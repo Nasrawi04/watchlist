@@ -364,28 +364,42 @@
 
 .det-header-info { flex:1; min-width:220px; }
 
-.det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:.9rem; }
+/* Details block, placed inline in the header next to the title box */
+.det-header-details {
+  flex:1.15; min-width:280px;
+  border-left:0.5px solid var(--border); padding-left:clamp(1.25rem, 3vw, 2rem);
+}
+@media(max-width:900px) {
+  .det-header-details { border-left:none; border-top:0.5px solid var(--border); padding-left:0; padding-top:1.5rem; flex-basis:100%; }
+}
+
+.det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:1.1rem; }
 .det-eyebrow-row .sel-dd { width:auto; min-width:120px; }
 .det-eyebrow-row .sel-dd-trigger { height:32px; padding:0 12px; border-radius:20px; font-size:12.5px; }
 
 .det-title-input {
   display:block; width:100%; background:transparent; border:none; border-bottom:1.5px solid var(--border);
   font-family:var(--serif); font-size:clamp(24px, 4.5vw, 38px); font-weight:300;
-  color:var(--text); padding:4px 0 8px; margin-bottom:1rem; line-height:1.15;
+  color:var(--text); padding:4px 0 8px; margin-bottom:1.1rem; line-height:1.15;
   outline:none; transition:border-color .2s;
 }
 .det-title-input::placeholder { color:var(--text-3); }
 .det-title-input:focus { border-color:var(--olive-light); }
 
-.det-year-row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem; }
-.det-year-field { display:flex; align-items:center; gap:6px; }
-.det-year-field label { font-size:10.5px; color:var(--text-3); letter-spacing:.5px; text-transform:uppercase; }
-.det-year-input {
-  width:70px; background:var(--bg-3); border:0.5px solid var(--border-2);
-  border-radius:var(--radius-sm); color:var(--text); font-size:13px; padding:6px 8px; text-align:center;
-  outline:none; transition:border-color .15s; -moz-appearance:textfield; appearance:textfield;
+/* Release + Completed combined into a single unified box */
+.det-year-box {
+  display:flex; align-items:stretch; width:fit-content;
+  background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius-sm);
+  overflow:hidden;
 }
-.det-year-input:focus { border-color:var(--olive-light); }
+.det-year-field { display:flex; align-items:center; gap:8px; padding:8px 16px; }
+.det-year-field label { font-size:10.5px; color:var(--text-3); letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+.det-year-divider { width:0.5px; background:var(--border-2); align-self:stretch; }
+.det-year-input {
+  width:64px; background:transparent; border:none;
+  color:var(--text); font-size:13px; padding:0; text-align:center;
+  outline:none; -moz-appearance:textfield; appearance:textfield;
+}
 .det-year-input::placeholder { color:var(--text-3); }
 
 .det-final-score-card {
@@ -399,11 +413,19 @@
 @media(max-width:560px) {
   .det-header { flex-direction:column; align-items:center; text-align:center; padding:1.25rem; }
   .det-header .detail-poster-wrap { width:clamp(110px, 38vw, 150px); height:auto; aspect-ratio:2/3; }
-  .det-eyebrow-row, .det-year-row { justify-content:center; }
+  .det-eyebrow-row { justify-content:center; }
+  .det-year-box { margin:0 auto; }
+  .det-header-details { text-align:left; }
 }
 
 /* ── Content cards ── */
 .det-content { display:flex; flex-direction:column; gap:1.5rem; }
+.det-row-2col { display:flex; gap:0; align-items:flex-start; flex-wrap:wrap; padding:0 !important; overflow:hidden; }
+.det-row-2col-half { flex:1; min-width:280px; padding:clamp(1.25rem, 3vw, 1.75rem); }
+.det-row-2col-half:last-child { border-left:0.5px solid var(--border); }
+@media(max-width:760px) {
+  .det-row-2col-half:last-child { border-left:none; border-top:0.5px solid var(--border); }
+}
 .det-card {
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
   padding:clamp(1.25rem, 3vw, 1.75rem);
@@ -498,6 +520,20 @@
       <input type="file" id="posterFile" accept="image/*" style="display:none" onchange="handlePosterUpload(event)">
 
       <div class="det-header-info">
+        <input class="det-title-input" id="dTitle" type="text" placeholder="Untitled…" oninput="updatePosterLetter()">
+
+        <div class="det-year-box">
+          <div class="det-year-field">
+            <label>Release Year</label>
+            <input class="det-year-input" id="dYear" type="number" min="1900" max="2030" placeholder="Year">
+          </div>
+          <div class="det-year-divider" id="detYearDivider"></div>
+          <div class="det-year-field" id="completionYearGroup">
+            <label>Completion Year</label>
+            <input class="det-year-input" id="dCompletionYear" type="number" min="1900" max="2030" placeholder="—">
+          </div>
+        </div>
+
         <div class="det-eyebrow-row">
           <select id="dCat" onchange="updateTypeSelector()" style="display:none">
             <option value="tv">TV Show</option>
@@ -525,27 +561,10 @@
           </div>
         </div>
 
-        <input class="det-title-input" id="dTitle" type="text" placeholder="Untitled…" oninput="updatePosterLetter()">
-
-        <div class="det-year-row">
-          <div class="det-year-field">
-            <label>Release</label>
-            <input class="det-year-input" id="dYear" type="number" min="1900" max="2030" placeholder="Year">
-          </div>
-          <div class="det-year-field" id="completionYearGroup">
-            <label>Completed</label>
-            <input class="det-year-input" id="dCompletionYear" type="number" min="1900" max="2030" placeholder="—">
-          </div>
-        </div>
-
       </div>
-    </div>
 
-    <!-- ═══ CONTENT ═══ -->
-    <div class="det-content">
-
-      <!-- Details card -->
-      <div class="det-card">
+      <!-- Details — sits next to the title box on wide screens -->
+      <div class="det-header-details">
         <div class="det-card-title">Details</div>
         <div class="det-fields-grid">
           <div class="field-group">
@@ -617,9 +636,16 @@
           </div>
         </div>
       </div>
+      <!-- /det-header-details -->
+    </div>
+    <!-- /det-header -->
 
-      <!-- Progress / Runtime card -->
-      <div class="det-card">
+    <!-- ═══ CONTENT ═══ -->
+    <div class="det-content">
+
+      <div class="det-card det-row-2col">
+      <!-- Progress / Runtime -->
+      <div class="det-row-2col-half">
         <div class="det-card-title">Progress</div>
 
         <div id="dProgressSection" class="progress-edit-section">
@@ -666,29 +692,8 @@
         </div>
       </div>
 
-      <!-- Ratings card — core and bonus side by side -->
-      <div class="det-card">
-        <div class="det-card-title">Rate This</div>
-        <div class="det-ratings-cols">
-          <div>
-            <div class="det-ratings-col-title">Core Ratings</div>
-            <div class="rating-stepper-grid" id="coreRatingGrid"></div>
-            <div id="animToggleSection" style="display:none;">
-              <button class="anim-toggle-btn" id="animToggleBtn" onclick="toggleAnimation()">+ Enable Animation Quality</button>
-              <div class="rating-stepper-grid" id="animRatingRow" style="display:none;margin-top:6px;"></div>
-            </div>
-          </div>
-          <div>
-            <div class="det-ratings-col-title">Bonus Ratings <span style="color:var(--text-3);font-size:9px;letter-spacing:1px;text-transform:none;font-family:var(--sans);margin-left:4px">optional</span></div>
-            <div class="rating-stepper-grid" id="bonusRatingGrid"></div>
-          </div>
-        </div>
-        <div class="ratings-section-label" style="margin-top:1.5rem;">Score Breakdown</div>
-        <div class="score-breakdown" id="scoreBreakdown"></div>
-      </div>
-
-      <!-- Notes & Favorites card -->
-      <div class="det-card">
+      <!-- Notes & Favorites -->
+      <div class="det-row-2col-half">
         <div class="det-card-title">Notes &amp; Favorites</div>
         <div class="det-fields-grid">
           <div class="field-group" id="dNotesSection" style="margin-bottom:0;">
@@ -730,6 +735,29 @@
             </div>
           </div>
         </div>
+      </div>
+      </div>
+      <!-- /det-row-2col: Progress + Notes & Favorites -->
+
+      <!-- Ratings card — core and bonus side by side -->
+      <div class="det-card">
+        <div class="det-card-title">Rate This</div>
+        <div class="det-ratings-cols">
+          <div>
+            <div class="det-ratings-col-title">Core Ratings</div>
+            <div class="rating-stepper-grid" id="coreRatingGrid"></div>
+            <div id="animToggleSection" style="display:none;">
+              <button class="anim-toggle-btn" id="animToggleBtn" onclick="toggleAnimation()">+ Enable Animation Quality</button>
+              <div class="rating-stepper-grid" id="animRatingRow" style="display:none;margin-top:6px;"></div>
+            </div>
+          </div>
+          <div>
+            <div class="det-ratings-col-title">Bonus Ratings <span style="color:var(--text-3);font-size:9px;letter-spacing:1px;text-transform:none;font-family:var(--sans);margin-left:4px">optional</span></div>
+            <div class="rating-stepper-grid" id="bonusRatingGrid"></div>
+          </div>
+        </div>
+        <div class="ratings-section-label" style="margin-top:1.5rem;">Score Breakdown</div>
+        <div class="score-breakdown" id="scoreBreakdown"></div>
       </div>
 
       <!-- Final Score card — sits at the very bottom, above the actions bar -->
@@ -1163,6 +1191,8 @@ function updateStatusUI() {
   // Hide completion year for movies (they only have release year)
   const completionYearGroup = document.getElementById('completionYearGroup');
   if (completionYearGroup) completionYearGroup.style.display = isMovie ? 'none' : '';
+  const yearDivider = document.getElementById('detYearDivider');
+  if (yearDivider) yearDivider.style.display = isMovie ? 'none' : '';
 
   // Show current position only when actively watching or paused
   const curPos = document.getElementById('dCurrentPosSection');
