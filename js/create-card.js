@@ -241,7 +241,7 @@ async function _drawCardPage1(myToken) {
   const TEXT = D ? '#eae6de' : '#18180f';
   const TEXT2 = D ? '#c7c1ac' : '#3a3428';
   const LOW = D ? '#e08585' : '#a33333';
-  const TRACK_BG = 'rgba(255,255,255,0.12)';
+  const TRACK_BG = D ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)';
   // Fixed (non-theme-adaptive) pair for the footer and genre pills —
   // these are branding/badge elements meant to look consistent
   // regardless of theme, not panels that should invert with it.
@@ -302,18 +302,18 @@ async function _drawCardPage1(myToken) {
           nameFS -= 0.5;
           ctx.font = `400 ${nameFS}px "Inter", Arial, sans-serif`;
         }
-        ctx.fillStyle = PANEL_TEXT;
+        ctx.fillStyle = TEXT;
         ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
         ctx.fillText(label, xx, yy + 7);
         ctx.restore();
         ctx.fillStyle = TRACK_BG;
         _rrect(ctx, barX, yy + 4, Math.max(barW, 10), 5, 3); ctx.fill();
         const pct = Math.max(0, Math.min(1, Number(value) / 10));
-        ctx.fillStyle = PANEL_ACCENT;
+        ctx.fillStyle = ACCENT;
         _rrect(ctx, barX, yy + 4, Math.max(barW * pct, 4), 5, 3); ctx.fill();
         ctx.save();
         ctx.font = '700 14px "Inter", Arial, sans-serif';
-        ctx.fillStyle = PANEL_ACCENT;
+        ctx.fillStyle = ACCENT;
         ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
         ctx.fillText(Number(value).toFixed(1), xx + colW, yy + 7);
         ctx.restore();
@@ -543,8 +543,8 @@ async function _drawCardPage1(myToken) {
       const partW = partsW / breakdownParts.length;
       const bdH = bdPadY * 2 + 96;
       if (draw) {
-        ctx.fillStyle = INK;
-        _rrect(ctx, PAD, y, boxW, bdH, 14); ctx.fill();
+        ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+        _rrect(ctx, PAD, y, boxW, bdH, 14); ctx.stroke();
       }
       let bx = PAD + bdPadX;
       breakdownParts.forEach((p, pi) => {
@@ -552,19 +552,19 @@ async function _drawCardPage1(myToken) {
         if (draw) {
           ctx.save();
           ctx.font = '700 12px "Inter", Arial, sans-serif';
-          ctx.fillStyle = PANEL_TEXT2;
+          ctx.fillStyle = TEXT2;
           ctx.textAlign = 'center'; ctx.textBaseline = 'top';
           ctx.fillText(p.label, colCenter, y + bdPadY);
           ctx.restore();
           ctx.save();
           ctx.font = '600 40px "Cormorant Garamond", Georgia, serif';
-          ctx.fillStyle = PANEL_ACCENT;
+          ctx.fillStyle = ACCENT;
           ctx.textAlign = 'center'; ctx.textBaseline = 'top';
           ctx.fillText(p.pct + '%', colCenter, y + bdPadY + 20);
           ctx.restore();
           ctx.save();
           ctx.font = '400 11.5px "Inter", Arial, sans-serif';
-          ctx.fillStyle = PANEL_TEXT2;
+          ctx.fillStyle = TEXT2;
           ctx.textAlign = 'center'; ctx.textBaseline = 'top';
           const dl = _wrap(ctx, p.desc, partW - 6).slice(0, 3);
           dl.forEach((ln, li) => ctx.fillText(ln, colCenter, y + bdPadY + 78 + li * 15));
@@ -578,7 +578,7 @@ async function _drawCardPage1(myToken) {
           if (draw) {
             ctx.save();
             ctx.font = '700 26px "Inter", Arial, sans-serif';
-            ctx.fillStyle = PANEL_TEXT2;
+            ctx.fillStyle = TEXT2;
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('+', bx + opW / 2, y + bdH / 2);
             ctx.restore();
@@ -589,7 +589,7 @@ async function _drawCardPage1(myToken) {
       if (draw) {
         ctx.save();
         ctx.font = '700 26px "Inter", Arial, sans-serif';
-        ctx.fillStyle = PANEL_TEXT2;
+        ctx.fillStyle = TEXT2;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('=', bx + opW / 2, y + bdH / 2);
         ctx.restore();
@@ -601,13 +601,13 @@ async function _drawCardPage1(myToken) {
         _rrect(ctx, bx, fbY, finalColW, fbH, 12); ctx.stroke();
         ctx.save();
         ctx.font = '700 12px "Inter", Arial, sans-serif';
-        ctx.fillStyle = PANEL_TEXT2;
+        ctx.fillStyle = TEXT2;
         ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         ctx.fillText('FINAL SCORE', finalCenter, y + bdPadY);
         ctx.restore();
         ctx.save();
         ctx.font = '700 66px "Cormorant Garamond", Georgia, serif';
-        ctx.fillStyle = PANEL_ACCENT;
+        ctx.fillStyle = ACCENT;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(score, finalCenter, y + bdH / 2);
         ctx.restore();
@@ -633,8 +633,8 @@ async function _drawCardPage1(myToken) {
       });
       const secH = maxColH + 24;
       if (draw) {
-        ctx.fillStyle = INK;
-        _rrect(ctx, PAD, y, boxW, secH, 14); ctx.fill();
+        ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+        _rrect(ctx, PAD, y, boxW, secH, 14); ctx.stroke();
       }
 
       cols.forEach((col, ci) => {
@@ -643,12 +643,12 @@ async function _drawCardPage1(myToken) {
         if (draw) {
           ctx.save();
           ctx.font = '700 14px "Inter", Arial, sans-serif';
-          ctx.fillStyle = PANEL_TEXT;
+          ctx.fillStyle = TEXT;
           ctx.textAlign = 'left'; ctx.textBaseline = 'top';
           ctx.fillText(col.title + '  ', cx, cy);
           const w1 = ctx.measureText(col.title + '  ').width;
           ctx.font = '600 13px "Inter", Arial, sans-serif';
-          ctx.fillStyle = PANEL_TEXT2;
+          ctx.fillStyle = TEXT2;
           ctx.fillText('(' + col.pct + '%)', cx + w1, cy);
           ctx.restore();
         }
