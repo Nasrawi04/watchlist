@@ -176,6 +176,15 @@ function _wrap(ctx, text, maxW) {
   return lines;
 }
 
+function _truncate(ctx, text, maxW) {
+  let str = String(text);
+  if (ctx.measureText(str).width <= maxW) return str;
+  while (str.length > 1 && ctx.measureText(str + '…').width > maxW) {
+    str = str.slice(0, -1);
+  }
+  return str + '…';
+}
+
 function _rrect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
@@ -784,7 +793,8 @@ async function _fetchDiscoverData(e) {
   if (_cardDiscoverEntryKey === key && _cardDiscoverData) return _cardDiscoverData;
   if (!e.tmdb_id || !e.tmdb_type) { _cardDiscoverData = null; _cardDiscoverEntryKey = key; return null; }
   try {
-    const url = `${TMDB_BASE}/${e.tmdb_type}/${e.tmdb_id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits`;
+    const extra = e.tmdb_type === 'movie' ? 'credits,release_dates' : 'credits,content_ratings';
+    const url = `${TMDB_BASE}/${e.tmdb_type}/${e.tmdb_id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=${extra}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('TMDB fetch failed: ' + res.status);
     const data = await res.json();
@@ -796,10 +806,32 @@ async function _fetchDiscoverData(e) {
     } else {
       director = (data.created_by || []).map(c => c.name).join(', ');
     }
-    const cast = (data.credits?.cast || []).slice(0, 5).map(c => c.name).filter(Boolean);
+    const writers = [...new Set(
+      (data.credits?.crew || [])
+        .filter(c => ['Writer', 'Screenplay', 'Story'].includes(c.job))
+        .map(c => c.name)
+    )].slice(0, 3).join(', ');
+    const cast = (data.credits?.cast || []).slice(0, 6).map(c => ({
+      name: c.name,
+      photo: c.profile_path ? `${TMDB_IMG}${c.profile_path}` : null,
+      character: c.character || ''
+    })).filter(c => c.name);
     const production = (data.production_companies || []).map(c => c.name).slice(0, 3).filter(Boolean);
+    const overview = (data.overview || '').trim();
+    const releaseDate = e.tmdb_type === 'movie' ? (data.release_date || '') : (data.first_air_date || '');
+    const budget = e.tmdb_type === 'movie' && data.budget ? data.budget : null;
 
-    const result = { director, cast, production };
+    let certification = '';
+    if (e.tmdb_type === 'movie') {
+      const usRel = (data.release_dates?.results || []).find(r => r.iso_3166_1 === 'US');
+      const withCert = (usRel?.release_dates || []).find(rd => rd.certification);
+      certification = withCert?.certification || '';
+    } else {
+      const usCert = (data.content_ratings?.results || []).find(r => r.iso_3166_1 === 'US');
+      certification = usCert?.rating || '';
+    }
+
+    const result = { director, writers, cast, production, overview, releaseDate, budget, certification };
     _cardDiscoverData = result;
     _cardDiscoverEntryKey = key;
     return result;
@@ -914,8 +946,9 @@ document.addEventListener('keydown', e => {
 
 /* ══════════════════════════════════════════════════════════════
    PAGE 3 — Discover Card
-   TMDB-sourced info card: poster, title/year, genres, director/
-   creator, starring cast, and production (when available).
+   TMDB-sourced info card: poster + title header (matching the main
+   card's layout language), genre pills, director, cast headshots,
+   and production — all in the same outlined-box style as page 1.
 ══════════════════════════════════════════════════════════════ */
 async function _drawDiscoverCard(myToken) {
   const canvas = document.getElementById('createCardCanvas');
@@ -943,33 +976,67 @@ async function _drawDiscoverCard(myToken) {
   if (promptEl) promptEl.style.display = data ? 'none' : '';
 
   const D = _cardTheme === 'dark';
-  const P = _cardPalette(D);
-  const W = 1000, PAD = 40;
-  const POSTER_H = 750;
-  const FOOTER_H = 60;
+  const BG      = D ? '#1e2219' : '#f4efe5';
+  const CARD_BG = D ? '#1e2219' : '#f4efe5';
+  const TEXT    = D ? '#eae6de' : '#18180f';
+  const TEXT2   = D ? '#c7c1ac' : '#3a3428';
+  const MUTED   = D ? '#9a9488' : '#5a5248';
+  const ACCENT  = D ? '#aac48c' : '#3e5c35';
+  const BORDER  = D ? 'rgba(170,196,140,0.35)' : 'rgba(62,92,53,0.3)';
+  const PILL_BG = D ? 'rgba(170,196,140,0.1)' : 'rgba(62,92,53,0.07)';
+  const BG_POST = D ? '#2a2f24' : '#e6e0d4';
+
+  const W = 1000, PAD = 40, GAP = 32;
+  const POSTER_W = 280, POSTER_H = 420;
+  const FOOTER_H = 70;
 
   let posterImg = null;
   if (e.poster_url) { try { posterImg = await _loadImage(e.poster_url); } catch { posterImg = null; } }
   let logoImg = null;
   try { logoImg = await _loadImage('icons/logo-nav.png'); } catch { logoImg = null; }
 
+  // Pre-load cast headshots (best-effort — missing photos just fall back to initials)
+  let castPhotos = [];
+  if (data?.cast?.length) {
+    castPhotos = await Promise.all(data.cast.map(async c => {
+      if (!c.photo) return null;
+      try { return await _loadImage(c.photo); } catch { return null; }
+    }));
+  }
+
   if (myToken !== _cardRenderToken || _cardPage !== 3 || _cardEntry !== e) return;
 
   function layout(ctx, draw) {
-    const pillRow = (items, xx, yy, maxW, textColor, bgColor) => {
+    const drawBox = (yy, h) => {
+      if (draw) { ctx.strokeStyle = BORDER; ctx.lineWidth = 1; _rrect(ctx, PAD, yy, W - PAD * 2, h, 14); ctx.stroke(); }
+    };
+    const sectionLabel = (label, xx, yy) => {
+      if (draw) {
+        ctx.save();
+        ctx.font = '700 12px "Inter", Arial, sans-serif';
+        ctx.fillStyle = ACCENT;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.letterSpacing = '2px';
+        ctx.fillText(label.toUpperCase(), xx, yy);
+        ctx.letterSpacing = '0px';
+        ctx.restore();
+      }
+      return yy + 12 + 14;
+    };
+    const pillRow = (items, xx, yy, maxW, textColor) => {
       ctx.save();
-      ctx.font = '500 14px "Inter", Arial, sans-serif';
-      const pPX = 14, pPY = 7, pGap = 8, pR = 13;
-      const pillH = 14 + pPY * 2;
+      ctx.font = '500 13px "Inter", Arial, sans-serif';
+      const pPX = 13, pPY = 7, pGap = 8, pR = 13;
+      const pillH = 13 + pPY * 2;
       let gx = xx, rows = 1;
       items.forEach(it => {
         const gw = ctx.measureText(it).width + pPX * 2;
         if (gx + gw > xx + maxW && gx > xx) { gx = xx; rows++; }
         if (draw) {
           const ry = yy + (rows - 1) * (pillH + 8);
-          ctx.fillStyle = bgColor;
+          ctx.fillStyle = PILL_BG;
           _rrect(ctx, gx, ry, gw, pillH, pR); ctx.fill();
-          ctx.strokeStyle = P.DIVIDER; ctx.lineWidth = 0.7;
+          ctx.strokeStyle = BORDER; ctx.lineWidth = 0.7;
           _rrect(ctx, gx, ry, gw, pillH, pR); ctx.stroke();
           ctx.fillStyle = textColor;
           ctx.textBaseline = 'middle';
@@ -980,107 +1047,222 @@ async function _drawDiscoverCard(myToken) {
       ctx.restore();
       return rows * pillH + (rows - 1) * 8;
     };
-    const drawDiv = yy => {
-      if (!draw) return;
-      ctx.strokeStyle = P.DIVIDER; ctx.lineWidth = 0.7;
-      ctx.beginPath(); ctx.moveTo(PAD, yy); ctx.lineTo(W - PAD, yy); ctx.stroke();
-    };
-    const drawHdr = (label, yy) => {
-      if (draw) {
-        ctx.save();
-        ctx.font = '700 16px "Inter", Arial, sans-serif';
-        ctx.fillStyle = P.OLIVEL;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.fillText(label.toUpperCase(), PAD, yy);
-        ctx.restore();
-      }
-      return yy + 16 + 10;
-    };
 
+    if (draw) { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, workCanvas.height); }
+
+    // ── Header: poster (left) + title/meta (right), like the main card ──
     if (draw) {
-      ctx.fillStyle = P.BG;
-      ctx.fillRect(0, 0, W, workCanvas.height);
-      ctx.fillStyle = P.BG_POST;
-      ctx.fillRect(0, 0, W, POSTER_H);
+      ctx.save();
+      _rrect(ctx, PAD, PAD, POSTER_W, POSTER_H, 16); ctx.clip();
+      ctx.fillStyle = BG_POST;
+      ctx.fillRect(PAD, PAD, POSTER_W, POSTER_H);
       if (posterImg) {
         const imgRatio = posterImg.width / posterImg.height;
-        const areaRatio = W / POSTER_H;
+        const areaRatio = POSTER_W / POSTER_H;
         let dw, dh, dx, dy;
-        if (imgRatio > areaRatio) { dw = W; dh = W / imgRatio; dx = 0; dy = (POSTER_H - dh) / 2; }
-        else { dh = POSTER_H; dw = POSTER_H * imgRatio; dx = (W - dw) / 2; dy = 0; }
-        ctx.save();
-        ctx.beginPath(); ctx.rect(0, 0, W, POSTER_H); ctx.clip();
+        if (imgRatio > areaRatio) { dh = POSTER_H; dw = POSTER_H * imgRatio; dx = PAD - (dw - POSTER_W) / 2; dy = PAD; }
+        else { dw = POSTER_W; dh = POSTER_W / imgRatio; dx = PAD; dy = PAD - (dh - POSTER_H) / 2; }
         ctx.drawImage(posterImg, dx, dy, dw, dh);
-        ctx.restore();
       } else {
-        ctx.save();
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = '300 90px "Cormorant Garamond", Georgia, serif';
-        ctx.fillStyle = P.OLIVEL;
-        ctx.fillText((e.title || '?')[0].toUpperCase(), W / 2, POSTER_H / 2);
-        ctx.restore();
+        ctx.font = '300 64px "Cormorant Garamond", Georgia, serif';
+        ctx.fillStyle = ACCENT;
+        ctx.fillText((e.title || '?')[0].toUpperCase(), PAD + POSTER_W / 2, PAD + POSTER_H / 2);
       }
-      ctx.strokeStyle = P.DIVIDER; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(PAD, POSTER_H + 1); ctx.lineTo(W - PAD, POSTER_H + 1); ctx.stroke();
+      ctx.restore();
+      ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
+      _rrect(ctx, PAD, PAD, POSTER_W, POSTER_H, 16); ctx.stroke();
     }
 
-    let y = POSTER_H + 30;
+    const infoX = PAD + POSTER_W + GAP;
+    const infoW = W - PAD - infoX;
+    let hy = PAD;
+
+    if (draw) {
+      ctx.save();
+      ctx.font = '700 11px "Inter", Arial, sans-serif';
+      ctx.fillStyle = ACCENT;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.letterSpacing = '2.5px';
+      ctx.fillText('DISCOVER', infoX, hy);
+      ctx.letterSpacing = '0px';
+      ctx.restore();
+    }
+    hy += 11 + 18;
 
     const title = e.title || '';
-    const titleFS = title.length > 30 ? 30 : title.length > 20 ? 36 : 42;
+    const titleFS = title.length > 26 ? 32 : title.length > 16 ? 38 : 44;
     ctx.save();
     ctx.font = `600 ${titleFS}px "Cormorant Garamond", Georgia, serif`;
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    const titleLines = _wrap(ctx, title, W - PAD * 2).slice(0, 2);
-    if (draw) { ctx.fillStyle = P.TEXT; titleLines.forEach((ln, i) => ctx.fillText(ln, PAD, y + i * (titleFS + 4))); }
+    const titleLines = _wrap(ctx, title, infoW).slice(0, 3);
+    if (draw) { ctx.fillStyle = TEXT; titleLines.forEach((ln, i) => ctx.fillText(ln, infoX, hy + i * (titleFS + 4))); }
     ctx.restore();
-    y += titleLines.length * (titleFS + 4) + 8;
+    hy += titleLines.length * (titleFS + 4) + 10;
 
-    if (e.year && draw) {
+    const metaBits = [];
+    if (data?.releaseDate) {
+      metaBits.push(new Date(data.releaseDate + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+    } else if (e.year) {
+      metaBits.push(String(e.year));
+    }
+    metaBits.push(e.tmdb_type === 'tv' ? 'TV Series' : 'Movie');
+    if (data?.certification) metaBits.push(data.certification);
+    if (draw) {
       ctx.save();
-      ctx.font = '400 18px "Inter", Arial, sans-serif';
-      ctx.fillStyle = P.TEXT2;
+      ctx.font = '400 15px "Inter", Arial, sans-serif';
+      ctx.fillStyle = TEXT2;
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      ctx.fillText(String(e.year), PAD, y);
+      ctx.fillText(_truncate(ctx, metaBits.join('  ·  '), infoW), infoX, hy);
       ctx.restore();
     }
-    if (e.year) y += 26;
+    hy += 15 + 22;
 
-    if (e.genres?.length) {
-      drawDiv(y); y += 16;
-      y = drawHdr('Genres', y);
-      y += pillRow(e.genres.slice(0, 5), PAD, y, W - PAD * 2, P.OLIVE, P.PILL_BG) + 8;
+    if (e.genres?.length && infoW > 0) {
+      hy += pillRow(e.genres.slice(0, 4), infoX, hy, infoW, ACCENT) + 12;
     }
 
-    if (data?.director) {
-      drawDiv(y); y += 16;
-      y = drawHdr(e.tmdb_type === 'tv' ? 'Created By' : 'Directed By', y);
+    if (data?.budget) {
+      if (draw) {
+        ctx.save();
+        ctx.font = '700 11px "Inter", Arial, sans-serif';
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.letterSpacing = '1.5px';
+        ctx.fillText('BUDGET', infoX, hy);
+        ctx.letterSpacing = '0px';
+        ctx.restore();
+      }
+      hy += 11 + 6;
+      if (draw) {
+        ctx.save();
+        ctx.font = '600 20px "Cormorant Garamond", Georgia, serif';
+        ctx.fillStyle = ACCENT;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillText(_truncate(ctx, '$' + data.budget.toLocaleString('en-US'), infoW), infoX, hy);
+        ctx.restore();
+      }
+      hy += 20 + 16;
+    }
+
+    // ── Credits — Director, Writers, and Production together ──
+    const creditRow = (label, value) => {
+      if (!value) return;
+      if (draw) {
+        ctx.save();
+        ctx.font = '700 11px "Inter", Arial, sans-serif';
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.letterSpacing = '1.5px';
+        ctx.fillText(label, infoX, hy);
+        ctx.letterSpacing = '0px';
+        ctx.restore();
+      }
+      hy += 11 + 6;
       ctx.save();
-      ctx.font = '400 20px "Inter", Arial, sans-serif';
-      ctx.fillStyle = P.TEXT;
-      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      if (draw) ctx.fillText(data.director, PAD, y);
+      ctx.font = '500 15.5px "Inter", Arial, sans-serif';
+      const allLines = _wrap(ctx, value, infoW);
+      const lines = allLines.slice(0, 2);
+      const truncated = allLines.length > 2;
+      if (draw) {
+        ctx.fillStyle = TEXT; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        lines.forEach((ln, i) => {
+          const isLast = i === lines.length - 1;
+          ctx.fillText(isLast && truncated ? _truncate(ctx, ln + '…', infoW) : ln, infoX, hy + i * 20);
+        });
+      }
       ctx.restore();
-      y += 28;
+      hy += lines.length * 20 + 14;
+    };
+    creditRow(e.tmdb_type === 'tv' ? 'CREATED BY' : 'DIRECTED BY', data?.director);
+    creditRow('WRITTEN BY', data?.writers);
+    creditRow('PRODUCTION', data?.production?.join(', '));
+
+    let y = Math.max(PAD + POSTER_H, hy) + 36;
+
+    // ── Description ──
+    const description = (data?.overview || e.description || '').trim();
+    if (description) {
+      const boxPadX = 30, boxPadY = 24;
+      const maxTextW = W - PAD * 2 - boxPadX * 2;
+      ctx.save();
+      ctx.font = '400 15.5px "Inter", Arial, sans-serif';
+      const allDescLines = _wrap(ctx, description, maxTextW);
+      const descLines = allDescLines.slice(0, 5);
+      if (allDescLines.length > 5 && descLines.length) {
+        descLines[descLines.length - 1] = _truncate(ctx, descLines[descLines.length - 1] + '…', maxTextW);
+      }
+      ctx.restore();
+      const lineH = 24;
+      const boxH = boxPadY * 2 + 14 + 10 + descLines.length * lineH;
+      drawBox(y, boxH);
+      let dy = sectionLabel('Description', PAD + boxPadX, y + boxPadY - 6) + 4;
+      ctx.save();
+      ctx.font = '400 15.5px "Inter", Arial, sans-serif';
+      ctx.fillStyle = TEXT2;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      if (draw) descLines.forEach((ln, i) => ctx.fillText(ln, PAD + boxPadX, dy + i * lineH));
+      ctx.restore();
+      y += boxH + 24;
     }
 
+    // ── Starring — cast headshots in a row ──
     if (data?.cast?.length) {
-      drawDiv(y); y += 16;
-      y = drawHdr('Starring', y);
-      y += pillRow(data.cast, PAD, y, W - PAD * 2, P.TEXT, P.PILL_BG) + 8;
-    }
+      const capH = 34;
+      const avatarD = 84, castGap = 20;
+      const nCols = Math.min(data.cast.length, 6);
+      const cellW = (W - PAD * 2 - castGap * (nCols - 1)) / nCols;
+      const rowH = avatarD + 14 + 16 + 16;
+      const boxH = capH + rowH + 24;
+      drawBox(y, boxH);
+      let cy = y + 22;
+      cy = sectionLabel('Starring', PAD + 24, cy) + 10;
+      data.cast.slice(0, nCols).forEach((c, i) => {
+        const ccx = PAD + 24 + i * (cellW + castGap) + Math.min(avatarD, cellW) / 2;
+        const img = castPhotos[i];
+        if (draw) {
+          ctx.save();
+          ctx.beginPath(); ctx.arc(ccx, cy + avatarD / 2, avatarD / 2, 0, Math.PI * 2); ctx.clip();
+          if (img) {
+            const ir = img.width / img.height;
+            let dw, dh, dx, dy;
+            if (ir > 1) { dh = avatarD; dw = avatarD * ir; dx = ccx - dw / 2; dy = cy; }
+            else { dw = avatarD; dh = avatarD / ir; dx = ccx - avatarD / 2; dy = cy + avatarD / 2 - dh / 2; }
+            ctx.drawImage(img, dx, dy, dw, dh);
+          } else {
+            ctx.fillStyle = PILL_BG; ctx.fillRect(ccx - avatarD / 2, cy, avatarD, avatarD);
+            ctx.fillStyle = ACCENT; ctx.font = '600 28px "Cormorant Garamond", Georgia, serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText((c.name || '?')[0].toUpperCase(), ccx, cy + avatarD / 2);
+          }
+          ctx.restore();
+          ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(ccx, cy + avatarD / 2, avatarD / 2, 0, Math.PI * 2); ctx.stroke();
 
-    if (data?.production?.length) {
-      drawDiv(y); y += 16;
-      y = drawHdr('Production', y);
-      y += pillRow(data.production, PAD, y, W - PAD * 2, P.TEXT2, P.PILL_BG) + 8;
+          ctx.save();
+          ctx.font = '600 13px "Inter", Arial, sans-serif';
+          ctx.fillStyle = TEXT;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+          ctx.fillText(_truncate(ctx, c.name, cellW + 10), ccx, cy + avatarD + 12);
+          ctx.restore();
+
+          if (c.character) {
+            ctx.save();
+            ctx.font = '400 11.5px "Inter", Arial, sans-serif';
+            ctx.fillStyle = MUTED;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            ctx.fillText(_truncate(ctx, c.character, cellW + 10), ccx, cy + avatarD + 30);
+            ctx.restore();
+          }
+        }
+      });
+      y += boxH + 24;
     }
 
     if (!data) {
-      drawDiv(y); y += 20;
       ctx.save();
       ctx.font = '400 15px "Inter", Arial, sans-serif';
-      ctx.fillStyle = P.TEXT2;
+      ctx.fillStyle = MUTED;
       ctx.textAlign = 'center'; ctx.textBaseline = 'top';
       if (draw) ctx.fillText("This title isn't linked to TMDB — showing available details only.", W / 2, y);
       ctx.restore();
@@ -1092,7 +1274,7 @@ async function _drawDiscoverCard(myToken) {
 
   let workCanvas = document.createElement('canvas');
   workCanvas.width = W;
-  workCanvas.height = POSTER_H + 800;
+  workCanvas.height = PAD + POSTER_H + 900;
   const measureCtx = workCanvas.getContext('2d');
   const contentBottom = layout(measureCtx, false);
   const totalH = Math.round(contentBottom + FOOTER_H);
@@ -1108,33 +1290,42 @@ async function _drawDiscoverCard(myToken) {
 
   layout(ctx, true);
 
-  ctx.fillStyle = P.BG_DARK;
+  // ── Footer — theme-matched, consistent with page 1 ──
+  ctx.fillStyle = CARD_BG;
   ctx.fillRect(-1, totalH - FOOTER_H, W + 2, FOOTER_H);
   const username = _cardUsername();
   const footerMidY = totalH - FOOTER_H / 2;
   if (username) {
+    const avatarR = 14;
+    const avatarCX = PAD + avatarR, avatarCY = footerMidY;
     ctx.save();
-    ctx.font = '600 18px "Inter", Arial, sans-serif';
-    ctx.fillStyle = P.TEXT_ON_DARK;
+    ctx.fillStyle = ACCENT;
+    ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.fill();
+    ctx.font = '700 13px "Inter", Arial, sans-serif';
+    ctx.fillStyle = BG;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText((username.replace('@', '')[0] || '?').toUpperCase(), avatarCX, avatarCY + 1);
+    ctx.restore();
+    ctx.save();
+    ctx.font = '700 13.5px "Inter", Arial, sans-serif';
+    ctx.fillStyle = TEXT;
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(username, PAD, footerMidY);
+    ctx.fillText(username, PAD + avatarR * 2 + 10, footerMidY);
     ctx.restore();
   }
   ctx.save();
-  ctx.font = '700 18px "Inter", Arial, sans-serif';
-  ctx.fillStyle = P.TEXT2_ON_DARK;
+  ctx.font = '700 14px "Inter", Arial, sans-serif';
+  ctx.fillStyle = TEXT;
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   const msLabel = 'MyScreenScore';
   const msW = ctx.measureText(msLabel).width;
   ctx.fillText(msLabel, W - PAD, footerMidY);
   if (logoImg) {
-    const logoH = 22, logoW = logoImg.width * (logoH / logoImg.height);
-    ctx.drawImage(logoImg, W - PAD - msW - 9 - logoW, footerMidY - logoH / 2, logoW, logoH);
+    const logoH = 20, logoW = logoImg.width * (logoH / logoImg.height);
+    ctx.drawImage(logoImg, W - PAD - msW - 8 - logoW, footerMidY - logoH / 2, logoW, logoH);
   }
   ctx.restore();
 
-  // Copy the naturally-rendered content straight across at its own
-  // height — no forced paper-size padding or scaling.
   canvas.width = W;
   canvas.height = totalH;
   const maxW = Math.min(340, window.innerWidth - 64);
