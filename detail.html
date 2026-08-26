@@ -362,18 +362,22 @@
 }
 .det-header .detail-poster-wrap img { width:100%; height:100%; object-fit:cover; }
 
+@media(min-width:901px) {
+  .det-header .detail-poster-wrap { width:220px; height:330px; }
+}
+
 .det-header-info { flex:1; min-width:220px; }
 
-/* Details block, placed inline in the header next to the title box */
+/* Details block, placed inline in the header next to the title box — split 50/50 with det-header-info */
 .det-header-details {
-  flex:1.15; min-width:280px;
+  flex:1; min-width:280px;
   border-left:0.5px solid var(--border); padding-left:clamp(1.25rem, 3vw, 2rem);
 }
 @media(max-width:900px) {
   .det-header-details { border-left:none; border-top:0.5px solid var(--border); padding-left:0; padding-top:1.5rem; flex-basis:100%; }
 }
 
-.det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:1.1rem; }
+.det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem; }
 .det-eyebrow-row .sel-dd { width:auto; min-width:120px; }
 .det-eyebrow-row .sel-dd-trigger { height:32px; padding:0 12px; border-radius:20px; font-size:12.5px; }
 
@@ -412,7 +416,7 @@
 
 @media(max-width:560px) {
   .det-header { flex-direction:column; align-items:center; text-align:center; padding:1.25rem; }
-  .det-header .detail-poster-wrap { width:clamp(110px, 38vw, 150px); height:auto; aspect-ratio:2/3; }
+  .det-header .detail-poster-wrap { width:clamp(150px, 52vw, 200px); height:auto; aspect-ratio:2/3; }
   .det-eyebrow-row { justify-content:center; }
   .det-year-box { margin:0 auto; }
   .det-header-details { text-align:left; }
@@ -522,18 +526,6 @@
       <div class="det-header-info">
         <input class="det-title-input" id="dTitle" type="text" placeholder="Untitled…" oninput="updatePosterLetter()">
 
-        <div class="det-year-box">
-          <div class="det-year-field">
-            <label>Release Year</label>
-            <input class="det-year-input" id="dYear" type="number" min="1900" max="2030" placeholder="Year">
-          </div>
-          <div class="det-year-divider" id="detYearDivider"></div>
-          <div class="det-year-field" id="completionYearGroup">
-            <label>Completion Year</label>
-            <input class="det-year-input" id="dCompletionYear" type="number" min="1900" max="2030" placeholder="—">
-          </div>
-        </div>
-
         <div class="det-eyebrow-row">
           <select id="dCat" onchange="updateTypeSelector()" style="display:none">
             <option value="tv">TV Show</option>
@@ -558,6 +550,36 @@
               <option value="movie">Movie</option>
             </select>
             <div id="dMediaTypeDD"></div>
+          </div>
+        </div>
+
+        <div class="det-year-box">
+          <div class="det-year-field">
+            <label>Release Year</label>
+            <input class="det-year-input" id="dYear" type="number" min="1900" max="2030" placeholder="Year">
+          </div>
+          <div class="det-year-divider" id="detYearDivider"></div>
+          <div class="det-year-field" id="completionYearGroup">
+            <label>Completion Year</label>
+            <input class="det-year-input" id="dCompletionYear" type="number" min="1900" max="2030" placeholder="—">
+          </div>
+        </div>
+
+        <div class="field-group" id="completedOnGroup" style="display:none;margin-top:1.25rem;margin-bottom:0;">
+          <div class="field-label">Completed On <span style="font-size:9px;color:var(--text-3);font-weight:400;">(when you finished)</span></div>
+          <div class="date-3box" id="completedDateWrap">
+            <input class="field-input date-3box-input" id="dDay"   type="number" min="1" max="31" placeholder="DD" style="width:64px;text-align:center">
+            <select class="field-input date-3box-input" id="dMonth" style="flex:1;display:none">
+              <option value="">Month</option>
+              <option value="01">January</option><option value="02">February</option>
+              <option value="03">March</option><option value="04">April</option>
+              <option value="05">May</option><option value="06">June</option>
+              <option value="07">July</option><option value="08">August</option>
+              <option value="09">September</option><option value="10">October</option>
+              <option value="11">November</option><option value="12">December</option>
+            </select>
+            <div id="dMonthDD" style="flex:1"></div>
+            <input class="field-input date-3box-input" id="dCYear" type="number" min="1900" max="2100" placeholder="YYYY" style="width:80px;text-align:center">
           </div>
         </div>
 
@@ -609,24 +631,6 @@
                 <span class="genre-opt" onclick="toggleGenre(this)">Shoujo</span>
                 <span class="genre-opt" onclick="toggleGenre(this)">Shounen</span>
               </div>
-            </div>
-          </div>
-
-          <div class="field-group" id="completedOnGroup" style="display:none;">
-            <div class="field-label">Completed On <span style="font-size:9px;color:var(--text-3);font-weight:400;">(when you finished)</span></div>
-            <div class="date-3box" id="completedDateWrap">
-              <input class="field-input date-3box-input" id="dDay"   type="number" min="1" max="31" placeholder="DD" style="width:64px;text-align:center">
-              <select class="field-input date-3box-input" id="dMonth" style="flex:1;display:none">
-                <option value="">Month</option>
-                <option value="01">January</option><option value="02">February</option>
-                <option value="03">March</option><option value="04">April</option>
-                <option value="05">May</option><option value="06">June</option>
-                <option value="07">July</option><option value="08">August</option>
-                <option value="09">September</option><option value="10">October</option>
-                <option value="11">November</option><option value="12">December</option>
-              </select>
-              <div id="dMonthDD" style="flex:1"></div>
-              <input class="field-input date-3box-input" id="dCYear" type="number" min="1900" max="2100" placeholder="YYYY" style="width:80px;text-align:center">
             </div>
           </div>
 
