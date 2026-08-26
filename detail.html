@@ -348,7 +348,7 @@
 .det-header {
   display:flex; gap:clamp(1.25rem, 3vw, 2rem); align-items:flex-start; flex-wrap:wrap;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:clamp(1.5rem, 3vw, 2rem); margin-bottom:1.5rem;
+  padding:clamp(1.5rem, 3vw, 2rem); margin-bottom:1.5rem; max-width:100%; box-sizing:border-box;
 }
 
 /* Poster — reuses .detail-poster-wrap class (handlePosterUpload's querySelector depends on it) */
@@ -366,15 +366,18 @@
   .det-header .detail-poster-wrap { width:220px; height:330px; }
 }
 
-.det-header-info { flex:1; min-width:220px; }
+.det-header-info { flex:1; min-width:220px; max-width:100%; }
 
 /* Details block, placed inline in the header next to the title box — split 50/50 with det-header-info */
 .det-header-details {
-  flex:1; min-width:280px;
+  flex:1; min-width:280px; max-width:100%; box-sizing:border-box;
   border-left:0.5px solid var(--border); padding-left:clamp(1.25rem, 3vw, 2rem);
 }
 @media(max-width:900px) {
-  .det-header-details { border-left:none; border-top:0.5px solid var(--border); padding-left:0; padding-top:1.5rem; flex-basis:100%; }
+  .det-header-details { border-left:none; border-top:0.5px solid var(--border); padding-left:0; padding-top:1.5rem; flex-basis:100%; min-width:0; }
+}
+@media(max-width:560px) {
+  .det-header-info { min-width:0; }
 }
 
 .det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem; }
@@ -392,15 +395,15 @@
 
 /* Release + Completed combined into a single unified box */
 .det-year-box {
-  display:flex; align-items:stretch; width:fit-content;
+  display:flex; align-items:stretch; width:fit-content; max-width:100%;
   background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius-sm);
   overflow:hidden;
 }
-.det-year-field { display:flex; align-items:center; gap:8px; padding:8px 16px; }
+.det-year-field { display:flex; align-items:center; gap:8px; padding:8px 16px; min-width:0; }
 .det-year-field label { font-size:10.5px; color:var(--text-3); letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
-.det-year-divider { width:0.5px; background:var(--border-2); align-self:stretch; }
+.det-year-divider { width:0.5px; background:var(--border-2); align-self:stretch; flex-shrink:0; }
 .det-year-input {
-  width:64px; background:transparent; border:none;
+  width:64px; flex-shrink:0; background:transparent; border:none;
   color:var(--text); font-size:13px; padding:0; text-align:center;
   outline:none; -moz-appearance:textfield; appearance:textfield;
 }
@@ -419,7 +422,11 @@
   .det-header .detail-poster-wrap { width:clamp(110px, 38vw, 150px); height:auto; aspect-ratio:2/3; }
   .det-eyebrow-row { justify-content:center; }
   .det-year-box { margin:0 auto; }
+  .det-year-field { padding:8px 10px; gap:5px; }
+  .det-year-field label { font-size:9px; }
+  .det-year-input { width:48px; font-size:12px; }
   .det-header-details { text-align:left; }
+  .det-header, .det-header-info, .det-header-details { overflow-x:hidden; }
 }
 
 /* ── Content cards ── */
