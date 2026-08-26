@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.td-wrap { max-width:none; }
+
+.td-back-loading {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; color:var(--text-3); text-decoration:none;
+  margin-bottom:1.5rem; transition:color .15s;
+}
+.td-back-loading:hover { color:var(--olive-light); }
+
+/* ── Hero (breaks out of page-wrap's side padding to run edge-to-edge) ── */
+.td-hero {
+  position:relative; min-height:clamp(480px, 78vw, 860px);
+  display:flex; flex-direction:column; justify-content:center;
+  margin-left:calc(-1 * var(--page-px)); margin-right:calc(-1 * var(--page-px));
+  margin-top:calc(-1 * var(--page-pt)); padding-top:var(--page-pt);
+  margin-bottom:2rem; background:var(--card); border-bottom:0.5px solid var(--border);
+}
+.td-back {
+  position:absolute; top:var(--page-pt); left:calc(var(--page-px) + 1rem); z-index:1;
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; color:#EDEDED; text-decoration:none; opacity:.8;
+  transition:opacity .15s;
+}
+.td-back:hover { opacity:1; }
+.td-backdrop-clip { position:absolute; inset:0; overflow:hidden; z-index:0; border-radius:inherit; }
+.td-backdrop {
+  position:absolute; inset:0; background-size:cover; background-position:center top;
+  filter:blur(2px) brightness(0.35); transform:scale(1.05);
+}
+.td-hero-inner {
+  position:relative; z-index:2; display:flex; gap:clamp(0.85rem, 3vw, 2.5rem); padding:2.5rem calc(var(--page-px) + 1rem) 3rem;
+  align-items:center; flex-wrap:nowrap; box-sizing:border-box;
+}
+.td-poster {
+  width:clamp(96px, 24vw, 320px); height:clamp(144px, 36vw, 480px); flex-shrink:0; border-radius:var(--radius); overflow:hidden;
+  background:var(--bg-3); box-shadow:0 10px 30px rgba(0,0,0,0.5);
+  display:flex; align-items:center; justify-content:center;
+}
+.td-poster img { width:100%; height:100%; object-fit:cover; }
+.td-hero-info { flex:1; min-width:0; color:#EDEDED; }
+.td-eyebrow {
+  font-size:clamp(10px, 1.6vw, 13px); letter-spacing:2.5px; text-transform:uppercase; color:#8FD177;
+  margin-bottom:.75rem; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.td-title { font-family:var(--serif); font-size:clamp(26px, 5.5vw, 52px); font-weight:300; margin-bottom:.75rem; line-height:1.1; }
+.td-tagline { font-style:italic; opacity:.65; font-size:clamp(12.5px, 2vw, 17px); margin-bottom:1.25rem; }
+.td-meta-row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; font-size:clamp(11.5px, 1.8vw, 15px); opacity:.85; }
+.td-meta-row span { display:flex; align-items:center; gap:5px; }
+.td-genres { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1.5rem; }
+.td-genre-chip {
+  font-size:clamp(10px, 1.5vw, 13px); padding:5px 14px; border-radius:20px;
+  background:rgba(126,184,108,0.12); border:0.5px solid rgba(126,184,108,0.35); color:#B8E0A8;
+}
+.td-ratings-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.td-rating-badge {
+  display:inline-flex; align-items:center; gap:10px;
+  background:rgba(0,0,0,0.35); border:0.5px solid rgba(255,255,255,0.15);
+  border-radius:var(--radius); padding:11px 18px;
+}
+.td-rating-num { font-family:var(--sans); font-weight:700; font-size:clamp(17px, 2.8vw, 26px); color:#F5C94B; }
+.td-rating-num.td-rating-mss { color:#8FD177; }
+.td-rating-label { font-size:clamp(9px, 1.3vw, 12px); opacity:.65; letter-spacing:.5px; text-transform:uppercase; }
+.td-trailer-link {
+  display:inline-flex; align-items:center; gap:7px; margin-left:14px;
+  font-size:clamp(11.5px, 1.8vw, 15px); color:#EDEDED; text-decoration:none; opacity:.85;
+  border:0.5px solid rgba(255,255,255,0.25); border-radius:20px; padding:9px 18px;
+  transition:opacity .15s;
+}
+.td-trailer-link:hover { opacity:1; }
+
+.td-hero-actions { margin-top:0.75rem; }
+.td-add-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; justify-content:flex-start; }
+.td-dd { position:relative; flex:0 1 190px; min-width:150px; }
+.td-dd-trigger {
+  width:100%; height:clamp(38px, 6vw, 48px); box-sizing:border-box; display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px; border-radius:var(--radius-sm); cursor:pointer;
+  background:rgba(255,255,255,0.1); border:0.5px solid rgba(255,255,255,0.28); color:#EDEDED;
+  font-size:clamp(12.5px, 1.8vw, 15px); font-family:var(--sans); transition:border-color .15s, background-color .15s;
+}
+.td-dd-trigger:hover { background:rgba(255,255,255,0.16); border-color:rgba(255,255,255,0.4); }
+.td-dd-placeholder .td-dd-trigger { color:rgba(237,237,237,0.55); }
+.td-dd.open .td-dd-trigger {
+  background:rgba(255,255,255,0.16); border-color:var(--olive-light);
+  border-bottom-left-radius:0; border-bottom-right-radius:0;
+}
+.td-dd-chevron { transition:transform .15s, color .15s; flex-shrink:0; margin-left:8px; color:#EDEDED; opacity:.7; }
+.td-dd.open .td-dd-chevron { transform:rotate(180deg); opacity:1; }
+.td-dd-menu {
+  display:none; position:absolute; top:100%; left:0; right:0; z-index:20;
+  background:var(--bg-3); box-shadow:var(--shadow-lg);
+  border:0.5px solid var(--olive-light); border-top:none;
+  border-radius:0 0 var(--radius-sm) var(--radius-sm);
+  overflow-y:auto;overscroll-behavior-y:contain; max-height:240px;
+}
+.td-dd.open .td-dd-menu { display:block; }
+.td-dd-opt { padding:12px 16px; font-size:clamp(12.5px, 1.8vw, 15px); color:var(--text); cursor:pointer; transition:background-color .15s; }
+.td-dd-opt:hover { background:var(--bg-2); }
+.td-dd-opt.active { background:var(--olive-faint); color:var(--olive-light); }
+.td-add-row button.btn-save { height:clamp(38px, 6vw, 48px); font-size:clamp(12.5px, 1.8vw, 15px); box-sizing:border-box; padding:0 24px; flex:0 0 auto; white-space:nowrap; }
+.td-in-library {
+  display:flex; align-items:center; gap:12px; font-size:clamp(12.5px, 1.8vw, 15px); color:#EDEDED;
+  background:rgba(0,0,0,0.35); border:0.5px solid rgba(255,255,255,0.15);
+  border-radius:var(--radius); padding:12px 20px; flex-wrap:wrap;
+}
+
+/* ── Sections ── */
+.td-section-title {
+  font-size:clamp(10px, 1.6vw, 13px); letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light);
+  margin:3rem 0 1.25rem; display:flex; align-items:center; gap:12px;
+}
+.td-section-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
+.td-overview { font-size:clamp(13.5px, 2vw, 17px); line-height:1.75; color:var(--text-2); }
+
+/* ── Cast ── */
+.td-cast-scroll { display:flex; flex-wrap:wrap; gap:20px 18px; }
+.td-cast-card { flex-shrink:0; width:clamp(90px, 12vw, 140px); text-align:center; display:block; text-decoration:none; color:inherit; transition:opacity .15s; }
+.td-cast-card:hover { opacity:.8; }
+.td-cast-photo {
+  width:clamp(90px, 12vw, 140px); height:clamp(90px, 12vw, 140px); border-radius:50%; overflow:hidden; background:var(--bg-3);
+  margin-bottom:10px; display:flex; align-items:center; justify-content:center;
+  border:0.5px solid var(--border); font-family:var(--serif); font-size:clamp(22px, 3vw, 34px); color:var(--olive-light);
+}
+.td-cast-photo img { width:100%; height:100%; object-fit:cover; }
+.td-cast-name { font-size:clamp(12px, 1.8vw, 15px); font-weight:500; color:var(--text); line-height:1.3; }
+.td-cast-char { font-size:clamp(10.5px, 1.5vw, 13px); color:var(--text-3); margin-top:3px; line-height:1.3; }
+
+/* ── Seasons: bigger blocks, left to right ── */
+.td-season-row { display:flex; gap:18px; overflow-x:auto; padding-bottom:10px; }
+.td-season-block {
+  flex-shrink:0; width:clamp(150px, 19vw, 220px); cursor:pointer; border-radius:var(--radius); overflow:hidden;
+  background:var(--card); border:1.5px solid var(--border); transition:border-color .15s;
+}
+.td-season-block:hover { border-color:var(--border-olive); }
+.td-season-block.active { border-color:var(--olive-light); }
+.td-season-block-poster { width:100%; aspect-ratio:2/3; background:var(--bg-3); }
+.td-season-block-poster img { width:100%; height:100%; object-fit:cover; }
+.td-season-block-info { padding:clamp(8px, 1.2vw, 10px) clamp(9px, 1.4vw, 12px); }
+.td-season-block-name { font-size:clamp(13px, 1.8vw, 15px); font-weight:500; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.td-season-block-sub { font-size:clamp(11px, 1.5vw, 12.5px); color:var(--text-3); white-space:nowrap; }
+
+.td-episode { display:flex; gap:14px; padding:14px 18px; border-bottom:0.5px solid var(--border); }
+.td-episode:last-child { border-bottom:none; }
+.td-ep-still { width:clamp(70px, 10vw, 100px); height:clamp(39px, 5.6vw, 56px); border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.td-ep-still img { width:100%; height:100%; object-fit:cover; }
+.td-ep-title { font-size:clamp(12.5px, 1.8vw, 15px); font-weight:500; margin-bottom:3px; }
+.td-ep-meta { font-size:clamp(10.5px, 1.5vw, 12px); color:var(--text-3); margin-bottom:5px; }
+.td-ep-overview { font-size:clamp(12px, 1.7vw, 14px); color:var(--text-2); line-height:1.55; }
+.td-season-loading { padding:16px; font-size:12.5px; color:var(--text-3); text-align:center; }
+#tdEpisodesList { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-top:1rem; }
+
+@media(max-width:640px) {
+  .td-add-row { flex-direction:column; align-items:stretch; width:100%; }
+  .td-dd, .td-add-row button { width:100%; flex:0 0 auto; }
+  .td-cast-scroll { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px 10px; }
+  .td-cast-card { width:100%; }
+  .td-cast-photo { width:100%; height:auto; aspect-ratio:1/1; }
+}
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+  <div class="td-wrap">
+    <a class="td-back-loading" href="discover.html" id="tdBackLoading">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to Discover
+    </a>
+    <div id="tdLoading" class="page-loading"><div class="spinner"></div></div>
+    <div id="tdContent" style="display:none"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script>
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+let _tdUser = null, _tdType = null, _tdId = null, _tdDetail = null, _tdOwnEntry = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  _tdType = params.get('type');
+  _tdId   = params.get('id');
+
+  initPageGuest(async (user) => {
+    _tdUser = user;
+    if (!_tdType || !_tdId || (_tdType !== 'movie' && _tdType !== 'tv')) {
+      renderTdError('Nothing to show here — this link is missing a title.');
+      return;
+    }
+    await loadTitle();
+  });
+});
+
+function renderTdError(msg) {
+  document.getElementById('tdLoading').style.display = 'none';
+  const c = document.getElementById('tdContent');
+  c.style.display = '';
+  c.innerHTML = `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('search', 44)}</div><div class="empty-text">${esc(msg)}</div></div>`;
+}
+/* ── TMDB detail fetchers (separate from nav.js's add-entry helpers —
+   these pull credits + videos on top of the base detail payload) ── */
+async function _tdFetchMovie(id) {
+  try {
+    const res = await fetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+async function _tdFetchTV(id) {
+  try {
+    const res = await fetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+async function _tdFetchSeason(tvId, seasonNum) {
+  try {
+    const res = await fetch(`${TMDB_BASE}/tv/${tvId}/season/${seasonNum}?api_key=${TMDB_KEY}&language=en-US`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+async function loadTitle() {
+  const detail = _tdType === 'movie' ? await _tdFetchMovie(_tdId) : await _tdFetchTV(_tdId);
+  if (!detail || detail.success === false) {
+    renderTdError('Could not load this title — it may not exist on TMDB.');
+    return;
+  }
+  _tdDetail = detail;
+
+  const titleForMatch = _tdType === 'movie' ? detail.title : detail.name;
+  const yearForMatch = ((_tdType === 'movie' ? detail.release_date : detail.first_air_date) || '').split('-')[0] || null;
+  const [mssScore, ownEntry] = await Promise.all([
+    getTmdbAvgScore(Number(_tdId), _tdType, titleForMatch, yearForMatch),
+    _tdUser ? getOwnEntryByTmdb(_tdUser.id, Number(_tdId), _tdType, titleForMatch) : Promise.resolve(null),
+  ]);
+  _tdOwnEntry = ownEntry;
+
+  // Fire-and-forget — for the Recently Viewed section on the home page.
+  // Never awaited, never blocks rendering; failures are logged and ignored.
+  if (_tdUser) {
+    recordRecentlyViewed(_tdUser.id, Number(_tdId), _tdType, titleForMatch, detail.poster_path ? TMDB_FULL + detail.poster_path : null);
+  }
+
+  document.getElementById('tdLoading').style.display = 'none';
+  document.getElementById('tdBackLoading').style.display = 'none';
+  const c = document.getElementById('tdContent');
+  c.style.display = '';
+  c.innerHTML = _tdBuildHTML(detail, mssScore, ownEntry);
+
+  // Wire season blocks (TV only)
+  document.querySelectorAll('.td-season-block').forEach(el => {
+    el.addEventListener('click', () => _selectSeason(el));
+  });
+  // Auto-select the first season
+  const firstSeason = document.querySelector('.td-season-block');
+  if (firstSeason) _selectSeason(firstSeason);
+}
+
+function _tdBuildHTML(d, mssScore, ownEntry) {
+  const isMovie = _tdType === 'movie';
+  const title    = isMovie ? d.title : d.name;
+  const date     = isMovie ? d.release_date : d.first_air_date;
+  const year     = (date || '').split('-')[0];
+  const poster   = d.poster_path ? TMDB_FULL + d.poster_path : null;
+  const backdrop = d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : poster;
+  const genres   = (d.genres || []).map(g => g.name);
+  const rating   = d.vote_average ? d.vote_average.toFixed(1) : null;
+  const voteCount = d.vote_count ? d.vote_count.toLocaleString() : null;
+
+  const trailer = (d.videos?.results || []).find(v => v.site === 'YouTube' && v.type === 'Trailer')
+               || (d.videos?.results || []).find(v => v.site === 'YouTube');
+
+  let metaBits = [];
+  if (isMovie) {
+    if (d.runtime) metaBits.push(`${Math.floor(d.runtime/60)}h ${d.runtime%60}m`);
+    if (d.status) metaBits.push(d.status);
+  } else {
+    if (d.number_of_seasons) metaBits.push(`${d.number_of_seasons} Season${d.number_of_seasons!==1?'s':''}`);
+    if (d.number_of_episodes) metaBits.push(`${d.number_of_episodes} Episodes`);
+    if (d.episode_run_time?.length) metaBits.push(`~${d.episode_run_time[0]}m / ep`);
+    if (d.status) metaBits.push(d.status);
+  }
+
+  const castSource = isMovie ? (d.credits?.cast || []) : (d.aggregate_credits?.cast || d.credits?.cast || []);
+  const cast = castSource.slice(0, 10);
+
+  return `
+    <div class="td-hero fade-up">
+      ${backdrop ? `<div class="td-backdrop-clip"><div class="td-backdrop" style="background-image:url('${backdrop}')"></div></div>` : ''}
+      <a class="td-back" href="discover.html">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Discover
+      </a>
+      <div class="td-hero-inner">
+        <div class="td-poster">${poster ? `<img src="${poster}" alt="">` : ''}</div>
+        <div class="td-hero-info">
+          <div class="td-eyebrow">${isMovie ? 'Movie' : 'TV Show'} ${year ? '· ' + year : ''}</div>
+          <div class="td-title">${esc(title)}</div>
+          ${d.tagline ? `<div class="td-tagline">"${esc(d.tagline)}"</div>` : ''}
+          <div class="td-meta-row">
+            <div class="td-ratings-row">
+              ${rating ? `<span class="td-rating-badge"><span class="td-rating-num">★ ${rating}</span><span class="td-rating-label">${voteCount ? voteCount + ' votes' : 'TMDB'}</span></span>` : ''}
+              <span class="td-rating-badge"><span class="td-rating-num td-rating-mss">★ ${mssScore.avg != null ? mssScore.avg.toFixed(1) : '—'}</span><span class="td-rating-label">MyScreenScore${mssScore.count ? ' · ' + mssScore.count + (mssScore.count===1?' rating':' ratings') : ' · No ratings yet'}</span></span>
+            </div>
+            ${metaBits.map(b => `<span>${esc(b)}</span>`).join('')}
+            ${trailer ? `<a class="td-trailer-link" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
+          </div>
+          <div class="td-genres">${genres.map(g => `<span class="td-genre-chip">${esc(g)}</span>`).join('')}</div>
+          <div class="td-hero-actions fade-up fade-up-1">
+            ${_tdAddControlsHTML(ownEntry)}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="td-section-title">Overview</div>
+    <div class="td-overview">${esc(d.overview) || 'No description available.'}</div>
+
+    ${cast.length ? `
+    <div class="td-section-title">Cast</div>
+    <div class="td-cast-scroll">
+      ${cast.map(p => `
+        <a class="td-cast-card" href="person.html?id=${p.id}">
+          <div class="td-cast-photo">${p.profile_path ? `<img src="${TMDB_IMG}${p.profile_path}" loading="lazy">` : esc((p.name||'?')[0])}</div>
+          <div class="td-cast-name">${esc(p.name)}</div>
+          <div class="td-cast-char">${esc(p.character || p.roles?.[0]?.character || '')}</div>
+        </a>`).join('')}
+    </div>` : ''}
+
+    ${!isMovie ? _tdSeasonsHTML(d) : ''}
+  `;
+}
+
+function _tdDDHTML(id, options, selected, placeholder) {
+  const selOpt = options.find(o => o.value === selected);
+  const usePlaceholder = !selOpt && placeholder;
+  const label = selOpt ? selOpt.label : (usePlaceholder ? placeholder : options[0].label);
+  const value = selOpt ? selOpt.value : (usePlaceholder ? '' : options[0].value);
+  return `<div class="td-dd${usePlaceholder ? ' td-dd-placeholder' : ''}" id="${id}" data-value="${value}">
+    <button type="button" class="td-dd-trigger" onclick="event.stopPropagation();_tdToggleDD('${id}')">
+      <span class="td-dd-label">${esc(label)}</span>
+      <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="td-dd-menu">
+      ${options.map(o => `<div class="td-dd-opt${o.value===value?' active':''}" data-value="${o.value}" onclick="event.stopPropagation();_tdSelectDD('${id}','${o.value}')">${esc(o.label)}</div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function _tdToggleDD(id) {
+  const target = document.getElementById(id);
+  const wasOpen = target.classList.contains('open');
+  document.querySelectorAll('.td-dd.open').forEach(el => el.classList.remove('open'));
+  if (!wasOpen) target.classList.add('open');
+}
+
+function _tdSelectDD(id, value) {
+  const el = document.getElementById(id);
+  el.dataset.value = value;
+  el.classList.remove('td-dd-placeholder');
+  const opt = el.querySelector(`.td-dd-opt[data-value="${value}"]`);
+  if (opt) el.querySelector('.td-dd-label').textContent = opt.textContent;
+  el.querySelectorAll('.td-dd-opt').forEach(o => o.classList.toggle('active', o.dataset.value === value));
+  el.classList.remove('open');
+  _updateTdAddValidation();
+}
+
+function _updateTdAddValidation() {
+  const cat = document.getElementById('tdCatDD')?.dataset.value;
+  const status = document.getElementById('tdStatusDD')?.dataset.value;
+  const complete = !!cat && !!status;
+  const msg = document.getElementById('tdValidationMsg');
+  const btn = document.getElementById('tdAddBtn');
+  if (msg) msg.style.display = complete ? 'none' : '';
+  if (btn) btn.disabled = !complete;
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.td-dd.open').forEach(el => el.classList.remove('open'));
+});
+
+function _tdAddControlsHTML(ownEntry) {
+  if (!_tdUser) {
+    return `<a href="login.html" class="btn-add" style="text-decoration:none">${icon('logout',14)} Sign in to add</a>`;
+  }
+  if (ownEntry) {
+    const statusLabel = {
+      queue:'On your Watchlist', watching:'Currently Watching', paused:'Taking a Break',
+      completed:'Watched', ongoing:'To Be Continued'
+    }[ownEntry.status] || ownEntry.status;
+    return `<div class="td-in-library">
+      ${icon('check', 16)} In your library — ${esc(statusLabel)}
+      <button class="btn-save" onclick="goToDetail('${ownEntry.id}','title.html')">View &amp; Rate →</button>
+    </div>`;
+  }
+
+  const isMovie = _tdType === 'movie';
+  const catOptions = isMovie ? [
+    { value:'movies', label:'Movie' },
+    { value:'anime', label:'Anime' },
+    { value:'cartoons', label:'Cartoon' },
+  ] : [
+    { value:'tv', label:'TV Show' },
+    { value:'anime', label:'Anime' },
+    { value:'cartoons', label:'Cartoon' },
+  ];
+  const statusOptions = [
+    { value:'queue', label:'Watchlist' },
+    { value:'watching', label:'Currently Watching' },
+    ...(!isMovie ? [{ value:'paused', label:'Taking a Break' }] : []),
+    { value:'completed', label:'Watched' },
+    ...(!isMovie ? [{ value:'ongoing', label:'To Be Continued' }] : []),
+  ];
+  return `<div class="td-add-row">
+    ${_tdDDHTML('tdCatDD', catOptions, null, 'Select category…')}
+    ${_tdDDHTML('tdStatusDD', statusOptions, null, 'Select status…')}
+    <button class="btn-save" id="tdAddBtn" onclick="_tdAddToLibrary()" disabled>${icon('plus',14)} Add to Library</button>
+  </div>
+  <div id="tdValidationMsg" style="font-size:12px;color:#e0a45c;background:rgba(224,164,92,0.1);border:0.5px solid rgba(224,164,92,0.3);border-radius:var(--radius-sm);padding:8px 12px;margin-top:10px;">Please select a category and status before adding.</div>`;
+}
+
+async function _tdAddToLibrary() {
+  if (!_tdUser) { window.location.href = 'login.html'; return; }
+
+  const cat = document.getElementById('tdCatDD')?.dataset.value;
+  if (!cat) { showToast('Please select a category.', 'err'); return; }
+  const status = document.getElementById('tdStatusDD')?.dataset.value;
+  if (!status) { showToast('Please select a status.', 'err'); return; }
+
+  // Guard against rapid double-clicks/double-taps firing this twice before
+  // the first request finishes — this was the actual cause of items getting
+  // added to the watchlist multiple times (two concurrent requests can both
+  // pass the "does this exist yet" check before either one commits).
+  const btn = document.getElementById('tdAddBtn');
+  if (btn && btn.disabled) return;
+  const origBtnHTML = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Adding…'; }
+
+  const d = _tdDetail;
+  const isMovie = _tdType === 'movie';
+
+  const payload = {
+    title:       isMovie ? d.title : d.name,
+    cat, status,
+    year:        ((isMovie ? d.release_date : d.first_air_date) || '').split('-')[0] || null,
+    description: d.overview || null,
+    genres:      (d.genres || []).map(g => g.name),
+    poster_url:  d.poster_path ? TMDB_FULL + d.poster_path : null,
+    tmdb_id:     Number(_tdId),
+    tmdb_type:   _tdType,
+  };
+  if (isMovie) {
+    payload.runtime_h = d.runtime ? Math.floor(d.runtime/60) : null;
+    payload.runtime_m = d.runtime ? (d.runtime%60) : null;
+  } else {
+    payload.total_seasons = d.number_of_seasons || null;
+    payload.total_eps     = d.number_of_episodes || null;
+  }
+
+  try {
+    const entry = await quickCreate(payload, _tdUser.id);
+    _tdOwnEntry = entry;
+    showToast('Added to your library!');
+    const addRow = document.querySelector('.td-add-row');
+    if (addRow) addRow.outerHTML = _tdAddControlsHTML(entry);
+  } catch (err) {
+    if (String(err.message).startsWith('DUPLICATE:')) {
+      // Something already added this — likely a near-simultaneous request
+      // that won the race. Rather than leave a broken Add button, fetch
+      // the entry that now exists and switch to the "already in library"
+      // state, same as a normal successful add would.
+      try {
+        const existing = await getOwnEntryByTmdb(_tdUser.id, Number(_tdId), _tdType, payload.title);
+        if (existing) {
+          _tdOwnEntry = existing;
+          const addRow = document.querySelector('.td-add-row');
+          if (addRow) addRow.outerHTML = _tdAddControlsHTML(existing);
+          return;
+        }
+      } catch (e2) { /* fall through to re-enabling the button below */ }
+      showToast('Already in your library.', 'err');
+    } else {
+      showToast('Error adding entry.', 'err');
+      console.error(err);
+    }
+    if (btn) { btn.disabled = false; btn.innerHTML = origBtnHTML; }
+  }
+}
+
+function _tdSeasonsHTML(d) {
+  const seasons = (d.seasons || []).filter(s => s.season_number > 0 || d.seasons.length === 1);
+  if (!seasons.length) return '';
+  return `
+    <div class="td-section-title">Episodes</div>
+    <div class="td-season-row" id="tdSeasonRow">
+      ${seasons.map(s => `
+        <div class="td-season-block" data-season="${s.season_number}" data-tv="${_tdId}">
+          <div class="td-season-block-poster">${s.poster_path ? `<img src="${TMDB_IMG}${s.poster_path}" loading="lazy">` : ''}</div>
+          <div class="td-season-block-info">
+            <div class="td-season-block-name">${esc(s.name)}</div>
+            <div class="td-season-block-sub">${s.episode_count} episode${s.episode_count!==1?'s':''}${s.air_date ? ' · ' + s.air_date.split('-')[0] : ''}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div id="tdEpisodesList"></div>`;
+}
+
+async function _selectSeason(el) {
+  document.querySelectorAll('.td-season-block').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+
+  const epsWrap = document.getElementById('tdEpisodesList');
+  epsWrap.innerHTML = '<div class="td-season-loading">Loading episodes…</div>';
+
+  const tvId = el.dataset.tv, seasonNum = el.dataset.season;
+  const season = await _tdFetchSeason(tvId, seasonNum);
+  const eps = season?.episodes || [];
+
+  if (!eps.length) {
+    epsWrap.innerHTML = '<div class="td-season-loading">No episode data available.</div>';
+    return;
+  }
+
+  epsWrap.innerHTML = eps.map(ep => `
+    <div class="td-episode">
+      <div class="td-ep-still">${ep.still_path ? `<img src="${TMDB_IMG}${ep.still_path}" loading="lazy">` : ''}</div>
+      <div>
+        <div class="td-ep-title">${ep.episode_number}. ${esc(ep.name)}</div>
+        <div class="td-ep-meta">${ep.air_date || ''}${ep.vote_average ? ` · ★ ${ep.vote_average.toFixed(1)}` : ''}</div>
+        <div class="td-ep-overview">${esc(ep.overview) || 'No description available.'}</div>
+      </div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>

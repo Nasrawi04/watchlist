@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ── Add friend box ── */
+.add-friend-box{
+  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);
+  padding:1.75rem;margin-bottom:2.5rem;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;
+}
+.add-friend-box .field-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.add-friend-input-wrap{flex:1;min-width:200px}
+.fused-search-wrap {
+  display:flex; align-items:stretch;
+  border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden;
+  background:var(--bg-3); transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
+}
+.fused-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.add-friend-input{
+  flex:1; min-width:0; background:transparent; border:none;
+  color:var(--text);font-size:14px;
+  padding:12px 18px;outline:none;box-sizing:border-box;
+}
+.add-friend-input::placeholder{color:var(--text-3)}
+.btn-send-req{
+  flex-shrink:0;
+  background:linear-gradient(135deg, var(--olive-light), var(--olive-2));border:none;
+  color:#fff;font-size:13px;font-weight:500;padding:10px 22px;cursor:pointer;
+  transition:opacity .15s;white-space:nowrap;
+}
+.btn-send-req:hover{opacity:.9}
+.btn-send-req:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Section headers ── */
+.friends-section-title{
+  font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--olive-light);
+  margin:2.5rem 0 1.25rem;display:flex;align-items:center;gap:12px;
+}
+.friends-section-title::after{content:'';flex:1;height:0.5px;background:var(--border)}
+.friends-count{
+  background:var(--olive-faint);border:0.5px solid var(--border-olive);
+  color:var(--olive-light);font-size:10px;padding:2px 8px;border-radius:20px;
+  letter-spacing:.5px;
+}
+.friends-sort-bar{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1rem; }
+
+/* ── Avatar helper — shared by pending + friend cards ── */
+.f-avatar-inner {
+  width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); color:inherit;
+  border-radius:50%; overflow:hidden;
+}
+.f-avatar-inner img {
+  width:100%; height:100%; object-fit:cover; border-radius:50%;
+  display:block;
+}
+
+/* ── Pending request card ── */
+.pending-card{
+  display:flex;align-items:center;gap:14px;
+  background:rgba(92,107,58,0.06);border:0.5px solid var(--border-olive);
+  border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;
+}
+.pending-avatar{
+  width:44px;height:44px;border-radius:50%;flex-shrink:0;
+  background:var(--olive-faint);border:1.5px solid var(--border-olive);
+  font-family:var(--serif);font-size:20px;color:var(--olive-light);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.pending-info{flex:1;min-width:0}
+.pending-username{font-size:15px;font-weight:500}
+.pending-label{font-size:12px;color:var(--text-3);margin-top:2px}
+.pending-actions{display:flex;gap:8px;flex-shrink:0}
+.btn-accept{
+  background:var(--olive);border:none;border-radius:var(--radius-sm);
+  color:#fff;font-size:12px;font-weight:500;padding:7px 16px;cursor:pointer;
+  transition:all .2s;
+}
+.btn-accept:hover{background:var(--olive-2)}
+.btn-decline{
+  background:transparent;border:0.5px solid var(--border-2);border-radius:var(--radius-sm);
+  color:var(--text-3);font-size:12px;padding:7px 14px;cursor:pointer;transition:all .2s;
+}
+.btn-decline:hover{border-color:rgba(220,50,50,0.4);color:#ff6b6b}
+
+/* ── Friend card ── */
+.friend-card{
+  display:flex;flex-direction:column;
+  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);
+  padding:16px 18px;margin-bottom:12px;cursor:pointer;transition:all .25s;
+}
+.friend-card:hover{border-color:var(--border-olive);background:var(--card-2)}
+.friend-card-top{display:flex;align-items:center;gap:14px;}
+.friend-avatar{
+  width:48px;height:48px;border-radius:50%;flex-shrink:0;
+  background:var(--bg-3);border:1.5px solid var(--border-2);
+  font-family:var(--serif);font-size:22px;color:var(--text-2);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  transition:border-color .25s;
+}
+.friend-card:hover .friend-avatar{border-color:var(--border-olive);color:var(--olive-light)}
+.friend-info{flex:1;min-width:0}
+.friend-display-name{font-size:16px;font-weight:600;margin-bottom:2px}
+.friend-username-sub{font-size:13px;color:var(--text-3)}
+.friend-card-divider{height:0.5px;background:var(--border);margin:14px 0 12px;}
+.friend-stats{display:flex;gap:16px;flex-wrap:wrap}
+.friend-stat{font-size:12px;color:var(--text-3)}
+.friend-stat strong{color:var(--olive-light);font-family:var(--serif);font-size:15px;margin-right:4px}
+.friend-actions{display:flex;gap:8px;flex-shrink:0;align-items:center}
+.btn-view-lists{
+  background:transparent;border:0.5px solid var(--border-olive);
+  border-radius:var(--radius-sm);color:var(--olive-light);font-size:12px;
+  padding:7px 14px;cursor:pointer;transition:all .2s;white-space:nowrap;
+}
+.btn-view-lists:hover{background:var(--olive-faint)}
+.btn-unfriend{
+  background:transparent;border:0.5px solid transparent;border-radius:var(--radius-sm);
+  color:var(--text-3);font-size:12px;padding:7px 10px;cursor:pointer;transition:all .2s;
+}
+.btn-unfriend:hover{border-color:rgba(220,50,50,0.3);color:#ff6b6b}
+.btn-pin{
+  background:transparent;border:0.5px solid transparent;border-radius:var(--radius-sm);
+  color:var(--text-3);font-size:14px;padding:6px 9px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;
+}
+.btn-pin:hover{border-color:var(--border-olive);color:var(--olive-light)}
+.btn-pin.pinned{color:var(--olive-light)}
+.friend-card.is-pinned{border-color:var(--border-olive);background:rgba(92,107,58,0.06)}
+.friend-pinned-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  background:var(--olive-faint);border:0.5px solid var(--border-olive);
+  color:var(--olive-light);font-size:9px;letter-spacing:.5px;text-transform:uppercase;
+  padding:2px 7px;border-radius:20px;margin-left:8px;vertical-align:middle;
+}
+
+/* ── Sent request ── */
+.sent-card{
+  display:flex;align-items:center;gap:14px;
+  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);
+  padding:12px 16px;margin-bottom:8px;opacity:.7;
+}
+.sent-badge{font-size:10px;padding:3px 10px;border-radius:20px;background:var(--bg-3);border:0.5px solid var(--border-2);color:var(--text-3);letter-spacing:.5px;white-space:nowrap}
+
+.empty-friends{text-align:center;padding:3rem 1rem}
+.empty-friends-icon{font-size:2.5rem;margin-bottom:.75rem}
+.empty-friends-text{font-size:14px;color:var(--text-3)}
+
+@media(max-width:600px){
+  .add-friend-box{padding:1.25rem;gap:8px;margin-bottom:1.75rem}
+  .add-friend-input{font-size:16px;padding:10px 14px}
+  .btn-send-req{font-size:12px;padding:10px 16px}
+  .friend-card{padding:11px 13px;gap:10px;margin-bottom:8px}
+  .friend-avatar{width:40px;height:40px;font-size:18px}
+  .friend-username{font-size:14px;margin-bottom:3px}
+  .friend-stats{gap:8px}
+  .friend-stat{font-size:10px}
+  .friend-stat strong{font-size:13px}
+  .btn-view-lists{font-size:11px;padding:6px 10px}
+}
+@media(max-width:400px){
+  .add-friend-box{padding:1rem;gap:6px}
+  .add-friend-input{font-size:16px;padding:9px 12px}
+  .btn-send-req{font-size:11px;padding:9px 13px}
+  .friend-card{padding:9px 11px;gap:8px}
+  .friend-avatar{width:34px;height:34px;font-size:15px}
+  .friend-username{font-size:13px}
+  .friend-stats{gap:6px}
+  .friend-stat{font-size:9px}
+  .friend-stat strong{font-size:12px}
+  .btn-view-lists{font-size:10px;padding:5px 8px}
+}
+
+/* ── Username search dropdown ── */
+.username-dropdown {
+  position:fixed;
+  background:var(--bg-3); border:0.5px solid var(--olive-light); border-top:none;
+  border-radius:0 0 var(--radius) var(--radius); z-index:290;
+  box-shadow:var(--shadow-lg);
+  overflow-y:auto; overflow-x:hidden; max-height:320px;
+  display:none;
+}
+.username-dropdown.open { display:block; }
+.ud-item {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 14px; cursor:pointer;
+  transition:background .15s;
+  border-bottom:0.5px solid var(--border);
+}
+.ud-item:last-child { border-bottom:none; }
+.ud-item:hover, .ud-item.ud-active { background:var(--olive-faint); }
+.ud-avatar {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:var(--bg-3); border:1px solid var(--border-2);
+  font-family:var(--serif); font-size:16px; color:var(--text-2);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.ud-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.ud-info { flex:1; min-width:0; }
+.ud-username { font-size:14px; font-weight:500; color:var(--text); }
+.ud-username em { color:var(--olive-light); font-style:normal; font-weight:600; }
+.ud-display { font-size:11px; color:var(--text-3); margin-top:2px; }
+.ud-loading, .ud-empty { padding:14px; font-size:13px; color:var(--text-3); text-align:center; }
+
+/* ── Mini Profile Overlay ── */
+#miniProfileOverlay {
+  position:fixed;inset:0;z-index:1100;
+  background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;padding:16px;
+  opacity:0;pointer-events:none;transition:opacity .22s;
+}
+#miniProfileOverlay.open { opacity:1;pointer-events:auto; }
+#miniProfileCard {
+  width:100%;max-width:560px;
+  background:var(--bg-2);
+  border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+  transform:scale(.96);
+  transition:transform .25s cubic-bezier(0.4,0,0.2,1);
+  max-height:85vh;overflow-y:auto;
+}
+#miniProfileOverlay.open #miniProfileCard { transform:scale(1); }
+.mp-header {
+  display:flex;flex-direction:column;align-items:center;
+  padding:2rem 1.5rem 1.5rem;text-align:center;
+  border-bottom:0.5px solid var(--border);
+  position:relative;
+}
+.mp-close {
+  position:absolute;top:14px;right:14px;
+  background:none;border:none;color:var(--text-3);
+  font-size:20px;cursor:pointer;line-height:1;
+  transition:color .15s;
+}
+.mp-close:hover { color:var(--text); }
+.mp-avatar {
+  width:72px;height:72px;border-radius:50%;
+  background:var(--olive-faint);border:2px solid var(--olive-light);
+  font-family:var(--serif);font-size:28px;color:var(--olive-light);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  margin-bottom:.75rem;
+}
+.mp-avatar img { width:100%;height:100%;object-fit:cover;border-radius:50%; }
+.mp-username { font-family:var(--serif);font-size:20px;font-weight:300;margin-bottom:3px; }
+.mp-bio { font-size:12px;color:var(--text-2);line-height:1.5;max-width:340px;margin-bottom:.75rem; }
+.mp-quote { font-family:var(--serif);font-style:italic;font-size:13px;color:var(--text-3);border-left:2px solid var(--olive-light);padding-left:10px;text-align:left;max-width:340px;margin-bottom:.75rem; }
+.mp-stats { display:flex;gap:1.5rem;justify-content:center;margin-bottom:1rem; }
+.mp-stat { text-align:center; }
+.mp-stat-num { font-family:var(--serif);font-size:20px;color:var(--olive-light); }
+.mp-stat-label { font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-top:2px; }
+.mp-btns { display:flex;gap:8px;flex-wrap:wrap;justify-content:center; }
+.mp-btn-add { padding:8px 22px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s; }
+.mp-btn-add:hover { background:var(--olive-2); }
+.mp-btn-pending { padding:8px 22px;border-radius:var(--radius-sm);background:transparent;color:var(--text-2);border:0.5px solid var(--border-2);font-size:13px;cursor:pointer;transition:all .15s; }
+.mp-btn-pending:hover { border-color:var(--border-olive);color:var(--text); }
+.mp-btn-friends { padding:8px 22px;border-radius:var(--radius-sm);background:var(--olive-faint);color:var(--olive-light);border:0.5px solid var(--border-olive);font-size:13px;cursor:pointer;transition:all .15s; }
+.mp-btn-friends:hover { background:rgba(220,50,50,0.08);color:#ff6b6b;border-color:rgba(220,50,50,0.3); }
+.mp-btn-view { padding:8px 18px;border-radius:var(--radius-sm);background:transparent;color:var(--olive-light);border:0.5px solid var(--border-olive);font-size:12px;cursor:pointer;transition:background .15s; }
+.mp-btn-view:hover { background:var(--olive-faint); }
+.mp-accept { padding:8px 18px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer; }
+.mp-decline { padding:8px 14px;border-radius:var(--radius-sm);background:transparent;color:var(--text-3);border:0.5px solid var(--border-2);font-size:13px;cursor:pointer; }
+.mp-top-picks { padding:1.25rem 1.5rem; }
+.mp-picks-label { font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:.75rem; }
+.mp-picks-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:8px; }
+@media(max-width:480px) { .mp-picks-grid { grid-template-columns:repeat(4,1fr); } }
+.mp-pick-card { aspect-ratio:2/3;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);position:relative; }
+.mp-pick-card img { width:100%;height:100%;object-fit:cover; }
+.mp-pick-letter { width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:18px;color:var(--olive-light); }
+.mp-pick-overlay { position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 50%); }
+.mp-pick-title { position:absolute;bottom:0;left:0;right:0;padding:4px;font-size:8px;color:#fff;font-weight:500;line-height:1.2; }
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="cat-page-header fade-up">
+    <div>
+      <h1 class="cat-page-title">Friends</h1>
+      <div class="cat-page-sub" id="friendsPageSub">0 Friends · 0 requests</div>
+    </div>
+  </div>
+
+  <!-- Find People -->
+  <div class="add-friend-box fade-up">
+    <div class="add-friend-input-wrap" style="flex:1;position:relative">
+      <div class="field-label">Find People</div>
+      <div class="fused-search-wrap" id="addFriendWrap">
+        <input class="add-friend-input" id="addFriendInput" placeholder="Search by username…"
+               autocomplete="off" spellcheck="false"
+               oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();_udSearch(this.value);_udSelectedId=null;_udSelectedUsername=null;"
+               onkeydown="_udKeydown(event)">
+        <button id="udViewProfileBtn" class="btn-send-req" onclick="_udViewProfile()">View Profile →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending incoming -->
+  <div id="pendingSection" style="display:none">
+    <div class="friends-section-title">
+      Pending Requests
+      <span class="friends-count" id="pendingCount">0</span>
+    </div>
+    <div id="pendingList"></div>
+  </div>
+
+  <!-- Friends list -->
+  <div class="friends-section-title fade-up">
+    My Friends
+    <span class="friends-count" id="friendsCount">0</span>
+  </div>
+  <div class="friends-sort-bar fade-up" id="friendsSortBar">
+    <button class="sort-btn active" data-sort="latest" onclick="setFriendsSort('latest')">Latest</button>
+    <button class="sort-btn" data-sort="earliest" onclick="setFriendsSort('earliest')">Earliest</button>
+  </div>
+  <div id="friendsList">
+    <div class="page-loading"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Sent (pending outgoing) -->
+  <div id="sentSection" style="display:none">
+    <div class="friends-section-title" style="margin-top:2rem">Sent Requests</div>
+    <div id="sentList"></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script>
+let _fUser = null;
+let _fProfile = null;
+let _friendsSortOrder = 'latest'; // 'latest' | 'earliest'
+let _friendStatsMap = {};
+let _friendships = [];
+
+/* ── Avatar HTML helper — handles both photo and initial fallback ── */
+function avatarHtml(profile, size = 44, fontSize = 20) {
+  const initial = (profile?.username?.[0] || '?').toUpperCase();
+  if (profile?.avatar_url) {
+    return `<img src="${profile.avatar_url}"
+                 style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;display:block;"
+                 onerror="this.parentNode.innerHTML='${initial}'"
+                 alt="${initial}">`;
+  }
+  return `<span style="font-family:var(--serif);font-size:${fontSize}px;color:inherit">${initial}</span>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async (user) => {
+    _fUser = user; // null for guests — search/view-profile below works either way
+    if (!user) {
+      document.getElementById('friendsPageSub').textContent = 'Search for someone below to view their profile.';
+      document.getElementById('pendingSection').style.display = 'none';
+      document.getElementById('sentSection').style.display = 'none';
+      document.getElementById('friendsSortBar').style.display = 'none';
+      document.getElementById('friendsCount').textContent = '0';
+      document.getElementById('friendsList').innerHTML = `
+        <div class="guest-page-state fade-up" style="padding:3rem 1rem;">
+          <div class="guest-page-icon">${icon('users', 32)}</div>
+          <h2 class="guest-page-title" style="font-size:19px;">See your friends here</h2>
+          <p class="guest-page-sub">Sign in to add friends and see what they're watching.</p>
+          <div class="guest-cta">
+            <a href="login.html" class="guest-btn-primary">Sign In</a>
+            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
+          </div>
+        </div>`;
+      return;
+    }
+    await loadFriends();
+  });
+});
+
+async function loadFriends() {
+  _friendships = await getFriendships(_fUser.id);
+  _fProfile = await getProfile(_fUser.id);
+
+  const accepted = _friendships.filter(f => f.status === 'accepted');
+  const incoming = _friendships.filter(f => f.status === 'pending' && !f.iRequested);
+  const outgoing = _friendships.filter(f => f.status === 'pending' && f.iRequested);
+
+  const subEl = document.getElementById('friendsPageSub');
+  if (subEl) {
+    subEl.textContent = `${accepted.length} Friend${accepted.length !== 1 ? 's' : ''} · ${incoming.length} request${incoming.length !== 1 ? 's' : ''}`;
+  }
+
+  /* ── Pending incoming ── */
+  if (incoming.length) {
+    document.getElementById('pendingSection').style.display = '';
+    document.getElementById('pendingCount').textContent = incoming.length;
+    document.getElementById('pendingList').innerHTML = incoming.map(f => {
+      const un = f.friendProfile?.username || 'unknown';
+      return `
+      <div class="pending-card" id="pc-${f.id}">
+        <div class="pending-avatar">
+          ${avatarHtml(f.friendProfile, 44, 20)}
+        </div>
+        <div class="pending-info">
+          <div class="pending-username">@${un}</div>
+          <div class="pending-label">sent you a friend request</div>
+        </div>
+        <div class="pending-actions">
+          <button class="btn-accept"  onclick="doAccept('${f.id}')">Accept</button>
+          <button class="btn-decline" onclick="doDecline('${f.id}')">Decline</button>
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    document.getElementById('pendingSection').style.display = 'none';
+  }
+
+  /* ── Accepted friends ── */
+  document.getElementById('friendsCount').textContent = accepted.length;
+  document.getElementById('friendsSortBar').style.display = accepted.length ? '' : 'none';
+  if (accepted.length) {
+    // Load entry counts for each friend in parallel, once — sort/pin
+    // toggles afterward just re-render from this cache, no refetch.
+    _friendStatsMap = {};
+    await Promise.all(accepted.map(async f => {
+      const entries = await getFriendEntries(f.friendId);
+      _friendStatsMap[f.friendId] = computeStats(entries);
+    }));
+    renderAcceptedFriends();
+  } else {
+    document.getElementById('friendsList').innerHTML = `
+      <div class="empty-friends">
+        <div class="empty-friends-icon" style="opacity:.4"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="empty-friends-text">No friends yet. Add someone by username above!</div>
+      </div>`;
+  }
+
+  /* ── Sent / outgoing ── */
+  if (outgoing.length) {
+    document.getElementById('sentSection').style.display = '';
+    document.getElementById('sentList').innerHTML = outgoing.map(f => {
+      const un = f.friendProfile?.username || 'unknown';
+      return `
+      <div class="sent-card" id="sc-${f.id}">
+        <div class="friend-avatar" style="width:36px;height:36px;font-size:16px;">
+          ${avatarHtml(f.friendProfile, 36, 16)}
+        </div>
+        <div class="friend-info">
+          <div class="friend-username" style="font-size:14px">@${un}</div>
+        </div>
+        <span class="sent-badge">Pending</span>
+        <button class="btn-unfriend" style="margin-left:auto" title="Cancel request" onclick="doCancelRequest('${f.id}')">✕</button>
+      </div>`;
+    }).join('');
+  } else {
+    document.getElementById('sentSection').style.display = 'none';
+  }
+}
+
+const _PIN_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>`;
+const _PIN_SVG_FILLED = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>`;
+
+function _friendCardHTML(f) {
+  const st = _friendStatsMap[f.friendId] || {};
+  const un = f.friendProfile?.username || 'unknown';
+  const displayName = f.friendProfile?.display_name;
+  const showDisplayName = displayName && displayName.toLowerCase() !== un.toLowerCase();
+  const somePinned = !!(_fProfile && _fProfile.pinned_friend_id);
+  const isPinned = somePinned && _fProfile.pinned_friend_id === f.friendId;
+  const pinnedBadge = isPinned ? `<span class="friend-pinned-badge">${_PIN_SVG_FILLED}Pinned</span>` : '';
+  // Only show a pin button if nothing's pinned yet, or on the currently
+  // pinned friend's own card (so it can be clicked to unpin). Other cards
+  // hide theirs until that happens, since only one friend can be pinned.
+  const pinBtn = (!somePinned || isPinned)
+    ? `<button class="btn-pin${isPinned ? ' pinned' : ''}" title="${isPinned ? 'Unpin friend' : 'Pin friend'}" onclick="togglePinFriend('${f.friendId}')">${isPinned ? _PIN_SVG_FILLED : _PIN_SVG}</button>`
+    : '';
+  return `
+  <div class="friend-card${isPinned ? ' is-pinned' : ''}" id="fc-${f.id}" onclick="viewFriend('${f.friendId}','${un}')">
+    <div class="friend-card-top">
+      <div class="friend-avatar">
+        ${avatarHtml(f.friendProfile, 48, 22)}
+      </div>
+      <div class="friend-info">
+        ${showDisplayName
+          ? `<div class="friend-display-name">${displayName}${pinnedBadge}</div><div class="friend-username-sub">@${un}</div>`
+          : `<div class="friend-display-name">@${un}${pinnedBadge}</div>`}
+      </div>
+      <div class="friend-actions" onclick="event.stopPropagation()">
+        ${pinBtn}
+        <button class="btn-unfriend" title="Remove friend" onclick="doUnfriend('${f.id}','${un}')">✕</button>
+      </div>
+    </div>
+    <div class="friend-card-divider"></div>
+    <div class="friend-stats">
+      <span class="friend-stat"><strong>${st.watching||0}</strong>watching</span>
+      <span class="friend-stat"><strong>${st.completed||0}</strong>completed</span>
+      <span class="friend-stat"><strong>${st.queue||0}</strong>in queue</span>
+      ${st.avgScore ? `<span class="friend-stat"><strong>${st.avgScore}</strong>avg score</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderAcceptedFriends() {
+  const accepted = _friendships.filter(f => f.status === 'accepted');
+  const pinnedId = _fProfile && _fProfile.pinned_friend_id;
+
+  const pinned = pinnedId ? accepted.find(f => f.friendId === pinnedId) : null;
+  const rest = accepted.filter(f => f !== pinned);
+
+  rest.sort((a, b) => {
+    const diff = new Date(b.created_at) - new Date(a.created_at); // latest first
+    return _friendsSortOrder === 'earliest' ? -diff : diff;
+  });
+
+  const ordered = pinned ? [pinned, ...rest] : rest;
+  document.getElementById('friendsList').innerHTML = ordered.map(_friendCardHTML).join('');
+}
+
+function setFriendsSort(order) {
+  _friendsSortOrder = order;
+  document.querySelectorAll('#friendsSortBar .sort-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.sort === order);
+  });
+  renderAcceptedFriends();
+}
+
+async function togglePinFriend(friendId) {
+  const wasPinned = _fProfile && _fProfile.pinned_friend_id === friendId;
+  const newPinnedId = wasPinned ? null : friendId;
+  try {
+    await setPinnedFriend(_fUser.id, newPinnedId);
+    _fProfile.pinned_friend_id = newPinnedId;
+    renderAcceptedFriends();
+    showToast(wasPinned ? 'Unpinned.' : 'Friend pinned!');
+  } catch (e) {
+    showToast('Error updating pin.', 'err');
+  }
+}
+
+async function doSendRequest() {
+  const username = document.getElementById('addFriendInput').value.trim().toLowerCase();
+  if (!username) { showToast('Enter a username.', 'err'); return; }
+
+  const btn = document.getElementById('btnSendReq');
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  try {
+    await sendFriendRequest(_fUser.id, username);
+    showToast(`Friend request sent to @${username}!`);
+    document.getElementById('addFriendInput').value = '';
+    await loadFriends();
+  } catch(e) {
+    showToast(e.message || 'Could not send request.', 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send Request';
+  }
+}
+
+async function doAccept(friendshipId) {
+  try {
+    await respondFriendRequest(friendshipId, true);
+    showToast('Friend added!');
+    await loadFriends();
+  } catch(e) { showToast('Error.', 'err'); }
+}
+
+async function doDecline(friendshipId) {
+  try {
+    await respondFriendRequest(friendshipId, false);
+    document.getElementById('pc-' + friendshipId)?.remove();
+    await loadFriends();
+  } catch(e) { showToast('Error.', 'err'); }
+}
+
+async function doUnfriend(friendshipId, username) {
+  const ok = await showConfirm({
+    title: 'Remove friend?',
+    message: `@${username} will be removed from your friends list.`,
+    confirmText: 'Remove',
+    iconName: 'users'
+  });
+  if (!ok) return;
+  try {
+    await removeFriendship(friendshipId);
+    showToast('Removed.');
+    await loadFriends();
+  } catch(e) { showToast('Error.', 'err'); }
+}
+
+async function doCancelRequest(friendshipId) {
+  try {
+    await removeFriendship(friendshipId);
+    await loadFriends();
+  } catch(e) { showToast('Error.', 'err'); }
+}
+
+
+/* ── Live username search dropdown ── */
+let _udTimer = null;
+let _udActive = -1;
+let _udResults = [];
+
+// Create dropdown on body - after DOM ready
+/* dropdown created in HTML */
+
+function _udPosition() {
+  const wrap = document.getElementById('addFriendWrap');
+  const drop  = document.getElementById('udDropdown');
+  if (!wrap || !drop) return;
+  const r = wrap.getBoundingClientRect();
+  drop.style.top    = r.bottom + 'px';
+  drop.style.left   = r.left + 'px';
+  drop.style.width  = r.width + 'px';
+  drop.style.position = 'fixed';
+}
+
+let _udScrollY = 0;
+async function _udSearch(val) {
+  const q = val.trim().toLowerCase();
+  const drop = document.getElementById('udDropdown');
+  clearTimeout(_udTimer);
+  _udActive = -1;
+  if (q.length < 2) { drop.classList.remove('open');
+  document.getElementById('addFriendWrap')?.classList.remove('dd-connected-active');
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.body.style.top = '';
+  window.scrollTo(0, _udScrollY || 0);
+  return; }
+  _udPosition();
+  drop.innerHTML = '<div class="ud-loading">Searching…</div>';
+  drop.classList.add('open');
+  document.getElementById('addFriendWrap')?.classList.add('dd-connected-active');
+  _udScrollY = window.scrollY;
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
+  document.body.style.top = '-' + _udScrollY + 'px';
+  _udTimer = setTimeout(async () => {
+    try {
+      const { data } = await sb.from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .ilike('username', q + '%')
+        .neq('id', _fUser?.id || '')
+        .limit(10);
+      _udResults = data || [];
+      if (!_udResults.length) {
+        drop.innerHTML = '<div class="ud-empty">No users found</div>';
+        return;
+      }
+      drop.innerHTML = _udResults.map((p, i) => {
+        const initial = (p.username[0] || '?').toUpperCase();
+        const avatarHTML = p.avatar_url
+          ? '<div class="ud-avatar"><img src="' + p.avatar_url + '" loading="lazy"></div>'
+          : '<div class="ud-avatar">' + initial + '</div>';
+        const reg = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        const highlighted = p.username.replace(reg, '<em>$1</em>');
+        const display = p.display_name && p.display_name !== p.username ? p.display_name : '';
+        return '<div class="ud-item" data-i="' + i + '" onmousedown="_udSelect(\'' + p.username + '\',\'' + p.id + '\')'  + '">'
+          + avatarHTML
+          + '<div class="ud-info"><div class="ud-username">@' + highlighted + '</div>'
+          + (display ? '<div class="ud-display">' + display + '</div>' : '')
+          + '</div></div>';
+      }).join('');
+    } catch(e) {
+      drop.innerHTML = '<div class="ud-empty">Error searching</div>';
+    }
+  }, 250);
+}
+
+let _udSelectedId = null, _udSelectedUsername = null;
+
+function _udSelect(username, userId) {
+  // Store selection first
+  _udSelectedId = userId;
+  _udSelectedUsername = username;
+  // Fill input (won't trigger oninput since we set vars above)
+  document.getElementById('addFriendInput').value = username;
+  // Close dropdown
+  document.getElementById('udDropdown').classList.remove('open');
+  document.getElementById('addFriendWrap')?.classList.remove('dd-connected-active');
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.body.style.top = '';
+  window.scrollTo(0, _udScrollY || 0);
+
+  _udResults = []; _udActive = -1;
+}
+
+function _udClearSelected() {
+  _udSelectedId = null;
+  _udSelectedUsername = null;
+}
+
+async function _udViewProfile() {
+  const input = document.getElementById('addFriendInput').value.trim();
+  if (!input) { showToast('Enter or select a username first.', 'err'); return; }
+
+  if (_udSelectedId) {
+    // Selected from dropdown - go directly
+    sessionStorage.setItem('viewProfileId', _udSelectedId);
+    sessionStorage.setItem('viewProfileUsername', _udSelectedUsername);
+    window.location.href = 'profile-view.html';
+  } else {
+    // Typed manually - look up by username
+    try {
+      const { data } = await sb.from('profiles').select('id,username').ilike('username', input).limit(1);
+      if (!data || !data.length) { showToast('User not found.', 'err'); return; }
+      sessionStorage.setItem('viewProfileId', data[0].id);
+      sessionStorage.setItem('viewProfileUsername', data[0].username);
+      window.location.href = 'profile-view.html';
+    } catch(e) { showToast('Error finding user.', 'err'); }
+  }
+}
+
+function _udKeydown(e) {
+  const drop = document.getElementById('udDropdown');
+  const items = drop.querySelectorAll('.ud-item');
+  if (!drop.classList.contains('open') || !items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _udActive = Math.min(_udActive + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('ud-active', i === _udActive));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _udActive = Math.max(_udActive - 1, -1);
+    items.forEach((el, i) => el.classList.toggle('ud-active', i === _udActive));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_udActive >= 0 && _udResults[_udActive]) {
+      _udSelect(_udResults[_udActive].username, _udResults[_udActive].id);
+    }
+  } else if (e.key === 'Escape') {
+    drop.classList.remove('open'); _udActive = -1;
+    document.getElementById('addFriendWrap')?.classList.remove('dd-connected-active');
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.top = '';
+    window.scrollTo(0, _udScrollY || 0);
+  }
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.add-friend-input-wrap') && !e.target.closest('#udDropdown')) {
+    document.getElementById('udDropdown')?.classList.remove('open');
+    document.getElementById('addFriendWrap')?.classList.remove('dd-connected-active');
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.body.style.top = '';
+  window.scrollTo(0, _udScrollY || 0);
+
+    _udActive = -1;
+  }
+});
+
+window.addEventListener('scroll', _udPosition, { passive: true });
+window.addEventListener('resize', _udPosition, { passive: true });
+
+function viewFriend(userId, username) {
+  sessionStorage.setItem('viewProfileId', userId);
+  sessionStorage.setItem('viewProfileUsername', username);
+  window.location.href = 'profile-view.html';
+}
+
+/* ── Mini Profile ── */
+let _mpUserId = null, _mpFriendship = null, _mpProfile = null;
+
+async function openMiniProfile(userId, username) {
+  _mpUserId = userId;
+  document.getElementById('miniProfileOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Reset state
+  document.getElementById('mpAvatar').innerHTML = '?';
+  document.getElementById('mpUsername').textContent = '@' + username;
+  document.getElementById('mpBio').style.display = 'none';
+  document.getElementById('mpQuote').style.display = 'none';
+  document.getElementById('mpStats').innerHTML = '<div style="font-size:12px;color:var(--text-3)">Loading…</div>';
+  document.getElementById('mpBtns').innerHTML = '';
+  document.getElementById('mpTopPicks').style.display = 'none';
+
+  try {
+    // Load profile + entries + friendship in parallel
+    const [profile, entries, friendships] = await Promise.all([
+      getProfile(userId),
+      getPublicEntries(userId),
+      _fUser ? getFriendships(_fUser.id) : Promise.resolve([]),
+    ]);
+
+    _mpProfile = profile;
+    _mpFriendship = friendships.find(f => f.friendId === userId) || null;
+
+    // Avatar
+    const av = document.getElementById('mpAvatar');
+    const un = profile?.username || username;
+    if (profile?.avatar_url) {
+      av.innerHTML = '<img src="'+profile.avatar_url+'" alt="">';
+    } else {
+      av.textContent = (un[0]||'?').toUpperCase();
+    }
+    document.getElementById('mpUsername').textContent = '@' + un;
+
+    if (profile?.bio) {
+      const bio = document.getElementById('mpBio');
+      bio.textContent = profile.bio; bio.style.display = '';
+    }
+    if (profile?.quote) {
+      const q = document.getElementById('mpQuote');
+      q.textContent = profile.quote; q.style.display = '';
+    }
+
+    // Stats
+    const st = computeStats(entries);
+    document.getElementById('mpStats').innerHTML =
+      '<div class="mp-stat"><div class="mp-stat-num">'+st.total+'</div><div class="mp-stat-label">Items</div></div>'
+      +'<div class="mp-stat"><div class="mp-stat-num">'+st.completed+'</div><div class="mp-stat-label">Watched</div></div>'
+      +'<div class="mp-stat"><div class="mp-stat-num">'+(st.avgScore||'—')+'</div><div class="mp-stat-label">Avg Score</div></div>';
+
+    // Friend button
+    _mpRenderBtn();
+
+    // Top picks grid
+    const top5 = [...entries].filter(e=>e.status==='completed'||e.status==='ongoing')
+      .sort((a,b)=>(liveScore(b)||0)-(liveScore(a)||0)).slice(0,5);
+    if (top5.length) {
+      document.getElementById('mpPicksGrid').innerHTML = top5.map(e =>
+        '<div class="mp-pick-card">'
+        + (e.poster_url ? '<img src="'+e.poster_url+'" loading="lazy">' : '<div class="mp-pick-letter">'+(e.title[0]||'?')+'</div>')
+        + '<div class="mp-pick-overlay"></div>'
+        + '<div class="mp-pick-title">'+e.title+'</div>'
+        + '</div>'
+      ).join('');
+      document.getElementById('mpTopPicks').style.display = '';
+    }
+  } catch(err) {
+    console.error('Mini profile error:', err);
+    document.getElementById('mpStats').innerHTML = '<div style="font-size:12px;color:var(--text-3)">Error loading profile</div>';
+  }
+}
+
+function _mpRenderBtn() {
+  const f = _mpFriendship;
+  const isMe = _fUser && _mpUserId === _fUser.id;
+  let html = '';
+  if (isMe) {
+    html = '<a href="profile.html" class="mp-btn-view">View My Profile</a>';
+  } else if (!_fUser) {
+    html = '<a href="login.html" class="mp-btn-add">Sign in to Follow</a>';
+  } else if (!f) {
+    html = '<button class="mp-btn-add" onclick="mpSendRequest()">+ Follow</button>';
+  } else if (f.status === 'accepted') {
+    html = '<button class="mp-btn-friends" onclick="mpUnfriend()" title="Click to unfriend">✓ Friends</button>';
+  } else if (f.status === 'pending' && f.iRequested) {
+    html = '<button class="mp-btn-pending" onclick="mpCancelRequest()">Requested ✕</button>';
+  } else if (f.status === 'pending' && !f.iRequested) {
+    html = '<button class="mp-accept" onclick="mpAccept()">Accept</button><button class="mp-decline" onclick="mpDecline()">Decline</button>';
+  }
+  html += '<button class="mp-btn-view" onclick="mpViewFullProfile()">View Profile →</button>';
+  document.getElementById('mpBtns').innerHTML = html;
+}
+
+async function mpSendRequest() {
+  if (!_mpProfile?.username) return;
+  try {
+    await sendFriendRequest(_fUser.id, _mpProfile.username);
+    showToast('Friend request sent!');
+    const f = await getFriendships(_fUser.id);
+    _mpFriendship = f.find(x => x.friendId === _mpUserId) || null;
+    _mpRenderBtn();
+    _loadFriendships();
+  } catch(e) { showToast(e.message||'Error', 'err'); }
+}
+
+async function mpCancelRequest() {
+  if (!_mpFriendship) return;
+  await removeFriendship(_mpFriendship.id);
+  _mpFriendship = null; _mpRenderBtn();
+  showToast('Request cancelled');
+  _loadFriendships();
+}
+
+async function mpUnfriend() {
+  if (!_mpFriendship) return;
+  const ok = await showConfirm({title:'Remove friend?',message:'Remove from your friends?',confirmText:'Unfriend',iconName:'users'});
+  if (!ok) return;
+  await removeFriendship(_mpFriendship.id);
+  _mpFriendship = null; _mpRenderBtn();
+  showToast('Removed from friends');
+  _loadFriendships();
+}
+
+async function mpAccept() {
+  if (!_mpFriendship) return;
+  await respondFriendRequest(_mpFriendship.id, true);
+  const f = await getFriendships(_fUser.id);
+  _mpFriendship = f.find(x => x.friendId === _mpUserId) || null;
+  _mpRenderBtn();
+  showToast('Now friends!');
+  _loadFriendships();
+}
+
+async function mpDecline() {
+  if (!_mpFriendship) return;
+  await respondFriendRequest(_mpFriendship.id, false);
+  _mpFriendship = null; _mpRenderBtn();
+  _loadFriendships();
+}
+
+function mpViewFullProfile() {
+  sessionStorage.setItem('viewProfileId', _mpUserId);
+  sessionStorage.setItem('viewProfileUsername', _mpProfile?.username||'');
+  window.location.href = 'profile-view.html';
+}
+
+function closeMiniProfile() {
+  document.getElementById('miniProfileOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Escape' && document.getElementById('miniProfileOverlay')?.classList.contains('open')) closeMiniProfile(); });
+
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+
+<div id="miniProfileOverlay" onclick="if(event.target===this)closeMiniProfile()">
+  <div id="miniProfileCard">
+    <div class="mp-header">
+      <button class="mp-close" onclick="closeMiniProfile()">✕</button>
+      <div class="mp-avatar" id="mpAvatar">?</div>
+      <div class="mp-username" id="mpUsername"></div>
+      <div class="mp-bio" id="mpBio" style="display:none"></div>
+      <div class="mp-quote" id="mpQuote" style="display:none"></div>
+      <div class="mp-stats" id="mpStats"></div>
+      <div class="mp-btns" id="mpBtns"></div>
+    </div>
+    <div class="mp-top-picks" id="mpTopPicks" style="display:none">
+      <div class="mp-picks-label">Top Rated</div>
+      <div class="mp-picks-grid" id="mpPicksGrid"></div>
+    </div>
+  </div>
+</div>
+<div id="udDropdown" class="username-dropdown"></div>
+</body>
+</html>

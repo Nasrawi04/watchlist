@@ -1,0 +1,2691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Library — MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>@media(max-width:400px) {
+  .prof-header { padding:.85rem 0; }
+  .prof-header-top { flex-direction:column; align-items:center; gap:.5rem; margin-bottom:10px; }
+  .prof-header-info { align-items:center; text-align:center; width:100%; }
+  .prof-avatar { width:78px; height:78px; font-size:30px; }
+  .prof-username { font-size:27px; }
+  .prof-displayname { font-size:13px; }
+  .prof-stat-box-num { font-size:15px; }
+  .prof-stat-box { padding:.3rem .35rem; min-width:0; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:.5px; }
+  .prof-header-actions { gap:6px; }
+}
+
+/* Friend request button states */
+
+
+
+
+
+
+
+
+
+
+
+.pv-library-btn {
+  padding:8px 20px; border-radius:var(--radius-sm);
+  border:0.5px solid var(--border-olive); background:transparent;
+  color:var(--olive-light); font-size:12px; font-weight:500; cursor:pointer;
+  transition:background .15s;
+}
+
+.pv-library-btn:hover { background:var(--olive-faint); }
+
+/* Tab bar — same as profile.html */
+.pv-tabs {
+  display:flex; border-bottom:0.5px solid var(--border);
+  position:sticky; top:120px; z-index:200;
+  background:var(--bg);
+  margin-left:calc(-50vw + 50%);
+  width:100vw;
+}
+
+/* pv-tabs gap handled by background */
+
+@media(max-width:640px) {
+          }
+
+.pv-tab {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  padding:12px 0; cursor:pointer; border-bottom:2px solid transparent;
+  color:var(--text-3); transition:all .15s; gap:5px;
+}
+
+.pv-tab svg { width:18px; height:18px; flex-shrink:0; }
+
+.pv-tab.active { color:var(--olive-light); border-bottom-color:var(--olive-light); }
+
+.pv-tab:hover { color:var(--text); }
+
+.pv-tab-label { display:none; }
+
+@media(min-width:640px){.prof-tab-label{display:inline;font-size:11px;letter-spacing:.3px;}}
+
+.pv-panel { display:none; padding-top:2rem; }
+
+.pv-panel.active { display:block; }
+
+/* Grid cards */
+.pv-grid {
+  display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:2rem;
+}
+
+@media(max-width:900px) { .pv-grid { grid-template-columns:repeat(4,1fr); } }
+
+.pv-card {
+  position:relative; border-radius:var(--radius); overflow:hidden;
+  background:var(--card); border:0.5px solid var(--border);
+  cursor:pointer; transition:transform .15s; aspect-ratio:2/3;
+}
+
+.pv-card:hover { transform:scale(1.02); }
+
+.pv-card-poster { width:100%; height:100%; object-fit:cover; display:block; }
+
+.pv-card-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,.85) 0%,transparent 50%); }
+
+.pv-card-info { position:absolute; bottom:0; left:0; right:0; padding:8px; }
+
+.pv-card-title { font-size:10px; font-weight:600; color:#fff; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.pv-card-score { font-family:var(--serif); font-size:12px; color:var(--olive-light); }
+
+.pv-card-rank { position:absolute; top:6px; left:6px; background:var(--bg-2); color:var(--olive-light); font-family:var(--serif); font-size:11px; padding:1px 5px; border-radius:var(--radius-xs); }
+
+.pv-card-letter { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:32px; color:var(--olive-light); background:var(--olive-faint); }
+
+.pv-section { margin-bottom:2.5rem; }
+
+
+
+.pv-eyebrow { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; }
+
+.pv-title { font-family:var(--serif); font-size:22px; font-weight:300; margin-bottom:1rem; }
+
+.pv-empty { text-align:center; padding:2rem; color:var(--text-3); font-size:13px; }
+
+/* Notes tab */
+.note-row{display:flex;gap:20px;align-items:flex-start;padding:20px 24px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;cursor:pointer;transition:all var(--trans) var(--ease);}
+.note-row:hover{border-color:var(--border-olive);background:var(--card-2);}
+
+.note-poster{width:84px;height:120px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:24px;color:var(--olive-light);overflow:hidden;}
+
+.note-poster img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);}
+
+.note-body{flex:1;min-width:0;}
+
+.note-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.note-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:4px;}
+.note-date{font-size:11px;color:var(--text-3);white-space:nowrap;}
+
+.note-text{font-size:13px;color:var(--text-2);font-style:italic;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:6px;}
+
+.note-score{font-family:var(--serif);font-size:24px;color:var(--olive-light);flex-shrink:0;line-height:1;}
+
+.note-popup-overlay{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
+
+.note-popup-overlay.open{opacity:1;pointer-events:auto;}
+
+.note-popup{width:100%;max-width:480px;background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);overflow:hidden;transform:scale(.96);transition:transform .22s cubic-bezier(0.4,0,0.2,1);max-height:85vh;overflow-y:auto;overscroll-behavior-y:contain;position:relative;}
+
+.note-popup-overlay.open .note-popup{transform:scale(1);}
+
+.note-popup-poster{width:100%;height:200px;object-fit:cover;display:block;}
+
+.note-popup-poster-ph{width:100%;height:160px;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:56px;color:var(--olive-light);}
+
+.note-popup-body{padding:1.25rem 1.5rem 1.5rem;}
+
+.note-popup-title{font-family:var(--serif);font-size:22px;font-weight:300;margin-bottom:4px;}
+
+.note-popup-meta{font-size:11px;color:var(--text-3);margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+.note-popup-score{font-family:var(--serif);font-size:18px;color:var(--olive-light);}
+
+.note-popup-divider{border:none;border-top:0.5px solid var(--border);margin:12px 0;}
+
+.note-popup-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px;}
+
+.note-popup-text{font-size:13px;color:var(--text-2);font-style:italic;line-height:1.65;}
+
+.note-popup-close{position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.5);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:2;}
+
+/* ── Mobile tab select ── */
+.prof-tab-select {
+  display:none;
+  width:100%;
+  padding:11px 14px;
+  font-family:var(--sans,Inter,sans-serif);
+  font-size:14px;
+  color:var(--text);
+  background:var(--bg);
+  border:none;
+  border-bottom:2px solid var(--olive-light);
+  border-radius:0;
+  cursor:pointer;
+  outline:none;
+  -webkit-appearance:none;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 14px center;
+  padding-right:36px;
+}
+
+/* ── Library tab: friend-view styles ── */
+.fv-watch-list{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none;}
+
+.fv-watch-list::-webkit-scrollbar{display:none;}
+
+.fv-w-card{display:flex;align-items:center;gap:20px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;min-height:160px;box-sizing:border-box;}
+
+.fv-w-poster{width:84px;height:120px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);position:relative;}
+
+.fv-w-poster img{width:100%;height:100%;object-fit:cover}
+
+.fv-w-body{flex:1;min-width:0}
+
+.fv-w-title{font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+
+.fv-w-genre{font-size:12px;color:var(--text-3);margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap}
+
+.fv-w-ep{margin-bottom:7px;display:flex;align-items:center;gap:10px}
+
+.fv-w-ep-badge{padding:3px 10px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);font-size:11px;font-weight:500}
+@media(max-width:640px){.fv-w-ep-badge{font-size:9px;padding:2px 7px;}}
+@media(max-width:400px){.fv-w-ep-badge{font-size:8px;padding:1px 5px;}}
+
+.fv-w-prog-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+[data-theme="light"] .fv-w-prog-track{background:rgba(0,0,0,0.16)}
+
+.fv-w-prog-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .5s var(--ease)}
+
+.fv-w-prog-label{font-size:10px;color:var(--text-3);margin-top:4px}
+
+.fv-w-score{font-family:var(--serif);font-size:24px;color:var(--olive-light);flex-shrink:0}
+
+.fv-ranked-list{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none;}
+
+.fv-ranked-list::-webkit-scrollbar{display:none;}
+
+.fv-rank-row{display:flex;align-items:center;gap:20px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;min-height:160px;overflow:hidden;box-sizing:border-box;cursor:pointer;transition:border-color var(--trans) var(--ease),background var(--trans) var(--ease);}
+
+.fv-rank-row:hover{border-color:var(--border-olive);background:var(--card-2);}
+
+.fv-rank-num{font-family:var(--serif);font-size:26px;font-weight:300;color:var(--text-2);text-align:center;min-width:44px;flex-shrink:0}
+
+.fv-rank-num.top3{color:var(--olive-light)}
+
+.fv-rank-poster{width:84px;height:120px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+
+.fv-rank-poster img{width:100%;height:100%;object-fit:cover}
+
+.fv-rank-info{flex:1;min-width:0}
+
+.fv-rank-title{font-size:18px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden;}
+
+.fv-rank-meta{font-size:12px;color:var(--text-3);margin-top:6px}
+
+.fv-rank-score{font-family:var(--serif);font-size:32px;font-weight:300;color:var(--olive-light);text-align:right;flex-shrink:0}
+
+.fv-entry-block{display:flex;flex-direction:column;}
+
+.fv-queue-no-hover{pointer-events:none;cursor:default;}
+
+.lib-section{margin-bottom:2.5rem;}
+
+.lib-section-hd{display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);}
+
+/* ── Profile entry popup (matches completed page) ── */
+#profPopupOverlay, #pvPopupOverlay {
+  position:fixed;inset:0;z-index:1100;
+  background:rgba(0,0,0,0.72);
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;box-sizing:border-box;
+  opacity:0;transition:opacity 220ms var(--ease);
+  pointer-events:none;
+}
+
+#profPopupCard, #pvPopupCard {
+  background:var(--bg-2);border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
+  width:100%;max-width:min(97vw, 760px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
+  box-sizing:border-box;
+  transform:translateY(18px);transition:transform 260ms var(--ease);
+}
+
+@media(max-width:600px) {
+  #profPopupCard, #pvPopupCard { max-height:88dvh; }
+}
+
+/* ── Favorites slots ── */
+.fav-slots{display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem;}
+
+.fav-slot{display:flex;align-items:center;gap:16px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;min-height:90px;}
+
+.fav-slot-num{font-family:var(--serif);font-size:28px;font-weight:300;color:var(--text-3);min-width:32px;text-align:center;flex-shrink:0;}
+
+.fav-slot.filled .fav-slot-num{color:var(--olive-light);}
+
+.fav-slot-poster{width:48px;height:68px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:20px;color:var(--text-3);}
+
+.fav-slot-poster img{width:100%;height:100%;object-fit:cover;}
+
+.fav-slot-info{flex:1;min-width:0;}
+
+.fav-slot-title{font-size:15px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.fav-slot-meta{font-size:11px;color:var(--text-3);margin-top:3px;}
+
+.fav-slot-empty{font-size:13px;color:var(--text-3);font-style:italic;}
+
+.fav-slot-score{font-family:var(--serif);font-size:20px;color:var(--olive-light);flex-shrink:0;}
+
+.fav-edit-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);border:0.5px solid var(--border-olive);background:transparent;color:var(--olive-light);font-size:12px;cursor:pointer;transition:background .15s;}
+
+.fav-edit-btn:hover{background:var(--olive-faint);}
+
+/* ── Fav Picker ── */
+#favPickerOverlay{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.65);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;pointer-events:none;transition:opacity .22s;}
+
+#favPickerOverlay.open{opacity:1;pointer-events:auto;}
+
+#favPickerSheet{width:100%;max-width:540px;background:var(--bg-2);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);box-shadow:4px 4px 0 var(--olive);transform:translateY(16px);transition:transform .26s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;max-height:85dvh;}
+
+#favPickerOverlay.open #favPickerSheet{transform:translateY(0);}
+
+.fav-picker-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border);flex-shrink:0;}
+
+.fav-picker-title{font-family:var(--serif);font-size:18px;font-weight:300;}
+
+.fav-picker-count{font-size:11px;color:var(--text-3);margin-left:8px;}
+
+.fav-picker-close{background:none;border:none;color:var(--text-3);font-size:20px;cursor:pointer;}
+
+.fav-picker-list{overflow-y:auto;overscroll-behavior-y:contain;flex:1;padding:8px 0;}
+
+.fav-picker-item{display:flex;align-items:center;gap:16px;padding:14px 20px;cursor:pointer;transition:background .12s;border-bottom:0.5px solid var(--border);}
+
+.fav-picker-item:hover{background:var(--olive-faint);}
+
+.fav-picker-item.selected{background:var(--olive-faint);}
+
+.fav-picker-poster{width:52px;height:72px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;font-family:var(--sans) !important;font-size:20px;color:var(--text-3);position:relative;}
+
+.fav-picker-poster img{width:100%;height:100%;object-fit:cover;}
+
+.fav-picker-info{flex:1;min-width:0;}
+
+.fav-picker-name{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.fav-picker-sub{font-size:12px;color:var(--text-3);margin-top:3px;}
+
+.fav-picker-score{font-family:var(--serif);font-size:20px;color:var(--olive-light);flex-shrink:0;}
+
+.fav-picker-check{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;}
+
+.fav-picker-item.selected .fav-picker-check{background:var(--olive-light);border-color:var(--olive-light);color:#fff;}
+
+
+
+.fav-picker-footer{padding:12px 20px;border-top:0.5px solid var(--border);display:flex;gap:10px;flex-shrink:0;}
+
+.fav-picker-save{flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:14px;font-weight:500;cursor:pointer;}
+
+.fav-picker-cancel{padding:11px 20px;border-radius:var(--radius-sm);background:transparent;color:var(--text-2);border:0.5px solid var(--border-2);font-size:14px;cursor:pointer;}
+
+
+/* ── Recommended slots (same as fav-slot) ── */
+.rec-section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.rec-slot-item{cursor:pointer;transition:border-color .15s;}
+.rec-slot-item:hover{border-color:var(--border-olive);}
+
+/* ── Favorite Sections popup ── */
+#favSecOverlay, #pvFavSecOverlay {
+  position:fixed;inset:0;z-index:910;
+  background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;box-sizing:border-box;
+  opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;
+}
+#favSecOverlay.open, #pvFavSecOverlay.open { opacity:1;pointer-events:auto; }
+#favSecCard, #pvFavSecCard {
+  background:var(--bg-2);border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
+  width:97%;max-width:900px;max-height:88dvh;overflow-y:auto;overscroll-behavior-y:contain;
+  box-sizing:border-box;
+  transform:translateY(18px);transition:transform 260ms var(--ease);
+}
+#favSecOverlay.open #favSecCard,
+#pvFavSecOverlay.open #pvFavSecCard { transform:translateY(0); }
+.favsec-hd {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:22px 28px;border-bottom:0.5px solid var(--border);
+  position:sticky;top:0;background:var(--bg-2);z-index:2;
+}
+.favsec-title {
+  font-family:var(--serif);font-size:26px;font-weight:300;color:var(--text);
+}
+.favsec-close {
+  background:none;border:none;color:var(--text-3);cursor:pointer;
+  font-size:26px;line-height:1;padding:0 0 2px 12px;
+  transition:color .15s;flex-shrink:0;
+}
+.favsec-close:hover { color:var(--text); }
+.favsec-grid {
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:16px;padding:22px 28px 28px;
+}
+.favsec-grid .q-card { min-width:0; }
+.favsec-grid .q-info { padding:8px 10px 28px; }
+.favsec-grid .q-title { font-size:13px;line-height:1.35; }
+.favsec-grid .q-genre { font-size:10px; }
+@media(max-width:700px) {
+  .favsec-grid { grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 18px 20px; }
+  .favsec-hd { padding:18px 20px; }
+  .favsec-title { font-size:22px; }
+}
+@media(max-width:400px) {
+  .favsec-grid { grid-template-columns:repeat(2,1fr);gap:10px; }
+  .favsec-title { font-size:19px; }
+}
+
+/* ── Favorite Sections row in overview ── */
+.favsec-row {
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+  margin-top:1rem;
+}
+.favsec-row-card {
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  cursor:pointer;border-radius:var(--radius-sm);
+  padding:10px 8px;border:0.5px solid var(--border);
+  background:var(--card);transition:border-color .15s;
+  text-align:center;
+}
+.favsec-row-card:hover { border-color:var(--border-olive); }
+.favsec-row-poster {
+  width:100%;aspect-ratio:0.67;border-radius:var(--radius-xs);
+  overflow:hidden;background:var(--bg-3);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-size:22px;color:var(--text-3);
+}
+.favsec-row-poster img { width:100%;height:100%;object-fit:cover; }
+.favsec-row-cat {
+  font-size:9px;text-transform:uppercase;letter-spacing:1px;
+  color:var(--olive-light);font-weight:600;
+}
+.favsec-row-title {
+  font-size:11px;color:var(--text);line-height:1.3;
+  overflow:hidden;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+@media(max-width:640px) {
+  .favsec-row { gap:7px; }
+  .favsec-row-title { font-size:10px; }
+  .favsec-row-cat { font-size:8px; }
+  .favsec-row-card { padding:8px 6px; }
+}
+@media(max-width:400px) {
+  .favsec-row-title { font-size:9px; }
+  .favsec-row-card { padding:6px 5px; }
+}
+/* ── Export cards ── */
+.export-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
+
+.export-card{background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:1.25rem;cursor:pointer;transition:transform 150ms,box-shadow 150ms,background 200ms;display:flex;flex-direction:column;gap:8px;}
+
+.export-card:hover{background:var(--olive-faint);}
+
+.export-card:active{transform:translate(4px,4px);box-shadow:none;}
+
+.export-card-icon{display:flex;align-items:center;color:var(--olive-light);}
+
+.export-card-icon svg{width:28px;height:28px;stroke-width:1.5;}
+
+.export-card-title{font-size:14px;font-weight:600;color:var(--text);}
+.export-card-desc{font-size:12px;color:var(--text-2);line-height:1.4;}
+
+.export-card-desc{font-size:11px;color:var(--text-2);line-height:1.5;}
+
+.export-overlay{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:20px;}
+
+.export-overlay.open{display:flex;}
+
+.export-popup{background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:5px 5px 0 var(--olive);border-radius:var(--radius-lg);padding:2rem 1.75rem;max-width:360px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;}
+
+.export-popup-icon{color:var(--olive-light);}
+
+.export-popup-icon svg{width:44px;height:44px;stroke-width:1.5;}
+
+.export-popup-title{font-family:var(--serif);font-size:26px;font-weight:300;color:var(--text);}
+
+.export-popup-desc{font-size:13px;color:var(--text-2);line-height:1.6;max-width:260px;}
+
+.export-theme-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 14px;background:var(--bg-2);border:0.5px solid var(--border-2);border-radius:var(--radius-sm);}
+
+.export-theme-label{font-size:12px;color:var(--text-2);font-weight:500;}
+
+.export-theme-btns{display:flex;gap:4px;}
+
+.eth-btn{padding:5px 14px;border-radius:var(--radius-xs);font-size:12px;font-weight:500;border:1px solid var(--border-2);background:transparent;color:var(--text-3);cursor:pointer;transition:all .15s;}
+
+.eth-btn.active{background:var(--olive);border-color:var(--olive-light);color:#fff;}
+
+.export-popup-actions{display:flex;gap:10px;width:100%;margin-top:6px;}
+
+.export-popup-cancel{flex:1;padding:11px;background:transparent;border:1.5px solid var(--border-2);border-radius:var(--radius-sm);color:var(--text-2);font-size:13px;font-weight:500;cursor:pointer;}
+
+.export-popup-confirm{flex:2;padding:11px;background:var(--olive);border:1.5px solid var(--olive-light);box-shadow:3px 3px 0 var(--olive-2);border-radius:var(--radius-sm);color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+
+.export-popup-confirm:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ── Profile tab & panel (uses prof- prefix) ── */
+.prof-tabs {
+  display:flex; border-bottom:0.5px solid var(--border);
+  position:sticky; top:120px; z-index:200;
+  background:var(--bg); margin-left:calc(-50vw + 50%); width:100vw;
+}
+
+
+.prof-tab{flex:1;display:flex;align-items:center;justify-content:center;padding:12px 0;cursor:pointer;border-bottom:2px solid transparent;color:var(--text-3);transition:all .15s;gap:5px;}
+
+.prof-tab svg{width:18px;height:18px;flex-shrink:0;}
+
+.prof-tab.active{color:var(--olive-light);border-bottom-color:var(--olive-light);}
+
+.prof-tab:hover{color:var(--text);}
+
+.prof-tab-label{display:none;}
+
+.prof-panel{display:none;padding-top:2rem;}
+
+.prof-panel.active{display:block;}
+
+.fv-w-card-no-hover{cursor:default;}
+
+/* ── Comments popup (same as category page) ── */
+#libCommentsOverlay {
+  position:fixed;inset:0;z-index:1200;
+  background:rgba(0,0,0,0.72);
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;box-sizing:border-box;
+  opacity:0;transition:opacity 220ms var(--ease);
+  pointer-events:none;
+}
+
+#libCommentsCard {
+  background:var(--bg-2);border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
+  width:100%;max-width:640px;max-height:90dvh;
+  position:relative;box-sizing:border-box;
+  display:flex;flex-direction:column;
+  transform:translateY(18px);transition:transform 260ms var(--ease);
+}
+
+/* pv-friend-btn styling */
+
+
+
+
+
+
+
+
+
+
+
+@media(max-width:640px) {
+  
+  
+  
+  
+  
+}
+
+
+/* ══ Profile Header — Instagram style ══ */
+.prof-header {
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:0;
+  padding:1.75rem 0 1.5rem;
+  position:relative;
+  margin-bottom:1.5rem;
+}
+.prof-header::after {
+  content:'';
+  position:absolute;
+  bottom:0;
+  left:calc(-50vw + 50%);
+  width:100vw;
+  height:0.5px;
+  background:var(--border);
+}
+/* Top row: avatar left + info right */
+.prof-header-top {
+  display:flex;
+  flex-direction:row;
+  align-items:flex-start;
+  gap:1.5rem;
+  margin-bottom:14px;
+}
+.prof-avatar {
+  width:110px; height:110px; border-radius:50%; flex-shrink:0;
+  background:var(--olive-faint); border:2.5px solid var(--olive-light);
+  font-family:var(--serif); font-size:44px; color:var(--olive-light);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.prof-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.prof-header-info {
+  flex:1; min-width:0;
+  display:flex; flex-direction:column; justify-content:center;
+  padding-top:4px;
+}
+.prof-username {
+  font-family:var(--serif); font-size:30px; font-weight:600;
+  color:var(--text); line-height:1.1; margin-bottom:5px;
+}
+.prof-displayname { font-size:15px; color:var(--text-2); margin-bottom:10px; font-weight:400; }
+.prof-bio { font-size:14px; color:var(--text); line-height:1.6; margin-bottom:8px; }
+.prof-quote {
+  font-family:var(--sans); font-style:italic;
+  font-size:14px; font-weight:400; color:var(--text-2);
+  padding-left:14px; border-left:3px solid var(--olive-light);
+  margin-bottom:0; line-height:1.6;
+}
+/* Stat boxes — full width below avatar+info */
+.prof-stat-boxes {
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:6px;
+}
+.prof-stat-box {
+  background:var(--card); border:0.5px solid var(--border-olive); border-radius:var(--radius);
+  padding:.5rem .6rem; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  transition:border-color var(--trans) var(--ease);
+  grid-column:span 2; min-width:0; overflow:hidden;
+}
+.prof-stat-box:nth-child(4),
+.prof-stat-box:nth-child(5) { grid-column:span 3; }
+.prof-stat-box:hover { border-color:var(--border-olive); }
+.prof-stat-box-num { font-family:var(--serif); font-size:22px; font-weight:300; color:var(--olive-light); line-height:1.15; text-align:center; }
+.prof-stat-box-label { font-size:8px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; margin-top:3px; white-space:nowrap; text-align:center; }
+/* Action buttons — full width, centered */
+.prof-header-actions {
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  justify-content:center; padding-top:10px; width:100%;
+}
+.prof-edit-btn {
+  padding:7px 18px; border-radius:var(--radius-sm);
+  border:0.5px solid var(--border-olive); background:transparent;
+  color:var(--olive-light); font-size:12px; font-weight:500; cursor:pointer;
+  text-decoration:none; display:inline-block; transition:background .15s;
+}
+.prof-edit-btn:hover { background:var(--olive-faint); }
+.prof-share-btn {
+  padding:7px 18px; border-radius:var(--radius-sm);
+  border:0.5px solid var(--border-2); background:transparent;
+  color:var(--text-2); font-size:12px; font-weight:500; cursor:pointer;
+  display:inline-flex; align-items:center; gap:5px; transition:all .15s;
+}
+.prof-share-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
+/* Share popup */
+.prof-share-popup {
+  position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,0.72);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity .2s var(--ease);
+}
+.prof-share-popup.open { opacity:1; pointer-events:auto; }
+.prof-share-card {
+  background:var(--bg-2); border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg);
+  padding:24px; width:100%; max-width:400px;
+  transform:translateY(16px); transition:transform .24s var(--ease);
+}
+.prof-share-popup.open .prof-share-card { transform:translateY(0); }
+.prof-share-title { font-family:var(--serif); font-size:20px; font-weight:300; margin-bottom:6px; }
+.prof-share-sub { font-size:12px; color:var(--text-3); margin-bottom:16px; }
+.prof-share-link {
+  display:flex; align-items:center; gap:8px;
+  background:var(--bg-3); border:0.5px solid var(--border-2);
+  border-radius:var(--radius-sm); padding:10px 14px;
+  font-size:12px; color:var(--text-2); word-break:break-all;
+  cursor:pointer; transition:border-color .15s; margin-bottom:14px;
+}
+.prof-share-link:hover { border-color:var(--border-olive); }
+.prof-share-link svg { flex-shrink:0; }
+.prof-share-actions { display:flex; gap:8px; }
+.prof-share-copy { flex:1; padding:10px; background:var(--olive); border:none; color:#fff; border-radius:var(--radius-sm); font-size:13px; font-weight:500; cursor:pointer; }
+.prof-share-copy:hover { background:var(--olive-2); }
+.prof-share-close { padding:10px 16px; background:transparent; border:0.5px solid var(--border-2); color:var(--text-2); border-radius:var(--radius-sm); font-size:13px; cursor:pointer; }
+/* Friend buttons */
+.pv-friend-btn {
+  padding:7px 18px; border-radius:var(--radius-sm); font-size:12px; font-weight:500;
+  cursor:pointer; transition:all .15s; white-space:nowrap;
+}
+.pv-friend-btn.add { background:var(--olive); color:#fff; border:none; }
+.pv-friend-btn.add:hover { background:var(--olive-2); }
+.pv-friend-btn.friends { background:var(--olive-faint); color:var(--olive-light); border:0.5px solid var(--border-olive); }
+.pv-friend-btn.friends:hover { background:#f87171; color:#fff; border-color:#f87171; }
+.pv-friend-btn.pending { background:transparent; color:var(--text-3); border:0.5px solid var(--border-2); }
+.pv-friend-btn.pending:hover { background:var(--bg-3); }
+.pv-friend-btn.accept { background:var(--olive); color:#fff; border:none; }
+.pv-friend-btn.accept:hover { background:var(--olive-2); }
+.pv-friend-btn.decline { background:transparent; color:#f87171; border:0.5px solid #f87171; }
+.pv-friend-btn.decline:hover { background:#f87171; color:#fff; }
+
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — full scaling for all screens
+   ══════════════════════════════════════════ */
+
+/* ── Large desktop (≥1280px) ── */
+@media(min-width:1280px) {
+  .prof-stat-box-num { font-size:28px; }
+}
+
+/* ── Tablet (≤900px) ── */
+@media(max-width:900px) {
+  .prof-header-top { gap:1.25rem; }
+  .prof-stat-box-num { font-size:24px; }
+  .prof-stat-box { padding:.45rem .6rem; min-width:0; }
+  .prof-bio { font-size:13px; } .prof-quote { font-size:14px; }
+  .fv-rank-row { padding:14px 16px; gap:14px; }
+  .fv-rank-poster { width:70px; height:98px; }
+  .fv-rank-title { font-size:15px; }
+  .fv-rank-score { font-size:26px; }
+  .fv-w-card { padding:14px 16px; gap:14px; }
+  .fv-w-poster { width:70px; height:98px; }
+  .fv-w-title { font-size:15px; }
+}
+
+/* ── Mobile (≤640px) ── */
+@media(max-width:640px) {
+  .prof-header { padding:1rem 0; }
+  .prof-header-top { gap:1rem; margin-bottom:10px; }
+  .prof-avatar { width:82px; height:82px; font-size:32px; }
+  .prof-username { font-size:25px; }
+  .prof-displayname { font-size:14px; margin-bottom:8px; }
+  .prof-bio { font-size:13px; } .prof-quote { font-size:14px; }
+  .prof-stat-box-num { font-size:18px; }
+  .prof-stat-box { padding:.4rem .5rem; min-width:0; }
+  .prof-header-identity { margin-bottom:10px; }
+  .prof-username { font-size:22px; }
+  .prof-displayname { font-size:13px; margin-bottom:8px; }
+  .prof-stat-boxes { gap:4px; }
+  .prof-stat-box { padding:.3rem .4rem; }
+  .prof-stat-box-num { font-size:18px; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:0.8px; }
+  .prof-bio { font-size:12px; }
+  .prof-quote { font-size:13px; }
+  .prof-edit-btn, .prof-share-btn, .pv-friend-btn { font-size:11px; padding:6px 14px; }
+  
+  .prof-tab svg { width:16px; height:16px; }
+  .prof-tab { padding:10px 0; }
+  .fv-rank-row { padding:10px 12px; gap:10px; min-height:unset; }
+  .fv-rank-poster { width:56px; height:78px; }
+  .fv-rank-title { font-size:13px; }
+  .fv-rank-score { font-size:22px; }
+  .fv-rank-num { font-size:20px; min-width:32px; }
+  .fv-w-card { padding:10px 12px; gap:10px; min-height:unset; }
+  .fv-w-poster { width:56px; height:78px; }
+  .fv-w-title { font-size:14px; }
+  .fv-w-score { font-size:18px; }
+  .note-row { padding:12px 14px; gap:12px; border-radius:var(--radius); }
+  .note-poster { width:64px; height:90px; font-size:20px; }
+  .note-title { font-size:15px; }
+  .note-tags { gap:3px; margin-bottom:3px; }
+  .note-text { font-size:11px; margin-top:4px; }
+  .note-score { font-size:20px; }
+  .note-date { font-size:10px; }
+  .fav-slot { padding:10px 12px; min-height:64px; gap:10px; }
+  .fav-slot-title { font-size:13px; }
+  .fav-slot-num { font-size:20px; }
+  .fav-slot-score { font-size:15px; }
+  .fav-slot-poster { width:40px; height:56px; font-size:16px; }
+  .fav-edit-btn { font-size:11px; padding:6px 12px; }
+  .fav-picker-item { padding:11px 16px; gap:12px; }
+  .fav-picker-poster { width:44px; height:62px; font-size:17px; }
+  .fav-picker-name { font-size:14px; }
+  .fav-picker-sub { font-size:11px; }
+  .fav-picker-score { font-size:17px; }
+  .fav-picker-check { width:24px; height:24px; }
+  #favPickerSheet { max-height:88dvh; }
+
+  .prof-share-card { padding:18px; }
+  .prof-share-title { font-size:18px; }
+  .sort-bar { padding:8px 12px 10px; gap:4px; }
+  .sort-btn { font-size:10px; padding:4px 8px; }
+  .cf-btn { font-size:10px; padding:4px 9px; }
+  .section-block-title { font-size:12px; }
+  .export-grid { grid-template-columns:repeat(2,1fr); }
+  .export-card { padding:1rem; gap:6px; }
+  .export-card-icon svg { width:22px; height:22px; }
+  .export-card-title { font-size:13px; }
+  .export-card-desc { font-size:11px; }
+}
+
+/* ── Small mobile (≤400px) ── */
+@media(max-width:400px) {
+  .prof-header { padding:.85rem 0; }
+  .prof-header-top { flex-direction:column; align-items:center; gap:.6rem; }
+  .prof-header-info { align-items:center; text-align:center; }
+  .prof-avatar { width:80px; height:80px; font-size:32px; }
+  .prof-username { font-size:22px; }
+  .prof-displayname { font-size:13px; }
+  .prof-stat-box-num { font-size:14px; }
+  .prof-stat-box { padding:.3rem .35rem; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:.5px; }
+  .prof-header-actions { gap:6px; }
+  .prof-header-identity { margin-bottom:8px; }
+  .fav-slot { padding:8px 10px; gap:8px; min-height:56px; }
+  .fav-slot-poster { width:36px; height:50px; font-size:14px; }
+  .fav-slot-title { font-size:12px; }
+  .fav-slot-num { font-size:17px; }
+
+  .fav-picker-item { padding:9px 12px; gap:10px; }
+  .fav-picker-poster { width:38px; height:54px; font-size:15px; }
+  .fav-picker-name { font-size:13px; }
+  .fav-picker-sub { font-size:10px; }
+  .fav-picker-score { font-size:15px; }
+  .fav-picker-check { width:22px; height:22px; }
+  .prof-username { font-size:20px; }
+  .prof-stat-boxes { gap:3px; }
+  .prof-stat-box { padding:.25rem .3rem; }
+  .prof-stat-box-num { font-size:13px; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:0.5px; }
+  .prof-header-actions { gap:6px; }
+  .prof-edit-btn, .prof-share-btn, .pv-friend-btn { font-size:10px; padding:5px 11px; }
+  .fv-rank-row { padding:8px 10px; gap:8px; }
+  .fv-rank-poster { width:48px; height:66px; }
+  .fv-rank-title { font-size:12px; }
+  .fv-rank-score { font-size:18px; }
+  .fv-w-card { padding:8px 10px; gap:8px; }
+  .fv-w-poster { width:48px; height:66px; }
+  .fv-w-title { font-size:12px; }
+  .sort-btn { font-size:9px; padding:3px 6px; }
+  .cf-btn { font-size:9px; padding:3px 7px; }
+  .note-row { padding:10px 12px; gap:10px; }
+  .note-poster { width:54px; height:76px; font-size:18px; }
+  .note-title { font-size:13px; }
+  .note-text { font-size:10px; }
+  .note-score { font-size:17px; }
+  .export-grid { grid-template-columns:1fr; }
+  .export-card { padding:.875rem; flex-direction:row; align-items:center; gap:12px; }
+  .export-card-icon { flex-shrink:0; }
+  .export-card-icon svg { width:20px; height:20px; }
+  .export-card-title { font-size:13px; }
+  .export-card-desc { font-size:11px; }
+}
+
+.cat-filter { display:flex; gap:4px; flex-wrap:wrap; }
+
+
+.prof-ov-grid {
+  display:grid; grid-template-columns:repeat(5,1fr); gap:12px;
+}
+.prof-ov-grid .q-card { width:100% !important; max-width:100% !important; min-width:0 !important; }
+@media(max-width:900px)  { .prof-ov-grid { grid-template-columns:repeat(4,1fr); gap:10px; } }
+@media(max-width:640px)  { .prof-ov-grid { grid-template-columns:repeat(3,1fr); gap:8px; } }
+@media(max-width:400px)  { .prof-ov-grid { grid-template-columns:repeat(2,1fr); gap:6px; } }
+
+/* ── Profile tab sticky positions ── */
+@media(max-width:1380px) { .pv-tabs, .prof-tabs { top:64px; } }
+
+#pvNotesContent{max-height:65vh;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:none;padding-right:4px;}
+#pvNotesContent::-webkit-scrollbar{display:none;}
+#notesContent{max-height:65vh;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:none;padding-right:4px;}
+#notesContent::-webkit-scrollbar{display:none;}
+/* ── Note popup ── */
+.note-popup-overlay2{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.note-popup-overlay2.open{opacity:1;pointer-events:auto;}
+.note-popup2{width:100%;max-width:520px;background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);overflow:hidden;transform:scale(.96);transition:transform .22s cubic-bezier(0.4,0,0.2,1);position:relative;}
+.note-popup-overlay2.open .note-popup2{transform:scale(1);}
+.note-popup2-header{display:flex;align-items:flex-start;gap:14px;padding:18px 20px 14px;border-bottom:0.5px solid var(--border);}
+.note-popup2-poster{width:60px;height:84px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:20px;color:var(--olive-light);}
+.note-popup2-poster img{width:100%;height:100%;object-fit:cover;}
+.note-popup2-info{flex:1;min-width:0;}
+.note-popup2-title{font-family:var(--serif);font-size:20px;font-weight:300;color:var(--text);margin-bottom:5px;line-height:1.2;}
+.note-popup2-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:5px;}
+.note-popup2-date{font-size:11px;color:var(--text-3);}
+.note-popup2-close{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;line-height:1;padding:0;flex-shrink:0;transition:color .15s;}
+.note-popup2-close:hover{color:var(--text);}
+.note-popup2-body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px;}
+.note-popup2-text{font-size:14px;color:var(--text-2);font-style:italic;line-height:1.7;}
+.note-popup2-edit{align-self:flex-end;background:transparent;border:0.5px solid var(--border-olive);border-radius:var(--radius-xs);color:var(--olive-light);font-size:11px;padding:5px 12px;cursor:pointer;transition:all .15s;font-family:var(--sans);flex-shrink:0;}
+.note-popup2-edit:hover{background:var(--olive-faint);}
+@media(max-width:640px){
+  .note-popup2-header{padding:14px 16px 12px;gap:12px;}
+  .note-popup2-poster{width:50px;height:70px;font-size:17px;}
+  .note-popup2-title{font-size:17px;}
+  .note-popup2-body{padding:14px 16px 18px;}
+  .note-popup2-text{font-size:13px;}
+}
+
+
+/* ── Info Popup (watching/queue) — same as profile-view ── */
+#profInfoOverlay {
+  position:fixed;inset:0;z-index:902;
+  background:rgba(0,0,0,0.72);
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;box-sizing:border-box;
+  opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;
+}
+#profInfoOverlay.open { opacity:1;pointer-events:auto; }
+#profInfoCard {
+  background:var(--bg-2);border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
+  width:97%;max-width:640px;max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
+  position:relative;box-sizing:border-box;
+  transform:translateY(18px);transition:transform 260ms var(--ease);
+}
+.pvi-header { display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0; }
+.pvi-poster {
+  width:clamp(52px,14vw,80px);height:clamp(73px,19.5vw,112px);
+  flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;
+  background:var(--bg-3);display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--shadow);font-family:var(--serif);font-size:28px;color:var(--text-3);
+}
+.pvi-poster img { width:100%;height:100%;object-fit:cover; }
+.pvi-meta-wrap { flex:1;min-width:0;padding-top:2px; }
+.pvi-title { font-family:var(--serif);font-size:clamp(16px,4.5vw,22px);font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text); }
+.pvi-tags { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:0; }
+.pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px; }
+.pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s; }
+.pvi-close:hover { color:var(--text); }
+.pvi-body { padding:16px 20px 20px; }
+.pvi-desc { font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:16px; }
+.pvi-section-label { font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;display:flex;align-items:center;gap:10px; }
+.pvi-section-label::after { content:'';flex:1;height:0.5px;background:var(--border); }
+.pvi-seasons { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px; }
+.pvi-season-chip { display:flex;flex-direction:column;align-items:center;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;min-width:58px;transition:border-color .15s; }
+.pvi-season-chip:hover { border-color:var(--border-olive); }
+.pvi-season-num { font-family:var(--serif);font-size:20px;font-weight:300;color:var(--olive-light);line-height:1; }
+.pvi-season-eps { font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-top:3px;white-space:nowrap; }
+.pvi-runtime { display:inline-flex;align-items:center;gap:10px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;margin-bottom:16px; }
+.pvi-runtime-val { font-family:var(--serif);font-size:24px;font-weight:300;color:var(--olive-light); }
+.pvi-runtime-lbl { font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px; }
+@media(max-width:600px) {
+  .pvi-header { padding:14px 14px 0;gap:12px; }
+  .pvi-body { padding:12px 14px 16px; }
+  .pvi-desc { font-size:12px; }
+  .pvi-season-chip { padding:6px 10px;min-width:46px; }
+  .pvi-season-num { font-size:17px; }
+  .pvi-runtime { padding:8px 14px; }
+  .pvi-runtime-val { font-size:20px; }
+  #profInfoCard { width:97%; }
+}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="cat-page-header fade-up">
+    <div>
+      <h1 class="cat-page-title">Library</h1>
+      <div class="cat-page-sub" id="libPageSub"></div>
+    </div>
+  </div>
+
+  <div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div>
+  <div id="libraryContent" style="display:none"></div>
+
+</div>
+
+<!-- Fav Picker -->
+<div id="favPickerOverlay" onclick="if(event.target===this)closeFavPicker()">
+  <div id="favPickerSheet">
+    <div class="fav-picker-hd">
+      <div><span class="fav-picker-title" id="favPickerTitle">Top Favorites</span><span class="fav-picker-count" id="favPickerCount">0 / 5</span></div>
+      <button class="fav-picker-close" onclick="closeFavPicker()">&#x2715;</button>
+    </div>
+    <div class="fav-picker-list" id="favPickerList"></div>
+    <div class="fav-picker-footer">
+      <button class="fav-picker-cancel" onclick="closeFavPicker()">Cancel</button>
+      <button class="fav-picker-save" id="favPickerSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export overlay -->
+<div class="export-overlay" id="exportOverlay" onclick="if(event.target===this)closeExportPopup()">
+  <div class="export-popup">
+    <div class="export-popup-icon" id="exportPopupIcon"></div>
+    <div class="export-popup-title" id="exportPopupTitle"></div>
+    <div class="export-popup-desc" id="exportPopupDesc"></div>
+    <div class="export-theme-row">
+      <span class="export-theme-label">Theme</span>
+      <div class="export-theme-btns">
+        <button class="eth-btn active" id="ethDark" onclick="setExportTheme('dark')">Dark</button>
+        <button class="eth-btn" id="ethLight" onclick="setExportTheme('light')">Light</button>
+      </div>
+    </div>
+    <div class="export-popup-actions">
+      <button class="export-popup-cancel" onclick="closeExportPopup()">Cancel</button>
+      <button class="export-popup-confirm" id="exportPopupBtn" onclick="runExport()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function _trimNotes(text) {
+  if (!text) return '';
+  var words = text.trim().split(/\s+/);
+  return words.length > 150 ? words.slice(0, 150).join(' ') + '…' : text;
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/create-card.js"></script>
+<script src="js/fav-lists-popup.js"></script>
+<script src="js/export.js"></script>
+<script>
+/* ── State ── */
+var _pUser = null, _pProfile = null, _pEntries = [], _activeTab = 0;
+var _profEntryMap = {};
+var _favSelected = [];
+var _recSelected = [];
+var _profFavLists = [];
+var _libSort = {watching:'newest',queue:'newest',completed:'newest'};
+var _libCollapsed = {watching:false,queue:false,completed:false};
+var _libWatchView = localStorage.getItem('prof_libWatchView')||'list';
+var _libQueueView = localStorage.getItem('prof_libQueueView')||'grid';
+var _libCompView  = localStorage.getItem('prof_libCompView')||'list';
+var _libStatusFilter = '';
+var _libCatFilter = '';
+var _libEntries = [];
+var _pendingExport = null, _exportTheme = 'dark';
+var _SVG_L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+var _SVG_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', function() {
+  initPage(async function(user, profile) {
+    if (!user) {
+      document.querySelector('.page-wrap').innerHTML = '<div class="guest-page-state fade-up"><div class="guest-page-icon">'+icon('user',36)+'</div><h2 class="guest-page-title">Library</h2><p class="guest-page-sub">Sign in to view your library.</p><div class="guest-cta"><a href="login.html" class="guest-btn-primary">Sign In</a><a href="login.html#signup" class="guest-btn-secondary">Create Account</a></div></div>';
+      return;
+    }
+    _pUser = user;
+    _pProfile = profile;
+    _pEntries = await getEntries(user.id);
+    // Load custom favorite lists
+    try {
+      var flResp = await sb.from('favorite_lists').select('*').eq('user_id',user.id).order('created_at',{ascending:true});
+      _profFavLists = flResp.data || [];
+    } catch(e2) { _profFavLists = []; }
+    _profEntryMap = Object.fromEntries(_pEntries.map(function(e){return [e.id,e];}));
+
+    var _libSt = computeStats(_pEntries);
+    var subEl = document.getElementById('libPageSub');
+    if (subEl) {
+      subEl.textContent = _pEntries.length + ' entr' + (_pEntries.length !== 1 ? 'ies' : 'y')
+        + ' · ' + _libSt.watching + ' watching'
+        + ' · ' + _libSt.completed + ' watched';
+    }
+
+    renderLibrary();
+  });
+});
+
+
+/* ── Profile stats (5 boxes) ── */
+function computeProfileStats(entries) {
+  var done = entries.filter(function(e){ return e.status === 'completed' || e.status === 'ongoing'; });
+  // Avg score
+  var rated = done.filter(function(e){ return liveScore(e) != null; });
+  var avgScore = rated.length
+    ? (rated.reduce(function(s,e){ return s + Number(liveScore(e)); }, 0) / rated.length).toFixed(1)
+    : null;
+  // TV shows: cat=tv, OR (anime/cartoons where _type !== 'movie')
+  var tvCount = done.filter(function(e){
+    if (e.cat === 'tv') return true;
+    if (e.cat === 'anime' || e.cat === 'cartoons') return (e.ratings && e.ratings._media_type) ? e.ratings._media_type !== 'movie' : true;
+    return false;
+  }).length;
+  // Movies: cat=movies, OR (anime/cartoons where _type === 'movie')
+  var movieCount = done.filter(function(e){
+    if (e.cat === 'movies') return true;
+    if (e.cat === 'anime' || e.cat === 'cartoons') return e.ratings && e.ratings._media_type === 'movie';
+    return false;
+  }).length;
+  // Episodes: all non-movie entries not in queue
+  var totalEps = entries
+    .filter(function(e){ return e.status !== 'queue' && e.cat !== 'movies' && !(e.ratings && e.ratings._media_type === 'movie'); })
+    .reduce(function(sum,e){
+      if (e.status === 'completed' || e.status === 'ongoing') return sum + (Number(e.total_eps) || Number(e.watched) || 0);
+      return sum + (Number(e.watched) || 0);
+    }, 0);
+  // Runtime: all completed/ongoing movies
+  var movieMins = done
+    .filter(function(e){ return e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie'); })
+    .reduce(function(sum,e){ return sum + (Number(e.runtime_h)||0)*60 + (Number(e.runtime_m)||0); }, 0);
+  var rtH = Math.floor(movieMins/60), rtM = movieMins%60;
+  var runtime = movieMins ? (rtH ? rtH+'h '+rtM+'m' : rtM+'m') : null;
+  return { avgScore: avgScore, tvCount: tvCount, movieCount: movieCount, totalEps: totalEps, runtime: runtime };
+}
+
+function _profStatBox(num, label) {
+  return '<div class="prof-stat-box"><div class="prof-stat-box-num">'+(num||'—')+'</div><div class="prof-stat-box-label">'+label+'</div></div>';
+}
+
+/* ── Header ── */
+function populateHeader() {
+  var p = _pProfile, u = _pUser;
+  var un = (p && p.username) || (u.email ? u.email.split('@')[0] : '');
+  var st = computeStats(_pEntries);
+  var hours = Math.round(((st.movieMins)||0)/60);
+  var av = document.getElementById('profAvatar');
+  if (p && p.avatar_url) {
+    av.innerHTML = '<img src="'+p.avatar_url+'" alt="">';
+  } else {
+    av.textContent = (un[0]||'?').toUpperCase();
+  }
+  document.getElementById('profUsername').textContent = '@'+un;
+  var dn = document.getElementById('profDisplayName');
+  dn.textContent = (p && p.display_name) || '';
+  var bio = document.getElementById('profBio');
+  bio.textContent = (p && p.bio) || '';
+  bio.style.display = (p && p.bio) ? '' : 'none';
+  var q = document.getElementById('profQuote');
+  q.textContent = (p && p.quote) || '';
+  q.style.display = (p && p.quote) ? '' : 'none';
+  var pst = computeProfileStats(_pEntries);
+  document.getElementById('profStats').innerHTML =
+    _profStatBox(pst.avgScore,'Avg Score')+
+    _profStatBox(pst.tvCount,'TV Shows')+
+    _profStatBox(pst.movieCount,'Movies')+
+    _profStatBox(pst.totalEps||'0','Episodes')+
+    _profStatBox(pst.runtime,'Runtime');
+  document.getElementById('profEditBtn').style.display = '';
+  var sb=document.getElementById('profShareBtn'); if(sb) sb.style.display='';
+}
+
+/* ── Tabs ── */
+function switchTab(n) {
+  _activeTab = n;
+  var sel = document.getElementById('profTabsSelect');
+  if (sel && +sel.value !== n) sel.value = n;
+  for (var i=0;i<5;i++) {
+    var t=document.getElementById('tab'+i), p=document.getElementById('panel'+i);
+    if(t) t.classList.toggle('active', i===n);
+    if(p) p.classList.toggle('active', i===n);
+  }
+  if (n===1) renderLibrary();
+  if (n===2) renderFavorites();
+  if (n===3) renderNotes();
+  if (n===4) renderExports();
+  if (n===0 && _pEntries.length) renderTab0();
+}
+
+/* ── Popup ── */
+var _profPopupEntryId = null;
+function profOpenPopup(id) {
+  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  _profPopupEntryId = id;
+  var e = _profEntryMap[id];
+  if (!e) { e = _pEntries.find(function(x){return x.id===id;}); }
+  if (!e) return;
+  var ov = document.getElementById('profPopupOverlay');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id='profPopupOverlay';
+    var card = document.createElement('div'); card.id='profPopupCard';
+    card.innerHTML =
+      '<div style="display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0;">'+
+        '<div id="profPopupPoster" style="width:72px;height:100px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);"></div>'+
+        '<div style="flex:1;min-width:0;padding-top:4px;">'+
+          '<div id="profPopupTitle" style="font-family:var(--serif);font-size:28px;font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text)"></div>'+
+          '<div id="profPopupMeta" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>'+
+          '<div id="profPopupInfo" style="margin-top:4px;"></div>'+
+        '</div>'+
+        '<button onclick="profClosePopup()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;padding:0 0 0 8px;flex-shrink:0;">&#x2715;</button>'+
+      '</div>'+
+      '<div id="profPopupBody" style="padding:16px 20px 4px;"></div>'+
+      '<div style="padding:0 20px 12px;"><button id="profPopupEditBtn" class="cc-strip" style="margin-top:4px;">Edit Entry &#x2192;</button></div>'+
+      '<div id="profPopupActions" style="display:flex;gap:8px;padding:0 20px 20px;flex-wrap:wrap;">'+
+        '<button class="popup-action-btn" onclick="openFavListsPopup(_profPopupEntryId)">'+
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'+
+          'Add to Favorites'+
+        '</button>'+
+        '<button class="popup-action-btn" onclick="rewatchEntry(_profPopupEntryId)">'+
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+
+          'Rewatch'+
+        '</button>'+
+        '<button class="popup-action-btn" onclick="createShareCard(_profPopupEntryId)">'+
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>'+
+          'Create Card'+
+        '</button>'+
+      '</div>';
+    ov.addEventListener('click', function(ev){if(ev.target===ov)profClosePopup();});
+    ov.appendChild(card);
+    document.body.appendChild(ov);
+  }
+  document.getElementById('profPopupPoster').innerHTML = posterHTML(e);
+  var _pyIsMovie = e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
+  var _pyStart = e.year || null;
+  var _pyEnd = (e.ratings && e.ratings._completion_year) || null;
+  var _pyStr = '';
+  if (_pyStart) {
+    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ' <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">'+_pyStart+'</span>';
+    else _pyStr = ' <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">'+_pyStart+'\u2013'+(_pyEnd||'Present')+'</span>';
+  }
+  document.getElementById('profPopupTitle').innerHTML = esc(e.title) + _pyStr;
+  var date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+  var meta = [(CAT_META[e.cat]&&CAT_META[e.cat].label)].concat((e.genres||[])).concat(date?[date]:[]).filter(Boolean);
+  document.getElementById('profPopupMeta').innerHTML = meta.map(function(m){
+    return '<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:20px;padding:2px 8px;font-size:10px;">'+m+'</span>';
+  }).join('')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'');
+  var sc = liveScore(e);
+  // Info bar (season breakdown / runtime) now renders inside the body, above the ratings
+  var _prInfoEl = document.getElementById('profPopupInfo');
+  if (_prInfoEl) _prInfoEl.innerHTML = '';
+  document.getElementById('profPopupBody').innerHTML = buildExpansion(e);
+  var eb = document.getElementById('profPopupEditBtn');
+  if (eb) eb.onclick = function(){goToDetail(id,'library.html');};
+  ov.style.pointerEvents='auto'; ov.style.opacity='1';
+  document.getElementById('profPopupCard').style.transform='translateY(0)';
+  document.body.style.overflow='hidden';
+}
+function profClosePopup() {
+  var ov=document.getElementById('profPopupOverlay');
+  if(ov){ov.style.opacity='0';ov.style.pointerEvents='none';}
+  var c=document.getElementById('profPopupCard');
+  if(c)c.style.transform='translateY(18px)';
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    if(document.getElementById('ratingFilterOverlay')?.classList.contains('open')) closeRatingFilter();
+    else if(document.getElementById('catDiscoverOverlay')?.classList.contains('open')) _closeDiscoverPicker();
+    else if(document.getElementById('profInfoOverlay')?.classList.contains('open')) closeProfInfoPopup();
+    else if(document.getElementById('createCardOverlay')?.classList.contains('open')) closeCreateCard();
+    else if(document.getElementById('favListsOverlay')?.classList.contains('open')) closeFavListsPopup();
+    else if(document.getElementById('favSecOverlay')?.classList.contains('open')) closeFavSec();
+    else if(document.getElementById('profPopupOverlay')?.style.opacity==='1') profClosePopup();
+  }
+});
+
+function _libBreakdownHTML(e) {
+  var isMovie = e.cat==='movies' || (e.ratings&&e.ratings._media_type==='movie');
+  if (!isMovie) {
+    var bd = Array.isArray(e.ratings&&e.ratings._season_breakdown)
+      ? e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number) : [];
+    var totalS = bd.length || Number(e.total_seasons) || 0;
+    if (totalS > 0) {
+      var chips = '';
+      for (var i=0; i<totalS; i++) {
+        var eps = bd[i] || null;
+        chips += '<span class="popup-info-season-chip">'
+          +'<span class="popup-info-season-num">S'+(i+1)+'</span>'
+          +'<span class="popup-info-season-eps">'+(eps?eps+' ep':'S'+(i+1))+'</span>'
+          +'</span>';
+      }
+      return '<div class="popup-info-block"><div class="popup-info-label">TV Show Breakdown</div><div style="display:flex;flex-wrap:wrap;">'+chips+'</div></div>';
+    } else if (e.total_eps) {
+      return '<div class="popup-info-block"><span style="font-size:11px;color:var(--text-3);">'+e.total_eps+' episodes</span></div>';
+    }
+    return '';
+  } else {
+    var rtH=Number(e.runtime_h)||0, rtM=Number(e.runtime_m)||0;
+    if (rtH||rtM) {
+      var rtStr = rtH ? rtH+'h '+rtM+'m' : rtM+'m';
+      return '<div class="popup-info-block"><span class="popup-info-runtime">'
+        +'<span class="popup-info-runtime-val">'+rtStr+'</span>'
+        +'<span class="popup-info-runtime-lbl">Movie Runtime</span>'
+        +'</span></div>';
+    }
+    return '';
+  }
+}
+
+function buildExpansion(e) {
+  var sc = liveScore(e)!=null?Number(liveScore(e)).toFixed(2):'—';
+  var isM = e.cat==='movies';
+  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var rd = typeof getRatings==='function' ? getRatings(e.cat) : {core:[],bonus:[]};
+  var isAnimated = e.cat === 'anime' || e.cat === 'cartoons';
+  var cR = (rd.core||[]).map(function(r){var v=e.ratings&&e.ratings[r.key];if(v==null||v==='')return '';return '<div class="fd-rating-row"><span class="fd-rating-label">'+r.label+'</span><span class="fd-rating-val">'+Number(v).toFixed(2)+'</span></div>';}).filter(Boolean).join('');
+  var animRow = (!isAnimated && e.ratings && e.ratings.animation != null && e.ratings.animation !== '')
+    ? '<div class="fd-rating-row"><span class="fd-rating-label">Animation Quality</span><span class="fd-rating-val">'+Number(e.ratings.animation).toFixed(2)+'</span></div>' : '';
+  var bR = (rd.bonus||[]).map(function(r){var v=e.ratings&&e.ratings[r.key];if(v==null||v==='')return '';return '<div class="fd-rating-row"><span class="fd-rating-label">'+r.label+'</span><span class="fd-rating-val">'+Number(v).toFixed(2)+'</span></div>';}).filter(Boolean).join('');
+  var fv = (e.ratings&&e.ratings._favorites)||{};
+  var lw = (e.ratings&&e.ratings._lowlights)||{};
+  var fc = [fv.character?'<span class="fav-chip"><span class="fav-chip-label">Fav Character</span>'+esc(fv.character)+'</span>':'',(!isM&&fv.episode)?'<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span>'+esc(fv.episode)+'</span>':'',(!isM&&fv.season)?'<span class="fav-chip"><span class="fav-chip-label">Fav Season</span>'+esc(fv.season)+'</span>':''].filter(Boolean).join('');
+  var lc = [lw.character?'<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav</span>'+esc(lw.character)+'</span>':''].filter(Boolean).join('');
+  var h=(e.description?'<div class="fd-description">'+esc(e.description)+'</div>':'')+_libBreakdownHTML(e)+'<div class="fd-cols">';
+  if(cR||animRow)h+='<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>'+cR+animRow+'</div>';
+  if(bR)h+='<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>'+bR+'</div>';
+  h+='</div><div class="fd-final"><span>Final Score</span><strong>'+sc+'</strong></div>';
+  if(fc)h+='<div class="fav-chips" style="margin-top:8px;">'+fc+'</div>';
+  if(lc)h+='<div class="fav-chips" style="margin-top:6px;">'+lc+'</div>';
+  if(e.notes)h+='<div class="fd-notes">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>';
+  return h;
+}
+
+/* ── Tab 0: Overview ── */
+function renderTab0() {
+  var el = document.getElementById('overviewContent');
+  if (!el) return;
+  if (!_pEntries || !_pEntries.length) return;
+  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  // Ensure pickers are initialized so openRecPicker works from overview
+  _favSelected = Array.isArray(_pProfile&&_pProfile.top_picks) ? _pProfile.top_picks.slice() : [];
+  _recSelected = Array.isArray(_pProfile&&_pProfile.recommended) ? _pProfile.recommended.slice() : [];
+
+  var picks = Array.isArray(_pProfile&&_pProfile.top_picks)&&_pProfile.top_picks.length
+    ? _pProfile.top_picks.map(function(id){return _profEntryMap[id];}).filter(Boolean) : null;
+  var topFavs = picks || [];
+  var watching = _pEntries.filter(function(e){return e.status==='watching'||e.status==='paused';}).slice(0,5);
+
+  function card(e, rank) {
+    var score = liveScore(e)!=null ? Number(liveScore(e)).toFixed(2) : null;
+    var scoreHTML = score ? ('<div style="font-family:var(--serif);font-size:15px;font-weight:300;color:var(--olive-light);margin-top:4px;text-align:right">'+score+'</div>') : '';
+    return '<div class="q-card" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="cursor:pointer">'
+      +'<div class="q-poster" style="position:relative">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div>'+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'</div>'
+      +'<div class="q-info"><div class="q-title">'+esc(e.title)+'</div><div class="q-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'+scoreHTML+'</div></div>';
+  }
+
+  function sec(eyebrow, title, items, ranked) {
+    if (!items.length) return '';
+    return '<div class="pv-section">'
+      +'<div class="pv-eyebrow">'+eyebrow+'</div>'
+      +'<div class="pv-title">'+title+'</div>'
+      +'<div class="prof-ov-grid">'+items.slice(0,5).map(function(e,i){return card(e,ranked?i:null);}).join('')+'</div>'
+      +'</div>';
+  }
+
+  var recPicks = Array.isArray(_pProfile&&_pProfile.recommended)
+    ? _pProfile.recommended.map(function(id){return _profEntryMap[id];}).filter(Boolean) : [];
+
+  function secWithEdit(eyebrow, title, items, ranked, editFn) {
+    return '<div class="pv-section">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">'
+      +'<div><div class="pv-eyebrow">'+eyebrow+'</div><div class="pv-title">'+title+'</div></div>'
+      +(editFn?'<button class="fav-edit-btn" onclick="'+editFn+'">'+icon('edit',13)+' Edit</button>':'')
+      +'</div>'
+      +(items.length
+        ? '<div class="prof-ov-grid">'+items.slice(0,5).map(function(e,i){return card(e,ranked?i:null);}).join('')+'</div>'
+        : '<div style="font-size:13px;color:var(--text-3);padding:.5rem 0 1rem;">Nothing here yet.</div>')
+      +'</div>';
+  }
+
+  var html = sec('Handpicked','Top Favorites', topFavs, true);
+
+  // Favorite Sections — one top item per category
+  var _favSecHtml = buildFavSections();
+  if (_favSecHtml) {
+    html += '<div class="pv-section">'      +'<div class="pv-eyebrow">Collections</div>'      +'<div class="pv-title">Favorite Picks</div>'      +_favSecHtml+'</div>';
+  }
+
+  html += secWithEdit('Would Recommend','Top Picks', recPicks, false, null);
+
+  [{cat:'tv',label:'TV Shows'},{cat:'movies',label:'Movies'},{cat:'anime',label:'Anime'},{cat:'cartoons',label:'Cartoons'}].forEach(function(m){
+    var items = _pEntries.filter(function(e){return e.cat===m.cat&&(e.status==='completed'||e.status==='ongoing');}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);}).slice(0,5);
+    html += sec('Top Rated', m.label, items, true);
+  });
+
+  el.innerHTML = html || '<div class="pv-empty">Nothing to show yet.</div>';
+}
+
+/* ── Tab 1: Library ── */
+
+function _libQueueScope(e) {
+  if (e.cat==='movies'||e.ratings?._media_type==='movie') {
+    var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
+    if (rtH||rtM) return rtH?rtH+'h '+rtM+'m':rtM+'m';
+    return '';
+  }
+  var bd=Array.isArray(e.ratings?._season_breakdown)?e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number):[];
+  if (bd.length){var tot=bd.reduce(function(a,b){return a+b;},0);return 'S'+bd.length+' E'+tot;}
+  if (e.total_seasons&&e.total_eps) return 'S'+e.total_seasons+' E'+e.total_eps;
+  if (e.total_seasons) return 'S'+e.total_seasons;
+  if (e.total_eps) return e.total_eps+' eps';
+  return '';
+}
+function _libEnjoymentVal(e){
+  var v=e.ratings&&e.ratings.enjoyment;
+  return (v!==undefined&&v!==null&&v!=='')?Number(v):null;
+}
+function _ratingVal(e,key){
+  var v=e.ratings&&e.ratings[key];
+  return (v!==undefined&&v!==null&&v!=='')?Number(v):null;
+}
+function _libEnjoymentBadge(e){
+  var val=_libEnjoymentVal(e);
+  if(val==null)return '<div class="cg-score-badge cg-score-none">-</div>';
+  var cls=val>=10?'cg-score-10':val>=9?'cg-score-9':val>=8?'cg-score-8':val>=7?'cg-score-7':val>=6?'cg-score-6':val>=3?'cg-score-3-5':'cg-score-0-2';
+  return '<div class="cg-score-badge '+cls+'">'+val.toFixed(2)+'</div>';
+}
+function _libRatingBadge(e,key){
+  var val=_ratingVal(e,key);
+  if(val==null)return '<div class="cg-score-badge cg-score-none">-</div>';
+  var cls=val>=10?'cg-score-10':val>=9?'cg-score-9':val>=8?'cg-score-8':val>=7?'cg-score-7':val>=6?'cg-score-6':val>=3?'cg-score-3-5':'cg-score-0-2';
+  return '<div class="cg-score-badge '+cls+'">'+val.toFixed(2)+'</div>';
+}
+
+/* This page mixes every category, so the rating list is the full union
+   across TV/Movies and Anime/Cartoons (e.g. "Acting" and "Voice Acting"
+   both appear as separate options, since they're different keys on
+   different entries), deduplicated where a key is genuinely shared. */
+function _ratingFilterOptionsAll(){
+  var seen={}; var opts=[];
+  CORE_RATINGS.concat(ANIME_CORE_RATINGS).forEach(function(r){
+    if(seen[r.key])return; seen[r.key]=1;
+    opts.push({key:r.key,label:r.label,group:'Core'});
+  });
+  if(!seen.animation){seen.animation=1;opts.push({key:'animation',label:'Animation Quality',group:'Core'});}
+  var seenB={};
+  BONUS_RATINGS.concat(ANIME_BONUS_RATINGS).forEach(function(r){
+    if(seenB[r.key])return; seenB[r.key]=1;
+    opts.push({key:r.key,label:r.label,group:'Bonus'});
+  });
+  return opts;
+}
+function _ratingFilterLabelAll(key){
+  var opt=_ratingFilterOptionsAll().filter(function(o){return o.key===key;})[0];
+  return opt?opt.label:key;
+}
+function _ratingShortLabel(label){
+  return label.length>14?label.slice(0,13)+'…':label;
+}
+
+function _libApplySort(arr,by){
+  var a=arr.slice();
+  var gd=function(e){return e.completed_date?new Date(e.completed_date):new Date(e.created_at);};
+  if(by==='newest')return a.sort(function(x,y){return gd(y)-gd(x);});
+  if(by==='oldest')return a.sort(function(x,y){return gd(x)-gd(y);});
+  if(by==='highest')return a.sort(function(x,y){return (liveScore(y)||0)-(liveScore(x)||0);});
+  if(by==='lowest')return a.sort(function(x,y){return (liveScore(x)||0)-(liveScore(y)||0);});
+  if(by&&by.indexOf('rating:')===0){
+    var key=by.slice(7);
+    return a.sort(function(x,y){
+      var ex=_ratingVal(x,key),ey=_ratingVal(y,key);
+      var xKey=ex!=null?ex:(liveScore(x)||0);
+      var yKey=ey!=null?ey:(liveScore(y)||0);
+      var d=yKey-xKey;
+      if(d)return d;
+      return (liveScore(y)||0)-(liveScore(x)||0);
+    });
+  }
+  if(by==='alpha')return a.sort(function(x,y){return (x.title||'').localeCompare(y.title||'');});
+  if(by==='zalpha')return a.sort(function(x,y){return (y.title||'').localeCompare(x.title||'');});
+  return a;
+}
+
+function _libCatFilterBar() {
+  var cats = [['','All'],['tv','TV Shows'],['movies','Movies'],['anime','Anime'],['cartoons','Cartoons']];
+  return '<div class="cat-filter" style="margin-bottom:10px;">'
+    + cats.map(function(ct){return '<button class="cf-btn'+(_libCatFilter===ct[0]?' active':'')+'" onclick="setLibCat(this.dataset.c)" data-c="'+ct[0]+'">'+ct[1]+'</button>';}).join('')
+    + '</div>';
+}
+function _libSortBar(sec){
+  var cur=_libSort[sec]||'newest';
+  var isQ=sec==='queue';
+  var showRating=sec==='completed';
+  var isRating=cur.indexOf('rating:')===0;
+  var ratingLabel=isRating?_ratingFilterLabelAll(cur.slice(7)):null;
+  var opts=[['newest','Newest'],['oldest','Oldest']].concat(!isQ?[['highest','Highest'],['lowest','Lowest']]:[]).concat([['alpha','A\u2192Z'],['zalpha','Z\u2192A']]);
+  var staticBtns=opts.map(function(o){return '<button class="sort-btn'+(cur===o[0]?' active':'')+'" onclick="setLibSort(\''+sec+'\',\''+o[0]+'\')">'+o[1]+'</button>';}).join('');
+  var ratingBtn=showRating?('<button class="sort-btn'+(isRating?' active':'')+'" onclick="openRatingFilter(\''+sec+'\')" data-short="'+(isRating?_ratingShortLabel(ratingLabel):'Rating')+'">'+(isRating?'Rating: '+ratingLabel:'Rating \u25be')+'</button>'):'';
+  return '<div class="sort-bar">'+staticBtns+ratingBtn+'</div>';
+}
+function setLibSort(sec,val){_libSort[sec]=val;renderLibrary();}
+function setLibStatus(s){_libStatusFilter=s;renderLibrary();}
+function setLibCat(c){_libCatFilter=c;renderLibrary();}
+
+/* ── Rating filter popup (shared markup/CSS pattern with category.js) ── */
+var _ratingFilterSection=null;
+function _injectRatingFilterOverlay(){
+  if(document.getElementById('ratingFilterOverlay'))return;
+  var el=document.createElement('div');
+  el.id='ratingFilterOverlay';
+  el.innerHTML='<div id="ratingFilterCard">'
+    + '<div class="rf-header"><div class="rf-title">Sort by Rating</div>'
+    + '<button class="rf-close" onclick="closeRatingFilter()">'+icon('x',18)+'</button></div>'
+    + '<div class="rf-list" id="ratingFilterList"></div></div>';
+  el.addEventListener('click',function(ev){if(ev.target===el)closeRatingFilter();});
+  document.body.appendChild(el);
+}
+function openRatingFilter(sec){
+  _injectRatingFilterOverlay();
+  _ratingFilterSection=sec;
+  var cur=_libSort[sec]||'newest';
+  var curKey=cur.indexOf('rating:')===0?cur.slice(7):null;
+  var opts=_ratingFilterOptionsAll();
+  var html='<div class="rf-item'+(!curKey?' active':'')+'" onclick="_pickRatingFilter(null)">'
+    + '<span>Overall Score (default)</span><span class="rf-item-check">'+icon('check',15)+'</span></div>';
+  var lastGroup=null;
+  opts.forEach(function(o){
+    if(o.group!==lastGroup){html+='<div class="rf-group-label">'+o.group+'</div>';lastGroup=o.group;}
+    html+='<div class="rf-item'+(curKey===o.key?' active':'')+'" onclick="_pickRatingFilter(\''+o.key+'\')">'
+      + '<span>'+o.label+'</span><span class="rf-item-check">'+icon('check',15)+'</span></div>';
+  });
+  document.getElementById('ratingFilterList').innerHTML=html;
+  document.getElementById('ratingFilterOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeRatingFilter(){
+  var ov=document.getElementById('ratingFilterOverlay');
+  if(!ov)return;
+  ov.classList.remove('open');
+  document.body.style.overflow='';
+}
+function _pickRatingFilter(key){
+  var sec=_ratingFilterSection;
+  closeRatingFilter();
+  if(!sec)return;
+  setLibSort(sec, key?'rating:'+key:'highest');
+}
+function _libToggleSec(key){
+  _libCollapsed[key]=!_libCollapsed[key];
+  var el=document.getElementById('libbody-'+key);
+  if(el)el.classList.toggle('open',!_libCollapsed[key]);
+}
+function _libViewToggle(vk){
+  if(vk==='watch'){_libWatchView=_libWatchView==='list'?'grid':'list';localStorage.setItem('prof_libWatchView',_libWatchView);}
+  else if(vk==='queue'){_libQueueView=_libQueueView==='list'?'grid':'list';localStorage.setItem('prof_libQueueView',_libQueueView);}
+  else{_libCompView=_libCompView==='list'?'grid':'list';localStorage.setItem('prof_libCompView',_libCompView);}
+  renderLibrary();
+}
+function _libSection(key,title,count,vk,sk,content){
+  var isOpen=!_libCollapsed[key];
+  var cv=vk==='watch'?_libWatchView:vk==='queue'?_libQueueView:_libCompView;
+  var chevRot=isOpen?'':'transform:rotate(-90deg);';
+  return '<div class="section-block" id="libsec-'+key+'" style="margin-bottom:16px;">'
+    +'<div class="section-block-header" onclick="_libToggleSec(\''+key+'\')" style="cursor:pointer;">'
+    +'<div class="sec-left" style="pointer-events:none;"><div class="section-block-title">'+title+'</div><span class="section-pill">'+count+'</span></div>'
+    +'<div class="sec-right" onclick="event.stopPropagation();">'
+    +'<div class="view-toggle">'
+    +'<button class="vt-btn '+(cv==='list'?'active':'')+'" onclick="_libViewToggle(\''+vk+'\')" title="List">'+icon('list',13)+'</button>'
+    +'<button class="vt-btn '+(cv==='grid'?'active':'')+'" onclick="_libViewToggle(\''+vk+'\')" title="Grid">'+icon('grid',13)+'</button>'
+    +'</div>'
+    +'<button class="chevron-btn" onclick="_libToggleSec(\''+key+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;transition:transform 220ms;'+chevRot+'"><polyline points="6 9 12 15 18 9"/></svg></button>'
+    +'</div></div>'
+    +'<div class="accordion-body '+(isOpen?'open':'')+'" id="libbody-'+key+'">'
+    +'<div class="accordion-inner">'+_libSortBar(sk)+content+'</div></div></div>';
+}
+function _libGridWrap(gid,html){
+  return '<div class="grid-nav-wrap">'
+    +'<button class="grid-nav-btn arr-left" onclick="event.stopPropagation();var el=document.getElementById(\''+gid+'\');if(el)el.scrollBy({left:-220,behavior:\'smooth\'})">'+_SVG_L+'</button>'
+    +'<button class="grid-nav-btn arr-right" onclick="event.stopPropagation();var el=document.getElementById(\''+gid+'\');if(el)el.scrollBy({left:220,behavior:\'smooth\'})">'+_SVG_R+'</button>'
+    +html+'</div>';
+}
+function renderLibrary(){
+  var el=document.getElementById('libraryContent');
+  var loading=document.getElementById('libraryLoading');
+  if(!el)return;
+  _libEntries=_pEntries.slice();
+  var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var watching=_libApplySort(_libEntries.filter(function(e){return e.status==='watching'&&(!_libCatFilter||e.cat===_libCatFilter);}),_libSort.watching).concat(_libApplySort(_libEntries.filter(function(e){return e.status==='paused'&&(!_libCatFilter||e.cat===_libCatFilter);}),_libSort.watching));
+  var queue=_libApplySort(_libEntries.filter(function(e){return e.status==='queue'&&(!_libCatFilter||e.cat===_libCatFilter);}),_libSort.queue);
+  var compAll=_libEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&& (e.status==='paused' || !_libCatFilter || e.cat===_libCatFilter);});
+
+  // Dynamic stats based on current filter
+  var _filteredAll = _pEntries.filter(function(e){return !_libCatFilter||e.cat===_libCatFilter;});
+  var _fSt = computeStats(_filteredAll);
+  var _fHours = Math.round((_fSt.movieMins||0)/60);
+  var completed=_libApplySort(_libStatusFilter?compAll.filter(function(e){return e.status===_libStatusFilter;}):compAll,_libSort.completed);
+  var st=computeStats(_libEntries);
+
+  // Stats bar
+  var statsHTML = '<div class="page-stats" style="margin-bottom:2rem;">'
+    + '<div class="page-stat"><div class="page-stat-num">'+_fSt.watching+'</div><div class="page-stat-label">Watching</div></div>'
+    + '<div class="page-stat"><div class="page-stat-num">'+_fSt.queue+'</div><div class="page-stat-label">Watchlist</div></div>'
+    + '<div class="page-stat"><div class="page-stat-num">'+_fSt.completed+'</div><div class="page-stat-label">Watched</div></div>'
+    + (_fSt.avgScore ? '<div class="page-stat"><div class="page-stat-num">'+_fSt.avgScore+'</div><div class="page-stat-label">Avg Score</div></div>' : '')
+    + (_fSt.totalEps ? '<div class="page-stat"><div class="page-stat-num">'+_fSt.totalEps.toLocaleString()+'</div><div class="page-stat-label">Episodes</div></div>' : '')
+    + (_fSt.watchTime ? '<div class="page-stat"><div class="page-stat-num">'+_fSt.watchTime+'</div><div class="page-stat-label">Movie Watch Time</div></div>' : '')
+    + '</div>';
+
+  // Watching
+  var wc;
+  if(!watching.length){wc='<div class="fv-empty">Not watching anything right now.</div>';}
+  else if(_libWatchView==='grid'){
+    var wg='libwg';
+    var wcs=watching.map(function(e){
+      var ip=e.status==='paused';
+      var pct=e.total_eps?Math.round(((e.watched||0)/e.total_eps)*100):0;
+      var isM=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
+      var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
+      var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
+      var ep=isM?rt:(e.season!=null?'S'+e.season+' E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
+      var _wgScore=liveScore(e)!=null?Number(liveScore(e)):null;
+      var _wgScoreCls=_wgScore==null?'':(_wgScore>=10?'cg-score-10':_wgScore>=9?'cg-score-9':_wgScore>=8?'cg-score-8':_wgScore>=7?'cg-score-7':_wgScore>=6?'cg-score-6':_wgScore>=3?'cg-score-3-5':'cg-score-0-2');
+      var _wgScoreBadge=_wgScore!=null?'<div class="cg-score-badge '+_wgScoreCls+'">'+_wgScore.toFixed(2)+'</div>':'';
+      return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+_wgScoreBadge+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
+        +(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">Taking<br>a Break</span></div>':'')
+        +'<div class="wg-overlay" style="z-index:2;">'+(ep?'<span class="wg-ep">'+ep+'</span>':'')+'</div>'
+        +'</div><div class="wg-info"><div class="wg-title">'+esc(e.title)+'</div>'
+        +'<div class="wg-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'
+        +(e.total_eps?'<div class="fv-w-prog-track" style="margin-top:6px;"><div class="fv-w-prog-fill" style="width:'+pct+'%'+(ip?';background:var(--text-3)':'')+';"></div></div>'
+          +'<div style="font-size:10px;color:var(--text-3);margin-top:3px;">'+(e.watched||0)+' / '+e.total_eps+' eps · '+pct+'%</div>'
+          :'')
+        +'</div></div>';
+    }).join('');
+    wc=_libGridWrap(wg,'<div class="watching-grid" id="'+wg+'">'+wcs+'</div>');
+  } else {
+    wc='<div class="fv-watch-list">'+watching.map(function(e){
+      var ip=e.status==='paused';
+      var isM=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
+      var pct=e.total_eps?Math.round(((e.watched||0)/e.total_eps)*100):0;
+      var ep=isM?'':(e.season!=null?'S'+e.season+' E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
+      var lbl=isM?'':(e.total_eps?(e.watched||0)+' / '+e.total_eps+' eps · '+pct+'%':'');
+      var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
+      var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
+      var cs=ip?'background:var(--olive-faint);border-color:var(--border-olive);':'';
+      return '<div class="fv-w-card" style="cursor:pointer;'+cs+'" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'">'
+        +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.55);display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">Taking<br>a Break</span></div>':'')+'</div>'
+        +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
+        +'<div class="fv-w-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'
+        +(ep?'<div class="fv-w-ep"><span class="fv-w-ep-badge">'+ep+'</span>'+(e.total_eps?'<span style="font-size:11px;color:var(--text-3);">/ '+e.total_eps+' eps</span>':'')+'</div>':'')
+        +(rt?'<div class="fv-w-ep"><span class="fv-w-ep-badge">'+rt+'</span></div>':'')
+        +((!isM&&e.total_eps)?'<div class="fv-w-prog-track" style="margin-top:6px;"><div class="fv-w-prog-fill" style="width:'+pct+'%'+(ip?';background:var(--text-3)':'')+';"></div></div><div class="fv-w-prog-label">'+(e.watched||0)+' / '+e.total_eps+' eps \u00b7 '+pct+'%</div>':(!isM&&e.watched?'<div class="fv-w-prog-label">'+e.watched+' watched</div>':''))
+        +'</div>'+(liveScore(e)!=null?'<div class="fv-w-score">'+Number(liveScore(e)).toFixed(2)+'</div>':'')
+        +'</div>';
+    }).join('')+'</div>';
+  }
+
+  // Queue
+  var qc;
+  if(!queue.length){qc='<div class="fv-empty">Nothing on your watchlist.</div>';}
+  else if(_libQueueView==='grid'){
+    var qg='libqg';
+    var qcs=queue.map(function(e){var scope=_libQueueScope(e);return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<div class="wg-overlay"></div>'+'</div><div class="wg-info"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px;"><div class="wg-title" style="margin-bottom:0;">'+esc(e.title)+'</div>'+(scope?'<span style="font-size:11px;font-weight:600;color:var(--olive-light);white-space:nowrap;flex-shrink:0;">'+scope+'</span>':'')+'</div><div class="wg-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div></div></div>';}).join('');
+    qc=_libGridWrap(qg,'<div class="watching-grid" id="'+qg+'">'+qcs+'</div>');
+  } else {
+    qc='<div class="watch-list">'+queue.map(function(e){var scope=_libQueueScope(e);return '<div class="w-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e)+'</div><div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+'</div></div><div class="w-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'+(scope?'<div class="w-ep-row"><span class="w-ep-badge">'+scope+'</span></div>':'')+'</div></div>';}).join('')+'</div>';
+  }
+
+  // Completed
+  var statusTabs='<div class="cat-filter" style="margin-bottom:12px;">'
+    +'<button class="cf-btn'+(_libStatusFilter===''?' active':'')+'" onclick="setLibStatus(this.dataset.s)" data-s="">All</button>'
+    +'<button class="cf-btn'+(_libStatusFilter==='completed'?' active':'')+'" onclick="setLibStatus(this.dataset.s)" data-s="completed">Watched</button>'
+    +'<button class="cf-btn'+(_libStatusFilter==='ongoing'?' active':'')+'" onclick="setLibStatus(this.dataset.s)" data-s="ongoing">To Be Continued</button>'
+    +'</div>';
+  var isRanked=_libSort.completed==='highest'||_libSort.completed==='lowest';
+  var ratingKey=(_libSort.completed||'').indexOf('rating:')===0?_libSort.completed.slice(7):null;
+  var cc;
+  if(!completed.length){cc=statusTabs+'<div class="fv-empty">Nothing here yet.</div>';}
+  else if(_libCompView==='grid'){
+    var cg='libcg';
+    var ccs=completed.map(function(e,i){
+      var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
+      var cls=i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other';
+      var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
+      var catLabel=(CAT_META[e.cat]&&CAT_META[e.cat].label)||'';
+      var typeBadge=catLabel?'<span class="type-label">'+catLabel+'</span>':'';
+      var dateSpan=date?'<span class="genre-dot" style="color:var(--text-3)">'+date+'</span>':'';
+      var isMovie=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
+      var metaHtml='';
+      if(isMovie){
+        var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
+        if(rtH||rtM)metaHtml='<div class="w-ep-row"><span class="w-ep-badge">'+(rtH?rtH+'h '+rtM+'m':rtM+'m')+'</span></div>';
+      } else if(e.status==='ongoing'&&e.season!=null&&e.episode!=null){
+        metaHtml='<div class="w-ep-row"><span class="w-ep-badge">S'+e.season+' E'+e.episode+'</span></div>';
+      } else {
+        var bd=Array.isArray(e.ratings&&e.ratings._season_breakdown)?e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number):[];
+        var bdTot=bd.reduce(function(a,b){return a+b;},0);
+        var scope=bd.length?'S'+bd.length+' E'+bdTot:(e.total_seasons&&e.total_eps?'S'+e.total_seasons+' E'+e.total_eps:e.total_seasons?'S'+e.total_seasons:e.total_eps?e.total_eps+' eps':'');
+        if(scope)metaHtml='<div class="w-ep-row"><span class="w-ep-badge">'+scope+'</span></div>';
+      }
+      return '<div class="wg-card cg-card-wrap" style="cursor:pointer;">'
+        +'<div class="wg-poster" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+'<div class="wg-overlay"></div>'+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+' </div>'
+        +'<div class="cg-grid-info" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
+        +'<div class="wg-title">'+esc(e.title)+'</div>'
+        +'<div class="wg-genre">'+typeBadge+genreHTML(e.genres||[], 3)+'</div>'
+        +metaHtml
+        +'<div class="cg-score-row"><span class="cg-score">'+(sc||'—')+'</span><span class="cg-score-lbl">score</span></div>'
+        +'</div>'
+        +'<div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">'
+        +_libCcBtn('prof',e.id)
+        +'</div></div>';
+    }).join('');
+    cc=statusTabs+_libGridWrap(cg,'<div class="watching-grid" id="'+cg+'">'+ccs+'</div>');
+  } else {
+    cc=statusTabs+'<div class="fv-ranked-list">'+completed.map(function(e,i){
+      var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):'—';
+      var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
+      return '<div class="fv-entry-block">'
+        +'<div class="fv-rank-row" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
+        +(isRanked?'<div class="fv-rank-num '+(i<3?'top3':'')+'">'+(i+1)+'</div>':'')
+        +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):'')+'</div>'
+        +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
+        +'<div class="fv-rank-meta">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)||'')+(e.genres&&e.genres.length?' · '+e.genres.slice(0,3).join(' · '):'')+'</div>'
+        +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
+        +renderFavChips(e.ratings,e.cat)
+        +'</div><div class="fv-rank-score">'+sc+'</div></div>'
+        +_libCcBtn('prof',e.id)
+        +'</div>';
+    }).join('')+'</div>';
+  }
+
+  el.innerHTML = statsHTML + _libCatFilterBar()
+    +_libSection('watching',icon('play',14)+' Currently Watching',watching.length,'watch','watching',wc)
+    +_libSection('queue',icon('bookmark',14)+' Watchlist',queue.length,'queue','queue',qc)
+    +_libSection('completed',icon('check',14)+' Watched',completed.length,'comp','completed',cc);
+  if(loading)loading.style.display='none';
+  el.style.display='block';
+}
+
+/* ── Tab 2: Favorites ── */
+function renderFavorites(){
+  _favSelected=Array.isArray(_pProfile&&_pProfile.top_picks)?_pProfile.top_picks.slice():[];
+  _recSelected=Array.isArray(_pProfile&&_pProfile.recommended)?_pProfile.recommended.slice():[];
+  _renderFavSlots();
+}
+function _favCardProf(e, rank) {
+  var esc2=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var sc = liveScore(e)!=null ? Number(liveScore(e)).toFixed(2) : null;
+  var rankCls = rank===0?'cg-rank-1':rank===1?'cg-rank-2':rank===2?'cg-rank-3':'cg-rank-other';
+  var badge = rank!=null ? '<div class="cg-rank-badge '+rankCls+'">'+(rank+1)+'</div>' : '';
+  var scoreHTML = sc ? '<div style="font-family:var(--serif);font-size:15px;font-weight:300;color:var(--olive-light);margin-top:4px;text-align:right">'+sc+'</div>' : '';
+  return '<div class="q-card" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="cursor:pointer;">'
+    +'<div class="q-poster" style="position:relative">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div>'+badge+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'</div>'
+    +'<div class="q-info"><div class="q-title">'+esc2(e.title)+'</div>'
+    +'<div class="q-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'
+    +scoreHTML+'</div></div>';
+}
+
+function _favHScrollProf(listId, title, items, editFn, delFn) {
+  var esc2=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var gid='prof-fhg-'+(listId||'top');
+  var editBtn = editFn ? '<button class="fav-edit-btn" onclick="'+editFn+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>' : '';
+  var delBtn = delFn ? '<button class="fav-edit-btn" style="color:var(--text-3);border-color:var(--border);" onclick="'+delFn+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>' : '';
+  var cards = items.map(function(e,i){return _favCardProf(e,i);}).join('');
+  var gridHtml = cards
+    ? '<div class="fav-grid-container">'+'<div class="grid-nav-wrap">'+'<button class="grid-nav-btn arr-left" onclick="event.stopPropagation();_profFavNavScroll(&quot;'+gid+'&quot;,-1)" aria-label="Scroll left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>'+'<button class="grid-nav-btn arr-right" onclick="event.stopPropagation();_profFavNavScroll(&quot;'+gid+'&quot;,1)" aria-label="Scroll right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>'+'<div class="fav-watching-grid" id="'+gid+'">'+cards+'</div>'+'</div></div>'
+    : '<div style="font-size:13px;color:var(--text-3);padding:8px 0;">Nothing here yet.</div>';
+  return '<div style="margin-bottom:2rem;">'    +'<div class="fav-page-list-header"><div class="fav-page-list-title">'+esc2(title)+'</div>'    +'<div style="display:flex;gap:6px;">'+editBtn+delBtn+'</div></div>'    +gridHtml    +'</div>';
+}
+
+function _profFavNavScroll(id,dir){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.scrollBy({left:dir*220,behavior:'smooth'});
+}
+
+
+function _renderFavSlots(){
+  var el=document.getElementById('favoritesContent');
+  if(!el)return;
+  var topItems = _favSelected.map(function(id){return _profEntryMap[id];}).filter(Boolean);
+  var secHd = function(label){ return '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin:1.5rem 0 1rem;display:flex;align-items:center;gap:12px;">'+label+'<span style="flex:1;height:0.5px;background:var(--border);"></span></div>'; };
+
+  var catKeys = {tv:'fav_tv',movies:'fav_movies',anime:'fav_anime',cartoons:'fav_cartoons'};
+  var cats = ['tv','movies','anime','cartoons'];
+  var catLabels = {tv:'Favorite TV Shows',movies:'Favorite Movies',anime:'Favorite Anime',cartoons:'Favorite Cartoons'};
+
+  var html = secHd('Handpicked');
+  html += _favHScrollProf(null,'Top Favorites',topItems,null,null);
+
+  cats.forEach(function(cat){
+    var key = catKeys[cat];
+    var label = catLabels[cat];
+    var defaultItems = Array.isArray(_pProfile&&_pProfile[key])&&_pProfile[key].length
+      ? _pProfile[key].map(function(id){return _profEntryMap[id];}).filter(Boolean) : [];
+    var customLists = _profFavLists.filter(function(l){return l.cat===cat;});
+
+    html += secHd(label);
+    // Default section — always shown, no delete
+    html += _favHScrollProf('default-'+cat, label, defaultItems, null, null);
+    // Custom lists
+    customLists.forEach(function(list){
+      var items = (list.items||[]).map(function(id){return _profEntryMap[id];}).filter(Boolean);
+      var lid = list.id;
+      html += _favHScrollProf(lid, list.title, items, null, null);
+    });
+  });
+
+  // Custom lists (cat === 'custom') — shown at the end
+  var customFavLists = _profFavLists.filter(function(l){ return l.cat === 'custom'; });
+  if (customFavLists.length) {
+    html += secHd('Custom Lists');
+    customFavLists.forEach(function(list) {
+      var lid = list.id;
+      var items = (list.items||[]).map(function(id){return _profEntryMap[id];}).filter(Boolean);
+      html += _favHScrollProf(lid, list.title, items, null, null);
+    });
+  }
+
+  el.innerHTML = html;
+}
+/* ── Unified picker for favorites and recommended ── */
+var _pickerMode = 'fav';
+
+function openFavPicker(){
+  _pickerMode='fav';
+  document.getElementById('favPickerSaveBtn').onclick = saveFavorites;
+  _openPicker(_favSelected,'Top Favorites',saveFavorites);
+}
+function openRecPicker(){
+  _pickerMode='rec';
+  document.getElementById('favPickerSaveBtn').onclick = saveRecommended;
+  _openPicker(_recSelected,'Would Recommend',saveRecommended);
+}
+
+function _openPicker(selected,title,saveFn){
+  var sel=new Set(selected);
+  var all=_pEntries.filter(function(e){return e.status==='completed'||e.status==='ongoing';});
+  // Already selected items first, in current rank order, then rest sorted by score
+  var inSel=selected.map(function(id){return _profEntryMap[id];}).filter(Boolean);
+  var rest=all.filter(function(e){return !sel.has(e.id);}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);});
+  var sorted=inSel.concat(rest);
+  // Re-use slotNum from current selected array for correct badge numbers
+  var selectedArr=selected;
+  var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  document.getElementById('favPickerTitle').textContent=title;
+  document.getElementById('favPickerSaveBtn').onclick=saveFn;
+  document.getElementById('favPickerList').innerHTML=sorted.map(function(e){
+    var liveArr=_pickerMode==='fav'?_favSelected:_recSelected;
+    var isSel=liveArr.indexOf(e.id)>=0,slotNum=liveArr.indexOf(e.id),sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
+    return '<div class="fav-picker-item'+(isSel?' selected':'')+'" onclick="togglePickerItem(this)" data-id="'+e.id+'">'
+      +'<div class="fav-picker-poster">'+(e.poster_url?'<img src="'+e.poster_url+'" loading="lazy">':esc((e.title[0]||'?').toUpperCase()))+(isSel?'<div class="cg-rank-badge '+_profRankCls(slotNum)+'">'+(slotNum+1)+'</div>':'')+('</div>')
+      +'<div class="fav-picker-info"><div class="fav-picker-name">'+esc(e.title)+'</div><div class="fav-picker-sub">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)||'')+'</div></div>'
+      +(sc?'<div class="fav-picker-score">'+sc+'</div>':'')
+      +'<div class="fav-picker-check">'+(isSel?'&#x2713;':'')+'</div></div>';
+  }).join('');
+  document.getElementById('favPickerCount').textContent=selected.length+' / 5';
+  document.getElementById('favPickerOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function togglePickerItem(el){
+  var id=el.dataset.id;
+  var arr=_pickerMode==='fav'?_favSelected:_recSelected;
+  var idx=arr.indexOf(id);
+  if(idx>=0){arr.splice(idx,1);el.classList.remove('selected');el.querySelector('.fav-picker-check').innerHTML='';var b=el.querySelector('.cg-rank-badge');if(b)b.remove();}
+  else{if(arr.length>=5){showToast('Max 5 items.','err');return;}arr.push(id);el.classList.add('selected');el.querySelector('.fav-picker-check').innerHTML='&#x2713;';var pp=el.querySelector('.fav-picker-poster'),bd=document.createElement('div');bd.className='cg-rank-badge cg-rank-other';bd.textContent=arr.length;pp.appendChild(bd);}
+  arr.forEach(function(sid,i){var r=document.querySelector('.fav-picker-item[data-id="'+sid+'"]');if(r){var b=r.querySelector('.cg-rank-badge');if(b){b.textContent=i+1;b.className='cg-rank-badge '+(i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other');}}});
+  document.getElementById('favPickerCount').textContent=arr.length+' / 5';
+}
+function toggleFavItem(el){togglePickerItem(el);}
+
+function _profRankCls(i){
+  return i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other';
+}
+
+/* ── Profile custom list picker ── */
+var _profListPickerId = null;
+var _profListPickerSelected = [];
+
+function openProfCatPicker(cat, profileKey) {
+  var currentItems = Array.isArray(_pProfile&&_pProfile[profileKey]) ? _pProfile[profileKey].slice() : [];
+  _profListPickerId = '__cat__'+cat+'__'+profileKey;
+
+  var pool = _pEntries.filter(function(e){return e.status==='completed'||e.status==='ongoing';});
+  if(cat==='movies') pool=pool.filter(function(e){return e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');});
+  else if(cat==='tv') pool=pool.filter(function(e){return e.cat==='tv';});
+  else pool=pool.filter(function(e){return e.cat===cat;});
+
+  _profListPickerSelected = currentItems.slice();
+  var selSet=new Set(currentItems);
+  var inSel=currentItems.map(function(id){return _profEntryMap[id];}).filter(Boolean);
+  var rest=pool.filter(function(e){return !selSet.has(e.id);}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);});
+  var sorted=inSel.concat(rest);
+
+  var catLabel={tv:'TV Shows',movies:'Movies',anime:'Anime',cartoons:'Cartoons'}[cat];
+  var esc2=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  document.getElementById('favPickerTitle').textContent='Favorite '+catLabel;
+  document.getElementById('favPickerCount').textContent=currentItems.length+' / ∞';
+  document.getElementById('favPickerSaveBtn').onclick=saveProfCatList;
+  document.getElementById('favPickerList').innerHTML=sorted.map(function(e){
+    var isSel=_profListPickerSelected.includes(e.id),slotNum=_profListPickerSelected.indexOf(e.id),sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
+    return '<div class="fav-picker-item'+(isSel?' selected':'')+'" onclick="toggleProfListItem(this)" data-id="'+e.id+'">'
+      +'<div class="fav-picker-poster">'+(e.poster_url?'<img src="'+e.poster_url+'" loading="lazy">':esc2((e.title[0]||'?').toUpperCase()))
+      +(isSel?'<div class="cg-rank-badge '+_profRankCls(slotNum)+'">'+(slotNum+1)+'</div>':'')
+      +'</div>'
+      +'<div class="fav-picker-info"><div class="fav-picker-name">'+esc2(e.title)+'</div><div class="fav-picker-sub">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)||'')+'</div></div>'
+      +(sc?'<div class="fav-picker-score">'+sc+'</div>':'')
+      +'<div class="fav-picker-check">'+(isSel?'&#x2713;':'')+'</div></div>';
+  }).join('');
+  document.getElementById('favPickerOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+async function saveProfCatList() {
+  var parts = _profListPickerId.split('__');
+  var profileKey = parts[3];
+  try {
+    var upd = {}; upd[profileKey] = _profListPickerSelected.slice();
+    var {error} = await sb.from('profiles').update(upd).eq('id',_pUser.id);
+    if(error) throw error;
+    if(_pProfile) _pProfile[profileKey] = _profListPickerSelected.slice();
+    closeFavPicker();
+    _renderFavSlots();
+    showToast('Saved!');
+  } catch(e){showToast('Error saving.','err');console.error(e);}
+}
+
+function openProfListPicker(listId) {
+  _profListPickerId = listId;
+  var list = _profFavLists.find(function(l){return l.id===listId;});
+  if (!list) return;
+  var currentItems = (list.items||[]).slice();
+  _profListPickerSelected = currentItems.slice();
+
+  // Filter pool by cat and genre (custom = all entries)
+  var pool = _pEntries.filter(function(e){return e.status==='completed'||e.status==='ongoing';});
+  var cat = list.cat;
+  if (cat && cat !== 'custom') {
+    if (cat==='movies') pool = pool.filter(function(e){return e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');});
+    else if (cat==='tv') pool = pool.filter(function(e){return e.cat==='tv';});
+    else pool = pool.filter(function(e){return e.cat===cat;});
+    if (list.genre) pool = pool.filter(function(e){return (e.genres||[]).includes(list.genre);});
+  }
+
+  // Sort: selected first by rank, then rest by score
+  var selSet = new Set(currentItems);
+  var inSel = currentItems.map(function(id){return _profEntryMap[id];}).filter(Boolean);
+  var rest = pool.filter(function(e){return !selSet.has(e.id);}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);});
+  var sorted = inSel.concat(rest);
+
+  var esc2=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  document.getElementById('favPickerTitle').textContent = list.title;
+  document.getElementById('favPickerCount').textContent = currentItems.length+' / ∞';
+  document.getElementById('favPickerSaveBtn').onclick = saveProfList;
+  document.getElementById('favPickerList').innerHTML = sorted.map(function(e){
+    var isSel=_profListPickerSelected.includes(e.id), slotNum=_profListPickerSelected.indexOf(e.id), sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
+    return '<div class="fav-picker-item'+(isSel?' selected':'')+'" onclick="toggleProfListItem(this)" data-id="'+e.id+'">'
+      +'<div class="fav-picker-poster">'+(e.poster_url?'<img src="'+e.poster_url+'" loading="lazy">':esc2((e.title[0]||'?').toUpperCase()))
+      +(isSel?'<div class="cg-rank-badge '+_profRankCls(slotNum)+'">'+(slotNum+1)+'</div>':'')
+      +'</div>'
+      +'<div class="fav-picker-info"><div class="fav-picker-name">'+esc2(e.title)+'</div><div class="fav-picker-sub">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)||'')+'</div></div>'
+      +(sc?'<div class="fav-picker-score">'+sc+'</div>':'')
+      +'<div class="fav-picker-check">'+(isSel?'&#x2713;':'')+'</div></div>';
+  }).join('');
+  document.getElementById('favPickerOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function _profRenumber() {
+  _profListPickerSelected.forEach(function(sid, i) {
+    var row = document.querySelector('.fav-picker-item[data-id="'+sid+'"]');
+    if (!row) return;
+    var b = row.querySelector('.cg-rank-badge');
+    if (!b) { b = document.createElement('div'); row.querySelector('.fav-picker-poster').appendChild(b); }
+    b.className = 'cg-rank-badge ' + _profRankCls(i);
+    b.textContent = i + 1;
+  });
+  document.querySelectorAll('.fav-picker-item:not(.selected) .cg-rank-badge').forEach(function(b){ b.remove(); });
+}
+
+function toggleProfListItem(el) {
+  var id=el.dataset.id;
+  var idx=_profListPickerSelected.indexOf(id);
+  if(idx>=0){
+    _profListPickerSelected.splice(idx,1);
+    el.classList.remove('selected');
+    el.querySelector('.fav-picker-check').innerHTML='';
+  } else {
+    _profListPickerSelected.push(id);
+    el.classList.add('selected');
+    el.querySelector('.fav-picker-check').innerHTML='&#x2713;';
+  }
+  _profRenumber();
+  _profListPickerSelected.forEach(function(sid,i){
+    var r=document.querySelector('.fav-picker-item[data-id="'+sid+'"]');
+    if(r){var b=r.querySelector('.cg-rank-badge');if(b){b.textContent=i+1;b.className='cg-rank-badge '+(i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other');}}
+  });
+  document.getElementById('favPickerCount').textContent=_profListPickerSelected.length+' / ∞';
+}
+
+async function saveProfList() {
+  if (_profListPickerId===null) { saveFavorites(); return; }
+  var list = _profFavLists.find(function(l){return l.id===_profListPickerId;});
+  if (!list) return;
+  try {
+    list.items = _profListPickerSelected.slice();
+    var { error } = await sb.from('favorite_lists').update({items:list.items}).eq('id',list.id).eq('user_id',_pUser.id);
+    if (error) throw error;
+    closeFavPicker();
+    _renderFavSlots();
+    showToast('Saved!');
+  } catch(e) { showToast('Error saving.','err'); console.error(e); }
+}
+
+async function deleteProfList(id) {
+  var list = _profFavLists.find(function(l){return l.id===id;});
+  var ok = await showConfirm({ title: 'Delete List?', message: '"'+(list?.title||'this list')+'" will be permanently deleted.', confirmText: 'Delete', iconName: 'x' });
+  if (!ok) return;
+  try {
+    var { error } = await sb.from('favorite_lists').delete().eq('id',id).eq('user_id',_pUser.id);
+    if (error) throw error;
+    _profFavLists = _profFavLists.filter(function(l){return l.id!==id;});
+    _renderFavSlots();
+    showToast('List deleted.');
+  } catch(e) { showToast('Error deleting.','err'); }
+}
+
+/* ── Add new list modal (in profile) ── */
+var _profNewCat=null, _profNewGenre=null;
+var PROF_GENRES=['Action','Adventure','Animation','Biography','Comedy','Crime','Documentary','Drama','Family','Fantasy','Heist','Historical','Horror','Medical','Musical','Mystery','Political','Psychological','Romance','Sci-Fi','Slice of Life','Space','Sports','Superhero','Supernatural','Thriller','War','Western'];
+
+function openProfAddListModal() {
+  _profNewCat=null; _profNewGenre=null;
+  // Reuse favPickerOverlay but with an "add list" mode — instead use a simple inline modal
+  var existing = document.getElementById('profAddListModal');
+  if (existing) { existing.style.display='flex'; document.body.style.overflow='hidden'; return; }
+  var el = document.createElement('div');
+  el.id='profAddListModal';
+  el.style.cssText='position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  el.innerHTML='<div style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:97%;max-width:480px;max-height:85dvh;overflow-y:auto;overscroll-behavior-y:contain;box-sizing:border-box;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:0.5px solid var(--border);">'
+    +'<div style="font-family:var(--serif);font-size:20px;font-weight:300;">New Favorites List</div>'
+    +'<button onclick="closeProfAddListModal()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;">✕</button>'
+    +'</div>'
+    +'<div style="padding:20px;">'
+    +'<div id="profAddPreview" style="font-size:13px;color:var(--olive-light);font-style:italic;min-height:18px;margin-bottom:16px;">Choose a category and genre</div>'
+    +'<div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;">Category</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;" id="profCatBtns">'
+    +'<button class="fav-cat-btn" data-cat="tv" onclick="profSelectCat(this)">TV Shows</button>'
+    +'<button class="fav-cat-btn" data-cat="movies" onclick="profSelectCat(this)">Movies</button>'
+    +'<button class="fav-cat-btn" data-cat="anime" onclick="profSelectCat(this)">Anime</button>'
+    +'<button class="fav-cat-btn" data-cat="cartoons" onclick="profSelectCat(this)">Cartoons</button>'
+    +'</div>'
+    +'<div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;">Genre</div>'
+    +'<div id="profGenreGrid" style="display:flex;flex-wrap:wrap;gap:6px;"></div>'
+    +'</div>'
+    +'<div style="padding:16px 20px;border-top:0.5px solid var(--border);">'
+    +'<button id="profAddCreateBtn" class="btn-save" style="width:100%;" onclick="profCreateList()" disabled>Create List</button>'
+    +'</div></div>';
+  el.addEventListener('click', function(ev){if(ev.target===el)closeProfAddListModal();});
+  document.body.appendChild(el);
+  document.body.style.overflow='hidden';
+}
+function closeProfAddListModal(){
+  var el=document.getElementById('profAddListModal');
+  if(el)el.style.display='none';
+  document.body.style.overflow='';
+}
+function profSelectCat(btn){
+  document.querySelectorAll('#profCatBtns .fav-cat-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  _profNewCat=btn.dataset.cat; _profNewGenre=null;
+  document.getElementById('profAddCreateBtn').disabled=true;
+  document.getElementById('profAddPreview').textContent='Choose a genre';
+  document.getElementById('profGenreGrid').innerHTML=PROF_GENRES.map(function(g){
+    return '<span style="font-size:11px;padding:4px 12px;border-radius:20px;background:var(--card);border:0.5px solid var(--border);color:var(--text-2);cursor:pointer;transition:all .15s;" onclick="profSelectGenre(this,&quot;'+g+'&quot;)" >'+g+'</span>';
+  }).join('');
+}
+function profSelectGenre(el,genre){
+  document.querySelectorAll('#profGenreGrid span').forEach(function(s){s.style.background='var(--card)';s.style.borderColor='var(--border)';s.style.color='var(--text-2)';});
+  el.style.background='var(--olive-faint)';el.style.borderColor='var(--border-olive)';el.style.color='var(--olive-light)';
+  _profNewGenre=genre;
+  document.getElementById('profAddCreateBtn').disabled=false;
+  var catLabel=(CAT_META[_profNewCat]&&CAT_META[_profNewCat].singular)||'';
+  document.getElementById('profAddPreview').textContent='"Favorite '+genre+' '+catLabel+'s"';
+}
+async function profCreateList(){
+  if(!_profNewCat||!_profNewGenre)return;
+  var catLabel=(CAT_META[_profNewCat]&&CAT_META[_profNewCat].singular)||'';
+  var title='Favorite '+_profNewGenre+' '+catLabel+'s';
+  try{
+    var ins=await sb.from('favorite_lists').insert({user_id:_pUser.id,cat:_profNewCat,genre:_profNewGenre,title:title,items:[]}).select().single();
+    if(ins.error)throw ins.error;
+    _profFavLists.push(ins.data);
+    closeProfAddListModal();
+    _renderFavSlots();
+    showToast('"'+title+'" created!');
+    setTimeout(function(){openProfListPicker(ins.data.id);},300);
+  }catch(e){showToast('Error creating list.','err');console.error(e);}
+}
+
+/* ── Favorite Sections ── */
+function _getFavSecItems(cat) {
+  // Get items from the first custom list for this cat, fallback to top_picks filtered by cat
+  var catList = _profFavLists.find(function(l){ return l.cat===cat; });
+  if (catList && catList.items && catList.items.length) {
+    return catList.items.map(function(id){return _profEntryMap[id];}).filter(Boolean);
+  }
+  // Fallback: top_picks filtered by category
+  var picks = Array.isArray(_pProfile&&_pProfile.top_picks) ? _pProfile.top_picks : [];
+  return picks.map(function(id){return _profEntryMap[id];}).filter(function(e){
+    return e && (
+      cat==='movies' ? (e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie'))
+      : cat==='tv'   ? (e.cat==='tv')
+      : e.cat===cat
+    );
+  });
+}
+
+function buildFavSections() {
+  var esc2=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var catKeys={tv:'fav_tv',movies:'fav_movies',anime:'fav_anime',cartoons:'fav_cartoons'};
+
+  function secCard(e, onclick, label) {
+    var emptyCard = '<div class="favsec-pick-card favsec-pick-empty" onclick="'+onclick+'">'
+      +'<div class="favsec-pick-poster"></div>'
+      +'<div class="favsec-pick-label">'+label+'</div>'
+      +'</div>';
+    if (!e) return emptyCard;
+    return '<div class="favsec-pick-card" onclick="'+onclick+'">'
+      +'<div class="favsec-pick-poster">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div></div>'
+      +'<div class="favsec-pick-label">'+label+'</div>'
+      +'</div>';
+  }
+
+  var topItems = Array.isArray(_pProfile&&_pProfile.top_picks)&&_pProfile.top_picks.length
+    ? _pProfile.top_picks.map(function(id){return _profEntryMap[id];}).filter(Boolean)
+    : [];
+  var cards = [];
+  if (topItems.length) cards.push(secCard(topItems[0], 'openFavSec(&quot;top&quot;)', 'Top Favorites'));
+
+  var cats=[{cat:'tv'},{cat:'movies'},{cat:'anime'},{cat:'cartoons'}];
+  cats.forEach(function(m){
+    var key=catKeys[m.cat];
+    var items=Array.isArray(_pProfile&&_pProfile[key])&&_pProfile[key].length
+      ? _pProfile[key].map(function(id){return _profEntryMap[id];}).filter(Boolean)
+      : [];
+    if (items.length) {
+      var catLabel2={tv:'TV Shows',movies:'Movies',anime:'Anime',cartoons:'Cartoons'}[m.cat];
+      cards.push(secCard(items[0], 'openFavSec(&quot;'+m.cat+'&quot;)', catLabel2));
+    }
+  });
+
+  if (!cards.length) return '';
+  return '<div class="favsec-picks-row">'+cards.join('')+'</div>';
+}
+
+function openFavSec(cat) {
+  var catLabels = {top:'Top Favorites',tv:'Favorite TV Shows',movies:'Favorite Movies',anime:'Favorite Anime',cartoons:'Favorite Cartoons'};
+  var catKeys={tv:'fav_tv',movies:'fav_movies',anime:'fav_anime',cartoons:'fav_cartoons'};
+  var items;
+  if (cat==='top') {
+    items = Array.isArray(_pProfile&&_pProfile.top_picks)&&_pProfile.top_picks.length
+      ? _pProfile.top_picks.map(function(id){return _profEntryMap[id];}).filter(Boolean)
+      : [];
+  } else {
+    var key=catKeys[cat];
+    items = Array.isArray(_pProfile&&_pProfile[key])&&_pProfile[key].length
+      ? _pProfile[key].map(function(id){return _profEntryMap[id];}).filter(Boolean)
+      : [];
+  }
+  var esc2 = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  document.getElementById('favSecTitle').textContent = catLabels[cat]||cat;
+  items = items.slice(0,5);
+  document.getElementById('favSecGrid').innerHTML = items.map(function(e){
+    var sc = liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
+    var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
+    return '<div class="q-card" style="cursor:pointer;" onclick="profClosePopup();profOpenPopup(&quot;'+e.id+'&quot;)">'
+      +'<div class="q-poster">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div></div>'
+      +'<div class="q-info"><div class="q-title">'+esc2(e.title)+'</div>'
+      +'<div class="q-genre">'+genreHTML(e.genres, 3)+'</div>'
+      +(sc?'<div class="fav-card-score">'+sc+'</div>':'')
+      +'</div></div>';
+  }).join('');
+  var ov = document.getElementById('favSecOverlay');
+  ov.classList.add('open');
+  document.getElementById('favSecCard').style.transform = 'translateY(0)';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFavSec() {
+  var ov = document.getElementById('favSecOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.getElementById('favSecCard').style.transform = 'translateY(18px)';
+  document.body.style.overflow = '';
+}
+function _profFavScroll(id,dir){var el=document.getElementById(id);if(el)el.scrollBy({left:dir*300,behavior:"smooth"});}
+
+async function saveFavorites(){
+  try{
+    await updateProfile(_pUser.id,{top_picks:_favSelected});
+    if(_pProfile)_pProfile.top_picks=_favSelected.slice();
+    closeFavPicker();
+    try{_renderFavSlots();}catch(e2){console.warn('renderFavSlots:',e2);}
+    try{renderOverview();}catch(e3){console.warn('renderOverview:',e3);}
+    showToast('Favorites saved!');
+  }catch(err){showToast('Error saving.','err');console.error(err);}
+}
+async function saveRecommended(){
+  try{
+    await updateProfile(_pUser.id,{recommended:_recSelected});
+    if(_pProfile)_pProfile.recommended=_recSelected.slice();
+    closeFavPicker();
+    try{_renderFavSlots();}catch(e2){console.warn('renderFavSlots:',e2);}
+    try{renderOverview();}catch(e3){console.warn('renderOverview:',e3);}
+    showToast('Recommendations saved!');
+  }catch(err){showToast('Error saving.','err');console.error(err);}
+}
+function closeFavPicker(){document.getElementById('favPickerOverlay').classList.remove('open');document.body.style.overflow='';}
+
+/* ── Tab 3: Notes ── */
+function renderNotes(){
+  var el=document.getElementById('notesContent');
+  var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var items=_pEntries.filter(function(e){return e.notes&&e.notes.trim();}).sort(function(a,b){return new Date(b.completed_date||b.created_at||0)-new Date(a.completed_date||a.created_at||0);});
+  if(!items.length){el.innerHTML='<div class="pv-empty">No personal notes yet.</div>';return;}
+  el.innerHTML=items.map(function(e){
+    var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
+    var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
+    return '<div class="note-row" onclick="openNotePopup2(this.dataset.id)" data-id="'+e.id+'">'
+      +'<div class="note-poster">'+(e.poster_url?'<img src="'+e.poster_url+'" loading="lazy">':esc((e.title[0]||'?').toUpperCase()))+'</div>'
+      +'<div class="note-body"><div class="note-title">'+esc(e.title)+'</div>'
+      +'<div class="note-tags">'+genreHTML(e.genres, 3)+(date?'<span class="note-date">'+date+'</span>':'')+'</div>'
+      +'<div class="note-text">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div></div>'
+      +(sc?'<div class="note-score">'+sc+'</div>':'')
+      +'</div>';
+  }).join('');
+}
+
+/* ── Tab 4: Exports ── */
+function renderExports(){
+  var el=document.getElementById('exportsContent');
+  if(el.innerHTML.trim())return;
+  var cards=[
+    {type:'ranked',icon:'trophy',title:'Ranked List',desc:'All completed titles sorted by score.'},
+    {type:'completed',icon:'check',title:'Watched List',desc:'Full watch history chronologically.'},
+    {type:'profile',icon:'user',title:'Profile Overview',desc:'Stats, highlights and top titles.'},
+    {type:'watchlater',icon:'bookmark',title:'Watchlist',desc:'Your full watchlist queue.'},
+  ];
+  el.innerHTML='<div class="pv-section"><div class="pv-eyebrow">Export</div><div class="pv-title">Download Your Data</div><div class="export-grid">'+cards.map(function(c){return '<div class="export-card" onclick="openExportPopup(\''+c.type+'\')"><div class="export-card-icon">'+icon(c.icon,28)+'</div><div class="export-card-title">'+c.title+'</div><div class="export-card-desc">'+c.desc+'</div></div>';}).join('')+'</div></div>';
+}
+function openExportPopup(type){
+  var titles={ranked:'Ranked List',completed:'Watched List',profile:'Profile Overview',watchlater:'Watchlist'};
+  var descs={ranked:'All completed titles sorted by score.',completed:'Full watch history chronologically.',profile:'Stats, highlights and top titles.',watchlater:'Your full watchlist queue.'};
+  var icons={ranked:'trophy',completed:'check',profile:'user',watchlater:'bookmark'};
+  _pendingExport=type;
+  document.getElementById('exportPopupTitle').textContent=titles[type];
+  document.getElementById('exportPopupDesc').textContent=descs[type];
+  document.getElementById('exportPopupIcon').innerHTML=icon(icons[type],44);
+  document.getElementById('exportPopupBtn').disabled=false;
+  document.getElementById('exportOverlay').classList.add('open');
+}
+function closeExportPopup(){document.getElementById('exportOverlay').classList.remove('open');_pendingExport=null;}
+function setExportTheme(t){_exportTheme=t;document.getElementById('ethDark').classList.toggle('active',t==='dark');document.getElementById('ethLight').classList.toggle('active',t==='light');}
+async function runExport(){
+  if(!_pendingExport)return;
+  var btn=document.getElementById('exportPopupBtn');
+  btn.disabled=true;btn.textContent='Generating…';
+  try{
+    var sorted;
+    if(_pendingExport==='ranked'){sorted=_pEntries.filter(function(e){return e.status==='completed'||e.status==='ongoing';}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);});await buildAndExportPDF({subtitle:'Ranked List',entries:sorted,useRanked:true,filename:'ranked-list.pdf'});}
+    else if(_pendingExport==='completed'){sorted=_pEntries.filter(function(e){return e.status==='completed'||e.status==='ongoing';}).sort(function(a,b){return new Date(b.completed_date||0)-new Date(a.completed_date||0);});await buildAndExportPDF({subtitle:'Watched List',entries:sorted,useRanked:false,filename:'completed-list.pdf'});}
+    else if(_pendingExport==='watchlater'){sorted=_pEntries.filter(function(e){return e.status==='queue';}).sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0);});await buildAndExportPDF({subtitle:'Watchlist',entries:sorted,useRanked:false,isWatchLater:true,filename:'watch-later.pdf'});}
+    else{sorted=_pEntries.filter(function(e){return e.status==='completed'||e.status==='ongoing';}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);}).slice(0,10);await buildAndExportPDF({subtitle:'Profile Overview',entries:sorted,useRanked:true,filename:'my-screenscore-profile.pdf'});}
+    showToast('PDF exported!');closeExportPopup();
+  }catch(err){console.error(err);btn.disabled=false;btn.textContent='Download PDF';}
+}
+
+/* ══════════════════════════════════════════
+   COMMENTS SYSTEM — same as completed page
+════════════════════════════════════════════ */
+function _injectLibCommentsPopup(prefix) {
+  var id = prefix+'LccOverlay';
+  if (document.getElementById(id)) return;
+  var el = document.createElement('div');
+  el.className = 'lcc-overlay';
+  el.id = id;
+  el.innerHTML = '<div class="lcc-card" id="'+prefix+'LccCard">'    +'<div style="display:flex;align-items:flex-start;gap:16px;padding:20px;border-bottom:0.5px solid var(--border);flex-shrink:0;">'+'<div id="'+prefix+'LccPoster" style="width:56px;height:76px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);"></div>'+'<div style="flex:1;min-width:0;">'+'<div id="'+prefix+'LccName" style="font-family:var(--serif);font-size:18px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text);"></div>'+'<div id="'+prefix+'LccMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px;"></div>'+'<div id="'+prefix+'LccCount" style="font-size:12px;color:var(--olive-light);font-weight:500;display:none;"></div>'+'</div>'+'<button class="lcc-close" onclick="closeLibComments(\''+prefix+'\')">✕</button>'+'</div>'    +'<div class="lcc-list" id="'+prefix+'LccList"><div class="lcc-empty">Loading…</div></div>'    +'<div class="lcc-form"><input class="lcc-input" id="'+prefix+'LccInput" placeholder="Write a comment…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();postLibComment(\''+prefix+'\')}"><button class="lcc-send" onclick="postLibComment(\''+prefix+'\')">Send</button></div>'    +'</div>';
+  el.addEventListener('click', function(e){if(e.target===el)closeLibComments(prefix);});
+  document.body.appendChild(el);
+}
+
+
+function _libCcBtn(prefix, entryId) {
+  var emap = prefix==='prof' ? '_profEntryMap' : '_pvEntryMapPv';
+  return '<button class="cc-strip" style="margin-top:0;display:inline-flex;width:auto;align-self:flex-start;" '
+    + 'onclick="event.stopPropagation();openLibComments(\'' + prefix + '\',\'' + entryId + '\',' + emap + ')">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' + ' <span>Comments</span></button>';
+}
+var _libCmtEntryId = {};
+var _libCmtEntryMap = {};
+var _libReplyFor = {};
+
+function openLibComments(prefix, entryId, entryMap) {
+  _injectLibCommentsPopup(prefix);
+  _libCmtEntryId[prefix] = entryId;
+  if (entryMap) _libCmtEntryMap[prefix] = entryMap;
+  var e = _libCmtEntryMap[prefix] && _libCmtEntryMap[prefix][entryId];
+  var nameEl = document.getElementById(prefix+'LccName');
+  if (e && nameEl) nameEl.textContent = e.title;
+  var posterEl = document.getElementById(prefix+'LccPoster');
+  if (e && posterEl) posterEl.innerHTML = posterHTML(e,'big');
+  var metaEl = document.getElementById(prefix+'LccMeta');
+  if (e && metaEl) {
+    var chips = [];
+    if (CAT_META && CAT_META[e.cat] && CAT_META[e.cat].label) chips.push(CAT_META[e.cat].label);
+    if (e.genres) e.genres.slice(0,3).forEach(function(g){chips.push(g);});
+    metaEl.innerHTML = chips.map(function(m){
+      return '<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:12px;padding:1px 6px;font-size:9px;letter-spacing:.3px">'+m+'</span>';
+    }).join('');
+  }
+  var inp = document.getElementById(prefix+'LccInput');
+  if (inp) inp.value = '';
+  loadLibComments(prefix, entryId);
+  var ov = document.getElementById(prefix+'LccOverlay');
+  if (ov) { ov.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+
+function closeLibComments(prefix) {
+  var ov = document.getElementById(prefix+'LccOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+  _libCmtEntryId[prefix] = null;
+}
+
+async function loadLibComments(prefix, entryId) {
+  var body = document.getElementById(prefix+'LccList');
+  var count = document.getElementById(prefix+'LccCount');
+  if (!body) return;
+  try {
+    var comments = await getComments(entryId);
+    var u = await getCurrentUser();
+    var me = u && u.id;
+    var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+    if (!comments.length) {
+      body.innerHTML = '<div class="lcc-empty">No comments yet — be the first!</div>';
+      if (count) count.style.display = 'none';
+      return;
+    }
+    var topC  = comments.filter(function(c){return !c.reply_to;});
+    var repsC = comments.filter(function(c){return c.reply_to;});
+    body.innerHTML = topC.map(function(c) {
+      var uname = esc((c.profiles&&c.profiles.username)||'Unknown');
+      var date  = new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      var reps  = repsC.filter(function(r){return r.reply_to===c.id;});
+      var repHTML = reps.map(function(r){
+        var runame = esc((r.profiles&&r.profiles.username)||'Unknown');
+        var rdate  = new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        return '<div class="det-reply-item" id="lcm-'+r.id+'">'
+          +'<div class="det-reply-author" style="color:var(--olive-light);">@'+runame+'</div>'
+          +'<div class="det-reply-text">'+esc(r.content).replace(/(@[\w]+)/g,'<span style="color:var(--olive-light);font-weight:600">$1</span>')+'</div>'
+          +'<div class="det-reply-meta"><span>'+rdate+'</span>'
+          +(r.author_id===me?'<button class="cc-del" onclick="deleteLibComment(\''+prefix+'\',\''+r.id+'\',\''+entryId+'\')">delete</button>':'')
+          +'</div></div>';
+      }).join('');
+      return '<div class="lcc-comment" id="lcm-'+c.id+'">'
+        
+        +'<div class="lcc-comment-body">'
+        +'<div class="lcc-author" style="color:var(--olive-light);">@'+uname+'</div>'
+        +'<div class="lcc-text">'+esc(c.content)+'</div>'
+        +'<div class="lcc-meta"><span>'+date+'</span>'
+        +'<button class="det-comment-reply-btn" onclick="libReply(\''+prefix+'\',\''+c.id+'\',\''+uname+'\',\''+entryId+'\')">Reply</button>'
+        +(c.author_id===me?'<button class="cc-del" onclick="deleteLibComment(\''+prefix+'\',\''+c.id+'\',\''+entryId+'\')">delete</button>':'')
+        +'</div>'+repHTML+'<div id="lcrep-'+c.id+'"></div>'
+        +'</div></div>';
+    }).join('');
+    if (count) { count.textContent = comments.length + ' comment' + (comments.length !== 1 ? 's' : ''); count.style.display = 'block'; }
+  } catch(err) { showToast('Could not load comments.','err'); }
+}
+
+async function postLibComment(prefix) {
+  var input = document.getElementById(prefix+'LccInput');
+  var content = input && input.value.trim();
+  var entryId = _libCmtEntryId[prefix];
+  if (!content || !entryId) return;
+  try {
+    input.disabled = true;
+    await addComment(entryId, content);
+    input.value = '';
+    await loadLibComments(prefix, entryId);
+  } catch(err) { showToast('Could not post comment.','err'); }
+  finally { if(input){input.disabled=false;input.focus();} }
+}
+
+async function deleteLibComment(prefix, commentId, entryId) {
+  try {
+    await deleteComment(commentId);
+    await loadLibComments(prefix, entryId);
+  } catch(err) { showToast('Could not delete.','err'); }
+}
+
+function libReply(prefix, commentId, username, entryId) {
+  var prev = _libReplyFor[prefix];
+  if (prev) { var pe=document.getElementById('lcrep-'+prev); if(pe) pe.innerHTML=''; }
+  if (prev===commentId) { _libReplyFor[prefix]=null; return; }
+  _libReplyFor[prefix] = commentId;
+  var box = document.getElementById('lcrep-'+commentId);
+  if (!box) return;
+  box.innerHTML = '<div class="det-reply-form">'
+    +'<input class="det-reply-input" id="lri-'+commentId+'" value="@'+username+' " placeholder="Reply..."'
+    +' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();postLibReply(\''+prefix+'\',\''+entryId+'\',\''+commentId+'\')}">'
+    +'<button class="det-reply-send" onclick="postLibReply(\''+prefix+'\',\''+entryId+'\',\''+commentId+'\')">Reply</button>'
+    +'<button class="det-comment-del" onclick="document.getElementById(\'lcrep-'+commentId+'\').innerHTML=\'\';_libReplyFor[\''+prefix+'\']=null" style="margin-left:4px;">&#x2715;</button>'
+    +'</div>';
+  var ri = document.getElementById('lri-'+commentId);
+  if (ri) ri.focus();
+}
+
+async function postLibReply(prefix, entryId, commentId) {
+  var input = document.getElementById('lri-'+commentId);
+  var content = input && input.value.trim();
+  if (!content) return;
+  input.disabled = true;
+  try {
+    await addComment(entryId, content, commentId);
+    document.getElementById('lcrep-'+commentId).innerHTML = '';
+    _libReplyFor[prefix] = null;
+    await loadLibComments(prefix, entryId);
+  } catch(err) { showToast('Could not post reply.','err'); if(input) input.disabled=false; }
+}
+
+
+/* ── Share Profile ── */
+function openShareProfile() {
+  var un = (_pProfile && _pProfile.username) || (_pUser && _pUser.email && _pUser.email.split('@')[0]) || '';
+  var base = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+  var url = base + 'profile-view.html?u=' + encodeURIComponent(un);
+  // Use navigator.share if available
+  if (navigator.share) {
+    navigator.share({ title: 'MyScreenScore — @'+un, url: url }).catch(function(){});
+    return;
+  }
+  // Fallback: show popup
+  var popup = document.getElementById('profSharePopup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.className = 'prof-share-popup';
+    popup.id = 'profSharePopup';
+    popup.innerHTML = '<div class="prof-share-card">'
+      +'<div class="prof-share-title">Share Profile</div>'
+      +'<div class="prof-share-sub">Anyone with this link can view your profile and send you a friend request.</div>'
+      +'<div class="prof-share-link" id="profShareLink" onclick="profCopyLink()">'
+      +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+      +'<span id="profShareUrl"></span>'
+      +'</div>'
+      +'<div class="prof-share-actions">'
+      +'<button class="prof-share-copy" onclick="profCopyLink()">Copy Link</button>'
+      +'<button class="prof-share-close" onclick="closeShareProfile()">Close</button>'
+      +'</div></div>';
+    popup.addEventListener('click', function(e){ if(e.target===popup) closeShareProfile(); });
+    document.body.appendChild(popup);
+  }
+  document.getElementById('profShareUrl').textContent = url;
+  popup._url = url;
+  popup.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeShareProfile() {
+  var p = document.getElementById('profSharePopup');
+  if (p) { p.classList.remove('open'); document.body.style.overflow = ''; }
+}
+function profCopyLink() {
+  var p = document.getElementById('profSharePopup');
+  var url = p && p._url;
+  if (!url) return;
+  navigator.clipboard && navigator.clipboard.writeText(url).then(function(){ showToast('Link copied!'); });
+}
+
+
+function openNotePopup2(id) {
+  var e = _pEntries.find(function(en){return en.id===id;});
+  if (!e) return;
+  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+  document.getElementById('notePopup2Poster').innerHTML = e.poster_url ? '<img src="'+e.poster_url+'" loading="lazy">' : esc((e.title[0]||'?').toUpperCase());
+  document.getElementById('notePopup2Title').textContent = e.title;
+  document.getElementById('notePopup2Tags').innerHTML = genreHTML(e.genres||[]) + (date?'<span class="note-date">'+date+'</span>':'');
+  document.getElementById('notePopup2Date').innerHTML = '';
+  document.getElementById('notePopup2Text').innerHTML = '&ldquo;' + esc(_trimNotes(e.notes||'')) + '&rdquo;';
+  var editBtn = document.getElementById('notePopup2Edit');
+  editBtn.style.display = 'inline-block';
+  editBtn.onclick = function(){
+    closeNotePopup2();
+    sessionStorage.setItem('detailId', id);
+    sessionStorage.setItem('detailFrom', 'profile.html');
+    sessionStorage.setItem('detailScrollTo', 'notes');
+    window.location.href = 'detail.html';
+  };
+  document.getElementById('notePopup2').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeNotePopup2() {
+  document.getElementById('notePopup2').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+
+
+/* ══ Info Popup for library watching/queue ══ */
+function _injectProfInfoPopup() {
+  if (document.getElementById('profInfoOverlay')) return;
+  var el = document.createElement('div');
+  el.id = 'profInfoOverlay';
+  el.innerHTML = '<div id="profInfoCard">'
+    + '<div class="pvi-header">'
+    + '<div class="pvi-poster" id="profInfoPoster"></div>'
+    + '<div class="pvi-meta-wrap"><div class="pvi-title" id="profInfoTitle"></div><div class="pvi-tags" id="profInfoTags"></div></div>'
+    + '<button class="pvi-close" onclick="closeProfInfoPopup()">&#x2715;</button>'
+    + '</div>'
+    + '<div class="pvi-body">'
+    + '<div class="pvi-desc" id="profInfoDesc"></div>'
+    + '<div id="profInfoDetails"></div>'
+    + '</div>'
+    + '<div class="pvi-actions">'
+    + '<button class="pvi-action-btn pvi-action-primary" id="profInfoDiscoverBtn" style="flex:1;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Discover</button>'
+    + '<button class="pvi-action-btn" onclick="createShareCard(_profInfoId, 3, true)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Discover Card</button>'
+    + '</div></div>';
+  el.addEventListener('click', function(ev){ if(ev.target===el) closeProfInfoPopup(); });
+  document.body.appendChild(el);
+}
+
+var _profInfoId = null;
+
+function openProfInfoPopup(id) {
+  try {
+  _injectProfInfoPopup();
+  var e = _profEntryMap[id] || _pEntries.find(function(en){ return en.id===id; });
+  if (!e) return;
+  _profInfoId = id;
+  var esc2 = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+
+  var pEl = document.getElementById('profInfoPoster');
+  pEl.innerHTML = e.poster_url ? '<img src="'+e.poster_url+'" loading="lazy">' : esc2((e.title||'?')[0].toUpperCase());
+
+  document.getElementById('profInfoTitle').textContent = e.title;
+
+  var tags = [];
+  if (CAT_META[e.cat]) tags.push(CAT_META[e.cat].label);
+  if (e.year) tags.push(e.year);
+  (e.genres||[]).forEach(function(g){ tags.push(g); });
+  document.getElementById('profInfoTags').innerHTML = tags.map(function(t){
+    return '<span class="pvi-tag">'+esc2(String(t))+'</span>';
+  }).join('');
+
+  var dEl = document.getElementById('profInfoDesc');
+  if (e.description) { dEl.textContent = e.description; dEl.style.color = ''; }
+  else { dEl.textContent = '—'; dEl.style.color = 'var(--text-3)'; }
+
+  var detEl = document.getElementById('profInfoDetails');
+  var isMovie = e.cat==='movies' || (e.ratings && e.ratings._media_type==='movie');
+  if (!isMovie) {
+    var bd = Array.isArray(e.ratings&&e.ratings._season_breakdown)
+      ? e.ratings._season_breakdown.filter(function(n){ return parseInt(n)>0; }).map(Number) : [];
+    var totalS = bd.length || Number(e.total_seasons) || 0;
+    if (totalS > 0) {
+      var chips = '';
+      for (var i=0; i<totalS; i++) {
+        var eps = bd[i] || null;
+        chips += '<div class="pvi-season-chip">'
+          +'<div class="pvi-season-num">S'+(i+1)+'</div>'
+          +'<div class="pvi-season-eps">'+(eps ? eps+' eps' : 'S'+(i+1))+'</div>'
+          +'</div>';
+      }
+      detEl.innerHTML = '<div class="pvi-section-label">TV Show Breakdown</div><div class="pvi-seasons">'+chips+'</div>';
+    } else if (e.total_eps) {
+      detEl.innerHTML = '<div class="pvi-section-label">Episodes</div>'
+        +'<div class="pvi-runtime"><div class="pvi-runtime-val">'+e.total_eps+'</div><div class="pvi-runtime-lbl">Total Episodes</div></div>';
+    } else { detEl.innerHTML = ''; }
+  } else {
+    var rtH=Number(e.runtime_h)||0, rtM=Number(e.runtime_m)||0;
+    if (rtH||rtM) {
+      var rtStr = rtH ? rtH+'h '+rtM+'m' : rtM+'m';
+      detEl.innerHTML = '<div class="pvi-section-label">Movie Runtime</div>'
+        +'<div class="pvi-runtime"><div class="pvi-runtime-val">'+rtStr+'</div><div class="pvi-runtime-lbl">Movie Runtime</div></div>';
+    } else { detEl.innerHTML = ''; }
+  }
+
+  var ov = document.getElementById('profInfoOverlay');
+  ov.classList.add('open');
+  document.getElementById('profInfoCard').style.transform = 'translateY(0)';
+  document.body.style.overflow = 'hidden';
+
+  var discBtn = document.getElementById('profInfoDiscoverBtn');
+  if (discBtn) discBtn.onclick = function(){ _libGoDiscover(e, discBtn); };
+  } catch(err) { console.error('openProfInfoPopup error:', err); }
+}
+
+function closeProfInfoPopup() {
+  var ov = document.getElementById('profInfoOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.getElementById('profInfoCard').style.transform = 'translateY(18px)';
+  document.body.style.overflow = '';
+  _profInfoId = null;
+}
+
+async function _libGoDiscover(e, btn) {
+  if (e.tmdb_id && e.tmdb_type) {
+    goToTitle(e.tmdb_type, e.tmdb_id);
+    return;
+  }
+  if (typeof _tmdbSearch !== 'function') {
+    showToast('Discover is unavailable right now.', 'err');
+    return;
+  }
+  var origLabel = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Searching…';
+  try {
+    var isMovie = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+    var results = await _tmdbSearch(e.title);
+    var wantType = isMovie ? 'movie' : 'tv';
+    var sorted = results.slice().sort(function(a, b) {
+      return (a.media_type === wantType ? 0 : 1) - (b.media_type === wantType ? 0 : 1);
+    });
+    closeProfInfoPopup();
+    _openDiscoverPicker(sorted, e.title);
+  } catch (err) {
+    showToast('Error searching TMDB.', 'err');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origLabel;
+  }
+}
+
+function _injectDiscoverPicker() {
+  if (document.getElementById('catDiscoverOverlay')) return;
+  var el = document.createElement('div');
+  el.id = 'catDiscoverOverlay';
+  el.innerHTML = '<div id="catDiscoverCard">'
+    + '<button class="cat-disc-close" onclick="_closeDiscoverPicker()">✕</button>'
+    + '<div class="cat-disc-title">Which one is it?</div>'
+    + '<div class="cat-disc-sub" id="catDiscoverSub"></div>'
+    + '<div id="catDiscoverList"></div>'
+    + '</div>';
+  el.addEventListener('click', function(ev){ if (ev.target === el) _closeDiscoverPicker(); });
+  document.body.appendChild(el);
+}
+
+function _openDiscoverPicker(results, entryTitle) {
+  _injectDiscoverPicker();
+  var esc3 = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  document.getElementById('catDiscoverSub').textContent = 'Matches for "'+entryTitle+'" — pick the right one';
+
+  var listEl = document.getElementById('catDiscoverList');
+  if (!results.length) {
+    listEl.innerHTML = '<div class="cat-disc-none">No matches found on TMDB.</div>';
+  } else {
+    listEl.innerHTML = results.map(function(r, i) {
+      var isMovie = r.media_type === 'movie';
+      var rTitle  = isMovie ? r.title : r.name;
+      var year    = ((isMovie ? r.release_date : r.first_air_date) || '').split('-')[0];
+      var thumb   = r.poster_path ? TMDB_IMG + r.poster_path : null;
+      return '<div class="cat-disc-item" data-i="'+i+'">'
+        + '<div class="cat-disc-thumb">'+(thumb ? '<img src="'+thumb+'" loading="lazy">' : '')+'</div>'
+        + '<div class="cat-disc-info">'
+        + '<div class="cat-disc-name">'+esc3(rTitle || '—')+'</div>'
+        + '<div class="cat-disc-meta">'+(isMovie ? 'Movie' : 'TV Show')+(year ? ' · '+year : '')+'</div>'
+        + '</div></div>';
+    }).join('');
+    listEl.querySelectorAll('.cat-disc-item').forEach(function(elm, i) {
+      elm.addEventListener('click', function() {
+        var r = results[i];
+        _closeDiscoverPicker();
+        goToTitle(r.media_type === 'movie' ? 'movie' : 'tv', r.id);
+      });
+    });
+  }
+
+  var ov = document.getElementById('catDiscoverOverlay');
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _closeDiscoverPicker() {
+  var ov = document.getElementById('catDiscoverOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ── Action button stubs (implemented in later steps) ── */
+/* rewatchEntry defined in rewatch.js */
+/* createShareCard defined in create-card.js */
+</script>
+<div class="note-popup-overlay2" id="notePopup2" onclick="if(event.target===this)closeNotePopup2()">
+  <div class="note-popup2">
+    <div class="note-popup2-header">
+      <div class="note-popup2-poster" id="notePopup2Poster"></div>
+      <div class="note-popup2-info">
+        <div class="note-popup2-title" id="notePopup2Title"></div>
+        <div class="note-popup2-tags" id="notePopup2Tags"></div>
+        <div class="note-popup2-date" id="notePopup2Date"></div>
+      </div>
+      <button class="note-popup2-close" onclick="closeNotePopup2()">&#x2715;</button>
+    </div>
+    <div class="note-popup2-body">
+      <div class="note-popup2-text" id="notePopup2Text"></div>
+      <button class="note-popup2-edit" id="notePopup2Edit" style="display:none">Edit Note &#x2192;</button>
+    </div>
+  </div>
+</div>
+<!-- Favorite Sections Popup -->
+<div id="favSecOverlay" onclick="if(event.target===this)closeFavSec()">
+  <div id="favSecCard">
+    <div class="favsec-hd">
+      <div class="favsec-title" id="favSecTitle"></div>
+      <button onclick="closeFavSec()" class="favsec-close">&#x2715;</button>
+    </div>
+    <div class="favsec-grid" id="favSecGrid"></div>
+  </div>
+</div>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

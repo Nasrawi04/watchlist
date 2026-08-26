@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ── Page ── */
+.auth-page {
+  position:fixed; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  background:var(--bg); padding:2rem;
+  gap:24px;
+}
+
+/* ── Logo ── */
+.auth-logo {
+  font-family:var(--serif); 
+  font-size:28px; 
+  font-weight:300;
+  letter-spacing:3px; 
+  text-transform:uppercase; 
+  color:var(--text);
+  text-align:center;
+  position:relative;
+  display:inline-block;
+  padding-bottom:8px;
+}
+
+.auth-logo em {
+  color:var(--olive-light);
+  font-style:normal;
+  font-weight:400;
+  text-decoration:underline;
+  text-decoration-thickness:2px;
+  text-underline-offset:3px;
+}
+
+/* ── Toggle row ── */
+.auth-toggle-row {
+  display:flex; align-items:center; gap:16px;
+}
+.auth-tab {
+  font-size:13px; font-weight:500; color:var(--text-2);
+  cursor:pointer; transition:color var(--trans) var(--ease);
+  user-select:none;
+}
+.auth-tab.active {
+  color:var(--text); font-weight:600;
+  text-decoration:underline; text-underline-offset:3px;
+}
+
+/* Slider toggle */
+.slider-track {
+  position:relative; width:50px; height:22px;
+  background:var(--bg-3);
+  border:1.5px solid var(--olive-light);
+  box-shadow:3px 3px 0 var(--olive);
+  border-radius:5px; cursor:pointer;
+  transition:background 0.3s;
+}
+.slider-thumb {
+  position:absolute; top:1px; left:1px;
+  width:18px; height:18px;
+  background:var(--bg-2);
+  border:1.5px solid var(--olive-light);
+  border-radius:4px;
+  box-shadow:0 2px 0 var(--olive);
+  transition:transform 0.3s, box-shadow 0.3s;
+}
+.slider-track.flipped { background:var(--olive-faint); }
+.slider-track.flipped .slider-thumb { transform:translateX(26px); }
+
+/* ── Flip card wrapper ── */
+.flip-card-wrapper {
+  width:340px;
+  perspective:1000px;
+}
+.flip-card-inner {
+  width:100%; min-height:390px; height:auto;
+  position:relative;
+  transform-style:preserve-3d;
+  transition:transform 0.65s cubic-bezier(0.4,0,0.2,1);
+  overflow:visible;
+}
+.flip-card-wrapper.flipped .flip-card-inner { transform:rotateY(180deg); }
+
+/* Reset Password Container */
+.reset-password-container {
+  display:none; opacity:0;
+  animation:fadeIn 0.3s var(--ease);
+}
+.reset-password-container.active { display:block; opacity:1; }
+.reset-password-wrapper {
+  width:340px; perspective:1000px;
+}
+.reset-password-card {
+  background:var(--bg-3); border-radius:var(--radius-lg);
+  border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
+  padding:2rem 1.75rem; min-height:390px; height:auto;
+}
+
+/* Front & back faces */
+.flip-card__front, .flip-card__back, .flip-card__reset {
+  position:absolute; left:0; right:0; top:0;
+  width:100%; min-height:390px; padding:2rem 1.75rem;
+  display:flex; flex-direction:column; justify-content:center;
+  -webkit-backface-visibility:hidden; backface-visibility:hidden;
+  background:var(--bg-3);
+  border-radius:var(--radius-lg);
+  border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);
+  box-sizing:border-box;
+}
+.flip-card__back { transform:rotateY(180deg); }
+.flip-card__reset { transform:rotateX(180deg); }
+
+/* ── Form elements ── */
+.flip-card__form {
+  display:flex; flex-direction:column; align-items:center; gap:14px;
+}
+.flip-card__title {
+  font-family:var(--serif); font-size:28px; font-weight:300;
+  letter-spacing:1px; color:var(--text); margin-bottom:4px; text-align:center;
+}
+.flip-card__sub {
+  font-size:11px; color:var(--text-3); letter-spacing:1px;
+  margin-top:-4px; margin-bottom:6px; text-align:center;
+}
+.flip-card__input {
+  width:100%; height:44px;
+  border-radius:var(--radius-sm);
+  border:1.5px solid var(--border-2);
+  background:var(--bg-2);
+  box-shadow:0 2px 4px rgba(0,0,0,0.2), 2px 2px 0 var(--border-2);
+  font-size:14px; color:var(--text);
+  padding:0 14px; outline:none;
+  transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease), background var(--trans) var(--ease);
+  box-sizing:border-box;
+}
+.flip-card__input::placeholder { color:var(--text-3); }
+.flip-card__input:focus {
+  border-color:var(--olive-light);
+  box-shadow:0 4px 12px rgba(126,184,108,0.25), 2px 2px 0 var(--olive-light);
+  background:var(--bg-3);
+}
+.flip-card__btn {
+  width:100%; height:44px;
+  border-radius:var(--radius-sm);
+  border:1.5px solid var(--olive-light);
+  background:var(--olive);
+  box-shadow:0 4px 12px rgba(74,103,65,0.28), 3px 3px 0 var(--olive-2);
+  font-size:14px; font-weight:600; color:#fff;
+  cursor:pointer; letter-spacing:0.3px;
+  transition:transform var(--trans) var(--ease), box-shadow var(--trans) var(--ease), background var(--trans) var(--ease), border-color var(--trans) var(--ease);
+  margin-top:4px;
+  position:relative;
+}
+.flip-card__btn:hover {
+  background:var(--olive-2);
+  border-color:var(--olive-light);
+  box-shadow:0 8px 20px rgba(74,103,65,0.35), 3px 3px 0 var(--olive-2);
+  transform:translateY(-2px);
+}
+.flip-card__btn:active {
+  box-shadow:0 2px 4px rgba(74,103,65,0.2), 1px 1px 0 var(--olive-2);
+  transform:translate(2px,2px);
+}
+.flip-card__btn:disabled {
+  opacity:0.55; cursor:not-allowed; transform:none;
+  box-shadow:0 2px 4px rgba(74,103,65,0.15), 2px 2px 0 var(--olive-2);
+}
+
+.flip-card__error {
+  width:100%; padding:11px 14px; border-radius:var(--radius-sm);
+  background:rgba(220,38,38,0.12); border:1.5px solid rgba(220,38,38,0.4);
+  color:#ff8787; font-size:12px; font-weight:500; text-align:left; display:none;
+  animation:fadeIn 0.2s var(--ease);
+}
+.flip-card__error.show { display:block; }
+.flip-card__hint {
+  font-size:11px; color:var(--text-3);
+  margin-top:-4px; align-self:flex-start;
+}
+
+/* ── Light mode ── */
+[data-theme="light"] .flip-card__front,
+[data-theme="light"] .flip-card__back {
+  background:var(--card);
+  border-color:var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);
+}
+[data-theme="light"] .flip-card__input {
+  background:var(--bg-2); border-color:var(--border-2);
+  box-shadow:2px 2px 0 var(--border-2); color:var(--text);
+}
+[data-theme="light"] .flip-card__input:focus {
+  border-color:var(--olive-light); box-shadow:2px 2px 0 var(--olive-light);
+}
+[data-theme="light"] .slider-track {
+  background:var(--bg-3); box-shadow:3px 3px 0 var(--olive);
+}
+[data-theme="light"] .slider-thumb {
+  background:var(--bg-3); box-shadow:0 2px 0 var(--olive);
+}
+
+/* ── Sign In Mode Toggle ── */
+.si-mode-toggle {
+  width:100%; display:flex; gap:0; margin-bottom:12px;
+  background:var(--bg-2); border:1.5px solid var(--border-2);
+  border-radius:var(--radius-sm); padding:3px; box-sizing:border-box;
+}
+.si-mode-toggle label {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; user-select:none; font-size:12px; font-weight:500;
+  color:var(--text-3); transition:all var(--trans) var(--ease);
+  padding:8px 12px; position:relative;
+}
+.si-mode-toggle input[type="radio"] {
+  position:absolute; opacity:0; cursor:pointer;
+}
+.si-mode-toggle input[type="radio"]:checked + span {
+  color:var(--text);
+}
+.si-mode-toggle input[type="radio"]:checked {
+  ~span { color:var(--text); }
+}
+.si-mode-toggle label:has(input:checked) {
+  background:var(--olive-faint); border-radius:var(--radius-xs);
+  color:var(--olive-light); font-weight:600;
+}
+
+/* ── Mobile ── */
+@media(max-width:400px) {
+  .flip-card-wrapper { width:92vw; }
+  .flip-card-inner   { min-height:420px; height:auto; }
+}
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+</head>
+<body>
+
+<div class="auth-page">
+
+  <!-- Updated Logo with underline exactly under "Screen" -->
+  <div class="auth-logo">
+    My<em>Screen</em>Score
+  </div>
+
+  <!-- Toggle row -->
+  <div class="auth-toggle-row">
+    <span class="auth-tab active" id="tabSignIn" onclick="setMode(false)">Sign in</span>
+    <div class="slider-track" id="sliderTrack" onclick="toggleMode()">
+      <div class="slider-thumb" id="sliderThumb"></div>
+    </div>
+    <span class="auth-tab" id="tabCreate" onclick="setMode(true)">Create account</span>
+  </div>
+
+  <!-- Flip card -->
+  <div class="flip-card-wrapper" id="flipWrapper">
+    <div class="flip-card-inner">
+
+      <!-- FRONT: Sign In -->
+      <div class="flip-card__front">
+        <div class="flip-card__title">Sign In</div>
+        <div class="flip-card__sub">Welcome back</div>
+        <form class="flip-card__form" onsubmit="doSignIn(event)">
+          <div class="flip-card__error" id="siError"></div>
+          <div class="si-mode-toggle">
+            <label>
+              <input type="radio" id="siModeEmail" name="siMode" value="email" checked onchange="setSIMode('email')">
+              <span>Email</span>
+            </label>
+            <label>
+              <input type="radio" id="siModeUsername" name="siMode" value="username" onchange="setSIMode('username')">
+              <span>Username</span>
+            </label>
+          </div>
+          <input class="flip-card__input" id="siEmail" type="email"
+                placeholder="Email address" autocomplete="email">
+          <input class="flip-card__input" id="siPass"  type="password"
+                placeholder="Password" autocomplete="current-password">
+          <button class="flip-card__btn" id="btnSignIn" type="submit">Let's go →</button>
+          <a href="#" onclick="goToReset(); return false;" style="font-size:12px;color:var(--text-3);text-decoration:none;margin-top:8px;transition:color var(--trans);" onmouseover="this.style.color='var(--olive-light)'" onmouseout="this.style.color='var(--text-3)'">Forgot password?</a>
+        </form>
+      </div>
+
+      <!-- BACK: Sign Up -->
+      <div class="flip-card__back">
+        <div class="flip-card__title">Create Account</div>
+        <div class="flip-card__sub">Start tracking today</div>
+        <form class="flip-card__form" onsubmit="doSignUp(event)">
+          <div class="flip-card__error" id="suError"></div>
+          <input class="flip-card__input" id="suUser" type="text"
+                placeholder="Username" autocomplete="off"
+                oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()">
+          <div class="flip-card__hint">Letters, numbers and _ only</div>
+          <input class="flip-card__input" id="suEmail" type="email"
+                placeholder="Email address" autocomplete="email">
+          <input class="flip-card__input" id="suPass"  type="password"
+                placeholder="Password (min 6)" autocomplete="new-password">
+          <button class="flip-card__btn" id="btnSignUp" type="submit">Create account →</button>
+        </form>
+      </div>
+
+    </div>
+  </div><!-- /flip-card-wrapper -->
+
+  <!-- Reset Password Container (separate) -->
+  <div class="reset-password-container" id="resetContainer">
+    <div class="reset-password-wrapper">
+      <div class="reset-password-card">
+        <div class="flip-card__title">Reset Password</div>
+        <div class="flip-card__sub">Recover your account</div>
+
+        <div id="resetStep1" style="display:block;">
+          <form class="flip-card__form" onsubmit="doForgotPassword(event)">
+            <div class="flip-card__error" id="fpError"></div>
+            <input class="flip-card__input" id="fpEmail" type="email"
+                  placeholder="Email address" autocomplete="email">
+            <button class="flip-card__btn" id="btnForgot" type="submit">Send reset link →</button>
+            <a href="#" onclick="goBackToSignIn(); return false;" style="font-size:12px;color:var(--text-3);text-decoration:none;margin-top:8px;transition:color var(--trans);" onmouseover="this.style.color='var(--olive-light)'" onmouseout="this.style.color='var(--text-3)'">Back to sign in</a>
+          </form>
+        </div>
+
+        <div id="resetStep2" style="display:none;text-align:center;">
+          <div style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:20px;">Check your email for a reset link. Once you click it, come back here to set your new password.</div>
+          <button class="flip-card__btn" onclick="goBackToSignIn()" style="margin-top:0;">Back to sign in</button>
+        </div>
+
+        <div id="resetStep3" style="display:none;">
+          <form class="flip-card__form" onsubmit="doResetPassword(event)">
+            <div class="flip-card__error" id="rpError"></div>
+            <input class="flip-card__input" id="rpPass"  type="password"
+                  placeholder="New password (min 6)" autocomplete="new-password">
+            <input class="flip-card__input" id="rpPass2" type="password"
+                  placeholder="Confirm password" autocomplete="new-password">
+            <button class="flip-card__btn" id="btnReset" type="submit">Update password →</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div><!-- /reset-password-container -->
+
+</div><!-- /auth-page -->
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script>
+/* Redirect if already logged in — but not if this is a password reset */
+(async () => {
+  const hash = window.location.hash;
+  const isRecovery = hash && hash.includes('type=recovery');
+  if (isRecovery) return; // Don't redirect — let reset form handle it
+  const user = await getCurrentUser();
+  if (user) window.location.href = 'index.html';
+})();
+
+/* ── Toggle mode ── */
+let _signUpMode = false;
+let _resetMode = false;
+
+function setMode(signUp) {
+  _signUpMode = signUp;
+  _resetMode = false;
+  document.getElementById('flipWrapper').classList.toggle('flipped', signUp);
+  document.getElementById('flipWrapper').classList.remove('reset');
+  document.getElementById('sliderTrack').classList.toggle('flipped', signUp);
+  document.getElementById('tabSignIn').classList.toggle('active', !signUp);
+  document.getElementById('tabCreate').classList.toggle('active',  signUp);
+  clearErrors();
+}
+
+function toggleMode() { setMode(!_signUpMode); }
+
+function goToReset() {
+  _resetMode = true;
+  _signUpMode = false;
+  document.getElementById('flipWrapper').style.display = 'none';
+  document.getElementById('resetContainer').classList.add('active');
+  clearErrors();
+  setTimeout(() => document.getElementById('fpEmail').focus(), 200);
+}
+
+function goBackToSignIn() {
+  _resetMode = false;
+  _signUpMode = false;
+  document.getElementById('flipWrapper').style.display = 'block';
+  document.getElementById('resetContainer').classList.remove('active');
+  document.getElementById('resetStep1').style.display = 'block';
+  document.getElementById('resetStep2').style.display = 'none';
+  document.getElementById('resetStep3').style.display = 'none';
+  clearErrors();
+}
+
+/* ── Helpers ── */
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
+}
+function clearErrors() {
+  ['siError','suError'].forEach(id => showErr(id, ''));
+}
+
+/* ── Sign In Mode Toggle ── */
+function setSIMode(mode) {
+  const input = document.getElementById('siEmail');
+  if (mode === 'email') {
+    input.type = 'email';
+    input.placeholder = 'Email address';
+    input.autocomplete = 'email';
+  } else {
+    input.type = 'text';
+    input.placeholder = 'Username';
+    input.autocomplete = 'off';
+  }
+  input.value = '';
+  showErr('siError', '');
+}
+
+/* ── Sign In ── */
+async function doSignIn(e) {
+  e.preventDefault();
+  const identifier = document.getElementById('siEmail').value.trim();
+  const pass = document.getElementById('siPass').value;
+  const mode = document.querySelector('input[name="siMode"]:checked').value;
+
+  if (!identifier || !pass) { showErr('siError','Please fill in all fields.'); return; }
+  showErr('siError','');
+
+  const btn = document.getElementById('btnSignIn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+
+  let email = identifier;
+
+  // If username mode, look up email from username
+  if (mode === 'username') {
+    try {
+      const { data, error } = await sb.from('profiles').select('email, id').ilike('username', identifier).single();
+      if (error || !data) {
+        showErr('siError', 'Username not found.');
+        btn.disabled = false; btn.textContent = "Let's go →";
+        return;
+      }
+      // If email is not in profiles, try to get it from auth user data
+      if (!data.email && data.id) {
+        // Fallback: use username as hint but still need email
+        showErr('siError', 'Account incomplete. Please reset password or contact support.');
+        btn.disabled = false; btn.textContent = "Let's go →";
+        return;
+      }
+      email = data.email;
+    } catch(err) {
+      showErr('siError', 'Error looking up username.');
+      btn.disabled = false; btn.textContent = "Let's go →";
+      return;
+    }
+  }
+
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    showErr('siError', error.message || 'Invalid credentials.');
+    btn.disabled = false; btn.textContent = "Let's go →";
+  } else {
+    window.location.href = 'index.html';
+  }
+}
+
+/* ── Sign Up ── */
+async function doSignUp(e) {
+  e.preventDefault();
+  const username = document.getElementById('suUser').value.trim();
+  const email    = document.getElementById('suEmail').value.trim();
+  const pass     = document.getElementById('suPass').value;
+
+  if (username.length < 3) { showErr('suError','Username must be at least 3 characters.'); return; }
+  if (!email)              { showErr('suError','Email is required.'); return; }
+  if (pass.length < 6)    { showErr('suError','Password must be at least 6 characters.'); return; }
+  showErr('suError','');
+
+  const btn = document.getElementById('btnSignUp');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+
+  let data, error;
+  try {
+    ({ data, error } = await sb.auth.signUp({
+      email, password: pass,
+      options: { data: { username, display_name: username, email } },
+    }));
+  } catch(err) {
+    showErr('suError', 'Connection error. Please try again.');
+    btn.disabled = false; btn.textContent = 'Create account →';
+    return;
+  }
+
+  if (error) {
+    showErr('suError', error.message || 'Sign up failed.');
+    btn.disabled = false; btn.textContent = 'Create account →';
+    return;
+  }
+
+  if (data?.session) {
+    window.location.href = 'index.html';
+  } else if (data?.user) {
+    // Store email in profiles for username login lookup
+    try {
+      await sb.from('profiles').update({ email }).eq('id', data.user.id);
+    } catch(e) {
+      console.warn('Could not store email in profiles:', e);
+    }
+    document.querySelector('.flip-card__back').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:1rem 0;text-align:center">
+        <div style="opacity:.5">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+              stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        </div>
+        <div style="font-family:var(--serif);font-size:22px;color:var(--text)">Check your email</div>
+        <div style="font-size:13px;color:var(--text-2);line-height:1.6">
+          Confirmation link sent to<br>
+          <strong style="color:var(--text)">${email}</strong>
+        </div>
+      </div>`;
+  } else {
+    showErr('suError', 'Account created! Please sign in.');
+    btn.disabled = false; btn.textContent = 'Create account →';
+  }
+}
+
+/* ── Forgot Password ── */
+async function doForgotPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById('fpEmail').value.trim();
+  if (!email) { showErr('fpError','Please enter your email address.'); return; }
+  showErr('fpError','');
+
+  const btn = document.getElementById('btnForgot');
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://nasrawi04.github.io/watchlist/login.html'
+    });
+    if (error) {
+      showErr('fpError', error.message || 'Failed to send reset email.');
+      btn.disabled = false; btn.textContent = 'Send reset link →';
+    } else {
+      document.getElementById('resetStep1').style.display = 'none';
+      document.getElementById('resetStep2').style.display = 'block';
+      btn.disabled = false;
+    }
+  } catch(err) {
+    showErr('fpError', 'Connection error. Please try again.');
+    btn.disabled = false; btn.textContent = 'Send reset link →';
+  }
+}
+
+/* ── Reset Password ── */
+async function doResetPassword(e) {
+  e.preventDefault();
+  const pass1 = document.getElementById('rpPass').value;
+  const pass2 = document.getElementById('rpPass2').value;
+  if (!pass1 || !pass2) { showErr('rpError','Please fill in all fields.'); return; }
+  if (pass1.length < 6) { showErr('rpError','Password must be at least 6 characters.'); return; }
+  if (pass1 !== pass2) { showErr('rpError','Passwords do not match.'); return; }
+  showErr('rpError','');
+
+  const btn = document.getElementById('btnReset');
+  btn.disabled = true; btn.textContent = 'Updating…';
+
+  try {
+    const { error } = await sb.auth.updateUser({ password: pass1 });
+    if (error) {
+      showErr('rpError', error.message || 'Failed to reset password.');
+      btn.disabled = false; btn.textContent = 'Update password →';
+    } else {
+      showToast('Password reset successfully!');
+      setTimeout(() => goBackToSignIn(), 1000);
+    }
+  } catch(err) {
+    showErr('rpError', 'Connection error. Please try again.');
+    btn.disabled = false; btn.textContent = 'Update password →';
+  }
+}
+
+/* ── Check for reset token in URL ── */
+function _showResetForm() {
+  const fw = document.getElementById('flipWrapper');
+  const rc = document.getElementById('resetContainer');
+  const s1 = document.getElementById('resetStep1');
+  const s3 = document.getElementById('resetStep3');
+  if (fw) fw.style.display = 'none';
+  if (rc) rc.classList.add('active');
+  if (s1) s1.style.display = 'none';
+  if (s3) s3.style.display = 'block';
+}
+
+(async () => {
+  const hash = window.location.hash.substring(1);
+  if (!hash) return;
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token') || '';
+  const type = params.get('type');
+
+  if (type === 'recovery' && accessToken) {
+    // Clear hash first so it doesn't interfere
+    window.history.replaceState({}, document.title, window.location.pathname);
+    try {
+      const { data, error } = await sb.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+      if (error) console.warn('setSession:', error.message);
+    } catch(e) {
+      console.warn('setSession exception:', e);
+    }
+    // Always show the reset form — session is now active
+    _showResetForm();
+  }
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

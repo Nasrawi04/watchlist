@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.comp-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:2.5rem;position:relative;z-index:60;}
+.comp-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.view-tabs{display:flex;background:var(--bg-3);border-radius:var(--radius-sm);padding:3px;gap:3px}
+.view-tab{
+  padding:7px 16px;border:none;background:transparent;color:var(--text-2);
+  font-size:12px;border-radius:5px;cursor:pointer;transition:all .2s;letter-spacing:.5px;
+}
+.view-tab.active{background:var(--olive);color:#fff;font-weight:500}
+.cat-filter{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:2rem}
+.cf-btn{
+  padding:6px 12px;border:0.5px solid var(--border-2);border-radius:20px;
+  background:transparent;color:var(--text-2);font-size:12px;cursor:pointer;transition:all .2s;
+}
+.cf-btn.active{border-color:var(--olive);color:var(--olive-light);background:var(--olive-faint)}
+.export-btn{
+  padding:8px 16px;background:transparent;border:0.5px solid var(--border-olive);
+  border-radius:var(--radius-sm);color:var(--olive-light);font-size:12px;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.export-btn:hover{background:var(--olive-faint)}
+.comp-stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;
+  margin-bottom:2rem;
+}
+.comp-stat-card{
+  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);
+  padding:.9rem 1rem;
+}
+.comp-stat-num{font-family:var(--serif);font-size:28px;font-weight:300;color:var(--olive-light);line-height:1}
+.comp-stat-label{font-size:9px;color:var(--text-3);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+@media(max-width:1080px) and (min-width:481px){.comp-stats{grid-template-columns:repeat(4,1fr);gap:8px}.comp-stat-num{font-size:22px}.comp-stat-card{padding:.75rem .85rem}}
+@media(max-width:480px){.comp-stats{grid-template-columns:repeat(3,1fr);gap:8px}.comp-stat-num{font-size:20px}.comp-stat-card{padding:.65rem .6rem}.comp-stat-label{font-size:8px;letter-spacing:.3px}}
+
+/* Main content scroll container */
+#mainContent{min-height:200px;overflow-x:hidden;}
+#mainContent::-webkit-scrollbar{display:block;width:3px;}
+#mainContent::-webkit-scrollbar-thumb{background:var(--border-olive);border-radius:2px;}
+
+/* Ranked list */
+.ranked-table{display:flex;flex-direction:column;gap:10px;max-height:65vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none;}
+.ranked-table::-webkit-scrollbar{display:none;}
+
+/* Recent list */
+.recent-list{display:flex;flex-direction:column;gap:10px;max-height:65vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none;}
+.recent-list::-webkit-scrollbar{display:none;}
+
+@media(max-width:640px){
+  .ranked-table,.recent-list{max-height:55vh;}
+}
+@media(max-width:400px){
+  .ranked-table,.recent-list{max-height:50vh;}
+}
+@media(min-width:1200px){
+  .ranked-table,.recent-list{max-height:70vh;}
+}
+.rank-row{
+  display:flex;align-items:center;gap:20px;
+  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);
+  padding:20px 24px;cursor:pointer;transition:all .25s;
+  height:160px;overflow:hidden;
+}
+.rank-row:hover{border-color:var(--border-olive);background:var(--card-2);}
+.rank-num{
+  font-family:var(--serif);font-size:26px;font-weight:300;
+  color:var(--text-2);text-align:center;min-width:44px;flex-shrink:0;
+}
+.rank-num.top3{color:var(--olive-light)}
+.rank-poster{width:84px;height:120px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,0.3)}
+.rank-poster img{width:100%;height:100%;object-fit:cover}
+.rank-info{flex:1;min-width:0}
+.rank-title{font-size:18px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden;}
+.rank-meta{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;gap:8px;align-items:center}
+.rank-score-wrap{text-align:right;flex-shrink:0}
+.rank-score{
+  font-family:var(--serif);font-size:34px;font-weight:300;
+  color:var(--olive-light);line-height:1;
+}
+.rank-score-label{font-size:10px;color:var(--text-3);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+
+/* Recent list — no own max-height, parent handles it */
+.recent-list{display:flex;flex-direction:column;gap:10px;}
+.recent-row{
+  display:flex;align-items:center;gap:20px;
+  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);
+  padding:20px 24px;cursor:pointer;transition:all .25s;
+  height:160px;overflow:hidden;
+}
+.recent-row:hover{border-color:var(--border-olive);background:var(--card-2);}
+.recent-poster{width:84px;height:120px;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 12px rgba(0,0,0,0.3)}
+.recent-poster img{width:100%;height:100%;object-fit:cover}
+.recent-info{flex:1;min-width:0}
+.recent-title{font-size:18px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden;}
+.recent-meta{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;gap:8px}
+.recent-date-wrap{text-align:right;flex-shrink:0}
+.recent-date{font-size:12px;color:var(--text-2);margin-top:4px}
+.recent-score{font-family:var(--serif);font-size:34px;font-weight:300;color:var(--olive-light);line-height:1;text-align:right}
+
+.cat-badge{
+  font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);
+  border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:.5px;
+}
+/* rank-badge is now in style.css */
+
+/* ── Grid detail popup ── */
+#cpPopupOverlay {
+  position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,0.72);
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;box-sizing:border-box;
+  opacity:0;transition:opacity 220ms var(--ease);
+  pointer-events:none;
+}
+#cpPopupCard {
+  background:var(--bg-2);border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
+  width:100%;max-width:min(97vw, 760px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
+  box-sizing:border-box;
+  transform:translateY(18px);transition:transform 260ms var(--ease);
+}
+
+/* ── Mobile overrides ── */
+@media(max-width:600px) {
+  .comp-header { flex-direction:column; align-items:flex-start; gap:.75rem; margin-bottom:1.5rem; }
+  .comp-controls { width:100%; justify-content:flex-end; }
+  .comp-stats { grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:1.5rem; }
+  .comp-stat-card { padding:.75rem .85rem; }
+  .comp-stat-num { font-size:22px; }
+  .comp-stat-label { font-size:9px; letter-spacing:.5px; }
+  .sort-bar { flex-wrap:wrap; gap:3px; }
+  .sort-btn { font-size:10px; padding:4px 8px; border-radius:14px; }
+  .cat-filter { gap:3px; margin-bottom:1.25rem; flex-wrap:wrap; }
+  .cf-btn { font-size:10px; padding:4px 9px; border-radius:16px; }
+
+  /* List rows — stack poster + info nicely on small screens */
+  .rank-row, .recent-row {
+    padding:12px 14px; gap:12px; height:auto; min-height:100px;
+  }
+  .rank-poster, .recent-poster { width:56px; height:80px; }
+  .rank-title, .recent-title { font-size:14px; }
+  .rank-meta, .recent-meta { font-size:11px; flex-wrap:wrap; gap:4px; }
+  .rank-score { font-size:24px; }
+  .recent-score { font-size:24px; }
+  .rank-num { font-size:20px; min-width:28px; }
+  /* hide date label on tiny screens to save space */
+  .recent-date { display:none; }
+}
+@media(max-width:400px) {
+  .rank-poster, .recent-poster { width:44px; height:64px; }
+  .rank-score, .recent-score { font-size:20px; }
+  .cf-btn { font-size:9px; padding:3px 7px; }
+  .cat-filter { gap:2px; }
+  .comp-stat-card { padding:.6rem .7rem; }
+  .comp-stat-num { font-size:18px; }
+  .comp-stat-label { font-size:8px; }
+}
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="comp-header fade-up">
+    <div>
+      <h1 class="cat-page-title">Watched</h1>
+    </div>
+    <div class="comp-controls">
+      <button class="export-btn" id="exportBtn" onclick="openExportThemePopup()" style="display:inline-flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export PDF</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="comp-stats fade-up fade-up-1" id="compStats"></div>
+
+  <!-- Sort bar + view toggle -->
+  <div style="display:flex;align-items:center;gap:12px;" class="fade-up fade-up-2">
+    <div class="sort-bar" id="compSortBar" style="flex:1;border-bottom:none;padding:0;margin:0;background:transparent;position:relative;backdrop-filter:none;-webkit-backdrop-filter:none;"></div>
+    <div class="view-toggle" id="compViewToggle"></div>
+  </div>
+
+  <!-- Category filters -->
+  <div class="cat-filter fade-up fade-up-3" id="catFilter" style="margin-top:1.5rem;">
+    <button class="cf-btn active" data-cat="" onclick="setCat(this,'')">All</button>
+    <button class="cf-btn" data-cat="tv"       onclick="setCat(this,'tv')">TV Shows</button>
+    <button class="cf-btn" data-cat="movies"   onclick="setCat(this,'movies')">Movies</button>
+    <button class="cf-btn" data-cat="anime"    onclick="setCat(this,'anime')">Anime</button>
+    <button class="cf-btn" data-cat="cartoons" onclick="setCat(this,'cartoons')">Cartoons</button>
+  </div>
+
+  <!-- Status filters -->
+  <div class="cat-filter fade-up fade-up-3" id="statusFilter" style="margin-top:1rem;margin-bottom:1.5rem;">
+    <button class="cf-btn active" data-status="" onclick="setStatus(this,'')">All</button>
+    <button class="cf-btn" data-status="completed" onclick="setStatus(this,'completed')">Watched</button>
+    <button class="cf-btn" data-status="ongoing"   onclick="setStatus(this,'ongoing')">To Be Continued</button>
+  </div>
+
+  <!-- Main content (pdf-able) -->
+  <div id="pdfRanked"    style="position:fixed;top:-9999px;left:0;width:900px;display:none"></div>
+  <div id="pdfCompleted" style="position:fixed;top:-9999px;left:0;width:900px;display:none"></div>
+
+  <div id="mainContent" class="fade-up fade-up-4">
+    <div class="page-loading"><div class="spinner"></div></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/create-card.js"></script>
+<script src="js/fav-lists-popup.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/export.js"></script>
+<script>
+let _compUser = null;
+let _allCompleted = [];
+let _compSort    = 'newest';
+let _compView    = localStorage.getItem('mss_compView') || 'list';
+let _catFilter   = '';
+let _exportTheme = 'dark';
+
+/* ── Ep/runtime badge helper ── */
+function _entryMeta(e) {
+  const isMovie = e.cat === 'movies' || (e.ratings?._media_type === 'movie');
+  if (isMovie) {
+    const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
+    if (!rtH && !rtM) return '';
+    return `<div class="w-ep-row" style="margin-top:5px;"><span class="w-ep-badge">${rtH ? `${rtH}h ${rtM}m` : `${rtM}m`}</span></div>`;
+  }
+  const bd = Array.isArray(e.ratings?._season_breakdown)
+    ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
+  const _bdTot = bd.reduce((a,b)=>a+b,0);
+  const scope = bd.length ? `S${bd.length} E${_bdTot}`
+    : (e.total_seasons && e.total_eps) ? `S${e.total_seasons} E${e.total_eps}`
+    : e.total_seasons ? `S${e.total_seasons}`
+    : e.total_eps ? `${e.total_eps} eps` : '';
+  if (!scope) return '';
+  return `<div class="w-ep-row" style="margin-top:5px;"><span class="w-ep-badge">${scope}</span></div>`;
+}
+
+function _cgBadgeHTML(rank) {
+  const cls = rank===1?'cg-rank-1':rank===2?'cg-rank-2':rank===3?'cg-rank-3':'cg-rank-other';
+  return `<div class="cg-rank-badge ${cls}">${rank}</div>`;
+}
+
+function _enjoymentValComp(e) {
+  const v = e.ratings?.enjoyment;
+  return (v !== undefined && v !== null && v !== '') ? Number(v) : null;
+}
+
+/* Generic version — this page mixes every category together, so ratings
+   are looked up directly by key on whatever the entry actually has. */
+function _ratingVal(e, key) {
+  const v = e.ratings?.[key];
+  return (v !== undefined && v !== null && v !== '') ? Number(v) : null;
+}
+
+function _cgEnjoymentBadgeHTML(e) {
+  const val = _enjoymentValComp(e);
+  if (val == null) return `<div class="cg-score-badge cg-score-none">-</div>`;
+  let cls;
+  if (val >= 10) cls = 'cg-score-10';
+  else if (val >= 9) cls = 'cg-score-9';
+  else if (val >= 8) cls = 'cg-score-8';
+  else if (val >= 7) cls = 'cg-score-7';
+  else if (val >= 6) cls = 'cg-score-6';
+  else if (val >= 3) cls = 'cg-score-3-5';
+  else cls = 'cg-score-0-2';
+  return `<div class="cg-score-badge ${cls}">${val.toFixed(2)}</div>`;
+}
+function _cgRatingBadgeHTML(e, key) {
+  const val = _ratingVal(e, key);
+  if (val == null) return `<div class="cg-score-badge cg-score-none">-</div>`;
+  let cls;
+  if (val >= 10) cls = 'cg-score-10';
+  else if (val >= 9) cls = 'cg-score-9';
+  else if (val >= 8) cls = 'cg-score-8';
+  else if (val >= 7) cls = 'cg-score-7';
+  else if (val >= 6) cls = 'cg-score-6';
+  else if (val >= 3) cls = 'cg-score-3-5';
+  else cls = 'cg-score-0-2';
+  return `<div class="cg-score-badge ${cls}">${val.toFixed(2)}</div>`;
+}
+
+/* This page mixes every category, so the rating list is the full union
+   across TV/Movies and Anime/Cartoons — e.g. "Acting" and "Voice Acting"
+   both show up as separate options, since they're different keys on
+   different entries. Deduplicated by key where a key is genuinely shared
+   (e.g. "story", "music", "emotional"). */
+function _ratingFilterOptionsAll() {
+  const seen = new Set();
+  const opts = [];
+  [...CORE_RATINGS, ...ANIME_CORE_RATINGS].forEach(r => {
+    if (seen.has(r.key)) return;
+    seen.add(r.key);
+    opts.push({ key: r.key, label: r.label, group: 'Core' });
+  });
+  if (!seen.has('animation')) { seen.add('animation'); opts.push({ key: 'animation', label: 'Animation Quality', group: 'Core' }); }
+  const seenB = new Set();
+  [...BONUS_RATINGS, ...ANIME_BONUS_RATINGS].forEach(r => {
+    if (seenB.has(r.key)) return;
+    seenB.add(r.key);
+    opts.push({ key: r.key, label: r.label, group: 'Bonus' });
+  });
+  return opts;
+}
+function _ratingFilterLabelAll(key) {
+  const opt = _ratingFilterOptionsAll().find(o => o.key === key);
+  return opt ? opt.label : key;
+}
+function _ratingShortLabel(label) {
+  return label.length > 14 ? label.slice(0, 13) + '…' : label;
+}
+
+/* ── Rating filter popup (shared markup/CSS with category.js's version) ── */
+let _ratingFilterCallback = null;
+
+function _injectRatingFilterOverlay() {
+  if (document.getElementById('ratingFilterOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'ratingFilterOverlay';
+  el.innerHTML = `<div id="ratingFilterCard">
+    <div class="rf-header">
+      <div class="rf-title">Sort by Rating</div>
+      <button class="rf-close" onclick="closeRatingFilter()">${icon('x', 18)}</button>
+    </div>
+    <div class="rf-list" id="ratingFilterList"></div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) closeRatingFilter(); });
+  document.body.appendChild(el);
+}
+
+function openRatingFilter() {
+  _injectRatingFilterOverlay();
+  const curKey = (_compSort||'').startsWith('rating:') ? _compSort.slice(7) : null;
+  const opts = _ratingFilterOptionsAll();
+
+  let html = `<div class="rf-item${!curKey ? ' active' : ''}" onclick="_pickRatingFilter(null)">
+    <span>Overall Score (default)</span><span class="rf-item-check">${icon('check', 15)}</span>
+  </div>`;
+  let lastGroup = null;
+  opts.forEach(o => {
+    if (o.group !== lastGroup) { html += `<div class="rf-group-label">${o.group}</div>`; lastGroup = o.group; }
+    html += `<div class="rf-item${curKey===o.key?' active':''}" onclick="_pickRatingFilter('${o.key}')">
+      <span>${o.label}</span><span class="rf-item-check">${icon('check', 15)}</span>
+    </div>`;
+  });
+  document.getElementById('ratingFilterList').innerHTML = html;
+
+  document.getElementById('ratingFilterOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRatingFilter() {
+  const ov = document.getElementById('ratingFilterOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function _pickRatingFilter(key) {
+  closeRatingFilter();
+  setCompSort(key ? 'rating:' + key : 'highest');
+}
+
+const _CLEFT  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+const _CRIGHT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+/* ════════ GRID DETAIL POPUP ════════ */
+function _cpInjectPopup() {
+  if (document.getElementById('cpPopupOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'cpPopupOverlay';
+  el.innerHTML = `
+    <div id="cpPopupCard">
+      <!-- header -->
+      <div style="display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0;">
+        <div id="cpPopupPoster" style="
+          width:72px;height:100px;flex-shrink:0;border-radius:var(--radius-sm);
+          overflow:hidden;background:var(--bg-3);
+          display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);
+        "></div>
+        <div style="flex:1;min-width:0;padding-top:4px;">
+          <div id="cpPopupTitle" style="font-family:var(--serif);font-size:28px;font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text)"></div>
+          <div id="cpPopupMeta"  style="font-size:12px;color:var(--text-3);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+          <div id="cpPopupInfo" style="margin-top:4px;"></div>
+        </div>
+        <button onclick="cpClosePopup()" style="
+          background:none;border:none;color:var(--text-3);cursor:pointer;
+          font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s;
+        " onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-3)'">✕</button>
+      </div>
+      <!-- ratings -->
+      <div id="cpPopupBody" style="padding:16px 20px 4px;"></div>
+      <!-- comments button -->
+      <div style="padding:0 20px 12px;">
+        <button id="cpPopupCcBtn" class="cc-strip" style="margin-top:4px;" onclick="openCommentsPopupCompleted(_cpPopupEntryId)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span id="cpPopupCcLabel">Comments</span>
+        </button>
+      </div>
+      <!-- Action buttons -->
+      <div style="display:flex;gap:8px;padding:0 20px 20px;flex-wrap:wrap;">
+        <button class="popup-action-btn" onclick="openFavListsPopup(_cpPopupEntryId)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Add to Favorites
+        </button>
+        <button class="popup-action-btn" onclick="rewatchEntry(_cpPopupEntryId)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+          Rewatch
+        </button>
+        <button class="popup-action-btn" onclick="createShareCard(_cpPopupEntryId)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          Create Card
+        </button>
+      </div>
+    </div>`;
+  el.addEventListener('click', e => { if (e.target === el) cpClosePopup(); });
+  document.body.appendChild(el);
+}
+
+let _cpPopupEntryId  = null;
+
+function cpOpenPopup(id) {
+  _cpInjectPopup();
+  const e = _allCompleted.find(en => en.id === id);
+  if (!e) return;
+  _cpPopupEntryId  = id;
+
+  document.getElementById('cpPopupPoster').innerHTML = posterHTML(e);
+  const _pyEsc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const _pyIsMovie = e.cat==='movies'||e.ratings?._media_type==='movie';
+  const _pyStart = e.year || null;
+  const _pyEnd = e.ratings?._completion_year || null;
+  let _pyStr = '';
+  if (_pyStart) {
+    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ` <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">${_pyStart}</span>`;
+    else _pyStr = ` <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">${_pyStart}\u2013${_pyEnd||'Present'}</span>`;
+  }
+  document.getElementById('cpPopupTitle').innerHTML = _pyEsc(e.title) + _pyStr;
+
+  const date = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+  const meta = [CAT_META[e.cat]?.label, ...((e.genres||[])), date].filter(Boolean);
+  document.getElementById('cpPopupMeta').innerHTML = meta.map(m =>
+    `<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:20px;padding:2px 8px;font-size:10px;letter-spacing:.4px">${m}</span>`
+  ).join('') +
+  (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '') +
+  `<a href="#" onclick="goToDetail('${e.id}','completed.html');return false;" style="font-size:11px;color:var(--text-3);text-decoration:none;align-self:center;margin-left:4px;">Edit →</a>`;
+
+  const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
+  // Info bar (season breakdown / runtime) now renders inside the body, above the ratings
+  const _cpInfoEl = document.getElementById('cpPopupInfo');
+  if (_cpInfoEl) _cpInfoEl.innerHTML = '';
+  document.getElementById('cpPopupBody').innerHTML = _buildCompExpansion(e);
+
+  const ov = document.getElementById('cpPopupOverlay');
+  ov.style.pointerEvents = 'auto';
+  ov.style.opacity = '1';
+  document.getElementById('cpPopupCard').style.transform = 'translateY(0)';
+  document.body.style.overflow = 'hidden';
+}
+
+function cpOpenPopupToComments(id) {
+  openCommentsPopupCompleted(id);
+}
+
+function cpClosePopup() {
+  const ov = document.getElementById('cpPopupOverlay');
+  if (!ov) return;
+  ov.style.opacity = '0';
+  document.getElementById('cpPopupCard').style.transform = 'translateY(18px)';
+  ov.style.pointerEvents = 'none';
+  document.body.style.overflow = '';
+  _cpPopupEntryId = null;
+}
+
+/* ════════ COMMENTS POPUP (dedicated modal) ════════ */
+function _injectCommentsPopupCompleted() {
+  if (document.getElementById('commentsPopupCompletedOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'commentsPopupCompletedOverlay';
+  el.style.cssText = `
+    position:fixed;inset:0;z-index:901;
+    background:rgba(0,0,0,0.72);
+    display:flex;align-items:center;justify-content:center;
+    padding:16px;box-sizing:border-box;
+    opacity:0;transition:opacity 220ms var(--ease);
+    pointer-events:none;
+  `;
+  el.innerHTML = `
+    <div id="commentsPopupCompletedCard" style="
+      background:var(--bg-2);border:1.5px solid var(--olive-light);
+      box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
+      width:100%;max-width:640px;max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
+      position:relative;box-sizing:border-box;
+      display:flex;flex-direction:column;
+      transform:translateY(18px);transition:transform 260ms var(--ease);
+    ">
+      <!-- header -->
+      <div id="commentsPopupCompletedHeader" style="
+        display:flex;align-items:flex-start;gap:16px;
+        padding:20px;border-bottom:0.5px solid var(--border);
+        flex-shrink:0;
+      ">
+        <div id="commentsPopupCompletedPoster" style="
+          width:56px;height:76px;flex-shrink:0;border-radius:var(--radius-sm);
+          overflow:hidden;background:var(--bg-3);
+          display:flex;align-items:center;justify-content:center;
+          box-shadow:var(--shadow);
+        "></div>
+        <div style="flex:1;min-width:0;">
+          <div id="commentsPopupCompletedTitle" style="font-family:var(--serif);font-size:18px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
+          <div id="commentsPopupCompletedMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px;"></div>
+          <div id="commentsPopupCompletedCount" style="font-size:12px;color:var(--olive-light);font-weight:500;"></div>
+        </div>
+        <button onclick="closeCommentsPopupCompleted()" style="
+          background:none;border:none;color:var(--text-3);cursor:pointer;
+          font-size:22px;line-height:1;padding:0;flex-shrink:0;
+          transition:color .15s;
+        " onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-3)'">✕</button>
+      </div>
+      <!-- comments body -->
+      <div id="commentsPopupCompletedBody" style="flex:1;overflow-y:auto;overscroll-behavior-y:contain;padding:16px 20px;min-height:0;">
+        <div style="font-size:12px;color:var(--text-3);text-align:center;padding:20px 0;">Loading…</div>
+      </div>
+      <!-- comment input -->
+      <div style="padding:16px 20px;border-top:0.5px solid var(--border);flex-shrink:0;">
+        <div class="cc-form">
+          <input class="cc-input" id="commentsPopupCompletedInput" placeholder="Write a comment…"
+                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();postCommentToPopupCompleted()}">
+          <button class="cc-send" onclick="postCommentToPopupCompleted()">Send</button>
+        </div>
+      </div>
+    </div>`;
+  el.addEventListener('click', e => { if (e.target === el) closeCommentsPopupCompleted(); });
+  document.body.appendChild(el);
+}
+
+let _commentsPopupCompletedEntryId = null;
+
+function openCommentsPopupCompleted(entryId) {
+  _injectCommentsPopupCompleted();
+  _commentsPopupCompletedEntryId = entryId;
+  const e = _allCompleted.find(en => en.id === entryId);
+  if (!e) return;
+
+  // Header info
+  document.getElementById('commentsPopupCompletedPoster').innerHTML = posterHTML(e);
+  document.getElementById('commentsPopupCompletedTitle').textContent = e.title;
+  const meta = [CAT_META[e.cat]?.label, ...(e.genres||[]).slice(0,2)].filter(Boolean);
+  document.getElementById('commentsPopupCompletedMeta').innerHTML = meta.map(m =>
+    `<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:12px;padding:1px 6px;font-size:9px;letter-spacing:.3px">${m}</span>`
+  ).join('');
+
+  // Input reset
+  document.getElementById('commentsPopupCompletedInput').value = '';
+
+  // Load comments
+  loadCommentsPopupCommentsCompleted(entryId);
+
+  // Show overlay
+  const ov = document.getElementById('commentsPopupCompletedOverlay');
+  ov.style.pointerEvents = 'auto';
+  ov.style.opacity = '1';
+  document.getElementById('commentsPopupCompletedCard').style.transform = 'translateY(0)';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCommentsPopupCompleted() {
+  const ov = document.getElementById('commentsPopupCompletedOverlay');
+  if (!ov) return;
+  ov.style.opacity = '0';
+  document.getElementById('commentsPopupCompletedCard').style.transform = 'translateY(18px)';
+  ov.style.pointerEvents = 'none';
+  document.body.style.overflow = '';
+  _commentsPopupCompletedEntryId = null;
+}
+
+async function loadCommentsPopupCommentsCompleted(entryId) {
+  const body = document.getElementById('commentsPopupCompletedBody');
+  const count = document.getElementById('commentsPopupCompletedCount');
+  if (!body) return;
+
+  try {
+    const comments = await getComments(entryId);
+    const me = (await getCurrentUser())?.id;
+
+    if (!comments.length) {
+      body.innerHTML = '<div style="font-size:12px;color:var(--text-3);text-align:center;padding:20px 0;">No comments yet.</div>';
+      if (count) count.textContent = 'Comments';
+      return;
+    }
+
+    const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const topLevel = comments.filter(c => !c.reply_to);
+    const replies  = comments.filter(c => c.reply_to);
+    body.innerHTML = topLevel.map(c => {
+      const uname = esc(c.profiles?.username || 'Unknown');
+      const date  = new Date(c.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+      const reps  = replies.filter(r => r.reply_to === c.id);
+      const repHTML = reps.map(r => {
+        const runame = esc(r.profiles?.username || 'Unknown');
+        const rdate  = new Date(r.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+        return `<div class="det-reply-item" id="cmpop-${r.id}">
+          <div class="det-reply-author" style="color:var(--olive-light);">@${runame}</div>
+          <div class="det-reply-text">${esc(r.content).replace(/(@[\w]+)/g,'<span style="color:var(--olive-light);font-weight:600">$1</span>')}</div>
+          <div class="det-reply-meta"><span>${rdate}</span>
+            ${r.author_id === me ? `<button class="cc-del" onclick="deleteCommentFromPopupCompleted('${r.id}','${entryId}')">delete</button>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+      return `<div class="cc-comment" id="cmpop-${c.id}">
+        <div class="cc-comment-body">
+          <div class="cc-author">@${uname}</div>
+          <div class="cc-text">${esc(c.content)}</div>
+          <div class="cc-meta">
+            <span>${date}</span>
+            <button class="det-comment-reply-btn" onclick="cpReply('${c.id}','${uname}','${entryId}')">Reply</button>
+            ${c.author_id === me ? `<button class="cc-del" onclick="deleteCommentFromPopupCompleted('${c.id}','${entryId}')">delete</button>` : ''}
+          </div>
+          ${repHTML}
+          <div id="cp-reply-form-${c.id}"></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    if (count) count.textContent = `${comments.length} comment${comments.length!==1?'s':''}`;
+  } catch(e) {
+    showToast('Could not load comments.', 'err');
+  }
+}
+
+async function postCommentToPopupCompleted() {
+  const input = document.getElementById('commentsPopupCompletedInput');
+  const content = input.value.trim();
+  if (!content || !_commentsPopupCompletedEntryId) return;
+
+  try {
+    input.disabled = true;
+    await addComment(_commentsPopupCompletedEntryId, content);
+    input.value = '';
+    await loadCommentsPopupCommentsCompleted(_commentsPopupCompletedEntryId);
+  } catch(e) {
+    showToast('Could not post comment.', 'err');
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+let _cpReplyFor = null;
+
+function cpReply(commentId, username, entryId) {
+  if (_cpReplyFor) { const _crEl = document.getElementById('cp-reply-form-' + _cpReplyFor); if(_crEl) _crEl.innerHTML = ''; }
+  if (_cpReplyFor === commentId) { _cpReplyFor = null; return; }
+  _cpReplyFor = commentId;
+  const box = document.getElementById('cp-reply-form-' + commentId);
+  if (!box) return;
+  box.innerHTML = `<div class="det-reply-form">
+    <input class="det-reply-input" id="cp-ri-${commentId}" value="@${username} " placeholder="Reply…"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cpPostReply('${commentId}','${entryId}')}">
+    <button class="det-reply-send" onclick="cpPostReply('${commentId}','${entryId}')">Send</button>
+    <button class="det-comment-del" onclick="document.getElementById('cp-reply-form-${commentId}').innerHTML='';_cpReplyFor=null" style="margin-left:4px;">✕</button>
+  </div>`;
+  setTimeout(() => document.getElementById('cp-ri-' + commentId)?.focus(), 50);
+}
+
+async function cpPostReply(commentId, entryId) {
+  const input = document.getElementById('cp-ri-' + commentId);
+  const content = input?.value?.trim();
+  if (!content) return;
+  input.disabled = true;
+  try {
+    await addComment(entryId, content, commentId);
+    document.getElementById('cp-reply-form-' + commentId).innerHTML = '';
+    _cpReplyFor = null;
+    await loadCommentsPopupCommentsCompleted(entryId);
+  } catch(e) {
+    showToast('Could not post reply.', 'err');
+    if (input) input.disabled = false;
+  }
+}
+
+async function deleteCommentFromPopupCompleted(commentId, entryId) {
+  if (!confirm('Delete this comment?')) return;
+  try {
+    await deleteComment(commentId);
+    await loadCommentsPopupCommentsCompleted(entryId);
+  } catch(e) {
+    showToast('Could not delete comment.', 'err');
+  }
+}
+
+/* Old inline comment functions removed — comments now use dedicated popup modal */
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('ratingFilterOverlay')?.classList.contains('open')) {
+      closeRatingFilter();
+    } else if (document.getElementById('catDiscoverOverlay')?.classList.contains('open')) {
+      _closeCardLinkPicker();
+    } else if (document.getElementById('createCardOverlay')?.classList.contains('open')) {
+      closeCreateCard();
+    } else if (document.getElementById('favListsOverlay')?.classList.contains('open')) {
+      closeFavListsPopup();
+    } else if (document.getElementById('commentsPopupCompletedOverlay')?.style.opacity === '1') {
+      closeCommentsPopupCompleted();
+    } else if (document.getElementById('cpPopupOverlay')?.style.opacity === '1') {
+      cpClosePopup();
+    }
+  }
+});
+
+/* Grid comment toggle (item 10) — uses same ccToggle/ccPost from list mode via shared IDs */
+function _renderCompGrid(items) {
+  const isRanked  = _compSort === 'highest' || _compSort === 'lowest';
+  const ratingKey = (_compSort||'').startsWith('rating:') ? _compSort.slice(7) : null;
+  const gid = 'compgrid';
+  const cards = items.map((e, i) => {
+    const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
+    const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+    const _badge = getTypeBadgeOverlay(e, 'completed');
+    return `<div class="wg-card cg-card-wrap" style="cursor:pointer;">
+      <div class="wg-poster" onclick="cpOpenPopup('${e.id}')" style="position:relative;">
+        ${posterHTML(e,'big')}
+        <div class="wg-overlay"></div>
+        ${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : (isRanked ? _cgBadgeHTML(i+1) : '')}
+        ${_badge}
+        ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
+      </div>
+      <div class="cg-grid-info" onclick="cpOpenPopup('${e.id}')">
+        <div class="wg-title">${e.title}</div>
+        <div class="wg-genre">${genreHTML(e.genres, 3)}</div>
+        ${_entryMeta(e)}
+        <div class="cg-score-row"><span class="cg-score">${score||'—'}</span><span class="cg-score-lbl">score</span></div>
+      </div>
+      <div onclick="event.stopPropagation()" style="padding:0 10px 10px;">
+        <button class="cc-strip" style="margin-top:0;" onclick="cpOpenPopupToComments('${e.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Comments</span>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="grid-nav-wrap">
+    <button class="grid-nav-btn arr-left"  onclick="_cScroll(-1)" aria-label="Scroll left">${_CLEFT}</button>
+    <button class="grid-nav-btn arr-right" onclick="_cScroll(1)"  aria-label="Scroll right">${_CRIGHT}</button>
+    <div class="watching-grid" id="${gid}">${cards}</div>
+  </div>`;
+}
+
+function _cScroll(dir) {
+  const el = document.getElementById('compgrid');
+  if (!el) return;
+  const amount = el.clientWidth * 0.75 || 220;
+  el.scrollBy({ left: dir * amount, behavior:'smooth' });
+}
+
+
+function _compViewBar() {
+  const el = document.getElementById('compViewToggle');
+  if (!el) return;
+  el.innerHTML = `
+    <button class="vt-btn ${_compView==='list'?'active':''}" onclick="setCompView('list')" title="List view">${icon('list',13)}</button>
+    <button class="vt-btn ${_compView==='grid'?'active':''}" onclick="setCompView('grid')" title="Grid view">${icon('grid',13)}</button>`;
+}
+
+function setCompView(v) {
+  _compView = v;
+  localStorage.setItem('mss_compView', v);
+  _compViewBar();
+  renderMain();
+}
+
+function _compSortBar() {
+  const el = document.getElementById('compSortBar');
+  if (!el) return;
+  const isRating = (_compSort||'').startsWith('rating:');
+  const ratingLabel = isRating ? _ratingFilterLabelAll(_compSort.slice(7)) : null;
+  const staticBtns = [['newest','Newest'],['oldest','Oldest'],['highest','Highest Rank'],['lowest','Lowest Rank'],['alpha','A → Z'],['zalpha','Z → A']]
+    .map(([v,l]) => `<button class="sort-btn${_compSort===v?' active':''}" onclick="setCompSort('${v}')">${l}</button>`).join('');
+  const ratingBtn = `<button class="sort-btn${isRating?' active':''}" onclick="openRatingFilter()" data-short="${isRating ? _ratingShortLabel(ratingLabel) : 'Rating'}">${isRating ? 'Rating: ' + ratingLabel : 'Rating ▾'}</button>`;
+  el.innerHTML = staticBtns + ratingBtn;
+}
+
+function setCompSort(v) {
+  _compSort = v;
+  _compSortBar();
+  renderMain();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async (user) => {
+    if (!user) {
+      document.querySelector('.page-wrap').innerHTML = `
+        <div class="guest-page-state fade-up">
+          <div class="guest-page-icon">${icon('check', 36)}</div>
+          <h2 class="guest-page-title">Your Watched Titles</h2>
+          <p class="guest-page-sub">Sign in to see your ranked and completed collection.</p>
+          <div class="guest-cta">
+            <a href="login.html" class="guest-btn-primary">Sign In</a>
+            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
+          </div>
+        </div>`;
+      return;
+    }
+    _compUser = user;
+    const [comp, ong] = await Promise.all([
+      getEntries(user.id, { status: 'completed' }),
+      getEntries(user.id, { status: 'ongoing' }),
+    ]);
+    _allCompleted = [...comp, ...ong];
+    _compSortBar();
+    _compViewBar();
+    renderStats();
+    renderMain();
+  });
+});
+
+/* ── Inline detail expansion ── */
+let _expandedCompId = null;
+
+function toggleCompDetail(id) {
+  const panel = document.getElementById('cdp-' + id);
+  if (!panel) return;
+  if (_expandedCompId === id) {
+    panel.style.display = 'none';
+    _expandedCompId = null;
+    return;
+  }
+  if (_expandedCompId) {
+    const prev = document.getElementById('cdp-' + _expandedCompId);
+    if (prev) prev.style.display = 'none';
+  }
+  const e = _allCompleted.find(en => en.id === id);
+  if (!e) return;
+  panel.innerHTML = _buildCompExpansion(e);
+  panel.style.display = 'block';
+  _expandedCompId = id;
+}
+
+function _cpBreakdownHTML(e) {
+  const isMovie = e.cat==='movies' || e.ratings?._media_type==='movie';
+  if (!isMovie) {
+    const bd = Array.isArray(e.ratings?._season_breakdown)
+      ? e.ratings._season_breakdown.filter(n=>parseInt(n)>0).map(Number) : [];
+    const totalS = bd.length || Number(e.total_seasons) || 0;
+    if (totalS > 0) {
+      let chips = '';
+      for (let i=0; i<totalS; i++) {
+        const eps = bd[i] || null;
+        chips += `<span class="popup-info-season-chip">
+          <span class="popup-info-season-num">S${i+1}</span>
+          <span class="popup-info-season-eps">${eps?eps+' ep':'S'+(i+1)}</span>
+        </span>`;
+      }
+      return `<div class="popup-info-block"><div class="popup-info-label">TV Show Breakdown</div><div style="display:flex;flex-wrap:wrap;">${chips}</div></div>`;
+    } else if (e.total_eps) {
+      return `<div class="popup-info-block"><span class="popup-info-season-eps" style="font-size:11px;">${e.total_eps} episodes</span></div>`;
+    }
+    return '';
+  } else {
+    const rtH=Number(e.runtime_h)||0, rtM=Number(e.runtime_m)||0;
+    if (rtH||rtM) {
+      const rtStr = rtH ? rtH+'h '+rtM+'m' : rtM+'m';
+      return `<div class="popup-info-block"><span class="popup-info-runtime">
+        <span class="popup-info-runtime-val">${rtStr}</span>
+        <span class="popup-info-runtime-lbl">Runtime</span>
+      </span></div>`;
+    }
+    return '';
+  }
+}
+
+function _buildCompExpansion(e) {
+  const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
+  const isMovies = e.cat === 'movies';
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const { core: coreArr, bonus: bonusArr } = getRatings(e.cat);
+  const isAnimated = e.cat === 'anime' || e.cat === 'cartoons';
+
+  const coreRows = coreArr.map(r => {
+    const val = e.ratings?.[r.key];
+    if (val == null || val === '') return '';
+    return `<div class="fd-rating-row"><span class="fd-rating-label">${r.label}</span><span class="fd-rating-val">${Number(val).toFixed(2)}</span></div>`;
+  }).filter(Boolean).join('');
+
+  // For TV/movies: show animation toggle rating separately if it was rated
+  const animRow = (!isAnimated && e.ratings?.animation != null && e.ratings?.animation !== '')
+    ? `<div class="fd-rating-row"><span class="fd-rating-label">Animation Quality</span><span class="fd-rating-val">${Number(e.ratings.animation).toFixed(2)}</span></div>` : '';
+
+  const bonusRows = bonusArr.map(r => {
+    const val = e.ratings?.[r.key];
+    if (val == null || val === '') return '';
+    return `<div class="fd-rating-row"><span class="fd-rating-label">${r.label}</span><span class="fd-rating-val">${Number(val).toFixed(2)}</span></div>`;
+  }).filter(Boolean).join('');
+
+  const favs = e.ratings?._favorites || {};
+  const favChips = [
+    favs.character ? `<span class="fav-chip"><span class="fav-chip-label">Fav Character</span>${esc(favs.character)}</span>` : '',
+    (!isMovies && favs.episode) ? `<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span>${esc(favs.episode)}</span>` : '',
+    (!isMovies && favs.season)  ? `<span class="fav-chip"><span class="fav-chip-label">Fav Season</span>${esc(favs.season)}</span>` : '',
+  ].filter(Boolean).join('');
+  const lows = e.ratings?._lowlights || e.ratings?._favorites?._lowlights || {};
+  const lowChips = [
+    lows.character ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Character</span>${esc(lows.character)}</span>` : '',
+    (!isMovies && lows.episode) ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Episode</span>${esc(lows.episode)}</span>` : '',
+    (!isMovies && lows.season)  ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span>${esc(lows.season)}</span>` : '',
+  ].filter(Boolean).join('');
+
+  return `${e.description ? `<div class="fd-description">${esc(e.description)}</div>` : ''}
+  ${_cpBreakdownHTML(e)}
+  <div class="fd-cols">
+    ${(coreRows || animRow) ? `<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>${coreRows}${animRow}</div>` : ''}
+    ${bonusRows ? `<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>${bonusRows}</div>` : ''}
+  </div>
+  <div class="fd-final"><span>Final Score</span><strong>${score}</strong></div>
+  ${favChips ? `<div class="fav-chips" style="margin-top:8px;">${favChips}</div>` : ''}
+  ${lowChips ? `<div class="fav-chips" style="margin-top:6px;">${lowChips}</div>` : ''}
+  ${e.notes ? `<div class="fd-notes">"${esc(e.notes)}"</div>` : ''}
+  <a href="#" class="fd-edit-link" onclick="goToDetail('${e.id}','completed.html');return false;">Edit entry →</a>`;
+}
+
+function setCat(btn, cat) {
+  _catFilter = cat;
+  document.querySelectorAll('.cf-btn[data-cat]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStats();
+  renderMain();
+}
+
+let _statusFilter = '';
+function setStatus(btn, status) {
+  _statusFilter = status;
+  document.querySelectorAll('.cf-btn[data-status]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStats();
+  renderMain();
+}
+
+function filtered() {
+  let result = _catFilter ? _allCompleted.filter(e => e.cat === _catFilter) : _allCompleted;
+  if (_statusFilter) result = result.filter(e => e.status === _statusFilter);
+  return result;
+}
+
+function renderStats() {
+  const all   = _allCompleted;
+  const rated = all.filter(e => e.final_score != null);
+  const avg   = rated.length ? (rated.reduce((s, e) => s + Number(liveScore(e)), 0) / rated.length).toFixed(2) : '—';
+  const cats  = {};
+  all.forEach(e => { cats[e.cat] = (cats[e.cat] || 0) + 1; });
+  const topCat = Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
+  const topCatLabel = topCat ? CAT_META[topCat[0]]?.label : '—';
+
+  // Episodes: completed only, use total_eps with watched as fallback, exclude movies and movie-type anime/cartoons
+  const epsSource = (_catFilter && _catFilter !== 'movies')
+    ? _allCompleted.filter(e => e.cat === _catFilter && (e.ratings?._media_type || 'show') !== 'movie')
+    : _allCompleted.filter(e => e.cat !== 'movies' && (e.ratings?._media_type || 'show') !== 'movie');
+  const totalEps = _catFilter === 'movies' ? 0 : epsSource.reduce((sum, e) => sum + (Number(e.total_eps) || Number(e.watched) || 0), 0);
+  const epsLabel = _catFilter && _catFilter !== 'movies'
+    ? `${CAT_META[_catFilter]?.label} Eps`
+    : 'Episodes';
+
+  // Movie watch time
+  const movieSource = _catFilter
+    ? _allCompleted.filter(e => e.cat === _catFilter && (e.cat === 'movies' || (e.ratings?._media_type === 'movie')))
+    : _allCompleted.filter(e => e.cat === 'movies' || (e.ratings?._media_type === 'movie'));
+  const totalMovieMins = movieSource.reduce((sum, e) => sum + (Number(e.runtime_h)||0)*60 + (Number(e.runtime_m)||0), 0);
+  const wtH = Math.floor(totalMovieMins / 60);
+  const wtM = totalMovieMins % 60;
+  const watchTimeLabel = totalMovieMins ? (wtH ? `${wtH}h ${wtM}m` : `${wtM}m`) : null;
+
+  const ongoingCount = (_catFilter ? _allCompleted.filter(e => e.cat === _catFilter && e.status === 'ongoing') : _allCompleted.filter(e => e.status === 'ongoing')).length;
+  const completedCount = (_catFilter ? _allCompleted.filter(e => e.cat === _catFilter && e.status === 'completed') : _allCompleted.filter(e => e.status === 'completed')).length;
+
+  document.getElementById('compStats').innerHTML = `
+    <div class="comp-stat-card"><div class="comp-stat-label">Watched</div><div class="comp-stat-num">${completedCount}</div></div>
+    <div class="comp-stat-card"><div class="comp-stat-label">To Be Continued</div><div class="comp-stat-num">${ongoingCount}</div></div>
+    <div class="comp-stat-card"><div class="comp-stat-label">Avg Score</div><div class="comp-stat-num">${avg}</div></div>
+    <div class="comp-stat-card"><div class="comp-stat-label">Rated</div><div class="comp-stat-num">${rated.length}</div></div>
+    <div class="comp-stat-card"><div class="comp-stat-label">Top Category</div><div class="comp-stat-num">${topCatLabel}</div></div>
+    ${totalEps > 0 ? `<div class="comp-stat-card"><div class="comp-stat-label">${epsLabel}</div><div class="comp-stat-num">${totalEps.toLocaleString()}</div></div>` : ''}
+    ${watchTimeLabel ? `<div class="comp-stat-card"><div class="comp-stat-label">Movie Watch Time</div><div class="comp-stat-num">${watchTimeLabel}</div></div>` : ''}`;
+}
+
+function renderMain() {
+  const items = filtered();
+  const el = document.getElementById('mainContent');
+
+  if (!items.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon" style="opacity:.35"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></div><div class="empty-text">No watched entries${_catFilter ? ' in this category' : ''}.</div></div>`;
+    return;
+  }
+
+  const _sortedItems = (() => {
+    const a = [...items];
+    const getDate = e => e.completed_date ? new Date(e.completed_date) : new Date(e.created_at);
+    if (_compSort === 'newest')  return a.sort((x,y) => getDate(y) - getDate(x));
+    if (_compSort === 'oldest')  return a.sort((x,y) => getDate(x) - getDate(y));
+    if (_compSort === 'highest') return a.sort((x,y) => { const d=(liveScore(y)||0)-(liveScore(x)||0); return d||new Date(y.created_at)-new Date(x.created_at); });
+    if (_compSort === 'lowest')  return a.sort((x,y) => { const d=(liveScore(x)||0)-(liveScore(y)||0); return d||new Date(y.created_at)-new Date(x.created_at); });
+    if (_compSort && _compSort.startsWith('rating:')) {
+      const key = _compSort.slice(7);
+      return a.sort((x,y) => {
+        const ex = _ratingVal(x, key), ey = _ratingVal(y, key);
+        const xKey = ex != null ? ex : (liveScore(x)||0);
+        const yKey = ey != null ? ey : (liveScore(y)||0);
+        const d = yKey - xKey;
+        if (d) return d;
+        return (liveScore(y)||0) - (liveScore(x)||0);
+      });
+    }
+    if (_compSort === 'alpha')   return a.sort((x,y) => (x.title||'').localeCompare(y.title||''));
+    if (_compSort === 'zalpha')  return a.sort((x,y) => (y.title||'').localeCompare(x.title||''));
+    return a;
+  })();
+
+  if (_compView === 'grid') {
+    el.innerHTML = _renderCompGrid(_sortedItems);
+    return;
+  }
+
+  if (_compSort === 'highest' || _compSort === 'lowest') {
+    const sorted = _sortedItems;
+    el.innerHTML = `<div class="ranked-table">${sorted.map((e, i) => {
+      const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
+      const cat   = CAT_META[e.cat];
+      const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+      return `<div class="comp-entry-block">
+        <div class="rank-row" onclick="cpOpenPopup('${e.id}')" style="cursor:pointer;">
+          <div class="rank-num ${i < 3 ? 'top3' : ''}">${i + 1}</div>
+          <div class="rank-poster">${posterHTML(e)}</div>
+          <div class="rank-info">
+            <div class="rank-title">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="rank-meta"><span class="cat-badge">${cat?.label}</span>${getTypeBadge(e,'completed')}${e.genres?.length ? e.genres.slice(0,3).map(g=>`<span style="color:var(--text-3)">· ${g}</span>`).join('') : ''}</div>
+            ${_entryMeta(e)}
+            ${renderFavChips(e.ratings, e.cat)}
+          </div>
+          <div class="rank-score-wrap"><div class="rank-score">${score}</div><div class="rank-score-label">score</div></div>
+        </div>
+        <button class="cc-strip" style="margin-top:0;" onclick="event.stopPropagation();cpOpenPopupToComments('${e.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Comments</span>
+        </button>
+      </div>`;
+    }).join('')}</div>`;
+  } else {
+    const recentSorted = _sortedItems;
+    const ratingKey = (_compSort||'').startsWith('rating:') ? _compSort.slice(7) : null;
+    el.innerHTML = `<div class="recent-list">${recentSorted.map(e => {
+      const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
+      const cat   = CAT_META[e.cat];
+      return `<div class="comp-entry-block">
+        <div class="recent-row" onclick="cpOpenPopup('${e.id}')" style="cursor:pointer;">
+        <div class="recent-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : ''}</div>
+        <div class="recent-info">
+          <div class="recent-title">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+          <div class="recent-meta"><span class="cat-badge">${cat?.label}</span>${getTypeBadge(e,'completed')}${e.genres?.length ? e.genres.slice(0,3).map(g=>`<span style="color:var(--text-3)">· ${g}</span>`).join('') : ''}</div>
+          ${_entryMeta(e)}
+          ${renderFavChips(e.ratings, e.cat)}
+        </div>
+        <div class="recent-date-wrap"><div class="recent-score">${score}</div></div>
+        </div>
+        <button class="cc-strip" style="margin-top:0;" onclick="event.stopPropagation();cpOpenPopupToComments('${e.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Comments</span>
+        </button>
+      </div>`;
+    }).join('')}</div>`;
+  }
+}
+
+async function doExport(exportCat) {
+  const items = exportCat
+    ? _allCompleted.filter(e => e.cat === exportCat)
+    : filtered();
+  if (!items.length) { showToast('Nothing to export.', 'err'); return; }
+
+  const useRanked = _compSort === 'highest' || _compSort === 'lowest';
+  const sorted = useRanked
+    ? [...items].sort((a,b) => (liveScore(b)||0) - (liveScore(a)||0))
+    : [...items].sort((a,b) => new Date(b.completed_date||b.created_at||0) - new Date(a.completed_date||a.created_at||0));
+
+  const rated     = sorted.filter(e => liveScore(e) != null);
+  const avgScore  = rated.length ? (rated.reduce((s,e)=>s+Number(liveScore(e)),0)/rated.length).toFixed(2) : null;
+  const totalEps  = sorted.filter(e=>e.cat!=='movies'&&(e.ratings?._media_type||'show')!=='movie')
+    .reduce((s,e)=>s+(Number(e.total_eps)||Number(e.watched)||0),0);
+  const totalMins = sorted.filter(e=>e.cat==='movies'||e.ratings?._media_type==='movie')
+    .reduce((s,e)=>s+(Number(e.runtime_h)||0)*60+(Number(e.runtime_m)||0),0);
+  const wtH=Math.floor(totalMins/60), wtM=totalMins%60;
+  const watchTime = totalMins ? (wtH?`${wtH}h ${wtM}m`:`${wtM}m`) : null;
+  const catLabels    = {'':'All',tv:'TV Shows',movies:'Movies',anime:'Anime',cartoons:'Cartoons'};
+  const statusLabels = {'':'',completed:'Watched',ongoing:'To Be Continued'};
+  const filterLabel  = [catLabels[_catFilter]||'All', statusLabels[_statusFilter]].filter(Boolean).join(' · ');
+
+  showToast('Preparing PDF…');
+  try {
+    await buildAndExportPDF({
+      subtitle: (() => {
+        const catLabels2 = {'':'All',tv:'TV Shows',movies:'Movies',anime:'Anime',cartoons:'Cartoons'};
+        const catPart = exportCat ? catLabels2[exportCat] : (filterLabel || 'All');
+        return `${useRanked?'Ranked List':'Watched List'} · ${catPart}`;
+      })(),
+      entries:   sorted,
+      useRanked,
+      exportCat: exportCat || '',
+      filename:  `screenscore-${_compSort}.pdf`,
+    });
+    showToast('PDF exported!');
+  } catch(err) {
+    console.error(err);
+    showToast('Export failed. Try again.', 'err');
+  }
+}
+/* ── Export theme popup ── */
+function openExportThemePopup() {
+  let ov = document.getElementById('exportThemeOverlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'exportThemeOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px;';
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:1.75rem;max-width:340px;width:100%;display:flex;flex-direction:column;gap:12px;';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-family:var(--serif);font-size:24px;font-weight:300;color:var(--text);text-align:center;';
+    title.textContent = 'Export PDF';
+    card.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.style.cssText = 'font-size:12px;color:var(--text-2);text-align:center;';
+    sub.textContent = 'Choose category & theme';
+    card.appendChild(sub);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:2px;';
+
+    const cats = [['tv','TV Shows'],['movies','Movies'],['anime','Anime'],['cartoons','Cartoons']];
+    const themes = [['dark','Dark'],['light','Light']];
+    cats.forEach(function(catItem) {
+      themes.forEach(function(themeItem) {
+        const cat = catItem[0], label = catItem[1];
+        const theme = themeItem[0], themeLabel = themeItem[1];
+        const btn = document.createElement('button');
+        btn.style.cssText = 'padding:9px 6px;border:0.5px solid var(--border-2);border-radius:var(--radius-sm);font-size:10px;cursor:pointer;font-family:var(--sans);text-align:center;line-height:1.4;';
+        btn.style.background = theme === 'dark' ? 'var(--bg-2)' : '#f0ebe2';
+        btn.style.color      = theme === 'dark' ? 'var(--text)' : '#1a1a1a';
+        const d1 = document.createElement('div');
+        d1.style.fontWeight = '600'; d1.textContent = label;
+        const d2 = document.createElement('div');
+        d2.style.cssText = 'opacity:.6;font-size:9px;'; d2.textContent = themeLabel;
+        btn.appendChild(d1); btn.appendChild(d2);
+        btn.addEventListener('click', (function(c,t){ return function(){ runCompExport(c,t); }; })(cat, theme));
+        grid.appendChild(btn);
+      });
+    });
+    card.appendChild(grid);
+
+    const cancel = document.createElement('button');
+    cancel.style.cssText = 'font-size:11px;color:var(--text-3);background:none;border:none;cursor:pointer;text-align:center;margin-top:-4px;';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', function(){ ov.style.display = 'none'; });
+    card.appendChild(cancel);
+
+    ov.appendChild(card);
+    ov.addEventListener('click', function(e){ if (e.target === ov) ov.style.display = 'none'; });
+    document.body.appendChild(ov);
+  }
+  ov.style.display = 'flex';
+}
+async function runCompExport(cat, theme) {
+  document.getElementById('exportThemeOverlay').style.display = 'none';
+  _exportTheme = theme;
+  await doExport(cat);
+}
+
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

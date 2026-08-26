@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notes — MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1E5C26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MyScreenScore">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+<style>
+/* ── Header buttons ── */
+.notes-header-btns { display:flex; gap:8px; flex-wrap:wrap; }
+@media(max-width:520px){
+  .notes-header-btns { width:100%; }
+  .notes-header-btns .btn-add-entry { flex:1; font-size:clamp(11px,3vw,13px); padding:10px 12px; }
+}
+
+/* ── Search popup (opened via + Add Note / Edit Note) ── */
+.notes-search-overlay {
+  position:fixed; inset:0; z-index:1150; background:rgba(0,0,0,0.72);
+  backdrop-filter:blur(6px); display:flex; align-items:flex-start; justify-content:center;
+  padding:16px; padding-top:max(16px, env(safe-area-inset-top)); box-sizing:border-box;
+  opacity:0; pointer-events:none; transition:opacity .2s; overflow-y:auto;
+}
+.notes-search-overlay.open { opacity:1; pointer-events:auto; }
+.notes-search-card {
+  width:100%; max-width:480px; max-height:calc(100dvh - 32px); display:flex; flex-direction:column;
+  background:var(--bg-2); border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg);
+  transform:translateY(16px); transition:transform .25s cubic-bezier(.4,0,.2,1);
+  overflow:hidden; margin-top:4vh;
+}
+.notes-search-overlay.open .notes-search-card { transform:translateY(0); }
+.notes-search-card-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 20px; border-bottom:0.5px solid var(--border); flex-shrink:0;
+}
+.notes-search-card-title { font-family:var(--serif); font-size:20px; font-weight:300; color:var(--text); }
+.notes-search-card-close { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:20px; line-height:1; }
+.notes-search-card-close:hover { color:var(--text); }
+.notes-search-input-wrap { position:relative; padding:16px 20px 12px; flex-shrink:0; }
+.notes-search-input {
+  width:100%; box-sizing:border-box; padding:11px 14px 11px 40px;
+  border-radius:var(--radius-sm); border:1px solid var(--border);
+  background:var(--bg-3); color:var(--text); font-family:var(--sans);
+  font-size:16px; outline:none; transition:border-color .15s;
+}
+.notes-search-input:focus { border-color:var(--olive-light); }
+.notes-search-icon {
+  position:absolute; left:33px; top:50%; transform:translateY(-50%);
+  color:var(--text-3); pointer-events:none;
+}
+.notes-search-results {
+  overflow-y:auto; overscroll-behavior-y:contain; padding:4px 10px 16px;
+}
+.notes-search-item {
+  display:flex; align-items:center; gap:12px; padding:10px 10px;
+  border-radius:var(--radius-sm); cursor:pointer; transition:background-color .12s;
+}
+.notes-search-item:hover, .notes-search-item.active { background:var(--olive-faint); }
+.notes-search-item-poster {
+  width:36px; height:52px; border-radius:var(--radius-xs); flex-shrink:0;
+  background:var(--bg-3); overflow:hidden; display:flex; align-items:center;
+  justify-content:center; font-family:var(--serif); font-size:15px; color:var(--olive-light);
+}
+.notes-search-item-poster img { width:100%; height:100%; object-fit:cover; }
+.notes-search-item-info { flex:1; min-width:0; }
+.notes-search-item-title {
+  font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.notes-search-item-meta { font-size:11px; color:var(--text-3); margin-top:2px; }
+.notes-search-item-has-note {
+  font-size:9px; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--olive-light); background:var(--olive-faint);
+  border:0.5px solid var(--border-olive); border-radius:20px; padding:2px 7px;
+  flex-shrink:0;
+}
+.notes-search-empty { padding:24px 14px; text-align:center; font-size:13px; color:var(--text-3); }
+
+/* ── Sort bar ── */
+.notes-sort-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1.25rem; }
+
+/* ── Note card list (reused from profile.html's Notes tab design) ── */
+.note-row{display:flex;gap:20px;align-items:flex-start;padding:20px 24px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;cursor:pointer;transition:all var(--trans) var(--ease);}
+.note-row:hover{border-color:var(--border-olive);background:var(--card-2);}
+.note-poster{width:84px;height:120px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:24px;color:var(--olive-light);overflow:hidden;}
+.note-poster img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);}
+.note-body{flex:1;min-width:0;}
+.note-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.note-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:4px;}
+.note-date{font-size:11px;color:var(--text-3);white-space:nowrap;}
+.note-text{font-size:13px;color:var(--text-2);font-style:italic;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:6px;}
+.note-score{font-family:var(--serif);font-size:24px;color:var(--olive-light);flex-shrink:0;line-height:1;}
+@media(max-width:640px){
+  .note-row { padding:12px 14px; gap:12px; border-radius:var(--radius); }
+  .note-poster { width:64px; height:90px; font-size:20px; }
+  .note-title { font-size:15px; }
+  .note-tags { gap:3px; margin-bottom:3px; }
+  .note-text { font-size:11px; margin-top:4px; }
+  .note-score { font-size:20px; }
+  .note-date { font-size:10px; }
+  .notes-search-card-header { padding:14px 16px; }
+  .notes-search-card-title { font-size:18px; }
+  .notes-search-input-wrap { padding:14px 16px 10px; }
+  .notes-search-input { padding:11px 14px 11px 38px; font-size:16px; }
+  .notes-search-icon { left:29px; }
+  .notes-search-item { padding:9px 8px; gap:10px; }
+  .notes-search-item-poster { width:32px; height:46px; font-size:13px; }
+  .notes-search-item-title { font-size:13px; }
+  .notes-search-item-meta { font-size:10px; }
+  .notes-search-item-has-note { font-size:8px; padding:2px 6px; }
+}
+@media(max-width:400px){
+  .note-row { padding:10px 12px; gap:10px; }
+  .note-poster { width:54px; height:76px; font-size:18px; }
+  .note-title { font-size:13px; }
+  .note-text { font-size:10px; }
+  .note-score { font-size:17px; }
+  .notes-search-card-header { padding:12px 14px; }
+  .notes-search-card-title { font-size:16px; }
+  .notes-search-input-wrap { padding:12px 14px 8px; }
+  .notes-search-input { padding:10px 12px 10px 34px; }
+  .notes-search-icon { left:25px; width:14px; height:14px; }
+  .notes-search-results { max-height:280px; }
+  .notes-search-item { padding:8px 10px; gap:8px; }
+  .notes-search-item-poster { width:28px; height:40px; font-size:12px; }
+  .notes-search-item-title { font-size:12px; }
+}
+
+/* ── Note popup (same visual design as profile.html's notePopup2, but
+   editable here instead of view-then-navigate-away) ── */
+.note-popup-overlay2{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.note-popup-overlay2.open{opacity:1;pointer-events:auto;}
+.note-popup2{width:100%;max-width:520px;background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);overflow:hidden;transform:scale(.96);transition:transform .22s cubic-bezier(0.4,0,0.2,1);position:relative;max-height:90dvh;display:flex;flex-direction:column;}
+.note-popup-overlay2.open .note-popup2{transform:scale(1);}
+.note-popup2-header{display:flex;align-items:flex-start;gap:14px;padding:18px 20px 14px;border-bottom:0.5px solid var(--border);flex-shrink:0;}
+.note-popup2-poster{width:60px;height:84px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:20px;color:var(--olive-light);}
+.note-popup2-poster img{width:100%;height:100%;object-fit:cover;}
+.note-popup2-info{flex:1;min-width:0;}
+.note-popup2-title{font-family:var(--serif);font-size:20px;font-weight:300;color:var(--text);margin-bottom:5px;line-height:1.2;}
+.note-popup2-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:5px;}
+.note-popup2-date{font-size:11px;color:var(--text-3);}
+.note-popup2-close{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;line-height:1;padding:0;flex-shrink:0;transition:color .15s;}
+.note-popup2-close:hover{color:var(--text);}
+.note-popup2-body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;overscroll-behavior-y:contain;}
+.note-popup2-text{font-size:14px;color:var(--text-2);font-style:italic;line-height:1.7;}
+.note-popup2-empty{font-size:13px;color:var(--text-3);}
+.note-popup2-textarea{
+  width:100%; box-sizing:border-box; min-height:160px; resize:vertical;
+  padding:12px 14px; border-radius:var(--radius-sm); border:1px solid var(--border);
+  background:var(--bg-3); color:var(--text); font-family:var(--sans); font-size:16px;
+  line-height:1.6; outline:none; transition:border-color .15s;
+}
+.note-popup2-textarea:focus{border-color:var(--olive-light);}
+.note-popup2-count{font-size:10.5px;color:var(--text-3);text-align:right;}
+.note-popup2-count.over{color:#c0564a;}
+.note-popup2-footer{display:flex;gap:10px;padding:14px 20px;border-top:0.5px solid var(--border);flex-shrink:0;}
+.note-popup2-cancel{flex:1;padding:10px;border-radius:var(--radius-sm);background:var(--bg-3);color:var(--text-2);border:0.5px solid var(--border);font-family:var(--sans);font-size:14px;cursor:pointer;}
+.note-popup2-edit{flex:1;padding:10px;border-radius:var(--radius-sm);background:var(--olive-faint);color:var(--olive-light);border:0.5px solid var(--border-olive);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;}
+.note-popup2-save{flex:2;padding:10px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;}
+.note-popup2-save:disabled{opacity:.5;cursor:default;}
+@media(max-width:640px){
+  .note-popup2-header{padding:14px 16px 12px;gap:12px;}
+  .note-popup2-poster{width:50px;height:70px;font-size:17px;}
+  .note-popup2-title{font-size:17px;}
+  .note-popup2-body{padding:14px 16px 18px;}
+  .note-popup2-textarea{min-height:130px;padding:10px 12px;}
+  .note-popup2-footer{padding:12px 16px;}
+  .note-popup2-cancel,.note-popup2-edit,.note-popup2-save{padding:9px;font-size:13px;}
+  .note-popup2-text{font-size:13px;}
+}
+@media(max-width:400px){
+  .note-popup2-header{padding:12px 14px 10px;gap:10px;}
+  .note-popup2-poster{width:44px;height:62px;font-size:15px;}
+  .note-popup2-title{font-size:15px;}
+  .note-popup2-body{padding:12px 14px 16px;}
+  .note-popup2-textarea{min-height:110px;}
+  .note-popup2-count{font-size:10px;}
+}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="cat-page-header fade-up">
+    <div class="cat-page-header-left">
+      <h1 class="cat-page-title">Notes</h1>
+      <div class="cat-page-sub" id="notesPageSub"></div>
+    </div>
+    <div class="cat-page-header-right notes-header-btns">
+      <button class="btn-add-entry" onclick="openNotesSearchPopup('add')">+ Add Note</button>
+      <button class="btn-add-entry" onclick="openNotesSearchPopup('edit')">Edit Note</button>
+    </div>
+  </div>
+
+  <!-- Stat boxes -->
+  <div class="page-stats fade-up fade-up-1" id="notesPageStats"></div>
+
+  <!-- Sort bar -->
+  <div class="notes-sort-bar fade-up fade-up-1" id="notesSortBar">
+    <button class="sort-btn active" data-sort="latest" onclick="setNotesSort('latest')">Latest</button>
+    <button class="sort-btn" data-sort="earliest" onclick="setNotesSort('earliest')">Earliest</button>
+    <button class="sort-btn" data-sort="az" onclick="setNotesSort('az')">A→Z</button>
+    <button class="sort-btn" data-sort="za" onclick="setNotesSort('za')">Z→A</button>
+    <button class="sort-btn" data-sort="longest" onclick="setNotesSort('longest')">Longest</button>
+  </div>
+
+  <!-- Notes list -->
+  <div id="notesPageContent" class="fade-up fade-up-2">
+    <div class="page-loading"><div class="spinner"></div></div>
+  </div>
+
+</div>
+
+<!-- Search popup -->
+<div class="notes-search-overlay" id="notesSearchOverlay" onclick="if(event.target===this)closeNotesSearchPopup()">
+  <div class="notes-search-card">
+    <div class="notes-search-card-header">
+      <div class="notes-search-card-title" id="notesSearchCardTitle">Add Note</div>
+      <button class="notes-search-card-close" onclick="closeNotesSearchPopup()">&#x2715;</button>
+    </div>
+    <div class="notes-search-input-wrap">
+      <svg class="notes-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="notesSearchInput" class="notes-search-input" placeholder="Search your library…" autocomplete="off" oninput="_notesPageSearch(this.value)" onkeydown="_notesPageSearchKeydown(event)">
+    </div>
+    <div class="notes-search-results" id="notesSearchResults"></div>
+  </div>
+</div>
+
+<!-- Note popup -->
+<div class="note-popup-overlay2" id="notePopup2" onclick="if(event.target===this)closeNotePopup2()">
+  <div class="note-popup2">
+    <div class="note-popup2-header">
+      <div class="note-popup2-poster" id="notePopup2Poster"></div>
+      <div class="note-popup2-info">
+        <div class="note-popup2-title" id="notePopup2Title"></div>
+        <div class="note-popup2-tags" id="notePopup2Tags"></div>
+        <div class="note-popup2-date" id="notePopup2Date"></div>
+      </div>
+      <button class="note-popup2-close" onclick="closeNotePopup2()">&#x2715;</button>
+    </div>
+
+    <!-- View mode (default) -->
+    <div class="note-popup2-body" id="notePopup2ViewBody">
+      <div class="note-popup2-text" id="notePopup2Text"></div>
+    </div>
+    <div class="note-popup2-footer" id="notePopup2ViewFooter">
+      <button class="note-popup2-cancel" onclick="closeNotePopup2()">Close</button>
+      <button class="note-popup2-edit" onclick="_notePopup2EnterEditMode()">Edit Note</button>
+    </div>
+
+    <!-- Edit mode (entered via the Edit Note button above) -->
+    <div class="note-popup2-body" id="notePopup2EditBody" style="display:none">
+      <textarea class="note-popup2-textarea" id="notePopup2Textarea" placeholder="Your thoughts…" oninput="_notePopup2UpdateWordCount()"></textarea>
+      <div class="note-popup2-count" id="notePopup2Count">0 / 150 words</div>
+    </div>
+    <div class="note-popup2-footer" id="notePopup2EditFooter" style="display:none">
+      <button class="note-popup2-cancel" onclick="_notePopup2ExitEditMode()">Cancel</button>
+      <button class="note-popup2-save" id="notePopup2SaveBtn" onclick="saveNotePopup2()">Save Note</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script>
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+let _notesUser = null;
+let _notesEntries = [];
+let _notesSortOrder = 'latest';
+let _notesActiveId = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async (user) => {
+    if (!user) {
+      document.querySelector('.page-wrap').innerHTML = `
+        <div class="guest-page-state fade-up">
+          <div class="guest-page-icon">${icon('list', 36)}</div>
+          <h2 class="guest-page-title">Your Notes</h2>
+          <p class="guest-page-sub">Sign in to write personal notes on anything in your library.</p>
+          <div class="guest-cta">
+            <a href="login.html" class="guest-btn-primary">Sign In</a>
+            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
+          </div>
+        </div>`;
+      return;
+    }
+    _notesUser = user;
+    await loadNotesPage();
+  });
+});
+
+async function loadNotesPage() {
+  _notesEntries = await getEntries(_notesUser.id) || [];
+  renderNotesPage();
+}
+
+function _trimNotes(text) {
+  if (!text) return '';
+  const words = text.trim().split(/\s+/);
+  return words.length > 150 ? words.slice(0, 150).join(' ') + '…' : text;
+}
+
+function renderNotesPage() {
+  const withNotes = _notesEntries.filter(e => e.notes && e.notes.trim());
+
+  // Stats
+  let totalWords = 0, longest = 0;
+  withNotes.forEach(e => {
+    const words = e.notes.trim().split(/\s+/).filter(Boolean).length;
+    totalWords += words;
+    if (words > longest) longest = words;
+  });
+  document.getElementById('notesPageStats').innerHTML = `
+    <div class="page-stat"><div class="page-stat-num">${withNotes.length}</div><div class="page-stat-label">Total Notes</div></div>
+    <div class="page-stat"><div class="page-stat-num">${totalWords}</div><div class="page-stat-label">Total Words</div></div>
+    <div class="page-stat"><div class="page-stat-num">${longest}</div><div class="page-stat-label">Longest Note</div></div>`;
+
+  document.getElementById('notesPageSub').textContent = `${withNotes.length} note${withNotes.length!==1?'s':''} · ${_notesEntries.length} entries in your library`;
+
+  document.getElementById('notesSortBar').style.display = withNotes.length ? '' : 'none';
+
+  if (!withNotes.length) {
+    document.getElementById('notesPageContent').innerHTML = `
+      <div class="empty" style="padding:4rem 1rem;text-align:center;">
+        <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('list', 44)}</div>
+        <div class="empty-text" style="color:var(--text-2);margin-bottom:.5rem;">No notes yet</div>
+        <div style="font-size:13px;color:var(--text-3);">Search for a title above to write your first note.</div>
+      </div>`;
+    return;
+  }
+
+  const sorted = _sortNotes(withNotes);
+  document.getElementById('notesPageContent').innerHTML = sorted.map(e => {
+    const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
+    const date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+    const posterEl = e.poster_url
+      ? `<div class="note-poster"><img src="${e.poster_url}" loading="lazy"></div>`
+      : `<div class="note-poster">${esc((e.title||'?')[0].toUpperCase())}</div>`;
+    return `<div class="note-row" onclick="openNotePopup2('${e.id}')">
+      ${posterEl}
+      <div class="note-body">
+        <div class="note-title">${esc(e.title)}</div>
+        <div class="note-tags">${genreHTML(e.genres, 3)}${date ? `<span class="note-date">${date}</span>` : ''}</div>
+        <div class="note-text">&ldquo;${esc(_trimNotes(e.notes))}&rdquo;</div>
+      </div>
+      ${score ? `<div class="note-score">${score}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function _sortNotes(list) {
+  const arr = [...list];
+  switch (_notesSortOrder) {
+    case 'earliest':
+      return arr.sort((a,b) => new Date(a.completed_date||a.created_at||0) - new Date(b.completed_date||b.created_at||0));
+    case 'az':
+      return arr.sort((a,b) => a.title.localeCompare(b.title));
+    case 'za':
+      return arr.sort((a,b) => b.title.localeCompare(a.title));
+    case 'longest':
+      return arr.sort((a,b) => (b.notes.trim().split(/\s+/).length) - (a.notes.trim().split(/\s+/).length));
+    case 'latest':
+    default:
+      return arr.sort((a,b) => new Date(b.completed_date||b.created_at||0) - new Date(a.completed_date||a.created_at||0));
+  }
+}
+
+function setNotesSort(order) {
+  _notesSortOrder = order;
+  document.querySelectorAll('#notesSortBar .sort-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.sort === order);
+  });
+  renderNotesPage();
+}
+
+/* ── Search popup (opened via + Add Note / Edit Note) ── */
+let _notesSearchMode = 'add';
+
+let _notesSearchScrollY = 0;
+
+function openNotesSearchPopup(mode) {
+  _notesSearchMode = mode;
+  document.getElementById('notesSearchCardTitle').textContent = mode === 'edit' ? 'Edit Note' : 'Add Note';
+  const input = document.getElementById('notesSearchInput');
+  input.value = '';
+  input.placeholder = mode === 'edit' ? 'Search notes you\'ve already written…' : 'Search your library…';
+  document.getElementById('notesSearchResults').innerHTML = '';
+  _notesActiveId = -1;
+  _notesSearchResultsList = [];
+
+  if (mode === 'edit' && !_notesEntries.some(e => (e.status === 'watching' || e.status === 'ongoing' || e.status === 'completed') && e.notes && e.notes.trim())) {
+    document.getElementById('notesSearchResults').innerHTML = `<div class="notes-search-empty">You haven't written any notes yet — use "+ Add Note" to write your first one.</div>`;
+  }
+
+  document.getElementById('notesSearchOverlay').classList.add('open');
+  _notesSearchScrollY = window.scrollY;
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
+  document.body.style.top = '-' + _notesSearchScrollY + 'px';
+
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) setTimeout(() => input.focus(), 150);
+}
+
+function closeNotesSearchPopup() {
+  document.getElementById('notesSearchOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.body.style.top = '';
+  window.scrollTo(0, _notesSearchScrollY || 0);
+}
+
+/* ── Search (client-side, filters the already-loaded library) ── */
+let _notesSearchResultsList = [];
+
+function _notesPageSearch(query) {
+  const resultsEl = document.getElementById('notesSearchResults');
+  const q = query.trim().toLowerCase();
+  _notesActiveId = -1;
+
+  // Notes only make sense for things you've actually watched some of —
+  // exclude Watchlist (not started) and Taking a Break (paused mid-way).
+  // Applies to both Add and Edit modes.
+  let pool = _notesEntries.filter(e => e.status === 'watching' || e.status === 'ongoing' || e.status === 'completed');
+  if (_notesSearchMode === 'edit') pool = pool.filter(e => e.notes && e.notes.trim());
+
+  if (!q) {
+    // No query yet — for Edit mode, show existing notes to browse; for Add
+    // mode, wait for a search term rather than dumping the whole library.
+    if (_notesSearchMode === 'edit' && pool.length) {
+      _notesSearchResultsList = pool.slice(0, 20);
+      _renderNotesSearchResults();
+    } else {
+      resultsEl.innerHTML = '';
+      _notesSearchResultsList = [];
+    }
+    return;
+  }
+
+  _notesSearchResultsList = pool.filter(e => e.title && e.title.toLowerCase().includes(q)).slice(0, 20);
+
+  if (!_notesSearchResultsList.length) {
+    resultsEl.innerHTML = `<div class="notes-search-empty">No matches${_notesSearchMode === 'edit' ? ' among your notes' : ' in your library'}.</div>`;
+    return;
+  }
+  _renderNotesSearchResults();
+}
+
+function _renderNotesSearchResults() {
+  const resultsEl = document.getElementById('notesSearchResults');
+  resultsEl.innerHTML = _notesSearchResultsList.map((e, i) => {
+    const hasNote = e.notes && e.notes.trim();
+    const posterEl = e.poster_url
+      ? `<img src="${e.poster_url}" loading="lazy">`
+      : esc((e.title||'?')[0].toUpperCase());
+    return `<div class="notes-search-item" data-i="${i}" onclick="_notesPageSearchPick(${i})">
+      <div class="notes-search-item-poster">${posterEl}</div>
+      <div class="notes-search-item-info">
+        <div class="notes-search-item-title">${esc(e.title)}</div>
+        <div class="notes-search-item-meta">${CAT_META[e.cat]?.label || ''}${e.year ? ' · ' + e.year : ''}</div>
+      </div>
+      ${hasNote ? `<span class="notes-search-item-has-note">Has Note</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function _notesPageSearchKeydown(e) {
+  if (!_notesSearchResultsList.length) return;
+  const items = document.querySelectorAll('#notesSearchResults .notes-search-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _notesActiveId = Math.min(_notesActiveId + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('active', i === _notesActiveId));
+    items[_notesActiveId]?.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _notesActiveId = Math.max(_notesActiveId - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('active', i === _notesActiveId));
+    items[_notesActiveId]?.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_notesActiveId >= 0) _notesPageSearchPick(_notesActiveId);
+    else if (_notesSearchResultsList.length === 1) _notesPageSearchPick(0);
+  } else if (e.key === 'Escape') {
+    closeNotesSearchPopup();
+  }
+}
+
+function _notesPageSearchPick(i) {
+  const e = _notesSearchResultsList[i];
+  if (!e) return;
+  closeNotesSearchPopup();
+  openNotePopup2(e.id);
+}
+
+/* ── Note popup — editable ── */
+function openNotePopup2(id) {
+  const e = _notesEntries.find(en => en.id === id);
+  if (!e) return;
+  _notesActiveId = null;
+  window._notesCurrentEntryId = id;
+
+  const date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+  document.getElementById('notePopup2Poster').innerHTML = e.poster_url ? `<img src="${e.poster_url}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase());
+  document.getElementById('notePopup2Title').textContent = e.title;
+  document.getElementById('notePopup2Tags').innerHTML = genreHTML(e.genres||[], 4) + (date ? `<span class="note-date">${date}</span>` : '');
+  document.getElementById('notePopup2Date').innerHTML = '';
+
+  document.getElementById('notePopup2').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Existing note — open in read-only view, matching how it's shown on
+  // profile.html; editing requires an explicit tap on "Edit Note" instead
+  // of dropping straight into an editable field. A brand-new note has
+  // nothing to view, so that case goes straight to edit mode.
+  if (e.notes && e.notes.trim()) {
+    document.getElementById('notePopup2Text').innerHTML = '&ldquo;' + esc(_trimNotes(e.notes)) + '&rdquo;';
+    _notePopup2ShowView();
+  } else {
+    _notePopup2ShowEdit();
+  }
+}
+
+function _notePopup2ShowView() {
+  document.getElementById('notePopup2ViewBody').style.display = '';
+  document.getElementById('notePopup2ViewFooter').style.display = '';
+  document.getElementById('notePopup2EditBody').style.display = 'none';
+  document.getElementById('notePopup2EditFooter').style.display = 'none';
+}
+
+function _notePopup2ShowEdit() {
+  const e = _notesEntries.find(en => en.id === window._notesCurrentEntryId);
+  const textarea = document.getElementById('notePopup2Textarea');
+  textarea.value = e?.notes || '';
+  _notePopup2UpdateWordCount();
+  _notePopup2GuardWordLimit();
+
+  document.getElementById('notePopup2ViewBody').style.display = 'none';
+  document.getElementById('notePopup2ViewFooter').style.display = 'none';
+  document.getElementById('notePopup2EditBody').style.display = '';
+  document.getElementById('notePopup2EditFooter').style.display = '';
+  setTimeout(() => textarea.focus(), 100);
+}
+
+function _notePopup2EnterEditMode() { _notePopup2ShowEdit(); }
+
+function _notePopup2ExitEditMode() {
+  const e = _notesEntries.find(en => en.id === window._notesCurrentEntryId);
+  // A brand-new note has nothing to go "back" to view — cancelling just
+  // closes the popup entirely instead of showing an empty view state.
+  if (!e || !e.notes || !e.notes.trim()) { closeNotePopup2(); return; }
+  document.getElementById('notePopup2Text').innerHTML = '&ldquo;' + esc(_trimNotes(e.notes)) + '&rdquo;';
+  _notePopup2ShowView();
+}
+
+function closeNotePopup2() {
+  document.getElementById('notePopup2').classList.remove('open');
+  document.body.style.overflow = '';
+  window._notesCurrentEntryId = null;
+}
+
+async function saveNotePopup2() {
+  const id = window._notesCurrentEntryId;
+  if (!id) return;
+  const notes = document.getElementById('notePopup2Textarea').value.trim();
+  const btn = document.getElementById('notePopup2SaveBtn');
+  const origLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const { error } = await sb.from('entries').update({ notes }).eq('id', id).eq('user_id', _notesUser.id);
+    if (error) throw error;
+    const entry = _notesEntries.find(en => en.id === id);
+    if (entry) entry.notes = notes;
+    closeNotePopup2();
+    renderNotesPage();
+    showToast('Note saved!');
+  } catch (err) {
+    console.error('saveNotePopup2:', err);
+    showToast('Error saving note.', 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origLabel;
+  }
+}
+
+/* 150-word cap, matching detail.html's Personal Notes field — blocks
+   further typing at the limit instead of silently trimming after the
+   fact, with a clear message when you hit it. */
+function _notePopup2UpdateWordCount() {
+  const el = document.getElementById('notePopup2Textarea');
+  const countEl = document.getElementById('notePopup2Count');
+  if (!el || !countEl) return;
+  const words = el.value.trim().split(/\s+/).filter(Boolean);
+  if (words.length > 150) {
+    el.value = words.slice(0, 150).join(' ');
+    countEl.textContent = 'Reached max word limit (150/150 words)';
+    countEl.classList.add('over');
+    return;
+  }
+  const count = words.length;
+  countEl.textContent = `${count} / 150 words`;
+  countEl.classList.toggle('over', count >= 150);
+}
+function _notePopup2GuardWordLimit() {
+  const el = document.getElementById('notePopup2Textarea');
+  if (!el || el.dataset.wordLimitGuarded) return;
+  el.dataset.wordLimitGuarded = '1';
+  el.addEventListener('beforeinput', e => {
+    if (e.inputType && e.inputType.startsWith('delete')) return;
+    if (el.selectionStart !== el.selectionEnd) return;
+    const count = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
+    if (count >= 150) {
+      e.preventDefault();
+      const countEl = document.getElementById('notePopup2Count');
+      if (countEl) { countEl.textContent = 'Reached max word limit (150/150 words)'; countEl.classList.add('over'); }
+    }
+  });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('notePopup2')?.classList.contains('open')) { closeNotePopup2(); return; }
+  if (document.getElementById('notesSearchOverlay')?.classList.contains('open')) { closeNotesSearchPopup(); return; }
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ── Final Score ── */
+.final-score-section{
+  background:var(--olive-faint);
+  border:0.5px solid var(--border-olive);border-radius:var(--radius);
+  padding:1.5rem;display:flex;align-items:center;gap:1.5rem;margin-top:1.5rem;
+}
+.final-score-left{text-align:center;flex-shrink:0;min-width:90px}
+.final-score-num{
+  font-family:var(--serif);font-size:72px;font-weight:300;
+  color:var(--olive-light);line-height:1;letter-spacing:-2px;
+}
+.final-score-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-3);margin-top:4px}
+.final-score-right{flex:1}
+.score-breakdown{display:flex;flex-direction:column;gap:6px}
+.score-breakdown-row{display:flex;align-items:center;gap:8px;font-size:11px}
+.score-breakdown-row label{color:var(--text-3);width:80px;flex-shrink:0}
+.score-mini-bar{flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.score-mini-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .5s ease}
+.score-mini-val{color:var(--olive-light);font-family:var(--serif);font-size:13px;min-width:28px;text-align:right}
+
+/* ── Rating dropdown ── */
+.ratings-section-label{
+  font-size:10px;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--olive-light);margin-bottom:1rem;margin-top:1.5rem;
+  display:flex;align-items:center;gap:10px;
+}
+.ratings-section-label::after{content:'';flex:1;height:0.5px;background:var(--border)}
+
+.rdrop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rdrop-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--bg-3);border-radius:var(--radius-sm);border:0.5px solid var(--border)}
+.rdrop-label{font-size:12px;color:var(--text-2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rdrop-label .icon{margin-right:5px;font-size:13px}
+.rdrop-wrap{position:relative;flex-shrink:0}
+.rdrop-btn{
+  background:var(--bg);border:0.5px solid var(--border-2);border-radius:6px;
+  padding:5px 10px;min-width:52px;text-align:center;cursor:pointer;
+  font-family:var(--serif);font-size:16px;color:var(--text-3);
+  transition:all .15s;white-space:nowrap;
+}
+.rdrop-btn:hover{border-color:var(--border-olive);color:var(--text)}
+.rdrop-btn.rated{color:var(--olive-light);border-color:var(--border-olive);background:var(--olive-faint)}
+.rdrop-list{
+  position:absolute;right:0;top:calc(100% + 4px);
+  width:68px;max-height:220px;overflow-y:auto;overscroll-behavior-y:contain;
+  background:var(--card-2);border:0.5px solid var(--border-2);border-radius:10px;
+  z-index:200;display:none;flex-direction:column;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  scrollbar-width:thin;scrollbar-color:var(--olive) transparent;
+}
+.rdrop-list.open{display:flex}
+.rdrop-opt{
+  padding:6px 10px;text-align:center;cursor:pointer;font-size:13px;
+  color:var(--text-2);transition:background .1s;flex-shrink:0;
+}
+.rdrop-opt:hover{background:var(--olive-faint);color:var(--text)}
+.rdrop-opt.sel{color:var(--olive-light);font-weight:600;background:rgba(92,107,58,0.1)}
+
+/* ── Progress bar ── */
+.det-prog-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-top:8px}
+[data-theme="light"] .det-prog-track{background:rgba(0,0,0,0.16)}
+.det-prog-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .4s ease}
+
+/* ── Saving state ── */
+.btn-save.saving{opacity:.6;pointer-events:none}
+
+/* ── Comments trigger button ── */
+.btn-comments{
+  display:inline-flex;align-items:center;gap:6px;
+  height:42px;padding:0 18px;
+  border-radius:var(--radius-sm);
+  border:1.5px solid var(--border-2);
+  background:var(--bg-3);
+  color:var(--text-2);
+  font-size:13px;font-weight:500;font-family:var(--sans);
+  cursor:pointer;
+  transition:border-color .18s,color .18s,box-shadow .15s,transform .12s;
+}
+.btn-comments:hover{border-color:var(--olive-light);color:var(--text);}
+.btn-comments:active{transform:translate(2px,2px);box-shadow:none;}
+
+/* ── Comments modal overlay ── */
+.det-comments-overlay{
+  position:fixed;inset:0;z-index:1100;
+  background:rgba(0,0,0,0.55);
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .22s ease;
+}
+@media(min-width:600px){
+  .det-comments-overlay{align-items:center;}
+}
+.det-comments-overlay.open{opacity:1;pointer-events:auto;}
+
+/* ── Comments modal card ── */
+.det-comments-card{
+  width:100%;max-width:520px;
+  background:var(--bg-2);
+  border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  display:flex;flex-direction:column;
+  max-height:80vh;
+  transform:translateY(24px);
+  transition:transform .25s cubic-bezier(0.4,0,0.2,1);
+}
+@media(min-width:600px){
+  .det-comments-card{border-radius:var(--radius-lg);transform:scale(.96);}
+  .det-comments-overlay.open .det-comments-card{transform:scale(1);}
+}
+.det-comments-overlay.open .det-comments-card{transform:translateY(0);}
+
+/* Header */
+.det-comments-header{
+  display:flex;align-items:flex-start;flex-wrap:wrap;gap:6px;
+  padding:18px 20px 14px;
+  border-bottom:0.5px solid var(--border);
+  flex-shrink:0;
+}
+.det-comments-title{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--serif);font-size:20px;font-weight:300;color:var(--text);
+  flex:1;min-width:0;
+}
+.det-comments-count{
+  font-family:var(--sans);font-size:11px;color:var(--text-3);
+  background:var(--bg-3);border:0.5px solid var(--border);
+  border-radius:20px;padding:2px 8px;margin-left:2px;
+}
+.det-comments-entry-name{
+  width:100%;font-size:12px;color:var(--text-3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  padding-top:2px;
+}
+.det-comments-close{
+  background:none;border:none;color:var(--text-3);cursor:pointer;
+  font-size:18px;line-height:1;padding:0 0 0 8px;flex-shrink:0;
+  transition:color .15s;
+}
+.det-comments-close:hover{color:var(--text);}
+
+/* List */
+.det-comments-list{
+  flex:1;overflow-y:auto;overscroll-behavior-y:contain;
+  padding:14px 20px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.det-comment-item{
+  background:var(--card);
+  border:0.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:12px 14px;
+}
+.det-comment-author{font-size:11px;font-weight:600;color:var(--olive-light);margin-bottom:4px;}
+.det-comment-text{font-size:13px;color:var(--text);line-height:1.55;word-break:break-word;}
+.det-comment-meta{font-size:10px;color:var(--text-3);margin-top:6px;display:flex;align-items:center;gap:10px;}
+.det-comment-del{
+  background:none;border:none;color:var(--text-3);cursor:pointer;
+  font-size:10px;padding:0;font-family:var(--sans);transition:color .15s;
+}
+.det-comment-del:hover{color:#f87171;}
+.det-comments-empty{font-size:13px;color:var(--text-3);text-align:center;padding:2rem 0;}
+
+/* Form */
+.det-comments-form{
+  display:flex;gap:8px;
+  padding:12px 20px 16px;
+  border-top:0.5px solid var(--border);
+  flex-shrink:0;
+}
+.det-comments-input{
+  flex:1;height:40px;
+  border-radius:var(--radius-sm);
+  border:1.5px solid var(--border-2);
+  background:var(--bg-3);
+  color:var(--text);font-size:13px;
+  padding:0 12px;outline:none;
+  transition:border-color .18s,box-shadow .18s;
+}
+.det-comments-input::placeholder{color:var(--text-3);}
+.det-comments-input:focus{border-color:var(--olive-light);box-shadow:0 0 0 2px rgba(126,184,108,.15);}
+.det-comments-send{
+  height:40px;padding:0 16px;
+  border-radius:var(--radius-sm);
+  border:1.5px solid var(--olive-light);
+  background:var(--olive);
+  color:#fff;font-size:13px;font-weight:600;font-family:var(--sans);
+  cursor:pointer;white-space:nowrap;
+  transition:background .15s,transform .12s,box-shadow .12s;
+  box-shadow:2px 2px 0 var(--olive-2);
+}
+.det-comments-send:hover{background:var(--olive-2);}
+.det-comments-send:active{transform:translate(2px,2px);box-shadow:none;}
+
+/* Light mode tweaks */
+[data-theme="light"] .det-comments-card{background:var(--card);}
+[data-theme="light"] .det-comments-input{background:var(--bg-2);}
+[data-theme="light"] .det-comment-item{background:var(--bg-2);}
+
+/* ── Rating steppers ── */
+.rating-stepper-grid{display:flex;flex-direction:column;gap:8px}
+.rating-stepper-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 14px;
+  background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-sm);
+}
+.rating-stepper-label{
+  font-size:13px;color:var(--text-2);flex:1;min-width:0;
+  display:flex;align-items:center;
+}
+.rating-stepper-controls{
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.rating-stepper-val{
+  font-family:var(--serif);font-size:20px;font-weight:300;
+  color:var(--text-3);width:56px;text-align:center;
+  background:transparent;border:none;border-bottom:1px solid var(--border-2);
+  outline:none;-moz-appearance:textfield;appearance:textfield;
+  transition:color .15s,border-color .15s;
+}
+.rating-stepper-val::-webkit-inner-spin-button,.rating-stepper-val::-webkit-outer-spin-button{-webkit-appearance:none}
+.rating-stepper-val::placeholder{color:var(--text-3);}
+.rating-stepper-val:focus{border-color:var(--border-olive);color:var(--text);}
+.rating-stepper-val.has-val{color:var(--olive-light);}
+.anim-toggle-btn{
+  width:100%;padding:8px 12px;margin-top:6px;
+  font-size:11px;letter-spacing:0.5px;text-transform:uppercase;
+  border:0.5px dashed var(--border-2);border-radius:var(--radius-xs);
+  background:transparent;color:var(--text-3);cursor:pointer;
+  transition:all .2s;text-align:center;
+}
+.anim-toggle-btn:hover,.anim-toggle-btn.on{border-style:solid;border-color:var(--border-olive);color:var(--olive-light);}
+.fav-section-inner{display:flex;flex-wrap:wrap;gap:10px;}
+.fav-field{
+  flex:1 1 140px; min-width:120px; box-sizing:border-box;
+  border:1px solid var(--border-olive); border-radius:var(--radius-sm);
+  padding:10px 12px;
+}
+.fav-field label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:6px;}
+.fav-field.low-field{border-color:rgba(163,51,51,0.35);}
+[data-theme="dark"] .fav-field.low-field{border-color:rgba(224,133,133,0.35);}
+@media(max-width:520px){
+  .fav-field{flex:1 1 100%;}
+}
+@media(max-width:600px){.rating-stepper-grid{gap:6px}}
+
+/* ── Completion popup ── */
+.completion-overlay{
+  position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.completion-overlay.open{display:flex;animation:fadeIn .25s var(--ease);}
+.completion-card{
+  background:var(--bg-3);
+  border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);
+  border-radius:var(--radius-lg);
+  padding:2.5rem 2rem;
+  max-width:380px;width:100%;
+  text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  animation:slideUp .28s var(--ease);
+}
+.completion-icon{
+  width:72px;height:72px;border-radius:50%;
+  background:var(--olive-faint);border:1.5px solid var(--border-olive);
+  display:flex;align-items:center;justify-content:center;margin-bottom:4px;
+}
+.completion-title{
+  font-family:var(--serif);font-size:32px;font-weight:300;
+  color:var(--text);letter-spacing:-0.5px;
+}
+.completion-sub{
+  font-size:14px;color:var(--text-2);line-height:1.6;
+  max-width:280px;
+}
+.completion-actions{display:flex;flex-direction:column;gap:10px;width:100%;margin-top:8px;}
+.completion-btn-primary{
+  width:100%;padding:13px;
+  background:var(--olive);border:1.5px solid var(--olive-light);
+  box-shadow:3px 3px 0 var(--olive-2);
+  border-radius:var(--radius-sm);color:#fff;
+  font-size:14px;font-weight:600;cursor:pointer;
+  transition:all var(--trans) var(--ease);
+}
+.completion-btn-primary:hover{background:var(--olive-2);}
+.completion-btn-primary:active{transform:translate(3px,3px);box-shadow:none;}
+.completion-btn-secondary{
+  width:100%;padding:12px;
+  background:transparent;border:1.5px solid var(--border-2);
+  box-shadow:2px 2px 0 var(--border-2);
+  border-radius:var(--radius-sm);color:var(--text-2);
+  font-size:14px;font-weight:500;cursor:pointer;
+  transition:all var(--trans) var(--ease);
+}
+.completion-btn-secondary:hover{border-color:var(--border-olive);box-shadow:2px 2px 0 var(--border-olive);color:var(--text);}
+.completion-btn-secondary:active{transform:translate(2px,2px);box-shadow:none;}
+
+@media(max-width:600px){
+  .final-score-section{flex-direction:column;align-items:flex-start;gap:1rem}
+  .final-score-num{font-size:56px}
+  .rdrop-grid{grid-template-columns:1fr}
+  .completion-overlay { padding:16px; align-items:flex-end; }
+  .completion-card {
+    padding:1.75rem 1.25rem;
+    border-radius:var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-sm);
+    max-width:100%;
+    gap:10px;
+  }
+  .completion-icon { width:56px; height:56px; }
+  .completion-icon svg { width:36px; height:36px; }
+  .completion-title { font-size:26px; }
+  .completion-sub { font-size:13px; }
+  .completion-btn-primary { padding:11px; font-size:13px; }
+  .completion-btn-secondary { padding:10px; font-size:13px; }
+}
+@media(max-width:400px){
+  .completion-card { padding:1.25rem 1rem; gap:8px; }
+  .completion-title { font-size:22px; }
+  .completion-sub { font-size:12px; }
+}
+.date-3box { display:flex; gap:8px; align-items:center; }
+.date-3box-input { margin:0 !important; }
+
+/* ══════════════════════════════════════════
+   DETAIL PAGE REDESIGN — hero + card layout
+══════════════════════════════════════════ */
+.det-wrap { max-width:none; }
+
+/* ── Header card (poster + core identity fields) ── */
+.det-back {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; color:var(--text-3); text-decoration:none;
+  margin-bottom:1.25rem; transition:color .15s;
+}
+.det-back:hover { color:var(--olive-light); }
+
+.det-header {
+  display:flex; gap:clamp(1.25rem, 3vw, 2rem); align-items:flex-start; flex-wrap:wrap;
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+  padding:clamp(1.5rem, 3vw, 2rem); margin-bottom:1.5rem;
+}
+
+/* Poster — reuses .detail-poster-wrap class (handlePosterUpload's querySelector depends on it) */
+.det-header .detail-poster-wrap {
+  width:clamp(96px, 16vw, 160px); height:clamp(144px, 24vw, 240px); flex-shrink:0;
+  border-radius:var(--radius); overflow:hidden; position:relative; cursor:pointer;
+  background:var(--bg-3); box-shadow:var(--shadow);
+  display:flex; align-items:center; justify-content:center;
+  border:0.5px solid var(--border);
+  font-family:var(--serif); font-size:clamp(32px,6vw,48px); color:var(--olive-light);
+}
+.det-header .detail-poster-wrap img { width:100%; height:100%; object-fit:cover; }
+
+.det-header-info { flex:1; min-width:220px; }
+
+.det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:.9rem; }
+.det-eyebrow-row .sel-dd { width:auto; min-width:120px; }
+.det-eyebrow-row .sel-dd-trigger { height:32px; padding:0 12px; border-radius:20px; font-size:12.5px; }
+
+.det-title-input {
+  display:block; width:100%; background:transparent; border:none; border-bottom:1.5px solid var(--border);
+  font-family:var(--serif); font-size:clamp(24px, 4.5vw, 38px); font-weight:300;
+  color:var(--text); padding:4px 0 8px; margin-bottom:1rem; line-height:1.15;
+  outline:none; transition:border-color .2s;
+}
+.det-title-input::placeholder { color:var(--text-3); }
+.det-title-input:focus { border-color:var(--olive-light); }
+
+.det-year-row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem; }
+.det-year-field { display:flex; align-items:center; gap:6px; }
+.det-year-field label { font-size:10.5px; color:var(--text-3); letter-spacing:.5px; text-transform:uppercase; }
+.det-year-input {
+  width:70px; background:var(--bg-3); border:0.5px solid var(--border-2);
+  border-radius:var(--radius-sm); color:var(--text); font-size:13px; padding:6px 8px; text-align:center;
+  outline:none; transition:border-color .15s; -moz-appearance:textfield; appearance:textfield;
+}
+.det-year-input:focus { border-color:var(--olive-light); }
+.det-year-input::placeholder { color:var(--text-3); }
+
+.det-score-badge {
+  display:inline-flex; align-items:center; gap:12px;
+  background:var(--olive-faint); border:1.5px solid var(--border-olive);
+  border-radius:var(--radius); padding:14px 28px;
+}
+.det-score-left { text-align:center; }
+.det-score-num { font-family:var(--serif); font-weight:300; font-size:clamp(32px, 5vw, 44px); color:var(--olive-light); line-height:1; }
+.det-score-label { font-size:10px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; margin-top:4px; }
+.det-score-outof { font-size:9px; color:var(--text-3); letter-spacing:1px; text-transform:uppercase; margin-top:2px; }
+
+@media(max-width:560px) {
+  .det-header { flex-direction:column; align-items:center; text-align:center; padding:1.25rem; }
+  .det-header .detail-poster-wrap { width:clamp(110px, 38vw, 150px); height:auto; aspect-ratio:2/3; }
+  .det-eyebrow-row, .det-year-row { justify-content:center; }
+  .det-score-badge { padding:12px 22px; }
+}
+
+/* ── Content cards ── */
+.det-content { display:flex; flex-direction:column; gap:1.5rem; }
+.det-card {
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+  padding:clamp(1.25rem, 3vw, 1.75rem);
+}
+.det-card-title {
+  font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light);
+  margin-bottom:1.25rem; display:flex; align-items:center; gap:10px;
+}
+.det-card-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
+
+.det-fields-grid { display:flex; flex-direction:column; gap:1rem; }
+.det-two-col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+/* Core / Bonus ratings side by side */
+.det-ratings-cols { display:grid; grid-template-columns:1fr 1fr; gap:clamp(1rem, 3vw, 2rem); align-items:start; }
+.det-ratings-col-title {
+  font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light);
+  margin-bottom:.85rem; display:flex; align-items:center; gap:8px;
+}
+@media(max-width:760px) {
+  .det-ratings-cols { grid-template-columns:1fr; gap:1.5rem; }
+}
+
+/* ── Bottom action bar ── */
+.det-actions-bar {
+  display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center;
+  margin-top:2rem; padding-top:1.75rem; border-top:0.5px solid var(--border);
+}
+/* All four are shared/global classes with different padding/height each
+   elsewhere on the site — unify them here without touching their base
+   definitions (which would ripple to every other page). The target size
+   is calibrated to match .popup-action-btn's natural dimensions (the
+   same class used in the category quick-view popups), so Discover/Add to
+   Favorites still look like they do there — Save/Delete/Comments now
+   match that same compact scale instead of towering over it. */
+.det-actions-bar .btn-save,
+.det-actions-bar .btn-delete,
+.det-actions-bar .popup-action-btn,
+.det-actions-bar .btn-comments {
+  box-sizing:border-box; height:40px; padding:0 18px;
+  font-size:13px; display:inline-flex; align-items:center; justify-content:center;
+}
+.det-actions-bar .btn-save { flex:1 1 200px; max-width:340px; }
+.det-actions-bar .btn-delete,
+.det-actions-bar .popup-action-btn,
+.det-actions-bar .btn-comments { flex:0 1 auto; }
+
+@media(max-width:600px) {
+  .det-two-col { grid-template-columns:1fr; }
+  .det-actions-bar { flex-direction:column; }
+  .det-actions-bar .btn-save,
+  .det-actions-bar .btn-delete,
+  .det-actions-bar .popup-action-btn,
+  .det-actions-bar .btn-comments { width:100%; max-width:none; flex:1 1 auto; }
+}
+.list-desc-count { font-size:10.5px; color:var(--text-3); text-align:right; margin-top:4px; }
+.list-desc-count.over { color:#c0564a; }
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+
+<div class="page-wrap det-wrap">
+  <div id="detailLoading" class="page-loading"><div class="spinner"></div></div>
+
+  <div class="fade-up" id="detailLayout" style="display:none">
+
+    <a class="det-back" id="backBtn" href="index.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Back</a>
+
+    <!-- ═══ HEADER ═══ -->
+    <div class="det-header">
+      <div class="detail-poster-wrap" onclick="document.getElementById('posterFile').click()">
+        <div class="detail-poster-letter" id="dPosterLetter">?</div>
+        <img id="dPosterImg" style="display:none" alt="">
+        <div class="poster-upload-overlay">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span>Upload Poster</span>
+        </div>
+        <div id="posterUploadingOverlay" style="display:none;position:absolute;inset:0;background:rgba(10,10,14,0.75);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;border-radius:var(--radius);">
+          <div style="width:36px;height:36px;border-radius:50%;border:3px solid rgba(126,184,108,0.3);border-top-color:var(--olive-light);animation:spin .65s linear infinite;"></div>
+          <span style="font-size:12px;color:var(--olive-light);letter-spacing:.5px;">Uploading…</span>
+        </div>
+      </div>
+      <input type="file" id="posterFile" accept="image/*" style="display:none" onchange="handlePosterUpload(event)">
+
+      <div class="det-header-info">
+        <div class="det-eyebrow-row">
+          <select id="dCat" onchange="updateTypeSelector()" style="display:none">
+            <option value="tv">TV Show</option>
+            <option value="movies">Movie</option>
+            <option value="anime">Anime</option>
+            <option value="cartoons">Cartoon</option>
+          </select>
+          <div id="dCatDD"></div>
+
+          <select id="dStatus" onchange="onStatusChange()" style="display:none">
+            <option value="queue">Watchlist</option>
+            <option value="watching">Currently Watching</option>
+            <option value="paused">Taking a Break</option>
+            <option value="completed">Watched</option>
+            <option value="ongoing">To Be Continued</option>
+          </select>
+          <div id="dStatusDD"></div>
+
+          <div id="dTypeGroup" style="display:none">
+            <select id="dMediaType" onchange="updateStatusUI()" style="display:none">
+              <option value="show">Show / Series</option>
+              <option value="movie">Movie</option>
+            </select>
+            <div id="dMediaTypeDD"></div>
+          </div>
+        </div>
+
+        <input class="det-title-input" id="dTitle" type="text" placeholder="Untitled…" oninput="updatePosterLetter()">
+
+        <div class="det-year-row">
+          <div class="det-year-field">
+            <label>Release</label>
+            <input class="det-year-input" id="dYear" type="number" min="1900" max="2030" placeholder="Year">
+          </div>
+          <div class="det-year-field" id="completionYearGroup">
+            <label>Completed</label>
+            <input class="det-year-input" id="dCompletionYear" type="number" min="1900" max="2030" placeholder="—">
+          </div>
+        </div>
+
+        <div class="det-score-badge" id="finalScoreSection">
+          <div class="det-score-left">
+            <div class="det-score-num" id="finalScoreNum">—</div>
+            <div class="det-score-label">Final Score</div>
+            <div class="det-score-outof">Out of 10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CONTENT ═══ -->
+    <div class="det-content">
+
+      <!-- Details card -->
+      <div class="det-card">
+        <div class="det-card-title">Details</div>
+        <div class="det-fields-grid">
+          <div class="field-group">
+            <div class="field-label">Genres</div>
+            <div class="genre-picker" id="dGenres" style="justify-content:space-between;">
+              <span class="genre-opt" onclick="toggleGenre(this)">Action</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Adventure</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Animation</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Biography</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Comedy</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Crime</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Documentary</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Drama</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Family</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Fantasy</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Heist</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Historical</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Horror</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Medical</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Musical</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Mystery</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Political</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Psychological</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Romance</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Sci-Fi</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Slice of Life</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Space</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Sports</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Superhero</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Supernatural</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Thriller</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">War</span>
+              <span class="genre-opt" onclick="toggleGenre(this)">Western</span>
+            </div>
+            <div id="animeGenreSection" style="display:none;margin-top:12px;">
+              <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;padding-top:10px;border-top:0.5px solid var(--border);">Anime-Specific Genres</div>
+              <div class="genre-picker" style="justify-content:flex-start;">
+                <span class="genre-opt" onclick="toggleGenre(this)">Isekai</span>
+                <span class="genre-opt" onclick="toggleGenre(this)">Josei</span>
+                <span class="genre-opt" onclick="toggleGenre(this)">Mecha</span>
+                <span class="genre-opt" onclick="toggleGenre(this)">Seinen</span>
+                <span class="genre-opt" onclick="toggleGenre(this)">Shoujo</span>
+                <span class="genre-opt" onclick="toggleGenre(this)">Shounen</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group" id="completedOnGroup" style="display:none;">
+            <div class="field-label">Completed On <span style="font-size:9px;color:var(--text-3);font-weight:400;">(when you finished)</span></div>
+            <div class="date-3box" id="completedDateWrap">
+              <input class="field-input date-3box-input" id="dDay"   type="number" min="1" max="31" placeholder="DD" style="width:64px;text-align:center">
+              <select class="field-input date-3box-input" id="dMonth" style="flex:1;display:none">
+                <option value="">Month</option>
+                <option value="01">January</option><option value="02">February</option>
+                <option value="03">March</option><option value="04">April</option>
+                <option value="05">May</option><option value="06">June</option>
+                <option value="07">July</option><option value="08">August</option>
+                <option value="09">September</option><option value="10">October</option>
+                <option value="11">November</option><option value="12">December</option>
+              </select>
+              <div id="dMonthDD" style="flex:1"></div>
+              <input class="field-input date-3box-input" id="dCYear" type="number" min="1900" max="2100" placeholder="YYYY" style="width:80px;text-align:center">
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Description</div>
+            <textarea class="field-input" id="dDesc" placeholder="Synopsis…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress / Runtime card -->
+      <div class="det-card">
+        <div class="det-card-title">Progress</div>
+
+        <div id="dProgressSection" class="progress-edit-section">
+          <div class="progress-edit-title">Season Breakdown</div>
+          <div id="dSeasonList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+          <button onclick="addSeason()" style="width:100%;padding:7px;font-size:11px;letter-spacing:.5px;text-transform:uppercase;border:0.5px dashed var(--border-2);border-radius:var(--radius-xs);background:transparent;color:var(--text-3);cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--border-olive)';this.style.color='var(--olive-light)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text-3)'">+ Add Season</button>
+
+          <div class="ep-grid" style="margin-top:10px;">
+            <div class="ep-field"><label>Total Seasons</label><input type="number" id="dTotalSeasons" readonly placeholder="—" style="opacity:.7;cursor:default;-moz-appearance:textfield;appearance:textfield;"></div>
+            <div class="ep-field"><label>Total Episodes</label><input type="number" id="dTotalEps" readonly placeholder="—" style="opacity:.7;cursor:default;-moz-appearance:textfield;appearance:textfield;"></div>
+          </div>
+
+          <div id="dCurrentPosSection" style="display:none;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);">
+            <div class="progress-edit-title" style="margin-bottom:8px;">Current Position</div>
+            <div class="ep-grid">
+              <div class="ep-field"><label>Current Season</label><input type="number" id="dSeason" min="1" placeholder="1" oninput="updateProgBar()"></div>
+              <div class="ep-field"><label>Current Episode</label><input type="number" id="dEpisode" min="1" placeholder="1" oninput="updateProgBar()"></div>
+            </div>
+            <div class="det-prog-track" style="margin-top:10px;"><div class="det-prog-fill" id="detProgFill" style="width:0%"></div></div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:5px;" id="detProgLabel"></div>
+          </div>
+
+          <input type="hidden" id="dWatched" value="0">
+        </div>
+
+        <div id="dRuntimeSection" style="display:none;" class="field-group">
+          <div class="progress-edit-title">Runtime</div>
+          <div class="ep-grid">
+            <div class="ep-field"><label>Hours</label><input type="number" id="dRuntimeH" min="0" placeholder="0" oninput="updateRuntimeDisplay()"></div>
+            <div class="ep-field"><label>Minutes</label><input type="number" id="dRuntimeM" min="0" max="59" placeholder="0" oninput="updateRuntimeDisplay()"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:6px;" id="dRuntimeLabel"></div>
+        </div>
+
+        <div style="margin-top:1.25rem;">
+          <div class="field-group" id="dRewatchSection" style="display:none;margin-bottom:0;">
+            <div class="field-label">Times Watched
+              <span style="font-size:10px;font-weight:400;color:var(--text-3);letter-spacing:0;text-transform:none;margin-left:6px;">First = 1</span>
+            </div>
+            <input type="number" class="field-input" id="dRewatchCount" min="1" max="999"
+              placeholder="1" style="padding:8px 12px;max-width:120px;"
+              onchange="if(this.value<1)this.value=1">
+          </div>
+        </div>
+      </div>
+
+      <!-- Ratings card — core and bonus side by side -->
+      <div class="det-card">
+        <div class="det-card-title">Rate This</div>
+        <div class="det-ratings-cols">
+          <div>
+            <div class="det-ratings-col-title">Core Ratings</div>
+            <div class="rating-stepper-grid" id="coreRatingGrid"></div>
+            <div id="animToggleSection" style="display:none;">
+              <button class="anim-toggle-btn" id="animToggleBtn" onclick="toggleAnimation()">+ Enable Animation Quality</button>
+              <div class="rating-stepper-grid" id="animRatingRow" style="display:none;margin-top:6px;"></div>
+            </div>
+          </div>
+          <div>
+            <div class="det-ratings-col-title">Bonus Ratings <span style="color:var(--text-3);font-size:9px;letter-spacing:1px;text-transform:none;font-family:var(--sans);margin-left:4px">optional</span></div>
+            <div class="rating-stepper-grid" id="bonusRatingGrid"></div>
+          </div>
+        </div>
+        <div class="ratings-section-label" style="margin-top:1.5rem;">Score Breakdown</div>
+        <div class="score-breakdown" id="scoreBreakdown"></div>
+      </div>
+
+      <!-- Notes & Favorites card -->
+      <div class="det-card">
+        <div class="det-card-title">Notes &amp; Favorites</div>
+        <div class="det-fields-grid">
+          <div class="field-group" id="dNotesSection" style="margin-bottom:0;">
+            <div class="field-label">Personal Notes</div>
+            <textarea class="field-input" id="dNotes" placeholder="Your thoughts…" oninput="_notesUpdateWordCount()"></textarea>
+            <div class="list-desc-count" id="dNotesCount">0 / 150 words</div>
+          </div>
+
+          <div class="field-group" id="favSection" style="margin-bottom:0;">
+            <div class="field-label">Favorites</div>
+            <div class="fav-section-inner">
+              <div class="fav-field">
+                <label>Favorite Character</label>
+                <input class="field-input" id="favCharacter" placeholder="e.g. Walter White" style="padding:8px 12px;">
+              </div>
+              <div class="fav-field" id="favEpisodeWrap">
+                <label>Favorite Episode</label>
+                <input class="field-input" id="favEpisode" placeholder="e.g. Ozymandias" style="padding:8px 12px;">
+              </div>
+              <div class="fav-field" id="favSeasonWrap">
+                <label>Favorite Season</label>
+                <input class="field-input" id="favSeason" placeholder="e.g. Season 4" style="padding:8px 12px;">
+              </div>
+            </div>
+            <div class="field-label" style="margin-top:1rem;">Lowlights</div>
+            <div class="fav-section-inner">
+              <div class="fav-field low-field">
+                <label>Least Favorite Character</label>
+                <input class="field-input" id="lowCharacter" placeholder="e.g. Skyler White" style="padding:8px 12px;">
+              </div>
+              <div class="fav-field low-field" id="lowEpisodeWrap">
+                <label>Least Favorite Episode</label>
+                <input class="field-input" id="lowEpisode" placeholder="e.g. Fly" style="padding:8px 12px;">
+              </div>
+              <div class="fav-field low-field" id="lowSeasonWrap">
+                <label>Least Favorite Season</label>
+                <input class="field-input" id="lowSeason" placeholder="e.g. Season 1" style="padding:8px 12px;">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ ALL ACTIONS AT THE BOTTOM ═══ -->
+      <div class="det-actions-bar">
+        <button class="btn-save" id="btnSave" onclick="doSave()">Save Entry</button>
+        <button class="btn-delete" id="dDeleteBtn" style="display:none" onclick="doDelete()">Delete</button>
+        <button class="popup-action-btn" id="dFavBtn" style="display:none;" onclick="openFavListsPopup(_detId)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Add to Favorites
+        </button>
+        <button class="popup-action-btn" id="dDiscoverBtn" style="display:none;" onclick="_detGoToDiscover(this)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Discover
+        </button>
+        <button class="btn-comments" id="dCommentsBtn" style="display:none" onclick="openCommentsModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span id="dCommentsBtnLabel">Comments</span>
+        </button>
+      </div>
+
+    </div><!-- /det-content -->
+
+  </div><!-- /detailLayout -->
+
+  <!-- ═══ COMMENTS MODAL ═══ -->
+  <div class="det-comments-overlay" id="detCommentsOverlay" onclick="if(event.target===this)closeCommentsModal()">
+    <div class="det-comments-card" id="detCommentsCard">
+      <div class="det-comments-header">
+        <div class="det-comments-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:var(--olive-light);flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Comments</span>
+          <span class="det-comments-count" id="detCommentsCount"></span>
+        </div>
+        <div class="det-comments-entry-name" id="detCommentsEntryName"></div>
+        <button class="det-comments-close" onclick="closeCommentsModal()">✕</button>
+      </div>
+      <div class="det-comments-list" id="detCommentList"></div>
+      <div class="det-comments-form">
+        <input class="det-comments-input" id="detCommentInput" placeholder="Write a comment…"
+               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitDetComment()}">
+        <button class="det-comments-send" onclick="submitDetComment()">Send</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ COMPLETION POPUP ═══ -->
+<div class="completion-overlay" id="completionOverlay">
+  <div class="completion-card">
+    <div class="completion-icon">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--olive-light)">
+        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+        <path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+      </svg>
+    </div>
+    <div class="completion-title" id="completionTitle">Finished!</div>
+    <div class="completion-sub" id="completionSub">You completed this title. Give it your ratings to rank it in your collection.</div>
+    <div class="completion-actions">
+      <button class="completion-btn-primary" onclick="closeCompletionPopup()">Rate Now</button>
+      <button class="completion-btn-secondary" onclick="window.location.href='completed.html'">View Completed →</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/create-card.js"></script>
+<script src="js/fav-lists-popup.js"></script>
+<script src="js/nav.js"></script>
+
+<script>
+let _detUser   = null;
+let _detId     = sessionStorage.getItem('detailId') || null;
+let _originalStatus = null; // track status at load time to detect new completions
+
+function _parseCompletedDate() {
+  const day   = document.getElementById('dDay')?.value?.trim();
+  const month = document.getElementById('dMonth')?.value;
+  const year  = document.getElementById('dCYear')?.value?.trim();
+  if (!year) return null;
+  const m = month || '01';
+  const d = day   ? String(parseInt(day)).padStart(2,'0') : '01';
+  return `${year}-${m}-${d}`;
+}
+function _setCompletedDate(iso) {
+  if (!iso) { 
+    document.getElementById('dDay').value = '';
+    document.getElementById('dMonth').value = '';
+    document.getElementById('dMonth')._ddSync?.();
+    document.getElementById('dCYear').value = '';
+    return;
+  }
+  const dt = new Date(iso + 'T12:00:00');
+  document.getElementById('dDay').value    = dt.getDate();
+  document.getElementById('dMonth').value  = String(dt.getMonth()+1).padStart(2,'0');
+  document.getElementById('dMonth')._ddSync?.();
+  document.getElementById('dCYear').value  = dt.getFullYear();
+}
+let _fromPage  = sessionStorage.getItem('detailFrom') || 'index.html';
+let _detEntry  = null;
+let draftRatings = {};
+let _posterUrl = null;
+
+document.getElementById('backBtn').href = _fromPage;
+
+let _animEnabled = false;
+
+/* ── Rating steppers ── */
+function buildRatingStepper(key, label, iconName) {
+  const val    = draftRatings[key];
+  const hasVal = val !== undefined && val !== null && val !== '';
+  const display = hasVal ? Number(val).toFixed(1) : '';
+  const iconHTML = iconName ? `<span style="display:inline-flex;align-items:center;margin-right:6px;opacity:.6">${icon(iconName,13)}</span>` : '';
+  return `<div class="rating-stepper-item">
+    <div class="rating-stepper-label">${iconHTML}${label}</div>
+    <div class="rating-stepper-controls">
+      <button class="ep-btn" onclick="stepRating('${key}',-0.5)" style="width:32px;height:32px;font-size:16px;">−</button>
+      <input class="rating-stepper-val${hasVal?' has-val':''}" id="sval-${key}"
+             type="text" inputmode="decimal" value="${display}" placeholder="—"
+             onchange="typeRating('${key}',this.value)"
+             onblur="typeRating('${key}',this.value)">
+      <button class="ep-btn" onclick="stepRating('${key}',+0.5)" style="width:32px;height:32px;font-size:16px;">+</button>
+    </div>
+  </div>`;
+}
+
+function renderRatingGrids() {
+  const cat = document.getElementById('dCat').value;
+  const isAnimated = cat === 'anime' || cat === 'cartoons';
+  const { core: coreArr, bonus: bonusArr } = getRatings(cat);
+
+  // Core: use category-specific array (animation already in ANIME_CORE_RATINGS)
+  document.getElementById('coreRatingGrid').innerHTML = coreArr.map(r => buildRatingStepper(r.key, r.label, null)).join('');
+
+  // Bonus: use category-specific array
+  document.getElementById('bonusRatingGrid').innerHTML = bonusArr.map(r => buildRatingStepper(r.key, r.label, r.icon)).join('');
+
+  // Animation toggle row: only for TV/movies (anime/cartoons always show it in core)
+  const animSection = document.getElementById('animToggleSection');
+  if (animSection) animSection.style.display = isAnimated ? 'none' : 'block';
+  if (!isAnimated && _animEnabled) {
+    document.getElementById('animRatingRow').innerHTML = buildRatingStepper('animation', 'Animation Quality', null);
+    document.getElementById('animRatingRow').style.display = 'block';
+  }
+}
+
+function stepRating(key, delta) {
+  const val    = draftRatings[key];
+  const hasVal = val !== undefined && val !== null && val !== '';
+  if (!hasVal && delta < 0) return;
+  const current = hasVal ? Number(val) : -0.5;
+  let next = Math.round((current + delta) * 10) / 10;
+  next = Math.max(0, Math.min(10, next));
+  draftRatings[key] = next;
+  const el = document.getElementById('sval-' + key);
+  if (el) { el.value = next.toFixed(1); el.classList.add('has-val'); }
+  recalcFinal();
+}
+
+function typeRating(key, rawVal) {
+  const s = String(rawVal).trim();
+  if (s === '' || s === '—') {
+    delete draftRatings[key];
+    const el = document.getElementById('sval-' + key);
+    if (el) { el.value = ''; el.classList.remove('has-val'); }
+    recalcFinal(); return;
+  }
+  const raw = parseFloat(s);
+  if (isNaN(raw)) {
+    const el = document.getElementById('sval-' + key);
+    if (el) el.value = draftRatings[key] != null ? Number(draftRatings[key]).toFixed(1) : '';
+    return;
+  }
+  let snapped = Math.round(raw * 2) / 2;
+  snapped = Math.max(0, Math.min(10, snapped));
+  draftRatings[key] = snapped;
+  const el = document.getElementById('sval-' + key);
+  if (el) { el.value = snapped.toFixed(1); el.classList.add('has-val'); }
+  recalcFinal();
+}
+
+function toggleAnimation() {
+  _animEnabled = !_animEnabled;
+  draftRatings._animEnabled = _animEnabled;
+  const row = document.getElementById('animRatingRow');
+  const btn = document.getElementById('animToggleBtn');
+  if (_animEnabled) {
+    row.innerHTML = buildRatingStepper('animation', 'Animation Quality', null);
+    row.style.display = 'block';
+    btn.textContent = '− Disable Animation Quality';
+    btn.classList.add('on');
+  } else {
+    row.style.display = 'none';
+    row.innerHTML = '';
+    delete draftRatings['animation'];
+    btn.textContent = '+ Enable Animation Quality';
+    btn.classList.remove('on');
+  }
+  recalcFinal();
+}
+
+function recalcFinal() {
+  const cat = document.getElementById('dCat').value;
+  const isAnimated = cat === 'anime' || cat === 'cartoons';
+  const { core: coreArr, bonus: bonusArr } = getRatings(cat);
+  const score = calcFinal(draftRatings, cat);
+  document.getElementById('finalScoreNum').textContent = score != null ? Number(score).toFixed(2) : '—';
+
+  const coreKeys = coreArr.filter(r => r.key !== 'enjoyment').map(r => r.key);
+  if (!isAnimated && draftRatings.animation != null && draftRatings.animation !== '') coreKeys.push('animation');
+  const coreVals  = coreKeys.map(k => draftRatings[k]).filter(v => v !== undefined && v !== null && v !== '');
+  const bonusVals = bonusArr.map(r => draftRatings[r.key]).filter(v => v !== undefined && v !== null && v !== '');
+  const coreAvg   = coreVals.length  ? coreVals.reduce((a,b) => a + Number(b), 0) / coreVals.length  : null;
+  const bonusAvg  = bonusVals.length ? bonusVals.reduce((a,b) => a + Number(b), 0) / bonusVals.length : null;
+  const enjoyVal  = draftRatings['enjoyment'];
+
+  document.getElementById('scoreBreakdown').innerHTML = [
+    { label: 'Core (70%)',      val: coreAvg,                                    filled: coreVals.length > 0 },
+    { label: 'Enjoyment (20%)', val: enjoyVal != null ? Number(enjoyVal) : null, filled: enjoyVal != null   },
+    { label: 'Bonus (10%)',     val: bonusAvg,                                   filled: bonusVals.length > 0 },
+  ].map(r => `<div class="score-breakdown-row">
+    <label>${r.label}</label>
+    <div class="score-mini-bar"><div class="score-mini-fill" style="width:${r.filled && r.val != null ? r.val * 10 : 0}%"></div></div>
+    <span class="score-mini-val">${r.filled && r.val != null ? Number(r.val).toFixed(2) : '—'}</span>
+  </div>`).join('');
+}
+
+/* ── Season Breakdown ── */
+let _seasonBreakdown = []; // array of episode counts per season
+
+function addSeason(eps) {
+  _seasonBreakdown.push(eps !== undefined ? Number(eps) : '');
+  renderSeasonRows();
+}
+
+function removeSeasonRow(i) {
+  _seasonBreakdown.splice(i, 1);
+  renderSeasonRows();
+}
+
+function updateSeasonEps(i, val) {
+  _seasonBreakdown[i] = parseInt(val) > 0 ? parseInt(val) : '';
+  updateSeasonTotals();
+}
+
+function renderSeasonRows() {
+  const container = document.getElementById('dSeasonList');
+  if (!container) return;
+  container.innerHTML = _seasonBreakdown.map((eps, i) => `
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:12px;color:var(--text-3);min-width:68px;flex-shrink:0;">Season ${i+1}</span>
+      <input type="number" min="1" value="${eps || ''}" placeholder="Episodes"
+             onchange="updateSeasonEps(${i},this.value)" oninput="updateSeasonEps(${i},this.value)"
+             class="field-input" style="flex:1;padding:6px 10px;font-size:13px;">
+      <button onclick="removeSeasonRow(${i})" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:15px;padding:2px 6px;transition:color .2s;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='var(--text-3)'">✕</button>
+    </div>`).join('');
+  updateSeasonTotals();
+}
+
+function updateSeasonTotals() {
+  const valid = _seasonBreakdown.filter(n => parseInt(n) > 0).map(Number);
+  const totalSeasons = valid.length;
+  const totalEps = valid.reduce((a, b) => a + b, 0);
+  const tsEl = document.getElementById('dTotalSeasons');
+  const teEl = document.getElementById('dTotalEps');
+  if (tsEl) tsEl.value = totalSeasons || '';
+  if (teEl) teEl.value = totalEps || '';
+  updateProgBar();
+}
+
+/* ── Runtime display ── */
+function updateRuntimeDisplay() {
+  const h = parseInt(document.getElementById('dRuntimeH')?.value) || 0;
+  const m = parseInt(document.getElementById('dRuntimeM')?.value) || 0;
+  const label = document.getElementById('dRuntimeLabel');
+  if (!label) return;
+  if (!h && !m) { label.textContent = ''; return; }
+  label.textContent = h ? `${h}h ${m}m` : `${m}m`;
+}
+
+/* ── Progress bar ── */
+function updateProgBar() {
+  const breakdown = _seasonBreakdown.filter(n => parseInt(n) > 0).map(Number);
+  const totalEps  = breakdown.length > 0 ? breakdown.reduce((a, b) => a + b, 0)
+                    : (parseInt(document.getElementById('dTotalEps').value) || 0);
+  const curSeason = parseInt(document.getElementById('dSeason')?.value) || 1;
+  const curEp     = parseInt(document.getElementById('dEpisode')?.value) || 0;
+  // Calculate watched from breakdown + current position
+  let watched = 0;
+  if (breakdown.length > 0) {
+    for (let i = 0; i < curSeason - 1 && i < breakdown.length; i++) watched += breakdown[i];
+    watched += curEp;
+  } else {
+    watched = parseInt(document.getElementById('dWatched').value) || 0;
+  }
+
+  // Store calculated watched in hidden field for save
+  const watchedEl = document.getElementById('dWatched');
+  if (watchedEl) watchedEl.value = watched;
+
+  const pct = totalEps > 0 ? Math.min(100, Math.floor((watched / totalEps) * 10000) / 100) : 0;
+  const fill  = document.getElementById('detProgFill');
+  const label = document.getElementById('detProgLabel');
+  if (fill)  fill.style.width = pct + '%';
+  if (label) {
+    if (breakdown.length > 0 && (curSeason > 0 || curEp > 0)) {
+      label.textContent = `S${curSeason} E${curEp}  ·  ${watched} / ${totalEps} Episodes  ·  ${pct.toFixed(2)}%`;
+    } else if (totalEps > 0) {
+      label.textContent = `${watched} / ${totalEps} episodes — ${pct.toFixed(2)}%`;
+    } else {
+      label.textContent = '';
+    }
+  }
+
+  // Auto-complete for movies only when 100%
+  if (pct >= 100 && totalEps > 0) {
+    const statusEl  = document.getElementById('dStatus');
+    const mediaType = getMediaType();
+    if (mediaType === 'movie' && statusEl && statusEl.value === 'watching') {
+      statusEl.value = 'completed';
+      updateStatusUI();
+    }
+    // For shows: no auto-complete — user chooses manually or via the category page popup
+  }
+}
+
+/* ── Type selector (anime/cartoon: movie vs show) ── */
+/* ── Shadow-select: hidden native <select> stays the real source of truth
+   (existing onchange/.value logic elsewhere is untouched), a visual .sel-dd
+   dropdown mirrors it. Call sel._ddSync() after programmatically changing
+   the hidden select's value or options so the visual stays in sync. ── */
+function _makeShadowDD(selectId, wrapId) {
+  const sel = document.getElementById(selectId);
+  const wrap = document.getElementById(wrapId);
+  if (!sel || !wrap) return;
+
+  const ddId = wrapId + '-dd';
+  const fnName = '_shadowSync_' + selectId;
+  window[fnName] = function(value) {
+    if (sel.value !== value) {
+      sel.value = value;
+      sel.dispatchEvent(new Event('change'));
+    }
+  };
+
+  function render() {
+    const opts = Array.from(sel.options).map(o => ({ value: o.value, label: o.textContent }));
+    if (!opts.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = _selDDHTML(ddId, opts, sel.value, fnName);
+  }
+  render();
+  sel._ddSync = render;
+}
+
+function updateTypeSelector() {
+  const cat = document.getElementById('dCat').value;
+  const isAnimeOrCartoon = cat === 'anime' || cat === 'cartoons';
+  const isMovies = cat === 'movies';
+  const animeSection = document.getElementById('animeGenreSection');
+  if (animeSection) animeSection.style.display = cat === 'anime' ? '' : 'none';
+  document.getElementById('dTypeGroup').style.display = isAnimeOrCartoon ? '' : 'none';
+  // Favorites: hide episode/season for movies
+  const epWrap = document.getElementById('favEpisodeWrap');
+  const seaWrap = document.getElementById('favSeasonWrap');
+  if (epWrap)  epWrap.style.display  = isMovies ? 'none' : '';
+  if (seaWrap) seaWrap.style.display = isMovies ? 'none' : '';
+  const lowEpWrap  = document.getElementById('lowEpisodeWrap');
+  const lowSeaWrap = document.getElementById('lowSeasonWrap');
+  if (lowEpWrap)  lowEpWrap.style.display  = isMovies ? 'none' : '';
+  if (lowSeaWrap) lowSeaWrap.style.display = isMovies ? 'none' : '';
+  // Re-render grids to reposition animation input
+  renderRatingGrids();
+  updateStatusUI();
+}
+
+function getMediaType() {
+  const cat = document.getElementById('dCat').value;
+  if (cat === 'movies') return 'movie';
+  if (cat === 'tv')     return 'show';
+  // anime / cartoons: use the selector
+  return document.getElementById('dMediaType').value || 'show';
+}
+
+function onStatusChange() {
+  updateStatusUI();
+}
+
+function updateStatusUI() {
+  const status    = document.getElementById('dStatus').value;
+  const mediaType = getMediaType();
+  const isMovie   = mediaType === 'movie';
+  const showProgress = !isMovie && status !== 'queue';
+
+  document.getElementById('dProgressSection').style.display = (!isMovie) ? 'block' : 'none';
+
+  // Hide paused/ongoing for movies — remove/re-add for cross-browser reliability
+  const statusEl = document.getElementById('dStatus');
+  const currentVal = statusEl.value;
+  ['paused','ongoing'].forEach(val => {
+    const opt = statusEl.querySelector(`option[value="${val}"]`);
+    if (isMovie && opt) opt.remove();
+    if (!isMovie && !statusEl.querySelector(`option[value="${val}"]`)) {
+      const newOpt = document.createElement('option');
+      newOpt.value = val;
+      newOpt.textContent = val === 'paused' ? 'Taking a Break' : 'To Be Continued';
+      const completed = statusEl.querySelector('option[value="completed"]');
+      statusEl.insertBefore(newOpt, completed);
+    }
+  });
+  if (isMovie && (currentVal === 'paused' || currentVal === 'ongoing')) {
+    statusEl.value = currentVal === 'paused' ? 'watching' : 'completed';
+  }
+  statusEl._ddSync?.();
+
+  // Show runtime section for movies only
+  const runtimeSection = document.getElementById('dRuntimeSection');
+  if (runtimeSection) runtimeSection.style.display = isMovie ? '' : 'none';
+
+  // Hide completion year for movies (they only have release year)
+  const completionYearGroup = document.getElementById('completionYearGroup');
+  if (completionYearGroup) completionYearGroup.style.display = isMovie ? 'none' : '';
+
+  // Show current position only when actively watching or paused
+  const curPos = document.getElementById('dCurrentPosSection');
+  if (curPos) curPos.style.display = (showProgress && (status === 'watching' || status === 'paused')) ? 'block' : 'none';
+
+  // Show/hide "Completed On" date field
+  const completedOnGroup = document.getElementById('completedOnGroup');
+  if (completedOnGroup) completedOnGroup.style.display = (status === 'completed' || status === 'ongoing') ? '' : 'none';
+  const _rwSec = document.getElementById('dRewatchSection');
+  if (_rwSec) _rwSec.style.display = (status === 'completed' || status === 'ongoing') ? '' : 'none';
+  // Only auto-set date if there is no date already AND entry has no existing completed_date
+  if ((status === 'completed' || status === 'ongoing') && !document.getElementById('dCYear')?.value && !_detEntry?.completed_date) {
+    const now = new Date();
+    document.getElementById('dDay').value   = now.getDate();
+    document.getElementById('dMonth').value = String(now.getMonth()+1).padStart(2,'0');
+    document.getElementById('dMonth')._ddSync?.();
+    document.getElementById('dCYear').value  = now.getFullYear();
+  }
+}
+
+function updatePosterLetter() {
+  const t = document.getElementById('dTitle').value;
+  if (document.getElementById('dPosterImg').style.display === 'none')
+    document.getElementById('dPosterLetter').textContent = t ? t[0].toUpperCase() : '?';
+}
+
+function toggleGenre(el) { el.classList.toggle('selected'); }
+
+/* ── Poster upload ── */
+async function handlePosterUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const overlay = document.getElementById('posterUploadingOverlay');
+  const wrap    = document.querySelector('.detail-poster-wrap');
+
+  // Show loading overlay immediately, block clicks, disable save
+  _posterUploading = true;
+  if (overlay) overlay.style.display = 'flex';
+  if (wrap)    wrap.style.pointerEvents = 'none';
+  const btnSave = document.getElementById('btnSave');
+  if (btnSave) { btnSave.disabled = true; btnSave.textContent = 'Uploading poster…'; }
+
+  try {
+    const userId = _detUser?.id || 'unknown';
+    const url = await uploadPoster(file, userId, _detId || Date.now());
+    _posterUrl = url;
+    // Show the real Cloudinary image
+    document.getElementById('dPosterImg').src = url;
+    document.getElementById('dPosterImg').style.display = 'block';
+    document.getElementById('dPosterLetter').style.display = 'none';
+    showToast('Poster uploaded.');
+  } catch(e) {
+    console.warn('Cloudinary upload failed:', e);
+    showToast('Poster upload failed. Please try again.', 'err');
+    _posterUrl = null;
+    document.getElementById('dPosterImg').style.display = 'none';
+    document.getElementById('dPosterLetter').style.display = 'block';
+  } finally {
+    _posterUploading = false;
+    if (overlay) overlay.style.display = 'none';
+    if (wrap)    wrap.style.pointerEvents = '';
+    if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Save Entry'; }
+  }
+}
+
+/* ── Load entry ── */
+document.addEventListener('DOMContentLoaded', () => {
+  _makeShadowDD('dCat', 'dCatDD');
+  _makeShadowDD('dMediaType', 'dMediaTypeDD');
+  _makeShadowDD('dStatus', 'dStatusDD');
+  _makeShadowDD('dMonth', 'dMonthDD');
+  initPage(async (user) => {
+    _detUser = user;
+    const e = _detId ? await getEntry(_detId) : null;
+    _detEntry = e || null;  // store for fav-lists-popup
+
+    // Populate form
+    draftRatings = (e && e.ratings) ? { ...e.ratings } : {};
+    _posterUrl   = (e?.poster_url && !e.poster_url.startsWith('data:')) ? e.poster_url : null;
+
+    document.getElementById('dTitle').value         = e?.title         || '';
+    document.getElementById('dCat').value           = e?.cat           || 'tv';
+    document.getElementById('dCat')._ddSync?.();
+    document.getElementById('dStatus').value        = e?.status        || 'queue';
+    document.getElementById('dStatus')._ddSync?.();
+    _originalStatus = e?.status || 'queue';
+    document.getElementById('dYear').value             = e?.year          || '';
+    document.getElementById('dCompletionYear').value   = e?.ratings?._completion_year || '';
+    document.getElementById('dDesc').value             = e?.description   || '';
+    document.getElementById('dSeason').value           = e?.season        || '';
+    document.getElementById('dEpisode').value          = e?.episode       || '';
+    document.getElementById('dWatched').value          = e?.watched       || '';
+    // Load runtime for movies
+    if (document.getElementById('dRuntimeH')) {
+      document.getElementById('dRuntimeH').value = e?.runtime_h || '';
+      document.getElementById('dRuntimeM').value = e?.runtime_m || '';
+      updateRuntimeDisplay();
+    }
+    document.getElementById('dNotes').value            = e?.notes         || '';
+    _notesUpdateWordCount();
+    _notesGuardWordLimit();
+    // Rewatch count
+    const _rewatchEl = document.getElementById('dRewatchCount');
+    const _rewatchSec = document.getElementById('dRewatchSection');
+    if (_rewatchEl && _rewatchSec) {
+      const _cnt = Number(e?.ratings?._rewatch_count) || 1;
+      _rewatchEl.value = _cnt;
+      const _st = e?.status || '';
+      _rewatchSec.style.display = (_st === 'completed' || _st === 'ongoing') ? '' : 'none';
+    }
+    _setCompletedDate(e?.completed_date || null);
+
+    // Restore season breakdown
+    _seasonBreakdown = Array.isArray(e?.ratings?._season_breakdown) ? [...e.ratings._season_breakdown] : [];
+    if (_seasonBreakdown.length === 0 && (e?.total_seasons || e?.total_eps)) {
+      // Legacy fallback: no breakdown stored yet but has totals
+    }
+    renderSeasonRows();
+    // Totals auto-calculated by renderSeasonRows; if no breakdown use stored values
+    if (_seasonBreakdown.length === 0) {
+      document.getElementById('dTotalSeasons').value = e?.total_seasons || '';
+      document.getElementById('dTotalEps').value     = e?.total_eps     || '';
+    }
+
+    document.querySelectorAll('.genre-opt').forEach(opt => {
+      opt.classList.toggle('selected', e && e.genres && e.genres.includes(opt.textContent));
+    });
+
+    // Poster
+    const pImg = document.getElementById('dPosterImg');
+    const pLtr = document.getElementById('dPosterLetter');
+    if (e?.poster_url) {
+      pImg.src = e.poster_url; pImg.style.display = 'block'; pLtr.style.display = 'none';
+    } else {
+      pImg.style.display = 'none'; pLtr.style.display = 'block';
+      pLtr.textContent = (e?.title || '?')[0]?.toUpperCase() || '?';
+    }
+
+    // Restore media type for anime/cartoons
+    if (e?.ratings?._media_type) {
+      document.getElementById('dMediaType').value = e.ratings._media_type;
+      document.getElementById('dMediaType')._ddSync?.();
+    }
+
+    // Restore animation quality toggle
+    _animEnabled = !!(e?.ratings?._animEnabled);
+    draftRatings._animEnabled = _animEnabled;
+    const animBtn = document.getElementById('animToggleBtn');
+    if (_animEnabled && animBtn) {
+      animBtn.textContent = '− Disable Animation Quality';
+      animBtn.classList.add('on');
+    }
+
+    // Restore favorites
+    const favs = e?.ratings?._favorites || {};
+    document.getElementById('favCharacter').value = favs.character || '';
+    document.getElementById('favEpisode').value   = favs.episode   || '';
+    document.getElementById('favSeason').value    = favs.season    || '';
+    const lows = e?.ratings?._lowlights || e?.ratings?._favorites?._lowlights || {};
+    if (document.getElementById('lowCharacter')) document.getElementById('lowCharacter').value = lows.character || '';
+    if (document.getElementById('lowEpisode'))   document.getElementById('lowEpisode').value   = lows.episode   || '';
+    if (document.getElementById('lowSeason'))    document.getElementById('lowSeason').value    = lows.season    || '';
+
+    document.getElementById('dDeleteBtn').style.display = _detId ? 'block' : 'none';
+    var _dFavBtn = document.getElementById('dFavBtn');
+    if (_dFavBtn) _dFavBtn.style.display = (_detId && _detEntry) ? 'flex' : 'none';
+    var _dFavBtn = document.getElementById('dFavBtn');
+    if (_dFavBtn) _dFavBtn.style.display = (_detId && _detEntry) ? 'flex' : 'none';
+    renderRatingGrids();
+    updateTypeSelector(); // sets type group visibility + calls updateStatusUI
+
+    updateProgBar();
+    recalcFinal();
+
+    // Show layout
+    document.getElementById('detailLoading').style.display = 'none';
+    document.getElementById('detailLayout').style.display  = '';
+    document.title = e ? `${e.title} — MyScreenScore` : 'New Entry';
+
+    // Scroll to progress section if coming from Continue Watching
+    const scrollTo = sessionStorage.getItem('detailScrollTo');
+    if (scrollTo === 'progress') {
+      sessionStorage.removeItem('detailScrollTo');
+      setTimeout(() => {
+        document.getElementById('dProgressSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+    } else if (scrollTo === 'notes') {
+      sessionStorage.removeItem('detailScrollTo');
+      setTimeout(() => {
+        document.getElementById('dNotesSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('dNotes')?.focus();
+      }, 300);
+    }
+
+    // Show comments button for existing entries
+    if (_detId) {
+      const btn = document.getElementById('dCommentsBtn');
+      if (btn) btn.style.display = 'inline-flex';
+      _refreshCommentsBtnCount();
+    }
+  });
+});
+
+/* ── Comments modal ── */
+function _escHTML(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openCommentsModal() {
+  const overlay = document.getElementById('detCommentsOverlay');
+  if (!overlay) return;
+  // Set entry name in header
+  const title = document.getElementById('dTitle')?.value?.trim() || 'this entry';
+  document.getElementById('detCommentsEntryName').textContent = title;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  loadDetComments();
+  setTimeout(() => document.getElementById('detCommentInput')?.focus(), 300);
+}
+
+function closeCommentsModal() {
+  const overlay = document.getElementById('detCommentsOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close on Escape — whichever overlay is actually open, not just Comments
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const discoverOv = document.getElementById('catDiscoverOverlay');
+  if (discoverOv && discoverOv.classList.contains('open')) { _closeDetDiscoverPicker?.(); return; }
+  const commentsOv = document.getElementById('detCommentsOverlay');
+  if (commentsOv && commentsOv.classList.contains('open')) { closeCommentsModal(); return; }
+  const completionOv = document.getElementById('completionOverlay');
+  if (completionOv && completionOv.classList.contains('open')) { closeCompletionPopup(); return; }
+});
+
+async function loadDetComments() {
+  const list = document.getElementById('detCommentList');
+  const countEl = document.getElementById('detCommentsCount');
+  if (!list || !_detId) return;
+
+  list.innerHTML = '<div class="det-comments-empty">Loading…</div>';
+
+  const comments = await getComments(_detId);
+
+  if (!comments.length) {
+    list.innerHTML = '<div class="det-comments-empty">No comments yet — be the first!</div>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+
+  const me = _detUser?.id;
+  const topLevel = comments.filter(c => !c.reply_to);
+  const replies  = comments.filter(c => c.reply_to);
+  if (countEl) countEl.textContent = `${comments.length}`;
+  list.innerHTML = topLevel.map(c => {
+    const uname = _escHTML(c.profiles?.username || 'Unknown');
+    const date  = new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const reps  = replies.filter(r => r.reply_to === c.id);
+    const repHTML = reps.map(r => {
+      const runame = _escHTML(r.profiles?.username || 'Unknown');
+      const rdate  = new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      return `<div class="det-reply-item" id="cm-${r.id}">
+        <div class="det-reply-author">@${runame}</div>
+        <div class="det-reply-text">${_escHTML(r.content)}</div>
+        <div class="det-reply-meta">
+          <span>${rdate}</span>
+          ${r.author_id === me ? `<button class="det-comment-del" onclick="removeDetComment('${r.id}')">delete</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="det-comment-item" id="cm-${c.id}">
+      <div class="det-comment-author">@${uname}</div>
+      <div class="det-comment-text">${_escHTML(c.content)}</div>
+      <div class="det-comment-meta">
+        <span>${date}</span>
+        <button class="det-comment-reply-btn" onclick="detReply('${c.id}','${uname}')">Reply</button>
+        ${c.author_id === me ? `<button class="det-comment-del" onclick="removeDetComment('${c.id}')">delete</button>` : ''}
+      </div>
+      ${repHTML}
+      <div id="det-reply-form-${c.id}"></div>
+    </div>`;
+  }).join('');
+}
+
+let _detReplyFor = null;
+
+function detReply(commentId, username) {
+  if (_detReplyFor) { const el = document.getElementById('det-reply-form-' + _detReplyFor); if(el) el.innerHTML = ''; }
+  if (_detReplyFor === commentId) { _detReplyFor = null; return; }
+  _detReplyFor = commentId;
+  const box = document.getElementById('det-reply-form-' + commentId);
+  if (!box) return;
+  box.innerHTML = `<div class="det-reply-form">
+    <input class="det-reply-input" id="det-ri-${commentId}" value="@${username} " placeholder="Reply to @${username}…"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();detPostReply('${commentId}')}">
+    <button class="det-reply-send" onclick="detPostReply('${commentId}')">Send</button>
+    <button class="det-comment-del" onclick="(function(){const el=document.getElementById('det-reply-form-${commentId}');if(el)el.innerHTML='';_detReplyFor=null;})()" style="margin-left:4px;">✕</button>
+  </div>`;
+  setTimeout(() => document.getElementById('det-ri-' + commentId)?.focus(), 50);
+}
+
+async function detPostReply(commentId) {
+  const input = document.getElementById('det-ri-' + commentId);
+  const content = input?.value?.trim();
+  if (!content) return;
+  input.disabled = true;
+  try {
+    await addComment(_detId, content, commentId);
+    const box = document.getElementById('det-reply-form-' + commentId);
+    if (box) box.innerHTML = '';
+    _detReplyFor = null;
+    await loadDetComments();
+    _refreshCommentsBtnCount();
+  } catch(e) {
+    showToast('Could not post reply.', 'err');
+    if (input) input.disabled = false;
+  }
+}
+
+async function submitDetComment() {
+  const input   = document.getElementById('detCommentInput');
+  const content = input?.value?.trim();
+  if (!content || !_detId) return;
+  input.disabled = true;
+  try {
+    await addComment(_detId, content);
+    input.value = '';
+    await loadDetComments();
+    // Update button label count
+    _refreshCommentsBtnCount();
+  } catch(e) {
+    showToast('Could not post comment.', 'err');
+    console.error(e);
+  }
+  input.disabled = false;
+  input.focus();
+}
+
+async function removeDetComment(commentId) {
+  try {
+    await deleteComment(commentId);
+    await loadDetComments();
+    _refreshCommentsBtnCount();
+  } catch(e) {
+    showToast('Could not delete comment.', 'err');
+  }
+}
+
+async function _refreshCommentsBtnCount() {
+  if (!_detId) return;
+  const comments = await getComments(_detId);
+  const label = document.getElementById('dCommentsBtnLabel');
+  if (label) label.textContent = comments.length ? `Comments (${comments.length})` : 'Comments';
+  const countEl = document.getElementById('detCommentsCount');
+  if (countEl) countEl.textContent = comments.length ? `${comments.length}` : '';
+}
+
+/* ── Save ── */
+async function doSave() {
+  const title = document.getElementById('dTitle').value.trim();
+  if (!title) { showToast('Please enter a title.', 'err'); return; }
+
+  const status  = document.getElementById('dStatus').value;
+  const cat     = document.getElementById('dCat').value;
+  const mediaType = getMediaType();
+  const isMovie = mediaType === 'movie';
+  const genres  = [...document.querySelectorAll('.genre-opt.selected')].map(o => o.textContent);
+
+  // ── Musts validation ──
+  if (!genres.length) {
+    showToast('Please select at least one genre.', 'err'); return;
+  }
+  if (isMovie) {
+    const rh = parseInt(document.getElementById('dRuntimeH')?.value) || 0;
+    const rm = parseInt(document.getElementById('dRuntimeM')?.value) || 0;
+    if (!rh && !rm) { showToast('Please enter the movie runtime.', 'err'); return; }
+  } else {
+    const totalEps = parseInt(document.getElementById('dTotalEps')?.value) || 0;
+    if (!totalEps) { showToast('Please add at least one season with episodes.', 'err'); return; }
+  }
+
+  const btn = document.getElementById('btnSave');
+  btn.classList.add('saving'); btn.textContent = 'Saving…';
+
+  // Store media type in ratings metadata for anime/cartoons
+  const ratingsWithType = { ...draftRatings };
+  if (cat === 'anime' || cat === 'cartoons') {
+    ratingsWithType._media_type = document.getElementById('dMediaType').value;
+  }
+
+  // Store animation enabled state
+  ratingsWithType._animEnabled = _animEnabled;
+
+  // Store favorites
+  ratingsWithType._favorites = {
+    character: document.getElementById('favCharacter')?.value?.trim() || '',
+    episode:   document.getElementById('favEpisode')?.value?.trim()   || '',
+    season:    document.getElementById('favSeason')?.value?.trim()    || '',
+  };
+  ratingsWithType._lowlights = {
+    character: document.getElementById('lowCharacter')?.value?.trim() || '',
+    episode:   document.getElementById('lowEpisode')?.value?.trim()   || '',
+    season:    document.getElementById('lowSeason')?.value?.trim()    || '',
+  };
+
+  // Store season breakdown and completion year
+  const validBreakdown = _seasonBreakdown.filter(n => parseInt(n) > 0).map(Number);
+  ratingsWithType._season_breakdown = validBreakdown;
+  ratingsWithType._completion_year  = parseInt(document.getElementById('dCompletionYear').value) || null;
+  // Rewatch count
+  const _rewatchInput = document.getElementById('dRewatchCount');
+  if (_rewatchInput && document.getElementById('dRewatchSection')?.style.display !== 'none') {
+    ratingsWithType._rewatch_count = Math.max(1, parseInt(_rewatchInput.value) || 1);
+  } else if (_detEntry?.ratings?._rewatch_count) {
+    ratingsWithType._rewatch_count = _detEntry.ratings._rewatch_count;
+  }
+  // Preserve rewatching flag
+  if (_detEntry?.ratings?._is_rewatching != null) {
+    ratingsWithType._is_rewatching = _detEntry.ratings._is_rewatching;
+  }
+
+  // Auto-calculate totals from breakdown if available
+  const calcTotalSeasons = validBreakdown.length > 0 ? validBreakdown.length : (parseInt(document.getElementById('dTotalSeasons').value) || null);
+  const calcTotalEps     = validBreakdown.length > 0 ? validBreakdown.reduce((a, b) => a + b, 0) : (parseInt(document.getElementById('dTotalEps').value) || null);
+
+  const payload = {
+    title,
+    cat,
+    status,
+    year:          document.getElementById('dYear').value || null,
+    description:   document.getElementById('dDesc').value,
+    genres,
+    poster_url:    (_posterUrl && !_posterUrl.startsWith('data:')) ? _posterUrl : null,
+    season:        isMovie ? null : (parseInt(document.getElementById('dSeason').value)   || null),
+    episode:       isMovie ? null : (parseInt(document.getElementById('dEpisode').value)  || null),
+    total_seasons: isMovie ? null : calcTotalSeasons,
+    watched:       isMovie ? 0    : (parseInt(document.getElementById('dWatched').value)  || 0),
+    total_eps:     isMovie ? null : calcTotalEps,
+    runtime_h:     isMovie ? (parseInt(document.getElementById('dRuntimeH')?.value) || null) : null,
+    runtime_m:     isMovie ? (parseInt(document.getElementById('dRuntimeM')?.value) || null) : null,
+    notes:         document.getElementById('dNotes').value,
+    completed_date: _parseCompletedDate(),
+    ratings:       ratingsWithType,
+  };
+
+  // Only show completion popup when transitioning INTO completed for the first time
+  const isNewlyCompleted = (status === 'completed' || status === 'ongoing') && _originalStatus !== 'completed' && _originalStatus !== 'ongoing';
+
+  try {
+    const saved = await saveEntry(payload, _detUser.id, _detId);
+    _detId = saved.id;
+    _originalStatus = status; // update so re-saves don't re-trigger popup
+    btn.classList.remove('saving'); btn.textContent = 'Save Entry';
+    document.getElementById('dDeleteBtn').style.display = 'block';
+    showToast('Saved!');
+  } catch(e) {
+    showToast('Error saving. Please try again.', 'err');
+    btn.classList.remove('saving'); btn.textContent = 'Save Entry';
+    console.error('Save error:', e);
+    return;
+  }
+
+  if (isNewlyCompleted) {
+    showCompletionPopup(title);
+  } else {
+    setTimeout(() => window.location.href = _fromPage, 700);
+  }
+}
+
+/* ── Completion popup ── */
+function showCompletionPopup(title) {
+  document.getElementById('completionTitle').textContent = `Finished "${title}"`;
+  document.getElementById('completionSub').textContent =
+    'Add your ratings to rank it in your collection.';
+  document.getElementById('completionOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCompletionPopup() {
+  document.getElementById('completionOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  // Scroll to ratings section
+  document.querySelector('.ratings-wrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ── Delete ── */
+async function doDelete() {
+  if (!_detId) return;
+  const title = document.getElementById('dTitle').value.trim() || 'this entry';
+  const ok = await showConfirm({
+    title: 'Delete entry?',
+    message: `"${title}" will be permanently removed.`,
+    confirmText: 'Delete',
+    iconName: 'x'
+  });
+  if (!ok) return;
+  try {
+    await deleteEntry(_detId, _detUser.id);
+    showToast('Deleted.');
+    setTimeout(() => window.location.href = _fromPage, 600);
+  } catch(e) {
+    showToast('Error deleting.', 'err');
+  }
+}
+</script>
+</body>
+<script>
+/* ── TMDB prefill from quick create ── */
+function _applyTMDBPrefill(p) {
+  if (!p) return;
+  console.log('[TMDB] applying prefill:', p);
+  if (p.description) { const el = document.getElementById('dDesc'); if(el && !el.value) el.value = p.description; }
+  if (p.genres && p.genres.length) {
+    document.querySelectorAll('.genre-opt').forEach(el => {
+      el.classList.toggle('selected', p.genres.includes(el.textContent.trim()));
+    });
+  }
+  if (p.poster_url) {
+    _posterUrl = p.poster_url;
+    const img = document.getElementById('dPosterImg');
+    const letter = document.getElementById('dPosterLetter');
+    if (img) { img.src = p.poster_url; img.style.display = 'block'; }
+    if (letter) letter.style.display = 'none';
+  }
+  if (p.total_seasons != null) {
+    const el = document.getElementById('dTotalSeasons');
+    if (el) { el.removeAttribute('readonly'); el.value = p.total_seasons; el.setAttribute('readonly',''); }
+  }
+  if (p.total_eps != null) {
+    const el = document.getElementById('dTotalEps');
+    if (el) { el.removeAttribute('readonly'); el.value = p.total_eps; el.setAttribute('readonly',''); }
+  }
+  // Fill season breakdown
+  if (p._season_breakdown && p._season_breakdown.length) {
+    _seasonBreakdown = [...p._season_breakdown];
+    if (typeof renderSeasonRows === 'function') renderSeasonRows();
+  }
+  if (p._completion_year) { const el = document.getElementById('dCompletionYear'); if(el) el.value = p._completion_year; }
+  else if (p.year && !p._completion_year) { /* leave completion year blank for ongoing */ }
+  if (p.runtime_h != null || p.runtime_m != null) {
+    const catEl = document.getElementById('dCat');
+    if (catEl) catEl.dispatchEvent(new Event('change'));
+    setTimeout(() => {
+      if (p.runtime_h != null) { const el = document.getElementById('dRuntimeH'); if(el) el.value = p.runtime_h; }
+      if (p.runtime_m != null) { const el = document.getElementById('dRuntimeM'); if(el) el.value = p.runtime_m; }
+      if (typeof updateRuntimeDisplay === 'function') updateRuntimeDisplay();
+    }, 100);
+  }
+  if (p.ratings?._type) {
+    const el = document.getElementById('dMediaType');
+    if (el) { el.value = p.ratings._type; el._ddSync?.(); el.dispatchEvent(new Event('change')); }
+  }
+  showToast && showToast('Details filled from TMDB ✓');
+}
+
+/* ── Check for TMDB prefill from session ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const prefill = sessionStorage.getItem('tmdbPrefill');
+  if (prefill) {
+    sessionStorage.removeItem('tmdbPrefill');
+    try { setTimeout(() => _applyTMDBPrefill(JSON.parse(prefill)), 1200); } catch(e) {}
+  }
+
+  /* ── Init TMDB search on title field ── */
+  setTimeout(() => {
+    if (typeof initTMDBSearch === 'function') {
+      initTMDBSearch('dTitle', () => document.getElementById('dCat')?.value || 'tv', entry => {
+        if (entry.title) document.getElementById('dTitle').value = entry.title;
+        if (entry.cat)   { const el = document.getElementById('dCat'); if(el) { el.value = entry.cat; el._ddSync?.(); el.dispatchEvent(new Event('change')); } }
+        if (entry.year)  { const el = document.getElementById('dYear'); if(el) el.value = entry.year; }
+        _applyTMDBPrefill(entry);
+      }, { connected: true });
+    }
+  }, 300);
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+
+function _showDuplicatePopup(title, existing) {
+  // Remove any existing popup
+  const old = document.getElementById('dupPopupOverlay');
+  if (old) old.remove();
+
+  const catLabel = (CAT_META[existing.cat] && CAT_META[existing.cat].label) || existing.cat;
+  const el = document.createElement('div');
+  el.id = 'dupPopupOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity .2s;pointer-events:none;';
+  el.innerHTML = `
+    <div id="dupPopupCard" style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:97%;max-width:440px;padding:28px 28px 24px;box-sizing:border-box;transform:translateY(16px);transition:transform .25s cubic-bezier(.4,0,.2,1);text-align:center;">
+      <div style="color:var(--olive-light);margin-bottom:14px;opacity:.7;">${icon('x', 32)}</div>
+      <h2 style="font-family:var(--serif);font-size:22px;font-weight:300;margin-bottom:10px;color:var(--text);">Already in your library</h2>
+      <p style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:6px;">
+        <strong style="color:var(--text);">${title}</strong> is already saved as a <strong style="color:var(--text);">${catLabel}</strong>.
+      </p>
+      <p style="font-size:13px;color:var(--text-3);margin-bottom:24px;">Close this and update your existing entry instead.</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button onclick="document.getElementById('dupPopupOverlay').remove();" style="padding:10px 28px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">Got it</button>
+      </div>
+    </div>`;
+  el.addEventListener('click', function(ev) { if (ev.target === el) el.remove(); });
+  document.body.appendChild(el);
+  requestAnimationFrame(() => {
+    el.style.opacity = '1'; el.style.pointerEvents = 'auto';
+    document.getElementById('dupPopupCard').style.transform = 'translateY(0)';
+  });
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { el.remove(); document.removeEventListener('keydown', esc); }
+  }, { once: true });
+}
+</script>
+
+<script>
+/* "Discover" button — same behavior as the category page popups: if this
+   entry already has a linked TMDB id/type, jump straight to its title.html
+   page (via the shared goToTitle() helper). Otherwise, search TMDB by
+   title and show a "Which one is it?" picker so the user can choose the
+   right match before navigating. Adapted from category.js's
+   _catGoDiscover/_openDiscoverPicker (not loaded here directly, since it
+   has its own page-init logic tied to window.PAGE_CAT that doesn't apply
+   to this page) — reuses the same shared CSS classes (#catDiscoverOverlay,
+   .cat-disc-*) already defined in style.css. */
+async function _detGoToDiscover(btn) {
+  const e = _detEntry;
+  if (!e) return;
+  if (e.tmdb_id && e.tmdb_type) {
+    goToTitle(e.tmdb_type, e.tmdb_id);
+    return;
+  }
+  if (typeof _tmdbSearch !== 'function') {
+    showToast('Discover is unavailable right now.', 'err');
+    return;
+  }
+  const origLabel = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Searching…';
+  try {
+    const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
+    const results = await _tmdbSearch(e.title);
+    const sorted = [...results].sort((a, b) => {
+      const wantType = isMovie ? 'movie' : 'tv';
+      return (a.media_type === wantType ? 0 : 1) - (b.media_type === wantType ? 0 : 1);
+    });
+    _openDetDiscoverPicker(sorted, e.title);
+  } catch (err) {
+    showToast('Error searching TMDB.', 'err');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origLabel;
+  }
+}
+
+function _injectDetDiscoverPicker() {
+  if (document.getElementById('catDiscoverOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'catDiscoverOverlay';
+  el.innerHTML = `<div id="catDiscoverCard">
+    <button class="cat-disc-close" onclick="_closeDetDiscoverPicker()">✕</button>
+    <div class="cat-disc-title">Which one is it?</div>
+    <div class="cat-disc-sub" id="catDiscoverSub"></div>
+    <div id="catDiscoverList"></div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) _closeDetDiscoverPicker(); });
+  document.body.appendChild(el);
+}
+
+function _openDetDiscoverPicker(results, entryTitle) {
+  _injectDetDiscoverPicker();
+  const esc2 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  document.getElementById('catDiscoverSub').textContent = `Matches for "${entryTitle}" — pick the right one`;
+
+  const listEl = document.getElementById('catDiscoverList');
+  if (!results.length) {
+    listEl.innerHTML = `<div class="cat-disc-none">No matches found on TMDB.</div>`;
+  } else {
+    listEl.innerHTML = results.map((r, i) => {
+      const isMovie = r.media_type === 'movie';
+      const rTitle  = isMovie ? r.title : r.name;
+      const year    = ((isMovie ? r.release_date : r.first_air_date) || '').split('-')[0];
+      const thumb   = r.poster_path ? TMDB_IMG + r.poster_path : null;
+      return `<div class="cat-disc-item" data-i="${i}">
+        <div class="cat-disc-thumb">${thumb ? `<img src="${thumb}" loading="lazy">` : ''}</div>
+        <div class="cat-disc-info">
+          <div class="cat-disc-name">${esc2(rTitle || '—')}</div>
+          <div class="cat-disc-meta">${isMovie ? 'Movie' : 'TV Show'}${year ? ' · ' + year : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+    listEl.querySelectorAll('.cat-disc-item').forEach((elm, i) => {
+      elm.addEventListener('click', () => {
+        const r = results[i];
+        _closeDetDiscoverPicker();
+        goToTitle(r.media_type === 'movie' ? 'movie' : 'tv', r.id);
+      });
+    });
+  }
+
+  const ov = document.getElementById('catDiscoverOverlay');
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _closeDetDiscoverPicker() {
+  const ov = document.getElementById('catDiscoverOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+(function() {
+  // Wait for the existing init flow (in the main script above) to finish
+  // populating _detEntry and reveal the page, rather than calling
+  // initPage() a second time (which would duplicate nav rendering/auth
+  // checks). Polls briefly since there's no event fired for "entry loaded".
+  let tries = 0;
+  const check = setInterval(() => {
+    tries++;
+    const layout = document.getElementById('detailLayout');
+    const ready = layout && layout.style.display !== 'none';
+    if (ready || tries > 100) { // ~10s max
+      clearInterval(check);
+      const btn = document.getElementById('dDiscoverBtn');
+      // Show for any existing, titled entry — no longer requires a
+      // pre-linked tmdb_id/type, since the picker can now find one.
+      if (btn) btn.style.display = (typeof _detEntry !== 'undefined' && _detEntry && _detEntry.title) ? 'inline-flex' : 'none';
+    }
+  }, 100);
+})();
+</script>
+
+<script>
+/* Personal Notes — 150-word cap, matching the length _trimNotes() already
+   truncates the display preview to elsewhere in the app (Notes tab list
+   view). Previously the writing field had no limit at all, so a note
+   could be written longer than what would ever actually be shown when
+   viewing it later. Blocks further typing at the limit via beforeinput
+   (deletions and replacing a selection still work) instead of silently
+   trimming text back after the fact. */
+function _notesCountWords(s) {
+  return s.trim() ? s.trim().split(/\s+/).length : 0;
+}
+function _notesUpdateWordCount() {
+  const el = document.getElementById('dNotes');
+  const countEl = document.getElementById('dNotesCount');
+  if (!el || !countEl) return;
+  const words = el.value.trim().split(/\s+/).filter(Boolean);
+  if (words.length > 150) {
+    el.value = words.slice(0, 150).join(' ');
+    countEl.textContent = 'Reached max word limit (150/150 words)';
+    countEl.classList.add('over');
+    return;
+  }
+  const count = words.length;
+  countEl.textContent = `${count} / 150 words`;
+  countEl.classList.toggle('over', count >= 150);
+}
+function _notesGuardWordLimit() {
+  const el = document.getElementById('dNotes');
+  if (!el || el.dataset.wordLimitGuarded) return;
+  el.dataset.wordLimitGuarded = '1';
+  el.addEventListener('beforeinput', e => {
+    if (e.inputType && e.inputType.startsWith('delete')) return;
+    if (el.selectionStart !== el.selectionEnd) return;
+    const count = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
+    if (count >= 150) {
+      e.preventDefault();
+      const countEl = document.getElementById('dNotesCount');
+      if (countEl) { countEl.textContent = 'Reached max word limit (150/150 words)'; countEl.classList.add('over'); }
+    }
+  });
+}
+</script>
+</html>

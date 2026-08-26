@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyScreenScore — Offline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  // Apply saved theme immediately (before paint) to avoid a flash of the wrong mode —
+  // same key/default config.js uses site-wide, so this page always matches.
+  (function() {
+    var t = localStorage.getItem('wl-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<style>
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+  :root {
+    --bg:           #0A0A0E;
+    --card:         rgba(255,255,255,0.058);
+    --text:         #EDEDED;
+    --text-2:       rgba(237,237,237,0.68);
+    --text-3:       rgba(237,237,237,0.42);
+    --olive:        #4A6741;
+    --olive-2:      #5B7D50;
+    --olive-light:  #7EB86C;
+    --border:       rgba(255,255,255,0.09);
+    --border-olive: rgba(126,184,108,0.32);
+    --olive-faint:  rgba(126,184,108,0.1);
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans:  'Inter', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  }
+  [data-theme="light"] {
+    --bg:           #E2DAD0;
+    --card:         #F3EDE4;
+    --text:         #1A1A1A;
+    --text-2:       rgba(26,26,26,0.66);
+    --text-3:       rgba(26,26,26,0.42);
+    --olive:        #1A4520;
+    --olive-2:      #0F2D14;
+    --olive-light:  #1E5C26;
+    --border:       rgba(0,0,0,0.1);
+    --border-olive: rgba(30,92,38,0.35);
+    --olive-faint:  rgba(30,92,38,0.08);
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 2rem; text-align: center;
+    transition: background .2s ease, color .2s ease;
+  }
+
+  .logo { font-family: var(--serif); font-size: clamp(22px, 5vw, 28px); font-weight: 300; letter-spacing: 2px; margin-bottom: 2.75rem; color: var(--text); }
+  .logo span { color: var(--olive-light); }
+
+  .icon-ring {
+    position: relative; width: clamp(64px, 14vw, 84px); height: clamp(64px, 14vw, 84px);
+    border-radius: 50%; margin: 0 auto 1.75rem;
+    background: var(--card); border: 1px solid var(--border-olive);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-ring svg { width: 46%; height: 46%; stroke: var(--olive-light); }
+  .status-dot {
+    position: absolute; bottom: 2px; right: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #D9534F; border: 2px solid var(--bg);
+  }
+  .status-dot.online { background: var(--olive-light); animation: pulse 1.4s ease-out infinite; }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 var(--olive-faint); }
+    70%  { box-shadow: 0 0 0 8px rgba(0,0,0,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+  }
+
+  h1 { font-family: var(--serif); font-size: clamp(26px, 6vw, 34px); font-weight: 300; margin-bottom: .6rem; }
+  p  { font-size: 14px; color: var(--text-2); line-height: 1.65; max-width: 300px; margin: 0 auto 2rem; }
+  #statusLine { font-size: 12px; color: var(--text-3); margin-top: -1.25rem; margin-bottom: 1.75rem; letter-spacing: .3px; }
+
+  .btn-retry {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 12px 28px; border-radius: 999px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--olive-light), var(--olive-2));
+    color: #fff; font-size: 13.5px; font-weight: 500; font-family: var(--sans);
+    transition: opacity .15s, transform .15s;
+  }
+  .btn-retry:hover { opacity: .9; }
+  .btn-retry:active { transform: scale(.97); }
+  .btn-retry svg { width: 15px; height: 15px; transition: transform .4s ease; }
+  .btn-retry.spinning svg { animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .offline-hint { margin-top: 2.25rem; font-size: 11.5px; color: var(--text-3); max-width: 260px; }
+
+  @media(max-width:400px){
+    .logo { margin-bottom: 2rem; }
+    p { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+  <div class="logo">MY<span>SCREEN</span>SCORE</div>
+
+  <div class="icon-ring">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="1" y1="1" x2="23" y2="23"/>
+      <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+      <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+      <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+      <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+      <line x1="12" y1="20" x2="12.01" y2="20"/>
+    </svg>
+    <span class="status-dot" id="statusDot"></span>
+  </div>
+
+  <h1>You're offline</h1>
+  <p>MyScreenScore needs an internet connection to load your library. Reconnect and we'll pick up right where you left off.</p>
+  <div id="statusLine">Checking connection…</div>
+
+  <button class="btn-retry" id="retryBtn" onclick="tryReconnect()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+    <span id="retryLabel">Try Again</span>
+  </button>
+
+  <div class="offline-hint">Already installed the app? Anything you rated before going offline is safely saved locally and will sync once you're back online.</div>
+
+<script>
+  function updateStatus() {
+    const dot = document.getElementById('statusDot');
+    const line = document.getElementById('statusLine');
+    if (navigator.onLine) {
+      dot.classList.add('online');
+      line.textContent = 'Connection restored — you can try again';
+    } else {
+      dot.classList.remove('online');
+      line.textContent = 'Still no connection';
+    }
+  }
+
+  function tryReconnect() {
+    const btn = document.getElementById('retryBtn');
+    const label = document.getElementById('retryLabel');
+    btn.classList.add('spinning');
+    label.textContent = 'Checking…';
+    setTimeout(() => {
+      if (navigator.onLine) {
+        window.location.href = 'index.html';
+      } else {
+        btn.classList.remove('spinning');
+        label.textContent = 'Still offline — Try Again';
+        setTimeout(() => { label.textContent = 'Try Again'; }, 2200);
+      }
+      updateStatus();
+    }, 500);
+  }
+
+  window.addEventListener('online', updateStatus);
+  window.addEventListener('offline', updateStatus);
+  updateStatus();
+</script>
+</body>
+</html>

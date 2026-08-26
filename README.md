@@ -415,4 +415,4 @@ Row Level Security is enabled on all tables. Users can only access their own dat
 
 ---
 
-*Built by **Mohammad Rahimi** · Half credit to **Narimaan Samani***
+*Built by **Mohammad Rahimi** · & **Narimaan Samani***

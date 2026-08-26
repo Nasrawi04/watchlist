@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+  <div class="cat-page-header fade-up">
+    <div class="cat-page-header-left">
+      <h1 class="cat-page-title">Anime</h1>
+      <div class="cat-page-sub" id="catSubtitle"></div>
+    </div>
+    <div class="cat-page-header-right">
+      <button class="btn-add-entry" onclick="openAddModal('anime')">+ Add Anime</button>
+    </div>
+  </div>
+  <div class="page-stats fade-up fade-up-1" id="pageStats"></div>
+  <div id="sectionsWrap" class="fade-up fade-up-2"></div>
+</div>
+<script>window.PAGE_CAT = 'anime';</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+
+<script src="js/category.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/create-card.js"></script>
+<script src="js/fav-lists-popup.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

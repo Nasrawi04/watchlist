@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ── Settings layout — wide, two-column ── */
+.settings-wrap { width:100%; }
+.settings-grid {
+  display:grid; grid-template-columns:340px 1fr; gap:1.25rem; align-items:start;
+}
+.settings-col { display:flex; flex-direction:column; gap:1.25rem; min-width:0; }
+
+.settings-section {
+  background:var(--card);
+  border:0.5px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:clamp(1rem, 4vw, 1.75rem);
+}
+.settings-back-link {
+  display:inline-flex; align-items:center; gap:6px; margin-bottom:1.5rem;
+  font-size:12px; color:var(--text-3);
+  text-decoration:none; transition:color .15s;
+}
+.settings-back-link:hover { color:var(--olive-light); }
+.settings-title {
+  font-size:11px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--olive-light);
+  margin-bottom:1.25rem; padding-bottom:.75rem;
+  border-bottom:0.5px solid var(--border);
+}
+
+.field-row { margin-bottom:1.1rem; }
+.field-row:last-child { margin-bottom:0; }
+.field-row .field-label {
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:11px; letter-spacing:1px; text-transform:uppercase;
+  color:var(--text-3); margin-bottom:6px;
+}
+.field-row input, .field-row textarea { width:100%; box-sizing:border-box; }
+.field-hint { font-size:10.5px; color:var(--text-3); font-weight:400; letter-spacing:0; text-transform:none; }
+.field-hint.ok   { color:var(--olive-light); }
+.field-hint.bad  { color:#ff6b6b; }
+.field-static {
+  width:100%; box-sizing:border-box; background:var(--bg-2); border:0.5px solid var(--border-2);
+  border-radius:var(--radius-sm); color:var(--text-2); font-size:14px; padding:10px 14px;
+}
+
+/* ── Avatar section ── */
+.avatar-row { display:flex; align-items:center; gap:1.25rem; }
+.settings-avatar {
+  width:clamp(84px, 20vw, 120px); height:clamp(84px, 20vw, 120px); border-radius:50%;
+  background:var(--olive-faint); border:3px solid var(--border-olive);
+  font-family:var(--serif); font-size:clamp(28px, 7vw, 44px); color:var(--olive-light);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; flex-shrink:0; cursor:pointer; transition:opacity .2s;
+}
+.settings-avatar:hover { opacity:.85; }
+.settings-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.avatar-info { flex:1; min-width:0; }
+.avatar-hint { font-size:11px; color:var(--text-3); margin-top:5px; line-height:1.4; }
+
+/* ── Theme preference ── */
+.theme-pref-row { display:flex; gap:10px; }
+.theme-pref-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;
+  padding:16px 10px; border-radius:var(--radius-sm); cursor:pointer;
+  background:var(--bg-2); border:1.5px solid var(--border-2); color:var(--text-2);
+  font-size:12.5px; font-family:var(--sans); transition:border-color .15s, color .15s;
+}
+.theme-pref-btn svg { width:20px; height:20px; }
+.theme-pref-btn.active { border-color:var(--olive-light); color:var(--olive-light); background:var(--olive-faint); }
+
+/* ── Share profile ── */
+.share-link-row { display:flex; gap:8px; }
+.share-link-row .field-input { flex:1; min-width:0; cursor:pointer; color:var(--text-2); }
+.share-copy-btn {
+  flex-shrink:0; width:42px; height:42px; display:flex; align-items:center; justify-content:center;
+  background:var(--bg-2); border:0.5px solid var(--border-2); border-radius:var(--radius-sm);
+  color:var(--text-2); cursor:pointer; transition:border-color .15s, color .15s;
+}
+.share-copy-btn svg { width:16px; height:16px; }
+.share-copy-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
+.share-copy-btn.copied { border-color:var(--olive-light); color:var(--olive-light); }
+
+/* ── Danger zone ── */
+.danger-zone {
+  background:rgba(220,50,50,0.05);
+  border:0.5px solid rgba(220,50,50,0.2);
+  border-radius:var(--radius-lg);
+  padding:1.5rem; margin-top:1.25rem;
+}
+.danger-title {
+  font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#ff6b6b;
+  margin-bottom:1rem; padding-bottom:.75rem; border-bottom:0.5px solid rgba(220,50,50,0.2);
+}
+.btn-danger {
+  background:rgba(220,50,50,0.1); border:0.5px solid rgba(220,50,50,0.3); color:#ff6b6b;
+  border-radius:var(--radius-sm); padding:10px 20px; font-size:13px; cursor:pointer; transition:all .2s;
+}
+.btn-danger:hover { background:rgba(220,50,50,0.2); }
+
+[data-theme="light"] .danger-zone { background:rgba(180,20,20,0.07); border-color:rgba(180,20,20,0.35); }
+[data-theme="light"] .danger-title { color:#991b1b; }
+[data-theme="light"] .btn-danger { background:rgba(180,20,20,0.1); border-color:rgba(180,20,20,0.45); color:#991b1b; }
+[data-theme="light"] .btn-danger:hover { background:rgba(180,20,20,0.18); }
+
+/* ── Mobile ── */
+@media(max-width:900px) {
+  .settings-grid { grid-template-columns:1fr; }
+}
+@media(max-width:640px) {
+  .cat-page-title { font-size:28px; }
+}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="cat-page-header fade-up">
+    <div>
+      <h1 class="cat-page-title">Settings</h1>
+    </div>
+  </div>
+
+  <a href="profile.html" class="settings-back-link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to Profile
+  </a>
+
+  <div class="settings-wrap">
+    <div class="settings-grid">
+
+      <!-- LEFT: Photo + Preferences -->
+      <div class="settings-col">
+        <div class="settings-section fade-up">
+          <div class="settings-title">Profile Photo</div>
+          <div class="avatar-row">
+            <div class="settings-avatar" id="settingsAvatar"
+                 onclick="document.getElementById('avatarFile').click()"
+                 title="Change photo">?</div>
+            <div class="avatar-info">
+              <button class="btn-save" onclick="document.getElementById('avatarFile').click()">Change Photo</button>
+              <div class="avatar-hint">JPG or PNG · max 5MB<br>Tap photo or button to upload</div>
+              <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="uploadAvatar(event)">
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section fade-up fade-up-1">
+          <div class="settings-title">Appearance</div>
+          <div class="field-row" style="margin-bottom:0">
+            <div class="field-label">Theme</div>
+            <div class="theme-pref-row">
+              <div class="theme-pref-btn" id="themeBtnLight" onclick="setSettingsTheme('light')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                Light
+              </div>
+              <div class="theme-pref-btn" id="themeBtnDark" onclick="setSettingsTheme('dark')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                Dark
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section fade-up fade-up-1">
+          <div class="settings-title">Share Profile</div>
+          <div class="field-row">
+            <div class="field-label">Your Profile Link</div>
+            <div class="share-link-row">
+              <input class="field-input" id="shareProfileUrl" readonly onclick="this.select()" aria-label="Your profile link">
+              <button class="share-copy-btn" id="shareCopyBtn" onclick="copyProfileLink()" title="Copy link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+          <button class="btn-save" style="width:100%;margin-top:1rem" onclick="shareProfileNative()" id="shareNativeBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share Profile
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Account details -->
+      <div class="settings-col">
+        <div class="settings-section fade-up fade-up-1">
+          <div class="settings-title">Account</div>
+          <div class="field-row">
+            <label class="field-label" for="setUsername">
+              <span>Username</span>
+              <span class="field-hint" id="usernameHint"></span>
+            </label>
+            <input class="field-input" id="setUsername" placeholder="your_username"
+                   autocomplete="off" spellcheck="false"
+                   oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();checkUsernameLive()">
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="setDisplayName">Display Name</label>
+            <input class="field-input" id="setDisplayName" placeholder="Your Name">
+          </div>
+          <div class="field-row">
+            <div class="field-label">Email</div>
+            <div class="field-static" id="setEmail">—</div>
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="setBio">
+              <span>Bio</span>
+              <span class="field-hint" id="bioCount">0/150</span>
+            </label>
+            <textarea class="field-input" id="setBio" rows="3"
+                      placeholder="A cinephile who…" maxlength="150" oninput="updateCharCount('setBio','bioCount',150)"></textarea>
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="setQuote">
+              <span>Quote</span>
+              <span class="field-hint" id="quoteCount">0/200</span>
+            </label>
+            <textarea class="field-input" id="setQuote" rows="2"
+                      placeholder="I watch too much TV and I have no regrets." maxlength="200" oninput="updateCharCount('setQuote','quoteCount',200)"></textarea>
+          </div>
+          <button class="btn-save" style="width:100%;margin-top:1rem" onclick="saveSettings()">Save Changes</button>
+        </div>
+
+        <div class="settings-section fade-up fade-up-2">
+          <div class="settings-title">Change Password</div>
+          <div class="field-row">
+            <label class="field-label" for="setNewPassword">New Password</label>
+            <input class="field-input" id="setNewPassword" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+          </div>
+          <button class="btn-save" style="width:100%;margin-top:.25rem" onclick="changePassword()">Update Password</button>
+        </div>
+
+        <div class="danger-zone fade-up fade-up-2">
+          <div class="danger-title">Danger Zone</div>
+          <button class="btn-danger" onclick="doSignOutEverywhere()">Sign Out Everywhere</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script>
+let _sUser = null, _sProfile = null;
+let _usernameCheckTimer = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async (user, profile) => {
+    if (!user) { window.location.href = 'login.html'; return; }
+    _sUser = user;
+    _sProfile = profile;
+    populateSettings();
+    syncThemeButtons();
+  });
+});
+
+function populateSettings() {
+  const p = _sProfile, u = _sUser;
+  const un = p?.username || u.email?.split('@')[0] || '';
+
+  document.getElementById('setUsername').value    = p?.username     || '';
+  document.getElementById('setDisplayName').value = p?.display_name || '';
+  document.getElementById('setBio').value         = p?.bio          || '';
+  document.getElementById('setQuote').value       = p?.quote        || '';
+  document.getElementById('setEmail').textContent = u.email || '—';
+  updateCharCount('setBio', 'bioCount', 150);
+  updateCharCount('setQuote', 'quoteCount', 200);
+
+  const av = document.getElementById('settingsAvatar');
+  if (p?.avatar_url) {
+    av.innerHTML = `<img src="${p.avatar_url}" alt="">`;
+  } else {
+    av.textContent = (un[0] || '?').toUpperCase();
+  }
+
+  const base = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+  document.getElementById('shareProfileUrl').value = base + 'profile-view.html?u=' + encodeURIComponent(un);
+  document.getElementById('shareNativeBtn').style.display = navigator.share ? '' : 'none';
+}
+
+function copyProfileLink() {
+  const input = document.getElementById('shareProfileUrl');
+  input.select();
+  navigator.clipboard?.writeText(input.value).then(() => {
+    const btn = document.getElementById('shareCopyBtn');
+    btn.classList.add('copied');
+    showToast('Link copied!');
+    setTimeout(() => btn.classList.remove('copied'), 1500);
+  }).catch(() => {
+    document.execCommand('copy');
+    showToast('Link copied!');
+  });
+}
+
+function shareProfileNative() {
+  const un = _sProfile?.username || _sUser?.email?.split('@')[0] || '';
+  const url = document.getElementById('shareProfileUrl').value;
+  if (navigator.share) {
+    navigator.share({ title: 'MyScreenScore — @' + un, url }).catch(() => {});
+  } else {
+    copyProfileLink();
+  }
+}
+
+function updateCharCount(fieldId, countId, max) {
+  const len = document.getElementById(fieldId).value.length;
+  document.getElementById(countId).textContent = `${len}/${max}`;
+}
+
+function checkUsernameLive() {
+  const hint = document.getElementById('usernameHint');
+  const val = document.getElementById('setUsername').value.trim();
+  clearTimeout(_usernameCheckTimer);
+  if (!val || val === _sProfile?.username) { hint.textContent = ''; hint.className = 'field-hint'; return; }
+  if (val.length < 3) { hint.textContent = 'Too short'; hint.className = 'field-hint bad'; return; }
+  hint.textContent = 'Checking…'; hint.className = 'field-hint';
+  _usernameCheckTimer = setTimeout(async () => {
+    const available = await checkUsernameAvailable(val, _sUser.id);
+    hint.textContent = available ? 'Available' : 'Taken';
+    hint.className = 'field-hint ' + (available ? 'ok' : 'bad');
+  }, 400);
+}
+
+function setSettingsTheme(theme) {
+  localStorage.setItem('wl-theme', theme);
+  document.documentElement.setAttribute('data-theme', theme);
+  syncThemeButtons();
+}
+
+function syncThemeButtons() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  document.getElementById('themeBtnLight')?.classList.toggle('active', current === 'light');
+  document.getElementById('themeBtnDark')?.classList.toggle('active', current === 'dark');
+}
+
+async function saveSettings() {
+  const username = document.getElementById('setUsername').value.trim();
+  if (!username || username.length < 3) {
+    showToast('Username must be at least 3 characters.', 'err'); return;
+  }
+  const available = await checkUsernameAvailable(username, _sUser.id);
+  if (!available) { showToast('That username is taken. Try another.', 'err'); return; }
+  try {
+    _sProfile = await updateProfile(_sUser.id, {
+      username,
+      display_name: document.getElementById('setDisplayName').value.trim(),
+      bio:          document.getElementById('setBio').value.trim(),
+      quote:        document.getElementById('setQuote').value.trim(),
+    });
+    showToast('Settings saved!');
+  } catch(e) {
+    showToast('Error saving settings.', 'err');
+    console.error(e);
+  }
+}
+
+async function changePassword() {
+  const pw = document.getElementById('setNewPassword').value;
+  if (!pw || pw.length < 6) { showToast('Password must be at least 6 characters.', 'err'); return; }
+  try {
+    const { error } = await sb.auth.updateUser({ password: pw });
+    if (error) throw error;
+    document.getElementById('setNewPassword').value = '';
+    showToast('Password updated!');
+  } catch(e) {
+    showToast('Error updating password.', 'err');
+    console.error(e);
+  }
+}
+
+async function uploadAvatar(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showToast('Image must be under 5MB.', 'err'); return; }
+
+  // Preview immediately
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('settingsAvatar').innerHTML =
+      `<img src="${ev.target.result}" alt="">`;
+  };
+  reader.readAsDataURL(file);
+  showToast('Uploading photo…');
+
+  try {
+    const ext  = file.name.split('.').pop().toLowerCase();
+    const path = `${_sUser.id}/avatar.${ext}`;
+    const { error: upErr } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
+    if (upErr) throw upErr;
+    const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
+    await updateProfile(_sUser.id, { avatar_url: publicUrl });
+    if (_sProfile) _sProfile.avatar_url = publicUrl;
+    ['navUserInitial','navUserInitialMobile'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.innerHTML = `<img src="${publicUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        el.style.padding = '0';
+      }
+    });
+    showToast('Photo updated!');
+  } catch(e) {
+    showToast('Upload failed — check Supabase Storage is set up.', 'err');
+    console.error(e);
+  }
+}
+
+async function doSignOutEverywhere() {
+  const ok = await showConfirm({
+    title: 'Sign out everywhere?',
+    message: 'You will be signed out on all devices immediately.',
+    confirmText: 'Sign Out',
+    iconName: 'logout'
+  });
+  if (!ok) return;
+  await sb.auth.signOut();
+  window.location.href = 'login.html';
+}
+</script>
+</body>
+</html>

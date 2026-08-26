@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.pub-hero{
+  display:flex;align-items:center;gap:2rem;margin-bottom:3rem;padding:2.5rem;
+  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);
+}
+.pub-avatar{
+  width:80px;height:80px;border-radius:50%;flex-shrink:0;
+  background:var(--olive-faint);border:2px solid var(--border-olive);
+  font-family:var(--serif);font-size:36px;color:var(--olive-light);
+  display:flex;align-items:center;justify-content:center;
+}
+.pub-username{font-family:var(--serif);font-size:28px;font-weight:300;letter-spacing:1px;margin-bottom:4px}
+.pub-bio{font-size:14px;color:var(--text-2);margin-bottom:1rem}
+.pub-stats-row{display:flex;gap:1.5rem;flex-wrap:wrap}
+.pub-stat{text-align:center}
+.pub-stat-num{font-family:var(--serif);font-size:24px;color:var(--olive-light)}
+.pub-stat-label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px}
+
+.pub-section-title{
+  font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--olive-light);
+  margin:2.5rem 0 1.25rem;display:flex;align-items:center;gap:12px;
+}
+.pub-section-title::after{content:'';flex:1;height:0.5px;background:var(--border)}
+
+/* Ranked rows */
+.ranked-table{display:flex;flex-direction:column;gap:8px}
+.rank-row{
+  display:grid;grid-template-columns:44px 56px 1fr auto;align-items:center;gap:16px;
+  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);
+  padding:12px 16px;
+}
+.rank-num{font-family:var(--serif);font-size:22px;color:var(--text-3);text-align:center}
+.rank-num.top3{color:var(--olive-light)}
+.rank-poster{width:44px;height:60px;border-radius:6px;overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center}
+.rank-poster img{width:100%;height:100%;object-fit:cover}
+.rank-title{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-meta{font-size:12px;color:var(--text-3);margin-top:3px}
+.rank-score-wrap{text-align:right}
+.rank-score{font-family:var(--serif);font-size:28px;color:var(--olive-light);line-height:1}
+.rank-score-label{font-size:10px;color:var(--text-3);letter-spacing:1px;text-transform:uppercase}
+
+/* Recent rows */
+.recent-list{display:flex;flex-direction:column;gap:8px}
+.recent-row{
+  display:grid;grid-template-columns:56px 1fr auto;align-items:center;gap:16px;
+  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);
+  padding:12px 16px;
+}
+.recent-poster{width:44px;height:60px;border-radius:6px;overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center}
+.recent-poster img{width:100%;height:100%;object-fit:cover}
+.recent-title{font-size:15px;font-weight:500}
+.recent-meta{font-size:12px;color:var(--text-3);margin-top:3px}
+.recent-score{font-family:var(--serif);font-size:24px;color:var(--olive-light);text-align:right}
+.recent-date{font-size:11px;color:var(--text-3);text-align:right}
+
+.cat-badge{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:.5px}
+
+.pub-not-found{text-align:center;padding:5rem 2rem}
+.pub-nf-icon{font-size:3rem;margin-bottom:1rem}
+.pub-nf-text{font-size:16px;color:var(--text-2)}
+
+.pub-footer{
+  text-align:center;margin-top:4rem;padding-top:2rem;border-top:0.5px solid var(--border);
+  font-size:13px;color:var(--text-3);
+}
+.pub-footer a{color:var(--olive-light)}
+
+@media(max-width:600px){
+  .pub-stats-row { gap:1rem; }
+  .pub-stat-num { font-size:20px; }
+  .pub-stat-label { font-size:9px; letter-spacing:.5px; }
+}
+@media(max-width:400px){
+  .pub-stats-row { gap:.75rem; }
+  .pub-stat-num { font-size:17px; }
+  .pub-stat-label { font-size:8px; }
+}
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+</head>
+<body>
+
+<div class="page-wrap" style="max-width:900px;margin:0 auto">
+
+  <div id="pubContent">
+    <div class="page-loading"><div class="spinner"></div></div>
+  </div>
+
+  <div class="pub-footer">
+    <div style="font-family:var(--serif);font-size:20px;margin-bottom:6px">Watch<em style="color:var(--olive-light);font-style:normal">list</em></div>
+    Track everything you watch · <a href="index.html">Sign in to create your own</a>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  const username = params.get('u');
+
+  if (!username) {
+    renderNotFound('No username provided.');
+    return;
+  }
+
+  document.title = `@${username} — MyScreenScore`;
+
+  const profile = await getProfileByUsername(username);
+  if (!profile || !profile.is_public) {
+    renderNotFound(`@${username} hasn't made their profile public.`);
+    return;
+  }
+
+  const entries = await getPublicEntries(profile.id);
+  renderProfile(profile, entries);
+});
+
+function renderNotFound(msg) {
+  document.getElementById('pubContent').innerHTML = `
+    <div class="pub-not-found">
+      <div class="pub-nf-icon" style="opacity:.4"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div class="pub-nf-text">${msg}</div>
+    </div>`;
+}
+
+function renderProfile(profile, entries) {
+  const completed = entries.filter(e => e.status === 'completed');
+  const ranked    = [...completed].sort((a, b) => (b.final_score || 0) - (a.final_score || 0));
+  const recent    = [...completed].sort((a, b) => new Date(b.completed_date||0) - new Date(a.completed_date||0)).slice(0, 10);
+  const rated     = completed.filter(e => e.final_score != null);
+  const avg       = rated.length ? (rated.reduce((s, e) => s + Number(e.final_score), 0) / rated.length).toFixed(1) : '—';
+  const watching  = entries.filter(e => e.status === 'watching').length;
+
+  const html = `
+    <div class="pub-hero fade-up">
+      <div class="pub-avatar">${(profile.username[0] || '?').toUpperCase()}</div>
+      <div>
+        <div class="pub-username">@${profile.username}</div>
+        ${profile.bio ? `<div class="pub-bio">${profile.bio}</div>` : ''}
+        <div class="pub-stats-row">
+          <div class="pub-stat"><div class="pub-stat-num">${completed.length}</div><div class="pub-stat-label">Watched</div></div>
+          <div class="pub-stat"><div class="pub-stat-num">${watching}</div><div class="pub-stat-label">Watching</div></div>
+          <div class="pub-stat"><div class="pub-stat-num">${avg}</div><div class="pub-stat-label">Avg Score</div></div>
+          <div class="pub-stat"><div class="pub-stat-num">${entries.length}</div><div class="pub-stat-label">Total</div></div>
+        </div>
+      </div>
+    </div>
+
+    ${ranked.length ? `
+    <div class="pub-section-title fade-up">Ranked List</div>
+    <div class="ranked-table fade-up">
+      ${ranked.map((e, i) => {
+        const score = e.final_score != null ? Number(e.final_score).toFixed(1) : '—';
+        const cat   = CAT_META[e.cat];
+        return `<div class="rank-row">
+          <div class="rank-num ${i < 3 ? 'top3' : ''}">${i === 0 ? '1' : i === 1 ? '2' : i === 2 ? '3' : `#${i+1}`}</div>
+          <div class="rank-poster">${posterHTML(e)}</div>
+          <div>
+            <div class="rank-title">${e.title}</div>
+            <div class="rank-meta"><span class="cat-badge">${cat?.label}</span> ${genreHTML(e.genres)}</div>
+          </div>
+          <div class="rank-score-wrap">
+            <div class="rank-score">${score}</div>
+            <div class="rank-score-label">score</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+
+    ${recent.length ? `
+    <div class="pub-section-title fade-up" style="margin-top:3rem">Recently Watched</div>
+    <div class="recent-list fade-up">
+      ${recent.map(e => {
+        const score = e.final_score != null ? Number(e.final_score).toFixed(1) : '—';
+        const date  = e.completed_date ? new Date(e.completed_date).toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '';
+        return `<div class="recent-row">
+          <div class="recent-poster">${posterHTML(e)}</div>
+          <div>
+            <div class="recent-title">${e.title}</div>
+            <div class="recent-meta"><span class="cat-badge">${CAT_META[e.cat]?.label}</span> ${genreHTML(e.genres)}</div>
+          </div>
+          <div>
+            <div class="recent-score">${score}</div>
+            <div class="recent-date">${date}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : ''}`;
+
+  document.getElementById('pubContent').innerHTML = html;
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

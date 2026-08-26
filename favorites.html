@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Favorites — MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1E5C26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MyScreenScore">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+<style>
+/* ── Favorites page ── */
+.fav-page-list-header {
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1rem;
+}
+.fav-page-list-title {
+  font-family:var(--serif);font-size:clamp(17px, 3.4vw, 20px);font-weight:300;color:var(--text);
+}
+.fav-page-list-count {
+  font-size:11px;color:var(--text-3);letter-spacing:.5px;margin-top:2px;
+}
+.fav-page-section {
+  margin-bottom:2.5rem;
+}
+.fav-page-section-hd {
+  font-size:11px;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--olive-light);margin:2rem 0 1.25rem;
+  display:flex;align-items:center;gap:12px;
+}
+.fav-page-section-hd::after{content:'';flex:1;height:0.5px;background:var(--border);}
+
+/* Picker */
+#favListPickerOverlay {
+  position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.65);
+  backdrop-filter:blur(10px);display:flex;align-items:center;
+  justify-content:center;padding:16px;box-sizing:border-box;
+  opacity:0;pointer-events:none;transition:opacity .22s;
+}
+#favListPickerOverlay.open{opacity:1;pointer-events:auto;}
+#favListPickerSheet {
+  width:97%;max-width:540px;background:var(--bg-2);
+  border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);
+  box-shadow:4px 4px 0 var(--olive);display:flex;flex-direction:column;
+  max-height:85dvh;transform:translateY(16px);
+  transition:transform .26s cubic-bezier(.4,0,.2,1);
+}
+#favListPickerOverlay.open #favListPickerSheet{transform:translateY(0);}
+
+@media(max-width:600px){
+  .fav-h-grid .q-card{flex:0 0 120px;min-width:120px;}
+  .fav-h-nav{display:none;}
+  .fav-page-list-title{font-size:17px;}
+}
+@media(max-width:400px){
+  .fav-h-grid .q-card{flex:0 0 105px;min-width:105px;}
+}
+
+/* Add list modal (genre + category) */
+#favAddModal {
+  position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.65);
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;box-sizing:border-box;
+  opacity:0;pointer-events:none;transition:opacity .22s;
+}
+#favAddModal.open{opacity:1;pointer-events:auto;}
+#favAddModalCard {
+  background:var(--bg-2);border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
+  width:97%;max-width:480px;max-height:85dvh;overflow-y:auto;overscroll-behavior-y:contain;
+  transform:translateY(16px);transition:transform .26s cubic-bezier(.4,0,.2,1);
+  box-sizing:border-box;
+}
+#favAddModal.open #favAddModalCard{transform:translateY(0);}
+.fav-add-modal-hd {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 20px;border-bottom:0.5px solid var(--border);
+}
+.fav-add-modal-title{font-family:var(--serif);font-size:20px;font-weight:300;}
+.fav-add-modal-body{padding:20px;}
+.fav-add-preview {
+  font-size:13px;color:var(--olive-light);font-style:italic;
+  min-height:18px;margin-bottom:16px;
+}
+.fav-genre-grid {
+  display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;
+}
+.fav-genre-chip {
+  font-size:11px;padding:4px 12px;border-radius:20px;
+  background:var(--card);border:0.5px solid var(--border);
+  color:var(--text-2);cursor:pointer;transition:all .15s;
+  user-select:none;
+}
+.fav-genre-chip.selected{
+  background:var(--olive-faint);border-color:var(--border-olive);
+  color:var(--olive-light);
+}
+.fav-cat-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.fav-cat-btn{
+  flex:1;min-width:80px;padding:10px 8px;text-align:center;
+  border-radius:var(--radius-sm);border:0.5px solid var(--border);
+  background:var(--card);color:var(--text-2);font-size:12px;font-weight:500;
+  cursor:pointer;transition:all .15s;
+}
+.fav-cat-btn.active{
+  background:var(--olive-faint);border-color:var(--border-olive);color:var(--olive-light);
+}
+.fav-add-modal-footer{
+  padding:16px 20px;border-top:0.5px solid var(--border);
+  display:flex;gap:8px;
+}
+.fav-field-label{
+  font-size:11px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--text-3);margin-bottom:8px;
+}
+.fav-page-list-desc {
+  font-size:12.5px; color:var(--text-2); line-height:1.5; margin-top:4px; max-width:520px;
+}
+.list-desc-field {
+  width:100%;box-sizing:border-box;padding:10px 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg-3);color:var(--text);
+  font-family:var(--sans);font-size:14px;outline:none;resize:vertical;min-height:56px;
+  transition:border-color .15s;
+}
+.list-desc-field:focus{border-color:var(--olive-light);}
+.list-desc-count { font-size:10.5px; color:var(--text-3); text-align:right; margin-top:4px; }
+.list-desc-count.over { color:#c0564a; }
+
+/* Edit-details modal (title + description for an existing genre+category list) */
+#favEditListModal {
+  position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.72);
+  backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;
+  padding:16px;box-sizing:border-box;opacity:0;pointer-events:none;transition:opacity .2s;
+}
+#favEditListModal.open { opacity:1;pointer-events:auto; }
+#favEditListCard {
+  background:var(--bg-2);border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
+  width:97%;max-width:420px;padding:24px 24px 20px;box-sizing:border-box;
+  transform:translateY(16px);transition:transform .25s cubic-bezier(.4,0,.2,1);
+}
+#favEditListModal.open #favEditListCard { transform:translateY(0); }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="cat-page-header fade-up">
+    <div class="cat-page-header-left">
+      <h1 class="cat-page-title">Favorites</h1>
+      <div class="cat-page-sub" id="favPageSub"></div>
+    </div>
+    <div class="cat-page-header-right">
+      <button class="btn-add-entry" onclick="openFavAddListModal()">+ Add List</button>
+    </div>
+  </div>
+
+  <!-- Stat boxes -->
+  <div class="page-stats fade-up fade-up-1" id="favPageStats"></div>
+
+  <!-- Main content -->
+  <div id="favPageContent" class="fade-up fade-up-2">
+    <div class="page-loading"><div class="spinner"></div></div>
+  </div>
+
+</div>
+
+<!-- List Picker Overlay -->
+<div id="favListPickerOverlay" onclick="if(event.target===this)closeFavListPicker()">
+  <div id="favListPickerSheet">
+    <div class="fav-picker-hd">
+      <div>
+        <span class="fav-picker-title" id="favListPickerTitle">Edit List</span>
+        <span class="fav-picker-count" id="favListPickerCount"></span>
+      </div>
+      <button onclick="closeFavListPicker()" class="fav-picker-close">✕</button>
+    </div>
+    <div class="fav-picker-search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="favListPickerSearch" class="fav-picker-search-input" placeholder="Search…" autocomplete="off" oninput="_favPickerSearch(this.value)">
+    </div>
+    <div class="fav-picker-list" id="favListPickerList"></div>
+    <div class="fav-picker-footer">
+      <button class="fav-picker-cancel" onclick="closeFavListPicker()">Cancel</button>
+      <button class="fav-picker-save" id="favListPickerSave" onclick="saveFavList()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add List Modal (genre + category) -->
+<div id="favAddModal" onclick="if(event.target===this)closeFavAddModal()">
+  <div id="favAddModalCard">
+    <div class="fav-add-modal-hd">
+      <div class="fav-add-modal-title">New List</div>
+      <button onclick="closeFavAddModal()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;">✕</button>
+    </div>
+    <div class="fav-add-modal-body">
+      <div class="fav-add-preview" id="favAddPreview">Choose a category and genre to get started</div>
+      <div class="fav-field-label">Category</div>
+      <div class="fav-cat-row">
+        <button class="fav-cat-btn" data-cat="tv"       onclick="selectFavCat(this)">TV Shows</button>
+        <button class="fav-cat-btn" data-cat="movies"   onclick="selectFavCat(this)">Movies</button>
+        <button class="fav-cat-btn" data-cat="anime"    onclick="selectFavCat(this)">Anime</button>
+        <button class="fav-cat-btn" data-cat="cartoons" onclick="selectFavCat(this)">Cartoons</button>
+      </div>
+      <div class="fav-field-label" style="margin-top:4px;">Genre <span style="color:var(--text-3);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;">(pick one)</span></div>
+      <div class="fav-genre-grid" id="favGenreGrid"></div>
+      <div class="fav-field-label" style="margin-top:16px;">Description <span style="color:var(--text-3);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;">(optional, max 50 words)</span></div>
+      <textarea id="favAddDescInput" class="list-desc-field" maxlength="500" placeholder="What's this list about?" oninput="_listsUpdateWordCount('favAddDescInput','favAddDescCount')"></textarea>
+      <div class="list-desc-count" id="favAddDescCount">0 / 50 words</div>
+    </div>
+    <div class="fav-add-modal-footer">
+      <button class="btn-save" style="flex:1;" onclick="createFavList()" id="favAddCreate" disabled>Create List</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit List Details Modal (title + description for an existing genre+category list) -->
+<div id="favEditListModal" onclick="if(event.target===this)closeFavAddListEditModal()">
+  <div id="favEditListCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div style="font-family:var(--serif);font-size:20px;font-weight:300;color:var(--text);">Edit List</div>
+      <button onclick="closeFavAddListEditModal()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;line-height:1;">✕</button>
+    </div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:8px;">List Title</div>
+    <input id="favEditListInput" type="text" maxlength="60" aria-label="List title"
+      style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:var(--radius-sm);
+             border:1px solid var(--border);background:var(--bg-3);color:var(--text);
+             font-family:var(--sans);font-size:16px;outline:none;margin-bottom:18px;
+             transition:border-color .15s;" onfocus="this.style.borderColor='var(--olive-light)'" onblur="this.style.borderColor='var(--border)'"
+      oninput="document.getElementById('favEditListSave').disabled=!this.value.trim()">
+    <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:8px;">Description <span style="color:var(--text-3);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;">(optional, max 50 words)</span></div>
+    <textarea id="favEditListDescInput" class="list-desc-field" maxlength="500" placeholder="What's this list about?" oninput="_listsUpdateWordCount('favEditListDescInput','favEditListDescCount')" style="margin-bottom:4px;"></textarea>
+    <div class="list-desc-count" id="favEditListDescCount" style="margin-bottom:14px;">0 / 50 words</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeFavAddListEditModal()" style="flex:1;padding:10px;border-radius:var(--radius-sm);background:var(--bg-3);color:var(--text-2);border:0.5px solid var(--border);font-family:var(--sans);font-size:14px;cursor:pointer;">Cancel</button>
+      <button id="favEditListSave" onclick="saveFavAddListEdit()"
+        style="flex:2;padding:10px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup injected dynamically -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script>
+function _favBreakdownHTML(e) {
+  const isMovie = e.cat==='movies' || e.ratings?._media_type==='movie';
+  if (!isMovie) {
+    const bd = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.filter(n=>parseInt(n)>0).map(Number) : [];
+    const totalS = bd.length || Number(e.total_seasons) || 0;
+    if (totalS > 0) {
+      let chips = '';
+      for (let i=0; i<totalS; i++) chips += `<span class="popup-info-season-chip"><span class="popup-info-season-num">S${i+1}</span><span class="popup-info-season-eps">${bd[i]?bd[i]+' ep':'S'+(i+1)}</span></span>`;
+      return `<div class="popup-info-block"><div class="popup-info-label">TV Show Breakdown</div><div style="display:flex;flex-wrap:wrap;">${chips}</div></div>`;
+    }
+    return '';
+  } else {
+    const rtH=Number(e.runtime_h)||0, rtM=Number(e.runtime_m)||0;
+    return (rtH||rtM) ? `<div class="popup-info-block"><span class="popup-info-runtime"><span class="popup-info-runtime-val">${rtH?rtH+'h '+rtM+'m':rtM+'m'}</span><span class="popup-info-runtime-lbl">Runtime</span></span></div>` : '';
+  }
+}
+
+function _buildCgDetailFav(e) {
+  const score    = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
+  const isMovies = e.cat === 'movies';
+  const esc      = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const { core: coreArr, bonus: bonusArr } = getRatings(e.cat);
+  const isAnimated = e.cat === 'anime' || e.cat === 'cartoons';
+
+  const coreRows = coreArr.map(r => {
+    const val = e.ratings?.[r.key];
+    if (val == null || val === '') return '';
+    return `<div class="fd-rating-row"><span class="fd-rating-label">${r.label}</span><span class="fd-rating-val">${Number(val).toFixed(2)}</span></div>`;
+  }).filter(Boolean).join('');
+
+  const animRow = (!isAnimated && e.ratings?.animation != null && e.ratings?.animation !== '')
+    ? `<div class="fd-rating-row"><span class="fd-rating-label">Animation Quality</span><span class="fd-rating-val">${Number(e.ratings.animation).toFixed(2)}</span></div>` : '';
+
+  const bonusRows = bonusArr.map(r => {
+    const val = e.ratings?.[r.key];
+    if (val == null || val === '') return '';
+    return `<div class="fd-rating-row"><span class="fd-rating-label">${r.label}</span><span class="fd-rating-val">${Number(val).toFixed(2)}</span></div>`;
+  }).filter(Boolean).join('');
+
+  const favs = e.ratings?._favorites || {};
+  const favChips = [
+    favs.character ? `<span class="fav-chip"><span class="fav-chip-label">Fav Character</span>${esc(favs.character)}</span>` : '',
+    (!isMovies && favs.episode) ? `<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span>${esc(favs.episode)}</span>` : '',
+    (!isMovies && favs.season)  ? `<span class="fav-chip"><span class="fav-chip-label">Fav Season</span>${esc(favs.season)}</span>` : '',
+  ].filter(Boolean).join('');
+  const lows = e.ratings?._lowlights || e.ratings?._favorites?._lowlights || {};
+  const lowChips = [
+    lows.character ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Character</span>${esc(lows.character)}</span>` : '',
+    (!isMovies && lows.episode) ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Episode</span>${esc(lows.episode)}</span>` : '',
+    (!isMovies && lows.season)  ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span>${esc(lows.season)}</span>` : '',
+  ].filter(Boolean).join('');
+
+  return `${e.description ? `<div class="fd-description">${esc(e.description)}</div>` : ''}
+  ${_favBreakdownHTML(e)}
+  <div class="fd-cols">
+    ${(coreRows||animRow) ? `<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>${coreRows}${animRow}</div>` : ''}
+    ${bonusRows ? `<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>${bonusRows}</div>` : ''}
+  </div>
+  <div class="fd-final"><span>Final Score</span><strong>${score}</strong></div>
+  ${favChips ? `<div class="fav-chips" style="margin-top:8px;">${favChips}</div>` : ''}
+  ${lowChips ? `<div class="fav-chips" style="margin-top:6px;">${lowChips}</div>` : ''}
+  ${e.notes ? `<div class="fd-notes">"${esc(e.notes)}"</div>` : ''}
+  <a href="#" class="fd-edit-link" onclick="goToDetail('${e.id}','favorites.html');return false;">Edit entry →</a>`;
+}
+
+/* ── Helpers (normally from category.js — inlined for favorites) ── */
+function goToDetail(id, from) {
+  sessionStorage.setItem('detailId', id);
+  sessionStorage.setItem('detailFrom', from || 'favorites.html');
+  window.location.href = 'detail.html';
+}
+
+function scoreColor(score) {
+  if (score == null) return null;
+  if (score >= 9)  return { bg: '#4a7c59' };
+  if (score >= 7)  return { bg: '#6b9e78' };
+  if (score >= 5)  return { bg: '#9aba6a' };
+  if (score >= 3)  return { bg: '#c8a84b' };
+  return { bg: '#c0564a' };
+}
+
+function _favNavScroll(id, dir) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var target = el.scrollWidth > el.clientWidth ? el : (el.closest('.grid-nav-wrap') || el);
+  target.scrollBy({ left: dir * (target.clientWidth * 0.75 || 220), behavior: 'smooth' });
+}
+
+let _favUser = null;
+let _favEntries = [];
+let _favProfile = null;
+let _favListsAll = [];  // genre+category favorite_lists rows (cat != 'custom')
+let _favEntryMap = {};
+
+const GENRES = ['Action','Adventure','Animation','Biography','Comedy','Crime','Documentary','Drama','Family','Fantasy','Heist','Historical','Horror','Medical','Musical','Mystery','Political','Psychological','Romance','Sci-Fi','Slice of Life','Space','Sports','Superhero','Supernatural','Thriller','War','Western'];
+
+// Picker state
+let _favListPickerListId = null;  // null = top picks, 'recommended', '__cat__CAT__PROFILEKEY', or a favorite_lists.id
+let _favListPickerCat = null;
+let _favListPickerGenre = null;
+let _favListPickerSelected = [];
+let _favListPickerPool = [];
+let _favListPickerMax  = Infinity;
+
+// Add List modal state
+let _newListCat = null;
+let _newListGenre = null;
+
+// Popup state
+let _favPopupId = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async (user) => {
+    if (!user) {
+      document.querySelector('.page-wrap').innerHTML = `
+        <div class="guest-page-state fade-up">
+          <div class="guest-page-icon">${icon('heart', 36)}</div>
+          <h2 class="guest-page-title">Your Favorites</h2>
+          <p class="guest-page-sub">Sign in to build out your favorite picks.</p>
+          <div class="guest-cta">
+            <a href="login.html" class="guest-btn-primary">Sign In</a>
+            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
+          </div>
+        </div>`;
+      return;
+    }
+    _favUser = user;
+    await loadFavPage();
+  });
+});
+
+async function loadFavPage() {
+  const [entries, profile, favLists] = await Promise.all([
+    getEntries(_favUser.id),
+    getProfile(_favUser.id),
+    getFavoriteLists(_favUser.id),
+  ]);
+  _favEntries = entries || [];
+  _favProfile = profile;
+  _favListsAll = favLists || [];
+  _favEntryMap = Object.fromEntries(_favEntries.map(e => [e.id, e]));
+
+  renderFavPage();
+}
+
+async function getFavoriteLists(userId) {
+  const { data, error } = await sb.from('favorite_lists')
+    .select('*')
+    .eq('user_id', userId)
+    .neq('cat', 'custom')
+    .order('created_at', { ascending: true });
+  if (error) { console.error('getFavoriteLists:', error); return []; }
+  return data || [];
+}
+
+async function saveFavoriteList(list) {
+  if (list.id) {
+    const upd = { items: list.items, title: list.title };
+    if (list.description !== undefined) upd.description = list.description;
+    const { data, error } = await sb.from('favorite_lists')
+      .update(upd)
+      .eq('id', list.id)
+      .eq('user_id', _favUser.id)
+      .select().single();
+    if (error) throw error;
+    return data;
+  } else {
+    const { data, error } = await sb.from('favorite_lists')
+      .insert({ user_id: _favUser.id, cat: list.cat, genre: list.genre, title: list.title, description: list.description || null, items: list.items || [] })
+      .select().single();
+    if (error) throw error;
+    return data;
+  }
+}
+
+async function deleteFavoriteList(id) {
+  const { error } = await sb.from('favorite_lists').delete().eq('id', id).eq('user_id', _favUser.id);
+  if (error) throw error;
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function favCard(e, rank) {
+  const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
+  const rankCls = rank === 0 ? 'cg-rank-1' : rank === 1 ? 'cg-rank-2' : rank === 2 ? 'cg-rank-3' : 'cg-rank-other';
+  const rankBadge = rank != null ? `<div class="cg-rank-badge ${rankCls}">${rank + 1}</div>` : '';
+  const scoreHTML = score ? `<div style="font-family:var(--serif);font-size:15px;font-weight:300;color:var(--olive-light);margin-top:4px;text-align:right">${score}</div>` : '';
+  return `<div class="q-card" onclick="openFavPopup('${e.id}')" style="cursor:pointer;">
+    <div class="q-poster" style="position:relative;">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${rankBadge}</div>
+    <div class="q-info">
+      <div class="q-title">${esc(e.title)}</div>
+      <div class="q-genre">${getTypeBadge(e,'friend')}${genreHTML(e.genres, 3)}</div>
+      ${scoreHTML}
+    </div>
+  </div>`;
+}
+
+function hScrollSection(listId, title, subtitle, items, showEdit, onEdit, onDelete, onRename, description) {
+  const cards = items.map((e, i) => favCard(e, i)).join('');
+  const RENAME_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`;
+  const EDIT_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+  const DEL_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+  const editBtn = showEdit
+    ? `<div style="display:flex;gap:8px;">
+        ${onRename ? `<button class="fav-edit-btn" style="padding:6px 10px;" title="Edit details" onclick="${onRename}">${RENAME_SVG}</button>` : ''}
+        <button class="fav-edit-btn" onclick="${onEdit}">${EDIT_SVG} Edit</button>
+        ${onDelete ? `<button class="fav-edit-btn" style="color:var(--text-3);border-color:var(--border);" onclick="${onDelete}">${DEL_SVG}</button>` : ''}
+       </div>`
+    : '';
+  const gid = 'fsg-' + (listId || 'top');
+  const emptyMsg = `<div style="font-size:13px;color:var(--text-3);padding:8px 0;">Nothing added yet — click Edit to add items.</div>`;
+  const gridHtml = cards
+    ? `<div class="fav-grid-container"><div class="grid-nav-wrap"><button class="grid-nav-btn arr-left" onclick="event.stopPropagation();_favNavScroll(&quot;${gid}&quot;,-1)" aria-label="Scroll left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><button class="grid-nav-btn arr-right" onclick="event.stopPropagation();_favNavScroll(&quot;${gid}&quot;,1)" aria-label="Scroll right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button><div class="fav-watching-grid" id="${gid}">${cards}</div></div></div>`
+    : `<div>${emptyMsg}</div>`;
+  return `<div class="fav-page-section">
+    <div class="fav-page-list-header">
+      <div>
+        <div class="fav-page-list-title">${esc(title)}</div>
+        ${subtitle ? `<div class="fav-page-list-count">${esc(subtitle)}</div>` : ''}
+        ${description ? `<div class="fav-page-list-desc">${esc(description)}</div>` : ''}
+      </div>
+      ${editBtn}
+    </div>
+    ${gridHtml}
+  </div>`;
+}
+
+function renderFavPage() {
+  const topPicks = Array.isArray(_favProfile?.top_picks) && _favProfile.top_picks.length
+    ? _favProfile.top_picks.map(id => _favEntryMap[id]).filter(Boolean)
+    : [];
+
+  const cats = ['tv','movies','anime','cartoons'];
+  const catLabels = { tv:'Favorite TV Shows', movies:'Favorite Movies', anime:'Favorite Anime', cartoons:'Favorite Cartoons' };
+  const catKeys = { tv:'fav_tv', movies:'fav_movies', anime:'fav_anime', cartoons:'fav_cartoons' };
+  const catPicks = {};
+  cats.forEach(cat => {
+    const key = catKeys[cat];
+    catPicks[cat] = Array.isArray(_favProfile?.[key]) && _favProfile[key].length
+      ? _favProfile[key].map(id => _favEntryMap[id]).filter(Boolean)
+      : [];
+  });
+
+  const recPicks = Array.isArray(_favProfile?.recommended) && _favProfile.recommended.length
+    ? _favProfile.recommended.map(id => _favEntryMap[id]).filter(Boolean)
+    : [];
+
+  const statsEl = document.getElementById('favPageStats');
+  statsEl.innerHTML = `
+    <div class="page-stat"><div class="page-stat-num">${topPicks.length}</div><div class="page-stat-label">Top Picks</div></div>
+    <div class="page-stat"><div class="page-stat-num">${recPicks.length}</div><div class="page-stat-label">Recommend</div></div>
+    <div class="page-stat"><div class="page-stat-num">${catPicks.tv.length}</div><div class="page-stat-label">TV</div></div>
+    <div class="page-stat"><div class="page-stat-num">${catPicks.movies.length}</div><div class="page-stat-label">Movies</div></div>
+    <div class="page-stat"><div class="page-stat-num">${catPicks.anime.length}</div><div class="page-stat-label">Anime</div></div>
+    <div class="page-stat"><div class="page-stat-num">${catPicks.cartoons.length}</div><div class="page-stat-label">Cartoons</div></div>`;
+
+  const totalFavorited = topPicks.length + recPicks.length + cats.reduce((s,c) => s + catPicks[c].length, 0);
+  document.getElementById('favPageSub').textContent = `${totalFavorited} favorite${totalFavorited!==1?'s':''} picked · ${_favEntries.length} entries in your library`;
+
+  let html = '';
+
+  html += `<div class="fav-page-section-hd">Handpicked</div>`;
+  html += hScrollSection('top', 'Top Favorites', `${topPicks.length} items`, topPicks, true, `openFavListPicker(null)`);
+  html += hScrollSection('recommended', 'Would Recommend', `${recPicks.length} items`, recPicks, true, `openRecPicker()`);
+
+  cats.forEach(cat => {
+    const key = catKeys[cat];
+    const items = catPicks[cat];
+    html += `<div class="fav-page-section-hd">${catLabels[cat]}</div>`;
+    html += hScrollSection(`default-${cat}`, catLabels[cat], `${items.length} items`, items, true,
+      `openFavListPickerCat(&quot;${cat}&quot;,&quot;${key}&quot;)`);
+
+    const genreLists = _favListsAll.filter(l => l.cat === cat);
+    genreLists.forEach(list => {
+      const listItems = (list.items || []).map(id => _favEntryMap[id]).filter(Boolean);
+      html += hScrollSection(list.id, list.title, `${listItems.length} items${list.genre ? ' · ' + list.genre : ''}`, listItems, true,
+        `openFavListPicker(&quot;${list.id}&quot;)`,
+        `deleteFavListConfirm(&quot;${list.id}&quot;)`,
+        `openFavAddListEditModal(&quot;${list.id}&quot;)`,
+        list.description);
+    });
+  });
+
+  document.getElementById('favPageContent').innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+// LIST PICKER (edit built-in favorite sections)
+// ══════════════════════════════════════════
+function openRecPicker() {
+  _favListPickerListId = 'recommended';
+  _favListPickerCat = null;
+  _favListPickerGenre = null;
+  _favListPickerMax = Infinity;
+  const currentItems = Array.isArray(_favProfile?.recommended) ? _favProfile.recommended.slice() : [];
+  _favListPickerSelected = currentItems.filter(id => !!_favEntryMap[id]);
+
+  _favListPickerPool = _favEntries.filter(e => e.status === 'completed' || e.status === 'ongoing');
+
+  document.getElementById('favListPickerTitle').textContent = 'Would Recommend';
+  _favPickerResetSearch();
+  _favUpdateCount();
+  _favRenderPickerList();
+
+  document.getElementById('favListPickerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function openFavListPickerCat(cat, profileKey) {
+  const currentItems = Array.isArray(_favProfile?.[profileKey]) ? _favProfile[profileKey].slice() : [];
+  _favListPickerListId = `__cat__${cat}__${profileKey}`;
+  _favListPickerCat = cat;
+  _favListPickerGenre = null;
+  _favListPickerMax = Infinity;
+
+  _favListPickerSelected = currentItems.filter(id => !!_favEntryMap[id]);
+
+  let pool = _favEntries.filter(e => e.status === 'completed' || e.status === 'ongoing');
+  if (cat === 'movies') pool = pool.filter(e => e.cat==='movies' || e.ratings?._media_type==='movie');
+  else if (cat === 'tv') pool = pool.filter(e => e.cat==='tv');
+  else pool = pool.filter(e => e.cat === cat);
+  _favListPickerPool = pool;
+
+  const catLabel = { tv:'TV Shows', movies:'Movies', anime:'Anime', cartoons:'Cartoons' }[cat];
+  document.getElementById('favListPickerTitle').textContent = `Favorite ${catLabel}`;
+  _favPickerResetSearch();
+  _favUpdateCount();
+  _favRenderPickerList();
+
+  document.getElementById('favListPickerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function openFavListPicker(listId) {
+  _favListPickerListId = listId; // null = top picks; otherwise a favorite_lists.id
+
+  if (listId === null) {
+    const title = 'Top Favorites';
+    const currentItems = Array.isArray(_favProfile?.top_picks) ? _favProfile.top_picks.slice() : [];
+    _favListPickerMax = 5;
+    _favListPickerCat = null;
+    _favListPickerGenre = null;
+    _favListPickerSelected = currentItems.filter(id => !!_favEntryMap[id]);
+    _favListPickerPool = _favEntries.filter(e => e.status === 'completed' || e.status === 'ongoing');
+    document.getElementById('favListPickerTitle').textContent = title;
+    _favPickerResetSearch();
+    _favUpdateCount();
+    _favRenderPickerList();
+    document.getElementById('favListPickerOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    return;
+  }
+
+  // Genre+category list (favorite_lists row)
+  const list = _favListsAll.find(l => l.id === listId);
+  if (!list) return;
+  const cat = list.cat, genre = list.genre;
+  _favListPickerMax = Infinity;
+  _favListPickerCat = cat;
+  _favListPickerGenre = genre;
+  _favListPickerSelected = (list.items || []).filter(id => !!_favEntryMap[id]);
+
+  let pool = _favEntries.filter(e => e.status === 'completed' || e.status === 'ongoing');
+  if (cat === 'movies') pool = pool.filter(e => e.cat==='movies' || e.ratings?._media_type==='movie');
+  else if (cat === 'tv') pool = pool.filter(e => e.cat==='tv');
+  else pool = pool.filter(e => e.cat === cat);
+  if (genre) pool = pool.filter(e => (e.genres || []).includes(genre));
+  _favListPickerPool = pool;
+
+  document.getElementById('favListPickerTitle').textContent = list.title;
+  _favPickerResetSearch();
+  _favUpdateCount();
+  _favRenderPickerList();
+  document.getElementById('favListPickerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _favRankCls(i) {
+  return i === 0 ? 'cg-rank-1' : i === 1 ? 'cg-rank-2' : i === 2 ? 'cg-rank-3' : 'cg-rank-other';
+}
+
+function _favUpdateCount() {
+  const maxLabel = _favListPickerMax === Infinity ? '∞' : String(_favListPickerMax);
+  document.getElementById('favListPickerCount').textContent = `${_favListPickerSelected.length} / ${maxLabel}`;
+}
+
+function _favDragHandleSVG() {
+  return '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2" cy="2" r="1.4"/><circle cx="8" cy="2" r="1.4"/><circle cx="2" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="2" cy="14" r="1.4"/><circle cx="8" cy="14" r="1.4"/></svg>';
+}
+
+let _favPickerSearchQuery = '';
+function _favPickerSearch(q) {
+  _favPickerSearchQuery = q.trim().toLowerCase();
+  _favRenderPickerList();
+}
+function _favPickerResetSearch() {
+  _favPickerSearchQuery = '';
+  const inp = document.getElementById('favListPickerSearch');
+  if (inp) inp.value = '';
+}
+
+function _favRenderPickerList() {
+  const listEl = document.getElementById('favListPickerList');
+  const prevScroll = listEl.scrollTop;
+
+  const selSet = new Set(_favListPickerSelected);
+  const inSel  = _favListPickerSelected.map(id => _favEntryMap[id]).filter(Boolean);
+  const rest   = _favListPickerPool.filter(e => !selSet.has(e.id)).sort((a,b) => (liveScore(b)||0)-(liveScore(a)||0));
+  let sorted = [...inSel, ...rest];
+
+  if (_favPickerSearchQuery) {
+    const q = _favPickerSearchQuery;
+    sorted = sorted.filter(e => {
+      const hay = [e.title, ...(e.genres||[]), CAT_META[e.cat]?.label].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  if (!sorted.length) {
+    listEl.innerHTML = `<div class="fav-picker-empty">No matches for "${esc(_favPickerSearchQuery)}"</div>`;
+    listEl.scrollTop = 0;
+    return;
+  }
+
+  listEl.innerHTML = sorted.map(e => {
+    const isSel   = selSet.has(e.id);
+    const slotNum = _favListPickerSelected.indexOf(e.id);
+    const sc      = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
+    const rankCls = _favRankCls(slotNum);
+    return `<div class="fav-picker-item ${isSel?'selected':''}" onclick="toggleFavListItem(this)" data-id="${e.id}">
+      ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onclick="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
+      <div class="fav-picker-poster">${e.poster_url ? `<img src="${e.poster_url}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase())}
+        ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
+      </div>
+      <div class="fav-picker-info"><div class="fav-picker-name">${esc(e.title)}</div><div class="fav-picker-sub">${(CAT_META[e.cat]?.label)||''}</div></div>
+      ${sc ? `<div class="fav-picker-score">${sc}</div>` : ''}
+      <div class="fav-picker-check">${isSel ? '✓' : ''}</div>
+    </div>`;
+  }).join('');
+
+  listEl.scrollTop = prevScroll;
+}
+
+function toggleFavListItem(el) {
+  const id = el.dataset.id;
+  const idx = _favListPickerSelected.indexOf(id);
+
+  if (idx >= 0) {
+    _favListPickerSelected.splice(idx, 1);
+  } else {
+    if (_favListPickerSelected.length >= _favListPickerMax) {
+      showToast(`Max ${_favListPickerMax} items.`, 'err'); return;
+    }
+    _favListPickerSelected.push(id);
+  }
+
+  _favUpdateCount();
+  _favRenderPickerList();
+}
+
+/* ── Drag to reorder selected items ── */
+let _favDrag = null;
+
+document.addEventListener('pointerdown', e => {
+  const handle = e.target.closest('.fav-drag-handle');
+  if (!handle) return;
+  const item = handle.closest('.fav-picker-item');
+  if (!item) return;
+  e.preventDefault();
+
+  const list = document.getElementById('favListPickerList');
+  const selectedEls = Array.from(list.querySelectorAll('.fav-picker-item.selected'));
+  const startIndex = selectedEls.indexOf(item);
+  if (startIndex < 0) return;
+
+  _favDrag = {
+    item, startIndex, currentIndex: startIndex,
+    startY: e.clientY,
+    itemHeight: item.getBoundingClientRect().height,
+    selectedEls,
+  };
+
+  item.classList.add('dragging');
+  item.style.position = 'relative';
+  item.style.zIndex = '5';
+
+  document.addEventListener('pointermove', _favDragMove);
+  document.addEventListener('pointerup', _favDragEnd);
+  document.addEventListener('pointercancel', _favDragEnd);
+});
+
+function _favDragMove(e) {
+  if (!_favDrag) return;
+  const d = _favDrag;
+  const deltaY = e.clientY - d.startY;
+  d.item.style.transform = `translateY(${deltaY}px)`;
+
+  const shift = Math.round(deltaY / d.itemHeight);
+  const newIndex = Math.min(Math.max(d.startIndex + shift, 0), d.selectedEls.length - 1);
+
+  if (newIndex !== d.currentIndex) {
+    d.selectedEls.forEach((el, i) => {
+      if (el === d.item) return;
+      el.style.transition = 'transform .15s ease';
+      if (i > d.startIndex && i <= newIndex)      el.style.transform = `translateY(-${d.itemHeight}px)`;
+      else if (i < d.startIndex && i >= newIndex) el.style.transform = `translateY(${d.itemHeight}px)`;
+      else                                        el.style.transform = '';
+    });
+    d.currentIndex = newIndex;
+  }
+}
+
+function _favDragEnd() {
+  if (!_favDrag) return;
+  const d = _favDrag;
+  document.removeEventListener('pointermove', _favDragMove);
+  document.removeEventListener('pointerup', _favDragEnd);
+  document.removeEventListener('pointercancel', _favDragEnd);
+
+  if (d.currentIndex !== d.startIndex) {
+    const [movedId] = _favListPickerSelected.splice(d.startIndex, 1);
+    _favListPickerSelected.splice(d.currentIndex, 0, movedId);
+  }
+
+  d.selectedEls.forEach(el => {
+    el.style.transform = '';
+    el.style.transition = '';
+    el.style.zIndex = '';
+    el.style.position = '';
+    el.classList.remove('dragging');
+  });
+
+  _favDrag = null;
+  _favRenderPickerList();
+}
+
+async function saveFavList() {
+  try {
+    if (_favListPickerListId === null) {
+      await updateProfile(_favUser.id, { top_picks: _favListPickerSelected });
+      if (_favProfile) _favProfile.top_picks = _favListPickerSelected.slice();
+    } else if (_favListPickerListId === 'recommended') {
+      await updateProfile(_favUser.id, { recommended: _favListPickerSelected });
+      if (_favProfile) _favProfile.recommended = _favListPickerSelected.slice();
+    } else if (String(_favListPickerListId).startsWith('__cat__')) {
+      const parts = _favListPickerListId.split('__');
+      const profileKey = parts[3];
+      await updateProfile(_favUser.id, { [profileKey]: _favListPickerSelected });
+      if (_favProfile) _favProfile[profileKey] = _favListPickerSelected.slice();
+    } else {
+      // Genre+category favorite_lists row
+      const list = _favListsAll.find(l => l.id === _favListPickerListId);
+      if (list) {
+        list.items = _favListPickerSelected.slice();
+        await saveFavoriteList(list);
+      }
+    }
+    closeFavListPicker();
+    renderFavPage();
+    showToast('Saved!');
+  } catch(e) { showToast('Error saving.', 'err'); console.error(e); }
+}
+
+async function deleteFavListConfirm(id) {
+  const list = _favListsAll.find(l => l.id === id);
+  const ok = await showConfirm({ title: 'Delete List?', message: '"'+(list?.title||'this list')+'" will be permanently deleted.', confirmText: 'Delete', iconName: 'x' });
+  if (!ok) return;
+  try {
+    await deleteFavoriteList(id);
+    _favListsAll = _favListsAll.filter(l => l.id !== id);
+    renderFavPage();
+    showToast('List deleted.');
+  } catch(e) { showToast('Error deleting.', 'err'); }
+}
+
+function closeFavListPicker() {
+  document.getElementById('favListPickerOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ══════════════════════════════════════════
+// ADD LIST MODAL (genre + category)
+// ══════════════════════════════════════════
+function openFavAddListModal() {
+  _newListCat = null; _newListGenre = null;
+  document.getElementById('favAddPreview').textContent = 'Choose a category and genre to get started';
+  document.querySelectorAll('.fav-cat-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('favGenreGrid').innerHTML = '';
+  document.getElementById('favAddCreate').disabled = true;
+  document.getElementById('favAddDescInput').value = '';
+  _listsUpdateWordCount('favAddDescInput','favAddDescCount');
+  _listsGuardWordLimit('favAddDescInput','favAddDescCount');
+  document.getElementById('favAddModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeFavAddModal() {
+  document.getElementById('favAddModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function selectFavCat(btn) {
+  document.querySelectorAll('.fav-cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _newListCat = btn.dataset.cat;
+  _newListGenre = null;
+  document.getElementById('favAddCreate').disabled = true;
+  updateFavPreview();
+  renderGenreGrid();
+}
+function renderGenreGrid() {
+  document.getElementById('favGenreGrid').innerHTML = GENRES.map(g =>
+    `<span class="fav-genre-chip" onclick="selectFavGenre(this,'${g}')">${g}</span>`
+  ).join('');
+}
+function selectFavGenre(el, genre) {
+  document.querySelectorAll('.fav-genre-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  _newListGenre = genre;
+  document.getElementById('favAddCreate').disabled = !(_newListCat && _newListGenre);
+  updateFavPreview();
+}
+function updateFavPreview() {
+  const catLabel = CAT_META[_newListCat]?.singular || '';
+  if (_newListCat && _newListGenre) {
+    document.getElementById('favAddPreview').textContent = `"Favorite ${_newListGenre} ${catLabel}s"`;
+  } else if (_newListCat) {
+    document.getElementById('favAddPreview').textContent = `Choose a genre for your ${catLabel} list`;
+  } else {
+    document.getElementById('favAddPreview').textContent = 'Choose a category and genre to get started';
+  }
+}
+async function createFavList() {
+  if (!_newListCat || !_newListGenre) return;
+  const catLabel = CAT_META[_newListCat]?.singular || '';
+  const title = `Favorite ${_newListGenre} ${catLabel}s`;
+  const description = document.getElementById('favAddDescInput').value.trim();
+  try {
+    const newList = await saveFavoriteList({ cat: _newListCat, genre: _newListGenre, title, description, items: [] });
+    _favListsAll.push(newList);
+    closeFavAddModal();
+    renderFavPage();
+    showToast(`"${title}" created!`);
+    setTimeout(() => openFavListPicker(newList.id), 300);
+  } catch(e) { showToast('Error creating list.', 'err'); console.error(e); }
+}
+
+// 50-word cap on description fields. _listsGuardWordLimit blocks further
+// typing once the limit is reached (deletions and replacing a selection
+// still work) instead of letting extra words in and yanking them back
+// after the fact. _listsUpdateWordCount stays as a safety-net fallback
+// for input paths that bypass beforeinput (e.g. some IME flows).
+function _listsCountWords(s) {
+  return s.trim() ? s.trim().split(/\s+/).length : 0;
+}
+function _listsUpdateWordCount(inputId, countId) {
+  const el = document.getElementById(inputId);
+  const words = el.value.trim().split(/\s+/).filter(Boolean);
+  const countEl = document.getElementById(countId);
+  if (words.length > 50) {
+    el.value = words.slice(0, 50).join(' ');
+    if (countEl) { countEl.textContent = 'Reached max word limit (50/50 words)'; countEl.classList.add('over'); }
+    return;
+  }
+  const count = words.length;
+  if (countEl) {
+    countEl.textContent = `${count} / 50 words`;
+    countEl.classList.toggle('over', count >= 50);
+  }
+}
+function _listsGuardWordLimit(inputId, countId) {
+  const el = document.getElementById(inputId);
+  if (!el || el.dataset.wordLimitGuarded) return;
+  el.dataset.wordLimitGuarded = '1';
+  el.addEventListener('beforeinput', e => {
+    if (e.inputType && e.inputType.startsWith('delete')) return;
+    if (el.selectionStart !== el.selectionEnd) return;
+    const count = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
+    if (count >= 50) {
+      e.preventDefault();
+      const countEl = document.getElementById(countId);
+      if (countEl) { countEl.textContent = 'Reached max word limit (50/50 words)'; countEl.classList.add('over'); }
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+// EDIT LIST DETAILS MODAL (title + description for an existing genre+category list)
+// ══════════════════════════════════════════
+let _favEditListId = null;
+function openFavAddListEditModal(listId) {
+  const list = _favListsAll.find(l => l.id === listId);
+  if (!list) return;
+  _favEditListId = listId;
+  document.getElementById('favEditListInput').value = list.title || '';
+  document.getElementById('favEditListDescInput').value = list.description || '';
+  _listsUpdateWordCount('favEditListDescInput','favEditListDescCount');
+  _listsGuardWordLimit('favEditListDescInput','favEditListDescCount');
+  document.getElementById('favEditListSave').disabled = !list.title;
+  document.getElementById('favEditListModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeFavAddListEditModal() {
+  document.getElementById('favEditListModal').classList.remove('open');
+  document.body.style.overflow = '';
+  _favEditListId = null;
+}
+async function saveFavAddListEdit() {
+  const title = document.getElementById('favEditListInput').value.trim();
+  const description = document.getElementById('favEditListDescInput').value.trim();
+  if (!title || !_favEditListId) return;
+  try {
+    const list = _favListsAll.find(l => l.id === _favEditListId);
+    if (list) {
+      list.title = title;
+      list.description = description;
+      await saveFavoriteList(list);
+      closeFavAddListEditModal();
+      renderFavPage();
+      showToast('List updated!');
+    }
+  } catch(e) { showToast('Error saving list.', 'err'); console.error(e); }
+}
+
+// ══════════════════════════════════════════
+// RATINGS POPUP
+// ══════════════════════════════════════════
+function openFavPopup(id) {
+  const e = _favEntryMap[id];
+  if (!e) return;
+  _favPopupId = id;
+  if (!document.getElementById('cgPopupOverlay')) _injectFavPopup();
+  const pEl = document.getElementById('cgPopupPoster');
+  pEl.innerHTML = e.poster_url ? `<img src="${e.poster_url}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);">` : esc((e.title||'?')[0].toUpperCase());
+  const _pyIsMovie = e.cat==='movies'||e.ratings?._media_type==='movie';
+  const _pyStart = e.year || null;
+  const _pyEnd = e.ratings?._completion_year || null;
+  let _pyStr = '';
+  if (_pyStart) {
+    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ` <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">${_pyStart}</span>`;
+    else _pyStr = ` <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">${_pyStart}\u2013${_pyEnd||'Present'}</span>`;
+  }
+  document.getElementById('cgPopupTitle').innerHTML = esc(e.title) + _pyStr;
+  const date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+  const meta = [CAT_META[e.cat]?.label, ...(e.genres||[]), date].filter(Boolean);
+  const metaEl = document.getElementById('cgPopupMeta');
+  metaEl.innerHTML = meta.map(m => `<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:20px;padding:2px 8px;font-size:10px;letter-spacing:.4px">${esc(m)}</span>`).join('')
+    + `<a href="#" onclick="goToDetail('${e.id}','favorites.html');return false;" style="font-size:11px;color:var(--text-3);text-decoration:none;align-self:center;margin-left:4px;">Edit →</a>`;
+  const infoEl = document.getElementById('cgPopupInfo');
+  if (infoEl) infoEl.innerHTML = '';
+  document.getElementById('cgPopupBody').innerHTML = _buildCgDetailFav(e);
+  const ccBtn = document.getElementById('cgPopupCcBtn');
+  if (ccBtn) ccBtn.onclick = () => { closeFavPopup(); sessionStorage.setItem('detailId',id); sessionStorage.setItem('detailFrom','favorites.html'); window.location.href='detail.html'; };
+  const ov = document.getElementById('cgPopupOverlay');
+  ov.style.pointerEvents='auto'; ov.style.opacity='1';
+  document.getElementById('cgPopupCard').style.transform='translateY(0)';
+  document.body.style.overflow='hidden';
+}
+
+function _injectFavPopup() {
+  if (document.getElementById('cgPopupOverlay')) return;
+  const el = document.createElement('div');
+  el.id='cgPopupOverlay';
+  el.style.cssText='position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;';
+  el.innerHTML=`<div id="cgPopupCard" style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:100%;max-width:min(97vw, 760px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;position:relative;box-sizing:border-box;transform:translateY(18px);transition:transform 260ms var(--ease);">
+    <div style="display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0;">
+      <div id="cgPopupPoster" style="width:72px;height:100px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);font-family:var(--serif);font-size:24px;color:var(--text-3);"></div>
+      <div style="flex:1;min-width:0;padding-top:4px;">
+        <div id="cgPopupTitle" style="font-family:var(--serif);font-size:28px;font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text);"></div>
+        <div id="cgPopupMeta" style="font-size:12px;color:var(--text-3);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+        <div id="cgPopupInfo" style="margin-top:4px;"></div>
+      </div>
+      <button onclick="closeFavPopup()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;">✕</button>
+    </div>
+    <div id="cgPopupBody" style="padding:16px 20px 4px;"></div>
+    <div style="padding:0 20px 20px;"><button id="cgPopupCcBtn" class="cc-strip" style="margin-top:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Comments</span></button></div>
+  </div>`;
+  el.addEventListener('click', ev => { if(ev.target===el) closeFavPopup(); });
+  document.body.appendChild(el);
+}
+
+function closeFavPopup() {
+  const ov=document.getElementById('cgPopupOverlay');
+  if(!ov)return;
+  ov.style.opacity='0'; ov.style.pointerEvents='none';
+  const card=document.getElementById('cgPopupCard');
+  if(card) card.style.transform='translateY(18px)';
+  document.body.style.overflow='';
+  _favPopupId=null;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('favListPickerOverlay')?.classList.contains('open')) closeFavListPicker();
+  else if (document.getElementById('favAddModal')?.classList.contains('open')) closeFavAddModal();
+  else if (document.getElementById('favEditListModal')?.classList.contains('open')) closeFavAddListEditModal();
+  else if (document.getElementById('cgPopupOverlay')?.style.opacity === '1') closeFavPopup();
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>
