@@ -54,17 +54,121 @@ function _discInterleave(a, b) {
 
 // Click handler for a Discover card. If we have a real TMDB id, route
 // straight to title.html as usual. If not (e.g. a MyScreenScore-rated
-// title where nobody has linked it to TMDB yet), fall back to opening
-// a TMDB search for that title in a new tab instead of a dead link.
+// title where nobody has linked it to TMDB yet), open a popup letting
+// the user search TMDB and pick the right match — selecting one links
+// it for every user who rated that title, not just whoever clicked.
 function _discClickAttr(it) {
   if (it.id != null && it.media_type) {
     return `onclick="goToTitle('${it.media_type}', ${it.id})"`;
   }
-  return `onclick='_discOpenFallbackSearch(${JSON.stringify(it.title || '')})'`;
+  return `onclick='_discOpenLinkPopup(${JSON.stringify(it.title || '')}, ${JSON.stringify(it.derived_type || 'tv')})'`;
 }
 
-function _discOpenFallbackSearch(title) {
-  window.open('https://www.themoviedb.org/search?query=' + encodeURIComponent(title), '_blank', 'noopener');
+/* ── Link-to-TMDB popup for unlinked MyScreenScore titles ── */
+function _discInjectLinkOverlay() {
+  if (document.getElementById('discLinkOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'discLinkOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
+  el.innerHTML = `
+    <div id="discLinkCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:460px;width:100%;max-height:85vh;overflow-y:auto;padding:1.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <div style="font-family:var(--serif);font-size:20px;font-weight:400;">Link to TMDB</div>
+        <button onclick="_discCloseLinkPopup()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;line-height:1;">&#x2715;</button>
+      </div>
+      <div id="discLinkSubtitle" style="font-size:13px;color:var(--text-3);margin-bottom:1rem;"></div>
+      <input type="text" id="discLinkSearchInput" class="field-input" placeholder="Search TMDB…" style="width:100%;margin-bottom:1rem;box-sizing:border-box;">
+      <div id="discLinkResults"></div>
+    </div>`;
+  el.addEventListener('click', e => { if (e.target === el) _discCloseLinkPopup(); });
+  document.body.appendChild(el);
+  document.getElementById('discLinkSearchInput').addEventListener('input', () => {
+    clearTimeout(_discLinkSearchTimer);
+    _discLinkSearchTimer = setTimeout(_discRunLinkSearch, 350);
+  });
+}
+
+let _discLinkSearchTimer = null;
+let _discLinkContext = null; // { title, derivedType }
+
+function _discOpenLinkPopup(title, derivedType) {
+  _discInjectLinkOverlay();
+  _discLinkContext = { title, derivedType };
+  document.getElementById('discLinkSubtitle').textContent = `Find the correct TMDB match for "${title}" to combine everyone's ratings into one score.`;
+  const input = document.getElementById('discLinkSearchInput');
+  input.value = title;
+  document.getElementById('discLinkResults').innerHTML = '';
+  const ov = document.getElementById('discLinkOverlay');
+  ov.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  _discRunLinkSearch();
+}
+
+function _discCloseLinkPopup() {
+  const ov = document.getElementById('discLinkOverlay');
+  if (ov) ov.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function _discRunLinkSearch() {
+  const input = document.getElementById('discLinkSearchInput');
+  const resultsEl = document.getElementById('discLinkResults');
+  const query = input.value.trim();
+  if (query.length < 2) { resultsEl.innerHTML = ''; return; }
+  resultsEl.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-3);font-size:13px;">Searching…</div>';
+
+  const mediaType = _discLinkContext?.derivedType === 'movie' ? 'movie' : 'tv';
+  try {
+    const data = await _discFetchJSON(`${TMDB_BASE}/search/${mediaType}?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(query)}`);
+    const results = (data.results || []).slice(0, 8);
+    if (!results.length) {
+      resultsEl.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-3);font-size:13px;">No results found.</div>';
+      return;
+    }
+    resultsEl.innerHTML = results.map(r => {
+      const title = mediaType === 'movie' ? r.title : r.name;
+      const year = ((mediaType === 'movie' ? r.release_date : r.first_air_date) || '').split('-')[0];
+      const poster = r.poster_path ? TMDB_IMG + r.poster_path : null;
+      return `<div class="disc-link-result" onclick='_discSelectLinkResult(${r.id}, ${JSON.stringify(mediaType)})' style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s;">
+        <div style="width:40px;height:58px;border-radius:4px;overflow:hidden;background:var(--bg-2);flex-shrink:0;">
+          ${poster ? `<img src="${poster}" style="width:100%;height:100%;object-fit:cover;">` : ''}
+        </div>
+        <div style="min-width:0;">
+          <div style="font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+          <div style="font-size:12px;color:var(--text-3);">${year || ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+    resultsEl.querySelectorAll('.disc-link-result').forEach(el => {
+      el.addEventListener('mouseenter', () => el.style.background = 'var(--card)');
+      el.addEventListener('mouseleave', () => el.style.background = 'none');
+    });
+  } catch (err) {
+    console.error('Discover link search error:', err);
+    resultsEl.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-3);font-size:13px;">Search failed — try again.</div>';
+  }
+}
+
+async function _discSelectLinkResult(tmdbId, tmdbType) {
+  if (!_discLinkContext) return;
+  const { title, derivedType } = _discLinkContext;
+  try {
+    const { data, error } = await sb.rpc('link_entries_to_tmdb', {
+      p_norm_title: title,
+      p_derived_type: derivedType,
+      p_tmdb_id: tmdbId,
+      p_tmdb_type: tmdbType,
+    });
+    if (error) throw error;
+    if (typeof showToast === 'function') showToast(`Linked — updated ${data} ${data === 1 ? 'entry' : 'entries'}.`);
+    _discCloseLinkPopup();
+    // Refresh so the newly-linked title now routes normally and its
+    // score reflects the merge.
+    if (typeof location !== 'undefined') location.reload();
+  } catch (err) {
+    console.error('Link entries error:', err);
+    if (typeof showToast === 'function') showToast('Failed to link — try again.', 'err');
+  }
 }
 
 const DISCOVER_CATEGORIES = [
@@ -124,6 +228,8 @@ const DISCOVER_CATEGORIES = [
         year: '',
         score: r.avg_score != null ? Number(r.avg_score) : null,
         origin_country: [],
+        needs_linking: !r.tmdb_id, // drives the linking popup instead of goToTitle
+        derived_type: r.derived_type,
       }));
     }
   },
