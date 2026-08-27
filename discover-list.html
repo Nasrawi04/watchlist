@@ -47,9 +47,6 @@
 .dl-list-row.dl-in-view { opacity:1; transform:none; }
 .dl-list-row:hover { border-color:var(--border-olive); background:var(--card-2); }
 .dl-list-rank { font-family:var(--serif); font-size:22px; color:var(--text-3); text-align:center; }
-.dl-list-rank.cg-rank-1 { color:#D4AC48; }
-.dl-list-rank.cg-rank-2 { color:#A4B2BA; }
-.dl-list-rank.cg-rank-3 { color:#A06B3E; }
 .dl-list-poster { width:64px; height:90px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
 .dl-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .dl-list-title { font-size:16px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -161,7 +158,7 @@ function _dlListRowHTML(it, rank) {
     ? `<img src="${posterUrl}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankCol = _dlIsRanked
-    ? `<div class="dl-list-rank ${_dlRankCls(rank)}">${rank}</div>`
+    ? `<div class="dl-list-rank">${rank}</div>`
     : '';
   return `<div class="dl-list-row ${_dlIsRanked ? 'dl-ranked' : ''}" onclick="goToTitle('${it.media_type}', ${it.id})">
     ${rankCol}
