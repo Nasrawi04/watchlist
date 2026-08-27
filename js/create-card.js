@@ -1212,12 +1212,31 @@ async function _drawDiscoverCard(myToken) {
       const avatarD = 84, castGap = 20;
       const nCols = Math.min(data.cast.length, 6);
       const cellW = (W - PAD * 2 - castGap * (nCols - 1)) / nCols;
-      const rowH = avatarD + 14 + 16 + 16;
+      const castRow = data.cast.slice(0, nCols);
+
+      // Pre-wrap each character name (max 2 lines) so the box can grow to
+      // fit the tallest one instead of letting long names spill out.
+      ctx.save();
+      ctx.font = '400 11.5px "Inter", Arial, sans-serif';
+      const charLinesList = castRow.map(c => {
+        if (!c.character) return [];
+        const allLines = _wrap(ctx, c.character, cellW + 10);
+        const lines = allLines.slice(0, 2);
+        if (allLines.length > 2 && lines.length) {
+          lines[lines.length - 1] = _truncate(ctx, lines[lines.length - 1] + '…', cellW + 10);
+        }
+        return lines;
+      });
+      ctx.restore();
+      const maxCharLines = Math.max(1, ...charLinesList.map(l => l.length));
+      const charLineH = 15;
+
+      const rowH = avatarD + 14 + 16 + (maxCharLines * charLineH) + 6;
       const boxH = capH + rowH + 24;
       drawBox(y, boxH);
       let cy = y + 22;
       cy = sectionLabel('Starring', PAD + 24, cy) + 10;
-      data.cast.slice(0, nCols).forEach((c, i) => {
+      castRow.forEach((c, i) => {
         const ccx = PAD + 24 + i * (cellW + castGap) + Math.min(avatarD, cellW) / 2;
         const img = castPhotos[i];
         if (draw) {
@@ -1246,12 +1265,13 @@ async function _drawDiscoverCard(myToken) {
           ctx.fillText(_truncate(ctx, c.name, cellW + 10), ccx, cy + avatarD + 12);
           ctx.restore();
 
-          if (c.character) {
+          const charLines = charLinesList[i];
+          if (charLines.length) {
             ctx.save();
             ctx.font = '400 11.5px "Inter", Arial, sans-serif';
             ctx.fillStyle = MUTED;
             ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-            ctx.fillText(_truncate(ctx, c.character, cellW + 10), ccx, cy + avatarD + 30);
+            charLines.forEach((ln, li) => ctx.fillText(ln, ccx, cy + avatarD + 30 + li * charLineH));
             ctx.restore();
           }
         }
