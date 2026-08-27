@@ -14,6 +14,41 @@
   .mobile-search-bar { display:none !important; }
   .home-hero { padding-bottom: 0.5rem; }
 
+  /* ── Discover ticker — infinite scrolling marquee of category shortcuts ── */
+  .disc-marquee {
+    overflow: hidden;
+    width: 100%;
+    margin-bottom: 2.5rem;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  }
+  .disc-marquee__inner {
+    display: flex;
+    width: max-content;
+    animation: discMarquee 55s linear infinite;
+  }
+  .disc-marquee:hover .disc-marquee__inner { animation-play-state: paused; }
+  .disc-marquee__group { display: flex; flex-shrink: 0; }
+  .disc-marquee__group a {
+    display: inline-flex; align-items: center;
+    margin: 0 8px; padding: 9px 20px;
+    white-space: nowrap; text-decoration: none;
+    background: var(--card); border: 0.5px solid var(--border); border-radius: 999px;
+    color: var(--text); font-size: 13.5px; font-weight: 500;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .disc-marquee__group a:hover {
+    border-color: var(--border-olive); color: var(--olive-light); background: var(--olive-faint);
+  }
+  @keyframes discMarquee {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @media(max-width:640px) {
+    .disc-marquee__group a { padding: 7px 16px; font-size: 12.5px; margin: 0 6px; }
+    .disc-marquee__inner { animation-duration: 42s; }
+  }
+
   /* TMDB-sourced home cards (Recently Viewed) —
      poster-fallback letter and year text, scaled to match how .q-card
      itself already shrinks at the site's existing breakpoints. */
@@ -59,6 +94,28 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <span>Search</span>
     </button>
+  </div>
+
+  <!-- DISCOVER TICKER -->
+  <div class="disc-marquee fade-up" aria-label="Explore Discover categories">
+    <div class="disc-marquee__inner">
+      <div class="disc-marquee__group">
+        <a href="discover-list.html?list=popular&title=What%27s%20Popular">What's Popular</a>
+        <a href="discover-list.html?list=top_rated_mss&title=Top%20Rated%20on%20MSS">Top Rated on MSS</a>
+        <a href="discover-list.html?list=top250_movies&title=Top%20250%20Movies">Top 250 Movies</a>
+        <a href="discover-list.html?list=top250_shows&title=Top%20250%20Shows">Top 250 Shows</a>
+        <a href="discover-list.html?list=top250_anime&title=Top%20250%20Anime">Top 250 Anime</a>
+        <a href="discover-list.html?list=top250_cartoons&title=Top%20250%20Cartoons">Top 250 Cartoons</a>
+      </div>
+      <div class="disc-marquee__group" aria-hidden="true">
+        <a href="discover-list.html?list=popular&title=What%27s%20Popular">What's Popular</a>
+        <a href="discover-list.html?list=top_rated_mss&title=Top%20Rated%20on%20MSS">Top Rated on MSS</a>
+        <a href="discover-list.html?list=top250_movies&title=Top%20250%20Movies">Top 250 Movies</a>
+        <a href="discover-list.html?list=top250_shows&title=Top%20250%20Shows">Top 250 Shows</a>
+        <a href="discover-list.html?list=top250_anime&title=Top%20250%20Anime">Top 250 Anime</a>
+        <a href="discover-list.html?list=top250_cartoons&title=Top%20250%20Cartoons">Top 250 Cartoons</a>
+      </div>
+    </div>
   </div>
 
   <!-- CATEGORY CARDS -->
@@ -138,10 +195,15 @@ function renderHomeWatchlist(entries) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   const queue = shuffled.slice(0, 12);
-  const cards = queue.map(e => `<div class="q-card" onclick="goToDetail('${e.id}','index.html')">
+  const cards = queue.map(e => {
+    const goto = (e.tmdb_id && e.tmdb_type)
+      ? `goToTitle('${e.tmdb_type}', ${e.tmdb_id})`
+      : `goToDetail('${e.id}','index.html')`;
+    return `<div class="q-card" onclick="${goto}">
     <div class="q-poster" style="position:relative">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${getTypeBadgeOverlay(e,'latest')}</div>
     <div class="q-info"><div class="q-title">${e.title}</div><div class="q-genre">${genreHTML(e.genres,3)}</div></div>
-  </div>`).join('');
+  </div>`;
+  }).join('');
   _homeHScrollSection('homeWatchlist', 'homeWatchlistGrid', 'Saved', 'From Your Watchlist', cards);
 }
 function renderHomeRecentlyViewed(rows) {
