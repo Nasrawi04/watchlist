@@ -261,9 +261,9 @@
 <body>
 <div class="page-wrap">
   <div class="td-wrap">
-    <a class="td-back-loading" href="discover.html" id="tdBackLoading">
+    <a class="td-back-loading" href="discover.html" id="tdBackLoading" onclick="if(history.length>1){history.back();return false;}">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      Back to Discover
+      Back
     </a>
     <div id="tdLoading" class="page-loading"><div class="spinner"></div></div>
     <div id="tdContent" style="display:none"></div>
@@ -392,9 +392,9 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
   return `
     <div class="td-hero fade-up">
       ${backdrop ? `<div class="td-backdrop-clip"><div class="td-backdrop" style="background-image:url('${backdrop}')"></div></div>` : ''}
-      <a class="td-back" href="discover.html">
+      <a class="td-back" href="discover.html" onclick="if(history.length>1){history.back();return false;}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        Back to Discover
+        Back
       </a>
       <div class="td-hero-inner">
         <div class="td-poster">${poster ? `<img src="${poster}" alt="">` : ''}</div>
