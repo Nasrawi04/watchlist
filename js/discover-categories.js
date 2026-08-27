@@ -69,6 +69,78 @@ const DISCOVER_CATEGORIES = [
     }
   },
   {
+    key: 'airing_today',
+    navLabel: 'Airing Today',
+    title: 'Airing Today',
+    async fetch(page) {
+      const data = await _discFetchJSON(`${TMDB_BASE}/tv/airing_today?api_key=${TMDB_KEY}&language=en-US&page=${page}`);
+      return (data.results || []).map(r => _discNormalize(r, 'tv'));
+    }
+  },
+  {
+    key: 'top250_movies',
+    navLabel: 'Top 250 Movies',
+    title: 'Top 250 Movies',
+    // Uses discover (not /movie/top_rated) so we can require a real minimum
+    // vote count — otherwise a handful of 10.0-rated titles with 3 votes
+    // can outrank genuinely well-reviewed ones.
+    async fetch(page) {
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
+      return (data.results || []).map(r => _discNormalize(r, 'movie'));
+    }
+  },
+  {
+    key: 'top250_shows',
+    navLabel: 'Top 250 Shows',
+    title: 'Top 250 Shows',
+    async fetch(page) {
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
+      return (data.results || [])
+        .map(r => _discNormalize(r, 'tv'))
+        .filter(r => !r.origin_country.includes('JP'));
+    }
+  },
+  {
+    key: 'top250_anime',
+    navLabel: 'Top 250 Anime',
+    title: 'Top 250 Anime',
+    async fetch(page) {
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&with_origin_country=JP&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
+      return (data.results || []).map(r => _discNormalize(r, 'tv'));
+    }
+  },
+  {
+    key: 'top250_cartoons',
+    navLabel: 'Top 250 Cartoons',
+    title: 'Top 250 Cartoons',
+    async fetch(page) {
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
+      return (data.results || [])
+        .map(r => _discNormalize(r, 'tv'))
+        .filter(r => !r.origin_country.includes('JP'));
+    }
+  },
+  {
+    key: 'niche_movies',
+    navLabel: 'Niche Movies',
+    title: 'Niche Movies',
+    // "Niche" = well-rated but not widely voted on — a hidden-gem signal
+    // rather than raw popularity.
+    async fetch(page) {
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=50&vote_count.lte=300&page=${page}`);
+      return (data.results || []).map(r => _discNormalize(r, 'movie'));
+    }
+  },
+  {
+    key: 'niche_shows',
+    navLabel: 'Niche Shows',
+    title: 'Niche Shows',
+    async fetch(page) {
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=50&vote_count.lte=300&page=${page}`);
+      return (data.results || []).map(r => _discNormalize(r, 'tv'));
+    }
+  },
+  {
     key: 'upcoming_movies',
     navLabel: 'Upcoming Movies',
     title: 'Upcoming Movies',
@@ -90,18 +162,6 @@ const DISCOVER_CATEGORIES = [
     }
   },
   {
-    key: 'upcoming_cartoons',
-    navLabel: 'Upcoming Cartoons',
-    title: 'Upcoming Cartoons',
-    async fetch(page) {
-      const today = _discTodayStr();
-      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&sort_by=popularity.desc&first_air_date.gte=${today}&page=${page}`);
-      return (data.results || [])
-        .map(r => _discNormalize(r, 'tv'))
-        .filter(r => !r.origin_country.includes('JP')); // Western animation only
-    }
-  },
-  {
     key: 'upcoming_anime',
     navLabel: 'Upcoming Anime',
     title: 'Upcoming Anime',
@@ -112,75 +172,15 @@ const DISCOVER_CATEGORIES = [
     }
   },
   {
-    key: 'airing_today',
-    navLabel: 'Airing Today',
-    title: 'Airing Today',
+    key: 'upcoming_cartoons',
+    navLabel: 'Upcoming Cartoons',
+    title: 'Upcoming Cartoons',
     async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/tv/airing_today?api_key=${TMDB_KEY}&language=en-US&page=${page}`);
-      return (data.results || []).map(r => _discNormalize(r, 'tv'));
-    }
-  },
-  {
-    key: 'top250_shows',
-    navLabel: 'Top 250 Shows',
-    title: 'Top 250 Shows',
-    // Uses discover (not /tv/top_rated) so we can require a real minimum
-    // vote count — otherwise a handful of 10.0-rated shows with 3 votes
-    // can outrank genuinely well-reviewed ones.
-    async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
+      const today = _discTodayStr();
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&sort_by=popularity.desc&first_air_date.gte=${today}&page=${page}`);
       return (data.results || [])
         .map(r => _discNormalize(r, 'tv'))
-        .filter(r => !r.origin_country.includes('JP'));
-    }
-  },
-  {
-    key: 'top250_movies',
-    navLabel: 'Top 250 Movies',
-    title: 'Top 250 Movies',
-    async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
-      return (data.results || []).map(r => _discNormalize(r, 'movie'));
-    }
-  },
-  {
-    key: 'top250_cartoons',
-    navLabel: 'Top 250 Cartoons',
-    title: 'Top 250 Cartoons',
-    async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
-      return (data.results || [])
-        .map(r => _discNormalize(r, 'tv'))
-        .filter(r => !r.origin_country.includes('JP'));
-    }
-  },
-  {
-    key: 'top250_anime',
-    navLabel: 'Top 250 Anime',
-    title: 'Top 250 Anime',
-    async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&with_origin_country=JP&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
-      return (data.results || []).map(r => _discNormalize(r, 'tv'));
-    }
-  },
-  {
-    key: 'niche_shows',
-    navLabel: 'Niche Shows',
-    title: 'Niche Shows',
-    // "Niche" = well-rated but not widely voted on — a hidden-gem signal
-    // rather than raw popularity.
-    async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=50&vote_count.lte=300&page=${page}`);
-      return (data.results || []).map(r => _discNormalize(r, 'tv'));
-    }
-  },
-  {
-    key: 'niche_movies',
-    navLabel: 'Niche Movies',
-    title: 'Niche Movies',
-    async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=50&vote_count.lte=300&page=${page}`);
-      return (data.results || []).map(r => _discNormalize(r, 'movie'));
+        .filter(r => !r.origin_country.includes('JP')); // Western animation only
     }
   },
 ];
