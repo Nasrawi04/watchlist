@@ -51,7 +51,7 @@
 .dl-list-poster { width:64px; height:90px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
 .dl-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .dl-list-title { font-size:16px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dl-list-year { font-size:12.5px; color:var(--text-3); margin-top:4px; }
+.dl-list-year { font-size:12.5px; color:var(--text-3); }
 .dl-list-type { font-size:11px; padding:4px 11px; border-radius:20px; background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); letter-spacing:.4px; white-space:nowrap; }
 
 @media(max-width:560px) {
@@ -76,6 +76,8 @@
   font-size:clamp(22px, 6vw, 32px);
 }
 .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
+.home-tmdb-meta-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px; }
+.home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
 
 .dl-sentinel { height:1px; }
 .dl-end-msg { text-align:center; padding:2.5rem 0; color:var(--text-3); font-size:13px; }
@@ -132,13 +134,13 @@ function _dlRankCls(rank) {
 }
 
 function _dlCardHTML(it, rank) {
-  const posterUrl = it.poster_path ? TMDB_FULL + it.poster_path : null;
-  const posterInner = posterUrl
-    ? `<img src="${posterUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+  const posterInner = it.poster_url
+    ? `<img src="${it.poster_url}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankBadge = _dlIsRanked
     ? `<div class="cg-rank-badge ${_dlRankCls(rank)}">${rank}</div>`
     : '';
+  const scoreStr = _discFloorScore(it.score);
   return `<div class="q-card dl-card" onclick="goToTitle('${it.media_type}', ${it.id})">
     <div class="q-poster" style="position:relative">
       ${posterInner}
@@ -148,25 +150,31 @@ function _dlCardHTML(it, rank) {
     </div>
     <div class="q-info">
       <div class="q-title">${_dlEsc(it.title)}</div>
-      ${it.year ? `<div class="q-genre home-tmdb-year">${_dlEsc(it.year)}</div>` : ''}
+      <div class="home-tmdb-meta-row">
+        <span class="home-tmdb-year">${it.year ? _dlEsc(it.year) : ''}</span>
+        ${scoreStr ? `<span class="home-tmdb-score">★ ${scoreStr}</span>` : ''}
+      </div>
     </div>
   </div>`;
 }
 
 function _dlListRowHTML(it, rank) {
-  const posterUrl = it.poster_path ? TMDB_IMG + it.poster_path : null;
-  const posterInner = posterUrl
-    ? `<img src="${posterUrl}" loading="lazy">`
+  const posterInner = it.poster_url
+    ? `<img src="${it.poster_url}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankCol = _dlIsRanked
     ? `<div class="dl-list-rank">${rank}</div>`
     : '';
+  const scoreStr = _discFloorScore(it.score);
   return `<div class="dl-list-row ${_dlIsRanked ? 'dl-ranked' : ''}" onclick="goToTitle('${it.media_type}', ${it.id})">
     ${rankCol}
     <div class="dl-list-poster">${posterInner}</div>
     <div style="min-width:0">
       <div class="dl-list-title">${_dlEsc(it.title)}</div>
-      ${it.year ? `<div class="dl-list-year">${_dlEsc(it.year)}</div>` : ''}
+      <div class="home-tmdb-meta-row">
+        <span class="dl-list-year">${it.year ? _dlEsc(it.year) : ''}</span>
+        ${scoreStr ? `<span class="home-tmdb-score">★ ${scoreStr}</span>` : ''}
+      </div>
     </div>
     <span class="dl-list-type">${_dlTypeLabel(it.media_type)}</span>
   </div>`;
