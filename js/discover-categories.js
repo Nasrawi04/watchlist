@@ -89,8 +89,8 @@ const DISCOVER_CATEGORIES = [
   },
   {
     key: 'top_rated_mss',
-    navLabel: 'Top Rated (MyScreenScore)',
-    title: 'Top Rated on MyScreenScore',
+    navLabel: 'Top Rated on MSS',
+    title: 'Top Rated on MSS',
     // Sourced from our own users' ratings (final_score), not TMDB — see
     // get_top_rated_myscreenscore() in 011_top_rated_myscreenscore.sql.
     // Capped at the top 500 titles.
