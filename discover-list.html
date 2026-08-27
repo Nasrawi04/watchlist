@@ -34,13 +34,6 @@
   font-size:10px; font-weight:600; letter-spacing:.3px;
   background:rgba(0,0,0,0.6); color:#fff; backdrop-filter:blur(4px);
 }
-.dl-rank-badge {
-  position:absolute; top:8px; left:8px; min-width:26px; height:26px; padding:0 6px;
-  border-radius:8px; display:flex; align-items:center; justify-content:center;
-  font-family:var(--serif); font-size:15px; font-weight:600;
-  background:rgba(0,0,0,0.65); color:#fff; backdrop-filter:blur(4px);
-}
-.dl-rank-badge.dl-top3 { background:var(--olive-light); color:#18180f; }
 .dl-play {
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
   opacity:0; transition:opacity .2s; color:#fff; pointer-events:none;
@@ -60,7 +53,9 @@
 .dl-list-row.dl-in-view { opacity:1; transform:none; }
 .dl-list-row:hover { border-color:var(--border-olive); background:var(--card-2); }
 .dl-list-rank { font-family:var(--serif); font-size:22px; color:var(--text-3); text-align:center; }
-.dl-list-rank.dl-top3 { color:var(--olive-light); }
+.dl-list-rank.cg-rank-1 { color:#D4AC48; }
+.dl-list-rank.cg-rank-2 { color:#A4B2BA; }
+.dl-list-rank.cg-rank-3 { color:#A06B3E; }
 .dl-list-poster { width:64px; height:90px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
 .dl-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .dl-list-title { font-size:16px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -142,13 +137,17 @@ function _dlTypeLabel(mediaType) {
   return mediaType === 'movie' ? 'Movie' : 'TV';
 }
 
+function _dlRankCls(rank) {
+  return rank === 1 ? 'cg-rank-1' : rank === 2 ? 'cg-rank-2' : rank === 3 ? 'cg-rank-3' : 'cg-rank-other';
+}
+
 function _dlCardHTML(it, rank) {
   const posterUrl = it.poster_path ? TMDB_FULL + it.poster_path : null;
   const posterInner = posterUrl
     ? `<img src="${posterUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankBadge = _dlIsRanked
-    ? `<span class="dl-rank-badge ${rank <= 3 ? 'dl-top3' : ''}">${rank}</span>`
+    ? `<div class="cg-rank-badge ${_dlRankCls(rank)}">${rank}</div>`
     : '';
   return `<div class="q-card dl-card" onclick="goToTitle('${it.media_type}', ${it.id})">
     <div class="q-poster" style="position:relative">
@@ -171,7 +170,7 @@ function _dlListRowHTML(it, rank) {
     ? `<img src="${posterUrl}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankCol = _dlIsRanked
-    ? `<div class="dl-list-rank ${rank <= 3 ? 'dl-top3' : ''}">${rank}</div>`
+    ? `<div class="dl-list-rank ${_dlRankCls(rank)}">${rank}</div>`
     : '';
   return `<div class="dl-list-row ${_dlIsRanked ? 'dl-ranked' : ''}" onclick="goToTitle('${it.media_type}', ${it.id})">
     ${rankCol}
