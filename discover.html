@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discover — MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  /* Hide nav search bar — hero search replaces it, same pattern as index.html */
+  .search-wrap { display:none !important; }
+  .nav-icon-btn { display:none !important; }
+  .mobile-search-bar { display:none !important; }
+
+  .disc-layout { display:flex; gap:clamp(1.5rem, 3vw, 3rem); align-items:flex-start; }
+  .disc-side-nav {
+    position:sticky; top:calc(var(--page-pt) + 88px); flex-shrink:0; width:210px;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .disc-side-link {
+    display:block; padding:9px 14px; border-radius:var(--radius-sm); font-size:13.5px;
+    color:var(--text-2); text-decoration:none; border-left:2px solid transparent;
+    transition:all .15s var(--ease); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .disc-side-link:hover { color:var(--text); background:var(--card); }
+  .disc-side-link.active { color:var(--olive-light); border-left-color:var(--olive-light); background:var(--olive-faint); }
+  .disc-main { flex:1; min-width:0; }
+
+  .disc-section { margin-bottom:3.5rem; scroll-margin-top:calc(var(--page-pt) + 88px); }
+  .disc-section-head { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; margin-bottom:.25rem; }
+  .disc-see-all {
+    display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:var(--olive-light);
+    text-decoration:none; white-space:nowrap; flex-shrink:0; transition:opacity .15s;
+  }
+  .disc-see-all:hover { opacity:.75; }
+  .disc-see-all svg { width:12px; height:12px; }
+
+  .home-tmdb-poster-fallback {
+    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    background:var(--bg-3); font-family:var(--serif); color:var(--olive-light);
+    font-size:clamp(22px, 6vw, 32px);
+  }
+  .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
+
+  @media(max-width:900px) {
+    .disc-side-nav { display:none; }
+  }
+  @media(max-width:640px) {
+    .home-tmdb-poster-fallback { font-size:26px; }
+    .home-tmdb-year { font-size:12px; }
+  }
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+
+<div class="page-wrap">
+  <!-- HERO -->
+  <div class="home-hero fade-up">
+    <div class="home-eyebrow">Explore what's out there</div>
+    <h1 class="home-title">Discover</h1>
+    <p class="home-sub">Trending titles, top rated picks, and what's coming next — sourced straight from TMDB.</p>
+  </div>
+
+  <!-- HERO SEARCH -->
+  <div class="hero-search-wrap fade-up" style="margin:1rem 0 2.5rem;">
+    <input type="text" id="heroSearch" placeholder="Search movies, shows, anime…" autocomplete="off">
+    <button type="button" class="hero-search-btn" tabindex="-1" onclick="document.getElementById('heroSearch').focus()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span>Search</span>
+    </button>
+  </div>
+
+  <div class="disc-layout">
+    <!-- SIDE NAV -->
+    <div class="disc-side-nav fade-up" id="discSideNav"></div>
+
+    <!-- MAIN CONTENT -->
+    <div class="disc-main" id="discMain"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/discover-categories.js"></script>
+<script>
+function _discEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+const _NAV_LEFT_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+const _NAV_RIGHT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+const _SEE_ALL_SVG   = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+function _discCardHTML(posterUrl, title, year, onclick) {
+  const posterInner = posterUrl
+    ? `<img src="${posterUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+    : `<div class="home-tmdb-poster-fallback">${_discEsc((title||'?')[0].toUpperCase())}</div>`;
+  return `<div class="q-card" onclick="${onclick}">
+    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div></div>
+    <div class="q-info">
+      <div class="q-title">${_discEsc(title)}</div>
+      ${year ? `<div class="q-genre home-tmdb-year">${_discEsc(year)}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+// Builds the side nav + one section shell per category, all up front,
+// so scroll-spy and layout are stable before any TMDB data comes back.
+function _discBuildLayout() {
+  const nav = document.getElementById('discSideNav');
+  const main = document.getElementById('discMain');
+  nav.innerHTML = DISCOVER_CATEGORIES.map(c => `<a class="disc-side-link" href="#disc-${c.key}">${_discEsc(c.navLabel)}</a>`).join('');
+  main.innerHTML = DISCOVER_CATEGORIES.map(c => `
+    <div class="disc-section" id="disc-${c.key}">
+      <div class="disc-section-head">
+        <div>
+          <div class="section-eyebrow">Discover</div>
+          <div class="section-title" style="margin-bottom:0">${_discEsc(c.title)}</div>
+        </div>
+        <a class="disc-see-all" href="discover-list.html?list=${encodeURIComponent(c.key)}&title=${encodeURIComponent(c.title)}">See All ${_SEE_ALL_SVG}</a>
+      </div>
+      <div class="grid-nav-wrap">
+        <button class="grid-nav-btn arr-left" onclick="event.stopPropagation();document.getElementById('discGrid-${c.key}').scrollBy({left:-660,behavior:'smooth'})" aria-label="Scroll left">${_NAV_LEFT_SVG}</button>
+        <button class="grid-nav-btn arr-right" onclick="event.stopPropagation();document.getElementById('discGrid-${c.key}').scrollBy({left:660,behavior:'smooth'})" aria-label="Scroll right">${_NAV_RIGHT_SVG}</button>
+        <div class="queue-grid" id="discGrid-${c.key}"><div class="page-loading" style="padding:1rem"><div class="spinner"></div></div></div>
+      </div>
+    </div>`).join('');
+}
+
+async function _discLoadCategory(cat) {
+  try {
+    const items = await cat.fetch(1);
+    const grid = document.getElementById(`discGrid-${cat.key}`);
+    if (!grid) return;
+    if (!items.length) {
+      document.getElementById(`disc-${cat.key}`).style.display = 'none';
+      return;
+    }
+    grid.innerHTML = items.slice(0, 12).map(it =>
+      _discCardHTML(it.poster_path ? TMDB_FULL + it.poster_path : null, it.title, it.year, `goToTitle('${it.media_type}', ${it.id})`)
+    ).join('');
+  } catch (e) {
+    console.error(`Discover fetch error (${cat.key}):`, e);
+    const section = document.getElementById(`disc-${cat.key}`);
+    if (section) section.style.display = 'none';
+  }
+}
+
+// Side nav active-state on scroll
+function _initDiscSideNavScrollSpy() {
+  const links = Array.from(document.querySelectorAll('.disc-side-link'));
+  const sections = links.map(l => document.querySelector(l.getAttribute('href'))).filter(Boolean);
+  if (!sections.length) return;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const idx = sections.indexOf(entry.target);
+      if (idx === -1) return;
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        links[idx].classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => obs.observe(s));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initDiscoverSearch('heroSearch', { max: 20, connected: true, includePersons: true });
+  initPageGuest(async () => {
+    _discBuildLayout();
+    // Loaded with a small stagger (not all 13+ requests fired at once) —
+    // easier on TMDB's shared API key with many users hitting the page
+    // at the same time, and sections above the fold still appear fast.
+    DISCOVER_CATEGORIES.forEach((cat, i) => {
+      setTimeout(() => _discLoadCategory(cat), i * 220);
+    });
+    _initDiscSideNavScrollSpy();
+  });
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>
