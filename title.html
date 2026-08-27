@@ -602,7 +602,7 @@ function _tdSeasonsHTML(d) {
     <div class="td-season-row" id="tdSeasonRow">
       ${seasons.map(s => `
         <div class="td-season-block" data-season="${s.season_number}" data-tv="${_tdId}">
-          <div class="td-season-block-poster">${s.poster_path ? `<img src="${TMDB_IMG}${s.poster_path}" loading="lazy">` : ''}</div>
+          <div class="td-season-block-poster">${s.poster_path ? `<img src="${TMDB_IMG.replace('w185', 'w342')}${s.poster_path}" loading="lazy">` : ''}</div>
           <div class="td-season-block-info">
             <div class="td-season-block-name">${esc(s.name)}</div>
             <div class="td-season-block-sub">${s.episode_count} episode${s.episode_count!==1?'s':''}${s.air_date ? ' · ' + s.air_date.split('-')[0] : ''}</div>
