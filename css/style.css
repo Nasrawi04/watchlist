@@ -3162,6 +3162,10 @@ body { font-size:15px; }
   .cf-btn   { padding:4px 9px; font-size:10px; }
   .stab     { padding:4px 9px; font-size:10px; }
 }
+@media (hover: none) and (pointer: coarse) and (max-width: 480px) {
+  .nav-icon-btn { width:34px; height:34px; }
+  .nav-top-user .nav-user-avatar { width:34px; height:34px; font-size:14px; }
+}
 @media (hover: none) and (pointer: coarse) and (max-width: 400px) {
   .sort-btn { padding:3px 6px; font-size:9px; }
   .cf-btn   { padding:3px 7px; font-size:9px; }
