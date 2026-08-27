@@ -122,6 +122,38 @@
 .td-section-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
 .td-overview { font-size:clamp(13.5px, 2vw, 17px); line-height:1.75; color:var(--text-2); }
 
+/* ── Community Notes ── */
+.td-notes-controls { display:flex; gap:8px; margin-bottom:1.25rem; margin-top:-0.5rem; }
+.td-notes-sort-btn {
+  padding:6px 14px; border-radius:20px; font-size:12.5px; font-weight:500;
+  background:var(--bg-3); border:0.5px solid var(--border); color:var(--text-3);
+  cursor:pointer; transition:all .15s;
+}
+.td-notes-sort-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.td-notes-sort-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+.td-notes-loading, .td-notes-empty { padding:2rem 0; text-align:center; color:var(--text-3); font-size:13.5px; }
+.td-note-card { display:flex; gap:14px; padding:1.1rem 0; border-bottom:0.5px solid var(--border); }
+.td-note-card:last-child { border-bottom:none; }
+.td-note-avatar {
+  width:38px; height:38px; border-radius:50%; flex-shrink:0; overflow:hidden;
+  background:var(--olive-faint); color:var(--olive-light); font-family:var(--serif); font-size:16px;
+  display:flex; align-items:center; justify-content:center;
+}
+.td-note-avatar img { width:100%; height:100%; object-fit:cover; }
+.td-note-body { flex:1; min-width:0; }
+.td-note-head { display:flex; align-items:center; gap:8px; margin-bottom:5px; flex-wrap:wrap; }
+.td-note-username { font-size:13.5px; font-weight:600; color:var(--text); }
+.td-note-date { font-size:11.5px; color:var(--text-3); }
+.td-note-text { font-size:14px; line-height:1.6; color:var(--text-2); white-space:pre-line; margin-bottom:8px; }
+.td-note-actions { display:flex; gap:14px; }
+.td-note-react-btn {
+  display:inline-flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer;
+  color:var(--text-3); font-size:12.5px; font-weight:500; padding:2px 0; transition:color .15s;
+}
+.td-note-react-btn:hover { color:var(--text); }
+.td-note-react-btn.active-like { color:var(--olive-light); }
+.td-note-react-btn.active-dislike { color:#c0685a; }
+
 /* ── Cast ── */
 .td-cast-scroll { display:flex; flex-wrap:wrap; gap:20px 18px; }
 .td-cast-card { flex-shrink:0; width:clamp(90px, 12vw, 140px); text-align:center; display:block; text-decoration:none; color:inherit; transition:opacity .15s; }
@@ -360,6 +392,8 @@ async function loadTitle() {
   // Auto-select the first season
   const firstSeason = document.querySelector('.td-season-block');
   if (firstSeason) _selectSeason(firstSeason);
+
+  _tdLoadNotes();
 }
 
 function _tdBuildHTML(d, mssScore, ownEntry) {
@@ -435,6 +469,13 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
     </div>` : ''}
 
     ${!isMovie ? _tdSeasonsHTML(d) : ''}
+
+    <div class="td-section-title">Community Notes</div>
+    <div class="td-notes-controls">
+      <button class="td-notes-sort-btn active" data-sort="popular" onclick="_tdSetNotesSort('popular')">Most Popular</button>
+      <button class="td-notes-sort-btn" data-sort="newest" onclick="_tdSetNotesSort('newest')">Newest</button>
+    </div>
+    <div id="tdNotesList"><div class="td-notes-loading">Loading notes…</div></div>
   `;
 }
 
@@ -706,6 +747,115 @@ function _closeEpisodePopup() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') _closeEpisodePopup();
 });
+
+/* ── Community Notes ── */
+let _tdNotesRaw = [];
+let _tdNotesReactions = {}; // entry_id -> 'like' | 'dislike' (current user's own reaction)
+let _tdNotesSort = 'popular';
+
+function _tdSetNotesSort(mode) {
+  _tdNotesSort = mode;
+  document.querySelectorAll('.td-notes-sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === mode));
+  _tdRenderNotes();
+}
+
+async function _tdLoadNotes() {
+  const wrap = document.getElementById('tdNotesList');
+  if (!wrap || !_tdId || !_tdType) return;
+  try {
+    const { data, error } = await sb.rpc('get_notes_for_title', { p_tmdb_id: Number(_tdId), p_tmdb_type: _tdType });
+    if (error) throw error;
+    _tdNotesRaw = data || [];
+
+    if (_tdUser && _tdNotesRaw.length) {
+      const entryIds = _tdNotesRaw.map(n => n.entry_id);
+      const { data: myReactions } = await sb.from('note_reactions')
+        .select('entry_id, is_like')
+        .eq('user_id', _tdUser.id)
+        .in('entry_id', entryIds);
+      _tdNotesReactions = {};
+      (myReactions || []).forEach(r => { _tdNotesReactions[r.entry_id] = r.is_like ? 'like' : 'dislike'; });
+    }
+
+    _tdRenderNotes();
+  } catch (err) {
+    console.error('Load notes error:', err);
+    wrap.innerHTML = '<div class="td-notes-empty">Couldn\'t load notes right now.</div>';
+  }
+}
+
+function _tdRenderNotes() {
+  const wrap = document.getElementById('tdNotesList');
+  if (!wrap) return;
+  if (!_tdNotesRaw.length) {
+    wrap.innerHTML = '<div class="td-notes-empty">No notes yet — be the first to leave one on your entry.</div>';
+    return;
+  }
+
+  const sorted = [..._tdNotesRaw].sort((a, b) => {
+    if (_tdNotesSort === 'newest') return new Date(b.created_at) - new Date(a.created_at);
+    const scoreA = Number(a.like_count) - Number(a.dislike_count);
+    const scoreB = Number(b.like_count) - Number(b.dislike_count);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  wrap.innerHTML = sorted.map(n => {
+    const myReaction = _tdNotesReactions[n.entry_id];
+    const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const initial = (n.username || '?')[0].toUpperCase();
+    return `<div class="td-note-card">
+      <div class="td-note-avatar">${n.avatar_url ? `<img src="${esc(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
+      <div class="td-note-body">
+        <div class="td-note-head">
+          <span class="td-note-username">@${esc(n.username || 'user')}</span>
+          <span class="td-note-date">${dateStr}</span>
+        </div>
+        <div class="td-note-text">${esc(n.notes)}</div>
+        <div class="td-note-actions">
+          <button class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="_tdReactToNote('${n.entry_id}', true)">
+            ${icon('thumbsUp', 14)} <span>${n.like_count || 0}</span>
+          </button>
+          <button class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="_tdReactToNote('${n.entry_id}', false)">
+            ${icon('thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function _tdReactToNote(entryId, isLike) {
+  if (!_tdUser) { showToast('Sign in to react to notes.', 'err'); return; }
+  const note = _tdNotesRaw.find(n => n.entry_id === entryId);
+  if (!note) return;
+  const current = _tdNotesReactions[entryId]; // 'like' | 'dislike' | undefined
+  const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
+
+  try {
+    if (wantsSame) {
+      // Clicking the same reaction again removes it
+      const { error } = await sb.from('note_reactions').delete().eq('entry_id', entryId).eq('user_id', _tdUser.id);
+      if (error) throw error;
+      delete _tdNotesReactions[entryId];
+      if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
+      else note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
+    } else {
+      const { error } = await sb.from('note_reactions')
+        .upsert({ entry_id: entryId, user_id: _tdUser.id, is_like: isLike }, { onConflict: 'entry_id,user_id' });
+      if (error) throw error;
+      if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
+      if (current === 'dislike') note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
+      if (isLike) note.like_count = Number(note.like_count) + 1;
+      else note.dislike_count = Number(note.dislike_count) + 1;
+      _tdNotesReactions[entryId] = isLike ? 'like' : 'dislike';
+    }
+    _tdRenderNotes();
+  } catch (err) {
+    console.error('React to note error:', err);
+    showToast('Failed to save your reaction.', 'err');
+  }
+}
 </script>
 </body>
 </html>
