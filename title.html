@@ -274,6 +274,7 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/discover-categories.js"></script>
 <script>
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -369,7 +370,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
   const poster   = d.poster_path ? TMDB_FULL + d.poster_path : null;
   const backdrop = d.backdrop_path ? `https://image.tmdb.org/t/p/w1280${d.backdrop_path}` : poster;
   const genres   = (d.genres || []).map(g => g.name);
-  const rating   = d.vote_average ? d.vote_average.toFixed(1) : null;
+  const rating   = d.vote_average ? _discFloorScore(d.vote_average) : null;
   const voteCount = d.vote_count ? d.vote_count.toLocaleString() : null;
 
   const trailer = (d.videos?.results || []).find(v => v.site === 'YouTube' && v.type === 'Trailer')
@@ -405,7 +406,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
           <div class="td-meta-row">
             <div class="td-ratings-row">
               ${rating ? `<span class="td-rating-badge"><span class="td-rating-num">★ ${rating}</span><span class="td-rating-label">${voteCount ? voteCount + ' votes' : 'TMDB'}</span></span>` : ''}
-              <span class="td-rating-badge"><span class="td-rating-num td-rating-mss">★ ${mssScore.avg != null ? mssScore.avg.toFixed(1) : '—'}</span><span class="td-rating-label">MyScreenScore${mssScore.count ? ' · ' + mssScore.count + (mssScore.count===1?' rating':' ratings') : ' · No ratings yet'}</span></span>
+              <span class="td-rating-badge"><span class="td-rating-num td-rating-mss">★ ${mssScore.avg != null ? _discFloorScore(mssScore.avg) : '—'}</span><span class="td-rating-label">MyScreenScore${mssScore.count ? ' · ' + mssScore.count + (mssScore.count===1?' rating':' ratings') : ' · No ratings yet'}</span></span>
             </div>
             ${metaBits.map(b => `<span>${esc(b)}</span>`).join('')}
             ${trailer ? `<a class="td-trailer-link td-trailer-desktop" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
@@ -629,7 +630,7 @@ async function _selectSeason(el) {
 
   epsWrap.innerHTML = `<div class="td-episode-row">${eps.map((ep, i) => {
     const runtime = ep.runtime ? `${ep.runtime}m` : '';
-    const rating = ep.vote_average ? ep.vote_average.toFixed(1) : null;
+    const rating = ep.vote_average ? _discFloorScore(ep.vote_average) : null;
     const date = ep.air_date || '';
     return `
     <div class="td-episode-card" onclick="_openEpisodePopup(${i})">
@@ -670,7 +671,7 @@ function _openEpisodePopup(index) {
   _injectEpPopupOverlay();
 
   const runtime = ep.runtime ? `${ep.runtime} min` : '';
-  const rating = ep.vote_average ? ep.vote_average.toFixed(1) : null;
+  const rating = ep.vote_average ? _discFloorScore(ep.vote_average) : null;
   const date = ep.air_date
     ? new Date(ep.air_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
