@@ -244,6 +244,7 @@ const DISCOVER_CATEGORIES = [
   },
   {
     key: 'top250_movies',
+    cap: 250,
     navLabel: 'Top 250 Movies',
     title: 'Top 250 Movies',
     // Uses discover (not /movie/top_rated) so we can require a real minimum
@@ -256,6 +257,7 @@ const DISCOVER_CATEGORIES = [
   },
   {
     key: 'top250_shows',
+    cap: 250,
     navLabel: 'Top 250 Shows',
     title: 'Top 250 Shows',
     async fetch(page) {
@@ -267,6 +269,7 @@ const DISCOVER_CATEGORIES = [
   },
   {
     key: 'top250_anime',
+    cap: 250,
     navLabel: 'Top 250 Anime',
     title: 'Top 250 Anime',
     async fetch(page) {
@@ -276,6 +279,7 @@ const DISCOVER_CATEGORIES = [
   },
   {
     key: 'top250_cartoons',
+    cap: 250,
     navLabel: 'Top 250 Cartoons',
     title: 'Top 250 Cartoons',
     async fetch(page) {
