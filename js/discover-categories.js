@@ -13,13 +13,13 @@ function _discTodayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// Rounds a score DOWN to the nearest 0.5 (never up), always shown to one
-// decimal place — e.g. 8.43 -> "8.0", 8.67 -> "8.5", 9.0 -> "9.0". Used
-// for every score badge across Discover, TMDB-sourced or MyScreenScore's
-// own, so the rounding rule is consistent everywhere.
+// Truncates a score DOWN to one decimal place (never rounds up) —
+// e.g. 8.15 -> "8.1", 8.98 -> "8.9". Used for every score badge across
+// Discover, TMDB-sourced or MyScreenScore's own, so the rule is
+// consistent everywhere.
 function _discFloorScore(score) {
   if (score == null || isNaN(score)) return null;
-  return (Math.floor(Number(score) * 2) / 2).toFixed(1);
+  return (Math.floor(Number(score) * 10) / 10).toFixed(1);
 }
 
 // Normalizes a raw TMDB result (movie or tv) into the shape every
