@@ -15,8 +15,10 @@
 
   .disc-layout { display:flex; gap:clamp(1.5rem, 3vw, 3rem); align-items:flex-start; }
   .disc-side-nav {
-    position:sticky; top:calc(var(--page-pt) + 88px); flex-shrink:0; width:210px;
+    position:sticky; top:calc(var(--page-pt) + 88px); flex-shrink:0; width:220px;
     display:flex; flex-direction:column; gap:2px;
+    background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+    padding:.85rem; max-height:calc(100vh - var(--page-pt) - 120px); overflow-y:auto;
   }
   .disc-side-link {
     display:block; padding:9px 14px; border-radius:var(--radius-sm); font-size:13.5px;
