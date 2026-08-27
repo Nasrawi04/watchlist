@@ -132,8 +132,20 @@
 .td-notes-sort-btn:hover { border-color:var(--border-olive); color:var(--text); }
 .td-notes-sort-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
 .td-notes-loading, .td-notes-empty { padding:2rem 0; text-align:center; color:var(--text-3); font-size:13.5px; }
-.td-note-card { display:flex; gap:14px; padding:1.1rem 0; border-bottom:0.5px solid var(--border); }
-.td-note-card:last-child { border-bottom:none; }
+#tdNotesList {
+  max-height:560px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;
+  padding-right:6px; scrollbar-width:thin; scrollbar-color:var(--border-olive) var(--bg-3);
+}
+#tdNotesList::-webkit-scrollbar { width:6px; }
+#tdNotesList::-webkit-scrollbar-track { background:var(--bg-3); border-radius:3px; }
+#tdNotesList::-webkit-scrollbar-thumb { background:var(--border-olive); border-radius:3px; }
+#tdNotesList::-webkit-scrollbar-thumb:hover { background:var(--olive-light); }
+.td-note-card {
+  display:flex; gap:14px; padding:1.1rem 1.25rem;
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+  transition:border-color .15s;
+}
+.td-note-card:hover { border-color:var(--border-olive); }
 .td-note-avatar {
   width:38px; height:38px; border-radius:50%; flex-shrink:0; overflow:hidden;
   background:var(--olive-faint); color:var(--olive-light); font-family:var(--serif); font-size:16px;
