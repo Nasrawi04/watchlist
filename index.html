@@ -14,7 +14,7 @@
   .mobile-search-bar { display:none !important; }
   .home-hero { padding-bottom: 0.5rem; }
 
-  /* TMDB-sourced home cards (Trending/Top Picks/Upcoming/Recently Viewed) —
+  /* TMDB-sourced home cards (Recently Viewed) —
      poster-fallback letter and year text, scaled to match how .q-card
      itself already shrinks at the site's existing breakpoints. */
   .home-tmdb-poster-fallback {
@@ -69,16 +69,7 @@
   <!-- CURRENTLY WATCHING -->
   <div id="homeWatching" style="margin-top:4rem"></div>
 
-  <!-- TRENDING THIS WEEK (TMDB) -->
-  <div id="homeTrending" style="margin-top:3rem"></div>
-
-  <!-- TOP PICKS (TMDB top rated) -->
-  <div id="homeTopPicks" style="margin-top:3rem"></div>
-
-  <!-- UPCOMING (TMDB) -->
-  <div id="homeUpcoming" style="margin-top:3rem"></div>
-
-  <!-- FROM YOUR WATCHLIST -->
+  <!-- SAVED (FROM YOUR WATCHLIST) -->
   <div id="homeWatchlist" style="margin-top:3rem"></div>
 
   <!-- RECENTLY VIEWED (MyScreenScore view history) -->
@@ -137,67 +128,6 @@ function _tmdbCardHTML(posterUrl, title, year, onclick) {
   </div>`;
 }
 
-// ── TMDB fetchers ──
-async function _fetchTrendingWeek() {
-  try {
-    const res = await fetch(`${TMDB_BASE}/trending/all/week?api_key=${TMDB_KEY}&language=en-US`);
-    if (!res.ok) throw new Error('Trending fetch failed: ' + res.status);
-    const data = await res.json();
-    return (data.results || [])
-      .filter(r => r.media_type === 'movie' || r.media_type === 'tv')
-      .slice(0, 12)
-      .map(r => ({
-        id: r.id, media_type: r.media_type,
-        title: r.title || r.name, poster_path: r.poster_path,
-        year: ((r.release_date || r.first_air_date) || '').split('-')[0],
-      }));
-  } catch (e) { console.error('Trending fetch error:', e); return []; }
-}
-
-async function _fetchTopPicks() {
-  // TMDB has no personalized "picks for you" without per-user TMDB login —
-  // this uses TMDB's own top-rated lists (movies + TV, interleaved) as the
-  // closest real equivalent.
-  try {
-    const [movRes, tvRes] = await Promise.all([
-      fetch(`${TMDB_BASE}/movie/top_rated?api_key=${TMDB_KEY}&language=en-US`),
-      fetch(`${TMDB_BASE}/tv/top_rated?api_key=${TMDB_KEY}&language=en-US`),
-    ]);
-    if (!movRes.ok || !tvRes.ok) throw new Error('Top Picks fetch failed');
-    const [movData, tvData] = await Promise.all([movRes.json(), tvRes.json()]);
-    const movies = (movData.results || []).slice(0, 6).map(r => ({ id:r.id, media_type:'movie', title:r.title, poster_path:r.poster_path, year:(r.release_date||'').split('-')[0] }));
-    const shows  = (tvData.results  || []).slice(0, 6).map(r => ({ id:r.id, media_type:'tv',    title:r.name,  poster_path:r.poster_path, year:(r.first_air_date||'').split('-')[0] }));
-    const merged = [];
-    for (let i = 0; i < 6; i++) { if (movies[i]) merged.push(movies[i]); if (shows[i]) merged.push(shows[i]); }
-    return merged;
-  } catch (e) { console.error('Top Picks fetch error:', e); return []; }
-}
-
-async function _fetchUpcoming() {
-  // TV has no clean "upcoming" equivalent on TMDB, so this leans on movies.
-  try {
-    const res = await fetch(`${TMDB_BASE}/movie/upcoming?api_key=${TMDB_KEY}&language=en-US&region=US`);
-    if (!res.ok) throw new Error('Upcoming fetch failed: ' + res.status);
-    const data = await res.json();
-    return (data.results || []).slice(0, 12).map(r => ({
-      id: r.id, media_type: 'movie', title: r.title, poster_path: r.poster_path,
-      year: (r.release_date || '').split('-')[0],
-    }));
-  } catch (e) { console.error('Upcoming fetch error:', e); return []; }
-}
-
-function renderHomeTrending(items) {
-  const cards = items.map(it => _tmdbCardHTML(it.poster_path ? TMDB_FULL + it.poster_path : null, it.title, it.year, `goToTitle('${it.media_type}', ${it.id})`)).join('');
-  _homeHScrollSection('homeTrending', 'homeTrendingGrid', 'Discover', 'Trending This Week', cards);
-}
-function renderHomeTopPicks(items) {
-  const cards = items.map(it => _tmdbCardHTML(it.poster_path ? TMDB_FULL + it.poster_path : null, it.title, it.year, `goToTitle('${it.media_type}', ${it.id})`)).join('');
-  _homeHScrollSection('homeTopPicks', 'homeTopPicksGrid', 'Discover', 'Top Picks', cards);
-}
-function renderHomeUpcoming(items) {
-  const cards = items.map(it => _tmdbCardHTML(it.poster_path ? TMDB_FULL + it.poster_path : null, it.title, it.year, `goToTitle('${it.media_type}', ${it.id})`)).join('');
-  _homeHScrollSection('homeUpcoming', 'homeUpcomingGrid', 'Discover', 'Upcoming', cards);
-}
 function renderHomeWatchlist(entries) {
   const all = entries.filter(e => e.status === 'queue');
   // Fisher-Yates shuffle — a fresh random sample each page load, instead of
@@ -239,12 +169,6 @@ function renderGuestLanding() {
       <a href="login.html" class="guest-btn-primary">Sign In</a>
       <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
     </div>`;
-
-  // Discovery sections are public TMDB content — no login needed, and a
-  // nice way for a guest to see what the app is about before signing up.
-  _fetchTrendingWeek().then(renderHomeTrending);
-  _fetchTopPicks().then(renderHomeTopPicks);
-  _fetchUpcoming().then(renderHomeUpcoming);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -313,10 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHomeWatchlist(entries);
 
     getRecentlyViewed(user.id, 12).then(renderHomeRecentlyViewed);
-
-    _fetchTrendingWeek().then(renderHomeTrending);
-    _fetchTopPicks().then(renderHomeTopPicks);
-    _fetchUpcoming().then(renderHomeUpcoming);
     /* Friend comments inbox */
     const inbox = await getInboxComments(user.id, 8);
     if (inbox.length) {
