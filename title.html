@@ -135,7 +135,12 @@
 .td-cast-char { font-size:clamp(10.5px, 1.5vw, 13px); color:var(--text-3); margin-top:3px; line-height:1.3; }
 
 /* ── Seasons: bigger blocks, left to right ── */
-.td-season-row { display:flex; gap:18px; overflow-x:auto; padding-bottom:10px; }
+.td-season-row { display:flex; gap:18px; overflow-x:auto; padding-bottom:14px; }
+.td-season-row::-webkit-scrollbar { display:block; height:6px; }
+.td-season-row::-webkit-scrollbar-track { background:var(--bg-3); border-radius:3px; }
+.td-season-row::-webkit-scrollbar-thumb { background:var(--border-olive); border-radius:3px; }
+.td-season-row::-webkit-scrollbar-thumb:hover { background:var(--olive-light); }
+.td-season-row { scrollbar-width:thin; scrollbar-color:var(--border-olive) var(--bg-3); }
 .td-season-block {
   flex-shrink:0; width:clamp(150px, 19vw, 220px); cursor:pointer; border-radius:var(--radius); overflow:hidden;
   background:var(--card); border:1.5px solid var(--border); transition:border-color .15s;
@@ -148,15 +153,69 @@
 .td-season-block-name { font-size:clamp(13px, 1.8vw, 15px); font-weight:500; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .td-season-block-sub { font-size:clamp(11px, 1.5vw, 12.5px); color:var(--text-3); white-space:nowrap; }
 
-.td-episode { display:flex; gap:14px; padding:14px 18px; border-bottom:0.5px solid var(--border); }
-.td-episode:last-child { border-bottom:none; }
-.td-ep-still { width:clamp(70px, 10vw, 100px); height:clamp(39px, 5.6vw, 56px); border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
-.td-ep-still img { width:100%; height:100%; object-fit:cover; }
-.td-ep-title { font-size:clamp(12.5px, 1.8vw, 15px); font-weight:500; margin-bottom:3px; }
-.td-ep-meta { font-size:clamp(10.5px, 1.5vw, 12px); color:var(--text-3); margin-bottom:5px; }
-.td-ep-overview { font-size:clamp(12px, 1.7vw, 14px); color:var(--text-2); line-height:1.55; }
+/* ── Episode cards — horizontal scroll, image-on-top card ── */
+.td-episode-row { display:flex; gap:20px; overflow-x:auto; padding:4px 4px 18px; }
+.td-episode-row::-webkit-scrollbar { display:block; height:6px; }
+.td-episode-row::-webkit-scrollbar-track { background:var(--bg-3); border-radius:3px; }
+.td-episode-row::-webkit-scrollbar-thumb { background:var(--border-olive); border-radius:3px; }
+.td-episode-row::-webkit-scrollbar-thumb:hover { background:var(--olive-light); }
+.td-episode-row { scrollbar-width:thin; scrollbar-color:var(--border-olive) var(--bg-3); }
+.td-episode-card {
+  flex-shrink:0; width:clamp(240px, 30vw, 300px);
+  background:var(--bg-3); border:0.5px solid var(--border); border-radius:16px;
+  overflow:hidden; display:flex; flex-direction:column;
+  transition:border-color .15s, transform .15s;
+}
+.td-episode-card:hover { border-color:var(--border-olive); transform:translateY(-2px); }
+.td-ep-still { width:100%; aspect-ratio:16/9; background:var(--bg-3); position:relative; flex-shrink:0; }
+.td-ep-still img { width:100%; height:100%; object-fit:cover; display:block; }
+.td-ep-num-badge {
+  position:absolute; top:10px; left:10px; padding:3px 10px; border-radius:20px;
+  font-size:11px; font-weight:600; letter-spacing:.3px;
+  background:rgba(0,0,0,0.6); color:#fff; backdrop-filter:blur(4px);
+}
+.td-ep-body { padding:16px 18px 18px; display:flex; flex-direction:column; gap:8px; flex:1; }
+.td-ep-title { font-size:clamp(14.5px, 1.9vw, 16.5px); font-weight:600; color:var(--text); line-height:1.3; }
+.td-ep-meta-row { display:flex; flex-wrap:wrap; gap:6px 10px; font-size:11.5px; color:var(--text-3); }
+.td-ep-meta-row span { display:inline-flex; align-items:center; gap:4px; }
+.td-ep-rating { color:var(--olive-light); font-weight:600; }
+.td-ep-overview {
+  font-size:12.5px; color:var(--text-2); line-height:1.6;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+}
+
+/* ── Episode detail popup ── */
+#epPopupOverlay {
+  position:fixed; inset:0; z-index:900; background:rgba(0,0,0,0.75); backdrop-filter:blur(10px);
+  display:none; align-items:center; justify-content:center; padding:24px; overflow-y:auto;
+}
+#epPopupOverlay.open { display:flex; animation:fadeIn .2s var(--ease); }
+.ep-popup-card {
+  background:var(--bg-3); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+  max-width:640px; width:100%; overflow:hidden; animation:slideUp .25s var(--ease);
+  max-height:90vh; display:flex; flex-direction:column;
+}
+.ep-popup-still { width:100%; aspect-ratio:16/9; background:var(--bg-3); position:relative; flex-shrink:0; }
+.ep-popup-still img { width:100%; height:100%; object-fit:cover; display:block; }
+.ep-popup-close {
+  position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%;
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); color:#fff; border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:16px; transition:background .15s;
+}
+.ep-popup-close:hover { background:rgba(0,0,0,0.8); }
+.ep-popup-num-badge {
+  position:absolute; top:14px; left:14px; padding:4px 12px; border-radius:20px;
+  font-size:12px; font-weight:600; letter-spacing:.3px;
+  background:rgba(0,0,0,0.6); color:#fff; backdrop-filter:blur(4px);
+}
+.ep-popup-body { padding:clamp(1.25rem, 4vw, 2rem); overflow-y:auto; }
+.ep-popup-title { font-family:var(--serif); font-size:clamp(22px, 4vw, 30px); font-weight:400; margin-bottom:.6rem; line-height:1.2; }
+.ep-popup-meta-row { display:flex; flex-wrap:wrap; gap:8px 16px; font-size:13px; color:var(--text-3); margin-bottom:1.25rem; }
+.ep-popup-meta-row span { display:inline-flex; align-items:center; gap:5px; }
+.ep-popup-rating { color:var(--olive-light); font-weight:600; font-size:14px; }
+.ep-popup-overview { font-size:14.5px; color:var(--text-2); line-height:1.75; white-space:pre-line; }
 .td-season-loading { padding:16px; font-size:12.5px; color:var(--text-3); text-align:center; }
-#tdEpisodesList { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-top:1rem; }
+#tdEpisodesList { margin-top:1rem; }
 
 @media(max-width:640px) {
   .td-add-row { flex-direction:column; align-items:stretch; width:100%; }
@@ -544,16 +603,84 @@ async function _selectSeason(el) {
     return;
   }
 
-  epsWrap.innerHTML = eps.map(ep => `
-    <div class="td-episode">
-      <div class="td-ep-still">${ep.still_path ? `<img src="${TMDB_IMG}${ep.still_path}" loading="lazy">` : ''}</div>
-      <div>
-        <div class="td-ep-title">${ep.episode_number}. ${esc(ep.name)}</div>
-        <div class="td-ep-meta">${ep.air_date || ''}${ep.vote_average ? ` · ★ ${ep.vote_average.toFixed(1)}` : ''}</div>
+  epsWrap.innerHTML = `<div class="td-episode-row">${eps.map((ep, i) => {
+    const runtime = ep.runtime ? `${ep.runtime}m` : '';
+    const rating = ep.vote_average ? ep.vote_average.toFixed(1) : null;
+    const date = ep.air_date || '';
+    return `
+    <div class="td-episode-card" onclick="_openEpisodePopup(${i})">
+      <div class="td-ep-still">
+        ${ep.still_path ? `<img src="${TMDB_IMG.replace('w185', 'w500')}${ep.still_path}" loading="lazy">` : ''}
+        <span class="td-ep-num-badge">Episode ${ep.episode_number}</span>
+      </div>
+      <div class="td-ep-body">
+        <div class="td-ep-title">${esc(ep.name)}</div>
+        <div class="td-ep-meta-row">
+          ${rating ? `<span class="td-ep-rating">★ ${rating}</span>` : ''}
+          ${date ? `<span>${date}</span>` : ''}
+          ${runtime ? `<span>${runtime}</span>` : ''}
+        </div>
         <div class="td-ep-overview">${esc(ep.overview) || 'No description available.'}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('')}</div>`;
+
+  _tdCurrentEpisodes = eps;
 }
+
+/* ── Episode detail popup ── */
+let _tdCurrentEpisodes = [];
+
+function _injectEpPopupOverlay() {
+  if (document.getElementById('epPopupOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'epPopupOverlay';
+  el.innerHTML = `<div class="ep-popup-card" id="epPopupCard"></div>`;
+  el.addEventListener('click', e => { if (e.target === el) _closeEpisodePopup(); });
+  document.body.appendChild(el);
+}
+
+function _openEpisodePopup(index) {
+  const ep = _tdCurrentEpisodes[index];
+  if (!ep) return;
+  _injectEpPopupOverlay();
+
+  const runtime = ep.runtime ? `${ep.runtime} min` : '';
+  const rating = ep.vote_average ? ep.vote_average.toFixed(1) : null;
+  const date = ep.air_date
+    ? new Date(ep.air_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
+
+  document.getElementById('epPopupCard').innerHTML = `
+    <div class="ep-popup-still">
+      ${ep.still_path ? `<img src="${TMDB_IMG.replace('w185', 'w780')}${ep.still_path}" loading="lazy">` : ''}
+      <span class="ep-popup-num-badge">Episode ${ep.episode_number}</span>
+      <button class="ep-popup-close" onclick="_closeEpisodePopup()">&#x2715;</button>
+    </div>
+    <div class="ep-popup-body">
+      <div class="ep-popup-title">${esc(ep.name)}</div>
+      <div class="ep-popup-meta-row">
+        ${rating ? `<span class="ep-popup-rating">★ ${rating}</span>` : ''}
+        ${date ? `<span>${date}</span>` : ''}
+        ${runtime ? `<span>${runtime}</span>` : ''}
+      </div>
+      <div class="ep-popup-overview">${esc(ep.overview) || 'No description available.'}</div>
+    </div>`;
+
+  const ov = document.getElementById('epPopupOverlay');
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _closeEpisodePopup() {
+  const ov = document.getElementById('epPopupOverlay');
+  if (ov) ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') _closeEpisodePopup();
+});
 </script>
 </body>
 </html>
