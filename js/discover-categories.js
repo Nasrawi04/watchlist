@@ -57,11 +57,20 @@ function _discInterleave(a, b) {
 // title where nobody has linked it to TMDB yet), open a popup letting
 // the user search TMDB and pick the right match — selecting one links
 // it for every user who rated that title, not just whoever clicked.
+// HTML-attribute-escapes a JSON-stringified value for safe embedding
+// inside a single-quoted onclick="" attribute — JSON.stringify only
+// escapes for JS syntax, not HTML, so a raw apostrophe in a title
+// (e.g. "Marvel's Daredevil") would otherwise terminate the attribute
+// early and silently break the click handler.
+function _discAttrJSON(value) {
+  return JSON.stringify(value).replace(/'/g, '&#39;');
+}
+
 function _discClickAttr(it) {
   if (it.id != null && it.media_type) {
     return `onclick="goToTitle('${it.media_type}', ${it.id})"`;
   }
-  return `onclick='_discOpenLinkPopup(${JSON.stringify(it.title || '')}, ${JSON.stringify(it.derived_type || 'tv')})'`;
+  return `onclick='_discOpenLinkPopup(${_discAttrJSON(it.title || '')}, ${_discAttrJSON(it.derived_type || 'tv')})'`;
 }
 
 /* ── Link-to-TMDB popup for unlinked MyScreenScore titles ── */
