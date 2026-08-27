@@ -128,6 +128,7 @@ function injectChrome() {
       <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenScore" class="nav-logo-img"></a>
       <div class="nav-links">
         ${navLink('index.html',     page, 'home',     'Home')}
+        ${navLink('discover.html',  page, 'compass',  'Discover')}
         ${navLibraryDropdown(page)}
         ${navLink('favorites.html',  page, 'heart',    'Favorites')}
         ${navLink('lists.html',      page, 'layers',   'Lists')}
@@ -162,6 +163,7 @@ function injectChrome() {
   mobileNavEl.id = 'mobileNav';
   mobileNavEl.innerHTML = `
     ${mobileNavLink('index.html',     page, 'home',     'Home')}
+    ${mobileNavLink('discover.html',  page, 'compass',  'Discover')}
     ${mobileLibraryGroup(page)}
     ${mobileNavLink('favorites.html', page, 'heart',    'Favorites')}
     ${mobileNavLink('lists.html',     page, 'layers',   'Lists')}
