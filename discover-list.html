@@ -14,16 +14,47 @@
   margin-bottom:1.5rem; transition:color .15s;
 }
 .dl-back:hover { color:var(--olive-light); }
-.dl-title { font-family:var(--serif); font-size:clamp(28px, 5vw, 42px); font-weight:300; margin-bottom:2rem; }
 
+.dl-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin-bottom:2rem; flex-wrap:wrap; }
+.dl-title { font-family:var(--serif); font-size:clamp(28px, 5vw, 42px); font-weight:300; }
+
+/* ── Grid view ── */
 .dl-grid {
   display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:clamp(14px, 2.5vw, 22px);
 }
 .dl-card {
-  opacity:0; transform:translateY(16px);
-  animation:dlCardIn .45s var(--ease) forwards;
+  opacity:0; transform:translateY(18px);
+  transition:opacity .5s var(--ease), transform .5s var(--ease);
 }
-@keyframes dlCardIn { to { opacity:1; transform:none; } }
+.dl-card.dl-in-view { opacity:1; transform:none; }
+.dl-card:hover .dl-play { opacity:1; }
+.dl-type-badge {
+  position:absolute; top:8px; left:8px; padding:2px 8px; border-radius:20px;
+  font-size:10px; font-weight:600; letter-spacing:.3px;
+  background:rgba(0,0,0,0.6); color:#fff; backdrop-filter:blur(4px);
+}
+.dl-play {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  opacity:0; transition:opacity .2s; color:#fff; pointer-events:none;
+}
+.dl-play svg { width:30px; height:30px; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+
+/* ── List view ── */
+.dl-list { display:flex; flex-direction:column; gap:2px; }
+.dl-list-row {
+  display:grid; grid-template-columns:52px 1fr auto; align-items:center; gap:14px;
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
+  padding:8px 14px 8px 8px; cursor:pointer;
+  opacity:0; transform:translateX(-10px);
+  transition:opacity .4s var(--ease), transform .4s var(--ease), border-color .15s, background .15s;
+}
+.dl-list-row.dl-in-view { opacity:1; transform:none; }
+.dl-list-row:hover { border-color:var(--border-olive); background:var(--card-2); }
+.dl-list-poster { width:52px; height:74px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.dl-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.dl-list-title { font-size:14.5px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dl-list-year { font-size:12px; color:var(--text-3); margin-top:2px; }
+.dl-list-type { font-size:10px; padding:3px 9px; border-radius:20px; background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); letter-spacing:.4px; white-space:nowrap; }
 
 .home-tmdb-poster-fallback {
   width:100%; height:100%; display:flex; align-items:center; justify-content:center;
@@ -51,7 +82,10 @@
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     Back
   </a>
-  <h1 class="dl-title" id="dlTitle">Loading…</h1>
+  <div class="dl-head">
+    <h1 class="dl-title" id="dlTitle">Loading…</h1>
+    <div class="view-toggle" id="dlViewToggle"></div>
+  </div>
   <div class="dl-grid" id="dlGrid"></div>
   <div class="dl-sentinel" id="dlSentinel"></div>
   <div class="dl-end-msg" id="dlEndMsg" style="display:none">You've reached the end.</div>
@@ -72,20 +106,83 @@ const _dlTitle = _dlParams.get('title') || _dlCategory.title;
 let _dlPage = 1;
 let _dlLoading = false;
 let _dlDone = false;
+let _dlView = localStorage.getItem('disc_listView') || 'grid';
 
-function _dlCardHTML(it, delayIdx) {
+const _DL_PLAY_SVG = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+
+function _dlTypeLabel(mediaType) {
+  return mediaType === 'movie' ? 'Movie' : 'TV';
+}
+
+function _dlCardHTML(it) {
   const posterUrl = it.poster_path ? TMDB_FULL + it.poster_path : null;
   const posterInner = posterUrl
     ? `<img src="${posterUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
-  const delay = Math.min(delayIdx * 0.03, 0.4);
-  return `<div class="q-card dl-card" style="animation-delay:${delay}s" onclick="goToTitle('${it.media_type}', ${it.id})">
-    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div></div>
+  return `<div class="q-card dl-card" onclick="goToTitle('${it.media_type}', ${it.id})">
+    <div class="q-poster" style="position:relative">
+      ${posterInner}
+      <div class="q-poster-overlay"></div>
+      <span class="dl-type-badge">${_dlTypeLabel(it.media_type)}</span>
+      <span class="dl-play">${_DL_PLAY_SVG}</span>
+    </div>
     <div class="q-info">
       <div class="q-title">${_dlEsc(it.title)}</div>
       ${it.year ? `<div class="q-genre home-tmdb-year">${_dlEsc(it.year)}</div>` : ''}
     </div>
   </div>`;
+}
+
+function _dlListRowHTML(it) {
+  const posterUrl = it.poster_path ? TMDB_IMG + it.poster_path : null;
+  const posterInner = posterUrl
+    ? `<img src="${posterUrl}" loading="lazy">`
+    : `<div class="home-tmdb-poster-fallback" style="font-size:16px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
+  return `<div class="dl-list-row" onclick="goToTitle('${it.media_type}', ${it.id})">
+    <div class="dl-list-poster">${posterInner}</div>
+    <div style="min-width:0">
+      <div class="dl-list-title">${_dlEsc(it.title)}</div>
+      ${it.year ? `<div class="dl-list-year">${_dlEsc(it.year)}</div>` : ''}
+    </div>
+    <span class="dl-list-type">${_dlTypeLabel(it.media_type)}</span>
+  </div>`;
+}
+
+function _dlRenderViewToggle() {
+  document.getElementById('dlViewToggle').innerHTML = `
+    <button class="vt-btn ${_dlView==='list'?'active':''}" onclick="_dlSetView('list')" title="List view">${icon('list',13)}</button>
+    <button class="vt-btn ${_dlView==='grid'?'active':''}" onclick="_dlSetView('grid')" title="Grid view">${icon('grid',13)}</button>`;
+}
+
+let _dlAllItems = [];
+let _dlRevealObserver = null;
+
+function _dlSetView(v) {
+  if (v === _dlView) return;
+  _dlView = v;
+  localStorage.setItem('disc_listView', v);
+  const grid = document.getElementById('dlGrid');
+  grid.className = v === 'list' ? 'dl-list' : 'dl-grid';
+  // Items already fetched aren't re-fetched, just redrawn in the new view.
+  grid.innerHTML = _dlAllItems.map(it => v === 'list' ? _dlListRowHTML(it) : _dlCardHTML(it)).join('');
+  _dlRenderViewToggle();
+  _dlObserveNewCards();
+}
+
+function _dlObserveNewCards() {
+  if (!_dlRevealObserver) {
+    _dlRevealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('dl-in-view');
+          _dlRevealObserver.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+  }
+  const grid = document.getElementById('dlGrid');
+  const selector = _dlView === 'list' ? '.dl-list-row:not(.dl-in-view)' : '.dl-card:not(.dl-in-view)';
+  grid.querySelectorAll(selector).forEach(el => _dlRevealObserver.observe(el));
 }
 
 async function _dlLoadMore() {
@@ -98,9 +195,10 @@ async function _dlLoadMore() {
       document.getElementById('dlEndMsg').style.display = '';
       return;
     }
+    _dlAllItems = _dlAllItems.concat(items);
     const grid = document.getElementById('dlGrid');
-    const startIdx = grid.children.length;
-    grid.insertAdjacentHTML('beforeend', items.map((it, i) => _dlCardHTML(it, i)).join(''));
+    grid.insertAdjacentHTML('beforeend', items.map(it => _dlView === 'list' ? _dlListRowHTML(it) : _dlCardHTML(it)).join(''));
+    _dlObserveNewCards();
     _dlPage++;
     if (_dlPage > 20) { _dlDone = true; } // TMDB caps around here for these endpoints anyway
   } catch (e) {
@@ -114,6 +212,8 @@ async function _dlLoadMore() {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dlTitle').textContent = _dlTitle;
   document.title = _dlTitle + ' — MyScreenScore';
+  document.getElementById('dlGrid').className = _dlView === 'list' ? 'dl-list' : 'dl-grid';
+  _dlRenderViewToggle();
 
   initPageGuest(async () => {
     await _dlLoadMore();
