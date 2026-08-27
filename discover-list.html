@@ -221,7 +221,19 @@ async function _dlLoadMore() {
   if (_dlLoading || _dlDone) return;
   _dlLoading = true;
   try {
-    const items = await _dlCategory.fetch(_dlPage);
+    let items = await _dlCategory.fetch(_dlPage);
+
+    // Enforce a per-category hard cap (e.g. a genuine "Top 250" should
+    // stop at 250, not keep paginating until TMDB runs dry).
+    if (_dlCategory.cap) {
+      const remaining = _dlCategory.cap - _dlAllItems.length;
+      if (remaining <= 0) {
+        items = [];
+      } else if (items.length > remaining) {
+        items = items.slice(0, remaining);
+      }
+    }
+
     if (!items.length) {
       _dlDone = true;
       document.getElementById('dlEndMsg').style.display = '';
@@ -233,7 +245,11 @@ async function _dlLoadMore() {
     grid.insertAdjacentHTML('beforeend', items.map((it, i) => _dlView === 'list' ? _dlListRowHTML(it, startRank + i) : _dlCardHTML(it, startRank + i)).join(''));
     _dlObserveNewCards();
     _dlPage++;
-    if (_dlPage > 20) { _dlDone = true; } // TMDB caps around here for these endpoints anyway
+    if (_dlCategory.cap && _dlAllItems.length >= _dlCategory.cap) {
+      _dlDone = true;
+      document.getElementById('dlEndMsg').style.display = '';
+    }
+    if (_dlPage > 30) { _dlDone = true; } // safety net regardless of category
   } catch (e) {
     console.error('Discover list fetch error:', e);
     _dlDone = true;
