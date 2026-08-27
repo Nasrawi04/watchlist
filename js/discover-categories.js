@@ -162,9 +162,9 @@ async function _discSelectLinkResult(tmdbId, tmdbType) {
     if (error) throw error;
     if (typeof showToast === 'function') showToast(`Linked — updated ${data} ${data === 1 ? 'entry' : 'entries'}.`);
     _discCloseLinkPopup();
-    // Refresh so the newly-linked title now routes normally and its
-    // score reflects the merge.
-    if (typeof location !== 'undefined') location.reload();
+    // Go straight to the newly-linked title instead of staying on this
+    // page — that's what the user was trying to reach in the first place.
+    goToTitle(tmdbType, tmdbId);
   } catch (err) {
     console.error('Link entries error:', err);
     if (typeof showToast === 'function') showToast('Failed to link — try again.', 'err');
