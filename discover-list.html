@@ -21,18 +21,26 @@
 /* ── Grid view ── */
 .dl-grid {
   display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:clamp(14px, 2.5vw, 22px);
+  align-items:start; grid-auto-rows:max-content;
 }
 .dl-card {
-  opacity:0; transform:translateY(18px);
+  opacity:0; transform:translateY(18px); width:100%; box-sizing:border-box;
   transition:opacity .5s var(--ease), transform .5s var(--ease);
 }
 .dl-card.dl-in-view { opacity:1; transform:none; }
 .dl-card:hover .dl-play { opacity:1; }
 .dl-type-badge {
-  position:absolute; top:8px; left:8px; padding:2px 8px; border-radius:20px;
+  position:absolute; top:8px; right:8px; padding:2px 8px; border-radius:20px;
   font-size:10px; font-weight:600; letter-spacing:.3px;
   background:rgba(0,0,0,0.6); color:#fff; backdrop-filter:blur(4px);
 }
+.dl-rank-badge {
+  position:absolute; top:8px; left:8px; min-width:26px; height:26px; padding:0 6px;
+  border-radius:8px; display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-size:15px; font-weight:600;
+  background:rgba(0,0,0,0.65); color:#fff; backdrop-filter:blur(4px);
+}
+.dl-rank-badge.dl-top3 { background:var(--olive-light); color:#18180f; }
 .dl-play {
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
   opacity:0; transition:opacity .2s; color:#fff; pointer-events:none;
@@ -40,21 +48,40 @@
 .dl-play svg { width:30px; height:30px; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
 
 /* ── List view ── */
-.dl-list { display:flex; flex-direction:column; gap:2px; }
+.dl-list { display:flex; flex-direction:column; gap:8px; }
 .dl-list-row {
-  display:grid; grid-template-columns:52px 1fr auto; align-items:center; gap:14px;
+  display:grid; grid-template-columns:64px 1fr auto; align-items:center; gap:18px;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
-  padding:8px 14px 8px 8px; cursor:pointer;
+  padding:12px 20px 12px 12px; cursor:pointer;
   opacity:0; transform:translateX(-10px);
   transition:opacity .4s var(--ease), transform .4s var(--ease), border-color .15s, background .15s;
 }
+.dl-list-row.dl-ranked { grid-template-columns:40px 64px 1fr auto; }
 .dl-list-row.dl-in-view { opacity:1; transform:none; }
 .dl-list-row:hover { border-color:var(--border-olive); background:var(--card-2); }
-.dl-list-poster { width:52px; height:74px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.dl-list-rank { font-family:var(--serif); font-size:22px; color:var(--text-3); text-align:center; }
+.dl-list-rank.dl-top3 { color:var(--olive-light); }
+.dl-list-poster { width:64px; height:90px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
 .dl-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.dl-list-title { font-size:14.5px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dl-list-year { font-size:12px; color:var(--text-3); margin-top:2px; }
-.dl-list-type { font-size:10px; padding:3px 9px; border-radius:20px; background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); letter-spacing:.4px; white-space:nowrap; }
+.dl-list-title { font-size:16px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dl-list-year { font-size:12.5px; color:var(--text-3); margin-top:4px; }
+.dl-list-type { font-size:11px; padding:4px 11px; border-radius:20px; background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); letter-spacing:.4px; white-space:nowrap; }
+
+@media(max-width:560px) {
+  .dl-head { margin-bottom:1.5rem; }
+  .dl-grid { grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:12px; }
+  .dl-rank-badge { min-width:22px; height:22px; font-size:13px; }
+  .dl-list-row { grid-template-columns:48px 1fr auto; gap:12px; padding:9px 14px 9px 9px; }
+  .dl-list-row.dl-ranked { grid-template-columns:26px 48px 1fr auto; }
+  .dl-list-poster { width:48px; height:68px; }
+  .dl-list-rank { font-size:17px; }
+  .dl-list-title { font-size:14px; }
+  .dl-list-year { font-size:11.5px; }
+  .dl-list-type { font-size:10px; padding:3px 8px; }
+}
+@media(max-width:380px) {
+  .dl-list-type { display:none; }
+}
 
 .home-tmdb-poster-fallback {
   width:100%; height:100%; display:flex; align-items:center; justify-content:center;
@@ -107,6 +134,7 @@ let _dlPage = 1;
 let _dlLoading = false;
 let _dlDone = false;
 let _dlView = localStorage.getItem('disc_listView') || 'grid';
+const _dlIsRanked = _dlCategory.key.startsWith('top250');
 
 const _DL_PLAY_SVG = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
 
@@ -114,15 +142,19 @@ function _dlTypeLabel(mediaType) {
   return mediaType === 'movie' ? 'Movie' : 'TV';
 }
 
-function _dlCardHTML(it) {
+function _dlCardHTML(it, rank) {
   const posterUrl = it.poster_path ? TMDB_FULL + it.poster_path : null;
   const posterInner = posterUrl
     ? `<img src="${posterUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
+  const rankBadge = _dlIsRanked
+    ? `<span class="dl-rank-badge ${rank <= 3 ? 'dl-top3' : ''}">${rank}</span>`
+    : '';
   return `<div class="q-card dl-card" onclick="goToTitle('${it.media_type}', ${it.id})">
     <div class="q-poster" style="position:relative">
       ${posterInner}
       <div class="q-poster-overlay"></div>
+      ${rankBadge}
       <span class="dl-type-badge">${_dlTypeLabel(it.media_type)}</span>
       <span class="dl-play">${_DL_PLAY_SVG}</span>
     </div>
@@ -133,12 +165,16 @@ function _dlCardHTML(it) {
   </div>`;
 }
 
-function _dlListRowHTML(it) {
+function _dlListRowHTML(it, rank) {
   const posterUrl = it.poster_path ? TMDB_IMG + it.poster_path : null;
   const posterInner = posterUrl
     ? `<img src="${posterUrl}" loading="lazy">`
-    : `<div class="home-tmdb-poster-fallback" style="font-size:16px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
-  return `<div class="dl-list-row" onclick="goToTitle('${it.media_type}', ${it.id})">
+    : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
+  const rankCol = _dlIsRanked
+    ? `<div class="dl-list-rank ${rank <= 3 ? 'dl-top3' : ''}">${rank}</div>`
+    : '';
+  return `<div class="dl-list-row ${_dlIsRanked ? 'dl-ranked' : ''}" onclick="goToTitle('${it.media_type}', ${it.id})">
+    ${rankCol}
     <div class="dl-list-poster">${posterInner}</div>
     <div style="min-width:0">
       <div class="dl-list-title">${_dlEsc(it.title)}</div>
@@ -164,7 +200,7 @@ function _dlSetView(v) {
   const grid = document.getElementById('dlGrid');
   grid.className = v === 'list' ? 'dl-list' : 'dl-grid';
   // Items already fetched aren't re-fetched, just redrawn in the new view.
-  grid.innerHTML = _dlAllItems.map(it => v === 'list' ? _dlListRowHTML(it) : _dlCardHTML(it)).join('');
+  grid.innerHTML = _dlAllItems.map((it, i) => v === 'list' ? _dlListRowHTML(it, i + 1) : _dlCardHTML(it, i + 1)).join('');
   _dlRenderViewToggle();
   _dlObserveNewCards();
 }
@@ -197,7 +233,8 @@ async function _dlLoadMore() {
     }
     _dlAllItems = _dlAllItems.concat(items);
     const grid = document.getElementById('dlGrid');
-    grid.insertAdjacentHTML('beforeend', items.map(it => _dlView === 'list' ? _dlListRowHTML(it) : _dlCardHTML(it)).join(''));
+    const startRank = _dlAllItems.length - items.length + 1;
+    grid.insertAdjacentHTML('beforeend', items.map((it, i) => _dlView === 'list' ? _dlListRowHTML(it, startRank + i) : _dlCardHTML(it, startRank + i)).join(''));
     _dlObserveNewCards();
     _dlPage++;
     if (_dlPage > 20) { _dlDone = true; } // TMDB caps around here for these endpoints anyway
