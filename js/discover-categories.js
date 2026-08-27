@@ -124,8 +124,11 @@ const DISCOVER_CATEGORIES = [
     key: 'top250_shows',
     navLabel: 'Top 250 Shows',
     title: 'Top 250 Shows',
+    // Uses discover (not /tv/top_rated) so we can require a real minimum
+    // vote count — otherwise a handful of 10.0-rated shows with 3 votes
+    // can outrank genuinely well-reviewed ones.
     async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/tv/top_rated?api_key=${TMDB_KEY}&language=en-US&page=${page}`);
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
       return (data.results || [])
         .map(r => _discNormalize(r, 'tv'))
         .filter(r => !r.origin_country.includes('JP'));
@@ -136,7 +139,7 @@ const DISCOVER_CATEGORIES = [
     navLabel: 'Top 250 Movies',
     title: 'Top 250 Movies',
     async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/movie/top_rated?api_key=${TMDB_KEY}&language=en-US&page=${page}`);
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
       return (data.results || []).map(r => _discNormalize(r, 'movie'));
     }
   },
@@ -145,7 +148,7 @@ const DISCOVER_CATEGORIES = [
     navLabel: 'Top 250 Cartoons',
     title: 'Top 250 Cartoons',
     async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&sort_by=vote_average.desc&vote_count.gte=50&page=${page}`);
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
       return (data.results || [])
         .map(r => _discNormalize(r, 'tv'))
         .filter(r => !r.origin_country.includes('JP'));
@@ -156,7 +159,7 @@ const DISCOVER_CATEGORIES = [
     navLabel: 'Top 250 Anime',
     title: 'Top 250 Anime',
     async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&with_origin_country=JP&sort_by=vote_average.desc&vote_count.gte=50&page=${page}`);
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&with_origin_country=JP&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
       return (data.results || []).map(r => _discNormalize(r, 'tv'));
     }
   },
