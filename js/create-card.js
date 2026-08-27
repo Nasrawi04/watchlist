@@ -1232,7 +1232,7 @@ async function _drawDiscoverCard(myToken) {
       const charLineH = 15;
 
       const rowH = avatarD + 14 + 16 + (maxCharLines * charLineH) + 6;
-      const boxH = capH + rowH + 24;
+      const boxH = capH + rowH + 40;
       drawBox(y, boxH);
       let cy = y + 22;
       cy = sectionLabel('Starring', PAD + 24, cy) + 10;
