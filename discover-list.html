@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.dl-back {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; color:var(--text-3); text-decoration:none;
+  margin-bottom:1.5rem; transition:color .15s;
+}
+.dl-back:hover { color:var(--olive-light); }
+.dl-title { font-family:var(--serif); font-size:clamp(28px, 5vw, 42px); font-weight:300; margin-bottom:2rem; }
+
+.dl-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:clamp(14px, 2.5vw, 22px);
+}
+.dl-card {
+  opacity:0; transform:translateY(16px);
+  animation:dlCardIn .45s var(--ease) forwards;
+}
+@keyframes dlCardIn { to { opacity:1; transform:none; } }
+
+.home-tmdb-poster-fallback {
+  width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+  background:var(--bg-3); font-family:var(--serif); color:var(--olive-light);
+  font-size:clamp(22px, 6vw, 32px);
+}
+.home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
+
+.dl-sentinel { height:1px; }
+.dl-end-msg { text-align:center; padding:2.5rem 0; color:var(--text-3); font-size:13px; }
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+  <a class="dl-back" href="discover.html" id="dlBack" onclick="if(history.length>1){history.back();return false;}">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+  <h1 class="dl-title" id="dlTitle">Loading…</h1>
+  <div class="dl-grid" id="dlGrid"></div>
+  <div class="dl-sentinel" id="dlSentinel"></div>
+  <div class="dl-end-msg" id="dlEndMsg" style="display:none">You've reached the end.</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/discover-categories.js"></script>
+<script>
+function _dlEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+const _dlParams = new URLSearchParams(location.search);
+const _dlCategory = getDiscoverCategory(_dlParams.get('list') || 'trending_week');
+const _dlTitle = _dlParams.get('title') || _dlCategory.title;
+
+let _dlPage = 1;
+let _dlLoading = false;
+let _dlDone = false;
+
+function _dlCardHTML(it, delayIdx) {
+  const posterUrl = it.poster_path ? TMDB_FULL + it.poster_path : null;
+  const posterInner = posterUrl
+    ? `<img src="${posterUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+    : `<div class="home-tmdb-poster-fallback">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
+  const delay = Math.min(delayIdx * 0.03, 0.4);
+  return `<div class="q-card dl-card" style="animation-delay:${delay}s" onclick="goToTitle('${it.media_type}', ${it.id})">
+    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div></div>
+    <div class="q-info">
+      <div class="q-title">${_dlEsc(it.title)}</div>
+      ${it.year ? `<div class="q-genre home-tmdb-year">${_dlEsc(it.year)}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+async function _dlLoadMore() {
+  if (_dlLoading || _dlDone) return;
+  _dlLoading = true;
+  try {
+    const items = await _dlCategory.fetch(_dlPage);
+    if (!items.length) {
+      _dlDone = true;
+      document.getElementById('dlEndMsg').style.display = '';
+      return;
+    }
+    const grid = document.getElementById('dlGrid');
+    const startIdx = grid.children.length;
+    grid.insertAdjacentHTML('beforeend', items.map((it, i) => _dlCardHTML(it, i)).join(''));
+    _dlPage++;
+    if (_dlPage > 20) { _dlDone = true; } // TMDB caps around here for these endpoints anyway
+  } catch (e) {
+    console.error('Discover list fetch error:', e);
+    _dlDone = true;
+  } finally {
+    _dlLoading = false;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dlTitle').textContent = _dlTitle;
+  document.title = _dlTitle + ' — MyScreenScore';
+
+  initPageGuest(async () => {
+    await _dlLoadMore();
+
+    const sentinel = document.getElementById('dlSentinel');
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) _dlLoadMore(); });
+    }, { rootMargin: '400px' });
+    obs.observe(sentinel);
+  });
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>
