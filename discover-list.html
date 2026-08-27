@@ -20,7 +20,8 @@
 
 /* ── Grid view ── */
 .dl-grid {
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:clamp(16px, 1.8vw, 32px);
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(clamp(80px, 26vw, 200px), 1fr));
+  gap:clamp(10px, 1.8vw, 32px);
   align-items:start; grid-auto-rows:max-content;
 }
 .dl-card {
@@ -55,7 +56,7 @@
 
 @media(max-width:560px) {
   .dl-head { margin-bottom:1.5rem; }
-  .dl-grid { grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .dl-grid { gap:10px; }
   .dl-rank-badge { min-width:22px; height:22px; font-size:13px; }
   .dl-list-row { grid-template-columns:48px 1fr auto; gap:12px; padding:9px 14px 9px 9px; }
   .dl-list-row.dl-ranked { grid-template-columns:26px 48px 1fr auto; }
