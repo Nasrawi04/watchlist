@@ -141,7 +141,7 @@ function _dlCardHTML(it, rank) {
     ? `<div class="cg-rank-badge ${_dlRankCls(rank)}">${rank}</div>`
     : '';
   const scoreStr = _discFloorScore(it.score);
-  return `<div class="q-card dl-card" onclick="goToTitle('${it.media_type}', ${it.id})">
+  return `<div class="q-card dl-card" ${_discClickAttr(it)}>
     <div class="q-poster" style="position:relative">
       ${posterInner}
       <div class="q-poster-overlay"></div>
@@ -166,7 +166,7 @@ function _dlListRowHTML(it, rank) {
     ? `<div class="dl-list-rank">${rank}</div>`
     : '';
   const scoreStr = _discFloorScore(it.score);
-  return `<div class="dl-list-row ${_dlIsRanked ? 'dl-ranked' : ''}" onclick="goToTitle('${it.media_type}', ${it.id})">
+  return `<div class="dl-list-row ${_dlIsRanked ? 'dl-ranked' : ''}" ${_discClickAttr(it)}>
     ${rankCol}
     <div class="dl-list-poster">${posterInner}</div>
     <div style="min-width:0">
