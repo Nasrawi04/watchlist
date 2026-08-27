@@ -233,7 +233,11 @@ nav {
 }
 .nav-logo em { color:var(--olive-light); font-style:normal; text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:3px; }
 .nav-logo-img { height:84px; width:auto; display:block; }
-@media(max-width:480px) { .nav-logo { font-size:20px; letter-spacing:2px; } .nav-logo-img { height:46px; } }
+@media(max-width:480px) {
+  .nav-logo { font-size:20px; letter-spacing:2px; } .nav-logo-img { height:46px; }
+  .nav-icon-btn { width:34px; height:34px; }
+  .nav-top-user .nav-user-avatar { width:34px; height:34px; font-size:14px; }
+}
 
 .nav-links { display:flex; align-items:center; gap:1px; flex:1; }
 
@@ -2165,7 +2169,6 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 [data-theme="light"] .toast          { background:rgba(25,22,18,0.96); color:#F0EDE8; border-color:rgba(0,0,0,0.15); }
 [data-theme="light"] .progress-edit-section { background:#DDD5CA; border-color:rgba(0,0,0,0.12); }
 [data-theme="light"] .w-prog-track,
-[data-theme="light"] .det-prog-track,
 [data-theme="light"] .wg-prog-track { background:rgba(0,0,0,0.16); }
 [data-theme="light"] .cat-card:hover     { background:#E8E1D7; border-color:rgba(26,69,32,0.3); }
 [data-theme="light"] .w-card:hover       { background:#E8E1D7; }
