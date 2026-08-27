@@ -13,16 +13,26 @@ function _discTodayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Rounds a score DOWN to the nearest 0.5 (never up), always shown to one
+// decimal place — e.g. 8.43 -> "8.0", 8.67 -> "8.5", 9.0 -> "9.0". Used
+// for every score badge across Discover, TMDB-sourced or MyScreenScore's
+// own, so the rounding rule is consistent everywhere.
+function _discFloorScore(score) {
+  if (score == null || isNaN(score)) return null;
+  return (Math.floor(Number(score) * 2) / 2).toFixed(1);
+}
+
 // Normalizes a raw TMDB result (movie or tv) into the shape every
-// Discover card expects: { id, media_type, title, poster_path, year, origin_country }
+// Discover card expects: { id, media_type, title, poster_url, year, score, origin_country }
 function _discNormalize(r, mediaType) {
   const isMovie = mediaType === 'movie';
   return {
     id: r.id,
     media_type: mediaType,
     title: isMovie ? r.title : r.name,
-    poster_path: r.poster_path,
+    poster_url: r.poster_path ? TMDB_FULL + r.poster_path : null,
     year: ((isMovie ? r.release_date : r.first_air_date) || '').split('-')[0],
+    score: typeof r.vote_average === 'number' && r.vote_average > 0 ? r.vote_average : null,
     origin_country: r.origin_country || [],
   };
 }
@@ -75,6 +85,31 @@ const DISCOVER_CATEGORIES = [
     async fetch(page) {
       const data = await _discFetchJSON(`${TMDB_BASE}/tv/airing_today?api_key=${TMDB_KEY}&language=en-US&page=${page}`);
       return (data.results || []).map(r => _discNormalize(r, 'tv'));
+    }
+  },
+  {
+    key: 'top_rated_mss',
+    navLabel: 'Top Rated (MyScreenScore)',
+    title: 'Top Rated on MyScreenScore',
+    // Sourced from our own users' ratings (final_score), not TMDB — see
+    // get_top_rated_myscreenscore() in 011_top_rated_myscreenscore.sql.
+    // Capped at the top 500 titles.
+    async fetch(page) {
+      const pageSize = 20;
+      const offset = (page - 1) * pageSize;
+      if (offset >= 500) return [];
+      const limit = Math.min(pageSize, 500 - offset);
+      const { data, error } = await sb.rpc('get_top_rated_myscreenscore', { p_limit: limit, p_offset: offset });
+      if (error) { console.error('Top Rated (MyScreenScore) fetch error:', error); return []; }
+      return (data || []).map(r => ({
+        id: r.tmdb_id,
+        media_type: r.tmdb_type,
+        title: r.title,
+        poster_url: r.poster_url || null,
+        year: '',
+        score: r.avg_score != null ? Number(r.avg_score) : null,
+        origin_country: [],
+      }));
     }
   },
   {
