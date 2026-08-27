@@ -3,13 +3,18 @@
 --  MyScreenScore — "Top Rated on MSS" Discover Category
 --
 --  Aggregates final_score across ALL users' entries into one
---  ranked list. Groups by normalized title + derived media type
---  (movie vs. show) rather than tmdb_id alone — this matters
---  because many entries predate TMDB linking and have no
---  tmdb_id/tmdb_type set at all. Grouping by title instead means
---  an older unlinked rating and a newer TMDB-linked rating of the
---  same title still get merged into a single combined score,
---  instead of the unlinked one being silently invisible.
+--  ranked list. Grouping happens in two tiers:
+--
+--    1. Entries WITH a tmdb_id/tmdb_type are grouped by that id —
+--       the authoritative, unambiguous key. This is what lets two
+--       differently-titled entries (e.g. "Marvel's Daredevil" vs
+--       "Daredevil") merge into one row once both are linked to
+--       the same TMDB title, instead of staying duplicated forever
+--       just because the text never matched.
+--    2. Entries with NO tmdb_id fall back to grouping by normalized
+--       title + derived media type, since that's the only key
+--       available before linking — these are the "needs linking"
+--       rows offered the popup in Discover.
 --
 --  A group with no linked entry anywhere still appears, with tmdb_id/
 --  tmdb_type as NULL — the client offers a linking popup for those
@@ -50,19 +55,43 @@ AS $$
       END AS derived_type
     FROM public.entries e
     WHERE e.final_score IS NOT NULL
+  ),
+  linked AS (
+    SELECT
+      s.tmdb_id,
+      s.tmdb_type,
+      (array_agg(s.title      ORDER BY s.created_at DESC))[1] AS title,
+      (array_agg(s.poster_url ORDER BY s.created_at DESC) FILTER (WHERE s.poster_url IS NOT NULL))[1] AS poster_url,
+      avg(s.final_score)::numeric AS avg_score,
+      count(*) AS rating_count,
+      count(DISTINCT s.user_id) AS user_count,
+      (array_agg(s.derived_type))[1] AS derived_type
+    FROM scored s
+    WHERE s.tmdb_id IS NOT NULL
+    GROUP BY s.tmdb_id, s.tmdb_type
+  ),
+  unlinked AS (
+    SELECT
+      NULL::integer AS tmdb_id,
+      NULL::text AS tmdb_type,
+      (array_agg(s.title      ORDER BY s.created_at DESC))[1] AS title,
+      (array_agg(s.poster_url ORDER BY s.created_at DESC) FILTER (WHERE s.poster_url IS NOT NULL))[1] AS poster_url,
+      avg(s.final_score)::numeric AS avg_score,
+      count(*) AS rating_count,
+      count(DISTINCT s.user_id) AS user_count,
+      s.derived_type
+    FROM scored s
+    WHERE s.tmdb_id IS NULL
+    GROUP BY s.norm_title, s.derived_type
   )
-  SELECT
-    (array_agg(s.tmdb_id)   FILTER (WHERE s.tmdb_id   IS NOT NULL))[1] AS tmdb_id,
-    (array_agg(s.tmdb_type) FILTER (WHERE s.tmdb_type IS NOT NULL))[1] AS tmdb_type,
-    (array_agg(s.title      ORDER BY s.created_at DESC))[1] AS title,
-    (array_agg(s.poster_url ORDER BY s.created_at DESC) FILTER (WHERE s.poster_url IS NOT NULL))[1] AS poster_url,
-    avg(s.final_score)::numeric AS avg_score,
-    count(*) AS rating_count,
-    s.derived_type
-  FROM scored s
-  GROUP BY s.norm_title, s.derived_type
-  HAVING count(DISTINCT s.user_id) >= 2
-  ORDER BY avg_score DESC, rating_count DESC
+  SELECT tmdb_id, tmdb_type, title, poster_url, avg_score, rating_count, derived_type
+  FROM (
+    SELECT * FROM linked
+    UNION ALL
+    SELECT * FROM unlinked
+  ) combined
+  WHERE user_count >= 2
+  ORDER BY avg_score DESC, rating_count DESC, title ASC
   LIMIT p_limit OFFSET p_offset;
 $$;
 
