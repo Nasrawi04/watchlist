@@ -52,6 +52,21 @@ function _discInterleave(a, b) {
   return merged;
 }
 
+// Click handler for a Discover card. If we have a real TMDB id, route
+// straight to title.html as usual. If not (e.g. a MyScreenScore-rated
+// title where nobody has linked it to TMDB yet), fall back to opening
+// a TMDB search for that title in a new tab instead of a dead link.
+function _discClickAttr(it) {
+  if (it.id != null && it.media_type) {
+    return `onclick="goToTitle('${it.media_type}', ${it.id})"`;
+  }
+  return `onclick='_discOpenFallbackSearch(${JSON.stringify(it.title || '')})'`;
+}
+
+function _discOpenFallbackSearch(title) {
+  window.open('https://www.themoviedb.org/search?query=' + encodeURIComponent(title), '_blank', 'noopener');
+}
+
 const DISCOVER_CATEGORIES = [
   {
     key: 'trending_week',
