@@ -165,6 +165,18 @@
 .td-note-react-btn:hover { color:var(--text); }
 .td-note-react-btn.active-like { color:var(--olive-light); }
 .td-note-react-btn.active-dislike { color:#c0685a; }
+.td-note-card { position:relative; }
+.dt-heart-pop {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.4);
+  font-size:56px; color:var(--olive-light); text-shadow:0 2px 14px rgba(0,0,0,.35);
+  pointer-events:none; opacity:0; animation:dtHeartPop .7s ease forwards; z-index:5;
+}
+@keyframes dtHeartPop {
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.4); }
+  25%  { opacity:1; transform:translate(-50%,-50%) scale(1.15); }
+  40%  { transform:translate(-50%,-50%) scale(0.95); }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(1); }
+}
 
 /* ── Cast ── */
 .td-cast-scroll { display:flex; flex-wrap:wrap; gap:20px 18px; }
@@ -760,6 +772,31 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') _closeEpisodePopup();
 });
 
+/* ── Double-tap-to-like (touch screens) ──
+   Reused across title.html/lists.html/notes.html with the same
+   signature: a unique key, a "do the like" callback, and an
+   "already liked?" check so a second tap never accidentally
+   un-likes something. */
+let _dtLastTap = {};
+function _dtHandleTouch(e, key, likeFn, isAlreadyLiked) {
+  const now = Date.now();
+  const last = _dtLastTap[key] || 0;
+  _dtLastTap[key] = now;
+  if (now - last < 350 && now - last > 0) {
+    _dtLastTap[key] = 0;
+    if (!isAlreadyLiked()) likeFn();
+    _dtShowHeart(e.currentTarget);
+  }
+}
+function _dtShowHeart(el) {
+  if (!el) return;
+  const heart = document.createElement('div');
+  heart.className = 'dt-heart-pop';
+  heart.textContent = '♥';
+  el.appendChild(heart);
+  setTimeout(() => heart.remove(), 700);
+}
+
 /* ── Community Notes ── */
 let _tdNotesRaw = [];
 let _tdNotesReactions = {}; // entry_id -> 'like' | 'dislike' (current user's own reaction)
@@ -816,7 +853,7 @@ function _tdRenderNotes() {
     const myReaction = _tdNotesReactions[n.entry_id];
     const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const initial = (n.username || '?')[0].toUpperCase();
-    return `<div class="td-note-card">
+    return `<div class="td-note-card" ontouchend="_dtHandleTouch(event, 'td-${n.entry_id}', () => _tdReactToNote('${n.entry_id}', true), () => _tdNotesReactions['${n.entry_id}'] === 'like')">
       <div class="td-note-avatar">${n.avatar_url ? `<img src="${esc(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
       <div class="td-note-body">
         <div class="td-note-head">
