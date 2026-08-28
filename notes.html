@@ -144,6 +144,56 @@
 
 /* ── Sort bar ── */
 .notes-sort-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1.25rem; }
+.notes-user-search-wrap { margin-bottom:1.25rem; }
+.username-dropdown {
+  position:fixed;
+  background:var(--bg-3); border:0.5px solid var(--olive-light); border-top:none;
+  border-radius:0 0 var(--radius) var(--radius); z-index:290;
+  box-shadow:var(--shadow-lg);
+  overflow-y:auto; overflow-x:hidden; max-height:320px;
+  display:none;
+}
+.username-dropdown.open { display:block; }
+.ud-item {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 14px; cursor:pointer;
+  transition:background .15s;
+  border-bottom:0.5px solid var(--border);
+}
+.ud-item:last-child { border-bottom:none; }
+.ud-item:hover, .ud-item.ud-active { background:var(--olive-faint); }
+.ud-avatar {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:var(--bg-3); border:1px solid var(--border-2);
+  font-family:var(--serif); font-size:16px; color:var(--text-2);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.ud-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.ud-info { flex:1; min-width:0; }
+.ud-username { font-size:14px; font-weight:500; color:var(--text); }
+.ud-username em { color:var(--olive-light); font-style:normal; font-weight:600; }
+.ud-display { font-size:11px; color:var(--text-3); margin-top:2px; }
+.ud-loading, .ud-empty { padding:14px; font-size:13px; color:var(--text-3); text-align:center; }
+.notes-user-search-wrap .fused-search-wrap {
+  display:flex; align-items:stretch;
+  border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden;
+  background:var(--bg-3); transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
+}
+.notes-user-search-wrap .fused-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.notes-user-search-wrap .add-friend-input {
+  flex:1; min-width:0; background:transparent; border:none;
+  color:var(--text); font-size:14px;
+  padding:12px 18px; outline:none; box-sizing:border-box;
+}
+.notes-user-search-wrap .add-friend-input::placeholder { color:var(--text-3); }
+#notesUserFilterBanner {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:var(--olive-faint); border:0.5px solid var(--border-olive); border-radius:var(--radius);
+  padding:10px 16px; margin-top:10px; font-size:13.5px; color:var(--olive-light); font-weight:500;
+}
+#notesUserFilterBanner button {
+  background:none; border:none; color:var(--olive-light); font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:underline;
+}
 
 /* ── Note card list (reused from profile.html's Notes tab design) ── */
 .note-row{display:flex;gap:20px;align-items:flex-start;padding:20px 24px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;cursor:pointer;transition:all var(--trans) var(--ease);}
@@ -276,6 +326,18 @@
     <button class="sort-btn" data-sort="za" onclick="setNotesSort('za')">Z→A</button>
     <button class="sort-btn" data-sort="longest" onclick="setNotesSort('longest')">Longest</button>
   </div>
+
+  <!-- Social: user search -->
+  <div class="notes-user-search-wrap fade-up fade-up-1" id="notesUserSearchWrap" style="display:none;">
+    <div class="fused-search-wrap" id="notesUserSearchWrapInner">
+      <input type="text" id="notesUserSearchInput" class="add-friend-input" placeholder="Find notes by username…"
+             autocomplete="off" spellcheck="false"
+             oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();_nuSearch(this.value);"
+             onkeydown="_nuKeydown(event)">
+    </div>
+    <div id="notesUserFilterBanner" style="display:none;"></div>
+  </div>
+  <div id="nuDropdown" class="username-dropdown"></div>
 
   <!-- Social sort bar -->
   <div class="notes-sort-bar fade-up fade-up-1" id="notesSocialSortBar" style="display:none;">
@@ -504,10 +566,14 @@ function setNotesMode(mode) {
   document.querySelectorAll('#notesModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
   document.getElementById('notesPageTitle').textContent = mode === 'personal' ? 'My Notes' : 'Community Notes';
   document.getElementById('notesSortBar').style.display = mode === 'personal' ? '' : 'none';
-  document.getElementById('notesSocialSortBar').style.display = mode === 'social' ? '' : 'none';
+  document.getElementById('notesSocialSortBar').style.display = mode === 'social' && !_nuFilterUser ? '' : 'none';
+  document.getElementById('notesUserSearchWrap').style.display = mode === 'social' ? '' : 'none';
   const headerBtns = document.querySelector('.notes-header-btns');
   if (headerBtns) headerBtns.style.display = mode === 'personal' ? '' : 'none';
   if (mode === 'social') {
+    _nuFilterUser = null;
+    document.getElementById('notesUserFilterBanner').style.display = 'none';
+    document.getElementById('notesSocialSortBar').style.display = '';
     loadSocialNotes();
   } else {
     renderNotesPage();
@@ -545,6 +611,194 @@ async function loadSocialNotes() {
     wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load social notes right now.</div>`;
   }
 }
+
+/* ── Find notes by username — same live dropdown pattern used on friends.html ── */
+let _nuTimer = null;
+let _nuActive = -1;
+let _nuResults = [];
+let _nuScrollY = 0;
+let _nuFilterUser = null; // { id, username, avatar_url }
+
+function _nuPosition() {
+  const wrap = document.getElementById('notesUserSearchWrapInner');
+  const drop = document.getElementById('nuDropdown');
+  if (!wrap || !drop) return;
+  const r = wrap.getBoundingClientRect();
+  drop.style.top = r.bottom + 'px';
+  drop.style.left = r.left + 'px';
+  drop.style.width = r.width + 'px';
+  drop.style.position = 'fixed';
+}
+
+function _nuLockScroll() {
+  _nuScrollY = window.scrollY;
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
+  document.body.style.top = '-' + _nuScrollY + 'px';
+}
+
+function _nuUnlockScroll() {
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.body.style.top = '';
+  window.scrollTo(0, _nuScrollY || 0);
+}
+
+async function _nuSearch(val) {
+  const q = val.trim().toLowerCase();
+  const drop = document.getElementById('nuDropdown');
+  clearTimeout(_nuTimer);
+  _nuActive = -1;
+  if (q.length < 2) {
+    drop.classList.remove('open');
+    document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
+    _nuUnlockScroll();
+    return;
+  }
+  _nuPosition();
+  drop.innerHTML = '<div class="ud-loading">Searching…</div>';
+  drop.classList.add('open');
+  document.getElementById('notesUserSearchWrapInner')?.classList.add('dd-connected-active');
+  _nuLockScroll();
+  _nuTimer = setTimeout(async () => {
+    try {
+      const { data } = await sb.from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .ilike('username', q + '%')
+        .neq('id', _notesUser?.id || '')
+        .limit(10);
+      _nuResults = data || [];
+      if (!_nuResults.length) {
+        drop.innerHTML = '<div class="ud-empty">No users found</div>';
+        return;
+      }
+      drop.innerHTML = _nuResults.map((p, i) => {
+        const initial = (p.username[0] || '?').toUpperCase();
+        const avatarHTML = p.avatar_url
+          ? '<div class="ud-avatar"><img src="' + p.avatar_url + '" loading="lazy"></div>'
+          : '<div class="ud-avatar">' + initial + '</div>';
+        const reg = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        const highlighted = p.username.replace(reg, '<em>$1</em>');
+        const display = p.display_name && p.display_name !== p.username ? p.display_name : '';
+        return '<div class="ud-item" data-i="' + i + '" onmousedown="_nuSelectUser(\'' + p.id + '\',\'' + p.username + '\',\'' + (p.avatar_url || '') + '\')">'
+          + avatarHTML
+          + '<div class="ud-info"><div class="ud-username">@' + highlighted + '</div>'
+          + (display ? '<div class="ud-display">' + display + '</div>' : '')
+          + '</div></div>';
+      }).join('');
+    } catch (e) {
+      drop.innerHTML = '<div class="ud-empty">Error searching</div>';
+    }
+  }, 250);
+}
+
+function _nuKeydown(e) {
+  const drop = document.getElementById('nuDropdown');
+  const items = drop.querySelectorAll('.ud-item');
+  if (!drop.classList.contains('open') || !items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _nuActive = Math.min(_nuActive + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('ud-active', i === _nuActive));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _nuActive = Math.max(_nuActive - 1, -1);
+    items.forEach((el, i) => el.classList.toggle('ud-active', i === _nuActive));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_nuActive >= 0 && _nuResults[_nuActive]) {
+      _nuSelectUser(_nuResults[_nuActive].id, _nuResults[_nuActive].username, _nuResults[_nuActive].avatar_url || '');
+    }
+  } else if (e.key === 'Escape') {
+    drop.classList.remove('open'); _nuActive = -1;
+    document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
+    _nuUnlockScroll();
+  }
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#notesUserSearchWrap') && !e.target.closest('#nuDropdown')) {
+    document.getElementById('nuDropdown')?.classList.remove('open');
+    document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
+    _nuUnlockScroll();
+    _nuActive = -1;
+  }
+});
+
+async function _nuSelectUser(userId, username, avatarUrl) {
+  _nuFilterUser = { id: userId, username, avatar_url: avatarUrl };
+  document.getElementById('notesUserSearchInput').value = username;
+  document.getElementById('nuDropdown').classList.remove('open');
+  document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
+  _nuUnlockScroll();
+  _nuResults = []; _nuActive = -1;
+  document.getElementById('notesSocialSortBar').style.display = 'none';
+  await _nuLoadUserNotes();
+}
+
+function _nuClearFilter() {
+  _nuFilterUser = null;
+  document.getElementById('notesUserSearchInput').value = '';
+  document.getElementById('notesUserFilterBanner').style.display = 'none';
+  document.getElementById('notesSocialSortBar').style.display = '';
+  loadSocialNotes();
+}
+
+async function _nuLoadUserNotes() {
+  const wrap = document.getElementById('notesPageContent');
+  wrap.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
+
+  const banner = document.getElementById('notesUserFilterBanner');
+  banner.style.display = 'flex';
+  banner.innerHTML = `<span>Showing notes by @${esc(_nuFilterUser.username)}</span><button onclick="_nuClearFilter()">Clear</button>`;
+
+  try {
+    const { data: entries, error } = await sb.from('entries')
+      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, user_id')
+      .eq('user_id', _nuFilterUser.id)
+      .not('notes', 'is', null)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const withNotes = (entries || []).filter(e => e.notes && e.notes.trim());
+    _socialNotesRaw = withNotes.map(e => ({
+      entry_id: e.id, user_id: e.user_id, username: _nuFilterUser.username, avatar_url: _nuFilterUser.avatar_url,
+      title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
+      notes: e.notes, final_score: e.final_score, created_at: e.created_at,
+      like_count: 0, dislike_count: 0,
+    }));
+
+    if (_socialNotesRaw.length) {
+      const entryIds = _socialNotesRaw.map(n => n.entry_id);
+      const { data: allReactions } = await sb.from('note_reactions').select('entry_id, is_like').in('entry_id', entryIds);
+      const counts = {};
+      (allReactions || []).forEach(r => {
+        if (!counts[r.entry_id]) counts[r.entry_id] = { like: 0, dislike: 0 };
+        r.is_like ? counts[r.entry_id].like++ : counts[r.entry_id].dislike++;
+      });
+      _socialNotesRaw.forEach(n => {
+        n.like_count = counts[n.entry_id]?.like || 0;
+        n.dislike_count = counts[n.entry_id]?.dislike || 0;
+      });
+
+      if (_notesUser) {
+        const { data: myReactions } = await sb.from('note_reactions')
+          .select('entry_id, is_like').eq('user_id', _notesUser.id).in('entry_id', entryIds);
+        _socialNotesMyReactions = {};
+        (myReactions || []).forEach(r => { _socialNotesMyReactions[r.entry_id] = r.is_like ? 'like' : 'dislike'; });
+      }
+    }
+
+    document.getElementById('notesPageSub').textContent = `${_socialNotesRaw.length} note${_socialNotesRaw.length !== 1 ? 's' : ''} from @${_nuFilterUser.username}`;
+    renderSocialNotes();
+  } catch (err) {
+    console.error('Load user notes error:', err);
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load this user's notes.</div>`;
+  }
+}
+
 
 function renderSocialNotes() {
   const wrap = document.getElementById('notesPageContent');
