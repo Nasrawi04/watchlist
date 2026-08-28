@@ -863,10 +863,10 @@ function _tdRenderNotes() {
         <div class="td-note-text">${esc(n.notes)}</div>
         <div class="td-note-actions">
           <button class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="_tdReactToNote('${n.entry_id}', true)">
-            ${icon('thumbsUp', 14)} <span>${n.like_count || 0}</span>
+            ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
           </button>
           <button class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="_tdReactToNote('${n.entry_id}', false)">
-            ${icon('thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
+            ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
           </button>
         </div>
       </div>
