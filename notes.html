@@ -39,7 +39,11 @@
 }
 .snote-avatar img { width:100%; height:100%; object-fit:cover; }
 .snote-username { font-size:12px; color:var(--text-3); font-weight:500; }
-.snote-reactions { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
+.snote-actions { display:flex; gap:14px; margin-top:8px; }
+.snote-rating {
+  position:absolute; top:16px; right:18px; font-size:13px; font-weight:600;
+  color:var(--olive-light); white-space:nowrap;
+}
 .snote-react-btn {
   display:inline-flex; align-items:center; gap:5px; background:none; border:none; cursor:pointer;
   color:var(--text-3); font-size:12.5px; font-weight:600; transition:color .15s;
@@ -47,6 +51,15 @@
 .snote-react-btn:hover { color:var(--text); }
 .snote-react-btn.active-like { color:var(--olive-light); }
 .snote-react-btn.active-dislike { color:#c0685a; }
+.snote-rect-btn {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:11px 0; border-radius:var(--radius-sm); font-size:13.5px; font-weight:600;
+  background:var(--bg-3); border:0.5px solid var(--border-2); color:var(--text-3); cursor:pointer;
+  transition:all .15s;
+}
+.snote-rect-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.snote-rect-btn.active-like { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+.snote-rect-btn.active-dislike { background:rgba(192,104,90,0.12); border-color:rgba(192,104,90,0.4); color:#c0685a; }
 .note-row { position:relative; }
 .dt-heart-pop {
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.4);
@@ -363,8 +376,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+let _notesReactionCounts = {}; // entry_id -> { like, dislike }
+
 async function loadNotesPage() {
   _notesEntries = await getEntries(_notesUser.id) || [];
+  const withNotes = _notesEntries.filter(e => e.notes && e.notes.trim());
+  if (withNotes.length) {
+    const ids = withNotes.map(e => e.id);
+    const { data: reactions } = await sb.from('note_reactions').select('entry_id, is_like').in('entry_id', ids);
+    _notesReactionCounts = {};
+    (reactions || []).forEach(r => {
+      if (!_notesReactionCounts[r.entry_id]) _notesReactionCounts[r.entry_id] = { like: 0, dislike: 0 };
+      if (r.is_like) _notesReactionCounts[r.entry_id].like++;
+      else _notesReactionCounts[r.entry_id].dislike++;
+    });
+  }
   renderNotesPage();
 }
 
@@ -410,12 +436,17 @@ function renderNotesPage() {
     const posterEl = e.poster_url
       ? `<div class="note-poster"><img src="${e.poster_url}" loading="lazy"></div>`
       : `<div class="note-poster">${esc((e.title||'?')[0].toUpperCase())}</div>`;
+    const counts = _notesReactionCounts[e.id] || { like: 0, dislike: 0 };
     return `<div class="note-row" onclick="openNotePopup2('${e.id}')">
       ${posterEl}
       <div class="note-body">
         <div class="note-title">${esc(e.title)}</div>
         <div class="note-tags">${genreHTML(e.genres, 3)}${date ? `<span class="note-date">${date}</span>` : ''}</div>
         <div class="note-text">&ldquo;${esc(_trimNotes(e.notes))}&rdquo;</div>
+        <div class="snote-actions" style="margin-top:8px;">
+          <span class="snote-react-btn" style="cursor:default;">${icon('thumbsUp', 13)} <span>${counts.like}</span></span>
+          <span class="snote-react-btn" style="cursor:default;">${icon('thumbsDown', 13)} <span>${counts.dislike}</span></span>
+        </div>
       </div>
       ${score ? `<div class="note-score">${score}</div>` : ''}
     </div>`;
@@ -541,6 +572,7 @@ function renderSocialNotes() {
     const myReaction = _socialNotesMyReactions[n.entry_id];
     const initial = (n.username || '?')[0].toUpperCase();
     const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const ratingStr = n.final_score != null ? Number(n.final_score).toFixed(1) : null;
     return `<div class="note-row" onclick="openSocialNotePopup('${n.entry_id}')" ontouchend="_dtHandleTouch(event, 'snote-${n.entry_id}', () => reactToSocialNote('${n.entry_id}', true), () => _socialNotesMyReactions['${n.entry_id}'] === 'like')">
       <div class="note-poster">${n.poster_url ? `<img src="${esc(n.poster_url)}" loading="lazy">` : esc((n.title||'?')[0].toUpperCase())}</div>
       <div class="note-body">
@@ -551,15 +583,16 @@ function renderSocialNotes() {
         <div class="note-title">${esc(n.title)}</div>
         <div class="note-tags">${dateStr ? `<span class="note-date">${dateStr}</span>` : ''}</div>
         <div class="note-text">&ldquo;${esc(_trimNotes(n.notes))}&rdquo;</div>
+        <div class="snote-actions">
+          <button class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialNote('${n.entry_id}', true)">
+            ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
+          </button>
+          <button class="snote-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="event.stopPropagation();reactToSocialNote('${n.entry_id}', false)">
+            ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
+          </button>
+        </div>
       </div>
-      <div class="snote-reactions">
-        <button class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialNote('${n.entry_id}', true)">
-          ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
-        </button>
-        <button class="snote-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="event.stopPropagation();reactToSocialNote('${n.entry_id}', false)">
-          ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
-        </button>
-      </div>
+      ${ratingStr ? `<div class="snote-rating">★ ${ratingStr}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -570,7 +603,7 @@ function _injectSocialNotePopupOverlay() {
   const el = document.createElement('div');
   el.id = 'snPopupOverlay';
   el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
-  el.innerHTML = `<div id="snPopupCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:460px;width:100%;max-height:85vh;overflow-y:auto;padding:1.75rem;"></div>`;
+  el.innerHTML = `<div id="snPopupCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:560px;width:100%;max-height:85vh;overflow-y:auto;overflow-x:hidden;"></div>`;
   el.addEventListener('click', e => { if (e.target === el) closeSocialNotePopup(); });
   document.body.appendChild(el);
 }
@@ -599,25 +632,45 @@ function _renderSocialNotePopup(n) {
   const myReaction = _socialNotesMyReactions[n.entry_id];
   const initial = (n.username || '?')[0].toUpperCase();
   const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  const ratingStr = n.final_score != null ? Number(n.final_score).toFixed(1) : null;
+  const hasPoster = n.poster_url && !n.poster_url.startsWith('PLACEHOLDER');
 
   document.getElementById('snPopupCard').innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <div class="snote-row-head" style="margin-bottom:0;">
+    <div style="position:relative; height:180px; overflow:hidden;">
+      ${hasPoster
+        ? `<div style="position:absolute; inset:-18px; background-image:url('${esc(n.poster_url)}'); background-size:cover; background-position:center 25%; filter:blur(22px) brightness(0.55); transform:scale(1.15);"></div>`
+        : `<div style="position:absolute; inset:0; background:var(--olive-faint);"></div>`}
+      <div style="position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.1), var(--bg-3) 95%);"></div>
+      <button onclick="closeSocialNotePopup()" style="position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:50%; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); border:none; color:#fff; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&#x2715;</button>
+    </div>
+
+    <div style="padding:0 1.75rem 1.75rem; margin-top:-64px; position:relative;">
+      <div style="display:flex; gap:16px; align-items:flex-end; margin-bottom:1.1rem;">
+        <div style="width:92px; height:134px; border-radius:10px; overflow:hidden; background:var(--bg-3); border:3px solid var(--bg-3); box-shadow:0 6px 18px rgba(0,0,0,0.35); flex-shrink:0;">
+          ${hasPoster ? `<img src="${esc(n.poster_url)}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);color:var(--olive-light);font-size:30px;">${esc((n.title||'?')[0].toUpperCase())}</div>`}
+        </div>
+        <div style="min-width:0; padding-bottom:4px;">
+          <div class="note-title" style="font-size:19px; margin-bottom:3px; white-space:normal;">${esc(n.title)}</div>
+          ${dateStr ? `<div class="note-date" style="margin-bottom:4px;">${dateStr}</div>` : ''}
+          ${ratingStr ? `<div class="snote-rating" style="position:static; font-size:14px;">★ ${ratingStr}</div>` : ''}
+        </div>
+      </div>
+
+      <div class="snote-row-head" style="margin-bottom:.85rem;">
         <div class="snote-avatar">${n.avatar_url ? `<img src="${esc(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
         <span class="snote-username">@${esc(n.username || 'user')}</span>
       </div>
-      <button onclick="closeSocialNotePopup()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;line-height:1;">&#x2715;</button>
-    </div>
-    <div class="note-title" style="font-size:17px;margin-bottom:4px;">${esc(n.title)}</div>
-    ${dateStr ? `<div class="note-date" style="margin-bottom:1rem;">${dateStr}</div>` : ''}
-    <div style="font-size:14.5px; line-height:1.75; color:var(--text-2); white-space:pre-line; margin-bottom:1.5rem;">&ldquo;${esc(n.notes)}&rdquo;</div>
-    <div class="snote-reactions">
-      <button class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialNote('${n.entry_id}', true); _renderSocialNotePopup(_socialNotesRaw.find(x=>x.entry_id==='${n.entry_id}'))">
-        ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 16)} <span>${n.like_count || 0}</span>
-      </button>
-      <button class="snote-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialNote('${n.entry_id}', false); _renderSocialNotePopup(_socialNotesRaw.find(x=>x.entry_id==='${n.entry_id}'))">
-        ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 16)} <span>${n.dislike_count || 0}</span>
-      </button>
+
+      <div style="font-size:14.5px; line-height:1.75; color:var(--text-2); white-space:pre-line; margin-bottom:1.5rem;">&ldquo;${esc(n.notes)}&rdquo;</div>
+
+      <div style="display:flex; gap:10px;">
+        <button class="snote-rect-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialNote('${n.entry_id}', true); _renderSocialNotePopup(_socialNotesRaw.find(x=>x.entry_id==='${n.entry_id}'))">
+          ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 16)} <span>${n.like_count || 0}</span>
+        </button>
+        <button class="snote-rect-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialNote('${n.entry_id}', false); _renderSocialNotePopup(_socialNotesRaw.find(x=>x.entry_id==='${n.entry_id}'))">
+          ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 16)} <span>${n.dislike_count || 0}</span>
+        </button>
+      </div>
     </div>
   `;
 }
