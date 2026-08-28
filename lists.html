@@ -37,6 +37,63 @@
 }
 .fav-page-section-hd::after{content:'';flex:1;height:0.5px;background:var(--border);}
 
+/* ── Personal / Social toggle ── */
+.pn-toggle { display:flex; gap:8px; margin-bottom:1.5rem; }
+.pn-toggle-btn {
+  padding:8px 20px; border-radius:999px; font-size:13.5px; font-weight:600;
+  background:var(--bg-3); border:0.5px solid var(--border); color:var(--text-3); cursor:pointer;
+  transition:all .15s;
+}
+.pn-toggle-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.pn-toggle-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+
+/* ── Social list cards ── */
+.social-list-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:18px; }
+.social-list-card { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.25rem; transition:border-color .15s; }
+.social-list-card:hover { border-color:var(--border-olive); }
+.social-list-owner { display:flex; align-items:center; gap:8px; margin-bottom:.75rem; }
+.social-list-avatar {
+  width:26px; height:26px; border-radius:50%; overflow:hidden; flex-shrink:0;
+  background:var(--olive-faint); color:var(--olive-light); font-family:var(--serif); font-size:12px;
+  display:flex; align-items:center; justify-content:center;
+}
+.social-list-avatar img { width:100%; height:100%; object-fit:cover; }
+.social-list-username { font-size:12.5px; color:var(--text-3); }
+.social-list-title { font-family:var(--serif); font-size:19px; font-weight:400; margin-bottom:4px; }
+.social-list-desc { font-size:12.5px; color:var(--text-2); line-height:1.5; margin-bottom:.75rem; }
+.social-list-count { font-size:11.5px; color:var(--text-3); margin-bottom:.9rem; }
+.social-list-posters { display:flex; gap:6px; margin-bottom:1rem; }
+.social-list-poster-thumb { width:44px; height:64px; border-radius:5px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.social-list-poster-thumb img { width:100%; height:100%; object-fit:cover; }
+.social-list-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.social-list-reactions { display:flex; gap:12px; }
+.social-list-react-btn {
+  display:inline-flex; align-items:center; gap:5px; background:none; border:none; cursor:pointer;
+  color:var(--text-3); font-size:12px; font-weight:500; transition:color .15s;
+}
+.social-list-react-btn:hover { color:var(--text); }
+.social-list-react-btn.active-like { color:var(--olive-light); }
+.social-list-react-btn.active-dislike { color:#c0685a; }
+.social-list-add-btn {
+  font-size:11.5px; font-weight:600; padding:6px 14px; border-radius:999px;
+  background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light);
+  cursor:pointer; transition:all .15s; white-space:nowrap;
+}
+.social-list-add-btn:hover { background:var(--olive-light); color:var(--bg); }
+.social-list-add-btn:disabled { opacity:.5; cursor:default; }
+.social-list-card { position:relative; }
+.dt-heart-pop {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.4);
+  font-size:56px; color:var(--olive-light); text-shadow:0 2px 14px rgba(0,0,0,.35);
+  pointer-events:none; opacity:0; animation:dtHeartPop .7s ease forwards; z-index:5;
+}
+@keyframes dtHeartPop {
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.4); }
+  25%  { opacity:1; transform:translate(-50%,-50%) scale(1.15); }
+  40%  { transform:translate(-50%,-50%) scale(0.95); }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(1); }
+}
+
 /* Picker */
 #favListPickerOverlay {
   position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.65);
@@ -135,6 +192,12 @@
     </div>
   </div>
 
+  <!-- Personal / Social toggle -->
+  <div class="pn-toggle fade-up" id="listsModeToggle">
+    <button class="pn-toggle-btn active" data-mode="personal" onclick="setListsMode('personal')">Personal</button>
+    <button class="pn-toggle-btn" data-mode="social" onclick="setListsMode('social')">Social</button>
+  </div>
+
   <!-- Stat boxes -->
   <div class="page-stats fade-up fade-up-1" id="listsPageStats"></div>
 
@@ -143,6 +206,12 @@
     <button class="sort-btn active" data-sort="default" onclick="setListsOrder('default')">Default</button>
     <button class="sort-btn" data-sort="az" onclick="setListsOrder('az')">A → Z</button>
     <button class="sort-btn" data-sort="za" onclick="setListsOrder('za')">Z → A</button>
+  </div>
+
+  <!-- Social sort by -->
+  <div class="lists-order-sort-bar fade-up fade-up-1" id="listsSocialSortBar" style="display:none;">
+    <button class="sort-btn active" data-sort="popular" onclick="setSocialListsSort('popular')">Popular</button>
+    <button class="sort-btn" data-sort="latest" onclick="setSocialListsSort('latest')">Latest</button>
   </div>
 
   <!-- Main content -->
@@ -292,6 +361,10 @@ let _listsAll = [];
 let _listsOrderSort = 'default';
 let _listItemSort = {};
 let _listsEntryMap = {};
+let _listsMode = 'personal';
+let _socialListsSort = 'popular';
+let _socialListsRaw = [];
+let _socialListsMyReactions = {}; // list_id -> 'like' | 'dislike'
 
 // Picker state
 let _favListPickerListId = null;
@@ -526,12 +599,186 @@ function renderListsPage() {
   document.getElementById('listsPageContent').innerHTML = html;
 }
 
+/* ── Double-tap-to-like (touch screens) ── */
+let _dtLastTap = {};
+function _dtHandleTouch(e, key, likeFn, isAlreadyLiked) {
+  const now = Date.now();
+  const last = _dtLastTap[key] || 0;
+  _dtLastTap[key] = now;
+  if (now - last < 350 && now - last > 0) {
+    _dtLastTap[key] = 0;
+    if (!isAlreadyLiked()) likeFn();
+    _dtShowHeart(e.currentTarget);
+  }
+}
+function _dtShowHeart(el) {
+  if (!el) return;
+  const heart = document.createElement('div');
+  heart.className = 'dt-heart-pop';
+  heart.textContent = '♥';
+  el.appendChild(heart);
+  setTimeout(() => heart.remove(), 700);
+}
+
 function setListsOrder(val) {
   _listsOrderSort = val;
   document.querySelectorAll('#listsOrderSortBar .sort-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.sort === val);
   });
   renderListsPage();
+}
+
+function setListsMode(mode) {
+  _listsMode = mode;
+  document.querySelectorAll('#listsModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('listsOrderSortBar').style.display = mode === 'personal' && _listsAll.filter(l => l.cat === 'custom').length ? '' : 'none';
+  document.getElementById('listsSocialSortBar').style.display = mode === 'social' ? '' : 'none';
+  document.getElementById('listsCustomBtn').style.display = mode === 'personal' ? '' : 'none';
+  if (mode === 'social') {
+    loadSocialLists();
+  } else {
+    renderListsPage();
+  }
+}
+
+function setSocialListsSort(val) {
+  _socialListsSort = val;
+  document.querySelectorAll('#listsSocialSortBar .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === val));
+  renderSocialLists();
+}
+
+async function loadSocialLists() {
+  const wrap = document.getElementById('listsPageContent');
+  wrap.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
+  document.getElementById('listsPageStats').innerHTML = '';
+  document.getElementById('listsPageSub').textContent = 'Discover and save lists from other users';
+  try {
+    const { data, error } = await sb.rpc('get_social_lists', { p_limit: 100 });
+    if (error) throw error;
+    _socialListsRaw = data || [];
+
+    if (_listsUser && _socialListsRaw.length) {
+      const listIds = _socialListsRaw.map(l => l.id);
+      const { data: myReactions } = await sb.from('list_reactions')
+        .select('list_id, is_like')
+        .eq('user_id', _listsUser.id)
+        .in('list_id', listIds);
+      _socialListsMyReactions = {};
+      (myReactions || []).forEach(r => { _socialListsMyReactions[r.list_id] = r.is_like ? 'like' : 'dislike'; });
+    }
+    renderSocialLists();
+  } catch (err) {
+    console.error('Load social lists error:', err);
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load social lists right now.</div>`;
+  }
+}
+
+function renderSocialLists() {
+  const wrap = document.getElementById('listsPageContent');
+  if (!_socialListsRaw.length) {
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
+      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('layers', 44)}</div>
+      <div class="empty-text" style="color:var(--text-2);">No public lists yet.</div>
+    </div>`;
+    return;
+  }
+  const sorted = [..._socialListsRaw].sort((a, b) => {
+    if (_socialListsSort === 'latest') return new Date(b.created_at) - new Date(a.created_at);
+    const scoreA = Number(a.like_count) - Number(a.dislike_count);
+    const scoreB = Number(b.like_count) - Number(b.dislike_count);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  const alreadyOwnedTitles = new Set(_listsAll.filter(l => l.cat === 'custom').map(l => l.title.toLowerCase().trim()));
+
+  wrap.innerHTML = `<div class="social-list-grid">${sorted.map(l => {
+    const myReaction = _socialListsMyReactions[l.id];
+    const items = l.items || [];
+    const posters = items.slice(0, 4).map(id => _listsEntryMap[id]).filter(Boolean);
+    const initial = (l.username || '?')[0].toUpperCase();
+    const isOwn = l.user_id === _listsUser?.id;
+    const alreadyForked = alreadyOwnedTitles.has((l.title || '').toLowerCase().trim());
+    return `<div class="social-list-card" ontouchend="_dtHandleTouch(event, 'list-${l.id}', () => reactToSocialList('${l.id}', true), () => _socialListsMyReactions['${l.id}'] === 'like')">
+      <div class="social-list-owner">
+        <div class="social-list-avatar">${l.avatar_url ? `<img src="${esc(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
+        <div class="social-list-username">@${esc(l.username || 'user')}</div>
+      </div>
+      <div class="social-list-title">${esc(l.title)}</div>
+      ${l.description ? `<div class="social-list-desc">${esc(l.description)}</div>` : ''}
+      <div class="social-list-count">${items.length} item${items.length !== 1 ? 's' : ''}</div>
+      ${posters.length ? `<div class="social-list-posters">${posters.map(e => `<div class="social-list-poster-thumb">${posterHTML(e,'big')}</div>`).join('')}</div>` : ''}
+      <div class="social-list-footer">
+        <div class="social-list-reactions">
+          <button class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialList('${l.id}', true)">
+            ${icon('thumbsUp', 13)} <span>${l.like_count || 0}</span>
+          </button>
+          <button class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialList('${l.id}', false)">
+            ${icon('thumbsDown', 13)} <span>${l.dislike_count || 0}</span>
+          </button>
+        </div>
+        ${isOwn
+          ? `<span style="font-size:11px;color:var(--text-3);">Your list</span>`
+          : `<button class="social-list-add-btn" ${alreadyForked ? 'disabled' : ''} onclick="forkSocialList('${l.id}')">${alreadyForked ? 'Already Added' : '+ Add to My Lists'}</button>`}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function reactToSocialList(listId, isLike) {
+  if (!_listsUser) { showToast('Sign in to react to lists.', 'err'); return; }
+  const list = _socialListsRaw.find(l => l.id === listId);
+  if (!list) return;
+  const current = _socialListsMyReactions[listId];
+  const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
+
+  try {
+    if (wantsSame) {
+      const { error } = await sb.from('list_reactions').delete().eq('list_id', listId).eq('user_id', _listsUser.id);
+      if (error) throw error;
+      delete _socialListsMyReactions[listId];
+      if (current === 'like') list.like_count = Math.max(0, Number(list.like_count) - 1);
+      else list.dislike_count = Math.max(0, Number(list.dislike_count) - 1);
+    } else {
+      const { error } = await sb.from('list_reactions')
+        .upsert({ list_id: listId, user_id: _listsUser.id, is_like: isLike }, { onConflict: 'list_id,user_id' });
+      if (error) throw error;
+      if (current === 'like') list.like_count = Math.max(0, Number(list.like_count) - 1);
+      if (current === 'dislike') list.dislike_count = Math.max(0, Number(list.dislike_count) - 1);
+      if (isLike) list.like_count = Number(list.like_count) + 1;
+      else list.dislike_count = Number(list.dislike_count) + 1;
+      _socialListsMyReactions[listId] = isLike ? 'like' : 'dislike';
+    }
+    renderSocialLists();
+  } catch (err) {
+    console.error('React to list error:', err);
+    showToast('Failed to save your reaction.', 'err');
+  }
+}
+
+async function forkSocialList(listId) {
+  if (!_listsUser) { showToast('Sign in to add lists.', 'err'); return; }
+  const list = _socialListsRaw.find(l => l.id === listId);
+  if (!list) return;
+  try {
+    const { error } = await sb.from('favorite_lists').insert({
+      user_id: _listsUser.id,
+      cat: 'custom',
+      genre: list.genre || '',
+      title: list.title,
+      description: list.description || null,
+      items: list.items || [],
+      forked_from: list.id,
+    });
+    if (error) throw error;
+    showToast('Added to your lists!');
+    const lists = await getFavoriteLists(_listsUser.id);
+    _listsAll = lists || [];
+    renderSocialLists();
+  } catch (err) {
+    console.error('Fork list error:', err);
+    showToast('Failed to add list.', 'err');
+  }
 }
 
 function setListItemSort(listId, val) {
