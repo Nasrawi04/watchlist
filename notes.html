@@ -16,6 +16,46 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
 <style>
+/* ── Personal / Social toggle ── */
+.pn-toggle { display:flex; gap:8px; margin-bottom:1.5rem; }
+.pn-toggle-btn {
+  padding:8px 20px; border-radius:999px; font-size:13.5px; font-weight:600;
+  background:var(--bg-3); border:0.5px solid var(--border); color:var(--text-3); cursor:pointer;
+  transition:all .15s;
+}
+.pn-toggle-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.pn-toggle-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+
+/* ── Social note row — same layout as .note-row, plus avatar/username ── */
+.snote-row-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.snote-avatar {
+  width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0;
+  background:var(--olive-faint); color:var(--olive-light); font-family:var(--serif); font-size:11px;
+  display:flex; align-items:center; justify-content:center;
+}
+.snote-avatar img { width:100%; height:100%; object-fit:cover; }
+.snote-username { font-size:12px; color:var(--text-3); font-weight:500; }
+.snote-reactions { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
+.snote-react-btn {
+  display:inline-flex; align-items:center; gap:5px; background:none; border:none; cursor:pointer;
+  color:var(--text-3); font-size:12.5px; font-weight:600; transition:color .15s;
+}
+.snote-react-btn:hover { color:var(--text); }
+.snote-react-btn.active-like { color:var(--olive-light); }
+.snote-react-btn.active-dislike { color:#c0685a; }
+.note-row { position:relative; }
+.dt-heart-pop {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.4);
+  font-size:56px; color:var(--olive-light); text-shadow:0 2px 14px rgba(0,0,0,.35);
+  pointer-events:none; opacity:0; animation:dtHeartPop .7s ease forwards; z-index:5;
+}
+@keyframes dtHeartPop {
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.4); }
+  25%  { opacity:1; transform:translate(-50%,-50%) scale(1.15); }
+  40%  { transform:translate(-50%,-50%) scale(0.95); }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(1); }
+}
+
 /* ── Header buttons ── */
 .notes-header-btns { display:flex; gap:8px; flex-wrap:wrap; }
 @media(max-width:520px){
@@ -202,6 +242,12 @@
     </div>
   </div>
 
+  <!-- Personal / Social toggle -->
+  <div class="pn-toggle fade-up" id="notesModeToggle">
+    <button class="pn-toggle-btn active" data-mode="personal" onclick="setNotesMode('personal')">Personal</button>
+    <button class="pn-toggle-btn" data-mode="social" onclick="setNotesMode('social')">Social</button>
+  </div>
+
   <!-- Stat boxes -->
   <div class="page-stats fade-up fade-up-1" id="notesPageStats"></div>
 
@@ -212,6 +258,12 @@
     <button class="sort-btn" data-sort="az" onclick="setNotesSort('az')">A→Z</button>
     <button class="sort-btn" data-sort="za" onclick="setNotesSort('za')">Z→A</button>
     <button class="sort-btn" data-sort="longest" onclick="setNotesSort('longest')">Longest</button>
+  </div>
+
+  <!-- Social sort bar -->
+  <div class="notes-sort-bar fade-up fade-up-1" id="notesSocialSortBar" style="display:none;">
+    <button class="sort-btn active" data-sort="popular" onclick="setSocialNotesSort('popular')">Popular</button>
+    <button class="sort-btn" data-sort="latest" onclick="setSocialNotesSort('latest')">Latest</button>
   </div>
 
   <!-- Notes list -->
@@ -281,6 +333,10 @@ let _notesUser = null;
 let _notesEntries = [];
 let _notesSortOrder = 'latest';
 let _notesActiveId = null;
+let _notesMode = 'personal';
+let _socialNotesSort = 'popular';
+let _socialNotesRaw = [];
+let _socialNotesMyReactions = {}; // entry_id -> 'like' | 'dislike'
 
 document.addEventListener('DOMContentLoaded', () => {
   initPage(async (user) => {
@@ -378,12 +434,155 @@ function _sortNotes(list) {
   }
 }
 
+/* ── Double-tap-to-like (touch screens) ── */
+let _dtLastTap = {};
+function _dtHandleTouch(e, key, likeFn, isAlreadyLiked) {
+  const now = Date.now();
+  const last = _dtLastTap[key] || 0;
+  _dtLastTap[key] = now;
+  if (now - last < 350 && now - last > 0) {
+    _dtLastTap[key] = 0;
+    if (!isAlreadyLiked()) likeFn();
+    _dtShowHeart(e.currentTarget);
+  }
+}
+function _dtShowHeart(el) {
+  if (!el) return;
+  const heart = document.createElement('div');
+  heart.className = 'dt-heart-pop';
+  heart.textContent = '♥';
+  el.appendChild(heart);
+  setTimeout(() => heart.remove(), 700);
+}
+
 function setNotesSort(order) {
   _notesSortOrder = order;
   document.querySelectorAll('#notesSortBar .sort-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.sort === order);
   });
   renderNotesPage();
+}
+
+function setNotesMode(mode) {
+  _notesMode = mode;
+  document.querySelectorAll('#notesModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('notesSortBar').style.display = mode === 'personal' ? '' : 'none';
+  document.getElementById('notesSocialSortBar').style.display = mode === 'social' ? '' : 'none';
+  const headerBtns = document.querySelector('.notes-header-btns');
+  if (headerBtns) headerBtns.style.display = mode === 'personal' ? '' : 'none';
+  if (mode === 'social') {
+    loadSocialNotes();
+  } else {
+    renderNotesPage();
+  }
+}
+
+function setSocialNotesSort(val) {
+  _socialNotesSort = val;
+  document.querySelectorAll('#notesSocialSortBar .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === val));
+  renderSocialNotes();
+}
+
+async function loadSocialNotes() {
+  const wrap = document.getElementById('notesPageContent');
+  wrap.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
+  document.getElementById('notesPageStats').innerHTML = '';
+  document.getElementById('notesPageSub').textContent = 'Notes from across the community';
+  try {
+    const { data, error } = await sb.rpc('get_social_notes', { p_limit: 100 });
+    if (error) throw error;
+    _socialNotesRaw = data || [];
+
+    if (_notesUser && _socialNotesRaw.length) {
+      const entryIds = _socialNotesRaw.map(n => n.entry_id);
+      const { data: myReactions } = await sb.from('note_reactions')
+        .select('entry_id, is_like')
+        .eq('user_id', _notesUser.id)
+        .in('entry_id', entryIds);
+      _socialNotesMyReactions = {};
+      (myReactions || []).forEach(r => { _socialNotesMyReactions[r.entry_id] = r.is_like ? 'like' : 'dislike'; });
+    }
+    renderSocialNotes();
+  } catch (err) {
+    console.error('Load social notes error:', err);
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load social notes right now.</div>`;
+  }
+}
+
+function renderSocialNotes() {
+  const wrap = document.getElementById('notesPageContent');
+  if (!_socialNotesRaw.length) {
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
+      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('list', 44)}</div>
+      <div class="empty-text" style="color:var(--text-2);">No public notes yet.</div>
+    </div>`;
+    return;
+  }
+  const sorted = [..._socialNotesRaw].sort((a, b) => {
+    if (_socialNotesSort === 'latest') return new Date(b.created_at) - new Date(a.created_at);
+    const scoreA = Number(a.like_count) - Number(a.dislike_count);
+    const scoreB = Number(b.like_count) - Number(b.dislike_count);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  wrap.innerHTML = sorted.map(n => {
+    const myReaction = _socialNotesMyReactions[n.entry_id];
+    const initial = (n.username || '?')[0].toUpperCase();
+    const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const clickAttr = (n.tmdb_id && n.tmdb_type) ? `onclick="goToTitle('${n.tmdb_type}', ${n.tmdb_id})"` : '';
+    return `<div class="note-row" ${clickAttr} ontouchend="_dtHandleTouch(event, 'snote-${n.entry_id}', () => reactToSocialNote('${n.entry_id}', true), () => _socialNotesMyReactions['${n.entry_id}'] === 'like')">
+      <div class="note-poster">${n.poster_url ? `<img src="${esc(n.poster_url)}" loading="lazy">` : esc((n.title||'?')[0].toUpperCase())}</div>
+      <div class="note-body">
+        <div class="snote-row-head">
+          <div class="snote-avatar">${n.avatar_url ? `<img src="${esc(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
+          <span class="snote-username">@${esc(n.username || 'user')}</span>
+        </div>
+        <div class="note-title">${esc(n.title)}</div>
+        <div class="note-tags">${dateStr ? `<span class="note-date">${dateStr}</span>` : ''}</div>
+        <div class="note-text">&ldquo;${esc(_trimNotes(n.notes))}&rdquo;</div>
+      </div>
+      <div class="snote-reactions">
+        <button class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialNote('${n.entry_id}', true)">
+          ${icon('thumbsUp', 14)} <span>${n.like_count || 0}</span>
+        </button>
+        <button class="snote-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="event.stopPropagation();reactToSocialNote('${n.entry_id}', false)">
+          ${icon('thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function reactToSocialNote(entryId, isLike) {
+  if (!_notesUser) { showToast('Sign in to react to notes.', 'err'); return; }
+  const note = _socialNotesRaw.find(n => n.entry_id === entryId);
+  if (!note) return;
+  const current = _socialNotesMyReactions[entryId];
+  const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
+
+  try {
+    if (wantsSame) {
+      const { error } = await sb.from('note_reactions').delete().eq('entry_id', entryId).eq('user_id', _notesUser.id);
+      if (error) throw error;
+      delete _socialNotesMyReactions[entryId];
+      if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
+      else note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
+    } else {
+      const { error } = await sb.from('note_reactions')
+        .upsert({ entry_id: entryId, user_id: _notesUser.id, is_like: isLike }, { onConflict: 'entry_id,user_id' });
+      if (error) throw error;
+      if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
+      if (current === 'dislike') note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
+      if (isLike) note.like_count = Number(note.like_count) + 1;
+      else note.dislike_count = Number(note.dislike_count) + 1;
+      _socialNotesMyReactions[entryId] = isLike ? 'like' : 'dislike';
+    }
+    renderSocialNotes();
+  } catch (err) {
+    console.error('React to note error:', err);
+    showToast('Failed to save your reaction.', 'err');
+  }
 }
 
 /* ── Search popup (opened via + Add Note / Edit Note) ── */
