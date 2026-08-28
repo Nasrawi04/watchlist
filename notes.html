@@ -17,14 +17,18 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
 <style>
 /* ── Personal / Social toggle ── */
-.pn-toggle { display:flex; gap:8px; margin-bottom:1.5rem; }
+.pn-toggle {
+  display:flex; width:fit-content; margin:0 auto 1.5rem;
+  background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius-sm); overflow:hidden;
+}
 .pn-toggle-btn {
-  padding:8px 20px; border-radius:999px; font-size:13.5px; font-weight:600;
-  background:var(--bg-3); border:0.5px solid var(--border); color:var(--text-3); cursor:pointer;
+  padding:10px 32px; font-size:13.5px; font-weight:600;
+  background:none; border:none; color:var(--text-3); cursor:pointer;
   transition:all .15s;
 }
-.pn-toggle-btn:hover { border-color:var(--border-olive); color:var(--text); }
-.pn-toggle-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+.pn-toggle-btn + .pn-toggle-btn { border-left:0.5px solid var(--border-2); }
+.pn-toggle-btn:hover { color:var(--text); }
+.pn-toggle-btn.active { background:var(--olive-faint); color:var(--olive-light); }
 
 /* ── Social note row — same layout as .note-row, plus avatar/username ── */
 .snote-row-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
@@ -233,7 +237,7 @@
   <!-- Header -->
   <div class="cat-page-header fade-up">
     <div class="cat-page-header-left">
-      <h1 class="cat-page-title">Notes</h1>
+      <h1 class="cat-page-title" id="notesPageTitle">My Notes</h1>
       <div class="cat-page-sub" id="notesPageSub"></div>
     </div>
     <div class="cat-page-header-right notes-header-btns">
@@ -263,6 +267,7 @@
   <!-- Social sort bar -->
   <div class="notes-sort-bar fade-up fade-up-1" id="notesSocialSortBar" style="display:none;">
     <button class="sort-btn active" data-sort="popular" onclick="setSocialNotesSort('popular')">Popular</button>
+    <button class="sort-btn" data-sort="least_popular" onclick="setSocialNotesSort('least_popular')">Least Popular</button>
     <button class="sort-btn" data-sort="latest" onclick="setSocialNotesSort('latest')">Latest</button>
   </div>
 
@@ -384,7 +389,7 @@ function renderNotesPage() {
     <div class="page-stat"><div class="page-stat-num">${totalWords}</div><div class="page-stat-label">Total Words</div></div>
     <div class="page-stat"><div class="page-stat-num">${longest}</div><div class="page-stat-label">Longest Note</div></div>`;
 
-  document.getElementById('notesPageSub').textContent = `${withNotes.length} note${withNotes.length!==1?'s':''} · ${_notesEntries.length} entries in your library`;
+  document.getElementById('notesPageSub').textContent = 'Your personal thoughts, reactions, and memories from everything you watch.';
 
   document.getElementById('notesSortBar').style.display = withNotes.length ? '' : 'none';
 
@@ -466,6 +471,7 @@ function setNotesSort(order) {
 function setNotesMode(mode) {
   _notesMode = mode;
   document.querySelectorAll('#notesModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('notesPageTitle').textContent = mode === 'personal' ? 'My Notes' : 'Community Notes';
   document.getElementById('notesSortBar').style.display = mode === 'personal' ? '' : 'none';
   document.getElementById('notesSocialSortBar').style.display = mode === 'social' ? '' : 'none';
   const headerBtns = document.querySelector('.notes-header-btns');
@@ -487,7 +493,7 @@ async function loadSocialNotes() {
   const wrap = document.getElementById('notesPageContent');
   wrap.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
   document.getElementById('notesPageStats').innerHTML = '';
-  document.getElementById('notesPageSub').textContent = 'Notes from across the community';
+  document.getElementById('notesPageSub').textContent = 'Discover what the MyScreenScore community has to say about the titles they’ve watched.';
   try {
     const { data, error } = await sb.rpc('get_social_notes', { p_limit: 100 });
     if (error) throw error;
@@ -520,6 +526,11 @@ function renderSocialNotes() {
   }
   const sorted = [..._socialNotesRaw].sort((a, b) => {
     if (_socialNotesSort === 'latest') return new Date(b.created_at) - new Date(a.created_at);
+    if (_socialNotesSort === 'least_popular') {
+      const dA = Number(a.dislike_count), dB = Number(b.dislike_count);
+      if (dB !== dA) return dB - dA;
+      return new Date(b.created_at) - new Date(a.created_at);
+    }
     const scoreA = Number(a.like_count) - Number(a.dislike_count);
     const scoreB = Number(b.like_count) - Number(b.dislike_count);
     if (scoreB !== scoreA) return scoreB - scoreA;
