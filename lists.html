@@ -51,9 +51,67 @@
 .pn-toggle-btn:hover { color:var(--text); }
 .pn-toggle-btn.active { background:var(--olive-faint); color:var(--olive-light); }
 
+/* ── Search — same live dropdown pattern used on friends.html/notes.html ── */
+.lists-search-wrap { margin-bottom:1.25rem; }
+.username-dropdown {
+  position:fixed;
+  background:var(--bg-3); border:0.5px solid var(--olive-light); border-top:none;
+  border-radius:0 0 var(--radius) var(--radius); z-index:290;
+  box-shadow:var(--shadow-lg);
+  overflow-y:auto; overflow-x:hidden; max-height:320px;
+  display:none;
+}
+.username-dropdown.open { display:block; }
+.ud-item {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 14px; cursor:pointer;
+  transition:background .15s;
+  border-bottom:0.5px solid var(--border);
+}
+.ud-item:last-child { border-bottom:none; }
+.ud-item:hover, .ud-item.ud-active { background:var(--olive-faint); }
+.ud-avatar {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:var(--bg-3); border:1px solid var(--border-2);
+  font-family:var(--serif); font-size:16px; color:var(--text-2);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.ud-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.ud-info { flex:1; min-width:0; }
+.ud-username { font-size:14px; font-weight:500; color:var(--text); }
+.ud-username em { color:var(--olive-light); font-style:normal; font-weight:600; }
+.ud-display { font-size:11px; color:var(--text-3); margin-top:2px; }
+.ud-loading, .ud-empty { padding:14px; font-size:13px; color:var(--text-3); text-align:center; }
+.ud-type-tag {
+  font-size:9.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--olive-light); background:var(--olive-faint); border:0.5px solid var(--border-olive);
+  border-radius:20px; padding:2px 8px; flex-shrink:0;
+}
+.lists-search-wrap .fused-search-wrap {
+  display:flex; align-items:stretch;
+  border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden;
+  background:var(--bg-3); transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
+}
+.lists-search-wrap .fused-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.lists-search-wrap .add-friend-input {
+  flex:1; min-width:0; background:transparent; border:none;
+  color:var(--text); font-size:14px;
+  padding:12px 18px; outline:none; box-sizing:border-box;
+}
+.lists-search-wrap .add-friend-input::placeholder { color:var(--text-3); }
+#listsFilterBanner {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:var(--olive-faint); border:0.5px solid var(--border-olive); border-radius:var(--radius);
+  padding:10px 16px; margin-top:10px; font-size:13.5px; color:var(--olive-light); font-weight:500;
+}
+#listsFilterBanner button {
+  background:none; border:none; color:var(--olive-light); font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:underline;
+}
+
 /* ── Social list rows ── */
-.social-list-rows { display:flex; flex-direction:column; gap:2px; }
-.social-list-row { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.1rem 1.25rem; transition:border-color .15s; cursor:pointer; margin-bottom:10px; }
+.social-list-rows { display:grid; grid-template-columns:repeat(2, 1fr); gap:18px; }
+@media(max-width:760px) { .social-list-rows { grid-template-columns:1fr; } }
+.social-list-row { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.1rem 1.25rem; transition:border-color .15s; cursor:pointer; }
 .social-list-row:hover { border-color:var(--border-olive); }
 .social-list-owner { display:flex; align-items:center; gap:8px; margin-bottom:.75rem; }
 .social-list-avatar {
@@ -78,6 +136,15 @@
 .social-list-react-btn:hover { color:var(--text); }
 .social-list-react-btn.active-like { color:var(--olive-light); }
 .social-list-react-btn.active-dislike { color:#c0685a; }
+.snote-rect-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:11px 8px; border-radius:var(--radius-sm); font-size:13px; font-weight:600;
+  background:var(--bg-3); border:0.5px solid var(--border-2); color:var(--text-3); cursor:pointer;
+  transition:all .15s; white-space:nowrap;
+}
+.snote-rect-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.snote-rect-btn.active-like { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+.snote-rect-btn.active-dislike { background:rgba(192,104,90,0.12); border-color:rgba(192,104,90,0.4); color:#c0685a; }
 .social-list-add-btn {
   font-size:11.5px; font-weight:600; padding:6px 14px; border-radius:999px;
   background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light);
@@ -211,6 +278,18 @@
     <button class="sort-btn" data-sort="az" onclick="setListsOrder('az')">A → Z</button>
     <button class="sort-btn" data-sort="za" onclick="setListsOrder('za')">Z → A</button>
   </div>
+
+  <!-- Social: search users, list names, item names -->
+  <div class="lists-search-wrap fade-up fade-up-1" id="listsSearchWrap" style="display:none;">
+    <div class="fused-search-wrap" id="listsSearchWrapInner">
+      <input type="text" id="listsSearchInput" class="add-friend-input" placeholder="Search users, lists, or titles…"
+             autocomplete="off" spellcheck="false"
+             oninput="_llSearch(this.value)"
+             onkeydown="_llKeydown(event)">
+    </div>
+    <div id="listsFilterBanner" style="display:none;"></div>
+  </div>
+  <div id="llDropdown" class="username-dropdown"></div>
 
   <!-- Social sort by -->
   <div class="lists-order-sort-bar fade-up fade-up-1" id="listsSocialSortBar" style="display:none;">
@@ -639,13 +718,222 @@ function setListsMode(mode) {
   document.querySelectorAll('#listsModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
   document.getElementById('listsPageTitle').textContent = mode === 'personal' ? 'My Lists' : 'Community Lists';
   document.getElementById('listsOrderSortBar').style.display = mode === 'personal' && _listsAll.filter(l => l.cat === 'custom').length ? '' : 'none';
-  document.getElementById('listsSocialSortBar').style.display = mode === 'social' ? '' : 'none';
+  document.getElementById('listsSearchWrap').style.display = mode === 'social' ? '' : 'none';
   document.getElementById('listsCustomBtn').style.display = mode === 'personal' ? '' : 'none';
   if (mode === 'social') {
+    _listsFilterMode = null;
+    document.getElementById('listsFilterBanner').style.display = 'none';
+    document.getElementById('listsSocialSortBar').style.display = '';
     loadSocialLists();
   } else {
     renderListsPage();
   }
+}
+
+/* ── Search — users, list names, and item (title) names — same live
+   dropdown pattern used on friends.html/notes.html ── */
+let _llTimer = null;
+let _llActive = -1;
+let _llResults = [];
+let _llScrollY = 0;
+
+function _llPosition() {
+  const wrap = document.getElementById('listsSearchWrapInner');
+  const drop = document.getElementById('llDropdown');
+  if (!wrap || !drop) return;
+  const r = wrap.getBoundingClientRect();
+  drop.style.top = r.bottom + 'px';
+  drop.style.left = r.left + 'px';
+  drop.style.width = r.width + 'px';
+  drop.style.position = 'fixed';
+}
+
+function _llLockScroll() {
+  _llScrollY = window.scrollY;
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
+  document.body.style.top = '-' + _llScrollY + 'px';
+}
+
+function _llUnlockScroll() {
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.body.style.top = '';
+  window.scrollTo(0, _llScrollY || 0);
+}
+
+async function _llSearch(val) {
+  const q = val.trim().toLowerCase();
+  const drop = document.getElementById('llDropdown');
+  clearTimeout(_llTimer);
+  _llActive = -1;
+  if (q.length < 2) {
+    drop.classList.remove('open');
+    document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
+    _llUnlockScroll();
+    return;
+  }
+  _llPosition();
+  drop.innerHTML = '<div class="ud-loading">Searching…</div>';
+  drop.classList.add('open');
+  document.getElementById('listsSearchWrapInner')?.classList.add('dd-connected-active');
+  _llLockScroll();
+
+  _llTimer = setTimeout(async () => {
+    try {
+      const { data: users } = await sb.from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .ilike('username', q + '%')
+        .neq('id', _listsUser?.id || '')
+        .limit(5);
+
+      const listMatches = _socialListsRaw
+        .filter(l => (l.title || '').toLowerCase().includes(q))
+        .slice(0, 5);
+
+      const seenEntryTitles = new Set();
+      const itemMatches = [];
+      for (const l of _socialListsRaw) {
+        for (const id of (l.items || [])) {
+          const e = _socialEntryMap[id];
+          if (!e || !e.title) continue;
+          const key = e.title.toLowerCase();
+          if (!key.includes(q) || seenEntryTitles.has(key)) continue;
+          seenEntryTitles.add(key);
+          itemMatches.push(e);
+          if (itemMatches.length >= 5) break;
+        }
+        if (itemMatches.length >= 5) break;
+      }
+
+      _llResults = [
+        ...(users || []).map(u => ({ type: 'user', ...u })),
+        ...listMatches.map(l => ({ type: 'list', ...l })),
+        ...itemMatches.map(e => ({ type: 'item', ...e })),
+      ];
+
+      if (!_llResults.length) {
+        drop.innerHTML = '<div class="ud-empty">No matches found</div>';
+        return;
+      }
+
+      const reg = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      drop.innerHTML = _llResults.map((r, i) => {
+        if (r.type === 'user') {
+          const initial = (r.username[0] || '?').toUpperCase();
+          const avatarHTML = r.avatar_url
+            ? '<div class="ud-avatar"><img src="' + r.avatar_url + '" loading="lazy"></div>'
+            : '<div class="ud-avatar">' + initial + '</div>';
+          const highlighted = r.username.replace(reg, '<em>$1</em>');
+          const display = r.display_name && r.display_name !== r.username ? r.display_name : '';
+          return '<div class="ud-item" data-i="' + i + '" onmousedown="_llSelectResult(' + i + ')">'
+            + avatarHTML
+            + '<div class="ud-info"><div class="ud-username">@' + highlighted + '</div>'
+            + (display ? '<div class="ud-display">' + display + '</div>' : '') + '</div>'
+            + '<span class="ud-type-tag">User</span></div>';
+        }
+        if (r.type === 'list') {
+          const initial = (r.title[0] || '?').toUpperCase();
+          const highlighted = esc(r.title).replace(reg, '<em>$1</em>');
+          return '<div class="ud-item" data-i="' + i + '" onmousedown="_llSelectResult(' + i + ')">'
+            + '<div class="ud-avatar">' + initial + '</div>'
+            + '<div class="ud-info"><div class="ud-username">' + highlighted + '</div>'
+            + '<div class="ud-display">List by @' + esc(r.username || 'user') + '</div></div>'
+            + '<span class="ud-type-tag">List</span></div>';
+        }
+        // item
+        const avatarHTML = r.poster_url
+          ? '<div class="ud-avatar"><img src="' + r.poster_url + '" loading="lazy"></div>'
+          : '<div class="ud-avatar">' + ((r.title || '?')[0] || '?').toUpperCase() + '</div>';
+        const highlighted = esc(r.title).replace(reg, '<em>$1</em>');
+        return '<div class="ud-item" data-i="' + i + '" onmousedown="_llSelectResult(' + i + ')">'
+          + avatarHTML
+          + '<div class="ud-info"><div class="ud-username">' + highlighted + '</div>'
+          + '<div class="ud-display">Appears in community lists</div></div>'
+          + '<span class="ud-type-tag">Title</span></div>';
+      }).join('');
+    } catch (e) {
+      console.error('Search error:', e);
+      drop.innerHTML = '<div class="ud-empty">Error searching</div>';
+    }
+  }, 250);
+}
+
+function _llKeydown(e) {
+  const drop = document.getElementById('llDropdown');
+  const items = drop.querySelectorAll('.ud-item');
+  if (!drop.classList.contains('open') || !items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _llActive = Math.min(_llActive + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('ud-active', i === _llActive));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _llActive = Math.max(_llActive - 1, -1);
+    items.forEach((el, i) => el.classList.toggle('ud-active', i === _llActive));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_llActive >= 0) _llSelectResult(_llActive);
+  } else if (e.key === 'Escape') {
+    drop.classList.remove('open'); _llActive = -1;
+    document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
+    _llUnlockScroll();
+  }
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#listsSearchWrap') && !e.target.closest('#llDropdown')) {
+    document.getElementById('llDropdown')?.classList.remove('open');
+    document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
+    _llUnlockScroll();
+    _llActive = -1;
+  }
+});
+
+function _llCloseDropdown() {
+  document.getElementById('llDropdown').classList.remove('open');
+  document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
+  _llUnlockScroll();
+  _llResults = []; _llActive = -1;
+}
+
+function _llSelectResult(i) {
+  const r = _llResults[i];
+  if (!r) return;
+  document.getElementById('listsSearchInput').value = r.type === 'item' ? r.title : (r.username || r.title);
+  _llCloseDropdown();
+
+  if (r.type === 'user') {
+    const lists = _socialListsRaw.filter(l => l.user_id === r.id);
+    _listsFilterMode = { type: 'user', label: '@' + r.username, lists };
+    _showListsFilterBanner(`Showing lists by @${esc(r.username)}`);
+    document.getElementById('listsSocialSortBar').style.display = 'none';
+    renderSocialLists();
+  } else if (r.type === 'list') {
+    openSocialListPopup(r.id);
+  } else if (r.type === 'item') {
+    const lists = _socialListsRaw.filter(l => (l.items || []).includes(r.id));
+    _listsFilterMode = { type: 'item', label: r.title, lists };
+    _showListsFilterBanner(`Showing lists containing "${esc(r.title)}"`);
+    document.getElementById('listsSocialSortBar').style.display = 'none';
+    renderSocialLists();
+  }
+}
+
+function _showListsFilterBanner(text) {
+  const banner = document.getElementById('listsFilterBanner');
+  banner.style.display = 'flex';
+  banner.innerHTML = `<span>${text}</span><button onclick="_llClearFilter()">Clear</button>`;
+}
+
+function _llClearFilter() {
+  _listsFilterMode = null;
+  document.getElementById('listsSearchInput').value = '';
+  document.getElementById('listsFilterBanner').style.display = 'none';
+  document.getElementById('listsSocialSortBar').style.display = '';
+  renderSocialLists();
 }
 
 function setSocialListsSort(val) {
@@ -653,6 +941,9 @@ function setSocialListsSort(val) {
   document.querySelectorAll('#listsSocialSortBar .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === val));
   renderSocialLists();
 }
+
+let _socialEntryMap = {}; // entry_id -> entry (across ALL social lists, not just the viewer's own)
+let _listsFilterMode = null; // { type: 'user'|'item', label, ... }
 
 async function loadSocialLists() {
   const wrap = document.getElementById('listsPageContent');
@@ -663,6 +954,17 @@ async function loadSocialLists() {
     const { data, error } = await sb.rpc('get_social_lists', { p_limit: 100 });
     if (error) throw error;
     _socialListsRaw = data || [];
+
+    // Every list's item ids might belong to a DIFFERENT user than the
+    // viewer — build a shared entry map covering all of them, not just
+    // the viewer's own entries, or poster previews for other users'
+    // lists would silently come up empty.
+    const allItemIds = [...new Set(_socialListsRaw.flatMap(l => l.items || []))];
+    if (allItemIds.length) {
+      const { data: entryRows } = await sb.from('entries').select('*').in('id', allItemIds);
+      _socialEntryMap = {};
+      (entryRows || []).forEach(e => { _socialEntryMap[e.id] = e; });
+    }
 
     if (_listsUser && _socialListsRaw.length) {
       const listIds = _socialListsRaw.map(l => l.id);
@@ -682,14 +984,15 @@ async function loadSocialLists() {
 
 function renderSocialLists() {
   const wrap = document.getElementById('listsPageContent');
-  if (!_socialListsRaw.length) {
+  const source = _listsFilterMode ? _listsFilterMode.lists : _socialListsRaw;
+  if (!source.length) {
     wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
       <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('layers', 44)}</div>
       <div class="empty-text" style="color:var(--text-2);">No public lists yet.</div>
     </div>`;
     return;
   }
-  const sorted = [..._socialListsRaw].sort((a, b) => {
+  const sorted = [...source].sort((a, b) => {
     if (_socialListsSort === 'latest') return new Date(b.created_at) - new Date(a.created_at);
     if (_socialListsSort === 'least_popular') {
       const dA = Number(a.dislike_count), dB = Number(b.dislike_count);
@@ -704,8 +1007,9 @@ function renderSocialLists() {
 
   wrap.innerHTML = `<div class="social-list-rows">${sorted.map(l => {
     const items = l.items || [];
-    const posters = items.slice(0, 5).map(id => _listsEntryMap[id]).filter(Boolean);
+    const posters = items.slice(0, 5).map(id => _socialEntryMap[id]).filter(Boolean);
     const initial = (l.username || '?')[0].toUpperCase();
+    const myReaction = _socialListsMyReactions[l.id];
     return `<div class="social-list-row" onclick="openSocialListPopup('${l.id}')" ontouchend="_dtHandleTouch(event, 'list-${l.id}', () => reactToSocialList('${l.id}', true), () => _socialListsMyReactions['${l.id}'] === 'like')">
       <div class="social-list-owner">
         <div class="social-list-avatar">${l.avatar_url ? `<img src="${esc(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
@@ -715,6 +1019,14 @@ function renderSocialLists() {
       ${l.description ? `<div class="social-list-desc">${esc(l.description)}</div>` : ''}
       <div class="social-list-count">${items.length} item${items.length !== 1 ? 's' : ''}</div>
       ${posters.length ? `<div class="social-list-posters">${posters.map(e => `<div class="social-list-poster-thumb">${posterHTML(e,'big')}</div>`).join('')}</div>` : ''}
+      <div class="social-list-reactions" style="margin-top:10px;">
+        <button class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialList('${l.id}', true)">
+          ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${l.like_count || 0}</span>
+        </button>
+        <button class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="event.stopPropagation();reactToSocialList('${l.id}', false)">
+          ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${l.dislike_count || 0}</span>
+        </button>
+      </div>
     </div>`;
   }).join('')}</div>`;
 }
@@ -725,7 +1037,7 @@ function _injectSocialListPopupOverlay() {
   const el = document.createElement('div');
   el.id = 'slPopupOverlay';
   el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
-  el.innerHTML = `<div id="slPopupCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:440px;width:100%;max-height:85vh;overflow-y:auto;padding:1.75rem;"></div>`;
+  el.innerHTML = `<div id="slPopupCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:540px;width:100%;max-height:85vh;overflow-y:auto;padding:1.75rem;"></div>`;
   el.addEventListener('click', e => { if (e.target === el) closeSocialListPopup(); });
   document.body.appendChild(el);
 }
@@ -754,6 +1066,7 @@ function _renderSocialListPopup(l) {
   const myReaction = _socialListsMyReactions[l.id];
   const initial = (l.username || '?')[0].toUpperCase();
   const items = l.items || [];
+  const posters = items.slice(0, 5).map(id => _socialEntryMap[id]).filter(Boolean);
   const alreadyOwnedTitles = new Set(_listsAll.filter(x => x.cat === 'custom').map(x => x.title.toLowerCase().trim()));
   const isOwn = l.user_id === _listsUser?.id;
   const alreadyForked = alreadyOwnedTitles.has((l.title || '').toLowerCase().trim());
@@ -766,22 +1079,215 @@ function _renderSocialListPopup(l) {
       </div>
       <button onclick="closeSocialListPopup()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;line-height:1;">&#x2715;</button>
     </div>
-    <div style="font-family:var(--serif);font-size:24px;font-weight:400;margin-bottom:.6rem;">${esc(l.title)}</div>
+    <div style="font-family:var(--serif);font-size:26px;font-weight:400;margin-bottom:.6rem;">${esc(l.title)}</div>
     ${l.description ? `<div style="font-size:13.5px;color:var(--text-2);line-height:1.6;margin-bottom:1rem;">${esc(l.description)}</div>` : ''}
-    <div class="social-list-count" style="margin-bottom:1.5rem;">${items.length} item${items.length !== 1 ? 's' : ''}</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <div class="social-list-reactions">
-        <button class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialList('${l.id}', true); _renderSocialListPopup(_socialListsRaw.find(x=>x.id==='${l.id}'))">
-          ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 15)} <span>${l.like_count || 0}</span>
-        </button>
-        <button class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialList('${l.id}', false); _renderSocialListPopup(_socialListsRaw.find(x=>x.id==='${l.id}'))">
-          ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 15)} <span>${l.dislike_count || 0}</span>
-        </button>
-      </div>
-      <button class="social-list-add-btn" style="padding:9px 20px;font-size:12.5px;" onclick="location.href='list-view.html?list=${l.id}'">View List</button>
+    <div class="social-list-count" style="margin-bottom:${posters.length ? '1rem' : '1.5rem'};">${items.length} item${items.length !== 1 ? 's' : ''}</div>
+    ${posters.length ? `<div class="social-list-posters" style="margin-bottom:1.5rem;">${posters.map(e => `<div class="social-list-poster-thumb">${posterHTML(e,'big')}</div>`).join('')}</div>` : ''}
+    <div style="display:grid; grid-template-columns:repeat(${isOwn ? 3 : 4}, 1fr); gap:10px;">
+      <button class="snote-rect-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialList('${l.id}', true); _renderSocialListPopup(_socialListsRaw.find(x=>x.id==='${l.id}'))">
+        ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 15)} <span>${l.like_count || 0}</span>
+      </button>
+      <button class="snote-rect-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialList('${l.id}', false); _renderSocialListPopup(_socialListsRaw.find(x=>x.id==='${l.id}'))">
+        ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 15)} <span>${l.dislike_count || 0}</span>
+      </button>
+      ${!isOwn ? `<button class="snote-rect-btn" ${alreadyForked ? 'disabled style="opacity:.5;cursor:default;"' : ''} onclick="forkSocialList('${l.id}')">${alreadyForked ? 'Added ✓' : '+ Add to My Lists'}</button>` : ''}
+      <button class="snote-rect-btn" onclick="closeSocialListPopup(); location.href='list-view.html?list=${l.id}'">${icon('list', 15)} View List</button>
     </div>
-    ${!isOwn ? `<button class="social-list-add-btn" style="width:100%;margin-top:12px;padding:9px;" ${alreadyForked ? 'disabled' : ''} onclick="forkSocialList('${l.id}')">${alreadyForked ? 'Already Added' : '+ Add to My Lists'}</button>` : ''}
+    <button class="snote-rect-btn" style="width:100%;margin-top:10px;" onclick='openReplyPopup("list", ${JSON.stringify(l.id)}, ${JSON.stringify(l.title)})'>
+      ${icon('list', 15)} View Replies
+    </button>
   `;
+}
+
+/* ── Replies popup — shared for notes and lists via `kind` ── */
+const REPLY_CONFIG = {
+  note: { table: 'note_replies', reactionTable: 'note_reply_reactions', rpc: 'get_note_replies', rpcParam: 'p_entry_id', col: 'entry_id' },
+  list: { table: 'list_replies', reactionTable: 'list_reply_reactions', rpc: 'get_list_replies', rpcParam: 'p_list_id', col: 'list_id' },
+};
+
+let _replyKind = null;
+let _replyTargetId = null;
+let _replyRaw = [];
+let _replySort = 'popular';
+let _replyMyReactions = {};
+
+function _injectReplyPopupOverlay() {
+  if (document.getElementById('replyPopupOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'replyPopupOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:920;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
+  el.innerHTML = `
+    <div id="replyPopupCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:520px;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:1.5rem 1.5rem 1rem;flex-shrink:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+          <div style="font-family:var(--serif);font-size:20px;font-weight:400;">Replies</div>
+          <button onclick="closeReplyPopup()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;line-height:1;">&#x2715;</button>
+        </div>
+        <div id="replyPopupSubtitle" style="font-size:12.5px;color:var(--text-3);margin-bottom:1rem;"></div>
+        <div style="display:flex;gap:6px;margin-bottom:.75rem;">
+          <button class="sort-btn active" data-sort="popular" onclick="_replySetSort('popular')">Popular</button>
+          <button class="sort-btn" data-sort="latest" onclick="_replySetSort('latest')">Latest</button>
+        </div>
+      </div>
+      <div id="replyList" style="flex:1;overflow-y:auto;padding:0 1.5rem;"></div>
+      <div id="replyComposer" style="padding:1rem 1.5rem 1.5rem;flex-shrink:0;border-top:0.5px solid var(--border);margin-top:.5rem;">
+        <textarea id="replyInput" class="field-input" placeholder="Add a reply…" style="width:100%;min-height:60px;resize:vertical;box-sizing:border-box;margin-bottom:8px;"></textarea>
+        <button class="snote-rect-btn" style="width:100%;" onclick="_replySubmit()">Post Reply</button>
+      </div>
+    </div>`;
+  el.addEventListener('click', e => { if (e.target === el) closeReplyPopup(); });
+  document.body.appendChild(el);
+}
+
+async function openReplyPopup(kind, targetId, title) {
+  _replyKind = kind;
+  _replyTargetId = targetId;
+  _injectReplyPopupOverlay();
+  document.getElementById('replyPopupSubtitle').textContent = title ? `On "${title}"` : '';
+  document.getElementById('replyList').innerHTML = '<div class="page-loading" style="padding:1rem"><div class="spinner"></div></div>';
+  const composer = document.getElementById('replyComposer');
+  composer.style.display = (typeof _notesUser !== 'undefined' && _notesUser) || (typeof _listsUser !== 'undefined' && _listsUser) ? '' : 'none';
+
+  const ov = document.getElementById('replyPopupOverlay');
+  ov.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  await _replyLoad();
+}
+
+function closeReplyPopup() {
+  const ov = document.getElementById('replyPopupOverlay');
+  if (ov) ov.style.display = 'none';
+  document.body.style.overflow = '';
+  _replyKind = null;
+  _replyTargetId = null;
+}
+
+function _replySetSort(mode) {
+  _replySort = mode;
+  document.querySelectorAll('#replyPopupCard .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === mode));
+  _replyRenderList();
+}
+
+function _currentUserForReplies() {
+  return (typeof _notesUser !== 'undefined' && _notesUser) || (typeof _listsUser !== 'undefined' && _listsUser) || null;
+}
+
+async function _replyLoad() {
+  const cfg = REPLY_CONFIG[_replyKind];
+  const listEl = document.getElementById('replyList');
+  try {
+    const params = {}; params[cfg.rpcParam] = _replyTargetId;
+    const { data, error } = await sb.rpc(cfg.rpc, params);
+    if (error) throw error;
+    _replyRaw = data || [];
+
+    const user = _currentUserForReplies();
+    if (user && _replyRaw.length) {
+      const replyIds = _replyRaw.map(r => r.id);
+      const { data: myReactions } = await sb.from(cfg.reactionTable)
+        .select('reply_id, is_like').eq('user_id', user.id).in('reply_id', replyIds);
+      _replyMyReactions = {};
+      (myReactions || []).forEach(r => { _replyMyReactions[r.reply_id] = r.is_like ? 'like' : 'dislike'; });
+    } else {
+      _replyMyReactions = {};
+    }
+    _replyRenderList();
+  } catch (err) {
+    console.error('Load replies error:', err);
+    listEl.innerHTML = '<div class="empty" style="padding:2rem 1rem;text-align:center;color:var(--text-3);">Couldn\'t load replies right now.</div>';
+  }
+}
+
+function _replyRenderList() {
+  const listEl = document.getElementById('replyList');
+  if (!_replyRaw.length) {
+    listEl.innerHTML = '<div class="empty" style="padding:2rem 1rem;text-align:center;color:var(--text-3);">No replies yet — be the first to say something.</div>';
+    return;
+  }
+  const sorted = [..._replyRaw].sort((a, b) => {
+    if (_replySort === 'latest') return new Date(b.created_at) - new Date(a.created_at);
+    const scoreA = Number(a.like_count) - Number(a.dislike_count);
+    const scoreB = Number(b.like_count) - Number(b.dislike_count);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+  listEl.innerHTML = sorted.map(r => {
+    const myReaction = _replyMyReactions[r.id];
+    const initial = (r.username || '?')[0].toUpperCase();
+    const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    return `<div style="display:flex;gap:12px;padding:14px 0;border-bottom:0.5px solid var(--border);">
+      <div class="social-list-avatar">${r.avatar_url ? `<img src="${esc(r.avatar_url)}" loading="lazy">` : esc(initial)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span class="social-list-username">@${esc(r.username || 'user')}</span>
+          <span style="font-size:11px;color:var(--text-3);">${dateStr}</span>
+        </div>
+        <div style="font-size:13.5px;line-height:1.6;color:var(--text-2);white-space:pre-line;margin-bottom:8px;">${esc(r.content)}</div>
+        <div style="display:flex;gap:14px;">
+          <button class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="_replyReact('${r.id}', true)">
+            ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 13)} <span>${r.like_count || 0}</span>
+          </button>
+          <button class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="_replyReact('${r.id}', false)">
+            ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 13)} <span>${r.dislike_count || 0}</span>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function _replyReact(replyId, isLike) {
+  const user = _currentUserForReplies();
+  if (!user) { showToast('Sign in to react to replies.', 'err'); return; }
+  const cfg = REPLY_CONFIG[_replyKind];
+  const r = _replyRaw.find(x => x.id === replyId);
+  if (!r) return;
+  const current = _replyMyReactions[replyId];
+  const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
+
+  try {
+    if (wantsSame) {
+      const { error } = await sb.from(cfg.reactionTable).delete().eq('reply_id', replyId).eq('user_id', user.id);
+      if (error) throw error;
+      delete _replyMyReactions[replyId];
+      if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
+      else r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
+    } else {
+      const { error } = await sb.from(cfg.reactionTable)
+        .upsert({ reply_id: replyId, user_id: user.id, is_like: isLike }, { onConflict: 'reply_id,user_id' });
+      if (error) throw error;
+      if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
+      if (current === 'dislike') r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
+      if (isLike) r.like_count = Number(r.like_count) + 1;
+      else r.dislike_count = Number(r.dislike_count) + 1;
+      _replyMyReactions[replyId] = isLike ? 'like' : 'dislike';
+    }
+    _replyRenderList();
+  } catch (err) {
+    console.error('React to reply error:', err);
+    showToast('Failed to save your reaction.', 'err');
+  }
+}
+
+async function _replySubmit() {
+  const user = _currentUserForReplies();
+  if (!user) { showToast('Sign in to reply.', 'err'); return; }
+  const input = document.getElementById('replyInput');
+  const content = input.value.trim();
+  if (!content) return;
+  const cfg = REPLY_CONFIG[_replyKind];
+  try {
+    const row = { user_id: user.id, content };
+    row[cfg.col] = _replyTargetId;
+    const { error } = await sb.from(cfg.table).insert(row);
+    if (error) throw error;
+    input.value = '';
+    await _replyLoad();
+  } catch (err) {
+    console.error('Post reply error:', err);
+    showToast('Failed to post reply.', 'err');
+  }
 }
 
 async function reactToSocialList(listId, isLike) {
