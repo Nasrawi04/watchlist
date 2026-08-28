@@ -874,10 +874,204 @@ function _tdRenderNotes() {
           <button class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="_tdReactToNote('${n.entry_id}', false)">
             ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
           </button>
+          <button class="td-note-react-btn" onclick='openReplyPopup("note", ${JSON.stringify(n.entry_id)}, ${JSON.stringify(n.username || "")})'>
+            ${icon('list', 14)} Replies
+          </button>
         </div>
       </div>
     </div>`;
   }).join('');
+}
+
+/* ── Replies popup — same shared component used on notes.html/lists.html ── */
+const REPLY_CONFIG = {
+  note: { table: 'note_replies', reactionTable: 'note_reply_reactions', rpc: 'get_note_replies', rpcParam: 'p_entry_id', col: 'entry_id' },
+  list: { table: 'list_replies', reactionTable: 'list_reply_reactions', rpc: 'get_list_replies', rpcParam: 'p_list_id', col: 'list_id' },
+};
+
+let _replyKind = null;
+let _replyTargetId = null;
+let _replyRaw = [];
+let _replySort = 'popular';
+let _replyMyReactions = {};
+
+function _injectReplyPopupOverlay() {
+  if (document.getElementById('replyPopupOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'replyPopupOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:920;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
+  el.innerHTML = `
+    <div id="replyPopupCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:520px;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:1.5rem 1.5rem 1rem;flex-shrink:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+          <div style="font-family:var(--serif);font-size:20px;font-weight:400;">Replies</div>
+          <button onclick="closeReplyPopup()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;line-height:1;">&#x2715;</button>
+        </div>
+        <div id="replyPopupSubtitle" style="font-size:12.5px;color:var(--text-3);margin-bottom:1rem;"></div>
+        <div style="display:flex;gap:6px;margin-bottom:.75rem;">
+          <button class="td-notes-sort-btn active" data-sort="popular" onclick="_replySetSort('popular')">Popular</button>
+          <button class="td-notes-sort-btn" data-sort="latest" onclick="_replySetSort('latest')">Latest</button>
+        </div>
+      </div>
+      <div id="replyList" style="flex:1;overflow-y:auto;padding:0 1.5rem;"></div>
+      <div id="replyComposer" style="padding:1rem 1.5rem 1.5rem;flex-shrink:0;border-top:0.5px solid var(--border);margin-top:.5rem;">
+        <textarea id="replyInput" class="field-input" placeholder="Add a reply…" style="width:100%;min-height:60px;resize:vertical;box-sizing:border-box;margin-bottom:8px;"></textarea>
+        <button class="td-note-react-btn" style="width:100%;justify-content:center;border:0.5px solid var(--border-2);border-radius:var(--radius-sm);padding:9px;" onclick="_replySubmit()">Post Reply</button>
+      </div>
+    </div>`;
+  el.addEventListener('click', e => { if (e.target === el) closeReplyPopup(); });
+  document.body.appendChild(el);
+}
+
+async function openReplyPopup(kind, targetId, title) {
+  _replyKind = kind;
+  _replyTargetId = targetId;
+  _injectReplyPopupOverlay();
+  document.getElementById('replyPopupSubtitle').textContent = title ? `On "${title}"` : '';
+  document.getElementById('replyList').innerHTML = '<div class="td-notes-loading">Loading replies…</div>';
+  const composer = document.getElementById('replyComposer');
+  composer.style.display = _currentUserForReplies() ? '' : 'none';
+
+  const ov = document.getElementById('replyPopupOverlay');
+  ov.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  await _replyLoad();
+}
+
+function closeReplyPopup() {
+  const ov = document.getElementById('replyPopupOverlay');
+  if (ov) ov.style.display = 'none';
+  document.body.style.overflow = '';
+  _replyKind = null;
+  _replyTargetId = null;
+}
+
+function _replySetSort(mode) {
+  _replySort = mode;
+  document.querySelectorAll('#replyPopupCard .td-notes-sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === mode));
+  _replyRenderList();
+}
+
+function _currentUserForReplies() {
+  return (typeof _tdUser !== 'undefined' && _tdUser) || null;
+}
+
+async function _replyLoad() {
+  const cfg = REPLY_CONFIG[_replyKind];
+  const listEl = document.getElementById('replyList');
+  try {
+    const params = {}; params[cfg.rpcParam] = _replyTargetId;
+    const { data, error } = await sb.rpc(cfg.rpc, params);
+    if (error) throw error;
+    _replyRaw = data || [];
+
+    const user = _currentUserForReplies();
+    if (user && _replyRaw.length) {
+      const replyIds = _replyRaw.map(r => r.id);
+      const { data: myReactions } = await sb.from(cfg.reactionTable)
+        .select('reply_id, is_like').eq('user_id', user.id).in('reply_id', replyIds);
+      _replyMyReactions = {};
+      (myReactions || []).forEach(r => { _replyMyReactions[r.reply_id] = r.is_like ? 'like' : 'dislike'; });
+    } else {
+      _replyMyReactions = {};
+    }
+    _replyRenderList();
+  } catch (err) {
+    console.error('Load replies error:', err);
+    listEl.innerHTML = '<div class="td-notes-empty">Couldn\'t load replies right now.</div>';
+  }
+}
+
+function _replyRenderList() {
+  const listEl = document.getElementById('replyList');
+  if (!_replyRaw.length) {
+    listEl.innerHTML = '<div class="td-notes-empty">No replies yet — be the first to say something.</div>';
+    return;
+  }
+  const sorted = [..._replyRaw].sort((a, b) => {
+    if (_replySort === 'latest') return new Date(b.created_at) - new Date(a.created_at);
+    const scoreA = Number(a.like_count) - Number(a.dislike_count);
+    const scoreB = Number(b.like_count) - Number(b.dislike_count);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+  listEl.innerHTML = sorted.map(r => {
+    const myReaction = _replyMyReactions[r.id];
+    const initial = (r.username || '?')[0].toUpperCase();
+    const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    return `<div style="display:flex;gap:12px;padding:14px 0;border-bottom:0.5px solid var(--border);">
+      <div class="td-note-avatar">${r.avatar_url ? `<img src="${esc(r.avatar_url)}" loading="lazy">` : esc(initial)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span class="td-note-username">@${esc(r.username || 'user')}</span>
+          <span class="td-note-date">${dateStr}</span>
+        </div>
+        <div style="font-size:13.5px;line-height:1.6;color:var(--text-2);white-space:pre-line;margin-bottom:8px;">${esc(r.content)}</div>
+        <div style="display:flex;gap:14px;">
+          <button class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="_replyReact('${r.id}', true)">
+            ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 13)} <span>${r.like_count || 0}</span>
+          </button>
+          <button class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="_replyReact('${r.id}', false)">
+            ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 13)} <span>${r.dislike_count || 0}</span>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function _replyReact(replyId, isLike) {
+  const user = _currentUserForReplies();
+  if (!user) { showToast('Sign in to react to replies.', 'err'); return; }
+  const cfg = REPLY_CONFIG[_replyKind];
+  const r = _replyRaw.find(x => x.id === replyId);
+  if (!r) return;
+  const current = _replyMyReactions[replyId];
+  const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
+
+  try {
+    if (wantsSame) {
+      const { error } = await sb.from(cfg.reactionTable).delete().eq('reply_id', replyId).eq('user_id', user.id);
+      if (error) throw error;
+      delete _replyMyReactions[replyId];
+      if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
+      else r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
+    } else {
+      const { error } = await sb.from(cfg.reactionTable)
+        .upsert({ reply_id: replyId, user_id: user.id, is_like: isLike }, { onConflict: 'reply_id,user_id' });
+      if (error) throw error;
+      if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
+      if (current === 'dislike') r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
+      if (isLike) r.like_count = Number(r.like_count) + 1;
+      else r.dislike_count = Number(r.dislike_count) + 1;
+      _replyMyReactions[replyId] = isLike ? 'like' : 'dislike';
+    }
+    _replyRenderList();
+  } catch (err) {
+    console.error('React to reply error:', err);
+    showToast('Failed to save your reaction.', 'err');
+  }
+}
+
+async function _replySubmit() {
+  const user = _currentUserForReplies();
+  if (!user) { showToast('Sign in to reply.', 'err'); return; }
+  const input = document.getElementById('replyInput');
+  const content = input.value.trim();
+  if (!content) return;
+  const cfg = REPLY_CONFIG[_replyKind];
+  try {
+    const row = { user_id: user.id, content };
+    row[cfg.col] = _replyTargetId;
+    const { error } = await sb.from(cfg.table).insert(row);
+    if (error) throw error;
+    input.value = '';
+    await _replyLoad();
+  } catch (err) {
+    console.error('Post reply error:', err);
+    showToast('Failed to post reply.', 'err');
+  }
 }
 
 async function _tdReactToNote(entryId, isLike) {
