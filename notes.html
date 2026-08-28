@@ -174,6 +174,11 @@
 .ud-username em { color:var(--olive-light); font-style:normal; font-weight:600; }
 .ud-display { font-size:11px; color:var(--text-3); margin-top:2px; }
 .ud-loading, .ud-empty { padding:14px; font-size:13px; color:var(--text-3); text-align:center; }
+.ud-type-tag {
+  font-size:9.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--olive-light); background:var(--olive-faint); border:0.5px solid var(--border-olive);
+  border-radius:20px; padding:2px 8px; flex-shrink:0;
+}
 .notes-user-search-wrap .fused-search-wrap {
   display:flex; align-items:stretch;
   border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden;
@@ -664,31 +669,62 @@ async function _nuSearch(val) {
   _nuLockScroll();
   _nuTimer = setTimeout(async () => {
     try {
-      const { data } = await sb.from('profiles')
-        .select('id, username, display_name, avatar_url')
-        .ilike('username', q + '%')
-        .neq('id', _notesUser?.id || '')
-        .limit(10);
-      _nuResults = data || [];
+      const [{ data: users }, { data: entries }] = await Promise.all([
+        sb.from('profiles').select('id, username, display_name, avatar_url')
+          .ilike('username', q + '%').neq('id', _notesUser?.id || '').limit(6),
+        sb.from('entries').select('title, poster_url')
+          .ilike('title', '%' + q + '%').not('notes', 'is', null).limit(20),
+      ]);
+
+      // De-dupe titles (many users can have a note on the same title)
+      const seenTitles = new Set();
+      const titleMatches = [];
+      for (const e of (entries || [])) {
+        const key = (e.title || '').toLowerCase();
+        if (!key || seenTitles.has(key)) continue;
+        seenTitles.add(key);
+        titleMatches.push(e);
+        if (titleMatches.length >= 6) break;
+      }
+
+      _nuResults = [
+        ...(users || []).map(u => ({ type: 'user', ...u })),
+        ...titleMatches.map(e => ({ type: 'title', ...e })),
+      ];
+
       if (!_nuResults.length) {
-        drop.innerHTML = '<div class="ud-empty">No users found</div>';
+        drop.innerHTML = '<div class="ud-empty">No matches found</div>';
         return;
       }
-      drop.innerHTML = _nuResults.map((p, i) => {
-        const initial = (p.username[0] || '?').toUpperCase();
-        const avatarHTML = p.avatar_url
-          ? '<div class="ud-avatar"><img src="' + p.avatar_url + '" loading="lazy"></div>'
-          : '<div class="ud-avatar">' + initial + '</div>';
-        const reg = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-        const highlighted = p.username.replace(reg, '<em>$1</em>');
-        const display = p.display_name && p.display_name !== p.username ? p.display_name : '';
-        return '<div class="ud-item" data-i="' + i + '" onmousedown="_nuSelectUser(\'' + p.id + '\',\'' + p.username + '\',\'' + (p.avatar_url || '') + '\')">'
+
+      const reg = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      drop.innerHTML = _nuResults.map((r, i) => {
+        if (r.type === 'user') {
+          const initial = (r.username[0] || '?').toUpperCase();
+          const avatarHTML = r.avatar_url
+            ? '<div class="ud-avatar"><img src="' + r.avatar_url + '" loading="lazy"></div>'
+            : '<div class="ud-avatar">' + initial + '</div>';
+          const highlighted = r.username.replace(reg, '<em>$1</em>');
+          const display = r.display_name && r.display_name !== r.username ? r.display_name : '';
+          return '<div class="ud-item" data-i="' + i + '" onmousedown="_nuSelectResult(' + i + ')">'
+            + avatarHTML
+            + '<div class="ud-info"><div class="ud-username">@' + highlighted + '</div>'
+            + (display ? '<div class="ud-display">' + display + '</div>' : '') + '</div>'
+            + '<span class="ud-type-tag">User</span></div>';
+        }
+        // title
+        const avatarHTML = r.poster_url
+          ? '<div class="ud-avatar"><img src="' + r.poster_url + '" loading="lazy"></div>'
+          : '<div class="ud-avatar">' + ((r.title || '?')[0] || '?').toUpperCase() + '</div>';
+        const highlighted = esc(r.title).replace(reg, '<em>$1</em>');
+        return '<div class="ud-item" data-i="' + i + '" onmousedown="_nuSelectResult(' + i + ')">'
           + avatarHTML
-          + '<div class="ud-info"><div class="ud-username">@' + highlighted + '</div>'
-          + (display ? '<div class="ud-display">' + display + '</div>' : '')
-          + '</div></div>';
+          + '<div class="ud-info"><div class="ud-username">' + highlighted + '</div>'
+          + '<div class="ud-display">Community notes</div></div>'
+          + '<span class="ud-type-tag">Title</span></div>';
       }).join('');
     } catch (e) {
+      console.error('Search error:', e);
       drop.innerHTML = '<div class="ud-empty">Error searching</div>';
     }
   }, 250);
@@ -708,9 +744,7 @@ function _nuKeydown(e) {
     items.forEach((el, i) => el.classList.toggle('ud-active', i === _nuActive));
   } else if (e.key === 'Enter') {
     e.preventDefault();
-    if (_nuActive >= 0 && _nuResults[_nuActive]) {
-      _nuSelectUser(_nuResults[_nuActive].id, _nuResults[_nuActive].username, _nuResults[_nuActive].avatar_url || '');
-    }
+    if (_nuActive >= 0) _nuSelectResult(_nuActive);
   } else if (e.key === 'Escape') {
     drop.classList.remove('open'); _nuActive = -1;
     document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
@@ -727,15 +761,22 @@ document.addEventListener('click', e => {
   }
 });
 
-async function _nuSelectUser(userId, username, avatarUrl) {
-  _nuFilterUser = { id: userId, username, avatar_url: avatarUrl };
-  document.getElementById('notesUserSearchInput').value = username;
+function _nuSelectResult(i) {
+  const r = _nuResults[i];
+  if (!r) return;
+  document.getElementById('notesUserSearchInput').value = r.type === 'title' ? r.title : r.username;
   document.getElementById('nuDropdown').classList.remove('open');
   document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
   _nuUnlockScroll();
   _nuResults = []; _nuActive = -1;
   document.getElementById('notesSocialSortBar').style.display = 'none';
-  await _nuLoadUserNotes();
+
+  if (r.type === 'user') {
+    _nuFilterUser = { id: r.id, username: r.username, avatar_url: r.avatar_url };
+    _nuLoadUserNotes();
+  } else {
+    _nuLoadTitleNotes(r.title);
+  }
 }
 
 function _nuClearFilter() {
@@ -744,6 +785,69 @@ function _nuClearFilter() {
   document.getElementById('notesUserFilterBanner').style.display = 'none';
   document.getElementById('notesSocialSortBar').style.display = '';
   loadSocialNotes();
+}
+
+async function _nuLoadTitleNotes(title) {
+  const wrap = document.getElementById('notesPageContent');
+  wrap.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
+
+  const banner = document.getElementById('notesUserFilterBanner');
+  banner.style.display = 'flex';
+  banner.innerHTML = `<span>Showing notes for "${esc(title)}"</span><button onclick="_nuClearFilter()">Clear</button>`;
+
+  try {
+    const { data: entries, error } = await sb.from('entries')
+      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, user_id')
+      .ilike('title', title)
+      .not('notes', 'is', null)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const withNotes = (entries || []).filter(e => e.notes && e.notes.trim());
+    const userIds = [...new Set(withNotes.map(e => e.user_id))];
+    const { data: profiles } = userIds.length
+      ? await sb.from('profiles').select('id, username, avatar_url').in('id', userIds)
+      : { data: [] };
+    const profileMap = {};
+    (profiles || []).forEach(p => { profileMap[p.id] = p; });
+
+    _socialNotesRaw = withNotes.map(e => {
+      const p = profileMap[e.user_id] || {};
+      return {
+        entry_id: e.id, user_id: e.user_id, username: p.username || 'user', avatar_url: p.avatar_url || null,
+        title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
+        notes: e.notes, final_score: e.final_score, created_at: e.created_at,
+        like_count: 0, dislike_count: 0,
+      };
+    });
+
+    if (_socialNotesRaw.length) {
+      const entryIds = _socialNotesRaw.map(n => n.entry_id);
+      const { data: allReactions } = await sb.from('note_reactions').select('entry_id, is_like').in('entry_id', entryIds);
+      const counts = {};
+      (allReactions || []).forEach(r => {
+        if (!counts[r.entry_id]) counts[r.entry_id] = { like: 0, dislike: 0 };
+        r.is_like ? counts[r.entry_id].like++ : counts[r.entry_id].dislike++;
+      });
+      _socialNotesRaw.forEach(n => {
+        n.like_count = counts[n.entry_id]?.like || 0;
+        n.dislike_count = counts[n.entry_id]?.dislike || 0;
+      });
+
+      if (_notesUser) {
+        const { data: myReactions } = await sb.from('note_reactions')
+          .select('entry_id, is_like').eq('user_id', _notesUser.id).in('entry_id', entryIds);
+        _socialNotesMyReactions = {};
+        (myReactions || []).forEach(r => { _socialNotesMyReactions[r.entry_id] = r.is_like ? 'like' : 'dislike'; });
+      }
+    }
+
+    document.getElementById('notesPageSub').textContent = `${_socialNotesRaw.length} note${_socialNotesRaw.length !== 1 ? 's' : ''} for "${title}"`;
+    renderSocialNotes();
+  } catch (err) {
+    console.error('Load title notes error:', err);
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load notes for this title.</div>`;
+  }
 }
 
 async function _nuLoadUserNotes() {
