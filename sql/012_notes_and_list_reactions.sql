@@ -201,3 +201,149 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_social_notes(integer) TO anon, authenticated;
+
+-- ════════════════════════════════════════════════════════════
+--  Replies — threaded discussion under Community Notes and
+--  Community Lists, each with their own like/dislike reactions.
+--  Fully public (read by anyone, write by the author only),
+--  matching the fully-public model the rest of Discover/Social
+--  already uses.
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS public.note_replies (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  entry_id   UUID REFERENCES public.entries(id) ON DELETE CASCADE NOT NULL,
+  user_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  content    TEXT NOT NULL CHECK (char_length(content) > 0 AND char_length(content) <= 500),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.note_replies ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "note_replies_read"   ON public.note_replies;
+DROP POLICY IF EXISTS "note_replies_insert" ON public.note_replies;
+DROP POLICY IF EXISTS "note_replies_delete" ON public.note_replies;
+
+CREATE POLICY "note_replies_read"   ON public.note_replies FOR SELECT USING (true);
+CREATE POLICY "note_replies_insert" ON public.note_replies FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "note_replies_delete" ON public.note_replies FOR DELETE USING (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS public.note_reply_reactions (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  reply_id   UUID REFERENCES public.note_replies(id) ON DELETE CASCADE NOT NULL,
+  user_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  is_like    BOOLEAN NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(reply_id, user_id)
+);
+
+ALTER TABLE public.note_reply_reactions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "note_reply_reactions_read"   ON public.note_reply_reactions;
+DROP POLICY IF EXISTS "note_reply_reactions_upsert" ON public.note_reply_reactions;
+DROP POLICY IF EXISTS "note_reply_reactions_update" ON public.note_reply_reactions;
+DROP POLICY IF EXISTS "note_reply_reactions_delete" ON public.note_reply_reactions;
+
+CREATE POLICY "note_reply_reactions_read"   ON public.note_reply_reactions FOR SELECT USING (true);
+CREATE POLICY "note_reply_reactions_upsert" ON public.note_reply_reactions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "note_reply_reactions_update" ON public.note_reply_reactions FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "note_reply_reactions_delete" ON public.note_reply_reactions FOR DELETE USING (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS public.list_replies (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  list_id    UUID REFERENCES public.favorite_lists(id) ON DELETE CASCADE NOT NULL,
+  user_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  content    TEXT NOT NULL CHECK (char_length(content) > 0 AND char_length(content) <= 500),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.list_replies ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "list_replies_read"   ON public.list_replies;
+DROP POLICY IF EXISTS "list_replies_insert" ON public.list_replies;
+DROP POLICY IF EXISTS "list_replies_delete" ON public.list_replies;
+
+CREATE POLICY "list_replies_read"   ON public.list_replies FOR SELECT USING (true);
+CREATE POLICY "list_replies_insert" ON public.list_replies FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "list_replies_delete" ON public.list_replies FOR DELETE USING (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS public.list_reply_reactions (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  reply_id   UUID REFERENCES public.list_replies(id) ON DELETE CASCADE NOT NULL,
+  user_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  is_like    BOOLEAN NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(reply_id, user_id)
+);
+
+ALTER TABLE public.list_reply_reactions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "list_reply_reactions_read"   ON public.list_reply_reactions;
+DROP POLICY IF EXISTS "list_reply_reactions_upsert" ON public.list_reply_reactions;
+DROP POLICY IF EXISTS "list_reply_reactions_update" ON public.list_reply_reactions;
+DROP POLICY IF EXISTS "list_reply_reactions_delete" ON public.list_reply_reactions;
+
+CREATE POLICY "list_reply_reactions_read"   ON public.list_reply_reactions FOR SELECT USING (true);
+CREATE POLICY "list_reply_reactions_upsert" ON public.list_reply_reactions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "list_reply_reactions_update" ON public.list_reply_reactions FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "list_reply_reactions_delete" ON public.list_reply_reactions FOR DELETE USING (auth.uid() = user_id);
+
+-- ── Fetch helpers: replies + reaction counts + author info, in one call ──
+
+DROP FUNCTION IF EXISTS public.get_note_replies(uuid);
+
+CREATE OR REPLACE FUNCTION public.get_note_replies(p_entry_id UUID)
+RETURNS TABLE (
+  id            UUID,
+  user_id       UUID,
+  username      TEXT,
+  avatar_url    TEXT,
+  content       TEXT,
+  created_at    TIMESTAMPTZ,
+  like_count    BIGINT,
+  dislike_count BIGINT
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    r.id, r.user_id, p.username, p.avatar_url, r.content, r.created_at,
+    COALESCE((SELECT count(*) FROM public.note_reply_reactions rr WHERE rr.reply_id = r.id AND rr.is_like = true), 0),
+    COALESCE((SELECT count(*) FROM public.note_reply_reactions rr WHERE rr.reply_id = r.id AND rr.is_like = false), 0)
+  FROM public.note_replies r
+  JOIN public.profiles p ON p.id = r.user_id
+  WHERE r.entry_id = p_entry_id
+  ORDER BY r.created_at DESC;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_note_replies(uuid) TO anon, authenticated;
+
+DROP FUNCTION IF EXISTS public.get_list_replies(uuid);
+
+CREATE OR REPLACE FUNCTION public.get_list_replies(p_list_id UUID)
+RETURNS TABLE (
+  id            UUID,
+  user_id       UUID,
+  username      TEXT,
+  avatar_url    TEXT,
+  content       TEXT,
+  created_at    TIMESTAMPTZ,
+  like_count    BIGINT,
+  dislike_count BIGINT
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    r.id, r.user_id, p.username, p.avatar_url, r.content, r.created_at,
+    COALESCE((SELECT count(*) FROM public.list_reply_reactions rr WHERE rr.reply_id = r.id AND rr.is_like = true), 0),
+    COALESCE((SELECT count(*) FROM public.list_reply_reactions rr WHERE rr.reply_id = r.id AND rr.is_like = false), 0)
+  FROM public.list_replies r
+  JOIN public.profiles p ON p.id = r.user_id
+  WHERE r.list_id = p_list_id
+  ORDER BY r.created_at DESC;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_list_replies(uuid) TO anon, authenticated;
