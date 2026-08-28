@@ -84,6 +84,8 @@ ALTER TABLE public.favorite_lists
 -- Powers the "all notes for this title" section on title.html — every
 -- user's note on any entry linked to this tmdb_id/tmdb_type, with
 -- reaction counts attached, ready to sort by newest or most-liked.
+DROP FUNCTION IF EXISTS public.get_notes_for_title(integer, text);
+
 CREATE OR REPLACE FUNCTION public.get_notes_for_title(
   p_tmdb_id   INTEGER,
   p_tmdb_type TEXT
@@ -94,6 +96,7 @@ RETURNS TABLE (
   username     TEXT,
   avatar_url   TEXT,
   notes        TEXT,
+  final_score  NUMERIC,
   created_at   TIMESTAMPTZ,
   like_count   BIGINT,
   dislike_count BIGINT
@@ -108,6 +111,7 @@ AS $$
     p.username,
     p.avatar_url,
     e.notes,
+    e.final_score,
     e.created_at,
     COALESCE((SELECT count(*) FROM public.note_reactions r WHERE r.entry_id = e.id AND r.is_like = true), 0) AS like_count,
     COALESCE((SELECT count(*) FROM public.note_reactions r WHERE r.entry_id = e.id AND r.is_like = false), 0) AS dislike_count
@@ -162,6 +166,8 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.get_social_lists(integer) TO anon, authenticated;
 
+DROP FUNCTION IF EXISTS public.get_social_notes(integer);
+
 CREATE OR REPLACE FUNCTION public.get_social_notes(p_limit INTEGER DEFAULT 100)
 RETURNS TABLE (
   entry_id     UUID,
@@ -173,6 +179,7 @@ RETURNS TABLE (
   tmdb_type    TEXT,
   poster_url   TEXT,
   notes        TEXT,
+  final_score  NUMERIC,
   created_at   TIMESTAMPTZ,
   like_count   BIGINT,
   dislike_count BIGINT
@@ -183,7 +190,7 @@ SET search_path = public
 AS $$
   SELECT
     e.id AS entry_id, e.user_id, p.username, p.avatar_url,
-    e.title, e.tmdb_id, e.tmdb_type, e.poster_url, e.notes, e.created_at,
+    e.title, e.tmdb_id, e.tmdb_type, e.poster_url, e.notes, e.final_score, e.created_at,
     COALESCE((SELECT count(*) FROM public.note_reactions r WHERE r.entry_id = e.id AND r.is_like = true), 0) AS like_count,
     COALESCE((SELECT count(*) FROM public.note_reactions r WHERE r.entry_id = e.id AND r.is_like = false), 0) AS dislike_count
   FROM public.entries e
