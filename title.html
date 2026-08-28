@@ -497,6 +497,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
     <div class="td-section-title">Community Notes</div>
     <div class="td-notes-controls">
       <button class="td-notes-sort-btn active" data-sort="popular" onclick="_tdSetNotesSort('popular')">Most Popular</button>
+      <button class="td-notes-sort-btn" data-sort="least_popular" onclick="_tdSetNotesSort('least_popular')">Least Popular</button>
       <button class="td-notes-sort-btn" data-sort="newest" onclick="_tdSetNotesSort('newest')">Newest</button>
     </div>
     <div id="tdNotesList"><div class="td-notes-loading">Loading notes…</div></div>
@@ -843,6 +844,11 @@ function _tdRenderNotes() {
 
   const sorted = [..._tdNotesRaw].sort((a, b) => {
     if (_tdNotesSort === 'newest') return new Date(b.created_at) - new Date(a.created_at);
+    if (_tdNotesSort === 'least_popular') {
+      const dA = Number(a.dislike_count), dB = Number(b.dislike_count);
+      if (dB !== dA) return dB - dA;
+      return new Date(b.created_at) - new Date(a.created_at);
+    }
     const scoreA = Number(a.like_count) - Number(a.dislike_count);
     const scoreB = Number(b.like_count) - Number(b.dislike_count);
     if (scoreB !== scoreA) return scoreB - scoreA;
