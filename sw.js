@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'mss-v156';
+const CACHE_VERSION = 'mss-v177';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const IMAGE_CACHE   = `${CACHE_VERSION}-images`;
 
@@ -78,6 +78,33 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // A user-triggered hard refresh (Ctrl/Cmd+Shift+R) only bypasses the
+  // browser's HTTP cache for THIS ONE request — it says nothing about
+  // every other page's cached copy. Browsers mark a hard reload's
+  // navigation request with request.cache === 'reload' (and usually a
+  // Cache-Control/Pragma: no-cache header too). We treat that as "the
+  // user wants everything fresh" and wipe every cache we own — same-
+  // origin pages, JS, CSS, everything — so the NEXT navigation to any
+  // other page also comes from the network, not stale cache, instead
+  // of needing a separate hard refresh on every single page.
+  const isHardReload = request.mode === 'navigate' && (
+    request.cache === 'reload' ||
+    request.headers.get('cache-control') === 'no-cache' ||
+    request.headers.get('pragma') === 'no-cache'
+  );
+  if (isHardReload && url.origin === self.location.origin) {
+    event.respondWith((async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter(k => k.startsWith('mss-')).map(k => caches.delete(k)));
+      try {
+        return await fetch(request);
+      } catch {
+        return caches.match('offline.html');
+      }
+    })());
+    return;
+  }
 
   // Never intercept Supabase API calls — always fresh
   if (url.hostname.includes('supabase.co')) return;
