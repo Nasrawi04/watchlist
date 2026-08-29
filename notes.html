@@ -51,6 +51,8 @@
 .snote-react-btn:hover { color:var(--text); }
 .snote-react-btn.active-like { color:var(--olive-light); }
 .snote-react-btn.active-dislike { color:#c0685a; }
+.snote-react-btn svg, .snote-rect-btn svg { transition:transform .3s, fill .3s; }
+.snote-react-btn:hover svg, .snote-rect-btn:hover svg { transform:scale(1.15) rotate(-8deg); }
 .snote-rect-btn {
   flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
   padding:11px 0; border-radius:var(--radius-sm); font-size:13.5px; font-weight:600;
