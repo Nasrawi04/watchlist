@@ -136,6 +136,8 @@
 .social-list-react-btn:hover { color:var(--text); }
 .social-list-react-btn.active-like { color:var(--olive-light); }
 .social-list-react-btn.active-dislike { color:#c0685a; }
+.social-list-react-btn svg, .snote-rect-btn svg { transition:transform .3s, fill .3s; }
+.social-list-react-btn:hover svg, .snote-rect-btn:hover svg { transform:scale(1.15) rotate(-8deg); }
 .snote-rect-btn {
   display:flex; align-items:center; justify-content:center; gap:8px;
   padding:11px 8px; border-radius:var(--radius-sm); font-size:13px; font-weight:600;
