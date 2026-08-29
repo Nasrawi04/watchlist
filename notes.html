@@ -573,8 +573,8 @@ function setNotesMode(mode) {
   document.getElementById('notesSortBar').style.display = mode === 'personal' ? '' : 'none';
   document.getElementById('notesSocialSortBar').style.display = mode === 'social' && !_nuFilterUser ? '' : 'none';
   document.getElementById('notesUserSearchWrap').style.display = mode === 'social' ? '' : 'none';
-  const headerBtns = document.querySelector('.notes-header-btns');
-  if (headerBtns) headerBtns.style.display = mode === 'personal' ? '' : 'none';
+  // "+ Add Note" / "Edit Note" stay available in both modes — you can add
+  // a personal note even while browsing the community feed.
   if (mode === 'social') {
     _nuFilterUser = null;
     document.getElementById('notesUserFilterBanner').style.display = 'none';
