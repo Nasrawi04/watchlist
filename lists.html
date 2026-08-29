@@ -1087,10 +1087,10 @@ function _renderSocialListPopup(l) {
     <div class="social-list-count" style="margin-bottom:${posters.length ? '1rem' : '1.5rem'};">${items.length} item${items.length !== 1 ? 's' : ''}</div>
     ${posters.length ? `<div class="social-list-posters" style="margin-bottom:1.5rem;">${posters.map(e => `<div class="social-list-poster-thumb">${posterHTML(e,'big')}</div>`).join('')}</div>` : ''}
     <div style="display:grid; grid-template-columns:repeat(${isOwn ? 3 : 4}, 1fr); gap:10px;">
-      <button class="snote-rect-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialList('${l.id}', true); _renderSocialListPopup(_socialListsRaw.find(x=>x.id==='${l.id}'))">
+      <button class="snote-rect-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialList('${l.id}', true).then(() => _renderSocialListPopup(_socialListsRaw.find(x=>x.id==='${l.id}')))">
         ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 15)} <span>${l.like_count || 0}</span>
       </button>
-      <button class="snote-rect-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialList('${l.id}', false); _renderSocialListPopup(_socialListsRaw.find(x=>x.id==='${l.id}'))">
+      <button class="snote-rect-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialList('${l.id}', false).then(() => _renderSocialListPopup(_socialListsRaw.find(x=>x.id==='${l.id}')))">
         ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 15)} <span>${l.dislike_count || 0}</span>
       </button>
       ${!isOwn ? `<button class="snote-rect-btn" ${alreadyForked ? 'disabled style="opacity:.5;cursor:default;"' : ''} onclick="forkSocialList('${l.id}')">${alreadyForked ? 'Added ✓' : '+ Add to My Lists'}</button>` : ''}
