@@ -205,6 +205,7 @@
 /* ── Note card list (reused from profile.html's Notes tab design) ── */
 .note-row{display:flex;gap:20px;align-items:flex-start;padding:20px 24px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;cursor:pointer;transition:all var(--trans) var(--ease);}
 .note-row:hover{border-color:var(--border-olive);background:var(--card-2);}
+.note-row-personal:hover{border-color:var(--border);background:var(--card);}
 .note-poster{width:84px;height:120px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:24px;color:var(--olive-light);overflow:hidden;}
 .note-poster img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);}
 .note-body{flex:1;min-width:0;}
@@ -255,15 +256,19 @@
 .note-popup-overlay2.open{opacity:1;pointer-events:auto;}
 .note-popup2{width:100%;max-width:520px;background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);overflow:hidden;transform:scale(.96);transition:transform .22s cubic-bezier(0.4,0,0.2,1);position:relative;max-height:90dvh;display:flex;flex-direction:column;}
 .note-popup-overlay2.open .note-popup2{transform:scale(1);}
-.note-popup2-header{display:flex;align-items:flex-start;gap:14px;padding:18px 20px 14px;border-bottom:0.5px solid var(--border);flex-shrink:0;}
-.note-popup2-poster{width:60px;height:84px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:20px;color:var(--olive-light);}
+.note-popup2-header{position:relative;height:150px;flex-shrink:0;overflow:hidden;}
+.note-popup2-header-blur{position:absolute;inset:-16px;background-size:cover;background-position:center 25%;filter:blur(20px) brightness(0.55);transform:scale(1.15);}
+.note-popup2-header-fade{position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,0.1), var(--bg-2) 95%);}
+.note-popup2-info-row{padding:0 20px 16px;margin-top:-56px;position:relative;display:flex;gap:16px;align-items:flex-end;}
+.note-popup2-poster{width:82px;height:120px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:26px;color:var(--olive-light);border:3px solid var(--bg-2);box-shadow:0 6px 16px rgba(0,0,0,0.35);}
 .note-popup2-poster img{width:100%;height:100%;object-fit:cover;}
-.note-popup2-info{flex:1;min-width:0;}
-.note-popup2-title{font-family:var(--serif);font-size:20px;font-weight:300;color:var(--text);margin-bottom:5px;line-height:1.2;}
+.note-popup2-info{flex:1;min-width:0;padding-bottom:4px;}
+.note-popup2-title{font-family:var(--serif);font-size:21px;font-weight:300;color:var(--text);margin-bottom:5px;line-height:1.2;}
+.note-popup2-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
+.note-popup2-reactions{display:flex;gap:14px;padding:0 20px 14px;border-bottom:0.5px solid var(--border);}
+.note-popup2-reaction-count{display:inline-flex;align-items:center;gap:6px;color:var(--text-3);font-size:12.5px;font-weight:500;}
 .note-popup2-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:5px;}
 .note-popup2-date{font-size:11px;color:var(--text-3);}
-.note-popup2-close{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;line-height:1;padding:0;flex-shrink:0;transition:color .15s;}
-.note-popup2-close:hover{color:var(--text);}
 .note-popup2-body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;overscroll-behavior-y:contain;}
 .note-popup2-text{font-size:14px;color:var(--text-2);font-style:italic;line-height:1.7;}
 .note-popup2-empty{font-size:13px;color:var(--text-3);}
@@ -282,8 +287,8 @@
 .note-popup2-save{flex:2;padding:10px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;}
 .note-popup2-save:disabled{opacity:.5;cursor:default;}
 @media(max-width:640px){
-  .note-popup2-header{padding:14px 16px 12px;gap:12px;}
-  .note-popup2-poster{width:50px;height:70px;font-size:17px;}
+  .note-popup2-header{height:120px;}
+  .note-popup2-poster{width:66px;height:96px;font-size:20px;}
   .note-popup2-title{font-size:17px;}
   .note-popup2-body{padding:14px 16px 18px;}
   .note-popup2-textarea{min-height:130px;padding:10px 12px;}
@@ -292,8 +297,8 @@
   .note-popup2-text{font-size:13px;}
 }
 @media(max-width:400px){
-  .note-popup2-header{padding:12px 14px 10px;gap:10px;}
-  .note-popup2-poster{width:44px;height:62px;font-size:15px;}
+  .note-popup2-header{height:100px;}
+  .note-popup2-poster{width:56px;height:82px;font-size:17px;}
   .note-popup2-title{font-size:15px;}
   .note-popup2-body{padding:12px 14px 16px;}
   .note-popup2-textarea{min-height:110px;}
@@ -379,13 +384,21 @@
 <div class="note-popup-overlay2" id="notePopup2" onclick="if(event.target===this)closeNotePopup2()">
   <div class="note-popup2">
     <div class="note-popup2-header">
+      <div class="note-popup2-header-blur" id="notePopup2Blur"></div>
+      <div class="note-popup2-header-fade"></div>
+      <button class="note-popup2-close" onclick="closeNotePopup2()">&#x2715;</button>
+    </div>
+    <div class="note-popup2-info-row">
       <div class="note-popup2-poster" id="notePopup2Poster"></div>
       <div class="note-popup2-info">
         <div class="note-popup2-title" id="notePopup2Title"></div>
         <div class="note-popup2-tags" id="notePopup2Tags"></div>
         <div class="note-popup2-date" id="notePopup2Date"></div>
       </div>
-      <button class="note-popup2-close" onclick="closeNotePopup2()">&#x2715;</button>
+    </div>
+    <div class="note-popup2-reactions" id="notePopup2Reactions" style="display:none;">
+      <span class="note-popup2-reaction-count"><span id="notePopup2LikeIcon"></span> <span id="notePopup2LikeCount">0</span></span>
+      <span class="note-popup2-reaction-count"><span id="notePopup2DislikeIcon"></span> <span id="notePopup2DislikeCount">0</span></span>
     </div>
 
     <!-- View mode (default) -->
@@ -506,7 +519,7 @@ function renderNotesPage() {
       ? `<div class="note-poster"><img src="${e.poster_url}" loading="lazy"></div>`
       : `<div class="note-poster">${esc((e.title||'?')[0].toUpperCase())}</div>`;
     const counts = _notesReactionCounts[e.id] || { like: 0, dislike: 0 };
-    return `<div class="note-row" onclick="openNotePopup2('${e.id}')">
+    return `<div class="note-row note-row-personal" onclick="openNotePopup2('${e.id}')">
       ${posterEl}
       <div class="note-body">
         <div class="note-title">${esc(e.title)}</div>
@@ -1024,10 +1037,10 @@ function _renderSocialNotePopup(n) {
       <div style="font-size:14.5px; line-height:1.75; color:var(--text-2); white-space:pre-line; margin-bottom:1.5rem;">&ldquo;${esc(n.notes)}&rdquo;</div>
 
       <div style="display:flex; gap:10px;">
-        <button class="snote-rect-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialNote('${n.entry_id}', true); _renderSocialNotePopup(_socialNotesRaw.find(x=>x.entry_id==='${n.entry_id}'))">
+        <button class="snote-rect-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialNote('${n.entry_id}', true).then(() => _renderSocialNotePopup(_socialNotesRaw.find(x=>x.entry_id==='${n.entry_id}')))">
           ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 16)} <span>${n.like_count || 0}</span>
         </button>
-        <button class="snote-rect-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialNote('${n.entry_id}', false); _renderSocialNotePopup(_socialNotesRaw.find(x=>x.entry_id==='${n.entry_id}'))">
+        <button class="snote-rect-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialNote('${n.entry_id}', false).then(() => _renderSocialNotePopup(_socialNotesRaw.find(x=>x.entry_id==='${n.entry_id}')))">
           ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 16)} <span>${n.dislike_count || 0}</span>
         </button>
       </div>
@@ -1392,10 +1405,20 @@ function openNotePopup2(id) {
   window._notesCurrentEntryId = id;
 
   const date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
-  document.getElementById('notePopup2Poster').innerHTML = e.poster_url ? `<img src="${e.poster_url}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase());
+  const hasPoster = e.poster_url && !e.poster_url.startsWith('PLACEHOLDER');
+  document.getElementById('notePopup2Blur').style.backgroundImage = hasPoster ? `url('${e.poster_url}')` : 'none';
+  document.getElementById('notePopup2Blur').style.background = hasPoster ? '' : 'var(--olive-faint)';
+  document.getElementById('notePopup2Poster').innerHTML = hasPoster ? `<img src="${e.poster_url}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase());
   document.getElementById('notePopup2Title').textContent = e.title;
   document.getElementById('notePopup2Tags').innerHTML = genreHTML(e.genres||[], 4) + (date ? `<span class="note-date">${date}</span>` : '');
   document.getElementById('notePopup2Date').innerHTML = '';
+
+  document.getElementById('notePopup2LikeIcon').innerHTML = icon('thumbsUp', 14);
+  document.getElementById('notePopup2DislikeIcon').innerHTML = icon('thumbsDown', 14);
+  const counts = _notesReactionCounts[id] || { like: 0, dislike: 0 };
+  document.getElementById('notePopup2LikeCount').textContent = counts.like;
+  document.getElementById('notePopup2DislikeCount').textContent = counts.dislike;
+  document.getElementById('notePopup2Reactions').style.display = (e.notes && e.notes.trim()) ? 'flex' : 'none';
 
   document.getElementById('notePopup2').classList.add('open');
   document.body.style.overflow = 'hidden';
