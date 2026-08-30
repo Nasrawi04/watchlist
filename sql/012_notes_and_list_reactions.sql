@@ -80,6 +80,13 @@ FOR DELETE USING (auth.uid() = user_id);
 ALTER TABLE public.favorite_lists
   ADD COLUMN IF NOT EXISTS forked_from UUID REFERENCES public.favorite_lists(id) ON DELETE SET NULL;
 
+-- ── Ranked lists ──
+-- NULL = undecided (older lists created before this feature existed —
+-- the UI offers a toggle to decide). TRUE/FALSE = decided, shown as a
+-- "Ranked"/"Unranked" badge everywhere the list appears.
+ALTER TABLE public.favorite_lists
+  ADD COLUMN IF NOT EXISTS ranked BOOLEAN;
+
 -- ── Helper: entry notes with like/dislike counts, for a given TMDB title ──
 -- Powers the "all notes for this title" section on title.html — every
 -- user's note on any entry linked to this tmdb_id/tmdb_type, with
@@ -133,6 +140,8 @@ GRANT EXECUTE ON FUNCTION public.get_notes_for_title(integer, text) TO anon, aut
 --  by "Popular" (likes) or "Latest" (newest) client-side.
 -- ════════════════════════════════════════════════════════════
 
+DROP FUNCTION IF EXISTS public.get_social_lists(integer);
+
 CREATE OR REPLACE FUNCTION public.get_social_lists(p_limit INTEGER DEFAULT 100)
 RETURNS TABLE (
   id           UUID,
@@ -144,6 +153,7 @@ RETURNS TABLE (
   cat          TEXT,
   genre        TEXT,
   items        TEXT[],
+  ranked       BOOLEAN,
   created_at   TIMESTAMPTZ,
   like_count   BIGINT,
   dislike_count BIGINT
@@ -154,7 +164,7 @@ SET search_path = public
 AS $$
   SELECT
     l.id, l.user_id, p.username, p.avatar_url, l.title, l.description,
-    l.cat, l.genre, l.items, l.created_at,
+    l.cat, l.genre, l.items, l.ranked, l.created_at,
     COALESCE((SELECT count(*) FROM public.list_reactions r WHERE r.list_id = l.id AND r.is_like = true), 0) AS like_count,
     COALESCE((SELECT count(*) FROM public.list_reactions r WHERE r.list_id = l.id AND r.is_like = false), 0) AS dislike_count
   FROM public.favorite_lists l
