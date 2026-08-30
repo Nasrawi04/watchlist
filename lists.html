@@ -24,6 +24,46 @@
 .fav-page-list-title {
   font-family:var(--serif);font-size:clamp(17px, 3.4vw, 20px);font-weight:300;color:var(--text);
 }
+.ranked-badge {
+  display:inline-flex; align-items:center; margin-left:10px; vertical-align:middle;
+  font-family:var(--sans); font-size:10.5px; font-weight:800; letter-spacing:.7px; text-transform:uppercase;
+  padding:3px 10px; border-radius:0;
+}
+.ranked-badge.ranked-yes { background:var(--olive-light); color:var(--bg); }
+.ranked-badge.ranked-no { background:var(--text-3); color:var(--bg); }
+@media(max-width:640px) {
+  .ranked-badge { font-size:9px; padding:2px 8px; margin-left:7px; letter-spacing:.5px; }
+  .mss-cbx-group { gap:10px; margin-left:8px; }
+  .checkbox-wrapper-46 .cbx span:last-child { font-size:10.5px; }
+  .checkbox-wrapper-46 .cbx span:first-child { width:14px; height:14px; }
+}
+
+/* ── Ranked/Unranked choice checkboxes — adapted from Uiverse (vishnupprajapat) ── */
+.mss-cbx-group { display:inline-flex; gap:16px; margin-left:12px; vertical-align:middle; }
+.checkbox-wrapper-46 input[type="checkbox"] { display:none; visibility:hidden; }
+.checkbox-wrapper-46 .cbx { margin:auto; user-select:none; cursor:pointer; display:inline-flex; align-items:center; }
+.checkbox-wrapper-46 .cbx span { display:inline-block; vertical-align:middle; transform:translate3d(0,0,0); }
+.checkbox-wrapper-46 .cbx span:first-child {
+  position:relative; width:16px; height:16px; border-radius:3px; transform:scale(1);
+  vertical-align:middle; background:var(--card); border:1.5px solid var(--text-3); transition:all .2s ease;
+}
+.checkbox-wrapper-46 .cbx span:first-child svg {
+  position:absolute; top:2px; left:2px; fill:none; stroke:#fff; stroke-width:2;
+  stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:16px; stroke-dashoffset:16px;
+  transition:all .3s ease; transition-delay:.1s; transform:translate3d(0,0,0);
+}
+.checkbox-wrapper-46 .cbx span:first-child::before {
+  content:''; width:100%; height:100%; display:block; transform:scale(0); opacity:1; border-radius:50%;
+}
+.checkbox-wrapper-46 .cbx span:last-child { padding-left:6px; font-family:var(--sans); font-weight:600; font-size:11.5px; color:var(--text-2); }
+.checkbox-wrapper-46 .cbx:hover span:first-child { border-color:var(--olive-light); }
+.checkbox-wrapper-46 .cbx-ranked-yes span:first-child::before { background:var(--olive-light); }
+.checkbox-wrapper-46 .cbx-ranked-no span:first-child::before { background:var(--text-3); }
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx.cbx-ranked-yes span:first-child { background:var(--olive-light); border-color:var(--olive-light); animation:mss-cbx-wave .4s ease; }
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx.cbx-ranked-no span:first-child { background:var(--text-3); border-color:var(--text-3); animation:mss-cbx-wave .4s ease; }
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child svg { stroke-dashoffset:0; }
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child::before { transform:scale(3.5); opacity:0; transition:all .6s ease; }
+@keyframes mss-cbx-wave { 50% { transform:scale(0.9); } }
 .fav-page-list-count {
   font-size:11px;color:var(--text-3);letter-spacing:.5px;margin-top:2px;
 }
@@ -125,7 +165,7 @@
 .social-list-desc { font-size:12.5px; color:var(--text-2); line-height:1.5; margin-bottom:.75rem; }
 .social-list-count { font-size:11.5px; color:var(--text-3); margin-bottom:.9rem; }
 .social-list-posters { display:flex; gap:6px; margin-bottom:1rem; }
-.social-list-poster-thumb { width:44px; height:64px; border-radius:5px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.social-list-poster-thumb { width:44px; height:64px; border-radius:5px; overflow:hidden; background:var(--bg-3); flex-shrink:0; position:relative; }
 .social-list-poster-thumb img { width:100%; height:100%; object-fit:cover; }
 .social-list-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .social-list-reactions { display:flex; gap:12px; }
@@ -325,6 +365,17 @@
     <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:8px;">Description <span style="color:var(--text-3);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;">(optional, max 50 words)</span></div>
     <textarea id="favCustomListDescInput" class="list-desc-field" maxlength="500" placeholder="What's this list about?" oninput="_listsUpdateWordCount('favCustomListDescInput','favCustomListDescCount')" style="margin-bottom:4px;"></textarea>
     <div class="list-desc-count" id="favCustomListDescCount" style="margin-bottom:14px;">0 / 50 words</div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;">Ranking</div>
+    <div class="mss-cbx-group" style="margin-left:0;margin-bottom:18px;">
+      <span class="checkbox-wrapper-46">
+        <input type="checkbox" id="favListRankedYes" class="inp-cbx" onchange="_favListRankedChange(true)">
+        <label for="favListRankedYes" class="cbx cbx-ranked-yes"><span><svg viewBox="0 0 12 10" height="10" width="12"><polyline points="1.5 6 4.5 9 10.5 1"></polyline></svg></span><span>Ranked</span></label>
+      </span>
+      <span class="checkbox-wrapper-46">
+        <input type="checkbox" id="favListRankedNo" class="inp-cbx" onchange="_favListRankedChange(false)">
+        <label for="favListRankedNo" class="cbx cbx-ranked-no"><span><svg viewBox="0 0 12 10" height="10" width="12"><polyline points="1.5 6 4.5 9 10.5 1"></polyline></svg></span><span>Unranked</span></label>
+      </span>
+    </div>
     <div style="display:flex;gap:10px;">
       <button onclick="closeFavCustomListModal()" style="flex:1;padding:10px;border-radius:var(--radius-sm);background:var(--bg-3);color:var(--text-2);border:0.5px solid var(--border);font-family:var(--sans);font-size:14px;cursor:pointer;">Cancel</button>
       <button id="favCustomListCreate" onclick="createFavCustomList()" disabled
@@ -536,6 +587,7 @@ async function saveFavoriteList(list) {
   if (list.id) {
     const upd = { items: list.items, title: list.title };
     if (list.description !== undefined) upd.description = list.description;
+    if (list.ranked !== undefined) upd.ranked = list.ranked;
     const { data, error } = await sb.from('favorite_lists')
       .update(upd)
       .eq('id', list.id)
@@ -545,7 +597,7 @@ async function saveFavoriteList(list) {
     return data;
   } else {
     const { data, error } = await sb.from('favorite_lists')
-      .insert({ user_id: _listsUser.id, cat: list.cat, genre: list.genre, title: list.title, description: list.description || null, items: list.items || [] })
+      .insert({ user_id: _listsUser.id, cat: list.cat, genre: list.genre, title: list.title, description: list.description || null, items: list.items || [], ranked: list.ranked ?? null })
       .select().single();
     if (error) throw error;
     return data;
@@ -572,8 +624,48 @@ function favCard(e, rank) {
   </div>`;
 }
 
-function hScrollSection(listId, title, subtitle, items, showEdit, onEdit, onDelete, onRename, description, itemSort) {
-  const cards = items.map((e, i) => favCard(e, i)).join('');
+function _rankedBadgeHTML(listId, ranked, isOwner) {
+  if (ranked === true) return `<span class="ranked-badge ranked-yes">Ranked</span>`;
+  if (ranked === false) return `<span class="ranked-badge ranked-no">Unranked</span>`;
+  if (isOwner && listId) {
+    return `<span class="mss-cbx-group" onclick="event.stopPropagation()">
+      <span class="checkbox-wrapper-46">
+        <input type="checkbox" id="cbx-ranked-yes-${listId}" class="inp-cbx" onchange="if(this.checked) setListRanked('${listId}', true)">
+        <label for="cbx-ranked-yes-${listId}" class="cbx cbx-ranked-yes"><span><svg viewBox="0 0 12 10" height="10" width="12"><polyline points="1.5 6 4.5 9 10.5 1"></polyline></svg></span><span>Ranked</span></label>
+      </span>
+      <span class="checkbox-wrapper-46">
+        <input type="checkbox" id="cbx-ranked-no-${listId}" class="inp-cbx" onchange="if(this.checked) setListRanked('${listId}', false)">
+        <label for="cbx-ranked-no-${listId}" class="cbx cbx-ranked-no"><span><svg viewBox="0 0 12 10" height="10" width="12"><polyline points="1.5 6 4.5 9 10.5 1"></polyline></svg></span><span>Unranked</span></label>
+      </span>
+    </span>`;
+  }
+  return '';
+}
+
+async function setListRanked(listId, value) {
+  try {
+    const { error } = await sb.from('favorite_lists').update({ ranked: value }).eq('id', listId).eq('user_id', _listsUser.id);
+    if (error) throw error;
+    const list = _listsAll.find(l => l.id === listId);
+    if (list) list.ranked = value;
+    const socialList = _socialListsRaw?.find?.(l => l.id === listId);
+    if (socialList) socialList.ranked = value;
+
+    if (_listsMode === 'social') {
+      renderSocialLists();
+    } else {
+      renderListsPage();
+    }
+    if (_slPopupListId === listId && socialList) _renderSocialListPopup(socialList);
+    showToast(value ? 'Marked as ranked!' : 'Marked as unranked.');
+  } catch (err) {
+    console.error('Set ranked error:', err);
+    showToast('Failed to update.', 'err');
+  }
+}
+
+function hScrollSection(listId, title, subtitle, items, showEdit, onEdit, onDelete, onRename, description, itemSort, ranked) {
+  const cards = items.map((e, i) => favCard(e, ranked === true ? i : null)).join('');
   const RENAME_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`;
   const EDIT_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
   const DEL_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
@@ -597,7 +689,7 @@ function hScrollSection(listId, title, subtitle, items, showEdit, onEdit, onDele
   return `<div class="fav-page-section">
     <div class="fav-page-list-header">
       <div>
-        <div class="fav-page-list-title">${esc(title)}</div>
+        <div class="fav-page-list-title">${esc(title)}${listId ? _rankedBadgeHTML(listId, ranked, true) : ''}</div>
         ${subtitle ? `<div class="fav-page-list-count">${esc(subtitle)}</div>` : ''}
         ${description ? `<div class="fav-page-list-desc">${esc(description)}</div>` : ''}
       </div>
@@ -674,7 +766,8 @@ function renderListsPage() {
         `deleteFavListConfirm(&quot;${list.id}&quot;)`,
         `openFavCustomListModal(&quot;${list.id}&quot;)`,
         list.description,
-        itemSort
+        itemSort,
+        list.ranked
       );
       html += `<div class="lists-drag-item" data-list-id="${list.id}">
         ${dragEnabled ? `<div class="lists-drag-handle" title="Drag to reorder"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/></svg></div>` : ''}
@@ -887,8 +980,9 @@ function _llKeydown(e) {
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('#listsSearchWrap') && !e.target.closest('#llDropdown')) {
-    document.getElementById('llDropdown')?.classList.remove('open');
+  const dd = document.getElementById('llDropdown');
+  if (dd && dd.classList.contains('open') && !e.target.closest('#listsSearchWrap') && !e.target.closest('#llDropdown')) {
+    dd.classList.remove('open');
     document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
     _llUnlockScroll();
     _llActive = -1;
@@ -1018,7 +1112,7 @@ function renderSocialLists() {
         <div class="social-list-avatar">${l.avatar_url ? `<img src="${esc(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
         <div class="social-list-username">@${esc(l.username || 'user')}</div>
       </div>
-      <div class="social-list-title">${esc(l.title)}</div>
+      <div class="social-list-title">${esc(l.title)}${_rankedBadgeHTML(l.id, l.ranked, false)}</div>
       ${l.description ? `<div class="social-list-desc">${esc(l.description)}</div>` : ''}
       <div class="social-list-count">${items.length} item${items.length !== 1 ? 's' : ''}</div>
       ${posters.length ? `<div class="social-list-posters">${posters.map(e => `<div class="social-list-poster-thumb">${posterHTML(e,'big')}</div>`).join('')}</div>` : ''}
@@ -1082,7 +1176,7 @@ function _renderSocialListPopup(l) {
       </div>
       <button onclick="closeSocialListPopup()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;line-height:1;">&#x2715;</button>
     </div>
-    <div style="font-family:var(--serif);font-size:26px;font-weight:400;margin-bottom:.6rem;">${esc(l.title)}</div>
+    <div style="font-family:var(--serif);font-size:26px;font-weight:400;margin-bottom:.6rem;">${esc(l.title)}${_rankedBadgeHTML(l.id, l.ranked, isOwn)}</div>
     ${l.description ? `<div style="font-size:13.5px;color:var(--text-2);line-height:1.6;margin-bottom:1rem;">${esc(l.description)}</div>` : ''}
     <div class="social-list-count" style="margin-bottom:${posters.length ? '1rem' : '1.5rem'};">${items.length} item${items.length !== 1 ? 's' : ''}</div>
     ${posters.length ? `<div class="social-list-posters" style="margin-bottom:1.5rem;">${posters.map(e => `<div class="social-list-poster-thumb">${posterHTML(e,'big')}</div>`).join('')}</div>` : ''}
@@ -1336,6 +1430,7 @@ async function forkSocialList(listId) {
       title: list.title,
       description: list.description || null,
       items: list.items || [],
+      ranked: list.ranked ?? null,
       forked_from: list.id,
     });
     if (error) throw error;
@@ -1819,6 +1914,13 @@ if ('serviceWorker' in navigator) {
 /* ── Custom List Modal (title only, no cat/genre) ── */
 var _favCustomListEditId = null;
 
+let _favCustomListRankedValue = null;
+function _favListRankedChange(val) {
+  _favCustomListRankedValue = val;
+  document.getElementById('favListRankedYes').checked = val === true;
+  document.getElementById('favListRankedNo').checked = val === false;
+}
+
 function openFavCustomListModal(editId) {
   _favCustomListEditId = editId || null;
   var inp = document.getElementById('favCustomListInput');
@@ -1826,6 +1928,9 @@ function openFavCustomListModal(editId) {
   const existingList = editId ? _listsAll.find(l => l.id === editId) : null;
   inp.value = existingList?.title || '';
   descInp.value = existingList?.description || '';
+  _favCustomListRankedValue = existingList?.ranked ?? null;
+  document.getElementById('favListRankedYes').checked = _favCustomListRankedValue === true;
+  document.getElementById('favListRankedNo').checked = _favCustomListRankedValue === false;
   _listsUpdateWordCount('favCustomListDescInput','favCustomListDescCount');
   _listsGuardWordLimit('favCustomListDescInput','favCustomListDescCount');
   document.getElementById('favCustomListCreate').disabled = !inp.value.trim();
@@ -1843,6 +1948,7 @@ function closeFavCustomListModal() {
 async function createFavCustomList() {
   const title = document.getElementById('favCustomListInput').value.trim();
   const description = document.getElementById('favCustomListDescInput').value.trim();
+  const ranked = _favCustomListRankedValue;
   if (!title) return;
   try {
     if (_favCustomListEditId) {
@@ -1850,13 +1956,14 @@ async function createFavCustomList() {
       if (list) {
         list.title = title;
         list.description = description;
+        list.ranked = ranked;
         await saveFavoriteList(list);
         closeFavCustomListModal();
         renderListsPage();
         showToast('List updated!');
       }
     } else {
-      const newList = await saveFavoriteList({ cat: 'custom', genre: '', title, description, items: [] });
+      const newList = await saveFavoriteList({ cat: 'custom', genre: '', title, description, items: [], ranked });
       _listsAll.push(newList);
       closeFavCustomListModal();
       renderListsPage();
