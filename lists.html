@@ -223,6 +223,13 @@
   transition:transform .26s cubic-bezier(.4,0,.2,1);
 }
 #favListPickerOverlay.open #favListPickerSheet{transform:translateY(0);}
+.fav-picker-list { min-height:0; } /* lets it actually scroll within max-height instead of overflowing the sheet */
+#favPickerModeToggle { flex-shrink:0; }
+
+@media(max-width:600px){
+  #favPickerModeToggle .pn-toggle-btn { padding:8px 20px; font-size:12.5px; }
+  #favPickerModeToggle { margin-bottom:10px !important; }
+}
 
 @media(max-width:600px){
   .fav-h-grid .q-card{flex:0 0 120px;min-width:120px;}
@@ -394,6 +401,10 @@
       </div>
       <button onclick="closeFavListPicker()" class="fav-picker-close">✕</button>
     </div>
+    <div class="pn-toggle" id="favPickerModeToggle" style="margin:14px auto 14px;">
+      <button class="pn-toggle-btn active" data-mode="library" onclick="_favPickerSetMode('library')">My Library</button>
+      <button class="pn-toggle-btn" data-mode="discover" onclick="_favPickerSetMode('discover')">Discover</button>
+    </div>
     <div class="fav-picker-search-wrap">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="favListPickerSearch" class="fav-picker-search-input" placeholder="Search…" autocomplete="off" oninput="_favPickerSearch(this.value)">
@@ -498,6 +509,44 @@ let _listsAll = [];
 let _listsOrderSort = 'default';
 let _listItemSort = {};
 let _listsEntryMap = {};
+let _tmdbItemCache = {}; // 'tmdb:movie:123' -> resolved {id, title, poster_url, tmdb_id, tmdb_type, year}
+
+// List items can be either a personal entry's UUID (existing behavior)
+// or a bare "tmdb:movie:123" / "tmdb:tv:456" reference for something
+// added straight from Discover, with no personal entry behind it at
+// all. This is the one place that knows how to turn either shape into
+// the same {id, title, poster_url, tmdb_id, tmdb_type, year} object
+// every renderer already expects — so favCard/hScrollSection/social
+// previews/list-view.html don't need to know the difference.
+function _resolveListItem(id) {
+  if (typeof id === 'string' && id.startsWith('tmdb:')) return _tmdbItemCache[id] || null;
+  return _listsEntryMap[id] || null;
+}
+
+async function _hydrateTmdbItems(allLists) {
+  const toFetch = new Set();
+  (allLists || []).forEach(l => (l.items || []).forEach(id => {
+    if (typeof id === 'string' && id.startsWith('tmdb:') && !_tmdbItemCache[id]) toFetch.add(id);
+  }));
+  await Promise.all([...toFetch].map(async pseudoId => {
+    const [, type, tmdbId] = pseudoId.split(':');
+    try {
+      const res = await fetch(`${TMDB_BASE}/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=en-US`);
+      if (!res.ok) return;
+      const d = await res.json();
+      const title = type === 'movie' ? d.title : d.name;
+      const dateStr = type === 'movie' ? d.release_date : d.first_air_date;
+      _tmdbItemCache[pseudoId] = {
+        id: pseudoId,
+        title, poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null,
+        tmdb_id: Number(tmdbId), tmdb_type: type,
+        year: (dateStr || '').split('-')[0],
+        genres: (d.genres || []).map(g => g.name),
+        cat: type === 'movie' ? 'movies' : 'tv',
+      };
+    } catch (e) { console.error('Hydrate TMDB item error:', pseudoId, e); }
+  }));
+}
 let _listsMode = 'personal';
 let _socialListsSort = 'popular';
 let _socialListsRaw = [];
@@ -542,6 +591,7 @@ async function loadListsPage() {
   _listsEntries = entries || [];
   _listsAll = lists || [];
   _listsEntryMap = Object.fromEntries(_listsEntries.map(e => [e.id, e]));
+  await _hydrateTmdbItems(_listsAll);
 
   await _ensureListSortOrder();
   renderListsPage();
@@ -610,15 +660,20 @@ async function deleteFavoriteList(id) {
 }
 
 function favCard(e, rank) {
-  const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
+  const isTmdbOnly = typeof e.id === 'string' && e.id.startsWith('tmdb:');
+  const score = !isTmdbOnly && liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
   const rankCls = rank === 0 ? 'cg-rank-1' : rank === 1 ? 'cg-rank-2' : rank === 2 ? 'cg-rank-3' : 'cg-rank-other';
   const rankBadge = rank != null ? `<div class="cg-rank-badge ${rankCls}">${rank + 1}</div>` : '';
   const scoreHTML = score ? `<div style="font-family:var(--serif);font-size:15px;font-weight:300;color:var(--olive-light);margin-top:4px;text-align:right">${score}</div>` : '';
-  return `<div class="q-card" onclick="openFavPopup('${e.id}')" style="cursor:pointer;">
+  const clickAttr = isTmdbOnly ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : `onclick="openFavPopup('${e.id}')"`;
+  const metaLine = isTmdbOnly
+    ? `<div class="q-genre">${e.year ? esc(e.year) + ' · ' : ''}${genreHTML(e.genres, 3)}</div>`
+    : `<div class="q-genre">${getTypeBadge(e,'friend')}${genreHTML(e.genres, 3)}</div>`;
+  return `<div class="q-card" ${clickAttr} style="cursor:pointer;">
     <div class="q-poster" style="position:relative;">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${rankBadge}</div>
     <div class="q-info">
       <div class="q-title">${esc(e.title)}</div>
-      <div class="q-genre">${getTypeBadge(e,'friend')}${genreHTML(e.genres, 3)}</div>
+      ${metaLine}
       ${scoreHTML}
     </div>
   </div>`;
@@ -750,7 +805,7 @@ function renderListsPage() {
     }
     const dragEnabled = _listsOrderSort === 'default';
     sorted.forEach(list => {
-      let listItems = (list.items || []).map(id => _listsEntryMap[id]).filter(Boolean);
+      let listItems = (list.items || []).map(id => _resolveListItem(id)).filter(Boolean);
       const itemSort = _listItemSort[list.id] || 'default';
       if (itemSort === 'highest') {
         listItems = [...listItems].sort((a, b) => (liveScore(b)||0) - (liveScore(a)||0));
@@ -893,7 +948,7 @@ async function _llSearch(val) {
       const itemMatches = [];
       for (const l of _socialListsRaw) {
         for (const id of (l.items || [])) {
-          const e = _socialEntryMap[id];
+          const e = _resolveSocialItem(id);
           if (!e || !e.title) continue;
           const key = e.title.toLowerCase();
           if (!key.includes(q) || seenEntryTitles.has(key)) continue;
@@ -1040,6 +1095,10 @@ function setSocialListsSort(val) {
 }
 
 let _socialEntryMap = {}; // entry_id -> entry (across ALL social lists, not just the viewer's own)
+function _resolveSocialItem(id) {
+  if (typeof id === 'string' && id.startsWith('tmdb:')) return _tmdbItemCache[id] || null;
+  return _socialEntryMap[id] || null;
+}
 let _listsFilterMode = null; // { type: 'user'|'item', label, ... }
 
 async function loadSocialLists() {
@@ -1055,13 +1114,17 @@ async function loadSocialLists() {
     // Every list's item ids might belong to a DIFFERENT user than the
     // viewer — build a shared entry map covering all of them, not just
     // the viewer's own entries, or poster previews for other users'
-    // lists would silently come up empty.
+    // lists would silently come up empty. Items added straight from
+    // Discover (tmdb:movie:123 style, no personal entry at all) aren't
+    // valid UUIDs, so they're excluded here and hydrated separately.
     const allItemIds = [...new Set(_socialListsRaw.flatMap(l => l.items || []))];
-    if (allItemIds.length) {
-      const { data: entryRows } = await sb.from('entries').select('*').in('id', allItemIds);
+    const entryItemIds = allItemIds.filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')));
+    if (entryItemIds.length) {
+      const { data: entryRows } = await sb.from('entries').select('*').in('id', entryItemIds);
       _socialEntryMap = {};
       (entryRows || []).forEach(e => { _socialEntryMap[e.id] = e; });
     }
+    await _hydrateTmdbItems(_socialListsRaw);
 
     if (_listsUser && _socialListsRaw.length) {
       const listIds = _socialListsRaw.map(l => l.id);
@@ -1104,7 +1167,7 @@ function renderSocialLists() {
 
   wrap.innerHTML = `<div class="social-list-rows">${sorted.map(l => {
     const items = l.items || [];
-    const posters = items.slice(0, 5).map(id => _socialEntryMap[id]).filter(Boolean);
+    const posters = items.slice(0, 5).map(id => _resolveSocialItem(id)).filter(Boolean);
     const initial = (l.username || '?')[0].toUpperCase();
     const myReaction = _socialListsMyReactions[l.id];
     return `<div class="social-list-row" onclick="openSocialListPopup('${l.id}')" ontouchend="_dtHandleTouch(event, 'list-${l.id}', () => reactToSocialList('${l.id}', true), () => _socialListsMyReactions['${l.id}'] === 'like')">
@@ -1163,7 +1226,7 @@ function _renderSocialListPopup(l) {
   const myReaction = _socialListsMyReactions[l.id];
   const initial = (l.username || '?')[0].toUpperCase();
   const items = l.items || [];
-  const posters = items.slice(0, 5).map(id => _socialEntryMap[id]).filter(Boolean);
+  const posters = items.slice(0, 5).map(id => _resolveSocialItem(id)).filter(Boolean);
   const alreadyOwnedTitles = new Set(_listsAll.filter(x => x.cat === 'custom').map(x => x.title.toLowerCase().trim()));
   const isOwn = l.user_id === _listsUser?.id;
   const alreadyForked = alreadyOwnedTitles.has((l.title || '').toLowerCase().trim());
@@ -1514,7 +1577,7 @@ function openFavListPicker(listId) {
 
   _favListPickerCat = cat;
   _favListPickerGenre = genre;
-  _favListPickerSelected = currentItems.filter(id => !!_listsEntryMap[id]);
+  _favListPickerSelected = currentItems.filter(id => !!_resolveListItem(id));
 
   let pool = _listsEntries.filter(e => e.status === 'completed' || e.status === 'ongoing');
   if (cat && cat !== 'custom') {
@@ -1528,6 +1591,7 @@ function openFavListPicker(listId) {
   _favListPickerPool = pool;
 
   document.getElementById('favListPickerTitle').textContent = title;
+  _favPickerSetMode('library');
   _favPickerResetSearch();
   _favUpdateCount();
   _favRenderPickerList();
@@ -1550,9 +1614,36 @@ function _favDragHandleSVG() {
 }
 
 let _favPickerSearchQuery = '';
+let _favPickerMode = 'library';
+let _favDiscoverSearchTimer = null;
+
+function _favPickerSetMode(mode) {
+  _favPickerMode = mode;
+  document.querySelectorAll('#favPickerModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  const inp = document.getElementById('favListPickerSearch');
+  inp.value = '';
+  inp.placeholder = mode === 'discover' ? 'Search movies & shows on TMDB…' : 'Search…';
+  _favPickerSearchQuery = '';
+  if (mode === 'discover') {
+    document.getElementById('favListPickerList').innerHTML = `<div class="fav-picker-empty">Search for a movie or show to add it — no personal rating required.</div>`;
+  } else {
+    _favRenderPickerList();
+  }
+}
+
 function _favPickerSearch(q) {
   _favPickerSearchQuery = q.trim().toLowerCase();
-  _favRenderPickerList();
+  if (_favPickerMode === 'discover') {
+    clearTimeout(_favDiscoverSearchTimer);
+    if (!_favPickerSearchQuery) {
+      document.getElementById('favListPickerList').innerHTML = `<div class="fav-picker-empty">Search for a movie or show to add it — no personal rating required.</div>`;
+      return;
+    }
+    document.getElementById('favListPickerList').innerHTML = `<div class="fav-picker-empty">Searching…</div>`;
+    _favDiscoverSearchTimer = setTimeout(() => _favRunDiscoverSearch(_favPickerSearchQuery), 350);
+  } else {
+    _favRenderPickerList();
+  }
 }
 function _favPickerResetSearch() {
   _favPickerSearchQuery = '';
@@ -1560,12 +1651,52 @@ function _favPickerResetSearch() {
   if (inp) inp.value = '';
 }
 
+async function _favRunDiscoverSearch(q) {
+  try {
+    const [movRes, tvRes] = await Promise.all([
+      fetch(`${TMDB_BASE}/search/movie?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`).then(r => r.json()),
+      fetch(`${TMDB_BASE}/search/tv?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`).then(r => r.json()),
+    ]);
+    const movies = (movRes.results || []).slice(0, 8).map(r => ({ pseudoId: `tmdb:movie:${r.id}`, title: r.title, poster_url: r.poster_path ? TMDB_IMG + r.poster_path : null, year: (r.release_date||'').split('-')[0], tmdb_id: r.id, tmdb_type: 'movie' }));
+    const shows  = (tvRes.results || []).slice(0, 8).map(r => ({ pseudoId: `tmdb:tv:${r.id}`, title: r.name, poster_url: r.poster_path ? TMDB_IMG + r.poster_path : null, year: (r.first_air_date||'').split('-')[0], tmdb_id: r.id, tmdb_type: 'tv' }));
+    const merged = [];
+    const max = Math.max(movies.length, shows.length);
+    for (let i = 0; i < max; i++) { if (movies[i]) merged.push(movies[i]); if (shows[i]) merged.push(shows[i]); }
+
+    if (!merged.length) {
+      document.getElementById('favListPickerList').innerHTML = `<div class="fav-picker-empty">No results for "${esc(q)}"</div>`;
+      return;
+    }
+
+    // Cache immediately so selecting one resolves everywhere (favCard,
+    // list-view.html, etc.) without waiting on a separate hydrate call.
+    merged.forEach(m => { _tmdbItemCache[m.pseudoId] = { id: m.pseudoId, title: m.title, poster_url: m.poster_url, tmdb_id: m.tmdb_id, tmdb_type: m.tmdb_type, year: m.year }; });
+
+    document.getElementById('favListPickerList').innerHTML = merged.map(m => {
+      const isSel = _favListPickerSelected.includes(m.pseudoId);
+      const slotNum = _favListPickerSelected.indexOf(m.pseudoId);
+      const rankCls = _favRankCls(slotNum);
+      return `<div class="fav-picker-item ${isSel?'selected':''}" onclick="toggleFavListItem(this)" data-id="${m.pseudoId}">
+        ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onclick="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
+        <div class="fav-picker-poster">${m.poster_url ? `<img src="${m.poster_url}" loading="lazy">` : esc((m.title[0]||'?').toUpperCase())}
+          ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
+        </div>
+        <div class="fav-picker-info"><div class="fav-picker-name">${esc(m.title)}</div><div class="fav-picker-sub">${m.tmdb_type==='movie'?'Movie':'TV'}${m.year?' · '+m.year:''}</div></div>
+        <div class="fav-picker-check">${isSel ? '✓' : ''}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    console.error('Discover search error:', e);
+    document.getElementById('favListPickerList').innerHTML = `<div class="fav-picker-empty">Search failed.</div>`;
+  }
+}
+
 function _favRenderPickerList() {
   const listEl = document.getElementById('favListPickerList');
   const prevScroll = listEl.scrollTop;
 
   const selSet = new Set(_favListPickerSelected);
-  const inSel  = _favListPickerSelected.map(id => _listsEntryMap[id]).filter(Boolean);
+  const inSel  = _favListPickerSelected.map(id => _resolveListItem(id)).filter(Boolean);
   const rest   = _favListPickerPool.filter(e => !selSet.has(e.id)).sort((a,b) => (liveScore(b)||0)-(liveScore(a)||0));
   let sorted = [...inSel, ...rest];
 
@@ -1616,7 +1747,11 @@ function toggleFavListItem(el) {
   }
 
   _favUpdateCount();
-  _favRenderPickerList();
+  if (_favPickerMode === 'discover') {
+    _favRunDiscoverSearch(_favPickerSearchQuery);
+  } else {
+    _favRenderPickerList();
+  }
 }
 
 /* ── Drag to reorder selected items ── */
