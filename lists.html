@@ -614,12 +614,12 @@ function renderListsPage() {
 
   const uniqueItemIds = new Set();
   let largest = 0;
-  let withDesc = 0;
+  let imported = 0;
   customLists.forEach(list => {
     const items = list.items || [];
     items.forEach(id => uniqueItemIds.add(id));
     if (items.length > largest) largest = items.length;
-    if (list.description && list.description.trim()) withDesc++;
+    if (list.forked_from) imported++;
   });
 
   const statsEl = document.getElementById('listsPageStats');
@@ -627,7 +627,7 @@ function renderListsPage() {
     <div class="page-stat"><div class="page-stat-num">${totalLists}</div><div class="page-stat-label">Total Lists</div></div>
     <div class="page-stat"><div class="page-stat-num">${uniqueItemIds.size}</div><div class="page-stat-label">Items Organized</div></div>
     <div class="page-stat"><div class="page-stat-num">${largest}</div><div class="page-stat-label">Largest List</div></div>
-    <div class="page-stat"><div class="page-stat-num">${withDesc}</div><div class="page-stat-label">With Description</div></div>`;
+    <div class="page-stat"><div class="page-stat-num">${imported}</div><div class="page-stat-label">Imported</div></div>`;
 
   document.getElementById('listsPageSub').textContent = 'Your personal collections, curated your way — from watchlists to favorites and beyond.';
 
