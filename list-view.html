@@ -176,6 +176,31 @@ let _lvList = null;
 let _lvItems = [];
 let _lvView = localStorage.getItem('disc_listView') || 'grid';
 let _lvRevealObserver = null;
+let _tmdbItemCache = {};
+
+// Same dual-format item resolution used on lists.html — an item id is
+// either a personal entry's UUID, or a bare "tmdb:movie:123" reference
+// for something added straight from Discover with no personal entry
+// behind it at all.
+async function _hydrateTmdbItems(items) {
+  const toFetch = [...new Set(items.filter(id => typeof id === 'string' && id.startsWith('tmdb:') && !_tmdbItemCache[id]))];
+  await Promise.all(toFetch.map(async pseudoId => {
+    const [, type, tmdbId] = pseudoId.split(':');
+    try {
+      const res = await fetch(`${TMDB_BASE}/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=en-US`);
+      if (!res.ok) return;
+      const d = await res.json();
+      const title = type === 'movie' ? d.title : d.name;
+      const dateStr = type === 'movie' ? d.release_date : d.first_air_date;
+      _tmdbItemCache[pseudoId] = {
+        id: pseudoId,
+        title, poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null,
+        tmdb_id: Number(tmdbId), tmdb_type: type,
+        year: (dateStr || '').split('-')[0],
+      };
+    } catch (e) { console.error('Hydrate TMDB item error:', pseudoId, e); }
+  }));
+}
 
 function _lvRankBadgeHTML(rank) {
   if (rank == null) return '';
@@ -331,10 +356,14 @@ async function _lvLoad() {
     const items = list.items || [];
     let entries = [];
     if (items.length) {
-      const { data: entryRows } = await sb.from('entries').select('*').in('id', items);
+      const entryItemIds = items.filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')));
       const map = {};
-      (entryRows || []).forEach(e => { map[e.id] = e; });
-      entries = items.map(id => map[id]).filter(Boolean);
+      if (entryItemIds.length) {
+        const { data: entryRows } = await sb.from('entries').select('*').in('id', entryItemIds);
+        (entryRows || []).forEach(e => { map[e.id] = e; });
+      }
+      await _hydrateTmdbItems(items);
+      entries = items.map(id => (typeof id === 'string' && id.startsWith('tmdb:')) ? _tmdbItemCache[id] : map[id]).filter(Boolean);
     }
     _lvItems = entries;
 
