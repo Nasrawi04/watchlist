@@ -1676,8 +1676,8 @@ async function _favRunDiscoverSearch(q) {
       const isSel = _favListPickerSelected.includes(m.pseudoId);
       const slotNum = _favListPickerSelected.indexOf(m.pseudoId);
       const rankCls = _favRankCls(slotNum);
-      return `<div class="fav-picker-item ${isSel?'selected':''}" onclick="toggleFavListItem(this)" data-id="${m.pseudoId}">
-        ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onclick="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
+      return `<div class="fav-picker-item ${isSel?'selected':''}" onmousedown="toggleFavListItem(this)" data-id="${m.pseudoId}">
+        ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onmousedown="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
         <div class="fav-picker-poster">${m.poster_url ? `<img src="${m.poster_url}" loading="lazy">` : esc((m.title[0]||'?').toUpperCase())}
           ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
         </div>
@@ -1719,8 +1719,8 @@ function _favRenderPickerList() {
     const slotNum = _favListPickerSelected.indexOf(e.id);
     const sc      = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     const rankCls = _favRankCls(slotNum);
-    return `<div class="fav-picker-item ${isSel?'selected':''}" onclick="toggleFavListItem(this)" data-id="${e.id}">
-      ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onclick="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
+    return `<div class="fav-picker-item ${isSel?'selected':''}" onmousedown="toggleFavListItem(this)" data-id="${e.id}">
+      ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onmousedown="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
       <div class="fav-picker-poster">${e.poster_url ? `<img src="${e.poster_url}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase())}
         ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
       </div>
