@@ -18,6 +18,46 @@
 .lv-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:.5rem; flex-wrap:wrap; }
 .lv-title-wrap { min-width:0; }
 .lv-title { font-family:var(--serif); font-size:clamp(28px, 5vw, 42px); font-weight:300; margin-bottom:.4rem; }
+.ranked-badge {
+  display:inline-flex; align-items:center; margin-left:12px; vertical-align:middle;
+  font-family:var(--sans); font-size:11px; font-weight:800; letter-spacing:.7px; text-transform:uppercase;
+  padding:3px 11px; border-radius:0;
+}
+.ranked-badge.ranked-yes { background:var(--olive-light); color:var(--bg); }
+.ranked-badge.ranked-no { background:var(--text-3); color:var(--bg); }
+@media(max-width:640px) {
+  .ranked-badge { font-size:9.5px; padding:2px 9px; margin-left:8px; letter-spacing:.5px; }
+  .mss-cbx-group { gap:10px; margin-left:8px; }
+  .checkbox-wrapper-46 .cbx span:last-child { font-size:11px; }
+  .checkbox-wrapper-46 .cbx span:first-child { width:14px; height:14px; }
+}
+
+/* ── Ranked/Unranked choice checkboxes — adapted from Uiverse (vishnupprajapat) ── */
+.mss-cbx-group { display:inline-flex; gap:16px; margin-left:12px; vertical-align:middle; }
+.checkbox-wrapper-46 input[type="checkbox"] { display:none; visibility:hidden; }
+.checkbox-wrapper-46 .cbx { margin:auto; user-select:none; cursor:pointer; display:inline-flex; align-items:center; }
+.checkbox-wrapper-46 .cbx span { display:inline-block; vertical-align:middle; transform:translate3d(0,0,0); }
+.checkbox-wrapper-46 .cbx span:first-child {
+  position:relative; width:16px; height:16px; border-radius:3px; transform:scale(1);
+  vertical-align:middle; background:var(--card); border:1.5px solid var(--text-3); transition:all .2s ease;
+}
+.checkbox-wrapper-46 .cbx span:first-child svg {
+  position:absolute; top:2px; left:2px; fill:none; stroke:#fff; stroke-width:2;
+  stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:16px; stroke-dashoffset:16px;
+  transition:all .3s ease; transition-delay:.1s; transform:translate3d(0,0,0);
+}
+.checkbox-wrapper-46 .cbx span:first-child::before {
+  content:''; width:100%; height:100%; display:block; transform:scale(0); opacity:1; border-radius:50%;
+}
+.checkbox-wrapper-46 .cbx span:last-child { padding-left:6px; font-family:var(--sans); font-weight:600; font-size:12px; color:var(--text-2); }
+.checkbox-wrapper-46 .cbx:hover span:first-child { border-color:var(--olive-light); }
+.checkbox-wrapper-46 .cbx-ranked-yes span:first-child::before { background:var(--olive-light); }
+.checkbox-wrapper-46 .cbx-ranked-no span:first-child::before { background:var(--text-3); }
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx.cbx-ranked-yes span:first-child { background:var(--olive-light); border-color:var(--olive-light); animation:mss-cbx-wave .4s ease; }
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx.cbx-ranked-no span:first-child { background:var(--text-3); border-color:var(--text-3); animation:mss-cbx-wave .4s ease; }
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child svg { stroke-dashoffset:0; }
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child::before { transform:scale(3.5); opacity:0; transition:all .6s ease; }
+@keyframes mss-cbx-wave { 50% { transform:scale(0.9); } }
 .lv-owner { display:flex; align-items:center; gap:8px; margin-bottom:.5rem; }
 .lv-avatar {
   width:26px; height:26px; border-radius:50%; overflow:hidden; flex-shrink:0;
@@ -136,13 +176,19 @@ let _lvItems = [];
 let _lvView = localStorage.getItem('disc_listView') || 'grid';
 let _lvRevealObserver = null;
 
-function _lvCardHTML(e) {
+function _lvRankBadgeHTML(rank) {
+  if (rank == null) return '';
+  const cls = rank === 0 ? 'cg-rank-1' : rank === 1 ? 'cg-rank-2' : rank === 2 ? 'cg-rank-3' : 'cg-rank-other';
+  return `<div class="cg-rank-badge ${cls}">${rank + 1}</div>`;
+}
+
+function _lvCardHTML(e, rank) {
   const posterInner = (e.poster_url && !e.poster_url.startsWith('PLACEHOLDER'))
     ? `<img src="${e.poster_url}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
   return `<div class="q-card lv-card" ${clickAttr}>
-    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div></div>
+    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${_lvRankBadgeHTML(rank)}</div>
     <div class="q-info">
       <div class="q-title">${_lvEsc(e.title)}</div>
       ${e.year ? `<div class="q-genre">${_lvEsc(e.year)}</div>` : ''}
@@ -150,13 +196,13 @@ function _lvCardHTML(e) {
   </div>`;
 }
 
-function _lvListRowHTML(e) {
+function _lvListRowHTML(e, rank) {
   const posterInner = (e.poster_url && !e.poster_url.startsWith('PLACEHOLDER'))
     ? `<img src="${e.poster_url}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
   return `<div class="lv-list-row" ${clickAttr}>
-    <div class="lv-list-poster">${posterInner}</div>
+    <div class="lv-list-poster" style="position:relative">${posterInner}${_lvRankBadgeHTML(rank)}</div>
     <div style="min-width:0">
       <div class="lv-list-title">${_lvEsc(e.title)}</div>
       ${e.year ? `<div class="lv-list-year">${_lvEsc(e.year)}</div>` : ''}
@@ -202,8 +248,44 @@ function _lvRenderGrid() {
     grid.innerHTML = `<div class="lv-empty">This list is empty.</div>`;
     return;
   }
-  grid.innerHTML = _lvItems.map(e => _lvView === 'list' ? _lvListRowHTML(e) : _lvCardHTML(e)).join('');
+  grid.innerHTML = _lvItems.map((e, i) => {
+    const rank = _lvList?.ranked === true ? i : null;
+    return _lvView === 'list' ? _lvListRowHTML(e, rank) : _lvCardHTML(e, rank);
+  }).join('');
   _lvObserveCards();
+}
+
+function _lvRankedBadgeHTML() {
+  const ranked = _lvList?.ranked;
+  const isOwner = _lvUser && _lvList && _lvList.user_id === _lvUser.id;
+  if (ranked === true) return `<span class="ranked-badge ranked-yes">Ranked</span>`;
+  if (ranked === false) return `<span class="ranked-badge ranked-no">Unranked</span>`;
+  if (isOwner) {
+    return `<span class="mss-cbx-group">
+      <span class="checkbox-wrapper-46">
+        <input type="checkbox" id="lv-cbx-ranked-yes" class="inp-cbx" onchange="if(this.checked) _lvSetRanked(true)">
+        <label for="lv-cbx-ranked-yes" class="cbx cbx-ranked-yes"><span><svg viewBox="0 0 12 10" height="10" width="12"><polyline points="1.5 6 4.5 9 10.5 1"></polyline></svg></span><span>Ranked</span></label>
+      </span>
+      <span class="checkbox-wrapper-46">
+        <input type="checkbox" id="lv-cbx-ranked-no" class="inp-cbx" onchange="if(this.checked) _lvSetRanked(false)">
+        <label for="lv-cbx-ranked-no" class="cbx cbx-ranked-no"><span><svg viewBox="0 0 12 10" height="10" width="12"><polyline points="1.5 6 4.5 9 10.5 1"></polyline></svg></span><span>Unranked</span></label>
+      </span>
+    </span>`;
+  }
+  return '';
+}
+
+async function _lvSetRanked(value) {
+  try {
+    const { error } = await sb.from('favorite_lists').update({ ranked: value }).eq('id', _lvList.id).eq('user_id', _lvUser.id);
+    if (error) throw error;
+    _lvList.ranked = value;
+    document.getElementById('lvTitle').innerHTML = _lvEsc(_lvList.title) + _lvRankedBadgeHTML();
+    showToast(value ? 'Marked as ranked!' : 'Marked as unranked.');
+  } catch (err) {
+    console.error('Set ranked error:', err);
+    showToast('Failed to update.', 'err');
+  }
 }
 
 async function importList() {
@@ -219,6 +301,7 @@ async function importList() {
       title: _lvList.title,
       description: _lvList.description || null,
       items: _lvList.items || [],
+      ranked: _lvList.ranked ?? null,
       forked_from: _lvList.id,
     });
     if (error) throw error;
@@ -255,7 +338,7 @@ async function _lvLoad() {
     _lvItems = entries;
 
     document.title = `${list.title} — MyScreenScore`;
-    document.getElementById('lvTitle').textContent = list.title;
+    document.getElementById('lvTitle').innerHTML = _lvEsc(list.title) + _lvRankedBadgeHTML();
     document.getElementById('lvDesc').textContent = list.description || '';
     document.getElementById('lvDesc').style.display = list.description ? '' : 'none';
     const username = list.profiles?.username || 'user';
