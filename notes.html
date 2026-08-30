@@ -768,8 +768,9 @@ function _nuKeydown(e) {
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('#notesUserSearchWrap') && !e.target.closest('#nuDropdown')) {
-    document.getElementById('nuDropdown')?.classList.remove('open');
+  const dd = document.getElementById('nuDropdown');
+  if (dd && dd.classList.contains('open') && !e.target.closest('#notesUserSearchWrap') && !e.target.closest('#nuDropdown')) {
+    dd.classList.remove('open');
     document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
     _nuUnlockScroll();
     _nuActive = -1;
