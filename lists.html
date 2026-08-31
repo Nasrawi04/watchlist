@@ -21,19 +21,23 @@
   margin-bottom:1rem;
 }
 .fav-page-list-title-row {
-  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px 14px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:nowrap;
   margin-bottom:6px;
 }
-.fav-edit-btn-row { display:flex; gap:8px; flex-wrap:wrap; }
+.fav-page-list-title-inner { display:flex; align-items:center; gap:8px; min-width:0; flex:1; }
+.fav-edit-btn-row { display:flex; gap:6px; flex-shrink:0; }
 @media(max-width:640px) {
-  .fav-page-list-title-row { gap:8px 10px; }
-  .fav-edit-btn-row { gap:6px; }
+  .fav-page-list-title-row { gap:8px; }
+  .fav-edit-btn-row { gap:5px; }
+  .fav-edit-btn-label { display:none; }
+  .fav-edit-btn { padding:7px 9px !important; }
 }
 .fav-page-list-title {
   font-family:var(--serif);font-size:clamp(17px, 3.4vw, 20px);font-weight:300;color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
 }
 .ranked-badge {
-  display:inline-flex; align-items:center; margin-left:10px; vertical-align:middle;
+  display:inline-flex; align-items:center; vertical-align:middle; flex-shrink:0;
   font-family:var(--sans); font-size:10.5px; font-weight:800; letter-spacing:.7px; text-transform:uppercase;
   padding:3px 10px; border-radius:0;
 }
@@ -41,13 +45,13 @@
 .ranked-badge.ranked-no { background:var(--text-3); color:var(--bg); }
 @media(max-width:640px) {
   .ranked-badge { font-size:9px; padding:2px 8px; margin-left:7px; letter-spacing:.5px; }
-  .mss-cbx-group { gap:10px; margin-left:8px; }
+  .mss-cbx-group { gap:10px; }
   .checkbox-wrapper-46 .cbx span:last-child { font-size:10.5px; }
   .checkbox-wrapper-46 .cbx span:first-child { width:14px; height:14px; }
 }
 
 /* ── Ranked/Unranked choice checkboxes — adapted from Uiverse (vishnupprajapat) ── */
-.mss-cbx-group { display:inline-flex; gap:16px; margin-left:12px; vertical-align:middle; }
+.mss-cbx-group { display:inline-flex; gap:16px; vertical-align:middle; flex-shrink:0; flex-wrap:wrap; }
 .checkbox-wrapper-46 input[type="checkbox"] { display:none; visibility:hidden; }
 .checkbox-wrapper-46 .cbx { margin:auto; user-select:none; cursor:pointer; display:inline-flex; align-items:center; }
 .checkbox-wrapper-46 .cbx span { display:inline-block; vertical-align:middle; transform:translate3d(0,0,0); }
@@ -734,9 +738,9 @@ function hScrollSection(listId, title, subtitle, items, showEdit, onEdit, onDele
   const DEL_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
   const editBtn = showEdit
     ? `<div class="fav-edit-btn-row">
-        ${listId ? `<button class="fav-edit-btn" title="View full list" onclick="location.href='list-view.html?list=${listId}'">${icon('list',13)} View List</button>` : ''}
-        <button class="fav-edit-btn" onclick="${onEdit}">${EDIT_SVG} Edit</button>
-        ${onRename ? `<button class="fav-edit-btn" title="Edit details" onclick="${onRename}">${RENAME_SVG} Rename</button>` : ''}
+        ${listId ? `<button class="fav-edit-btn" title="View full list" onclick="location.href='list-view.html?list=${listId}'">${icon('list',13)}<span class="fav-edit-btn-label"> View List</span></button>` : ''}
+        <button class="fav-edit-btn" onclick="${onEdit}">${EDIT_SVG}<span class="fav-edit-btn-label"> Edit</span></button>
+        ${onRename ? `<button class="fav-edit-btn" title="Edit details" onclick="${onRename}">${RENAME_SVG}<span class="fav-edit-btn-label"> Rename</span></button>` : ''}
         ${onDelete ? `<button class="fav-edit-btn" style="color:var(--text-3);border-color:var(--border);" onclick="${onDelete}">${DEL_SVG}</button>` : ''}
        </div>`
     : '';
@@ -752,7 +756,10 @@ function hScrollSection(listId, title, subtitle, items, showEdit, onEdit, onDele
   return `<div class="fav-page-section">
     <div class="fav-page-list-header">
       <div class="fav-page-list-title-row">
-        <div class="fav-page-list-title">${esc(title)}${listId ? _rankedBadgeHTML(listId, ranked, true) : ''}</div>
+        <div class="fav-page-list-title-inner">
+          <div class="fav-page-list-title">${esc(title)}</div>
+          ${listId ? _rankedBadgeHTML(listId, ranked, true) : ''}
+        </div>
         ${editBtn}
       </div>
       ${subtitle ? `<div class="fav-page-list-count">${esc(subtitle)}</div>` : ''}
