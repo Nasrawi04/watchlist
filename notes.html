@@ -342,9 +342,9 @@
   <!-- Social: user search -->
   <div class="notes-user-search-wrap fade-up fade-up-1" id="notesUserSearchWrap" style="display:none;">
     <div class="fused-search-wrap" id="notesUserSearchWrapInner">
-      <input type="text" id="notesUserSearchInput" class="add-friend-input" placeholder="Find notes by username…"
+      <input type="text" id="notesUserSearchInput" class="add-friend-input" placeholder="Search by username or title…"
              autocomplete="off" spellcheck="false"
-             oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();_nuSearch(this.value);"
+             oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'');_nuSearch(this.value);"
              onkeydown="_nuKeydown(event)">
     </div>
     <div id="notesUserFilterBanner" style="display:none;"></div>
