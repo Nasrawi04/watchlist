@@ -15,19 +15,24 @@
 }
 .lv-back:hover { color:var(--olive-light); }
 
-.lv-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.lv-head { margin-bottom:.5rem; }
+.lv-title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:nowrap; margin-bottom:.5rem; }
+.lv-title-inner { display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
 .lv-title-wrap { min-width:0; }
-.lv-title { font-family:var(--serif); font-size:clamp(28px, 5vw, 42px); font-weight:300; margin-bottom:.4rem; }
+.lv-title {
+  font-family:var(--serif); font-size:clamp(22px, 5vw, 42px); font-weight:300;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+}
 .ranked-badge {
-  display:inline-flex; align-items:center; margin-left:12px; vertical-align:middle;
+  display:inline-flex; align-items:center; vertical-align:middle; flex-shrink:0;
   font-family:var(--sans); font-size:11px; font-weight:800; letter-spacing:.7px; text-transform:uppercase;
   padding:3px 11px; border-radius:0;
 }
 .ranked-badge.ranked-yes { background:var(--olive-light); color:var(--bg); }
 .ranked-badge.ranked-no { background:var(--text-3); color:var(--bg); }
 @media(max-width:640px) {
-  .ranked-badge { font-size:9.5px; padding:2px 9px; margin-left:8px; letter-spacing:.5px; }
-  .mss-cbx-group { gap:10px; margin-left:8px; }
+  .ranked-badge { font-size:9.5px; padding:2px 9px; letter-spacing:.5px; }
+  .mss-cbx-group { gap:10px; }
   .checkbox-wrapper-46 .cbx span:last-child { font-size:11px; }
   .checkbox-wrapper-46 .cbx span:first-child { width:14px; height:14px; }
 }
@@ -58,7 +63,7 @@
 .checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child svg { stroke-dashoffset:0; }
 .checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child::before { transform:scale(3.5); opacity:0; transition:all .6s ease; }
 @keyframes mss-cbx-wave { 50% { transform:scale(0.9); } }
-.lv-owner { display:flex; align-items:center; gap:8px; margin-bottom:.5rem; }
+.lv-owner { display:flex; align-items:center; gap:8px; margin-bottom:.6rem; }
 .lv-avatar {
   width:26px; height:26px; border-radius:50%; overflow:hidden; flex-shrink:0;
   background:var(--olive-faint); color:var(--olive-light); font-family:var(--serif); font-size:12px;
@@ -66,7 +71,7 @@
 }
 .lv-avatar img { width:100%; height:100%; object-fit:cover; }
 .lv-username { font-size:13px; color:var(--text-3); }
-.lv-desc { font-size:13.5px; color:var(--text-2); line-height:1.6; max-width:600px; margin-bottom:.5rem; }
+.lv-desc { font-size:13.5px; color:var(--text-2); line-height:1.6; margin-bottom:.5rem; }
 .lv-import-btn {
   font-size:13px; font-weight:600; padding:9px 20px; border-radius:999px; flex-shrink:0;
   background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light);
@@ -74,7 +79,9 @@
 }
 .lv-import-btn:hover { background:var(--olive-light); color:var(--bg); }
 .lv-import-btn:disabled { opacity:.5; cursor:default; }
-
+@media(max-width:520px) {
+  .lv-import-btn { padding:8px 14px; font-size:12px; }
+}
 .lv-controls { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:1.5rem 0 2rem; flex-wrap:wrap; }
 .lv-count { font-size:13px; color:var(--text-3); }
 
@@ -141,15 +148,18 @@
   <div id="lvLoading" class="page-loading"><div class="spinner"></div></div>
   <div id="lvContent" style="display:none">
     <div class="lv-head">
-      <div class="lv-title-wrap">
-        <div class="lv-owner">
-          <div class="lv-avatar" id="lvAvatar"></div>
-          <span class="lv-username" id="lvUsername"></span>
-        </div>
-        <div class="lv-title" id="lvTitle"></div>
-        <div class="lv-desc" id="lvDesc"></div>
+      <div class="lv-owner">
+        <div class="lv-avatar" id="lvAvatar"></div>
+        <span class="lv-username" id="lvUsername"></span>
       </div>
-      <button class="lv-import-btn" id="lvImportBtn" onclick="importList()">+ Import This List</button>
+      <div class="lv-title-row">
+        <div class="lv-title-inner">
+          <div class="lv-title" id="lvTitle"></div>
+          <span id="lvRankedBadgeSlot"></span>
+        </div>
+        <button class="lv-import-btn" id="lvImportBtn" onclick="importList()"><span class="lv-import-btn-label">+ Import This List</span></button>
+      </div>
+      <div class="lv-desc" id="lvDesc"></div>
     </div>
 
     <div class="lv-controls">
@@ -306,7 +316,7 @@ async function _lvSetRanked(value) {
     const { error } = await sb.from('favorite_lists').update({ ranked: value }).eq('id', _lvList.id).eq('user_id', _lvUser.id);
     if (error) throw error;
     _lvList.ranked = value;
-    document.getElementById('lvTitle').innerHTML = _lvEsc(_lvList.title) + _lvRankedBadgeHTML();
+    document.getElementById('lvTitle').textContent = _lvList.title; document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML();
     showToast(value ? 'Marked as ranked!' : 'Marked as unranked.');
   } catch (err) {
     console.error('Set ranked error:', err);
@@ -368,7 +378,7 @@ async function _lvLoad() {
     _lvItems = entries;
 
     document.title = `${list.title} — MyScreenScore`;
-    document.getElementById('lvTitle').innerHTML = _lvEsc(list.title) + _lvRankedBadgeHTML();
+    document.getElementById('lvTitle').textContent = list.title; document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML();
     document.getElementById('lvDesc').textContent = list.description || '';
     document.getElementById('lvDesc').style.display = list.description ? '' : 'none';
     const username = list.profiles?.username || 'user';
