@@ -26,6 +26,7 @@
   margin-bottom:6px;
 }
 .fav-page-list-title-inner { display:flex; align-items:center; gap:8px; min-width:0; flex:1; }
+.home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
 .fav-edit-btn-row { display:flex; gap:6px; flex-shrink:0; }
 @media(max-width:640px) {
   .fav-page-list-title-row { gap:8px; }
@@ -680,7 +681,7 @@ function favCard(e, rank) {
   const scoreHTML = score ? `<div style="font-family:var(--serif);font-size:15px;font-weight:300;color:var(--olive-light);margin-top:4px;text-align:right">${score}</div>` : '';
   const clickAttr = isTmdbOnly ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : `onclick="openFavPopup('${e.id}')"`;
   const metaLine = isTmdbOnly
-    ? `<div class="q-genre">${e.year ? esc(e.year) + ' · ' : ''}${genreHTML(e.genres, 3)}</div>`
+    ? (e.year ? `<div class="home-tmdb-year">${esc(e.year)}</div>` : '')
     : `<div class="q-genre">${getTypeBadge(e,'friend')}${genreHTML(e.genres, 3)}</div>`;
   return `<div class="q-card" ${clickAttr} style="cursor:pointer;">
     <div class="q-poster" style="position:relative;">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${rankBadge}</div>
@@ -1891,7 +1892,15 @@ function _listsUpdateDragPosition() {
   const d = _listsDrag;
   if (!d) return;
   const scrollDelta = window.scrollY - d.startScrollY;
-  const deltaY = (d.lastClientY - d.startY) + scrollDelta;
+  const rawDeltaY = (d.lastClientY - d.startY) + scrollDelta;
+
+  // Clamp the dragged item's visual position to the list's own bounds —
+  // it can never move further than swapping with the first or last item,
+  // so it can't visually float up past the list into the stat boxes.
+  const minDeltaY = -(d.startIndex * d.itemHeight);
+  const maxDeltaY = (d.items.length - 1 - d.startIndex) * d.itemHeight;
+  const deltaY = Math.min(Math.max(rawDeltaY, minDeltaY), maxDeltaY);
+
   d.item.style.transform = `translateY(${deltaY}px) scale(0.98)`;
 
   const shift = Math.round(deltaY / d.itemHeight);
