@@ -439,6 +439,7 @@ let _socialNotesRaw = [];
 let _socialNotesMyReactions = {}; // entry_id -> 'like' | 'dislike'
 
 document.addEventListener('DOMContentLoaded', () => {
+  attachClearButton('notesUserSearchInput');
   initPage(async (user) => {
     if (!user) {
       document.querySelector('.page-wrap').innerHTML = `
