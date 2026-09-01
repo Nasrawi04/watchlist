@@ -586,6 +586,8 @@ let _favListPickerMax  = Infinity;
 let _favPopupId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  attachClearButton('listsSearchInput');
+  attachClearButton('favListPickerSearch');
   initPage(async (user) => {
     if (!user) {
       document.querySelector('.page-wrap').innerHTML = `
