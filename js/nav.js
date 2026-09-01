@@ -295,6 +295,8 @@ function injectChrome() {
   // Discover dropdown on both nav search inputs (desktop + mobile)
   initDiscoverSearch('globalSearch', { max: 20, connected: true, includePersons: true });
   initDiscoverSearch('mobileSearchInput', { max: 20, connected: true, includePersons: true });
+  attachClearButton('globalSearch');
+  attachClearButton('mobileSearchInput');
 }
 
 /* ── Link builders ── */
@@ -1032,6 +1034,51 @@ function _viewportInfo() {
   return vv
     ? { vw: vv.width, vh: vv.height, offX: vv.offsetLeft, offY: vv.offsetTop }
     : { vw: window.innerWidth, vh: window.innerHeight, offX: 0, offY: 0 };
+}
+
+/* ── Universal "clear" (×) button for any text/search input ──
+   Sits at the far right, shown only while the input actually has
+   text, clears it fully and re-fires the input's own 'input' event
+   so whatever search/filter logic is already wired up just re-runs
+   naturally against an empty value — no per-input special-casing
+   needed anywhere this gets attached. */
+function attachClearButton(input) {
+  if (typeof input === 'string') input = document.getElementById(input);
+  if (!input || input._hasClearBtn) return;
+  input._hasClearBtn = true;
+
+  // Always wrap the input in its own dedicated container, rather than
+  // assuming its existing parent is a tight wrapper around just this
+  // input — some search inputs share a parent with a title, results
+  // list, etc., where reusing that parent would badly mis-position
+  // the button. `flex:1` makes this a no-op sizing-wise when the
+  // original parent happens to be a flex row (the common case for
+  // search bars), while still behaving like a normal full-width block
+  // when it isn't.
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:relative; flex:1; min-width:0;';
+  input.parentNode.insertBefore(wrapper, input);
+  wrapper.appendChild(input);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'input-clear-btn';
+  btn.innerHTML = '&#x2715;';
+  btn.setAttribute('aria-label', 'Clear');
+  btn.tabIndex = -1;
+  btn.addEventListener('mousedown', e => e.preventDefault()); // don't steal focus from the input
+  btn.addEventListener('click', () => {
+    input.value = '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    btn.classList.remove('visible');
+    input.focus();
+  });
+  wrapper.appendChild(btn);
+  input.style.paddingRight = '32px';
+
+  const sync = () => btn.classList.toggle('visible', input.value.length > 0);
+  input.addEventListener('input', sync);
+  sync();
 }
 
 function initDiscoverSearch(inputId, opts = {}) {
