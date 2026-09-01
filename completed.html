@@ -797,14 +797,15 @@ function _compSortBar() {
   if (!el) return;
   const isRating = (_compSort||'').startsWith('rating:');
   const ratingLabel = isRating ? _ratingFilterLabelAll(_compSort.slice(7)) : null;
-  const staticBtns = [['newest','Newest'],['oldest','Oldest'],['highest','Highest Rank'],['lowest','Lowest Rank'],['alpha','A → Z'],['zalpha','Z → A']]
+  const staticBtns = [['newest','Newest'],['oldest','Oldest'],['highest','Highest Rank'],['lowest','Lowest Rank'],['alpha','A → Z'],['zalpha','Z → A'],['release','Release Date']]
     .map(([v,l]) => `<button class="sort-btn${_compSort===v?' active':''}" onclick="setCompSort('${v}')">${l}</button>`).join('');
   const ratingBtn = `<button class="sort-btn${isRating?' active':''}" onclick="openRatingFilter()" data-short="${isRating ? _ratingShortLabel(ratingLabel) : 'Rating'}">${isRating ? 'Rating: ' + ratingLabel : 'Rating ▾'}</button>`;
   el.innerHTML = staticBtns + ratingBtn;
 }
 
-function setCompSort(v) {
+async function setCompSort(v) {
   _compSort = v;
+  if (v === 'release') { await ensureReleaseDatesFetched(_allCompleted); }
   _compSortBar();
   renderMain();
 }
@@ -1033,6 +1034,9 @@ function renderMain() {
     }
     if (_compSort === 'alpha')   return a.sort((x,y) => (x.title||'').localeCompare(y.title||''));
     if (_compSort === 'zalpha')  return a.sort((x,y) => (y.title||'').localeCompare(x.title||''));
+    if (_compSort === 'release') {
+      return a.sort((x,y) => getReleaseDateValue(y) - getReleaseDateValue(x));
+    }
     return a;
   })();
 
