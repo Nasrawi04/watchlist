@@ -56,11 +56,15 @@
 .td-tagline { font-style:italic; opacity:.65; font-size:clamp(12.5px, 2vw, 17px); margin-bottom:1.25rem; }
 .td-meta-row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; font-size:clamp(11.5px, 1.8vw, 15px); opacity:.85; }
 .td-meta-row span { display:flex; align-items:center; gap:5px; }
-.td-genres { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1.5rem; }
+.td-genres { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:0.85rem; }
 .td-genre-chip {
   font-size:clamp(10px, 1.5vw, 13px); padding:5px 14px; border-radius:20px;
   background:rgba(126,184,108,0.12); border:0.5px solid rgba(126,184,108,0.35); color:#B8E0A8;
 }
+.td-director-row { font-size:13.5px; color:var(--text-3); margin-bottom:1.25rem; }
+.td-director-label { text-transform:uppercase; font-size:11px; letter-spacing:.8px; margin-right:6px; color:var(--olive-light); font-weight:600; }
+.td-director-link { color:var(--text-2); text-decoration:none; transition:color .15s; }
+.td-director-link:hover { color:var(--olive-light); text-decoration:underline; }
 .td-ratings-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
 .td-rating-badge {
   display:inline-flex; align-items:center; gap:10px;
@@ -300,6 +304,7 @@
   .td-meta-row { justify-content:center; margin-bottom:.85rem; gap:10px 14px; }
   .td-trailer-desktop { display:none; }
   .td-genres { justify-content:center; margin-bottom:.85rem; }
+  .td-director-row { text-align:center; }
   .td-trailer-mobile { display:inline-flex; margin-left:0; margin-bottom:1rem; }
   .td-ratings-row { justify-content:center; }
   .td-rating-badge { padding:8px 14px; }
@@ -450,6 +455,20 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
   const castSource = isMovie ? (d.credits?.cast || []) : (d.aggregate_credits?.cast || d.credits?.cast || []);
   const cast = castSource.slice(0, 10);
 
+  // Movies: director(s) come from crew (job === 'Director'). TV shows:
+  // TMDB exposes creator(s) directly on the show object already.
+  const directors = isMovie
+    ? (d.credits?.crew || []).filter(c => c.job === 'Director')
+    : (d.created_by || []);
+  const seenDirectorIds = new Set();
+  const uniqueDirectors = directors.filter(p => {
+    if (seenDirectorIds.has(p.id)) return false;
+    seenDirectorIds.add(p.id);
+    return true;
+  });
+  const directorLabel = isMovie ? 'Director' : 'Creator';
+  const directorLabelPlural = isMovie ? 'Directors' : 'Creators';
+
   return `
     <div class="td-hero fade-up">
       ${backdrop ? `<div class="td-backdrop-clip"><div class="td-backdrop" style="background-image:url('${backdrop}')"></div></div>` : ''}
@@ -472,6 +491,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
             ${trailer ? `<a class="td-trailer-link td-trailer-desktop" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
           </div>
           <div class="td-genres">${genres.map(g => `<span class="td-genre-chip">${esc(g)}</span>`).join('')}</div>
+          ${uniqueDirectors.length ? `<div class="td-director-row"><span class="td-director-label">${uniqueDirectors.length > 1 ? directorLabelPlural : directorLabel}</span> ${uniqueDirectors.map(p => `<a class="td-director-link" href="person.html?id=${p.id}&mode=directing">${esc(p.name)}</a>`).join(', ')}</div>` : ''}
           ${trailer ? `<a class="td-trailer-link td-trailer-mobile" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
           <div class="td-hero-actions fade-up fade-up-1">
             ${_tdAddControlsHTML(ownEntry)}
