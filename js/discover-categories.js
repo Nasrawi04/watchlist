@@ -95,6 +95,7 @@ function _discInjectLinkOverlay() {
     clearTimeout(_discLinkSearchTimer);
     _discLinkSearchTimer = setTimeout(_discRunLinkSearch, 350);
   });
+  attachClearButton('discLinkSearchInput');
 }
 
 let _discLinkSearchTimer = null;
