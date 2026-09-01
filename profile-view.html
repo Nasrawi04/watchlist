@@ -178,7 +178,6 @@
 @media(max-width:400px){.fv-w-ep-badge{font-size:8px;padding:1px 5px;}}
 
 .fv-w-prog-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
-[data-theme="light"] .fv-w-prog-track{background:rgba(0,0,0,0.16)}
 
 .fv-w-prog-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .5s var(--ease)}
 
@@ -1628,7 +1627,7 @@ function renderPvLibrary() {
     var showRating = sec === 'completed';
     var isRating = cur.indexOf('rating:')===0;
     var ratingLabel = isRating ? _ratingFilterLabelAll(cur.slice(7)) : null;
-    var opts = [['newest','Newest'],['oldest','Oldest']].concat(!isQ?[['highest','Highest'],['lowest','Lowest']]:[]).concat([['alpha','A\u2192Z'],['zalpha','Z\u2192A']]);
+    var opts = [['newest','Newest'],['oldest','Oldest']].concat(!isQ?[['highest','Highest'],['lowest','Lowest']]:[]).concat([['alpha','A\u2192Z'],['zalpha','Z\u2192A'],['release','Release Date']]);
     var staticBtns = opts.map(function(o){return '<button class="sort-btn'+(cur===o[0]?' active':'')+'" onclick="pvSetLibSort(\''+sec+'\',\''+o[0]+'\')">'+o[1]+'</button>';}).join('');
     var ratingBtn = showRating ? ('<button class="sort-btn'+(isRating?' active':'')+'" onclick="openRatingFilter(\''+sec+'\')" data-short="'+(isRating?_ratingShortLabel(ratingLabel):'Rating')+'">'+(isRating?'Rating: '+ratingLabel:'Rating \u25be')+'</button>') : '';
     return '<div class="sort-bar">'+staticBtns+ratingBtn+'</div>';
@@ -1839,7 +1838,11 @@ let _libWatchViewPv = localStorage.getItem('pv_libWatchView') || 'list';
 let _libQueueViewPv = localStorage.getItem('pv_libQueueView') || 'grid';
 let _libCompViewPv  = localStorage.getItem('pv_libCompView')  || 'list';
 
-function pvSetLibSort(sec, val) { _libSort[sec] = val; renderPvLibrary(); }
+async function pvSetLibSort(sec, val) {
+  _libSort[sec] = val;
+  if (val === 'release') { await ensureReleaseDatesFetched(_pvEntries); }
+  renderPvLibrary();
+}
 function pvSetLibStatus(s) { _libStatusFilter = s; renderPvLibrary(); }
 function pvSetLibView(sec, v) {
   if (sec === 'watch')       { _libWatchViewPv = v; localStorage.setItem('pv_libWatchView', v); }
@@ -1918,6 +1921,9 @@ function _libApplySort(arr, sortBy) {
   }
   if (sortBy==='alpha')   return a.sort(function(x,y){return (x.title||'').localeCompare(y.title||'');});
   if (sortBy==='zalpha')  return a.sort(function(x,y){return (y.title||'').localeCompare(x.title||'');});
+  if (sortBy==='release') {
+    return a.sort(function(x,y){return getReleaseDateValue(y)-getReleaseDateValue(x);});
+  }
   return a;
 }
 
@@ -1934,14 +1940,15 @@ function _libSortBar(section) {
   var showRating = section === 'completed';
   var isRating = cur.indexOf('rating:')===0;
   var ratingLabel = isRating ? _ratingFilterLabelAll(cur.slice(7)) : null;
-  var opts = [['newest','Newest'],['oldest','Oldest']].concat(!isQueue?[['highest','Highest'],['lowest','Lowest']]:[]).concat([['alpha','A\u2192Z'],['zalpha','Z\u2192A']]);
+  var opts = [['newest','Newest'],['oldest','Oldest']].concat(!isQueue?[['highest','Highest'],['lowest','Lowest']]:[]).concat([['alpha','A\u2192Z'],['zalpha','Z\u2192A'],['release','Release Date']]);
   var staticBtns = opts.map(function(o){return '<button class="sort-btn'+(cur===o[0]?' active':'')+'" onclick="setLibSort(\''+section+'\',\''+o[0]+'\')" >'+o[1]+'</button>';}).join('');
   var ratingBtn = showRating ? ('<button class="sort-btn'+(isRating?' active':'')+'" onclick="openRatingFilter(\''+section+'\')" data-short="'+(isRating?_ratingShortLabel(ratingLabel):'Rating')+'">'+(isRating?'Rating: '+ratingLabel:'Rating \u25be')+'</button>') : '';
   return '<div class="sort-bar">'+staticBtns+ratingBtn+'</div>';
 }
 
-function setLibSort(section, value) {
+async function setLibSort(section, value) {
   _libSort[section] = value;
+  if (value === 'release') { await ensureReleaseDatesFetched(_pvEntries); }
   renderPvLibrary();
 }
 
