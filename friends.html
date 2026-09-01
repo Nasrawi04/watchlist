@@ -364,6 +364,7 @@ function avatarHtml(profile, size = 44, fontSize = 20) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  attachClearButton('addFriendInput');
   initPage(async (user) => {
     _fUser = user; // null for guests — search/view-profile below works either way
     if (!user) {
