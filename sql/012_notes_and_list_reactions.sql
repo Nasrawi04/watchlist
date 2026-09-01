@@ -87,6 +87,14 @@ ALTER TABLE public.favorite_lists
 ALTER TABLE public.favorite_lists
   ADD COLUMN IF NOT EXISTS ranked BOOLEAN;
 
+-- Remembers HOW a ranked list is ordered (picked/highest/lowest/
+-- enjoyment/story/acting/ending/az/za) so that adding or editing items
+-- later re-applies the same order automatically instead of asking
+-- again every time. NULL means "not decided yet" — the ordering popup
+-- is only ever shown once, the first time a list becomes ranked.
+ALTER TABLE public.favorite_lists
+  ADD COLUMN IF NOT EXISTS sort_mode TEXT;
+
 -- ── Helper: entry notes with like/dislike counts, for a given TMDB title ──
 -- Powers the "all notes for this title" section on title.html — every
 -- user's note on any entry linked to this tmdb_id/tmdb_type, with
