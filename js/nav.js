@@ -758,6 +758,58 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TMDB_IMG  = 'https://image.tmdb.org/t/p/w185';
 const TMDB_FULL = 'https://image.tmdb.org/t/p/w500';
 
+/* ── "Release Date" sort support ──
+   Movies have one fixed release date, so entry.year is already
+   accurate. Shows are different: a show that started in 2019 but is
+   still airing could have dropped a new episode yesterday — sorting
+   by the show's original air year would bury it under everything
+   else, when it should be one of the most "recent" things in the
+   list. There's no way to know a show's CURRENT last-aired date
+   without asking TMDB live, since that changes over time as new
+   episodes air — it's not something we store ourselves. This caches
+   that lookup (session-only, in memory) so switching to "Release
+   Date" sort doesn't re-fetch the same show over and over. */
+window._releaseDateCache = window._releaseDateCache || {};
+
+async function ensureReleaseDatesFetched(entries) {
+  const toFetch = [...new Set(
+    entries
+      .filter(e => e.tmdb_id && e.tmdb_type === 'tv' && !(e.tmdb_id in window._releaseDateCache))
+      .map(e => e.tmdb_id)
+  )];
+  if (!toFetch.length) return;
+  await Promise.all(toFetch.map(async id => {
+    try {
+      const res = await fetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US`);
+      if (!res.ok) { window._releaseDateCache[id] = null; return; }
+      const d = await res.json();
+      // last_air_date is the most recently aired episode's date — this
+      // is what actually needs to be "yesterday" for a currently-airing
+      // show to sort as the newest thing. Falls back to first_air_date
+      // for shows TMDB has no last_air_date for.
+      window._releaseDateCache[id] = d.last_air_date || d.first_air_date || null;
+    } catch (err) {
+      console.error('Release date fetch error:', id, err);
+      window._releaseDateCache[id] = null;
+    }
+  }));
+}
+
+// The actual comparator value used for "Release Date" sort — a real
+// timestamp when we have one, falling back to whatever year-level data
+// is available locally (so the sort still works reasonably even before
+// the live fetch completes, or if it fails for a given entry).
+function getReleaseDateValue(e) {
+  if (e.cat === 'movies') {
+    return e.year ? new Date(String(e.year) + '-06-15').getTime() : 0;
+  }
+  if (e.tmdb_id && window._releaseDateCache[e.tmdb_id]) {
+    return new Date(window._releaseDateCache[e.tmdb_id]).getTime();
+  }
+  const y = (e.ratings && e.ratings._completion_year) || e.year;
+  return y ? new Date(String(y) + '-06-15').getTime() : 0;
+}
+
 // Validate key on load
 if (TMDB_KEY === 'YOUR_TMDB_API_KEY') {
   console.warn('[TMDB] API key not set — replace YOUR_TMDB_API_KEY in js/tmdb.js');
