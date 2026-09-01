@@ -286,6 +286,7 @@ function renderGuestLanding() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initDiscoverSearch('heroSearch', { max: 20, connected: true, includePersons: true });
+  attachClearButton('heroSearch');
   initPageGuest(async (user) => {
     if (!user) { renderGuestLanding(); return; }
     _homeUser = user;
