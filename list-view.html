@@ -123,6 +123,8 @@
   font-size:clamp(22px, 6vw, 32px);
 }
 .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
+.home-tmdb-meta-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px; }
+.home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
 .lv-empty { text-align:center; padding:3rem 0; color:var(--text-3); font-size:14px; }
 
 @media(max-width:560px) {
@@ -227,11 +229,15 @@ function _lvCardHTML(e, rank) {
     ? `<img src="${e.poster_url}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
+  const scoreStr = _lvOwnScoreHTML(e);
   return `<div class="q-card lv-card" ${clickAttr}>
     <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${_lvRankBadgeHTML(rank)}</div>
     <div class="q-info">
       <div class="q-title">${_lvEsc(e.title)}</div>
-      ${e.year ? `<div class="home-tmdb-year">${_lvEsc(e.year)}</div>` : ''}
+      <div class="home-tmdb-meta-row">
+        <span class="home-tmdb-year">${e.year ? _lvEsc(e.year) : ''}</span>
+        ${scoreStr}
+      </div>
     </div>
   </div>`;
 }
@@ -241,13 +247,32 @@ function _lvListRowHTML(e, rank) {
     ? `<img src="${e.poster_url}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
+  const scoreStr = _lvOwnScoreHTML(e);
   return `<div class="lv-list-row" ${clickAttr}>
     <div class="lv-list-poster" style="position:relative">${posterInner}${_lvRankBadgeHTML(rank)}</div>
     <div style="min-width:0">
       <div class="lv-list-title">${_lvEsc(e.title)}</div>
-      ${e.year ? `<div class="lv-list-year">${_lvEsc(e.year)}</div>` : ''}
+      <div class="home-tmdb-meta-row">
+        <span class="lv-list-year">${e.year ? _lvEsc(e.year) : ''}</span>
+        ${scoreStr}
+      </div>
     </div>
   </div>`;
+}
+
+// Shows the viewer's own MSS score, in the same star/olive style used
+// for ratings everywhere else — but only when it's actually meaningful:
+// this is your own list, it's a ranked list, and this particular item
+// is a real personal entry (not something added straight from
+// Discover, which has no personal score to show).
+function _lvOwnScoreHTML(e) {
+  const isOwner = _lvUser && _lvList && _lvList.user_id === _lvUser.id;
+  if (!isOwner || _lvList.ranked !== true) return '';
+  const isTmdbOnly = typeof e.id === 'string' && e.id.startsWith('tmdb:');
+  if (isTmdbOnly) return '';
+  const score = liveScore(e);
+  if (score == null) return '';
+  return `<span class="home-tmdb-score">★ ${Number(score).toFixed(1)}</span>`;
 }
 
 function _lvRenderViewToggle() {
