@@ -652,6 +652,7 @@ async function saveFavoriteList(list) {
     const upd = { items: list.items, title: list.title };
     if (list.description !== undefined) upd.description = list.description;
     if (list.ranked !== undefined) upd.ranked = list.ranked;
+    if (list.sort_mode !== undefined) upd.sort_mode = list.sort_mode;
     const { data, error } = await sb.from('favorite_lists')
       .update(upd)
       .eq('id', list.id)
@@ -661,7 +662,7 @@ async function saveFavoriteList(list) {
     return data;
   } else {
     const { data, error } = await sb.from('favorite_lists')
-      .insert({ user_id: _listsUser.id, cat: list.cat, genre: list.genre, title: list.title, description: list.description || null, items: list.items || [], ranked: list.ranked ?? null })
+      .insert({ user_id: _listsUser.id, cat: list.cat, genre: list.genre, title: list.title, description: list.description || null, items: list.items || [], ranked: list.ranked ?? null, sort_mode: list.sort_mode ?? null })
       .select().single();
     if (error) throw error;
     return data;
@@ -1978,11 +1979,131 @@ async function saveFavList() {
     const list = _listsAll.find(l => l.id === _favListPickerListId);
     if (!list) return;
     list.items = _favListPickerSelected.slice();
+
+    if (list.ranked === true && list.sort_mode) {
+      // Already decided how this list is ordered — just re-apply that
+      // same order to the (possibly changed) item set automatically,
+      // instead of asking again every time items are added or edited.
+      _reorderListItems(list, list.sort_mode);
+    }
+
     await saveFavoriteList(list);
     closeFavListPicker();
     renderListsPage();
     showToast('Saved!');
+    if (list.ranked === true && !list.sort_mode) _openRankOrderPrompt(list.id);
   } catch(e) { showToast('Error saving.', 'err'); console.error(e); }
+}
+
+/* ── Ranked-list ordering prompt — shown right after saving a ranked
+   list's items, so the rank numbers (1, 2, 3...) reflect a real,
+   permanent choice instead of whatever order items happened to get
+   clicked in the picker. This actually reorders list.items and saves
+   it, unlike the view-only Default/Highest/Lowest sort buttons under
+   each list, which never persist. ── */
+function _injectRankOrderOverlay() {
+  if (document.getElementById('rankOrderOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'rankOrderOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.65);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:16px;';
+  el.innerHTML = `
+    <div style="width:97%;max-width:420px;height:480px;max-height:85vh;display:flex;flex-direction:column;background:var(--bg-2);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);box-shadow:4px 4px 0 var(--olive);padding:1.75rem;">
+      <div style="font-family:var(--serif);font-size:20px;font-weight:400;margin-bottom:.4rem;flex-shrink:0;">Order this ranked list</div>
+      <div id="rankOrderSubtitle" style="font-size:12.5px;color:var(--text-3);margin-bottom:1.25rem;flex-shrink:0;"></div>
+      <div id="rankOrderOptions" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:0;flex:1;"></div>
+    </div>`;
+  el.addEventListener('click', e => { if (e.target === el) _closeRankOrderPrompt(); });
+  document.body.appendChild(el);
+}
+
+const _RANK_ORDER_OPTS = [
+  ['picked',    'The order I just picked them in'],
+  ['highest',   'Highest rated overall'],
+  ['lowest',    'Lowest rated overall'],
+  ['enjoyment', 'Best Enjoyment'],
+  ['story',     'Best Story & Plot'],
+  ['acting',    'Best Acting'],
+  ['ending',    'Best Ending & Payoff'],
+  ['az',        'Title A → Z'],
+  ['za',        'Title Z → A'],
+];
+
+// Reads a specific rating dimension off an entry, accounting for the
+// fact that anime/cartoons use slightly different rating keys than
+// movies/shows for the same concept (e.g. "voice_acting" vs "acting").
+// Discover-only items with no personal entry never have sub-ratings.
+function _getSubRating(entry, concept) {
+  if (!entry || !entry.ratings) return null;
+  const isAnimated = entry.cat === 'anime' || entry.cat === 'cartoons';
+  const keyMap = {
+    story: 'story',
+    enjoyment: 'enjoyment',
+    acting: isAnimated ? 'voice_acting' : 'acting',
+    ending: 'ending',
+  };
+  const key = keyMap[concept];
+  const val = key ? entry.ratings[key] : null;
+  return typeof val === 'number' ? val : null;
+}
+
+function _openRankOrderPrompt(listId) {
+  _injectRankOrderOverlay();
+  const list = _listsAll.find(l => l.id === listId);
+  if (!list) return;
+  document.querySelector('#rankOrderSubtitle').textContent = `How should the ${ (list.items||[]).length } items be ordered?`;
+  document.getElementById('rankOrderOptions').innerHTML = _RANK_ORDER_OPTS.map(([val, label]) =>
+    `<button class="fav-edit-btn" style="justify-content:flex-start;padding:11px 16px;" onclick="_applyRankOrder('${listId}','${val}')">${label}</button>`
+  ).join('');
+  document.getElementById('rankOrderOverlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function _closeRankOrderPrompt() {
+  const ov = document.getElementById('rankOrderOverlay');
+  if (ov) ov.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// Actually reorders list.items in place according to `mode` — shared by
+// the first-time ordering prompt and by automatic re-application on
+// later edits. Mutates list.items directly; caller is responsible for
+// saving.
+function _reorderListItems(list, mode) {
+  if (mode === 'picked') return; // leave items in whatever order they're already in
+  const resolved = (list.items || []).map(id => ({ id, item: _resolveListItem(id) })).filter(x => x.item);
+  resolved.sort((a, b) => {
+    if (mode === 'az') return (a.item.title||'').localeCompare(b.item.title||'');
+    if (mode === 'za') return (b.item.title||'').localeCompare(a.item.title||'');
+    if (mode === 'enjoyment' || mode === 'story' || mode === 'acting' || mode === 'ending') {
+      const subA = _getSubRating(a.item, mode) ?? -Infinity;
+      const subB = _getSubRating(b.item, mode) ?? -Infinity;
+      return subB - subA; // best first, always high-to-low for named dimensions
+    }
+    const scoreA = liveScore(a.item) ?? -Infinity;
+    const scoreB = liveScore(b.item) ?? -Infinity;
+    return mode === 'highest' ? scoreB - scoreA : scoreA - scoreB;
+  });
+  // Items that failed to resolve (shouldn't normally happen) get kept,
+  // appended after the sorted ones, rather than silently dropped.
+  const resolvedIds = new Set(resolved.map(x => x.id));
+  const unresolved = (list.items || []).filter(id => !resolvedIds.has(id));
+  list.items = [...resolved.map(x => x.id), ...unresolved];
+}
+
+async function _applyRankOrder(listId, mode) {
+  const list = _listsAll.find(l => l.id === listId);
+  if (!list) return;
+  try {
+    _reorderListItems(list, mode);
+    list.sort_mode = mode;
+    await saveFavoriteList(list);
+    _closeRankOrderPrompt();
+    renderListsPage();
+    showToast('Order saved!');
+  } catch (err) {
+    console.error('Apply rank order error:', err);
+    showToast('Failed to save order.', 'err');
+  }
 }
 
 function closeFavListPicker() {
