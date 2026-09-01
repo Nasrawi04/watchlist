@@ -306,6 +306,9 @@ function applySort(arr, sortBy) {
   }
   if (sortBy === 'alpha')   return a.sort((x,y) => (x.title||'').localeCompare(y.title||''));
   if (sortBy === 'zalpha')  return a.sort((x,y) => (y.title||'').localeCompare(x.title||''));
+  if (sortBy === 'release') {
+    return a.sort((x,y) => getReleaseDateValue(y) - getReleaseDateValue(x));
+  }
   return a;
 }
 
@@ -319,6 +322,7 @@ function sortBar(section) {
     ['newest', 'Newest', 'New'], ['oldest', 'Oldest', 'Old'],
     ...(!isQueue ? [['highest','Highest Rank','High'],['lowest','Lowest Rank','Low']] : []),
     ['alpha', 'A → Z', 'A→Z'], ['zalpha', 'Z → A', 'Z→A'],
+    ['release', 'Release Date', 'Release'],
   ];
   const staticBtns = opts.map(([v,l,s]) =>
     `<button class="sort-btn${cur===v?' active':''}" onclick="setSort('${section}','${v}')" data-short="${s}">${l}</button>`
@@ -392,8 +396,9 @@ function _sortWatching(items, sortBy) {
   return [...active, ...paused];
 }
 
-function setSort(section, value) {
+async function setSort(section, value) {
   _sort[section] = value;
+  if (value === 'release') { await ensureReleaseDatesFetched(_catAll); }
   let base;
   if (section === 'watching') base = _catAll.filter(e => e.status === 'watching' || e.status === 'paused');
   else if (section === 'queue') base = _catAll.filter(e => e.status === 'queue');
