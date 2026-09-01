@@ -212,7 +212,6 @@
 @media(max-width:400px){.fv-w-ep-badge{font-size:8px;padding:1px 5px;}}
 
 .fv-w-prog-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
-[data-theme="light"] .fv-w-prog-track{background:rgba(0,0,0,0.16)}
 
 .fv-w-prog-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .5s var(--ease)}
 
@@ -1434,6 +1433,9 @@ function _libApplySort(arr,by){
   }
   if(by==='alpha')return a.sort(function(x,y){return (x.title||'').localeCompare(y.title||'');});
   if(by==='zalpha')return a.sort(function(x,y){return (y.title||'').localeCompare(x.title||'');});
+  if(by==='release'){
+    return a.sort(function(x,y){return getReleaseDateValue(y)-getReleaseDateValue(x);});
+  }
   return a;
 }
 
@@ -1449,12 +1451,18 @@ function _libSortBar(sec){
   var showRating=sec==='completed';
   var isRating=cur.indexOf('rating:')===0;
   var ratingLabel=isRating?_ratingFilterLabelAll(cur.slice(7)):null;
-  var opts=[['newest','Newest'],['oldest','Oldest']].concat(!isQ?[['highest','Highest'],['lowest','Lowest']]:[]).concat([['alpha','A\u2192Z'],['zalpha','Z\u2192A']]);
+  var opts=[['newest','Newest'],['oldest','Oldest']].concat(!isQ?[['highest','Highest'],['lowest','Lowest']]:[]).concat([['alpha','A\u2192Z'],['zalpha','Z\u2192A'],['release','Release Date']]);
   var staticBtns=opts.map(function(o){return '<button class="sort-btn'+(cur===o[0]?' active':'')+'" onclick="setLibSort(\''+sec+'\',\''+o[0]+'\')">'+o[1]+'</button>';}).join('');
   var ratingBtn=showRating?('<button class="sort-btn'+(isRating?' active':'')+'" onclick="openRatingFilter(\''+sec+'\')" data-short="'+(isRating?_ratingShortLabel(ratingLabel):'Rating')+'">'+(isRating?'Rating: '+ratingLabel:'Rating \u25be')+'</button>'):'';
   return '<div class="sort-bar">'+staticBtns+ratingBtn+'</div>';
 }
-function setLibSort(sec,val){_libSort[sec]=val;renderLibrary();}
+async function setLibSort(sec,val){
+  _libSort[sec]=val;
+  if(val==='release'){
+    await ensureReleaseDatesFetched(_libEntries);
+  }
+  renderLibrary();
+}
 function setLibStatus(s){_libStatusFilter=s;renderLibrary();}
 function setLibCat(c){_libCatFilter=c;renderLibrary();}
 
