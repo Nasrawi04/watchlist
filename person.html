@@ -122,6 +122,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replac
 
 const _ppParams = new URLSearchParams(location.search);
 const _ppId = _ppParams.get('id');
+const _ppMode = _ppParams.get('mode') === 'directing' ? 'directing' : 'acting';
 const TMDB_GENDER = { 0: '', 1: 'Female', 2: 'Male', 3: 'Non-binary' };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -162,8 +163,13 @@ function renderPerson(p) {
   // De-dupe cast credits (a person can appear twice for different roles),
   // keep only ones with a poster, sort by release/air date — latest first,
   // then split into Movies / TV Shows so each gets its own full section.
+  // In "directing" mode, source from crew instead (Director for movies,
+  // Creator for TV shows) rather than cast.
   const seen = new Set();
-  const allCredits = (p.combined_credits?.cast || [])
+  const sourceCredits = _ppMode === 'directing'
+    ? (p.combined_credits?.crew || []).filter(cr => cr.job === 'Director' || cr.job === 'Creator')
+    : (p.combined_credits?.cast || []);
+  const allCredits = sourceCredits
     .filter(cr => cr.poster_path)
     .filter(cr => { const k = cr.media_type + cr.id; if (seen.has(k)) return false; seen.add(k); return true; })
     .sort((a, b) => {
@@ -205,14 +211,14 @@ function renderPerson(p) {
 
         ${allCredits.length ? `
           ${movieCredits.length ? `
-            <div class="pp-section-title pp-mt">Movies</div>
+            <div class="pp-section-title pp-mt">${_ppMode === 'directing' ? 'Movies Directed' : 'Movies'}</div>
             <div class="pp-grid">${_ppCreditGrid(movieCredits)}</div>
           ` : ''}
           ${tvCredits.length ? `
-            <div class="pp-section-title pp-mt">TV Shows</div>
+            <div class="pp-section-title pp-mt">${_ppMode === 'directing' ? 'Shows Created' : 'TV Shows'}</div>
             <div class="pp-grid">${_ppCreditGrid(tvCredits)}</div>
           ` : ''}
-        ` : `<div class="pp-empty">No known credits found.</div>`}
+        ` : `<div class="pp-empty">${_ppMode === 'directing' ? 'No directing/creator credits found.' : 'No known credits found.'}</div>`}
       </div>
     </div>
   `;
@@ -232,6 +238,7 @@ function _ppCreditGrid(list) {
     const isMovie = cr.media_type === 'movie';
     const title = isMovie ? cr.title : cr.name;
     const year = ((isMovie ? cr.release_date : cr.first_air_date) || '').split('-')[0];
+    const roleLabel = _ppMode === 'directing' ? (cr.job || '') : (cr.character || '');
     return `<a class="pp-credit-card" href="title.html?type=${isMovie ? 'movie' : 'tv'}&id=${cr.id}">
       <div class="pp-credit-poster">
         <img src="${TMDB_IMG}${cr.poster_path}" loading="lazy" alt="">
@@ -239,7 +246,7 @@ function _ppCreditGrid(list) {
       </div>
       <div class="pp-credit-info">
         <div class="pp-credit-title">${esc(title)}</div>
-        <div class="pp-credit-role">${esc(cr.character || '')}${year ? (cr.character ? ' · ' : '') + year : ''}</div>
+        <div class="pp-credit-role">${esc(roleLabel)}${year ? (roleLabel ? ' · ' : '') + year : ''}</div>
       </div>
     </a>`;
   }).join('');
