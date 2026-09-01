@@ -146,7 +146,26 @@
             <div class="avatar-info">
               <button class="btn-save" onclick="document.getElementById('avatarFile').click()">Change Photo</button>
               <div class="avatar-hint">JPG or PNG · max 5MB<br>Tap photo or button to upload</div>
-              <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="uploadAvatar(event)">
+              <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="_avatarCropStart(event)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Avatar crop/zoom/pan popup -->
+        <div id="avatarCropOverlay" style="position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:20px;">
+          <div style="width:100%;max-width:380px;background:var(--bg-2);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);box-shadow:4px 4px 0 var(--olive);padding:1.75rem;">
+            <div style="font-family:var(--serif);font-size:20px;font-weight:400;margin-bottom:1.25rem;text-align:center;">Adjust Photo</div>
+            <div id="avatarCropViewport" style="width:240px;height:240px;border-radius:50%;overflow:hidden;margin:0 auto 1.25rem;position:relative;background:var(--bg-3);border:0.5px solid var(--border);cursor:grab;touch-action:none;">
+              <img id="avatarCropImg" style="position:absolute;top:50%;left:50%;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none;">
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;">
+              <span style="font-size:12px;color:var(--text-3);">−</span>
+              <input type="range" id="avatarCropZoom" min="1" max="3" step="0.01" value="1" style="flex:1;accent-color:var(--olive-light);" oninput="_avatarCropUpdateZoom(this.value)">
+              <span style="font-size:12px;color:var(--text-3);">+</span>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="fav-edit-btn" style="flex:1;justify-content:center;" onclick="_avatarCropCancel()">Cancel</button>
+              <button class="btn-save" style="flex:1;" onclick="_avatarCropConfirm()">Use Photo</button>
             </div>
           </div>
         </div>
@@ -377,40 +396,156 @@ async function changePassword() {
   }
 }
 
-async function uploadAvatar(event) {
+/* ── Avatar crop/zoom/pan ── */
+let _avatarCropFile = null;
+let _avatarCropNaturalW = 0, _avatarCropNaturalH = 0;
+let _avatarCropMinZoom = 1;
+let _avatarCropZoom = 1;
+let _avatarCropX = 0, _avatarCropY = 0; // pan offset in screen px, relative to viewport center
+let _avatarCropDragging = false;
+let _avatarCropDragStart = { x: 0, y: 0, panX: 0, panY: 0 };
+const _AVATAR_VIEWPORT = 240; // matches #avatarCropViewport width/height
+const _AVATAR_OUTPUT = 500;   // exported image size in px
+
+function _avatarCropStart(event) {
   const file = event.target.files[0];
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) { showToast('Image must be under 5MB.', 'err'); return; }
+  _avatarCropFile = file;
 
-  // Preview immediately
   const reader = new FileReader();
   reader.onload = ev => {
-    document.getElementById('settingsAvatar').innerHTML =
-      `<img src="${ev.target.result}" alt="">`;
+    const img = document.getElementById('avatarCropImg');
+    img.onload = () => {
+      _avatarCropNaturalW = img.naturalWidth;
+      _avatarCropNaturalH = img.naturalHeight;
+      // Minimum zoom is whatever scale makes the image's shorter side
+      // exactly fill the circular viewport, so there's never empty space.
+      _avatarCropMinZoom = _AVATAR_VIEWPORT / Math.min(_avatarCropNaturalW, _avatarCropNaturalH);
+      _avatarCropZoom = _avatarCropMinZoom;
+      _avatarCropX = 0; _avatarCropY = 0;
+      document.getElementById('avatarCropZoom').min = _avatarCropMinZoom;
+      document.getElementById('avatarCropZoom').max = _avatarCropMinZoom * 3;
+      document.getElementById('avatarCropZoom').value = _avatarCropMinZoom;
+      _avatarCropApplyTransform();
+      document.getElementById('avatarCropOverlay').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    };
+    img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
-  showToast('Uploading photo…');
+  event.target.value = ''; // allow re-selecting the same file later
+}
 
-  try {
-    const ext  = file.name.split('.').pop().toLowerCase();
-    const path = `${_sUser.id}/avatar.${ext}`;
-    const { error: upErr } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
-    if (upErr) throw upErr;
-    const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
-    await updateProfile(_sUser.id, { avatar_url: publicUrl });
-    if (_sProfile) _sProfile.avatar_url = publicUrl;
-    ['navUserInitial','navUserInitialMobile'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.innerHTML = `<img src="${publicUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-        el.style.padding = '0';
-      }
-    });
-    showToast('Photo updated!');
-  } catch(e) {
-    showToast('Upload failed — check Supabase Storage is set up.', 'err');
-    console.error(e);
-  }
+function _avatarCropApplyTransform() {
+  const img = document.getElementById('avatarCropImg');
+  const w = _avatarCropNaturalW * _avatarCropZoom;
+  const h = _avatarCropNaturalH * _avatarCropZoom;
+  img.style.width = w + 'px';
+  img.style.height = h + 'px';
+
+  // Clamp panning so the image always fully covers the circular viewport
+  const maxX = Math.max(0, (w - _AVATAR_VIEWPORT) / 2);
+  const maxY = Math.max(0, (h - _AVATAR_VIEWPORT) / 2);
+  _avatarCropX = Math.min(maxX, Math.max(-maxX, _avatarCropX));
+  _avatarCropY = Math.min(maxY, Math.max(-maxY, _avatarCropY));
+
+  img.style.transform = `translate(-50%, -50%) translate(${_avatarCropX}px, ${_avatarCropY}px)`;
+}
+
+function _avatarCropUpdateZoom(val) {
+  _avatarCropZoom = Number(val);
+  _avatarCropApplyTransform();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const vp = document.getElementById('avatarCropViewport');
+  if (!vp) return;
+  const start = (x, y) => {
+    _avatarCropDragging = true;
+    vp.style.cursor = 'grabbing';
+    _avatarCropDragStart = { x, y, panX: _avatarCropX, panY: _avatarCropY };
+  };
+  const move = (x, y) => {
+    if (!_avatarCropDragging) return;
+    _avatarCropX = _avatarCropDragStart.panX + (x - _avatarCropDragStart.x);
+    _avatarCropY = _avatarCropDragStart.panY + (y - _avatarCropDragStart.y);
+    _avatarCropApplyTransform();
+  };
+  const end = () => { _avatarCropDragging = false; vp.style.cursor = 'grab'; };
+
+  vp.addEventListener('pointerdown', e => { vp.setPointerCapture(e.pointerId); start(e.clientX, e.clientY); });
+  vp.addEventListener('pointermove', e => move(e.clientX, e.clientY));
+  vp.addEventListener('pointerup', end);
+  vp.addEventListener('pointercancel', end);
+
+  // Pinch-to-zoom and scroll-wheel zoom
+  let pinchStartDist = null, pinchStartZoom = 1;
+  vp.addEventListener('wheel', e => {
+    e.preventDefault();
+    const slider = document.getElementById('avatarCropZoom');
+    const delta = -e.deltaY * 0.0015;
+    const newZoom = Math.min(Number(slider.max), Math.max(Number(slider.min), _avatarCropZoom + delta));
+    slider.value = newZoom;
+    _avatarCropUpdateZoom(newZoom);
+  }, { passive: false });
+});
+
+function _avatarCropCancel() {
+  document.getElementById('avatarCropOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+  _avatarCropFile = null;
+}
+
+async function _avatarCropConfirm() {
+  const img = document.getElementById('avatarCropImg');
+  // Map the visible circular viewport back to source-image pixel
+  // coordinates, then draw that exact region into a fixed-size output
+  // canvas — this is what actually "bakes in" the pan + zoom.
+  const srcCenterX = (_avatarCropNaturalW / 2) - (_avatarCropX / _avatarCropZoom);
+  const srcCenterY = (_avatarCropNaturalH / 2) - (_avatarCropY / _avatarCropZoom);
+  const srcSize = _AVATAR_VIEWPORT / _avatarCropZoom;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = _AVATAR_OUTPUT;
+  canvas.height = _AVATAR_OUTPUT;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(
+    img,
+    srcCenterX - srcSize / 2, srcCenterY - srcSize / 2, srcSize, srcSize,
+    0, 0, _AVATAR_OUTPUT, _AVATAR_OUTPUT
+  );
+
+  canvas.toBlob(async (blob) => {
+    if (!blob) { showToast('Failed to process image.', 'err'); return; }
+    document.getElementById('avatarCropOverlay').style.display = 'none';
+    document.body.style.overflow = '';
+
+    const previewUrl = URL.createObjectURL(blob);
+    document.getElementById('settingsAvatar').innerHTML = `<img src="${previewUrl}" alt="">`;
+    showToast('Uploading photo…');
+
+    try {
+      const path = `${_sUser.id}/avatar.jpg`;
+      const { error: upErr } = await sb.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
+      const bustedUrl = publicUrl + '?t=' + Date.now();
+      await updateProfile(_sUser.id, { avatar_url: bustedUrl });
+      if (_sProfile) _sProfile.avatar_url = bustedUrl;
+      ['navUserInitial','navUserInitialMobile'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.innerHTML = `<img src="${bustedUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+          el.style.padding = '0';
+        }
+      });
+      showToast('Photo updated!');
+    } catch(e) {
+      showToast('Upload failed — check Supabase Storage is set up.', 'err');
+      console.error(e);
+    }
+  }, 'image/jpeg', 0.92);
 }
 
 async function doSignOutEverywhere() {
