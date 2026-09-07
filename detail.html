@@ -67,7 +67,6 @@
 
 /* ── Progress bar ── */
 .det-prog-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-top:8px}
-[data-theme="light"] .det-prog-track{background:rgba(0,0,0,0.16)}
 .det-prog-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .4s ease}
 
 /* ── Saving state ── */
@@ -348,7 +347,7 @@
 .det-header {
   display:flex; gap:clamp(1.25rem, 3vw, 2rem); align-items:flex-start; flex-wrap:wrap;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:clamp(1.5rem, 3vw, 2rem); margin-bottom:1.5rem; max-width:100%; box-sizing:border-box;
+  padding:clamp(1.5rem, 3vw, 2rem); margin-bottom:1.5rem;
 }
 
 /* Poster — reuses .detail-poster-wrap class (handlePosterUpload's querySelector depends on it) */
@@ -362,82 +361,51 @@
 }
 .det-header .detail-poster-wrap img { width:100%; height:100%; object-fit:cover; }
 
-@media(min-width:901px) {
-  .det-header .detail-poster-wrap { width:220px; height:330px; }
-}
+.det-header-info { flex:1; min-width:220px; }
 
-.det-header-info { flex:1; min-width:220px; max-width:100%; }
-
-/* Details block, placed inline in the header next to the title box — split 50/50 with det-header-info */
-.det-header-details {
-  flex:1; min-width:280px; max-width:100%; box-sizing:border-box;
-  border-left:0.5px solid var(--border); padding-left:clamp(1.25rem, 3vw, 2rem);
-}
-@media(max-width:900px) {
-  .det-header-details { border-left:none; border-top:0.5px solid var(--border); padding-left:0; padding-top:1.5rem; flex-basis:100%; min-width:0; }
-}
-@media(max-width:560px) {
-  .det-header-info { min-width:0; }
-}
-
-.det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem; }
+.det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:.9rem; }
 .det-eyebrow-row .sel-dd { width:auto; min-width:120px; }
 .det-eyebrow-row .sel-dd-trigger { height:32px; padding:0 12px; border-radius:20px; font-size:12.5px; }
 
 .det-title-input {
   display:block; width:100%; background:transparent; border:none; border-bottom:1.5px solid var(--border);
   font-family:var(--serif); font-size:clamp(24px, 4.5vw, 38px); font-weight:300;
-  color:var(--text); padding:4px 0 8px; margin-bottom:1.1rem; line-height:1.15;
+  color:var(--text); padding:4px 0 8px; margin-bottom:1rem; line-height:1.15;
   outline:none; transition:border-color .2s;
 }
 .det-title-input::placeholder { color:var(--text-3); }
 .det-title-input:focus { border-color:var(--olive-light); }
 
-/* Release + Completed combined into a single unified box */
-.det-year-box {
-  display:flex; align-items:stretch; width:fit-content; max-width:100%;
-  background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius-sm);
-  overflow:hidden;
-}
-.det-year-field { display:flex; align-items:center; gap:8px; padding:8px 16px; min-width:0; }
-.det-year-field label { font-size:10.5px; color:var(--text-3); letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
-.det-year-divider { width:0.5px; background:var(--border-2); align-self:stretch; flex-shrink:0; }
+.det-year-row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem; }
+.det-year-field { display:flex; align-items:center; gap:6px; }
+.det-year-field label { font-size:10.5px; color:var(--text-3); letter-spacing:.5px; text-transform:uppercase; }
 .det-year-input {
-  width:64px; flex-shrink:0; background:transparent; border:none;
-  color:var(--text); font-size:13px; padding:0; text-align:center;
-  outline:none; -moz-appearance:textfield; appearance:textfield;
+  width:70px; background:var(--bg-3); border:0.5px solid var(--border-2);
+  border-radius:var(--radius-sm); color:var(--text); font-size:13px; padding:6px 8px; text-align:center;
+  outline:none; transition:border-color .15s; -moz-appearance:textfield; appearance:textfield;
 }
+.det-year-input:focus { border-color:var(--olive-light); }
 .det-year-input::placeholder { color:var(--text-3); }
 
-.det-final-score-card {
-  text-align:center; padding:clamp(1.5rem, 4vw, 2.25rem) 1.5rem;
+.det-score-badge {
+  display:inline-flex; align-items:center; gap:12px;
   background:var(--olive-faint); border:1.5px solid var(--border-olive);
+  border-radius:var(--radius); padding:14px 28px;
 }
-.det-final-score-label { font-size:11px; color:var(--olive-light); letter-spacing:2.5px; text-transform:uppercase; margin-bottom:.6rem; }
-.det-final-score-num { font-family:var(--serif); font-weight:300; font-size:clamp(48px, 10vw, 76px); color:var(--olive-light); line-height:1; }
-.det-final-score-outof { font-size:10px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; margin-top:.5rem; }
+.det-score-left { text-align:center; }
+.det-score-num { font-family:var(--serif); font-weight:300; font-size:clamp(32px, 5vw, 44px); color:var(--olive-light); line-height:1; }
+.det-score-label { font-size:10px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; margin-top:4px; }
+.det-score-outof { font-size:9px; color:var(--text-3); letter-spacing:1px; text-transform:uppercase; margin-top:2px; }
 
 @media(max-width:560px) {
   .det-header { flex-direction:column; align-items:center; text-align:center; padding:1.25rem; }
   .det-header .detail-poster-wrap { width:clamp(110px, 38vw, 150px); height:auto; aspect-ratio:2/3; }
-  .det-title-input { text-align:center; }
-  .det-eyebrow-row { justify-content:center; }
-  .det-year-box { margin:0 auto; }
-  .det-year-field { padding:8px 10px; gap:5px; }
-  .det-year-field label { font-size:9px; }
-  .det-year-input { width:48px; font-size:12px; }
-  .det-header-details { text-align:left; }
-  .det-header, .det-header-info, .det-header-details { overflow-x:hidden; }
+  .det-eyebrow-row, .det-year-row { justify-content:center; }
+  .det-score-badge { padding:12px 22px; }
 }
 
 /* ── Content cards ── */
 .det-content { display:flex; flex-direction:column; gap:1.5rem; }
-.det-row-2col { display:flex; gap:0; align-items:flex-start; flex-wrap:wrap; padding:0 !important; overflow:hidden; }
-.det-row-2col-half { flex:1; min-width:280px; padding:clamp(1.25rem, 3vw, 1.75rem); }
-.det-row-2col-half:last-child { border-left:0.5px solid var(--border); }
-@media(max-width:760px) {
-  .det-row-2col-half:last-child { border-left:none; border-top:0.5px solid var(--border); }
-}
 .det-card {
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
   padding:clamp(1.25rem, 3vw, 1.75rem);
@@ -532,8 +500,6 @@
       <input type="file" id="posterFile" accept="image/*" style="display:none" onchange="handlePosterUpload(event)">
 
       <div class="det-header-info">
-        <input class="det-title-input" id="dTitle" type="text" placeholder="Untitled…" oninput="updatePosterLetter()">
-
         <div class="det-eyebrow-row">
           <select id="dCat" onchange="updateTypeSelector()" style="display:none">
             <option value="tv">TV Show</option>
@@ -553,7 +519,7 @@
           <div id="dStatusDD"></div>
 
           <div id="dTypeGroup" style="display:none">
-            <select id="dMediaType" onchange="updateStatusUI()" style="display:none">
+            <select id="dMediaType" onchange="updateTypeSelector()" style="display:none">
               <option value="show">Show / Series</option>
               <option value="movie">Movie</option>
             </select>
@@ -561,40 +527,34 @@
           </div>
         </div>
 
-        <div class="det-year-box">
+        <input class="det-title-input" id="dTitle" type="text" placeholder="Untitled…" oninput="updatePosterLetter()">
+
+        <div class="det-year-row">
           <div class="det-year-field">
-            <label>Release Year</label>
+            <label>Release</label>
             <input class="det-year-input" id="dYear" type="number" min="1900" max="2030" placeholder="Year">
           </div>
-          <div class="det-year-divider" id="detYearDivider"></div>
           <div class="det-year-field" id="completionYearGroup">
-            <label>Completion Year</label>
+            <label>Completed</label>
             <input class="det-year-input" id="dCompletionYear" type="number" min="1900" max="2030" placeholder="—">
           </div>
         </div>
 
-        <div class="field-group" id="completedOnGroup" style="display:none;margin-top:1.25rem;margin-bottom:0;">
-          <div class="field-label">Completed On <span style="font-size:9px;color:var(--text-3);font-weight:400;">(when you finished)</span></div>
-          <div class="date-3box" id="completedDateWrap">
-            <input class="field-input date-3box-input" id="dDay"   type="number" min="1" max="31" placeholder="DD" style="width:64px;text-align:center">
-            <select class="field-input date-3box-input" id="dMonth" style="flex:1;display:none">
-              <option value="">Month</option>
-              <option value="01">January</option><option value="02">February</option>
-              <option value="03">March</option><option value="04">April</option>
-              <option value="05">May</option><option value="06">June</option>
-              <option value="07">July</option><option value="08">August</option>
-              <option value="09">September</option><option value="10">October</option>
-              <option value="11">November</option><option value="12">December</option>
-            </select>
-            <div id="dMonthDD" style="flex:1"></div>
-            <input class="field-input date-3box-input" id="dCYear" type="number" min="1900" max="2100" placeholder="YYYY" style="width:80px;text-align:center">
+        <div class="det-score-badge" id="finalScoreSection">
+          <div class="det-score-left">
+            <div class="det-score-num" id="finalScoreNum">—</div>
+            <div class="det-score-label">Final Score</div>
+            <div class="det-score-outof">Out of 10</div>
           </div>
         </div>
-
       </div>
+    </div>
 
-      <!-- Details — sits next to the title box on wide screens -->
-      <div class="det-header-details">
+    <!-- ═══ CONTENT ═══ -->
+    <div class="det-content">
+
+      <!-- Details card -->
+      <div class="det-card">
         <div class="det-card-title">Details</div>
         <div class="det-fields-grid">
           <div class="field-group">
@@ -642,22 +602,33 @@
             </div>
           </div>
 
+          <div class="field-group" id="completedOnGroup" style="display:none;">
+            <div class="field-label">Completed On <span style="font-size:9px;color:var(--text-3);font-weight:400;">(when you finished)</span></div>
+            <div class="date-3box" id="completedDateWrap">
+              <input class="field-input date-3box-input" id="dDay"   type="number" min="1" max="31" placeholder="DD" style="width:64px;text-align:center">
+              <select class="field-input date-3box-input" id="dMonth" style="flex:1;display:none">
+                <option value="">Month</option>
+                <option value="01">January</option><option value="02">February</option>
+                <option value="03">March</option><option value="04">April</option>
+                <option value="05">May</option><option value="06">June</option>
+                <option value="07">July</option><option value="08">August</option>
+                <option value="09">September</option><option value="10">October</option>
+                <option value="11">November</option><option value="12">December</option>
+              </select>
+              <div id="dMonthDD" style="flex:1"></div>
+              <input class="field-input date-3box-input" id="dCYear" type="number" min="1900" max="2100" placeholder="YYYY" style="width:80px;text-align:center">
+            </div>
+          </div>
+
           <div class="field-group">
             <div class="field-label">Description</div>
             <textarea class="field-input" id="dDesc" placeholder="Synopsis…"></textarea>
           </div>
         </div>
       </div>
-      <!-- /det-header-details -->
-    </div>
-    <!-- /det-header -->
 
-    <!-- ═══ CONTENT ═══ -->
-    <div class="det-content">
-
-      <div class="det-card det-row-2col">
-      <!-- Progress / Runtime -->
-      <div class="det-row-2col-half">
+      <!-- Progress / Runtime card -->
+      <div class="det-card">
         <div class="det-card-title">Progress</div>
 
         <div id="dProgressSection" class="progress-edit-section">
@@ -704,8 +675,29 @@
         </div>
       </div>
 
-      <!-- Notes & Favorites -->
-      <div class="det-row-2col-half">
+      <!-- Ratings card — core and bonus side by side -->
+      <div class="det-card">
+        <div class="det-card-title">Rate This</div>
+        <div class="det-ratings-cols">
+          <div>
+            <div class="det-ratings-col-title">Core Ratings</div>
+            <div class="rating-stepper-grid" id="coreRatingGrid"></div>
+            <div id="animToggleSection" style="display:none;">
+              <button class="anim-toggle-btn" id="animToggleBtn" onclick="toggleAnimation()">+ Enable Animation Quality</button>
+              <div class="rating-stepper-grid" id="animRatingRow" style="display:none;margin-top:6px;"></div>
+            </div>
+          </div>
+          <div>
+            <div class="det-ratings-col-title">Bonus Ratings <span style="color:var(--text-3);font-size:9px;letter-spacing:1px;text-transform:none;font-family:var(--sans);margin-left:4px">optional</span></div>
+            <div class="rating-stepper-grid" id="bonusRatingGrid"></div>
+          </div>
+        </div>
+        <div class="ratings-section-label" style="margin-top:1.5rem;">Score Breakdown</div>
+        <div class="score-breakdown" id="scoreBreakdown"></div>
+      </div>
+
+      <!-- Notes & Favorites card -->
+      <div class="det-card">
         <div class="det-card-title">Notes &amp; Favorites</div>
         <div class="det-fields-grid">
           <div class="field-group" id="dNotesSection" style="margin-bottom:0;">
@@ -747,36 +739,6 @@
             </div>
           </div>
         </div>
-      </div>
-      </div>
-      <!-- /det-row-2col: Progress + Notes & Favorites -->
-
-      <!-- Ratings card — core and bonus side by side -->
-      <div class="det-card">
-        <div class="det-card-title">Rate This</div>
-        <div class="det-ratings-cols">
-          <div>
-            <div class="det-ratings-col-title">Core Ratings</div>
-            <div class="rating-stepper-grid" id="coreRatingGrid"></div>
-            <div id="animToggleSection" style="display:none;">
-              <button class="anim-toggle-btn" id="animToggleBtn" onclick="toggleAnimation()">+ Enable Animation Quality</button>
-              <div class="rating-stepper-grid" id="animRatingRow" style="display:none;margin-top:6px;"></div>
-            </div>
-          </div>
-          <div>
-            <div class="det-ratings-col-title">Bonus Ratings <span style="color:var(--text-3);font-size:9px;letter-spacing:1px;text-transform:none;font-family:var(--sans);margin-left:4px">optional</span></div>
-            <div class="rating-stepper-grid" id="bonusRatingGrid"></div>
-          </div>
-        </div>
-        <div class="ratings-section-label" style="margin-top:1.5rem;">Score Breakdown</div>
-        <div class="score-breakdown" id="scoreBreakdown"></div>
-      </div>
-
-      <!-- Final Score card — sits at the very bottom, above the actions bar -->
-      <div class="det-card det-final-score-card" id="finalScoreSection">
-        <div class="det-final-score-label">Final Score</div>
-        <div class="det-final-score-num" id="finalScoreNum">—</div>
-        <div class="det-final-score-outof">Out of 10</div>
       </div>
 
       <!-- ═══ ALL ACTIONS AT THE BOTTOM ═══ -->
@@ -1139,7 +1101,7 @@ function _makeShadowDD(selectId, wrapId) {
 function updateTypeSelector() {
   const cat = document.getElementById('dCat').value;
   const isAnimeOrCartoon = cat === 'anime' || cat === 'cartoons';
-  const isMovies = cat === 'movies';
+  const isMovies = getMediaType() === 'movie'; // was `cat === 'movies'` — ignored the actual Movie/Show selector for anime/cartoons, so episode/season fields never hid even after picking "Movie"
   const animeSection = document.getElementById('animeGenreSection');
   if (animeSection) animeSection.style.display = cat === 'anime' ? '' : 'none';
   document.getElementById('dTypeGroup').style.display = isAnimeOrCartoon ? '' : 'none';
@@ -1203,8 +1165,6 @@ function updateStatusUI() {
   // Hide completion year for movies (they only have release year)
   const completionYearGroup = document.getElementById('completionYearGroup');
   if (completionYearGroup) completionYearGroup.style.display = isMovie ? 'none' : '';
-  const yearDivider = document.getElementById('detYearDivider');
-  if (yearDivider) yearDivider.style.display = isMovie ? 'none' : '';
 
   // Show current position only when actively watching or paused
   const curPos = document.getElementById('dCurrentPosSection');
