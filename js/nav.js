@@ -1055,10 +1055,21 @@ function attachClearButton(input) {
   // original parent happens to be a flex row (the common case for
   // search bars), while still behaving like a normal full-width block
   // when it isn't.
+  //
+  // The wrapper is a plain block div, NOT a flex container — so if the
+  // input itself had its own `flex:1` (or similar) CSS rule assuming
+  // its *direct* parent was a flex row, that rule now does nothing,
+  // since it's one level deeper than before. Force full width directly
+  // on the input itself so it always fills the wrapper regardless of
+  // whatever CSS it originally relied on.
   const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'position:relative; flex:1; min-width:0;';
+  wrapper.className = 'clear-btn-wrap';
   input.parentNode.insertBefore(wrapper, input);
   wrapper.appendChild(input);
+  input.style.width = '100%';
+  input.style.boxSizing = 'border-box';
+  input.style.flex = '1';
+  input.style.minWidth = '0';
 
   const btn = document.createElement('button');
   btn.type = 'button';
