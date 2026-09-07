@@ -3499,6 +3499,10 @@ body { font-size:15px; }
 }
 .input-clear-btn.visible { opacity:1; pointer-events:auto; }
 .input-clear-btn:hover { color:var(--text); }
+.clear-btn-wrap {
+  position:relative; display:flex; flex:1; min-width:0;
+  background:none; border:none; padding:0; margin:0;
+}
 
 .tmdb-dropdown.dd-connected {
   z-index:390;
