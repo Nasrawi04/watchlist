@@ -52,6 +52,12 @@
   font-size:clamp(10px, 1.6vw, 13px); letter-spacing:2.5px; text-transform:uppercase; color:#8FD177;
   margin-bottom:.75rem; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
 }
+.td-certification {
+  font-size:clamp(9.5px, 1.4vw, 12px); letter-spacing:.5px; font-weight:700;
+  padding:clamp(2px, 0.3vw, 3px) clamp(6px, 1vw, 9px); border-radius:4px;
+  background:rgba(255,255,255,0.12); border:0.5px solid rgba(255,255,255,0.25); color:#fff;
+  white-space:nowrap;
+}
 .td-title { font-family:var(--serif); font-size:clamp(26px, 5.5vw, 52px); font-weight:300; margin-bottom:.75rem; line-height:1.1; }
 .td-tagline { font-style:italic; opacity:.65; font-size:clamp(12.5px, 2vw, 17px); margin-bottom:1.25rem; }
 .td-meta-row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; font-size:clamp(11.5px, 1.8vw, 15px); opacity:.85; }
@@ -372,14 +378,14 @@ function renderTdError(msg) {
    these pull credits + videos on top of the base detail payload) ── */
 async function _tdFetchMovie(id) {
   try {
-    const res = await fetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos`);
+    const res = await fetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,release_dates`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
 }
 async function _tdFetchTV(id) {
   try {
-    const res = await fetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits`);
+    const res = await fetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits,content_ratings`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
@@ -459,6 +465,19 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
   const castSource = isMovie ? (d.credits?.cast || []) : (d.aggregate_credits?.cast || d.credits?.cast || []);
   const cast = castSource.slice(0, 10);
 
+  // Age/content rating (PG-13, R, TV-14, TV-MA, etc.) — movies expose
+  // this via release_dates (per-country certifications, several release
+  // types each), TV via content_ratings (one rating per country). Both
+  // need the US entry specifically pulled out.
+  let certification = null;
+  if (isMovie) {
+    const us = (d.release_dates?.results || []).find(r => r.iso_3166_1 === 'US');
+    certification = us?.release_dates?.find(rd => rd.certification)?.certification || null;
+  } else {
+    const us = (d.content_ratings?.results || []).find(r => r.iso_3166_1 === 'US');
+    certification = us?.rating || null;
+  }
+
   // Movies: director(s) come from crew (job === 'Director'). TV shows:
   // TMDB exposes creator(s) directly on the show object already.
   const directors = isMovie
@@ -483,7 +502,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
       <div class="td-hero-inner">
         <div class="td-poster">${poster ? `<img src="${poster}" alt="">` : ''}</div>
         <div class="td-hero-info">
-          <div class="td-eyebrow">${isMovie ? 'Movie' : 'TV Show'} ${year ? '· ' + year : ''}</div>
+          <div class="td-eyebrow">${isMovie ? 'Movie' : 'TV Show'} ${year ? '· ' + year : ''}${certification ? `<span class="td-certification">${esc(certification)}</span>` : ''}</div>
           <div class="td-title">${esc(title)}</div>
           ${d.tagline ? `<div class="td-tagline">"${esc(d.tagline)}"</div>` : ''}
           <div class="td-meta-row">
