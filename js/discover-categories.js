@@ -39,40 +39,66 @@ function _discNormalize(r, mediaType) {
 }
 
 // Genre + origin alone can't tell "family cartoon" from "adult animated
-// show" — Arcane, Rick and Morty, and Invincible are all Western
-// Animation-genre shows with a non-JP origin, exactly like something
+// show/movie" — Arcane, Rick and Morty, and Invincible are all Western
+// Animation-genre TV with a non-JP origin, exactly like something
 // genuinely kid-oriented, but they're TV-14/TV-MA content and should
-// read (and be categorized) as ordinary TV shows, not cartoons. TMDB's
-// search/discover results don't include content rating at all, so this
-// needs a live lookup per show — cached so the same show is never
-// re-checked twice in a session.
+// read (and be categorized) as ordinary TV, not cartoons. Same idea
+// for movies (an R-rated animated film isn't what "cartoon" means
+// here either). TMDB's search/discover results don't include content
+// rating at all, so this needs a live lookup per title — cached so
+// the same one is never re-checked twice in a session.
 const _discMaturityCache = {};
 
-async function _discIsMatureAnimation(tvId) {
-  if (tvId in _discMaturityCache) return _discMaturityCache[tvId];
+async function _discIsMatureAnimation(id, mediaType) {
+  const cacheKey = mediaType + ':' + id;
+  if (cacheKey in _discMaturityCache) return _discMaturityCache[cacheKey];
   try {
-    const data = await _discFetchJSON(`${TMDB_BASE}/tv/${tvId}/content_ratings?api_key=${TMDB_KEY}`);
-    const us = (data.results || []).find(r => r.iso_3166_1 === 'US');
-    const mature = us ? (us.rating === 'TV-MA' || us.rating === 'TV-14') : false;
-    _discMaturityCache[tvId] = mature;
+    let mature = false;
+    if (mediaType === 'tv') {
+      const data = await _discFetchJSON(`${TMDB_BASE}/tv/${id}/content_ratings?api_key=${TMDB_KEY}`);
+      const us = (data.results || []).find(r => r.iso_3166_1 === 'US');
+      mature = us ? (us.rating === 'TV-MA' || us.rating === 'TV-14') : false;
+    } else {
+      const data = await _discFetchJSON(`${TMDB_BASE}/movie/${id}/release_dates?api_key=${TMDB_KEY}`);
+      const us = (data.results || []).find(r => r.iso_3166_1 === 'US');
+      const cert = us?.release_dates?.find(rd => rd.certification)?.certification || '';
+      mature = ['PG-13', 'R', 'NC-17'].includes(cert);
+    }
+    _discMaturityCache[cacheKey] = mature;
     return mature;
   } catch (e) {
-    _discMaturityCache[tvId] = false;
+    _discMaturityCache[cacheKey] = false;
     return false;
   }
 }
 
 // Wraps _discNormalize with the maturity check, but ONLY for the exact
-// subset it's relevant to (Western Animation-genre TV) — checking every
-// single TV show's content rating on every category load would be a lot
-// of pointless extra requests for shows this never applies to.
-async function _discNormalizeTv(r) {
-  const item = _discNormalize(r, 'tv');
+// subset it's relevant to (Western Animation-genre content) — checking
+// every single title's content rating on every category load would be
+// a lot of pointless extra requests for the vast majority this never
+// applies to. Anime (JP origin) is deliberately left alone — "anime" is
+// a medium/style label that holds regardless of audience maturity,
+// unlike "cartoon" which carries a family-content assumption here.
+async function _discNormalizeChecked(r, mediaType) {
+  const item = _discNormalize(r, mediaType);
   const isWesternAnimation = item.genre_ids.includes(_ANIMATION_GENRE) && !item.origin_country.includes('JP');
   if (isWesternAnimation) {
-    item.is_mature_animation = await _discIsMatureAnimation(item.id);
+    item.is_mature_animation = await _discIsMatureAnimation(item.id, mediaType);
   }
   return item;
+}
+// Old name kept as an alias — every existing call site already uses it.
+const _discNormalizeTv = (r) => _discNormalizeChecked(r, 'tv');
+
+// Removes family-rated Western animation from a general (non-Cartoons)
+// category's results — that content belongs in Top 250 Cartoons /
+// Upcoming Cartoons instead. Mature Western animation (Arcane, etc.)
+// and all anime are left untouched, since neither should be redirected.
+function _discExcludeFamilyCartoons(items) {
+  return items.filter(it => {
+    const isWesternAnimation = (it.genre_ids || []).includes(_ANIMATION_GENRE) && !(it.origin_country || []).includes('JP');
+    return !isWesternAnimation || it.is_mature_animation === true;
+  });
 }
 
 // Movies/Shows categories don't exclude animated content (only the
@@ -84,7 +110,7 @@ function _discTypeLabel(it) {
   const isAnimated = (it.genre_ids || []).includes(_ANIMATION_GENRE);
   if (isAnimated) {
     if ((it.origin_country || []).includes('JP')) return 'Anime';
-    if (it.is_mature_animation) return 'TV'; // mature Western animation (Arcane, Rick and Morty, etc.) — not a "cartoon"
+    if (it.is_mature_animation) return it.media_type === 'movie' ? 'Movie' : 'TV'; // mature Western animation (Arcane, Rick and Morty, etc.) — not a "cartoon"
     return 'Cartoon';
   }
   return it.media_type === 'movie' ? 'Movie' : 'TV';
@@ -242,7 +268,8 @@ const DISCOVER_CATEGORIES = [
     async fetch(page) {
       const data = await _discFetchJSON(`${TMDB_BASE}/trending/all/week?api_key=${TMDB_KEY}&language=en-US&page=${page}`);
       const raw = (data.results || []).filter(r => r.media_type === 'movie' || r.media_type === 'tv');
-      return Promise.all(raw.map(r => r.media_type === 'tv' ? _discNormalizeTv(r) : _discNormalize(r, 'movie')));
+      const items = await Promise.all(raw.map(r => _discNormalizeChecked(r, r.media_type)));
+      return _discExcludeFamilyCartoons(items);
     }
   },
   {
@@ -254,8 +281,8 @@ const DISCOVER_CATEGORIES = [
         _discFetchJSON(`${TMDB_BASE}/movie/popular?api_key=${TMDB_KEY}&language=en-US&page=${page}`),
         _discFetchJSON(`${TMDB_BASE}/tv/popular?api_key=${TMDB_KEY}&language=en-US&page=${page}`),
       ]);
-      const movies = (movData.results || []).map(r => _discNormalize(r, 'movie'));
-      const shows = await Promise.all((tvData.results || []).map(r => _discNormalizeTv(r)));
+      const movies = _discExcludeFamilyCartoons(await Promise.all((movData.results || []).map(r => _discNormalizeChecked(r, 'movie'))));
+      const shows  = _discExcludeFamilyCartoons(await Promise.all((tvData.results || []).map(r => _discNormalizeTv(r))));
       return _discInterleave(movies, shows);
     }
   },
@@ -265,7 +292,8 @@ const DISCOVER_CATEGORIES = [
     title: 'Airing Today',
     async fetch(page) {
       const data = await _discFetchJSON(`${TMDB_BASE}/tv/airing_today?api_key=${TMDB_KEY}&language=en-US&page=${page}`);
-      return Promise.all((data.results || []).map(r => _discNormalizeTv(r)));
+      const items = await Promise.all((data.results || []).map(r => _discNormalizeTv(r)));
+      return _discExcludeFamilyCartoons(items);
     }
   },
   {
@@ -305,7 +333,8 @@ const DISCOVER_CATEGORIES = [
     // can outrank genuinely well-reviewed ones.
     async fetch(page) {
       const data = await _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
-      return (data.results || []).map(r => _discNormalize(r, 'movie'));
+      const items = await Promise.all((data.results || []).map(r => _discNormalizeChecked(r, 'movie')));
+      return _discExcludeFamilyCartoons(items);
     }
   },
   {
@@ -316,7 +345,7 @@ const DISCOVER_CATEGORIES = [
     async fetch(page) {
       const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
       const items = await Promise.all((data.results || []).map(r => _discNormalizeTv(r)));
-      return items.filter(r => !r.origin_country.includes('JP'));
+      return _discExcludeFamilyCartoons(items.filter(r => !r.origin_country.includes('JP')));
     }
   },
   {
@@ -351,7 +380,8 @@ const DISCOVER_CATEGORIES = [
     // rather than raw popularity.
     async fetch(page) {
       const data = await _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=50&vote_count.lte=300&page=${page}`);
-      return (data.results || []).map(r => _discNormalize(r, 'movie'));
+      const items = await Promise.all((data.results || []).map(r => _discNormalizeChecked(r, 'movie')));
+      return _discExcludeFamilyCartoons(items);
     }
   },
   {
@@ -360,7 +390,8 @@ const DISCOVER_CATEGORIES = [
     title: 'Niche Shows',
     async fetch(page) {
       const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=50&vote_count.lte=300&page=${page}`);
-      return Promise.all((data.results || []).map(r => _discNormalizeTv(r)));
+      const items = await Promise.all((data.results || []).map(r => _discNormalizeTv(r)));
+      return _discExcludeFamilyCartoons(items);
     }
   },
   {
@@ -369,7 +400,8 @@ const DISCOVER_CATEGORIES = [
     title: 'Upcoming Movies',
     async fetch(page) {
       const data = await _discFetchJSON(`${TMDB_BASE}/movie/upcoming?api_key=${TMDB_KEY}&language=en-US&region=US&page=${page}`);
-      return (data.results || []).map(r => _discNormalize(r, 'movie'));
+      const items = await Promise.all((data.results || []).map(r => _discNormalizeChecked(r, 'movie')));
+      return _discExcludeFamilyCartoons(items);
     }
   },
   {
@@ -380,7 +412,7 @@ const DISCOVER_CATEGORIES = [
       const today = _discTodayStr();
       const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=popularity.desc&first_air_date.gte=${today}&page=${page}`);
       const items = await Promise.all((data.results || []).map(r => _discNormalizeTv(r)));
-      return items.filter(r => !r.origin_country.includes('JP')); // exclude anime, has its own row
+      return _discExcludeFamilyCartoons(items.filter(r => !r.origin_country.includes('JP'))); // exclude anime, has its own row
     }
   },
   {
