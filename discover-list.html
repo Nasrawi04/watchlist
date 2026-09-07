@@ -126,8 +126,15 @@ let _dlDone = false;
 let _dlView = localStorage.getItem('disc_listView') || 'grid';
 const _dlIsRanked = _dlCategory.key.startsWith('top250');
 
+// Type badge is only shown on the Anime/Cartoons categories, where a
+// single list genuinely mixes movies and shows (a viewer can't tell
+// which just from the title/poster) — everywhere else the category
+// itself already says what you're browsing, so the badge is redundant.
+const _DL_TYPE_BADGE_CATEGORIES = new Set(['top250_anime', 'top250_cartoons', 'upcoming_anime', 'upcoming_cartoons']);
+
 function _dlTypeLabel(it) {
-  return _discTypeLabel(it);
+  if (!_DL_TYPE_BADGE_CATEGORIES.has(_dlCategory.key)) return null;
+  return it.media_type === 'movie' ? 'Movie' : 'TV Show';
 }
 
 function _dlRankCls(rank) {
@@ -147,7 +154,7 @@ function _dlCardHTML(it, rank) {
       ${posterInner}
       <div class="q-poster-overlay"></div>
       ${rankBadge}
-      <span class="dl-type-badge">${_dlTypeLabel(it)}</span>
+      ${_dlTypeLabel(it) ? `<span class="dl-type-badge">${_dlTypeLabel(it)}</span>` : ''}
     </div>
     <div class="q-info">
       <div class="q-title">${_dlEsc(it.title)}</div>
@@ -175,7 +182,7 @@ function _dlListRowHTML(it, rank) {
       <div class="dl-list-year">${it.year ? _dlEsc(it.year) : ''}</div>
     </div>
     <div class="dl-list-right">
-      <span class="dl-list-type">${_dlTypeLabel(it)}</span>
+      ${_dlTypeLabel(it) ? `<span class="dl-list-type">${_dlTypeLabel(it)}</span>` : ''}
       ${scoreStr ? `<span class="home-tmdb-score">★ ${scoreStr}</span>` : ''}
     </div>
   </div>`;
