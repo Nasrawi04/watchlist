@@ -34,8 +34,20 @@ function _discNormalize(r, mediaType) {
     year: ((isMovie ? r.release_date : r.first_air_date) || '').split('-')[0],
     score: typeof r.vote_average === 'number' && r.vote_average > 0 ? r.vote_average : null,
     origin_country: r.origin_country || [],
+    original_language: r.original_language || '',
     genre_ids: r.genre_ids || [],
   };
+}
+
+// "Is this anime" — origin_country alone isn't reliable for this.
+// It's a solidly-populated field for TV, but movies don't consistently
+// carry it the same way, so an anime MOVIE (Demon Slayer's film
+// entries, Ghibli films, etc.) can silently read as having no JP
+// origin at all and slip through as if it weren't anime. original_
+// language is always populated for both movies and TV, so checking
+// BOTH signals actually catches anime movies reliably.
+function _discIsAnimeOrigin(it) {
+  return (it.origin_country || []).includes('JP') || it.original_language === 'ja';
 }
 
 // Genre + origin alone can't tell "family cartoon" from "adult animated
@@ -80,7 +92,7 @@ async function _discIsMatureAnimation(id, mediaType) {
 async function _discNormalizeChecked(r, mediaType) {
   const item = _discNormalize(r, mediaType);
   const isAnimated = item.genre_ids.includes(_ANIMATION_GENRE);
-  const isAnime = item.origin_country.includes('JP');
+  const isAnime = _discIsAnimeOrigin(item);
   if (isAnimated && !isAnime) {
     item.is_mature_animation = await _discIsMatureAnimation(item.id, mediaType);
   }
@@ -101,7 +113,7 @@ function _discExcludeFamilyAnimation(items) {
   return items.filter(it => {
     const isAnimated = (it.genre_ids || []).includes(_ANIMATION_GENRE);
     if (!isAnimated) return true;
-    const isAnime = (it.origin_country || []).includes('JP');
+    const isAnime = _discIsAnimeOrigin(it);
     if (isAnime) return false;
     return it.is_mature_animation === true;
   });
@@ -336,7 +348,7 @@ const DISCOVER_CATEGORIES = [
     async fetch(page) {
       const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
       const items = await Promise.all((data.results || []).map(r => _discNormalizeTv(r)));
-      return _discExcludeFamilyAnimation(items.filter(r => !r.origin_country.includes('JP')));
+      return _discExcludeFamilyAnimation(items.filter(r => !_discIsAnimeOrigin(r)));
     }
   },
   {
@@ -346,7 +358,7 @@ const DISCOVER_CATEGORIES = [
     title: 'Top 250 Anime',
     async fetch(page) {
       const [movData, tvData] = await Promise.all([
-        _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&with_origin_country=JP&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`),
+        _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&with_original_language=ja&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`),
         _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&with_origin_country=JP&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`),
       ]);
       const movies = (movData.results || []).map(r => _discNormalize(r, 'movie'));
@@ -368,9 +380,9 @@ const DISCOVER_CATEGORIES = [
       // etc.) isn't a "cartoon" in the sense this category means —
       // it belongs in the general Movies/Shows lists instead.
       const movies = (await Promise.all((movData.results || []).map(r => _discNormalizeChecked(r, 'movie'))))
-        .filter(r => !r.origin_country.includes('JP') && !r.is_mature_animation);
+        .filter(r => !_discIsAnimeOrigin(r) && !r.is_mature_animation);
       const shows = (await Promise.all((tvData.results || []).map(r => _discNormalizeChecked(r, 'tv'))))
-        .filter(r => !r.origin_country.includes('JP') && !r.is_mature_animation);
+        .filter(r => !_discIsAnimeOrigin(r) && !r.is_mature_animation);
       return _discInterleave(movies, shows);
     }
   },
@@ -414,7 +426,7 @@ const DISCOVER_CATEGORIES = [
       const today = _discTodayStr();
       const data = await _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&sort_by=popularity.desc&first_air_date.gte=${today}&page=${page}`);
       const items = await Promise.all((data.results || []).map(r => _discNormalizeTv(r)));
-      return _discExcludeFamilyAnimation(items.filter(r => !r.origin_country.includes('JP'))); // exclude anime, has its own row
+      return _discExcludeFamilyAnimation(items.filter(r => !_discIsAnimeOrigin(r))); // exclude anime, has its own row
     }
   },
   {
@@ -424,7 +436,7 @@ const DISCOVER_CATEGORIES = [
     async fetch(page) {
       const today = _discTodayStr();
       const [movData, tvData] = await Promise.all([
-        _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&with_origin_country=JP&sort_by=popularity.desc&primary_release_date.gte=${today}&page=${page}`),
+        _discFetchJSON(`${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&with_original_language=ja&sort_by=popularity.desc&primary_release_date.gte=${today}&page=${page}`),
         _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&with_origin_country=JP&sort_by=popularity.desc&first_air_date.gte=${today}&page=${page}`),
       ]);
       const movies = (movData.results || []).map(r => _discNormalize(r, 'movie'));
@@ -443,9 +455,9 @@ const DISCOVER_CATEGORIES = [
         _discFetchJSON(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&language=en-US&with_genres=${_ANIMATION_GENRE}&sort_by=popularity.desc&first_air_date.gte=${today}&page=${page}`),
       ]);
       const movies = (await Promise.all((movData.results || []).map(r => _discNormalizeChecked(r, 'movie'))))
-        .filter(r => !r.origin_country.includes('JP') && !r.is_mature_animation);
+        .filter(r => !_discIsAnimeOrigin(r) && !r.is_mature_animation);
       const shows = (await Promise.all((tvData.results || []).map(r => _discNormalizeChecked(r, 'tv'))))
-        .filter(r => !r.origin_country.includes('JP') && !r.is_mature_animation);
+        .filter(r => !_discIsAnimeOrigin(r) && !r.is_mature_animation);
       return _discInterleave(movies, shows);
     }
   },
