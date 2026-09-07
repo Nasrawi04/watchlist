@@ -126,8 +126,8 @@ let _dlDone = false;
 let _dlView = localStorage.getItem('disc_listView') || 'grid';
 const _dlIsRanked = _dlCategory.key.startsWith('top250');
 
-function _dlTypeLabel(mediaType) {
-  return mediaType === 'movie' ? 'Movie' : 'TV';
+function _dlTypeLabel(it) {
+  return _discTypeLabel(it);
 }
 
 function _dlRankCls(rank) {
@@ -147,7 +147,7 @@ function _dlCardHTML(it, rank) {
       ${posterInner}
       <div class="q-poster-overlay"></div>
       ${rankBadge}
-      <span class="dl-type-badge">${_dlTypeLabel(it.media_type)}</span>
+      <span class="dl-type-badge">${_dlTypeLabel(it)}</span>
     </div>
     <div class="q-info">
       <div class="q-title">${_dlEsc(it.title)}</div>
@@ -175,7 +175,7 @@ function _dlListRowHTML(it, rank) {
       <div class="dl-list-year">${it.year ? _dlEsc(it.year) : ''}</div>
     </div>
     <div class="dl-list-right">
-      <span class="dl-list-type">${_dlTypeLabel(it.media_type)}</span>
+      <span class="dl-list-type">${_dlTypeLabel(it)}</span>
       ${scoreStr ? `<span class="home-tmdb-score">★ ${scoreStr}</span>` : ''}
     </div>
   </div>`;
