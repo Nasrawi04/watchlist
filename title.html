@@ -378,21 +378,21 @@ function renderTdError(msg) {
    these pull credits + videos on top of the base detail payload) ── */
 async function _tdFetchMovie(id) {
   try {
-    const res = await fetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,release_dates`);
+    const res = await tmdbFetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,release_dates`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
 }
 async function _tdFetchTV(id) {
   try {
-    const res = await fetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits,content_ratings`);
+    const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits,content_ratings`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
 }
 async function _tdFetchSeason(tvId, seasonNum) {
   try {
-    const res = await fetch(`${TMDB_BASE}/tv/${tvId}/season/${seasonNum}?api_key=${TMDB_KEY}&language=en-US`);
+    const res = await tmdbFetch(`${TMDB_BASE}/tv/${tvId}/season/${seasonNum}?api_key=${TMDB_KEY}&language=en-US`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
@@ -1095,7 +1095,7 @@ async function _replyReact(replyId, isLike) {
     _replyRenderList();
   } catch (err) {
     console.error('React to reply error:', err);
-    showToast('Failed to save your reaction.', 'err');
+    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
   }
 }
 
@@ -1115,7 +1115,7 @@ async function _replySubmit() {
     await _replyLoad();
   } catch (err) {
     console.error('Post reply error:', err);
-    showToast('Failed to post reply.', 'err');
+    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to post reply.', 'err');
   }
 }
 
@@ -1147,7 +1147,7 @@ async function _tdReactToNote(entryId, isLike) {
     _tdRenderNotes();
   } catch (err) {
     console.error('React to note error:', err);
-    showToast('Failed to save your reaction.', 'err');
+    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
   }
 }
 </script>
