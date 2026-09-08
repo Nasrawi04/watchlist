@@ -41,7 +41,7 @@ function _injectCatInfoPopup() {
         <div id="profInfoDetails"></div>
       </div>
       <div class="pvi-actions">
-        <button class="pvi-action-btn" id="catInfoEditBtn">${icon('list',14)} Edit</button>
+        <button class="pvi-action-btn" id="catInfoEditBtn">${icon('edit',14)} Edit</button>
         <button class="pvi-action-btn pvi-action-primary" id="catInfoDiscoverBtn">${icon('search',14)} Discover</button>
         <button class="pvi-action-btn" id="catInfoCardBtn" onclick="createShareCard(_catInfoId, 3, true)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Discover Card</button>
       </div>
