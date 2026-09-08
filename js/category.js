@@ -1102,7 +1102,7 @@ function _injectCommentsPopup() {
         "></div>
         <div style="flex:1;min-width:0;">
           <div id="commentsPopupTitle" style="font-family:var(--serif);font-size:18px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
-          <div id="commentsPopupMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px;"></div>
+          <div id="commentsPopupMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:6px;"></div>
           <div id="commentsPopupCount" style="font-size:12px;color:var(--olive-light);font-weight:500;"></div>
         </div>
         <button onclick="closeCommentsPopup()" style="
@@ -2045,7 +2045,7 @@ function _injectQPModal() {
         "></div>
         <div style="flex:1;min-width:0;">
           <div id="qpTitle" style="font-family:var(--serif);font-size:17px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
-          <div id="qpMeta" style="font-size:10px;color:var(--text-3);margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px;"></div>
+          <div id="qpMeta" style="font-size:10px;color:var(--text-3);margin-bottom:4px;display:flex;flex-wrap:wrap;gap:6px;"></div>
           <div style="font-size:11px;color:var(--olive-light);font-weight:500;">From your watchlist</div>
         </div>
         <button onclick="closeQueuePicker()" style="
