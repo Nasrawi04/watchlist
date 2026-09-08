@@ -1075,26 +1075,39 @@ async function _replyReact(replyId, isLike) {
   const current = _replyMyReactions[replyId];
   const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
 
+  // Optimistic: update + render immediately, roll back on failure.
+  const prevReaction = current;
+  const prevLike = r.like_count;
+  const prevDislike = r.dislike_count;
+
+  if (wantsSame) {
+    delete _replyMyReactions[replyId];
+    if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
+    else r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
+  } else {
+    if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
+    if (current === 'dislike') r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
+    if (isLike) r.like_count = Number(r.like_count) + 1;
+    else r.dislike_count = Number(r.dislike_count) + 1;
+    _replyMyReactions[replyId] = isLike ? 'like' : 'dislike';
+  }
+  _replyRenderList();
+
   try {
     if (wantsSame) {
       const { error } = await sb.from(cfg.reactionTable).delete().eq('reply_id', replyId).eq('user_id', user.id);
       if (error) throw error;
-      delete _replyMyReactions[replyId];
-      if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
-      else r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
     } else {
       const { error } = await sb.from(cfg.reactionTable)
         .upsert({ reply_id: replyId, user_id: user.id, is_like: isLike }, { onConflict: 'reply_id,user_id' });
       if (error) throw error;
-      if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
-      if (current === 'dislike') r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
-      if (isLike) r.like_count = Number(r.like_count) + 1;
-      else r.dislike_count = Number(r.dislike_count) + 1;
-      _replyMyReactions[replyId] = isLike ? 'like' : 'dislike';
     }
-    _replyRenderList();
   } catch (err) {
     console.error('React to reply error:', err);
+    if (prevReaction) _replyMyReactions[replyId] = prevReaction; else delete _replyMyReactions[replyId];
+    r.like_count = prevLike;
+    r.dislike_count = prevDislike;
+    _replyRenderList();
     showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
   }
 }
@@ -1126,27 +1139,39 @@ async function _tdReactToNote(entryId, isLike) {
   const current = _tdNotesReactions[entryId]; // 'like' | 'dislike' | undefined
   const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
 
+  const prevReaction = current;
+  const prevLike = note.like_count;
+  const prevDislike = note.dislike_count;
+
+  if (wantsSame) {
+    // Clicking the same reaction again removes it
+    delete _tdNotesReactions[entryId];
+    if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
+    else note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
+  } else {
+    if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
+    if (current === 'dislike') note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
+    if (isLike) note.like_count = Number(note.like_count) + 1;
+    else note.dislike_count = Number(note.dislike_count) + 1;
+    _tdNotesReactions[entryId] = isLike ? 'like' : 'dislike';
+  }
+  _tdRenderNotes();
+
   try {
     if (wantsSame) {
-      // Clicking the same reaction again removes it
       const { error } = await sb.from('note_reactions').delete().eq('entry_id', entryId).eq('user_id', _tdUser.id);
       if (error) throw error;
-      delete _tdNotesReactions[entryId];
-      if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
-      else note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
     } else {
       const { error } = await sb.from('note_reactions')
         .upsert({ entry_id: entryId, user_id: _tdUser.id, is_like: isLike }, { onConflict: 'entry_id,user_id' });
       if (error) throw error;
-      if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
-      if (current === 'dislike') note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
-      if (isLike) note.like_count = Number(note.like_count) + 1;
-      else note.dislike_count = Number(note.dislike_count) + 1;
-      _tdNotesReactions[entryId] = isLike ? 'like' : 'dislike';
     }
-    _tdRenderNotes();
   } catch (err) {
     console.error('React to note error:', err);
+    if (prevReaction) _tdNotesReactions[entryId] = prevReaction; else delete _tdNotesReactions[entryId];
+    note.like_count = prevLike;
+    note.dislike_count = prevDislike;
+    _tdRenderNotes();
     showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
   }
 }
