@@ -819,6 +819,16 @@ let _detUser   = null;
 let _detId     = sessionStorage.getItem('detailId') || null;
 let _originalStatus = null; // track status at load time to detect new completions
 
+// Reads an integer from an input and clamps it into [min, max] — guards
+// against negative episode/season numbers, an out-of-range runtime
+// minute value, etc. reaching the save payload unvalidated. Returns
+// `fallback` (default null) if the field is empty or not a number.
+function _clampInt(value, min, max, fallback = null) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
 function _parseCompletedDate() {
   const day   = document.getElementById('dDay')?.value?.trim();
   const month = document.getElementById('dMonth')?.value;
@@ -1462,7 +1472,7 @@ function detReply(commentId, username) {
   const box = document.getElementById('det-reply-form-' + commentId);
   if (!box) return;
   box.innerHTML = `<div class="det-reply-form">
-    <input class="det-reply-input" id="det-ri-${commentId}" value="@${username} " placeholder="Reply to @${username}…"
+    <input class="det-reply-input" id="det-ri-${commentId}" maxlength="1000" value="@${username} " placeholder="Reply to @${username}…"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();detPostReply('${commentId}')}">
     <button class="det-reply-send" onclick="detPostReply('${commentId}')">Send</button>
     <button class="det-comment-del" onclick="(function(){const el=document.getElementById('det-reply-form-${commentId}');if(el)el.innerHTML='';_detReplyFor=null;})()" style="margin-left:4px;">✕</button>
@@ -1577,7 +1587,7 @@ async function doSave() {
   // Store season breakdown and completion year
   const validBreakdown = _seasonBreakdown.filter(n => parseInt(n) > 0).map(Number);
   ratingsWithType._season_breakdown = validBreakdown;
-  ratingsWithType._completion_year  = parseInt(document.getElementById('dCompletionYear').value) || null;
+  ratingsWithType._completion_year  = (() => { const n = _clampInt(document.getElementById('dCompletionYear').value, 1900, 2100); return n != null ? String(n) : null; })();
   // Rewatch count
   const _rewatchInput = document.getElementById('dRewatchCount');
   if (_rewatchInput && document.getElementById('dRewatchSection')?.style.display !== 'none') {
@@ -1598,17 +1608,17 @@ async function doSave() {
     title,
     cat,
     status,
-    year:          document.getElementById('dYear').value || null,
+    year:          (() => { const n = _clampInt(document.getElementById('dYear').value, 1900, 2100); return n != null ? String(n) : null; })(),
     description:   document.getElementById('dDesc').value,
     genres,
     poster_url:    (_posterUrl && !_posterUrl.startsWith('data:')) ? _posterUrl : null,
-    season:        isMovie ? null : (parseInt(document.getElementById('dSeason').value)   || null),
-    episode:       isMovie ? null : (parseInt(document.getElementById('dEpisode').value)  || null),
+    season:        isMovie ? null : _clampInt(document.getElementById('dSeason').value, 1, 999),
+    episode:       isMovie ? null : _clampInt(document.getElementById('dEpisode').value, 0, 9999),
     total_seasons: isMovie ? null : calcTotalSeasons,
-    watched:       isMovie ? 0    : (parseInt(document.getElementById('dWatched').value)  || 0),
+    watched:       isMovie ? 0    : _clampInt(document.getElementById('dWatched').value, 0, 99999, 0),
     total_eps:     isMovie ? null : calcTotalEps,
-    runtime_h:     isMovie ? (parseInt(document.getElementById('dRuntimeH')?.value) || null) : null,
-    runtime_m:     isMovie ? (parseInt(document.getElementById('dRuntimeM')?.value) || null) : null,
+    runtime_h:     isMovie ? _clampInt(document.getElementById('dRuntimeH')?.value, 0, 99) : null,
+    runtime_m:     isMovie ? _clampInt(document.getElementById('dRuntimeM')?.value, 0, 59) : null,
     notes:         document.getElementById('dNotes').value,
     completed_date: _parseCompletedDate(),
     ratings:       ratingsWithType,
