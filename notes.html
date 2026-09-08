@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!user) {
       document.querySelector('.page-wrap').innerHTML = `
         <div class="guest-page-state fade-up">
-          <div class="guest-page-icon">${icon('list', 36)}</div>
+          <div class="guest-page-icon">${icon('notebook', 36)}</div>
           <h2 class="guest-page-title">Your Notes</h2>
           <p class="guest-page-sub">Sign in to write personal notes on anything in your library.</p>
           <div class="guest-cta">
@@ -505,7 +505,7 @@ function renderNotesPage() {
   if (!withNotes.length) {
     document.getElementById('notesPageContent').innerHTML = `
       <div class="empty" style="padding:4rem 1rem;text-align:center;">
-        <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('list', 44)}</div>
+        <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('notebook', 44)}</div>
         <div class="empty-text" style="color:var(--text-2);margin-bottom:.5rem;">No notes yet</div>
         <div style="font-size:13px;color:var(--text-3);">Search for a title above to write your first note.</div>
       </div>`;
@@ -925,7 +925,7 @@ function renderSocialNotes() {
   const wrap = document.getElementById('notesPageContent');
   if (!_socialNotesRaw.length) {
     wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
-      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('list', 44)}</div>
+      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('notebook', 44)}</div>
       <div class="empty-text" style="color:var(--text-2);">No public notes yet.</div>
     </div>`;
     return;
@@ -1048,7 +1048,7 @@ function _renderSocialNotePopup(n) {
       </div>
 
       <button class="snote-rect-btn" style="width:100%;margin-top:10px;" onclick='openReplyPopup("note", ${JSON.stringify(n.entry_id)}, ${JSON.stringify(n.title)})'>
-        ${icon('list', 15)} View Replies
+        ${icon('reply', 15)} View Replies
       </button>
     </div>
   `;
