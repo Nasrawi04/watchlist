@@ -676,7 +676,7 @@ function cpReply(commentId, username, entryId) {
   const box = document.getElementById('cp-reply-form-' + commentId);
   if (!box) return;
   box.innerHTML = `<div class="det-reply-form">
-    <input class="det-reply-input" id="cp-ri-${commentId}" value="@${username} " placeholder="Reply…"
+    <input class="det-reply-input" id="cp-ri-${commentId}" maxlength="1000" value="@${username} " placeholder="Reply…"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cpPostReply('${commentId}','${entryId}')}">
     <button class="det-reply-send" onclick="cpPostReply('${commentId}','${entryId}')">Send</button>
     <button class="det-comment-del" onclick="document.getElementById('cp-reply-form-${commentId}').innerHTML='';_cpReplyFor=null" style="margin-left:4px;">✕</button>
