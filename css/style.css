@@ -9,6 +9,7 @@
   --bg-2:         #111117;
   --bg-3:         #19191F;
   --card:         rgba(255,255,255,0.058);
+  --card-solid:   #18181D; /* opaque equivalent of --card's visual appearance — --card itself is translucent in dark mode, which is fine for a static background but leaves scrolled content visible through anything sticky/opaque-required, like the sort bar */
   --card-2:       rgba(255,255,255,0.09);
   --card-3:       rgba(255,255,255,0.13);
 
@@ -26,6 +27,7 @@
   --tv-faint:     rgba(74,110,145,0.14);
   --tv-border:    rgba(122,163,201,0.5);
   --tv-solid:     #3D6D96; /* darker, solid-fill-safe variant — ~5.8:1 contrast with white text */
+  --movie-solid:  #9C7A1F; /* third accent for Movie type tags — distinct from both genre olive and TV blue, ~5.15:1 with white text */
 
   --border:       rgba(255,255,255,0.1);
   --border-2:     rgba(255,255,255,0.17);
@@ -542,8 +544,17 @@ nav {
   display:flex; gap:6px; flex-wrap:wrap;
   padding:12px 20px 16px; border-bottom:1px solid var(--border); margin-bottom:18px;
   position:sticky; top:0; z-index:5;
-  background:var(--card); /* was var(--bg) — the accordion/card it sits inside (.section-block) uses var(--card), so the hardcoded var(--bg) created a visibly mismatched patch right where the filters are */
+  background:var(--card-solid); /* was var(--card) — that's translucent in dark mode (fine for a static background, but a sticky bar needs to be fully opaque or scrolled content shows through it) */
   margin-left:-20px; margin-right:-20px;
+}
+/* Caps a hairline sub-pixel rendering seam that can appear above a
+   sticky element when it's exactly abutting the page's sticky header
+   above it — extends the same solid background slightly upward so
+   there's never a fractional-pixel gap for scrolled content to peek
+   through, regardless of the exact rounding cause. */
+.sort-bar::before {
+  content:''; position:absolute; left:0; right:0; top:-10px; height:10px;
+  background:var(--card-solid);
 }
 .sort-btn { background:transparent; border:1px solid var(--border); border-radius:var(--radius-xs); padding:5px 12px; font-size:11px; font-weight:500; color:var(--text-3); cursor:pointer; transition:all var(--trans) var(--ease); white-space:nowrap; letter-spacing:.3px; }
 .sort-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
@@ -685,7 +696,7 @@ nav {
    SECTION MODULE
 ════════════════════════════════════════════ */
 .section-block {
-  background:var(--card); border:0.5px solid var(--border);
+  background:var(--card-solid); border:0.5px solid var(--border);
   border-radius:var(--radius-lg); overflow:clip;
   margin-bottom:20px; box-shadow:var(--shadow);
   transition:box-shadow var(--trans) var(--ease);
@@ -1381,9 +1392,17 @@ nav {
   font-size:clamp(8.5px, 2vw, 10.5px);
   padding:clamp(2px, 0.5vw, 3px) clamp(6px, 1.6vw, 9px);
   border-radius:3px;
-  background:var(--olive); border:0.5px solid var(--olive);
   color:#fff; letter-spacing:0.3px;
   white-space:nowrap; flex-shrink:0; display:inline-block;
+}
+.genre-dot, .w-ep-badge, .cat-badge {
+  background:var(--olive); border:0.5px solid var(--olive);
+}
+/* Movie variant of the type tag — its own color, distinct from genre
+   tags (olive) and the TV variant (blue) below, so all three read
+   apart from each other at a glance. */
+.type-label {
+  background:var(--movie-solid); border:0.5px solid var(--movie-solid);
 }
 /* TV-show variant of the type tag — same shape/weight/scaling, just
    the second accent color (a darker, solid-fill-safe blue — the
@@ -2140,6 +2159,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   --bg-2:         #D8D0C5;
   --bg-3:         #CEC5B8;
   --card:         #F3EDE4;
+  --card-solid:   #F3EDE4; /* already opaque in light mode, so this is just an alias */
   --card-2:       #E8E1D7;
   --card-3:       #DDD5CA;
   --olive:        #1A4520;
@@ -2153,6 +2173,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   --tv-faint:     rgba(43,90,133,0.1);
   --tv-border:    rgba(43,90,133,0.45);
   --tv-solid:     #1F4A6B; /* darker, solid-fill-safe variant — ~10:1 contrast with white text */
+  --movie-solid:  #5C4813; /* third accent for Movie type tags — ~9.25:1 with white text */
   --border:       rgba(0,0,0,0.12);
   --border-2:     rgba(0,0,0,0.2);
   --text:         #1A1A1A;
@@ -2940,7 +2961,7 @@ body { font-size:15px; }
   .qp-trigger { padding:6px 8px; }
 
   /* ── Sort bar ── */
-  .sort-bar { gap:3px; padding:8px 14px 10px; margin-bottom:12px; margin-left:-14px; margin-right:-14px; background:var(--card); }
+  .sort-bar { gap:3px; padding:8px 14px 10px; margin-bottom:12px; margin-left:-14px; margin-right:-14px; background:var(--card-solid); }
   .sort-btn  { font-size:10px; padding:4px 8px; border-radius:14px; }
   .sort-btn[data-short]::before { content: attr(data-short); }
   .sort-btn[data-short] { font-size:0; padding:5px 9px; }
