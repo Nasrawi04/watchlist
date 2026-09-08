@@ -499,7 +499,7 @@
   .note-row { padding:12px 14px; gap:12px; border-radius:var(--radius); }
   .note-poster { width:64px; height:90px; font-size:20px; }
   .note-title { font-size:15px; }
-  .note-tags { gap:3px; margin-bottom:3px; }
+  .note-tags { gap:4px; margin-bottom:3px; }
   .note-text { font-size:11px; margin-top:4px; }
   .note-score { font-size:20px; }
   .note-date { font-size:10px; }
@@ -1748,7 +1748,8 @@ function renderPvLibrary() {
       var cls=i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other';
       var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
       var catLabel=(CAT_META[e.cat]&&CAT_META[e.cat].label)||'';
-      var typeBadge=catLabel?'<span class="type-label">'+catLabel+'</span>':'';
+      var catBadge=catLabel?'<span class="cat-badge">'+catLabel+'</span>':'';
+      var typeBadge=getTypeBadge(e,'friend');
       var dateSpan=date?'<span class="genre-dot" style="color:var(--text-3)">'+date+'</span>':'';
       var isMovie=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var metaHtml='';
@@ -1767,7 +1768,7 @@ function renderPvLibrary() {
         +'<div class="wg-poster" onclick="pvOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+'<div class="wg-overlay">'+(metaHtml?'<span class="wg-ep">'+metaHtml+'</span>':'')+'</div>'+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+' </div>'
         +'<div class="cg-grid-info" onclick="pvOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="wg-title">'+esc(e.title)+'</div>'
-        +'<div class="wg-genre">'+typeBadge+genreHTML(e.genres||[], 3)+'</div>'
+        +'<div class="wg-genre">'+catBadge+typeBadge+genreHTML(e.genres||[], 3)+'</div>'
         +'<div class="cg-score-row"><span class="cg-score">'+(sc||'—')+'</span><span class="cg-score-lbl">score</span></div>'
         +'</div>'
         +'<div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">'
