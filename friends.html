@@ -539,12 +539,17 @@ function setFriendsSort(order) {
 async function togglePinFriend(friendId) {
   const wasPinned = _fProfile && _fProfile.pinned_friend_id === friendId;
   const newPinnedId = wasPinned ? null : friendId;
+
+  const prevPinnedId = _fProfile ? _fProfile.pinned_friend_id : null;
+  if (_fProfile) _fProfile.pinned_friend_id = newPinnedId;
+  renderAcceptedFriends();
+
   try {
     await setPinnedFriend(_fUser.id, newPinnedId);
-    _fProfile.pinned_friend_id = newPinnedId;
-    renderAcceptedFriends();
     showToast(wasPinned ? 'Unpinned.' : 'Friend pinned!');
   } catch (e) {
+    if (_fProfile) _fProfile.pinned_friend_id = prevPinnedId;
+    renderAcceptedFriends();
     showToast('Error updating pin.', 'err');
   }
 }
@@ -569,19 +574,29 @@ async function doSendRequest() {
 }
 
 async function doAccept(friendshipId) {
+  const el = document.getElementById('pc-' + friendshipId);
+  if (el) el.style.opacity = '0.4';
   try {
     await respondFriendRequest(friendshipId, true);
     showToast('Friend added!');
     await loadFriends();
-  } catch(e) { showToast('Error.', 'err'); }
+  } catch(e) {
+    if (el) el.style.opacity = '';
+    showToast('Error.', 'err');
+  }
 }
 
 async function doDecline(friendshipId) {
+  const el = document.getElementById('pc-' + friendshipId);
+  // Optimistic: remove immediately, restore it if the request fails.
+  if (el) el.remove();
   try {
     await respondFriendRequest(friendshipId, false);
-    document.getElementById('pc-' + friendshipId)?.remove();
     await loadFriends();
-  } catch(e) { showToast('Error.', 'err'); }
+  } catch(e) {
+    showToast('Error.', 'err');
+    await loadFriends(); // reconcile back to truth since we already removed the card
+  }
 }
 
 async function doUnfriend(friendshipId, username) {
@@ -592,18 +607,28 @@ async function doUnfriend(friendshipId, username) {
     iconName: 'users'
   });
   if (!ok) return;
+  const el = document.getElementById('fc-' + friendshipId);
+  if (el) el.remove();
   try {
     await removeFriendship(friendshipId);
     showToast('Removed.');
     await loadFriends();
-  } catch(e) { showToast('Error.', 'err'); }
+  } catch(e) {
+    showToast('Error.', 'err');
+    await loadFriends();
+  }
 }
 
 async function doCancelRequest(friendshipId) {
+  const el = document.getElementById('pc-' + friendshipId);
+  if (el) el.remove();
   try {
     await removeFriendship(friendshipId);
     await loadFriends();
-  } catch(e) { showToast('Error.', 'err'); }
+  } catch(e) {
+    showToast('Error.', 'err');
+    await loadFriends();
+  }
 }
 
 
