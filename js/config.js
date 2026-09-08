@@ -22,6 +22,23 @@ try {
   console.error('Supabase failed to init — check SUPABASE_URL and SUPABASE_ANON_KEY in js/config.js');
 }
 
+/* ── Rate-limit error handling — shared across every page, including
+   pre-auth ones like login.html that don't load nav.js. tmdbFetch()
+   itself (the actual request queue) lives in nav.js since only pages
+   doing TMDB work need it, but the error class + detection helper
+   need to be available anywhere a rate-limited Supabase call could
+   happen, login included. ── */
+class TmdbRateLimitError extends Error {
+  constructor(message) { super(message); this.name = 'TmdbRateLimitError'; }
+}
+function isRateLimitError(err) {
+  if (!err) return false;
+  if (err instanceof TmdbRateLimitError) return true;
+  const msg = String(err.message || err.details || '');
+  return msg.includes('rate_limit_exceeded') || err.code === 'P0001';
+}
+const RATE_LIMIT_MESSAGE = "You're doing that a bit too fast — give it a moment and try again.";
+
 /* ── Inline SVG icon system (Lucide outline, 1.75 stroke) ── */
 const ICONS = {
   home:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
