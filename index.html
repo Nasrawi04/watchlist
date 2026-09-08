@@ -617,16 +617,22 @@ async function hcSubmit() {
 }
 
 async function hcDelete(commentId) {
+  const el = document.getElementById('hcm-' + commentId);
+  // Optimistic: hide immediately rather than waiting for the delete to
+  // confirm — restore visibility if the request fails.
+  if (el) el.style.display = 'none';
   try {
     await deleteComment(commentId);
-    const el = document.getElementById('hcm-' + commentId);
     if (el) el.remove();
     const list = document.getElementById('hcList');
     const countEl = document.getElementById('hcCount');
     const remaining = list.querySelectorAll('.hc-comment').length;
     if (!remaining) { list.innerHTML = '<div class="hc-empty">No comments yet.</div>'; countEl.style.display='none'; }
     else countEl.textContent = remaining;
-  } catch(err) { if(typeof showToast !== 'undefined') showToast('Failed to delete.'); }
+  } catch(err) {
+    if (el) el.style.display = '';
+    if(typeof showToast !== 'undefined') showToast('Failed to delete.');
+  }
 }
 </script>
 </body>
