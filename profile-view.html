@@ -2073,7 +2073,7 @@ async function pvSendRequest() {
     const friendships = await getFriendships(_pvMe.id);
     _pvFriendship = friendships.find(f => f.friendId === _pvUserId) || null;
     document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
-  } catch(e) { showToast(e.message || 'Error sending request', 'err'); }
+  } catch(e) { showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : (e.message || 'Error sending request'), 'err'); }
 }
 
 async function pvCancelRequest() {
