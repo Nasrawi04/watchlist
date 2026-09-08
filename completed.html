@@ -695,7 +695,7 @@ async function cpPostReply(commentId, entryId) {
     _cpReplyFor = null;
     await loadCommentsPopupCommentsCompleted(entryId);
   } catch(e) {
-    showToast('Could not post reply.', 'err');
+    showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Could not post reply.', 'err');
     if (input) input.disabled = false;
   }
 }
