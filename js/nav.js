@@ -782,7 +782,7 @@ async function ensureReleaseDatesFetched(entries) {
   if (!toFetch.length) return;
   await Promise.all(toFetch.map(async id => {
     try {
-      const res = await fetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US`);
+      const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US`);
       if (!res.ok) { window._releaseDateCache[id] = null; return; }
       const d = await res.json();
       // last_air_date is the most recently aired episode's date — this
@@ -858,7 +858,7 @@ async function _tmdbSearch(query, limit = 6, includePersons = false) {
   try {
     const url = `${TMDB_BASE}/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&language=en-US&include_adult=false&page=1`;
     console.log('[TMDB] searching:', query);
-    const res = await fetch(url);
+    const res = await tmdbFetch(url);
     if (!res.ok) { console.error('[TMDB] HTTP error:', res.status, res.statusText); return []; }
     const json = await res.json();
     console.log('[TMDB] results:', json.results?.length || 0);
@@ -870,7 +870,7 @@ async function _tmdbSearch(query, limit = 6, includePersons = false) {
 /* ── Fetch TV detail (seasons/episodes) ── */
 async function _tmdbTV(id) {
   try {
-    const res = await fetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US`);
+    const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US`);
     const data = await res.json();
 
     // Fetch per-season episode counts (skip specials = season 0)
@@ -884,7 +884,7 @@ async function _tmdbTV(id) {
 /* ── Fetch Movie detail (runtime) ── */
 async function _tmdbMovie(id) {
   try {
-    const res = await fetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US`);
+    const res = await tmdbFetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US`);
     return await res.json();
   } catch { return null; }
 }
@@ -1090,6 +1090,63 @@ function attachClearButton(input) {
   const sync = () => btn.classList.toggle('visible', input.value.length > 0);
   input.addEventListener('input', sync);
   sync();
+}
+
+/* ── TMDB request throttling + rate-limit handling ──
+   The TMDB API key is embedded client-side, so EVERY visitor shares
+   the same quota with TMDB (historically ~40 requests per 10 seconds
+   per key). A busy moment — several people browsing Discover at once,
+   each triggering a dozen+ parallel fetches for content ratings,
+   credits, person pages, etc. — can trip that limit for everyone at
+   once. This throttles our own outgoing requests to a safe rate,
+   queuing anything over that, and retries with backoff on an actual
+   429 rather than failing silently or showing a broken empty page.
+   Use this instead of a bare fetch() for any TMDB call. */
+const _tmdbQueue = [];
+let _tmdbActive = 0;
+const TMDB_MAX_CONCURRENT = 4;
+const TMDB_MIN_GAP_MS = 60;
+let _tmdbLastStart = 0;
+
+function _tmdbProcessQueue() {
+  if (_tmdbActive >= TMDB_MAX_CONCURRENT || !_tmdbQueue.length) return;
+  const wait = Math.max(0, _tmdbLastStart + TMDB_MIN_GAP_MS - Date.now());
+  setTimeout(() => {
+    if (_tmdbActive >= TMDB_MAX_CONCURRENT || !_tmdbQueue.length) return;
+    const job = _tmdbQueue.shift();
+    _tmdbActive++;
+    _tmdbLastStart = Date.now();
+    job();
+  }, wait);
+}
+
+async function tmdbFetch(url, opts = {}, _attempt = 0) {
+  return new Promise((resolve, reject) => {
+    _tmdbQueue.push(async () => {
+      const done = () => { _tmdbActive--; _tmdbProcessQueue(); };
+      try {
+        const res = await fetch(url, opts);
+        if (res.status === 429) {
+          done();
+          if (_attempt < 3) {
+            const retryAfter = Number(res.headers.get('Retry-After')) || (1 + _attempt);
+            await new Promise(r => setTimeout(r, retryAfter * 1000));
+            try { resolve(await tmdbFetch(url, opts, _attempt + 1)); }
+            catch (e) { reject(e); }
+          } else {
+            reject(new TmdbRateLimitError('TMDB is rate-limiting this app right now — please try again shortly.'));
+          }
+          return;
+        }
+        done();
+        resolve(res);
+      } catch (err) {
+        done();
+        reject(err);
+      }
+    });
+    _tmdbProcessQueue();
+  });
 }
 
 function initDiscoverSearch(inputId, opts = {}) {
