@@ -1058,7 +1058,7 @@ function renderMain() {
           <div class="rank-poster">${posterHTML(e)}</div>
           <div class="rank-info">
             <div class="rank-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}${_entryMeta(e) ? `<span class="w-ep-badge">${_entryMeta(e)}</span>` : ''}</div>
-            <div class="rank-meta"><span class="cat-badge">${cat?.label}</span>${getTypeBadge(e,'completed')}${e.genres?.length ? e.genres.slice(0,3).map(g=>`<span style="color:var(--text-3)">· ${g}</span>`).join('') : ''}</div>
+            <div class="rank-meta"><span class="cat-badge">${cat?.label}</span>${getTypeBadge(e,'completed')}${genreHTML(e.genres, 3)}</div>
             ${renderFavChips(e.ratings, e.cat)}
           </div>
           <div class="rank-score-wrap"><div class="rank-score">${score}</div><div class="rank-score-label">score</div></div>
@@ -1080,7 +1080,7 @@ function renderMain() {
         <div class="recent-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : ''}</div>
         <div class="recent-info">
           <div class="recent-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}${_entryMeta(e) ? `<span class="w-ep-badge">${_entryMeta(e)}</span>` : ''}</div>
-          <div class="recent-meta"><span class="cat-badge">${cat?.label}</span>${getTypeBadge(e,'completed')}${e.genres?.length ? e.genres.slice(0,3).map(g=>`<span style="color:var(--text-3)">· ${g}</span>`).join('') : ''}</div>
+          <div class="recent-meta"><span class="cat-badge">${cat?.label}</span>${getTypeBadge(e,'completed')}${genreHTML(e.genres, 3)}</div>
           ${renderFavChips(e.ratings, e.cat)}
         </div>
         <div class="recent-date-wrap"><div class="recent-score">${score}</div></div>
