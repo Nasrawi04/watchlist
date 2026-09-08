@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadPerson() {
   try {
-    const res = await fetch(`${TMDB_BASE}/person/${_ppId}?api_key=${TMDB_KEY}&language=en-US&append_to_response=combined_credits`);
+    const res = await tmdbFetch(`${TMDB_BASE}/person/${_ppId}?api_key=${TMDB_KEY}&language=en-US&append_to_response=combined_credits`);
     if (!res.ok) { renderPpError('Could not load this person — they may not exist on TMDB.'); return; }
     const p = await res.json();
     renderPerson(p);
