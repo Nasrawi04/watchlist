@@ -452,20 +452,22 @@ async function doSignIn(e) {
   // If username mode, look up email from username
   if (mode === 'username') {
     try {
-      const { data, error } = await sb.from('profiles').select('email, id').ilike('username', identifier).single();
-      if (error || !data) {
+      const { data: lookedUpEmail, error } = await sb.rpc('get_email_for_login', { p_username: identifier });
+      if (error) {
+        if (isRateLimitError(error)) {
+          showErr('siError', RATE_LIMIT_MESSAGE);
+        } else {
+          showErr('siError', 'Username not found.');
+        }
+        btn.disabled = false; btn.textContent = "Let's go →";
+        return;
+      }
+      if (!lookedUpEmail) {
         showErr('siError', 'Username not found.');
         btn.disabled = false; btn.textContent = "Let's go →";
         return;
       }
-      // If email is not in profiles, try to get it from auth user data
-      if (!data.email && data.id) {
-        // Fallback: use username as hint but still need email
-        showErr('siError', 'Account incomplete. Please reset password or contact support.');
-        btn.disabled = false; btn.textContent = "Let's go →";
-        return;
-      }
-      email = data.email;
+      email = lookedUpEmail;
     } catch(err) {
       showErr('siError', 'Error looking up username.');
       btn.disabled = false; btn.textContent = "Let's go →";
