@@ -203,7 +203,7 @@ async function _hydrateTmdbItems(items) {
   await Promise.all(toFetch.map(async pseudoId => {
     const [, type, tmdbId] = pseudoId.split(':');
     try {
-      const res = await fetch(`${TMDB_BASE}/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=en-US`);
+      const res = await tmdbFetch(`${TMDB_BASE}/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=en-US`);
       if (!res.ok) return;
       const d = await res.json();
       const title = type === 'movie' ? d.title : d.name;
