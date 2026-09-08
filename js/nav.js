@@ -132,7 +132,7 @@ function injectChrome() {
         ${navLibraryDropdown(page)}
         ${navLink('favorites.html',  page, 'heart',    'Favorites')}
         ${navLink('lists.html',      page, 'layers',   'Lists')}
-        ${navLink('notes.html',      page, 'list',     'Notes')}
+        ${navLink('notes.html',      page, 'notebook',     'Notes')}
         ${navLink('friends.html',   page, 'users',    'Friends')}
         ${navLink('profile.html',   page, 'user',     'Profile')}
       </div>
@@ -167,7 +167,7 @@ function injectChrome() {
     ${mobileLibraryGroup(page)}
     ${mobileNavLink('favorites.html', page, 'heart',    'Favorites')}
     ${mobileNavLink('lists.html',     page, 'layers',   'Lists')}
-    ${mobileNavLink('notes.html',     page, 'list',     'Notes')}
+    ${mobileNavLink('notes.html',     page, 'notebook',     'Notes')}
     ${mobileNavLink('friends.html',   page, 'users',    'Friends')}
     ${mobileNavLink('profile.html',   page, 'user',     'Profile')}
     ${mobileNavLink('settings.html',  page, 'settings', 'Settings')}
@@ -184,8 +184,8 @@ function injectChrome() {
     ${bnItem('index.html',    page, 'home',     'Home')}
     ${bnItem('tv-shows.html', page, 'tv',       'TV')}
     ${bnItem('movies.html',   page, 'film',     'Movies')}
-    ${bnItem('anime.html',    page, 'sparkles', 'Anime')}
-    ${bnItem('cartoons.html', page, 'brush',    'Cartoons')}`;
+    ${bnItem('anime.html',    page, 'animeFace', 'Anime')}
+    ${bnItem('cartoons.html', page, 'crown',    'Cartoons')}`;
 
   /* ── FAB ── */
   const fabEl = document.createElement('button');
@@ -318,8 +318,8 @@ const LIBRARY_PAGES = [
   { href: 'library.html', iconName: 'list',     label: 'Library'  },
   { href: 'tv-shows.html', iconName: 'tv',       label: 'TV Shows' },
   { href: 'movies.html',   iconName: 'film',     label: 'Movies'   },
-  { href: 'anime.html',    iconName: 'sparkles', label: 'Anime'    },
-  { href: 'cartoons.html', iconName: 'brush',    label: 'Cartoons' },
+  { href: 'anime.html',    iconName: 'animeFace', label: 'Anime'    },
+  { href: 'cartoons.html', iconName: 'crown',    label: 'Cartoons' },
   { href: 'completed.html',iconName: 'check',    label: 'Watched'},
 ];
 function _isLibraryPage(page) {
