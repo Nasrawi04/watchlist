@@ -1643,7 +1643,8 @@ function renderLibrary(){
       var cls=i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other';
       var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
       var catLabel=(CAT_META[e.cat]&&CAT_META[e.cat].label)||'';
-      var catBadge=catLabel?'<span class="cat-badge">'+catLabel+'</span>':'';
+      var _isAnimeOrCartoon = e.cat==='anime'||e.cat==='cartoons';
+      var catBadge=(catLabel&&_isAnimeOrCartoon)?'<span class="cat-badge">'+catLabel+'</span>':'';
       var typeBadge=getTypeBadge(e,'friend');
       var dateSpan=date?'<span class="genre-dot" style="color:var(--text-3)">'+date+'</span>':'';
       var isMovie=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
@@ -1680,7 +1681,7 @@ function renderLibrary(){
         +(isRanked?'<div class="fv-rank-num '+(i<3?'top3':'')+'">'+(i+1)+'</div>':'')
         +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):'')+'</div>'
         +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
-        +'<div class="fv-rank-meta">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)?'<span class="cat-badge">'+CAT_META[e.cat].label+'</span>':'')+genreHTML(e.genres, 3)+'</div>'
+        +'<div class="fv-rank-meta">'+((CAT_META[e.cat]&&CAT_META[e.cat].label&&(e.cat==='anime'||e.cat==='cartoons'))?'<span class="cat-badge">'+CAT_META[e.cat].label+'</span>':'')+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
         +renderFavChips(e.ratings,e.cat)
         +'</div><div class="fv-rank-score">'+sc+'</div></div>'
