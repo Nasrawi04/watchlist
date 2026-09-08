@@ -1812,7 +1812,7 @@ function renderLibrary(){
         +(isRanked?'<div class="fv-rank-num '+(i<3?'top3':'')+'">'+(i+1)+'</div>':'')
         +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):'')+'</div>'
         +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
-        +'<div class="fv-rank-meta">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)||'')+(e.genres&&e.genres.length?' · '+e.genres.slice(0,3).join(' · '):'')+'</div>'
+        +'<div class="fv-rank-meta">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)?'<span class="cat-badge">'+CAT_META[e.cat].label+'</span>':'')+genreHTML(e.genres, 3)+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
         +renderFavChips(e.ratings,e.cat)
         +'</div><div class="fv-rank-score">'+sc+'</div></div>'
