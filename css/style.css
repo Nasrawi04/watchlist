@@ -1002,7 +1002,7 @@ nav {
 .pvi-poster img { width:100%;height:100%;object-fit:cover; }
 .pvi-meta-wrap { flex:1;min-width:0;padding-top:2px; }
 .pvi-title { font-family:var(--serif);font-size:clamp(16px,4.5vw,22px);font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text); }
-.pvi-tags { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:0; }
+.pvi-tags { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0; }
 .pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px; }
 .pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s; }
 .pvi-close:hover { color:var(--text); }
@@ -1349,7 +1349,7 @@ nav {
 @media(max-width:400px) { .fav-card-score { font-size:12px;bottom:5px;right:6px; } }
 .q-title { font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:6px; }
 .q-year { font-size:11px; color:var(--text-3); }
-.q-genre { display:flex; flex-wrap:wrap; gap:4px; }
+.q-genre { display:flex; flex-wrap:wrap; gap:6px; }
 .q-meta-row { display:flex; align-items:center; gap:7px; }
 .q-hd-badge {
   font-size:9px; font-weight:700; color:var(--text-3);
@@ -1374,7 +1374,7 @@ nav {
 .comp-info { flex:1; min-width:0; }
 .comp-rank { font-size:11px; color:var(--text-3); display:block; margin-bottom:4px; letter-spacing:1px; }
 .comp-title { font-size:20px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.comp-meta { font-size:13px; color:var(--text-3); margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.comp-meta { font-size:13px; color:var(--text-3); margin-top:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .comp-date { color:var(--text-3); }
 .comp-score-wrap { text-align:right; flex-shrink:0; }
 .comp-score { font-family:var(--serif); font-size:32px; color:var(--olive-light); line-height:1; }
@@ -2330,7 +2330,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .facts-title-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
 .facts-title { font-family:var(--serif); font-size:19px; font-weight:600; color:var(--text); line-height:1.2; }
 .facts-year { font-family:var(--serif); font-size:14px; color:var(--text-3); font-weight:400; }
-.facts-genre-row { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.facts-genre-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 .facts-rows { display:flex; flex-direction:column; gap:6px; margin-top:2px; padding-top:10px; border-top:0.5px solid var(--border); }
 .facts-row { display:flex; flex-direction:column; gap:1px; font-size:12.5px; }
 .facts-label { font-size:9.5px; letter-spacing:1px; text-transform:uppercase; color:var(--olive-light); }
@@ -2375,7 +2375,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .wg-prog-fill  { height:100%; background:var(--olive-light); border-radius:2px; transition:width .4s var(--ease); }
 .wg-info { padding:10px 10px 12px; display:flex; flex-direction:column; flex:1; }
 .wg-title { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
-.wg-genre { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+.wg-genre { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .wg-controls {
   display:flex; align-items:center; justify-content:space-between;
   gap:6px; margin-top:auto; overflow:hidden; min-width:0;
@@ -3645,7 +3645,7 @@ body { font-size:15px; }
 .pvi-poster img { width:100%;height:100%;object-fit:cover; }
 .pvi-meta-wrap { flex:1;min-width:0;padding-top:2px; }
 .pvi-title { font-family:var(--serif);font-size:clamp(16px,4.5vw,22px);font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text); }
-.pvi-tags { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:0; }
+.pvi-tags { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0; }
 .pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px; }
 .pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s; }
 .pvi-close:hover { color:var(--text); }
