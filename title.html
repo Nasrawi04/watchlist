@@ -920,7 +920,7 @@ function _tdRenderNotes() {
             ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
           </button>
           <button class="td-note-react-btn" onclick='openReplyPopup("note", ${JSON.stringify(n.entry_id)}, ${JSON.stringify(n.username || "")})'>
-            ${icon('list', 14)} Replies
+            ${icon('reply', 14)} Replies
           </button>
         </div>
       </div>
