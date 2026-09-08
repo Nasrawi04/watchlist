@@ -303,13 +303,13 @@
         <div class="flip-card__sub">Start tracking today</div>
         <form class="flip-card__form" onsubmit="doSignUp(event)">
           <div class="flip-card__error" id="suError"></div>
-          <input class="flip-card__input" id="suUser" type="text"
+          <input class="flip-card__input" id="suUser" type="text" maxlength="20"
                 placeholder="Username" autocomplete="off"
                 oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()">
           <div class="flip-card__hint">Letters, numbers and _ only</div>
-          <input class="flip-card__input" id="suEmail" type="email"
+          <input class="flip-card__input" id="suEmail" type="email" maxlength="254"
                 placeholder="Email address" autocomplete="email">
-          <input class="flip-card__input" id="suPass"  type="password"
+          <input class="flip-card__input" id="suPass"  type="password" maxlength="128"
                 placeholder="Password (min 6)" autocomplete="new-password">
           <button class="flip-card__btn" id="btnSignUp" type="submit">Create account →</button>
         </form>
@@ -491,9 +491,19 @@ async function doSignUp(e) {
   const email    = document.getElementById('suEmail').value.trim();
   const pass     = document.getElementById('suPass').value;
 
-  if (username.length < 3) { showErr('suError','Username must be at least 3 characters.'); return; }
-  if (!email)              { showErr('suError','Email is required.'); return; }
-  if (pass.length < 6)    { showErr('suError','Password must be at least 6 characters.'); return; }
+  // e.preventDefault() above means the browser's native type="email"
+  // check never actually runs (native validation only fires on an
+  // unprevented submit) — so this needs a real explicit check, not
+  // just "is it non-empty".
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (username.length < 3)      { showErr('suError','Username must be at least 3 characters.'); return; }
+  if (username.length > 20)     { showErr('suError','Username must be 20 characters or fewer.'); return; }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) { showErr('suError','Username can only contain letters, numbers, and _.'); return; }
+  if (!email)                   { showErr('suError','Email is required.'); return; }
+  if (!EMAIL_RE.test(email))    { showErr('suError','Please enter a valid email address.'); return; }
+  if (pass.length < 6)          { showErr('suError','Password must be at least 6 characters.'); return; }
+  if (pass.length > 128)        { showErr('suError','Password must be 128 characters or fewer.'); return; }
   showErr('suError','');
 
   const btn = document.getElementById('btnSignUp');
