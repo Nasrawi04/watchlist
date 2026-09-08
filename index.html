@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inbox = await getInboxComments(user.id, 8);
     if (inbox.length) {
       document.getElementById('homeComments').innerHTML = `
-        <div class="section-eyebrow">Social</div>
+        <div class="section-eyebrow">Community</div>
         <div class="section-title comments-section-toggle" onclick="_toggleComments()">
           Friend Comments
           <span class="comments-section-chevron" id="commentsChev">${icon('chevdown',18)}</span>
