@@ -1487,16 +1487,26 @@ async function adjustEp(id, delta) {
   }
 
   if (!justFinished) {
+    // Optimistic: apply + re-render immediately, since this is the
+    // single most frequently tapped action in the app — roll back the
+    // exact prior values if the save actually fails.
+    const prevWatched = entry.watched, prevEpisode = entry.episode, prevSeason = entry.season, prevTotalEps = entry.total_eps;
+    entry.watched = newWatched;
+    entry.episode = newEp;
+    entry.season  = newSeason;
+    const watching = _catAll.filter(e => e.status === 'watching' || e.status === 'paused').sort((a,b) => (a.status==='paused')-(b.status==='paused'));
+    const inner = document.querySelector('#body-watching .accordion-inner');
+    if (inner) inner.innerHTML = sortBar('watching') + buildWatching(watching);
+
     try {
       await updateProgress(id, _catUser.id, { watched: newWatched, episode: newEp, season: newSeason });
-      entry.watched = newWatched;
-      entry.episode = newEp;
-      entry.season  = newSeason;
-      const watching = _catAll.filter(e => e.status === 'watching' || e.status === 'paused').sort((a,b) => (a.status==='paused')-(b.status==='paused'));
-      const inner = document.querySelector('#body-watching .accordion-inner');
-      if (inner) inner.innerHTML = sortBar('watching') + buildWatching(watching);
       showToast('Progress updated');
-    } catch(e) { showToast('Error updating progress.', 'err'); }
+    } catch(e) {
+      entry.watched = prevWatched; entry.episode = prevEpisode; entry.season = prevSeason; entry.total_eps = prevTotalEps;
+      const watching2 = _catAll.filter(e => e.status === 'watching' || e.status === 'paused').sort((a,b) => (a.status==='paused')-(b.status==='paused'));
+      if (inner) inner.innerHTML = sortBar('watching') + buildWatching(watching2);
+      showToast('Error updating progress.', 'err');
+    }
   } else {
     // For movies: auto-complete. For shows: ask Completed or Ongoing
     const isMovie = entry.cat === 'movies' || entry.ratings?._media_type === 'movie';
@@ -1528,15 +1538,21 @@ async function markMovieComplete(event, id) {
   const entry = _catAll.find(e => e.id === id);
   if (!entry) return;
 
+  const prevStatus = entry.status, prevDate = entry.completed_date;
+  const now = new Date();
+  const isoDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  entry.status = 'completed';
+  entry.completed_date = isoDate;
+  renderSections();
+  _showRateNowPopup(entry.title, id);
+
   try {
-    const now = new Date();
-    const isoDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     await updateProgress(id, _catUser.id, { status: 'completed', completed_date: isoDate });
-    entry.status = 'completed';
-    entry.completed_date = isoDate;
-    renderSections();
-    _showRateNowPopup(entry.title, id);
   } catch(e) {
+    entry.status = prevStatus;
+    entry.completed_date = prevDate;
+    renderSections();
+    document.getElementById('_rateNowOverlay')?.remove();
     showToast('Error marking complete.', 'err');
   }
 }
@@ -1633,23 +1649,35 @@ function renderPausedList(items) {
 }
 
 async function resumeEntry(id) {
+  const entry = _catAll.find(e => e.id === id);
+  if (!entry) return;
+  const prevStatus = entry.status;
+  entry.status = 'watching';
+  renderSections();
   try {
     await updateProgress(id, _catUser.id, { status: 'watching' });
-    const entry = _catAll.find(e => e.id === id);
-    if (entry) entry.status = 'watching';
-    renderSections();
     showToast('Resumed!');
-  } catch(e) { showToast('Error resuming.', 'err'); }
+  } catch(e) {
+    entry.status = prevStatus;
+    renderSections();
+    showToast('Error resuming.', 'err');
+  }
 }
 
 async function pauseEntry(id) {
+  const entry = _catAll.find(e => e.id === id);
+  if (!entry) return;
+  const prevStatus = entry.status;
+  entry.status = 'paused';
+  renderSections();
   try {
     await updateProgress(id, _catUser.id, { status: 'paused' });
-    const entry = _catAll.find(e => e.id === id);
-    if (entry) entry.status = 'paused';
-    renderSections();
     showToast('Taking a break!');
-  } catch(e) { showToast('Error updating.', 'err'); }
+  } catch(e) {
+    entry.status = prevStatus;
+    renderSections();
+    showToast('Error updating.', 'err');
+  }
 }
 
 /* ════════ QUEUE / WATCHLIST ════════ */
@@ -1739,20 +1767,25 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
 
 /* ── Continue Watching (from Ongoing) ── */
 async function startWatching(id) {
+  const entry = _catAll.find(e => e.id === id);
+  const isMovie = !entry || entry.cat === 'movies' || entry.ratings?._media_type === 'movie';
+  const updates = { status: 'watching' };
+  if (!isMovie) {
+    updates.season  = entry?.season  || 1;
+    updates.episode = 0;
+    updates.watched = 0;
+  }
+
+  const prevStatus = entry?.status, prevSeason = entry?.season, prevEpisode = entry?.episode, prevWatched = entry?.watched;
+  if (entry) { entry.status = 'watching'; if (!isMovie) { entry.season = updates.season; entry.episode = 0; entry.watched = 0; } }
+  renderSections();
+
   try {
-    const entry = _catAll.find(e => e.id === id);
-    const isMovie = !entry || entry.cat === 'movies' || entry.ratings?._media_type === 'movie';
-    const updates = { status: 'watching' };
-    if (!isMovie) {
-      updates.season  = entry?.season  || 1;
-      updates.episode = 0;
-      updates.watched = 0;
-    }
     await updateProgress(id, _catUser.id, updates);
-    if (entry) { entry.status = 'watching'; if (!isMovie) { entry.season = updates.season; entry.episode = 0; entry.watched = 0; } }
     showToast('Moved to Currently Watching!');
-    renderSections();
   } catch(e) {
+    if (entry) { entry.status = prevStatus; entry.season = prevSeason; entry.episode = prevEpisode; entry.watched = prevWatched; }
+    renderSections();
     showToast('Error updating. Please try again.', 'err');
     console.error(e);
   }
