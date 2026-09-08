@@ -301,18 +301,29 @@ function genreHTML(genres, max) {
 }
 
 /*
- * getTypeBadge(entry, context) — subtle text label for anime/cartoon entries only.
- * Only shown when the entry has _media_type set (Movie or TV Show).
- * Returns a plain muted text label to appear before genres, or ''.
+ * getTypeBadge(entry, context) — Movie / TV Show type tag, shown for
+ * every entry (not just anime/cartoons) so the type is visible at a
+ * glance everywhere genres/runtime are shown. Uses the same chip
+ * design as genre tags, with a second accent color for TV so the two
+ * types read apart without needing to read the text.
  */
 function getTypeBadge(entry, context) {
   var cat = (entry && entry.cat) || '';
-  var isAnimated = cat === 'anime' || cat === 'cartoons';
-  if (!isAnimated) return '';
-  // Default to 'show' if not explicitly set — matches detail.html behaviour
-  var mediaType = (entry && entry.ratings && entry.ratings._media_type) || 'show';
-  var label = mediaType === 'movie' ? 'Movie' : 'TV Show';
-  return '<span class="type-label">' + label + '</span>';
+  var isMovie;
+  if (cat === 'movies') {
+    isMovie = true;
+  } else if (cat === 'tv') {
+    isMovie = false;
+  } else {
+    // anime / cartoons: only these track an explicit movie-vs-show
+    // distinction on the entry itself, since a single category can
+    // contain both (e.g. a Ghibli film vs. an anime series).
+    var mediaType = (entry && entry.ratings && entry.ratings._media_type) || 'show';
+    isMovie = mediaType === 'movie';
+  }
+  var label = isMovie ? 'Movie' : 'TV Show';
+  var cls = isMovie ? 'type-label' : 'type-label type-label-tv';
+  return '<span class="' + cls + '">' + label + '</span>';
 }
 
 /* Overlay variant — no poster tag, returns empty (label appears before genres only) */
