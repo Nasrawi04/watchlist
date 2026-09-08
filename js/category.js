@@ -212,13 +212,15 @@ function closeCatInfoPopup() {
 
 
 /* ── Shared ep/runtime badge helper ── */
+/* ── Ep/runtime meta text (plain value — callers wrap it: .wg-ep on a
+   poster overlay for grid cards, .w-ep-badge next to the title for
+   list rows) ── */
 function _entryMeta(e) {
   const isMovie = e.cat === 'movies' || (e.ratings?._media_type === 'movie');
   if (isMovie) {
     const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
     if (!rtH && !rtM) return '';
-    const label = rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
-    return `<div class="w-ep-row"><span class="w-ep-badge">${label}</span></div>`;
+    return rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
   }
   // Same logic as _queueScope — show shape of the show
   const bd = Array.isArray(e.ratings?._season_breakdown)
@@ -228,24 +230,17 @@ function _entryMeta(e) {
     : (e.total_seasons && e.total_eps) ? `S${e.total_seasons} E${e.total_eps}`
     : e.total_seasons ? `S${e.total_seasons}`
     : e.total_eps ? `${e.total_eps} eps` : '';
-  if (!scope) return '';
-  return `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>`;
+  return scope;
 }
 
-/* ── Ongoing badge: shows last watched position (S3 E10) ── */
+/* ── Ongoing meta: shows last watched position (S3 E10) — same plain-
+   text contract as _entryMeta above ── */
 function _ongoingMeta(e) {
   const isMovie = e.ratings?._media_type === 'movie';
   if (isMovie) return _entryMeta(e);
-  // Show current position — where the user stopped watching
-  if (e.season != null && e.episode != null) {
-    return `<div class="w-ep-row"><span class="w-ep-badge">S${e.season} E${e.episode}</span></div>`;
-  }
-  if (e.season != null) {
-    return `<div class="w-ep-row"><span class="w-ep-badge">S${e.season}</span></div>`;
-  }
-  if (e.watched) {
-    return `<div class="w-ep-row"><span class="w-ep-badge">${e.watched} eps</span><span class="w-ep-total">watched</span></div>`;
-  }
+  if (e.season != null && e.episode != null) return `S${e.season} E${e.episode}`;
+  if (e.season != null) return `S${e.season}`;
+  if (e.watched) return `${e.watched} eps watched`;
   return '';
 }
 
@@ -1032,8 +1027,8 @@ function openGridPopup(id) {
     `<a href="#" onclick="goToDetail('${e.id}','${currentFile()}');return false;" style="font-size:11px;color:var(--text-3);text-decoration:none;align-self:center;margin-left:4px;">Edit →</a>`;
   // Ep/runtime badge
   const _metaEl = document.getElementById('cgPopupMeta');
-  const _metaHTML = _entryMeta(e);
-  if (_metaHTML) _metaEl.insertAdjacentHTML('beforeend', _metaHTML);
+  const _metaText = _entryMeta(e);
+  if (_metaText) _metaEl.insertAdjacentHTML('beforeend', `<span class="w-ep-badge">${_metaText}</span>`);
   // Score
   const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
   // Info bar (season breakdown / runtime) now renders inside the body, above the ratings
@@ -1404,17 +1399,17 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
     const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
+    const _meta = e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e);
     return `<div class="wg-card cg-card-wrap" style="cursor:pointer;">
       <div class="wg-poster" onclick="openGridPopup('${e.id}')" style="position:relative;">
         ${posterHTML(e,'big')}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
-        <div class="wg-overlay"></div>
+        <div class="wg-overlay">${_meta ? `<span class="wg-ep">${_meta}</span>` : ''}</div>
         ${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(i+1) : '')}
       </div>
       <div class="cg-grid-info" onclick="openGridPopup('${e.id}')">
         <div class="wg-title">${e.title}</div>
         <div class="wg-genre">${_badge}${genreHTML(e.genres, 3)}</div>
-        ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
         <div class="cg-score-row"><span class="cg-score">${score||'—'}</span><span class="cg-score-lbl">score</span></div>
       </div>
       <div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">
@@ -1740,14 +1735,14 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
     const score = e.final_score != null ? Number(liveScore(e)).toFixed(2) : '—';
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
+    const _meta = e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e);
     return `<div class="cc-block">
       <div class="comp-row" style="cursor:pointer;" onclick="openGridPopup('${e.id}')">
         ${isRanked ? `<div style="font-family:var(--serif);font-size:26px;font-weight:300;color:${i<3?'var(--olive-light)':'var(--text-2)'};text-align:center;min-width:44px;flex-shrink:0;">${i+1}</div>` : ''}
         <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : ''}</div>
         <div class="comp-info">
-          <div class="comp-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
-          <div class="comp-meta">${_badge}${e.genres?.length ? e.genres.slice(0,3).map(g=>`<span style="color:var(--text-3)">· ${g}</span>`).join('') : ''}</div>
-          ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
+          <div class="comp-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}${_meta ? `<span class="w-ep-badge">${_meta}</span>` : ''}</div>
+          <div class="comp-meta">${_badge}${genreHTML(e.genres, 3)}</div>
           ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">"${e.notes}"</div>` : ''}
           ${renderFavChips(e.ratings, e.cat)}
         </div>
