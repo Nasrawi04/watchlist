@@ -1434,26 +1434,39 @@ async function _replyReact(replyId, isLike) {
   const current = _replyMyReactions[replyId];
   const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
 
+  // Optimistic: update + render immediately, roll back on failure.
+  const prevReaction = current;
+  const prevLike = r.like_count;
+  const prevDislike = r.dislike_count;
+
+  if (wantsSame) {
+    delete _replyMyReactions[replyId];
+    if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
+    else r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
+  } else {
+    if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
+    if (current === 'dislike') r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
+    if (isLike) r.like_count = Number(r.like_count) + 1;
+    else r.dislike_count = Number(r.dislike_count) + 1;
+    _replyMyReactions[replyId] = isLike ? 'like' : 'dislike';
+  }
+  _replyRenderList();
+
   try {
     if (wantsSame) {
       const { error } = await sb.from(cfg.reactionTable).delete().eq('reply_id', replyId).eq('user_id', user.id);
       if (error) throw error;
-      delete _replyMyReactions[replyId];
-      if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
-      else r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
     } else {
       const { error } = await sb.from(cfg.reactionTable)
         .upsert({ reply_id: replyId, user_id: user.id, is_like: isLike }, { onConflict: 'reply_id,user_id' });
       if (error) throw error;
-      if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
-      if (current === 'dislike') r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
-      if (isLike) r.like_count = Number(r.like_count) + 1;
-      else r.dislike_count = Number(r.dislike_count) + 1;
-      _replyMyReactions[replyId] = isLike ? 'like' : 'dislike';
     }
-    _replyRenderList();
   } catch (err) {
     console.error('React to reply error:', err);
+    if (prevReaction) _replyMyReactions[replyId] = prevReaction; else delete _replyMyReactions[replyId];
+    r.like_count = prevLike;
+    r.dislike_count = prevDislike;
+    _replyRenderList();
     showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
   }
 }
@@ -1485,26 +1498,42 @@ async function reactToSocialList(listId, isLike) {
   const current = _socialListsMyReactions[listId];
   const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
 
+  // Optimistic: apply the change and re-render immediately, before the
+  // network call even starts — the tap should feel instant. If the
+  // request fails, roll the exact same state back and re-render again.
+  const prevReaction = current;
+  const prevLike = list.like_count;
+  const prevDislike = list.dislike_count;
+
+  if (wantsSame) {
+    delete _socialListsMyReactions[listId];
+    if (current === 'like') list.like_count = Math.max(0, Number(list.like_count) - 1);
+    else list.dislike_count = Math.max(0, Number(list.dislike_count) - 1);
+  } else {
+    if (current === 'like') list.like_count = Math.max(0, Number(list.like_count) - 1);
+    if (current === 'dislike') list.dislike_count = Math.max(0, Number(list.dislike_count) - 1);
+    if (isLike) list.like_count = Number(list.like_count) + 1;
+    else list.dislike_count = Number(list.dislike_count) + 1;
+    _socialListsMyReactions[listId] = isLike ? 'like' : 'dislike';
+  }
+  renderSocialLists();
+
   try {
     if (wantsSame) {
       const { error } = await sb.from('list_reactions').delete().eq('list_id', listId).eq('user_id', _listsUser.id);
       if (error) throw error;
-      delete _socialListsMyReactions[listId];
-      if (current === 'like') list.like_count = Math.max(0, Number(list.like_count) - 1);
-      else list.dislike_count = Math.max(0, Number(list.dislike_count) - 1);
     } else {
       const { error } = await sb.from('list_reactions')
         .upsert({ list_id: listId, user_id: _listsUser.id, is_like: isLike }, { onConflict: 'list_id,user_id' });
       if (error) throw error;
-      if (current === 'like') list.like_count = Math.max(0, Number(list.like_count) - 1);
-      if (current === 'dislike') list.dislike_count = Math.max(0, Number(list.dislike_count) - 1);
-      if (isLike) list.like_count = Number(list.like_count) + 1;
-      else list.dislike_count = Number(list.dislike_count) + 1;
-      _socialListsMyReactions[listId] = isLike ? 'like' : 'dislike';
     }
-    renderSocialLists();
   } catch (err) {
     console.error('React to list error:', err);
+    // Roll back to exactly the pre-tap state.
+    if (prevReaction) _socialListsMyReactions[listId] = prevReaction; else delete _socialListsMyReactions[listId];
+    list.like_count = prevLike;
+    list.dislike_count = prevDislike;
+    renderSocialLists();
     showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
   }
 }
@@ -1584,12 +1613,22 @@ async function deleteFavListConfirm(id) {
   const list = _listsAll.find(l => l.id === id);
   const ok = await showConfirm({ title: 'Delete List?', message: '"'+(list?.title||'this list')+'" will be permanently deleted.', confirmText: 'Delete', iconName: 'x' });
   if (!ok) return;
+
+  // Optimistic: remove from view immediately after confirming, restore
+  // it if the delete actually fails server-side.
+  const idx = _listsAll.findIndex(l => l.id === id);
+  const removed = _listsAll[idx];
+  _listsAll = _listsAll.filter(l => l.id !== id);
+  renderListsPage();
+
   try {
     await deleteFavoriteList(id);
-    _listsAll = _listsAll.filter(l => l.id !== id);
-    renderListsPage();
     showToast('List deleted.');
-  } catch(e) { showToast('Error deleting.', 'err'); }
+  } catch(e) {
+    if (removed) _listsAll.splice(idx, 0, removed);
+    renderListsPage();
+    showToast('Error deleting.', 'err');
+  }
 }
 
 // ══════════════════════════════════════════
