@@ -456,7 +456,7 @@ setTimeout(() => {
     </div>
     <div class="hc-list" id="hcList"></div>
     <div class="hc-form">
-      <input class="hc-input" id="hcInput" placeholder="Write a comment&hellip;">
+      <input class="hc-input" id="hcInput" maxlength="1000" placeholder="Write a comment&hellip;">
       <button class="hc-send" onclick="hcSubmit()">Send</button>
     </div>
   </div>
@@ -566,6 +566,7 @@ function hcReply(commentId, username) {
   var inp = document.createElement('input');
   inp.className = 'det-reply-input';
   inp.id = 'hc-ri-' + commentId;
+  inp.maxLength = 1000;
   inp.placeholder = 'Reply to @' + username + '…';
   inp.value = '@' + username + ' ';
   inp.addEventListener('keydown', function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();hcPostReply(commentId);} });
