@@ -173,9 +173,8 @@
 
 .fv-w-ep{margin-bottom:7px;display:flex;align-items:center;gap:10px}
 
-.fv-w-ep-badge{padding:3px 10px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);font-size:11px;font-weight:500}
-@media(max-width:640px){.fv-w-ep-badge{font-size:9px;padding:2px 7px;}}
-@media(max-width:400px){.fv-w-ep-badge{font-size:8px;padding:1px 5px;}}
+@media(max-width:640px){.w-ep-badge{font-size:9px;padding:2px 7px;}}
+@media(max-width:400px){.w-ep-badge{font-size:8px;padding:1px 5px;}}
 
 .fv-w-prog-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
 
@@ -1695,10 +1694,8 @@ function renderPvLibrary() {
       var cs=ip?'background:var(--olive-faint);border-color:var(--border-olive);':''
       return '<div class="fv-w-card fv-w-card-no-hover clickable" style="'+cs+'" onclick="openInfoPopup(\''+e.id+'\')">' 
         +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.55);display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">Taking<br>a Break</span></div>':'')+'</div>'
-        +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
-        +'<div class="fv-w-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'
-        +(ep?'<div class="fv-w-ep"><span class="fv-w-ep-badge">'+ep+'</span>'+(e.total_eps?'<span style="font-size:11px;color:var(--text-3);">/ '+e.total_eps+' eps</span>':'')+'</div>':'')+
-        (rt?'<div class="fv-w-ep"><span class="fv-w-ep-badge">'+rt+'</span></div>':'')+
+        +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+(ep?'<span class="w-ep-badge">'+ep+'</span>':'')+(rt?'<span class="w-ep-badge">'+rt+'</span>':'')+' </div>'
+        +'<div class="fv-w-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'+
         (!isM&&e.total_eps?'<div class="fv-w-prog-track"><div class="fv-w-prog-fill" style="width:'+pct+'%'+(ip?";background:var(--text-3)":'')+';"></div></div>':'')+
         (lbl?'<div class="fv-w-prog-label">'+lbl+'</div>':'')+
         '</div>'+(liveScore(e)!=null?'<div class="fv-w-score">'+Number(liveScore(e)).toFixed(2)+'</div>':'')
@@ -1716,10 +1713,9 @@ function renderPvLibrary() {
       var scope = _libQueueScope(e);
       var oid = e.id;
       return '<div class="wg-card fv-queue-no-hover clickable" style="cursor:pointer;" onclick="openInfoPopup(&quot;'+ oid +'&quot;)"><div class="wg-poster" style="position:relative;">'
-        +posterHTML(e,'big')+'<div class="wg-overlay"></div>'+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'</div>'
-        +'<div class="wg-info"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px;"><div class="wg-title" style="margin-bottom:0;">'+esc(e.title)+'</div>'
-        +(scope?'<span style="font-size:11px;font-weight:600;color:var(--olive-light);white-space:nowrap;flex-shrink:0;">'+scope+'</span>':'')
-        +'</div><div class="wg-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div></div></div>';
+        +posterHTML(e,'big')+'<div class="wg-overlay">'+(scope?'<span class="wg-ep">'+scope+'</span>':'')+'</div>'+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'</div>'
+        +'<div class="wg-info"><div class="wg-title" style="margin-bottom:4px;">'+esc(e.title)+'</div>'
+        +'<div class="wg-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div></div></div>';
     }).join('');
     qc = pvGridWrap(qg, '<div class="watching-grid" id="'+qg+'">'+qcs+'</div>');
   } else {
@@ -1728,9 +1724,8 @@ function renderPvLibrary() {
       var oid = e.id;
       return '<div class="w-card fv-queue-no-hover clickable" style="cursor:pointer;border-color:var(--border) !important;" onclick="openInfoPopup(&quot;'+ oid +'&quot;)">'
         +'<div class="w-poster">'+posterHTML(e)+'</div>'
-        +'<div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+'</div></div>'
+        +'<div class="w-body"><div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div>'
         +'<div class="w-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'
-        +(scope?'<div class="w-ep-row"><span class="w-ep-badge">'+scope+'</span></div>':'')
         +'</div></div>';
     }).join('') + '</div>';
   }
@@ -1759,21 +1754,20 @@ function renderPvLibrary() {
       var metaHtml='';
       if(isMovie){
         var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
-        if(rtH||rtM)metaHtml='<div class="w-ep-row"><span class="w-ep-badge">'+(rtH?rtH+'h '+rtM+'m':rtM+'m')+'</span></div>';
+        if(rtH||rtM)metaHtml=(rtH?rtH+'h '+rtM+'m':rtM+'m');
       } else if(e.status==='ongoing'&&e.season!=null&&e.episode!=null){
-        metaHtml='<div class="w-ep-row"><span class="w-ep-badge">S'+e.season+' E'+e.episode+'</span></div>';
+        metaHtml='S'+e.season+' E'+e.episode;
       } else {
         var bd=Array.isArray(e.ratings&&e.ratings._season_breakdown)?e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number):[];
         var bdTot=bd.reduce(function(a,b){return a+b;},0);
         var scope=bd.length?'S'+bd.length+' E'+bdTot:(e.total_seasons&&e.total_eps?'S'+e.total_seasons+' E'+e.total_eps:e.total_seasons?'S'+e.total_seasons:e.total_eps?e.total_eps+' eps':'');
-        if(scope)metaHtml='<div class="w-ep-row"><span class="w-ep-badge">'+scope+'</span></div>';
+        if(scope)metaHtml=scope;
       }
       return '<div class="wg-card cg-card-wrap" style="cursor:pointer;">'
-        +'<div class="wg-poster" onclick="pvOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+'<div class="wg-overlay"></div>'+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+' </div>'
+        +'<div class="wg-poster" onclick="pvOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+'<div class="wg-overlay">'+(metaHtml?'<span class="wg-ep">'+metaHtml+'</span>':'')+'</div>'+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+' </div>'
         +'<div class="cg-grid-info" onclick="pvOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="wg-title">'+esc(e.title)+'</div>'
         +'<div class="wg-genre">'+typeBadge+genreHTML(e.genres||[], 3)+'</div>'
-        +metaHtml
         +'<div class="cg-score-row"><span class="cg-score">'+(sc||'—')+'</span><span class="cg-score-lbl">score</span></div>'
         +'</div>'
         +'<div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">'
