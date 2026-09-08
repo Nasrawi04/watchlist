@@ -691,6 +691,8 @@ function renderMoviesWatchingList(items) {
     const cardStyle = isPaused ? 'background:var(--olive-faint);border-color:var(--border-olive);opacity:0.85' : '';
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
+    const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
+    const rt  = (rtH||rtM) ? (rtH?`${rtH}h ${rtM}m`:`${rtM}m`) : '';
     return `<div class="w-card" style="${cardStyle}" onclick="openCatInfoPopup('${e.id}')">
       <div class="w-poster" style="position:relative">
         ${posterHTML(e)}
@@ -699,7 +701,7 @@ function renderMoviesWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>${score}</div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}${rt ? `<span class="w-ep-badge">${rt}</span>` : ''}</div>${score}</div>
         <div class="w-genre">${_badge}${genreHTML(e.genres, 3)}</div>
         ${e.year ? `<span style="font-size:11px;color:var(--text-3);margin-top:3px;display:inline-block">${e.year}</span>` : ''}
       </div>
@@ -773,14 +775,13 @@ function renderWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>${score}</div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}<span class="w-ep-badge">${epStr}</span></div>${score}</div>
         <div class="w-genre">${_badge}${genreHTML(e.genres, 3)}</div>
         <div class="w-ep-row">
-          <span class="w-ep-badge">${epStr}</span>
-          <span class="w-ep-total">${e.total_eps ? `/ ${e.total_eps} eps` : ''}</span>
+          <span class="w-ep-total">${e.total_eps ? `${e.watched??0} / ${e.total_eps} eps` : ''}</span>
         </div>
         <div class="w-prog-track"><div class="w-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
-        <div class="w-prog-label">${e.total_eps ? `${e.watched??0} / ${e.total_eps} eps · ${pct}%` : (e.episode ? `Ep ${e.episode}` : '')}</div>
+        <div class="w-prog-label">${e.total_eps ? `${pct}% complete` : ''}</div>
       </div>
       <div class="w-ep-controls${isDone?' w-ep-controls--done':''}" onclick="event.stopPropagation()">
         ${isPaused
@@ -874,14 +875,13 @@ function renderQueueGrid(items) {
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
     return `<div class="wg-card" onclick="openCatInfoPopup('${e.id}')">
-      <div class="wg-poster">
+      <div class="wg-poster" style="position:relative;">
         ${posterHTML(e, 'big')}
-        <div class="wg-overlay"></div>
+        <div class="wg-overlay">${scope ? `<span class="wg-ep">${scope}</span>` : ''}</div>
       </div>
       <div class="wg-info" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
         <div style="margin-bottom:6px;">
           <div class="wg-title" style="margin-bottom:4px;">${e.title}</div>
-          ${scope ? `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>` : ''}
         </div>
         <div class="wg-genre">${_badge}${genreHTML(e.genres, 3)}</div>
       </div>
@@ -1713,9 +1713,8 @@ function renderQueueList(items) {
     return `<div class="w-card" style="cursor:default;">
       <div class="w-poster" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">${posterHTML(e)}</div>
       <div class="w-body" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
-        <div class="w-top"><div class="w-title">${e.title}</div></div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${scope ? `<span class="w-ep-badge">${scope}</span>` : ''}</div></div>
         <div class="w-genre">${_badge}${genreHTML(e.genres, 3)}</div>
-        ${scope ? `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>` : ''}
       </div>
       <div style="display:flex;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">
         <button onclick="startWatching('${e.id}')" class="w-list-action-btn w-list-play-btn" title="Start Watching">${icon('play',14)}</button>
