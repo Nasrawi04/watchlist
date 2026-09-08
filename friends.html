@@ -562,7 +562,7 @@ async function doSendRequest() {
     document.getElementById('addFriendInput').value = '';
     await loadFriends();
   } catch(e) {
-    showToast(e.message || 'Could not send request.', 'err');
+    showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : (e.message || 'Could not send request.'), 'err');
   } finally {
     btn.disabled = false; btn.textContent = 'Send Request';
   }
@@ -884,7 +884,7 @@ async function mpSendRequest() {
     _mpFriendship = f.find(x => x.friendId === _mpUserId) || null;
     _mpRenderBtn();
     _loadFriendships();
-  } catch(e) { showToast(e.message||'Error', 'err'); }
+  } catch(e) { showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : (e.message||'Error'), 'err'); }
 }
 
 async function mpCancelRequest() {
