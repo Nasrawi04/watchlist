@@ -27,7 +27,7 @@
   --tv-faint:     rgba(74,110,145,0.14);
   --tv-border:    rgba(122,163,201,0.5);
   --tv-solid:     #3D6D96; /* darker, solid-fill-safe variant — ~5.8:1 contrast with white text */
-  --movie-solid:  #9C7A1F; /* third accent for Movie type tags — distinct from both genre olive and TV blue, ~5.15:1 with white text */
+  --movie-solid:  #B0562E; /* third accent for Movie type tags — warm terracotta, distinct from both genre olive and TV blue, ~5.4:1 with white text */
 
   --border:       rgba(255,255,255,0.1);
   --border-2:     rgba(255,255,255,0.17);
@@ -2173,7 +2173,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   --tv-faint:     rgba(43,90,133,0.1);
   --tv-border:    rgba(43,90,133,0.45);
   --tv-solid:     #1F4A6B; /* darker, solid-fill-safe variant — ~10:1 contrast with white text */
-  --movie-solid:  #5C4813; /* third accent for Movie type tags — ~9.25:1 with white text */
+  --movie-solid:  #7A3A1D; /* third accent for Movie type tags — deep rust, ~8.9:1 with white text */
   --border:       rgba(0,0,0,0.12);
   --border-2:     rgba(0,0,0,0.2);
   --text:         #1A1A1A;
@@ -2582,7 +2582,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   .wg-genre .w-ep-badge { font-size:6px; padding:1px 3px; letter-spacing:0; }
   .w-ep-badge  { font-size:6px; padding:1px 4px; }
   .wg-title    { font-size:11px; }
-  .wg-genre    { gap:3px; margin-bottom:5px; }
+  .wg-genre    { gap:4px; margin-bottom:5px; }
 }
 
 /* ════════════════════════════════════════════
@@ -2848,7 +2848,7 @@ body { font-size:15px; }
   .w-card  { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
   .w-poster { width:64px; height:90px; }
   .w-title  { font-size:13px; }
-  .w-genre  { font-size:9px; gap:3px; margin-bottom:5px; }
+  .w-genre  { font-size:9px; gap:4px; margin-bottom:5px; }
   .w-genre .genre-dot, .w-genre .type-label, .w-genre .cat-badge { font-size:8px; padding:1px 4px; }
   .cg-score-badge { font-size:8px; padding:2px 5px; min-width:24px; top:5px; left:5px; }
   /* Items 3/4/5: always show controls on mobile, scaled down */
