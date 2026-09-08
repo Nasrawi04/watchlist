@@ -25,6 +25,7 @@
   --tv-accent:    #8AAFD1;
   --tv-faint:     rgba(74,110,145,0.14);
   --tv-border:    rgba(122,163,201,0.5);
+  --tv-solid:     #3D6D96; /* darker, solid-fill-safe variant — ~5.8:1 contrast with white text */
 
   --border:       rgba(255,255,255,0.1);
   --border-2:     rgba(255,255,255,0.17);
@@ -1380,14 +1381,16 @@ nav {
   font-size:clamp(8.5px, 2vw, 10.5px);
   padding:clamp(2px, 0.5vw, 3px) clamp(6px, 1.6vw, 9px);
   border-radius:3px;
-  background:var(--olive-faint); border:0.5px solid var(--border-olive);
-  color:var(--olive-light); letter-spacing:0.3px;
+  background:var(--olive); border:0.5px solid var(--olive);
+  color:#fff; letter-spacing:0.3px;
   white-space:nowrap; flex-shrink:0; display:inline-block;
 }
 /* TV-show variant of the type tag — same shape/weight/scaling, just
-   the second accent color so Movie vs TV Show reads apart at a glance. */
+   the second accent color (a darker, solid-fill-safe blue — the
+   lighter --tv-accent is meant for text-on-tint, not a solid
+   background) so Movie vs TV Show reads apart at a glance. */
 .type-label-tv {
-  background:var(--tv-faint); border-color:var(--tv-border); color:var(--tv-accent);
+  background:var(--tv-solid); border-color:var(--tv-solid); color:#fff;
 }
 .cat-badge-mini { font-size:14px; flex-shrink:0; }
 
@@ -2149,6 +2152,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   --tv-accent:    #2B5A85;
   --tv-faint:     rgba(43,90,133,0.1);
   --tv-border:    rgba(43,90,133,0.45);
+  --tv-solid:     #1F4A6B; /* darker, solid-fill-safe variant — ~10:1 contrast with white text */
   --border:       rgba(0,0,0,0.12);
   --border-2:     rgba(0,0,0,0.2);
   --text:         #1A1A1A;
