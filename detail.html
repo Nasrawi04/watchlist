@@ -1483,7 +1483,7 @@ async function detPostReply(commentId) {
     await loadDetComments();
     _refreshCommentsBtnCount();
   } catch(e) {
-    showToast('Could not post reply.', 'err');
+    showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Could not post reply.', 'err');
     if (input) input.disabled = false;
   }
 }
