@@ -52,7 +52,7 @@
 .dl-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .dl-list-title { font-size:16px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dl-list-year { font-size:12.5px; color:var(--text-3); }
-.dl-list-type { font-size:11px; padding:4px 11px; border-radius:20px; background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); letter-spacing:.4px; white-space:nowrap; }
+/* .dl-list-type removed — list-view type tags now use the shared .type-label/.type-label-tv classes */
 .dl-list-right { display:flex; flex-direction:column; align-items:center; gap:6px; }
 
 @media(max-width:560px) {
@@ -65,10 +65,10 @@
   .dl-list-rank { font-size:17px; }
   .dl-list-title { font-size:14px; }
   .dl-list-year { font-size:11.5px; }
-  .dl-list-type { font-size:10px; padding:3px 8px; }
+  .dl-list-row .type-label { font-size:10px; padding:3px 8px; }
 }
 @media(max-width:380px) {
-  .dl-list-type { display:none; }
+  .dl-list-row .type-label { display:none; }
 }
 
 .home-tmdb-poster-fallback {
@@ -182,7 +182,7 @@ function _dlListRowHTML(it, rank) {
       <div class="dl-list-year">${it.year ? _dlEsc(it.year) : ''}</div>
     </div>
     <div class="dl-list-right">
-      ${_dlTypeLabel(it) ? `<span class="dl-list-type">${_dlTypeLabel(it)}</span>` : ''}
+      ${_dlTypeLabel(it) ? `<span class="type-label${it.media_type==='movie'?'':' type-label-tv'}">${_dlTypeLabel(it)}</span>` : ''}
       ${scoreStr ? `<span class="home-tmdb-score">★ ${scoreStr}</span>` : ''}
     </div>
   </div>`;
@@ -261,6 +261,14 @@ async function _dlLoadMore() {
   } catch (e) {
     console.error('Discover list fetch error:', e);
     _dlDone = true;
+    const endMsg = document.getElementById('dlEndMsg');
+    if (isRateLimitError(e)) {
+      endMsg.textContent = "TMDB is busy right now — please refresh in a moment to keep browsing.";
+      endMsg.style.display = '';
+    } else if (_dlAllItems.length === 0) {
+      endMsg.textContent = "Couldn't load this list right now — please try again shortly.";
+      endMsg.style.display = '';
+    }
   } finally {
     _dlLoading = false;
   }
