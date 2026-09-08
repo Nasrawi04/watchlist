@@ -795,7 +795,7 @@ async function _fetchDiscoverData(e) {
   try {
     const extra = e.tmdb_type === 'movie' ? 'credits,release_dates' : 'credits,content_ratings';
     const url = `${TMDB_BASE}/${e.tmdb_type}/${e.tmdb_id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=${extra}`;
-    const res = await fetch(url);
+    const res = await tmdbFetch(url);
     if (!res.ok) throw new Error('TMDB fetch failed: ' + res.status);
     const data = await res.json();
 
