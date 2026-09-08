@@ -366,37 +366,34 @@
   .det-header .detail-poster-wrap { width:220px; height:330px; }
 }
 
-.det-header-main { flex:1 1 480px; min-width:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:0; }
-.det-header-info, .det-header-details { width:100%; box-sizing:border-box; }
-/* Forces the genre picker to respect its column's width instead of
-   growing to fit its wrapped content, which is what was pushing the
-   divider off-center. */
-#dGenres { width:100%; box-sizing:border-box; }
-.det-header-info { padding-right:clamp(1.25rem, 3vw, 2rem); }
-
-/* Details block, placed inline in the header next to the title box — split 50/50 with det-header-info */
-.det-header-details {
-  min-width:0; max-width:100%; box-sizing:border-box;
-  border-left:0.5px solid var(--border); padding-left:clamp(1.25rem, 3vw, 2rem);
-  margin-top:6px; /* nudges the divider's top edge down slightly so it clears the title's own underline instead of the two lines meeting right at the top */
-}
-@media(max-width:900px) {
-  .det-header-main { grid-template-columns:1fr; }
-  .det-header-info { padding-right:0; }
-  .det-header-details { border-left:none; border-top:0.5px solid var(--border); padding-left:0; padding-top:1.5rem; margin-top:0; min-width:0; }
-}
-@media(max-width:900px) and (min-width:561px) {
-  /* Between the mobile breakpoint (560px, where the year box centers
-     itself with more breathing room) and 900px (where columns are still
-     side-by-side and the year box's column is narrow) — "Release Year" /
-     "Completion Year" together don't fit on one line, so the box would
-     otherwise clip. Shortening the label text keeps the original
-     single-line design instead of wrapping it onto two lines. */
-  .det-year-label-full { display:none; }
-}
-@media(max-width:560px) {
-  .det-header-info { min-width:0; }
-}
+/* Title/dropdowns/year box, paired with Details (Genres + Description)
+   next to the poster. Wrapped together in .det-header-main so the pair
+   moves as one unit relative to the poster — both sit beside it, or
+   both wrap below it together, never split apart from each other.
+   Both sides share .det-row-2col-half's own flex/min-width/padding
+   (and its :last-child border-side-switch at 760px) directly in the
+   HTML class list — rather than maintaining a second, separately-tuned
+   copy of those same dimensions here, which is exactly what caused the
+   two rows to drift out of sync with each other before. */
+.det-header-main { flex:1 1 480px; min-width:0; display:flex; flex-wrap:wrap; }
+/* .det-row-2col-half sets an explicit min-width:280px as a floor, but
+   an explicit value doesn't stop a child's own content from pushing
+   the item even wider — only min-width:0 disables that "auto-expand
+   to fit my content" behavior. The year box's labels don't wrap
+   (white-space:nowrap), so without this override its natural content
+   width can force .det-header-info wider than its fair 50% share,
+   pushing the divider off-center and simultaneously starving the year
+   box of room at cramped widths — the two symptoms share this one
+   cause. (The actual override with the correct effective source order
+   is further below, right after .det-row-2col-half is defined — this
+   position, before that shared class, was getting silently overridden
+   by it.) */
+/* Locks the Favorites/Lowlights field rows (now paired with Progress
+   below, class name kept from its earlier header placement) to their
+   column's width — without this, wrapping content like this can push
+   its column wider than its fair share, the same issue genres
+   previously ran into. */
+.det-header-notes .fav-section-inner { width:100%; box-sizing:border-box; }
 
 .det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem; }
 .det-eyebrow-row .sel-dd { width:auto; min-width:120px; }
@@ -426,6 +423,17 @@
   outline:none; -moz-appearance:textfield; appearance:textfield;
 }
 .det-year-input::placeholder { color:var(--text-3); }
+@media(max-width:1100px) and (min-width:761px) {
+  /* Details (Genres + Description) sharing the header row with the
+     title means the year box only gets roughly half the row's width,
+     not the full remaining space next to the poster — so "Release
+     Year" / "Completion Year" together can outgrow that half before
+     the two columns naturally wrap to full-width at 561px. Shortening
+     the label text keeps the original single-line box design instead
+     of letting it wrap or clip. Range kept generous since the exact
+     wrap point shifts with the poster's own width. */
+  .det-year-label-full { display:none; }
+}
 
 .det-final-score-card {
   text-align:center; padding:clamp(1.5rem, 4vw, 2.25rem) 1.5rem;
@@ -435,24 +443,57 @@
 .det-final-score-num { font-family:var(--serif); font-weight:300; font-size:clamp(48px, 10vw, 76px); color:var(--olive-light); line-height:1; }
 .det-final-score-outof { font-size:10px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; margin-top:.5rem; }
 
-@media(max-width:560px) {
+@media(max-width:760px) {
   .det-header { flex-direction:column; align-items:center; text-align:center; padding:1.25rem; }
   .det-header .detail-poster-wrap { width:clamp(110px, 38vw, 150px); height:auto; aspect-ratio:2/3; }
+  .det-header-main { flex-basis:100%; width:100%; }
+  .det-header-details { border-left:none; border-top:0.5px solid var(--border); padding-left:0; padding-top:1.5rem; }
   .det-title-input { text-align:center; }
   .det-eyebrow-row { justify-content:center; }
   .det-year-box { margin:0 auto; }
   .det-year-field { padding:8px 10px; gap:5px; }
   .det-year-field label { font-size:9px; }
   .det-year-input { width:48px; font-size:12px; }
-  .det-header-details { text-align:left; }
-  .det-header, .det-header-info, .det-header-details, .det-header-main { overflow-x:hidden; }
+  .det-header, .det-header-info, .det-header-notes, .det-header-main { overflow-x:hidden; }
 }
 
 /* ── Content cards ── */
 .det-content { display:flex; flex-direction:column; gap:1.5rem; }
 .det-row-2col { display:flex; gap:0; align-items:flex-start; flex-wrap:wrap; padding:0 !important; overflow:hidden; }
 .det-row-2col-half { flex:1; min-width:280px; padding:clamp(1.25rem, 3vw, 1.75rem); }
+/* .det-header-info's min-width:0 override lives here, not up near
+   .det-header-main above where it originally was, because that
+   position came BEFORE .det-row-2col-half in source order — meaning
+   .det-row-2col-half's own flex:1/min-width:280px was winning the
+   cascade and silently nullifying it (same specificity, later rule
+   wins). Placing the override here, after the shared class, is what
+   actually makes it take effect. */
+.det-header-info { min-width:0; flex:0.65; }
+/* This has to sit AFTER the plain .det-header-info rule right above,
+   not back up near .det-header-main/the other 760px rules — a media
+   query doesn't get special cascade priority just for being a media
+   query. With equal specificity, whichever rule is LATER in the file
+   wins regardless of which one is conditional, so placing this before
+   the plain rule (as it was originally) meant the plain rule's
+   flex:0.65 was silently overriding this at every width, including
+   ≤760px. This is the same mistake, in a new spot, as the earlier
+   title-width override that needed the identical fix.
+   The actual bug being fixed: .det-header-info's min-width:0 (needed
+   above 760px so year-box content can't force it wider than its
+   flex:0.65 share) also removes the one thing flex-wrap needs to ever
+   trigger wrapping — an infinitely-shrinkable item just keeps
+   shrinking instead of dropping to a new line, which is what was
+   crushing the title down to nothing while Details stayed rigidly
+   beside it at its own min-width. Forcing both to flex-basis:100%
+   here makes them explicitly stack instead of depending on wrap
+   happening on its own. */
+@media(max-width:760px) {
+  .det-header-info, .det-header-details { flex:1 1 100%; min-width:0; }
+}
 .det-row-2col-half:last-child { border-left:0.5px solid var(--border); }
+/* Same width-safety lock as .det-header-notes above — genres previously
+   caused exactly this "pushes its column wider than its share" issue. */
+#dGenres { width:100%; box-sizing:border-box; }
 @media(max-width:760px) {
   .det-row-2col-half:last-child { border-left:none; border-top:0.5px solid var(--border); }
 }
@@ -497,11 +538,26 @@
 .det-actions-bar .btn-comments {
   box-sizing:border-box; height:40px; padding:0 18px;
   font-size:13px; display:inline-flex; align-items:center; justify-content:center;
+  flex:1 1 160px;
 }
-.det-actions-bar .btn-save { flex:1 1 200px; max-width:340px; }
-.det-actions-bar .btn-delete,
+/* Delete: solid filled red, matching the same "solid, not outlined"
+   treatment Save Entry already has, instead of its usual transparent/
+   outlined look elsewhere on the site. Scoped to this action bar only —
+   .btn-delete's base outlined style elsewhere is untouched. */
+.det-actions-bar .btn-delete {
+  background:#b23a3a; border:1px solid #b23a3a; color:#fff;
+}
+.det-actions-bar .btn-delete:hover { background:#9c3232; border-color:#9c3232; color:#fff; }
+/* Add to Favorites / Discover / Comments: solid filled green, matching
+   Save Entry, instead of their usual neutral/outlined look elsewhere. */
 .det-actions-bar .popup-action-btn,
-.det-actions-bar .btn-comments { flex:0 1 auto; }
+.det-actions-bar .btn-comments {
+  background:var(--olive); border:1px solid var(--olive); color:#fff;
+}
+.det-actions-bar .popup-action-btn:hover,
+.det-actions-bar .btn-comments:hover { background:var(--olive-2); border-color:var(--olive-2); color:#fff; }
+.det-actions-bar .popup-action-btn svg,
+.det-actions-bar .btn-comments svg { color:#fff; opacity:0.9; }
 
 @media(max-width:600px) {
   .det-two-col { grid-template-columns:1fr; }
@@ -550,7 +606,7 @@
       <input type="file" id="posterFile" accept="image/*" style="display:none" onchange="handlePosterUpload(event)">
 
       <div class="det-header-main">
-      <div class="det-header-info">
+      <div class="det-header-info det-row-2col-half">
         <input class="det-title-input" id="dTitle" type="text" placeholder="Untitled…" oninput="updatePosterLetter()">
 
         <div class="det-eyebrow-row">
@@ -612,8 +668,8 @@
 
       </div>
 
-      <!-- Details — sits next to the title box on wide screens -->
-      <div class="det-header-details">
+      <!-- Notes & Favorites — paired with the title, next to the poster -->
+      <div class="det-header-details det-row-2col-half">
         <div class="det-card-title">Details</div>
         <div class="det-fields-grid">
           <div class="field-group">
@@ -667,9 +723,7 @@
           </div>
         </div>
       </div>
-      <!-- /det-header-details -->
       </div>
-      <!-- /det-header-main -->
     </div>
     <!-- /det-header -->
 
@@ -725,8 +779,8 @@
         </div>
       </div>
 
-      <!-- Notes & Favorites -->
-      <div class="det-row-2col-half">
+      <!-- Notes & Favorites — paired with Progress -->
+      <div class="det-header-notes det-row-2col-half">
         <div class="det-card-title">Notes &amp; Favorites</div>
         <div class="det-fields-grid">
           <div class="field-group" id="dNotesSection" style="margin-bottom:0;">
