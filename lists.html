@@ -553,7 +553,7 @@ async function _hydrateTmdbItems(allLists) {
   await Promise.all([...toFetch].map(async pseudoId => {
     const [, type, tmdbId] = pseudoId.split(':');
     try {
-      const res = await fetch(`${TMDB_BASE}/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=en-US`);
+      const res = await tmdbFetch(`${TMDB_BASE}/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=en-US`);
       if (!res.ok) return;
       const d = await res.json();
       const title = type === 'movie' ? d.title : d.name;
@@ -1454,7 +1454,7 @@ async function _replyReact(replyId, isLike) {
     _replyRenderList();
   } catch (err) {
     console.error('React to reply error:', err);
-    showToast('Failed to save your reaction.', 'err');
+    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
   }
 }
 
@@ -1474,7 +1474,7 @@ async function _replySubmit() {
     await _replyLoad();
   } catch (err) {
     console.error('Post reply error:', err);
-    showToast('Failed to post reply.', 'err');
+    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to post reply.', 'err');
   }
 }
 
@@ -1505,7 +1505,7 @@ async function reactToSocialList(listId, isLike) {
     renderSocialLists();
   } catch (err) {
     console.error('React to list error:', err);
-    showToast('Failed to save your reaction.', 'err');
+    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
   }
 }
 
@@ -1532,7 +1532,7 @@ async function forkSocialList(listId) {
     if (_slPopupListId === listId) _renderSocialListPopup(list);
   } catch (err) {
     console.error('Fork list error:', err);
-    showToast('Failed to add list.', 'err');
+    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to add list.', 'err');
   }
 }
 
@@ -1682,8 +1682,8 @@ function _favPickerResetSearch() {
 async function _favRunDiscoverSearch(q) {
   try {
     const [movRes, tvRes] = await Promise.all([
-      fetch(`${TMDB_BASE}/search/movie?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`).then(r => r.json()),
-      fetch(`${TMDB_BASE}/search/tv?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`).then(r => r.json()),
+      tmdbFetch(`${TMDB_BASE}/search/movie?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`).then(r => r.json()),
+      tmdbFetch(`${TMDB_BASE}/search/tv?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`).then(r => r.json()),
     ]);
     const movies = (movRes.results || []).slice(0, 8).map(r => ({ pseudoId: `tmdb:movie:${r.id}`, title: r.title, poster_url: r.poster_path ? TMDB_IMG + r.poster_path : null, year: (r.release_date||'').split('-')[0], tmdb_id: r.id, tmdb_type: 'movie' }));
     const shows  = (tvRes.results || []).slice(0, 8).map(r => ({ pseudoId: `tmdb:tv:${r.id}`, title: r.name, poster_url: r.poster_path ? TMDB_IMG + r.poster_path : null, year: (r.first_air_date||'').split('-')[0], tmdb_id: r.id, tmdb_type: 'tv' }));
@@ -2261,7 +2261,7 @@ async function createFavCustomList() {
       showToast(`"${title}" created!`);
       setTimeout(() => openFavListPicker(newList.id), 300);
     }
-  } catch(e) { showToast('Error saving list.', 'err'); console.error(e); }
+  } catch(e) { showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Error saving list.', 'err'); console.error(e); }
 }
 </script>
 </body>
