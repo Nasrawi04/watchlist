@@ -19,6 +19,13 @@
   --olive-faint:  rgba(74,103,65,0.11);
   --border-olive: rgba(74,103,65,0.44);
 
+  /* Second accent, used only to tell Movie vs TV Show type tags apart
+     at a glance — same faint-fill/bordered-chip treatment as olive,
+     just a different hue, so the two read as a matched pair. */
+  --tv-accent:    #8AAFD1;
+  --tv-faint:     rgba(74,110,145,0.14);
+  --tv-border:    rgba(122,163,201,0.5);
+
   --border:       rgba(255,255,255,0.1);
   --border-2:     rgba(255,255,255,0.17);
 
@@ -763,11 +770,6 @@ nav {
 .w-score { font-family:var(--serif); font-size:24px; color:var(--olive-light); flex-shrink:0; }
 .w-genre { font-size:12px; color:var(--text-3); margin-bottom:10px; display:flex; gap:6px; flex-wrap:wrap; }
 .w-ep-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; flex-wrap:wrap; }
-.w-ep-badge {
-  font-size:10px; padding:2px 8px; border-radius:20px;
-  background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); font-weight:500;
-  white-space:nowrap; display:inline-block;
-}
 .w-ep-total { font-size:10px; color:var(--text-3); white-space:nowrap; }
 .w-prog-track { height:3px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
 .w-prog-fill { height:100%; background:var(--olive-light); border-radius:2px; transition:width .5s var(--ease); }
@@ -1367,17 +1369,25 @@ nav {
 .comp-score-label { font-size:10px; color:var(--text-3); letter-spacing:1px; text-transform:uppercase; margin-top:4px; }
 
 /* ════════════════════════════════════════════
-   GENRE + MISC BADGES
+   GENRE + MISC BADGES — one shared visual language for every genre,
+   type (Movie/TV), and runtime/episode tag across the whole app.
+   Explicit font-family/weight so these never silently inherit a
+   surrounding serif title font; clamp() for smooth scaling instead of
+   a patchwork of per-page breakpoint overrides.
 ════════════════════════════════════════════ */
-.genre-dot {
-  font-size:10px; padding:2px 8px; border-radius:20px;
+.genre-dot, .type-label, .w-ep-badge, .cat-badge {
+  font-family:var(--sans); font-weight:600;
+  font-size:clamp(8.5px, 2vw, 10.5px);
+  padding:clamp(2px, 0.5vw, 3px) clamp(6px, 1.6vw, 9px);
+  border-radius:3px;
   background:var(--olive-faint); border:0.5px solid var(--border-olive);
   color:var(--olive-light); letter-spacing:0.3px;
+  white-space:nowrap; flex-shrink:0; display:inline-block;
 }
-.cat-badge {
-  font-size:10px; padding:2px 8px; border-radius:20px;
-  background:var(--olive-faint); border:0.5px solid var(--border-olive);
-  color:var(--olive-light); letter-spacing:0.5px;
+/* TV-show variant of the type tag — same shape/weight/scaling, just
+   the second accent color so Movie vs TV Show reads apart at a glance. */
+.type-label-tv {
+  background:var(--tv-faint); border-color:var(--tv-border); color:var(--tv-accent);
 }
 .cat-badge-mini { font-size:14px; flex-shrink:0; }
 
@@ -1759,18 +1769,8 @@ nav {
 /* ── Picker number badge ── */
 /* fav-slot-num-badge removed — now using cg-rank-badge */
 
-/* ── Type label (Movie / TV Show — anime/cartoons only) ──
-   Matches .genre-dot's styling (same font-size/padding was already true
-   at every breakpoint — the mismatch was color: this used a flat, low-
-   contrast gray that barely showed up against the light theme, making
-   it look smaller/out of place next to the vivid olive genre pills next
-   to it. Using the same olive theme fixes that without any size change. */
-.type-label {
-  font-size:10px; padding:2px 8px; border-radius:20px;
-  background:var(--olive-faint); border:0.5px solid var(--border-olive);
-  color:var(--olive-light); letter-spacing:0.3px;
-  white-space:nowrap; flex-shrink:0; display:inline-block;
-}
+/* Type label (Movie / TV Show) styling now lives in the shared
+   .genre-dot, .type-label, .w-ep-badge, .cat-badge rule above. */
 
 /* ════════════════════════════════════════════
    MODAL / OVERLAY
@@ -2145,6 +2145,10 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   --olive-glow:   rgba(26,69,32,0.25);
   --olive-faint:  rgba(26,69,32,0.1);
   --border-olive: rgba(26,69,32,0.45);
+
+  --tv-accent:    #2B5A85;
+  --tv-faint:     rgba(43,90,133,0.1);
+  --tv-border:    rgba(43,90,133,0.45);
   --border:       rgba(0,0,0,0.12);
   --border-2:     rgba(0,0,0,0.2);
   --text:         #1A1A1A;
@@ -2335,9 +2339,9 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   pointer-events:none;
 }
 .wg-ep {
-  font-size:10px; font-weight:700; color:#fff; letter-spacing:0.4px;
+  font-family:var(--sans); font-size:10px; font-weight:700; color:#fff; letter-spacing:0.4px;
   background:rgba(20,28,17,0.75); backdrop-filter:blur(2px);
-  border-radius:5px; box-shadow:0 1px 4px rgba(0,0,0,0.35);
+  border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.35);
   padding:3px 7px; align-self:flex-start;
   white-space:nowrap; max-width:calc(100% - 4px);
   overflow:hidden; text-overflow:ellipsis;
@@ -2773,23 +2777,9 @@ body { font-size:15px; }
   .fav-chip-label { font-size:8px; letter-spacing:0; }
   .fav-chips { gap:3px; margin-top:4px; }
 
-  /* Genre dots + cat badges — all pages */
-  .genre-dot {
-    font-size:8px;
-    padding:1px 5px;
-    letter-spacing:0;
-  }
-  .cat-badge {
-    font-size:8px;
-    padding:1px 5px;
-  }
-  .type-label { font-size:8px; padding:1px 5px; }
+  /* Genre dots + cat badges now scale smoothly via clamp() in the base
+     rule — no fixed per-breakpoint override needed here anymore. */
 
-  /* Episode badge — watching cards */
-  .w-ep-badge {
-    font-size:8px;
-    padding:2px 6px;
-  }
   /* Latest Entries: badge in narrow horizontal-scroll cards */
   #homeRecentGrid .w-ep-badge { font-size:7px; padding:1px 4px; }
   #homeRecentGrid .q-title { font-size:11px; }
@@ -3027,9 +3017,7 @@ body { font-size:15px; }
   .wg-title { font-size:11px; }
   /* Extra small tags */
   .fav-chip { font-size:8px; padding:1px 4px; }
-  .genre-dot { font-size:7px; padding:1px 4px; }
-  .type-label { font-size:7px; padding:1px 4px; }
-  .w-ep-badge { font-size:7px; padding:1px 5px; }
+  /* genre-dot / type-label / w-ep-badge now scale via clamp() in the base rule */
   /* Done button tiny phones */
   .w-ep-controls--done .w-list-action-btn { width:22px; height:22px; }
   .w-ep-controls--done .w-list-action-btn svg { width:10px; height:10px; }
@@ -3101,8 +3089,7 @@ body { font-size:15px; }
 
   /* ISSUE 1: tag scaling on tablet */
   .fav-chip { font-size:10px; padding:2px 7px; }
-  .genre-dot { font-size:9px; padding:1px 6px; }
-  .type-label { font-size:9px; padding:1px 6px; }
+  /* genre-dot / type-label now scale via clamp() in the base rule */
 
   @media (max-width: 768px) {
     .qp-trigger { font-size:10px; padding:5px 8px; }
