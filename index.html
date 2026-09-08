@@ -600,7 +600,7 @@ async function hcPostReply(commentId) {
     await addComment(_hcEntryId, content, commentId);
     hcCancelReply(commentId);
     await hcLoad();
-  } catch(err) { if(typeof showToast !== 'undefined') showToast('Failed to post reply.'); input.disabled = false; }
+  } catch(err) { if(typeof showToast !== 'undefined') showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to post reply.'); input.disabled = false; }
 }
 
 async function hcSubmit() {
