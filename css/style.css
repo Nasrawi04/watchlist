@@ -2391,14 +2391,10 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   position:absolute !important; z-index:2; top:6px; left:6px;
   max-width:calc(100% - 12px); overflow:hidden; text-overflow:ellipsis;
 }
-/* Top-right variant, for when top-left is already occupied by
-   something else on the same poster (e.g. a rank number badge). */
-.type-label-overlay-right {
-  position:absolute !important; z-index:2; top:6px; right:6px;
-  max-width:calc(100% - 12px); overflow:hidden; text-overflow:ellipsis;
-}
-/* Bottom-left variant, used on list-view poster thumbnails where the
-   badge sits at the bottom of the poster rather than the top. */
+/* Bottom-left variant, used on poster thumbnails where the badge sits
+   at the bottom of the poster rather than the top (e.g. next to a
+   rank number badge already occupying top-left, or by design choice
+   for a given card layout). */
 .type-label-overlay-bottom {
   position:absolute !important; z-index:2; bottom:6px; left:6px;
   max-width:calc(100% - 12px); overflow:hidden; text-overflow:ellipsis;
