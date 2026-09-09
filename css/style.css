@@ -3086,9 +3086,27 @@ body { font-size:15px; }
   #homeRecentGrid .q-genre { font-size:8px; }
   .w-ep-total { font-size:7px; }
   .w-ep-row { gap:4px; }
-  /* Grid: 2 col on very small phones */
+  /* Grid: 3 col on phones, not 2 — matches the already-existing 3-col
+     pattern used at ≤640px (this ≤400px block is nested inside that
+     range too, so it needs its own copy to actually apply). */
   .watching-grid, .queue-grid, .completed-grid {
-    grid-template-columns:repeat(2,1fr) !important;
+    grid-template-columns:repeat(3,1fr) !important;
+  }
+  /* Same width:100% approach as the ≤640px rule above, not a fixed
+     pixel guess — this way the card always fills its actual grid
+     cell exactly, whatever that computes to, rather than needing a
+     hand-picked max-width re-tuned for every breakpoint. Matching
+     specificity to the compound-selector rule set earlier
+     (.watching-grid .wg-card, etc.) is required here too — a plain
+     .wg-card rule would lose to that one regardless of !important,
+     since specificity is compared before source order (the exact bug
+     that caused the tablet breakpoint to overflow before this same
+     fix was applied there). */
+  .wg-card, .q-card, .cg-card,
+  .watching-grid .wg-card, .watching-grid .q-card, .watching-grid .cg-card,
+  .queue-grid .q-card, .completed-grid .cg-card {
+    width:100% !important;
+    max-width:100% !important;
   }
   /* Score on tiny phones */
   .cg-score { font-size:14px; }
@@ -3154,7 +3172,7 @@ body { font-size:15px; }
    LARGE DISPLAYS — 1536px+
 ───────────────────────────────────────── */
 @media (min-width: 1536px) {
-  .wg-card, .q-card, .cg-card { width:220px !important; }
+  .wg-card, .q-card, .cg-card { width:280px !important; }
   .watching-grid, .queue-grid, .completed-grid { gap:18px !important; }
 }
 
@@ -3162,7 +3180,7 @@ body { font-size:15px; }
    TV / ULTRAWIDE — 1920px+
 ───────────────────────────────────────── */
 @media (min-width: 1920px) {
-  .wg-card, .q-card, .cg-card { width:240px !important; }
+  .wg-card, .q-card, .cg-card { width:300px !important; }
   .home-title  { font-size:80px; }
   .category-grid { grid-template-columns:repeat(4,1fr); }
 }
