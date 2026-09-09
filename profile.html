@@ -207,7 +207,7 @@
 
 .fv-w-ep{margin-bottom:7px;display:flex;align-items:center;gap:10px}
 
-.fv-w-ep-badge{padding:3px 10px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);font-size:11px;font-weight:500}
+.fv-w-ep-badge{padding:clamp(2px, 0.5vw, 3px) clamp(6px, 1.6vw, 9px);border-radius:3px;background:var(--olive);border:0.5px solid var(--olive);color:#fff;font-family:var(--sans);font-size:clamp(8.5px, 2vw, 10.5px);font-weight:600;letter-spacing:0.3px}
 @media(max-width:640px){.fv-w-ep-badge{font-size:9px;padding:2px 7px;}}
 @media(max-width:400px){.fv-w-ep-badge{font-size:8px;padding:1px 5px;}}
 
@@ -218,7 +218,7 @@
 
 .fv-w-prog-label{font-size:10px;color:var(--text-3);margin-top:4px}
 
-.fv-w-score{font-family:var(--serif);font-size:24px;color:var(--olive-light);flex-shrink:0}
+.fv-w-score{font-family:var(--serif);font-size:clamp(28px,5vw,36px);font-weight:300;color:var(--olive-light);flex-shrink:0;line-height:1}
 
 .fv-ranked-list{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none;}
 
@@ -1710,11 +1710,12 @@ function renderLibrary(){
       var _wgScore=liveScore(e)!=null?Number(liveScore(e)):null;
       var _wgScoreCls=_wgScore==null?'':(_wgScore>=10?'cg-score-10':_wgScore>=9?'cg-score-9':_wgScore>=8?'cg-score-8':_wgScore>=7?'cg-score-7':_wgScore>=6?'cg-score-6':_wgScore>=3?'cg-score-3-5':'cg-score-0-2');
       var _wgScoreBadge=_wgScore!=null?'<div class="cg-score-badge '+_wgScoreCls+'">'+_wgScore.toFixed(2)+'</div>':'';
+      var _typeCls=(isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+_wgScoreBadge+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
         +(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">Taking<br>a Break</span></div>':'')
-        +'<div class="wg-overlay" style="z-index:2;">'+(ep?'<span class="wg-ep">'+ep+'</span>':'')+'</div>'
-        +'</div><div class="wg-info"><div class="wg-title">'+esc(e.title)+'</div>'
-        +'<div class="wg-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'
+        +'<span class="'+_typeCls+'">'+(isM?'Movie':'TV Show')+'</span>'
+        +'</div><div class="wg-info"><div class="wg-title" style="display:flex;align-items:baseline;gap:6px;">'+esc(e.title)+(e.year?'<span style="font-size:11px;font-weight:400;color:var(--text-3);">'+e.year+'</span>':'')+'</div>'
+        +(ep?'<div class="wg-genre"><span class="w-ep-badge">'+ep+'</span></div>':'')
         +(e.total_eps?'<div class="fv-w-prog-track" style="margin-top:6px;"><div class="fv-w-prog-fill" style="width:'+pct+'%'+(ip?';background:var(--text-3)':'')+';"></div></div>'
           +'<div style="font-size:10px;color:var(--text-3);margin-top:3px;">'+(e.watched||0)+' / '+e.total_eps+' eps · '+pct+'%</div>'
           :'')
