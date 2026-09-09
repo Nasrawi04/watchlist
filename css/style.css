@@ -2391,6 +2391,12 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   position:absolute !important; z-index:2; top:6px; left:6px;
   max-width:calc(100% - 12px); overflow:hidden; text-overflow:ellipsis;
 }
+/* Top-right variant, for when top-left is already occupied by
+   something else on the same poster (e.g. a rank number badge). */
+.type-label-overlay-right {
+  position:absolute !important; z-index:2; top:6px; right:6px;
+  max-width:calc(100% - 12px); overflow:hidden; text-overflow:ellipsis;
+}
 .wg-prog-track { height:2px; background:rgba(255,255,255,0.2); border-radius:2px; overflow:hidden; }
 .wg-prog-fill  { height:100%; background:var(--olive-light); border-radius:2px; transition:width .4s var(--ease); }
 .wg-info { padding:10px 10px 12px; display:flex; flex-direction:column; flex:1; }
