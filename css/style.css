@@ -11,6 +11,7 @@
   --card:         rgba(255,255,255,0.058);
   --card-solid:   #18181D; /* opaque equivalent of --card's visual appearance — --card itself is translucent in dark mode, which is fine for a static background but leaves scrolled content visible through anything sticky/opaque-required, like the sort bar */
   --card-2:       rgba(255,255,255,0.09);
+  --card-2-solid: #212126; /* opaque equivalent of --card-2's visual appearance, same reasoning as --card-solid above — needed here for the theme toggle pill, which looked glassy/translucent in dark mode (where --card-2 is a genuine rgba overlay) while looking solid in light mode (where --card-2 is already an opaque hex) */
   --card-3:       rgba(255,255,255,0.13);
 
   --olive:        #4A6741;
@@ -2162,6 +2163,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   --card:         #F3EDE4;
   --card-solid:   #F3EDE4; /* already opaque in light mode, so this is just an alias */
   --card-2:       #E8E1D7;
+  --card-2-solid: #E8E1D7; /* already opaque in light mode, so this is just an alias */
   --card-3:       #DDD5CA;
   --olive:        #1A4520;
   --olive-2:      #0F2D14;
@@ -2245,9 +2247,8 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .theme-toggle-pill {
   position:fixed; bottom:24px; right:24px; z-index:395;
   display:flex; align-items:center; gap:2px; padding:3px;
-  background:var(--card-2); border:0.5px solid var(--border-2);
+  background:var(--card-2-solid); border:0.5px solid var(--border-2);
   border-radius:50px;
-  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
   box-shadow:var(--shadow);
   transition:box-shadow 220ms var(--ease);
 }
@@ -2372,15 +2373,14 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   white-space:nowrap; max-width:calc(100% - 4px);
   overflow:hidden; text-overflow:ellipsis;
 }
-/* Runtime/ep poster corner overlay (bottom-left) — same dark-glass
-   treatment as .wg-ep so it stays legible over any poster art. */
-.poster-ep-badge {
-  position:absolute; z-index:2; bottom:6px; left:6px;
-  font-family:var(--sans); font-size:9px; font-weight:700; color:#fff; letter-spacing:0.3px;
-  background:rgba(20,28,17,0.75); backdrop-filter:blur(2px);
-  border-radius:3px; padding:2px 7px;
-  white-space:nowrap; max-width:calc(100% - 12px);
-  overflow:hidden; text-overflow:ellipsis;
+/* Runtime/ep poster corner overlay (bottom-left) — positioning only.
+   The actual look (solid olive fill) comes from .w-ep-badge, the same
+   primary runtime/ep tag class used everywhere else on the site
+   (next to titles, in Completed rows, etc.), not a separate
+   poster-overlay-specific variant. */
+.w-ep-badge-overlay {
+  position:absolute !important; z-index:2; bottom:6px; left:6px;
+  max-width:calc(100% - 12px); overflow:hidden; text-overflow:ellipsis;
 }
 /* Type badge poster corner overlay (top-left) — positioning only.
    The actual look (solid olive for Movie, solid blue for TV Show)
