@@ -95,6 +95,12 @@
   gap:clamp(10px, 1.8vw, 32px);
   align-items:start; grid-auto-rows:max-content;
 }
+@media(min-width:1024px) {
+  .lv-grid { grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
+}
+@media(min-width:1600px) {
+  .lv-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
+}
 .lv-card {
   opacity:0; transform:translateY(18px); width:100%; box-sizing:border-box;
   transition:opacity .5s var(--ease), transform .5s var(--ease);
@@ -104,18 +110,19 @@
 /* ── List view ── */
 .lv-list { display:flex; flex-direction:column; gap:8px; }
 .lv-list-row {
-  display:grid; grid-template-columns:64px 1fr auto; align-items:center; gap:18px;
+  display:grid; grid-template-columns:80px 1fr auto; align-items:center; gap:20px;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
-  padding:12px 20px 12px 12px; cursor:pointer;
+  padding:14px 22px 14px 14px; cursor:pointer;
   opacity:0; transform:translateX(-10px);
   transition:opacity .4s var(--ease), transform .4s var(--ease), border-color .15s, background .15s;
 }
 .lv-list-row.lv-in-view { opacity:1; transform:none; }
 .lv-list-row:hover { border-color:var(--border-olive); background:var(--card-2); }
-.lv-list-poster { width:64px; height:90px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.lv-list-poster { width:80px; height:112px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
 .lv-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.lv-list-title { font-size:16px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lv-list-year { font-size:12.5px; color:var(--text-3); }
+.lv-list-title { font-size:18px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lv-list-year { font-size:13px; color:var(--text-3); }
+.lv-list-genres { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
 
 .home-tmdb-poster-fallback {
   width:100%; height:100%; display:flex; align-items:center; justify-content:center;
@@ -125,13 +132,19 @@
 .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
 .home-tmdb-meta-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px; }
 .home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
+/* Your own MSS rating — needs its own bigger, more prominent class
+   rather than sharing .home-tmdb-score (the small public TMDB score
+   shown elsewhere), since making that class bigger everywhere would
+   also inflate the public score display it's used for. */
+.lv-own-score { color:var(--olive-light); font-family:var(--serif); font-size:clamp(16px, 3.4vw, 20px); font-weight:600; white-space:nowrap; }
 .lv-empty { text-align:center; padding:3rem 0; color:var(--text-3); font-size:14px; }
 
 @media(max-width:560px) {
   .lv-grid { gap:10px; }
-  .lv-list-row { grid-template-columns:48px 1fr auto; gap:12px; padding:9px 14px 9px 9px; }
-  .lv-list-poster { width:48px; height:68px; }
-  .lv-list-title { font-size:14px; }
+  .lv-list-row { grid-template-columns:56px 1fr auto; gap:14px; padding:10px 16px 10px 10px; }
+  .lv-list-poster { width:56px; height:80px; }
+  .lv-list-title { font-size:15px; }
+  .lv-list-year { font-size:12px; }
 }
 </style>
   <!-- PWA -->
@@ -224,14 +237,35 @@ function _lvRankBadgeHTML(rank) {
   return `<div class="cg-rank-badge ${cls}">${rank + 1}</div>`;
 }
 
+// Personal ranked lists can genuinely mix movies and shows within the
+// same list (a "Cold Characters" list might have both a film and a
+// series) — unlike Discover's category-based lists where most
+// categories are already single-type by name, there's no such
+// shortcut here, so the type badge always shows when we can determine
+// it. Checks tmdb_type first (TMDB-linked items), falling back to the
+// personal entry's own category/media-type fields.
+function _lvTypeLabel(e) {
+  if (e.tmdb_type) return e.tmdb_type === 'movie' ? 'Movie' : 'TV Show';
+  if (e.cat === 'movies') return 'Movie';
+  if (e.cat === 'tv') return 'TV Show';
+  const mt = e.ratings && e.ratings._media_type;
+  if (mt) return mt === 'movie' ? 'Movie' : 'TV Show';
+  return null;
+}
+function _lvTypeCls(e) {
+  const isMovie = e.tmdb_type === 'movie' || e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+  return isMovie ? 'type-label' : 'type-label type-label-tv';
+}
+
 function _lvCardHTML(e, rank) {
   const posterInner = (e.poster_url && !e.poster_url.startsWith('PLACEHOLDER'))
     ? `<img src="${e.poster_url}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
   const scoreStr = _lvOwnScoreHTML(e);
+  const typeLabel = _lvTypeLabel(e);
   return `<div class="q-card lv-card" ${clickAttr}>
-    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${_lvRankBadgeHTML(rank)}</div>
+    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${_lvRankBadgeHTML(rank)}${typeLabel ? `<span class="${_lvTypeCls(e)} type-label-overlay">${typeLabel}</span>` : ''}</div>
     <div class="q-info">
       <div class="q-title">${_lvEsc(e.title)}</div>
       <div class="home-tmdb-meta-row">
@@ -248,10 +282,31 @@ function _lvListRowHTML(e, rank) {
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
   const scoreStr = _lvOwnScoreHTML(e);
+  const typeLabel = _lvTypeLabel(e);
+  // Runtime/ep scope — only meaningful for full personal library
+  // entries (season/episode/runtime data), not for a pure TMDB
+  // reference added straight from Discover, which carries none of
+  // this. genreHTML() already renders nothing for an empty/missing
+  // genres array, so no separate guard is needed there.
+  const isMovieRow = e.tmdb_type === 'movie' || e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+  let scope = '';
+  if (isMovieRow) {
+    const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
+    if (rtH || rtM) scope = rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
+  } else if (e.season != null) {
+    scope = `S${e.season} E${e.episode ?? 0}`;
+  } else if (e.watched) {
+    scope = `Ep ${e.watched}`;
+  }
   return `<div class="lv-list-row" ${clickAttr}>
     <div class="lv-list-poster" style="position:relative">${posterInner}${_lvRankBadgeHTML(rank)}</div>
     <div style="min-width:0">
-      <div class="lv-list-title">${_lvEsc(e.title)}</div>
+      <div class="lv-list-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        ${_lvEsc(e.title)}
+        ${typeLabel ? `<span class="${_lvTypeCls(e)}">${typeLabel}</span>` : ''}
+        ${scope ? `<span class="w-ep-badge">${scope}</span>` : ''}
+      </div>
+      ${e.genres && e.genres.length ? `<div class="lv-list-genres">${genreHTML(e.genres, 3)}</div>` : ''}
       <div class="home-tmdb-meta-row">
         <span class="lv-list-year">${e.year ? _lvEsc(e.year) : ''}</span>
         ${scoreStr}
@@ -272,7 +327,7 @@ function _lvOwnScoreHTML(e) {
   if (isTmdbOnly) return '';
   const score = liveScore(e);
   if (score == null) return '';
-  return `<span class="home-tmdb-score">★ ${Number(score).toFixed(1)}</span>`;
+  return `<span class="lv-own-score">★ ${Number(score).toFixed(1)}</span>`;
 }
 
 function _lvRenderViewToggle() {
