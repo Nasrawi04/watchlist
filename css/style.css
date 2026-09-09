@@ -2372,21 +2372,25 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   white-space:nowrap; max-width:calc(100% - 4px);
   overflow:hidden; text-overflow:ellipsis;
 }
-/* Poster corner overlay badges — type (top-left) and runtime/ep
-   (bottom-left), same dark-glass treatment as .wg-ep so they stay
-   legible over any poster art. Used by getTypeBadgeOverlay() and
-   any card wanting a runtime/ep badge directly on the poster image
-   rather than in the text/meta row below it. */
-.poster-type-badge, .poster-ep-badge {
-  position:absolute; z-index:2;
+/* Runtime/ep poster corner overlay (bottom-left) — same dark-glass
+   treatment as .wg-ep so it stays legible over any poster art. */
+.poster-ep-badge {
+  position:absolute; z-index:2; bottom:6px; left:6px;
   font-family:var(--sans); font-size:9px; font-weight:700; color:#fff; letter-spacing:0.3px;
   background:rgba(20,28,17,0.75); backdrop-filter:blur(2px);
   border-radius:3px; padding:2px 7px;
   white-space:nowrap; max-width:calc(100% - 12px);
   overflow:hidden; text-overflow:ellipsis;
 }
-.poster-type-badge { top:6px; left:6px; }
-.poster-ep-badge { bottom:6px; left:6px; }
+/* Type badge poster corner overlay (top-left) — positioning only.
+   The actual look (solid olive for Movie, solid blue for TV Show)
+   comes from the existing .type-label/.type-label-tv classes already
+   used everywhere else on the site — this just pins that same badge
+   to a poster corner instead of the usual meta-row placement. */
+.type-label-overlay {
+  position:absolute !important; z-index:2; top:6px; left:6px;
+  max-width:calc(100% - 12px); overflow:hidden; text-overflow:ellipsis;
+}
 .wg-prog-track { height:2px; background:rgba(255,255,255,0.2); border-radius:2px; overflow:hidden; }
 .wg-prog-fill  { height:100%; background:var(--olive-light); border-radius:2px; transition:width .4s var(--ease); }
 .wg-info { padding:10px 10px 12px; display:flex; flex-direction:column; flex:1; }
@@ -2707,7 +2711,7 @@ body { font-size:15px; }
 .completed-grid .cg-card,
 .fav-watching-grid .q-card {
   flex-shrink:0 !important;
-  width:240px;
+  width:240px !important;
   scroll-snap-align:start;
   display:flex !important;
   flex-direction:column !important;
@@ -2721,13 +2725,13 @@ body { font-size:15px; }
   .watching-grid .q-card,
   .watching-grid .cg-card,
   .queue-grid .q-card,
-  .completed-grid .cg-card { width:180px; }
+  .completed-grid .cg-card { width:180px !important; }
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
   .accordion-body.open:has(.completed-list) { max-height:55vh; }
 }
 @media(max-width:400px) {
-  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card { width:150px; }
+  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card { width:150px !important; }
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
   .accordion-body.open:has(.completed-list) { max-height:50vh; }
@@ -2736,7 +2740,7 @@ body { font-size:15px; }
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
   .accordion-body.open:has(.completed-list) { max-height:65vh; }
-  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card, .fav-watching-grid .q-card { width:260px; }
+  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card, .fav-watching-grid .q-card { width:260px !important; }
 }
 
 /* ════════════════════════════════════════════
