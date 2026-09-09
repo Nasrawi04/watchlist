@@ -3114,7 +3114,9 @@ body { font-size:15px; }
     scroll-snap-type:unset !important;
     justify-content:start !important;
   }
-  .wg-card, .q-card, .cg-card {
+  .wg-card, .q-card, .cg-card,
+  .watching-grid .wg-card, .watching-grid .q-card, .watching-grid .cg-card,
+  .queue-grid .q-card, .completed-grid .cg-card {
     flex-shrink:unset !important;
     width:100% !important;
     max-width:180px !important;
