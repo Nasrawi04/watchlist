@@ -57,6 +57,7 @@
 .dl-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .dl-list-title { font-size:18px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dl-list-year { font-size:14px; color:var(--text-3); font-weight:400; }
+.dl-list-badges-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .dl-list-desc {
   font-size:12px; color:var(--text-3); margin-top:4px; line-height:1.4;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
@@ -176,17 +177,12 @@ function _dlCardHTML(it, rank) {
   const scoreStr = _discFloorScore(it.score);
   const typeLabel = _dlTypeLabel(it);
   const typeCls = it.media_type === 'movie' ? 'type-label' : 'type-label type-label-tv';
-  // .cg-rank-badge already occupies top-left when the list is ranked
-  // (the rank number), so the type badge moves to top-right there
-  // instead of colliding with it — top-left otherwise, matching the
-  // same corner used everywhere else this badge appears.
-  const typeCornerCls = _dlIsRanked ? 'type-label-overlay-right' : 'type-label-overlay';
   return `<div class="q-card dl-card" ${_discClickAttr(it)}>
     <div class="q-poster" style="position:relative">
       ${posterInner}
       <div class="q-poster-overlay"></div>
       ${rankBadge}
-      ${typeLabel ? `<span class="${typeCls} ${typeCornerCls}">${typeLabel}</span>` : ''}
+      ${typeLabel ? `<span class="${typeCls} type-label-overlay-bottom">${typeLabel}</span>` : ''}
     </div>
     <div class="q-info">
       <div class="q-title">${_dlEsc(it.title)}</div>
@@ -214,12 +210,13 @@ function _dlListRowHTML(it, rank) {
   // gap on this specific data source.
   return `<div class="dl-list-row ${_dlIsRanked ? 'dl-ranked' : ''}" ${_discClickAttr(it)}>
     ${rankCol}
-    <div class="dl-list-poster" style="position:relative">${posterInner}${typeLabel ? `<span class="${typeCls} type-label-overlay-bottom">${typeLabel}</span>` : ''}</div>
+    <div class="dl-list-poster">${posterInner}</div>
     <div style="min-width:0">
       <div class="dl-list-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
         ${_dlEsc(it.title)}
         <span class="dl-list-year">${it.year ? _dlEsc(it.year) : ''}</span>
       </div>
+      ${typeLabel ? `<div class="dl-list-badges-row"><span class="${typeCls}">${typeLabel}</span></div>` : ''}
       ${it.overview ? `<div class="dl-list-desc">${_dlEsc(it.overview)}</div>` : ''}
     </div>
     <div class="dl-list-right">
