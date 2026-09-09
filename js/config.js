@@ -327,8 +327,25 @@ function getTypeBadge(entry, context) {
 }
 
 /* Overlay variant — no poster tag, returns empty (label appears before genres only) */
+/*
+ * getTypeBadgeOverlay(entry, context) — Movie/TV Show type tag styled
+ * for a poster overlay (top-left corner, dark glass background so it
+ * stays legible over any poster art), as opposed to getTypeBadge()'s
+ * plain solid-fill tag meant for a text/meta row below a poster.
+ */
 function getTypeBadgeOverlay(entry, context) {
-  return '';
+  var cat = (entry && entry.cat) || '';
+  var isMovie;
+  if (cat === 'movies') {
+    isMovie = true;
+  } else if (cat === 'tv') {
+    isMovie = false;
+  } else {
+    var mediaType = (entry && entry.ratings && entry.ratings._media_type) || 'show';
+    isMovie = mediaType === 'movie';
+  }
+  var label = isMovie ? 'Movie' : 'TV Show';
+  return '<span class="poster-type-badge">' + label + '</span>';
 }
 
 /* ── Navigation helpers ── */
