@@ -73,7 +73,7 @@
      pattern) — no scoped override needed here anymore. */
   /* Corner badges on these two sections' posters — type top-left,
      runtime/ep bottom-left — use the shared .type-label-overlay/
-     .poster-ep-badge classes from style.css (added there rather than
+     .w-ep-badge-overlay classes from style.css (added there rather than
      scoped here, since getTypeBadgeOverlay() is also used by
      completed.html and friend-view.html). */
 </style>
@@ -294,7 +294,7 @@ function renderHomeWatchlist(entries) {
       scope = bd.length ? `S${bd.length} E${bdTot}` : (e.total_seasons && e.total_eps ? `S${e.total_seasons} E${e.total_eps}` : e.total_seasons ? `S${e.total_seasons}` : e.total_eps ? `${e.total_eps} eps` : '');
     }
     return `<div class="q-card" onclick="${goto}">
-    <div class="q-poster" style="position:relative">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${getTypeBadgeOverlay(e,'latest')}${scope ? `<span class="poster-ep-badge">${scope}</span>` : ''}</div>
+    <div class="q-poster" style="position:relative">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${getTypeBadgeOverlay(e,'latest')}${scope ? `<span class="w-ep-badge w-ep-badge-overlay">${scope}</span>` : ''}</div>
     <div class="q-info"><div class="q-title">${e.title}</div><div class="q-genre">${genreHTML(e.genres,3)}</div></div>
   </div>`;
   }).join('');
