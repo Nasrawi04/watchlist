@@ -3186,7 +3186,7 @@ body { font-size:15px; }
    LARGE DISPLAYS — 1536px+
 ───────────────────────────────────────── */
 @media (min-width: 1536px) {
-  .wg-card, .q-card, .cg-card { width:260px !important; }
+  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card, .fav-watching-grid .q-card { width:260px !important; }
   .watching-grid, .queue-grid, .completed-grid { gap:18px !important; }
 }
 
@@ -3194,7 +3194,7 @@ body { font-size:15px; }
    TV / ULTRAWIDE — 1920px+
 ───────────────────────────────────────── */
 @media (min-width: 1920px) {
-  .wg-card, .q-card, .cg-card { width:280px !important; }
+  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card, .fav-watching-grid .q-card { width:280px !important; }
   .home-title  { font-size:80px; }
   .category-grid { grid-template-columns:repeat(4,1fr); }
 }
