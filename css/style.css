@@ -1944,6 +1944,13 @@ nav {
   .confirm-actions { flex-direction:column; }
   .confirm-cancel { flex:none; }
   .confirm-ok     { flex:none; }
+  /* .w-card's ≤400px tier (70x100 poster) never gets any smaller below
+     that — on genuinely narrow phones (320-360px) that's still tight
+     against how little width is actually available once the poster,
+     gaps, and padding are all accounted for. */
+  .w-card  { padding:6px 8px; gap:8px; height:auto !important; min-height:76px; }
+  .w-poster { width:56px; height:80px; }
+  .w-title { font-size:12px; }
 }
 
 /* ════════════════════════════════════════════
