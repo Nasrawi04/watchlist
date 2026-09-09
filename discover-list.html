@@ -56,8 +56,7 @@
 .dl-list-poster { width:80px; height:112px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
 .dl-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .dl-list-title { font-size:18px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dl-list-year { font-size:13px; color:var(--text-3); }
-.dl-list-genres { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.dl-list-year { font-size:14px; color:var(--text-3); font-weight:400; }
 .dl-list-desc {
   font-size:12px; color:var(--text-3); margin-top:4px; line-height:1.4;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
@@ -77,9 +76,6 @@
   .dl-list-year { font-size:12px; }
   .dl-list-row .type-label { font-size:10px; padding:3px 8px; }
 }
-@media(max-width:380px) {
-  .dl-list-row .type-label { display:none; }
-}
 
 .home-tmdb-poster-fallback {
   width:100%; height:100%; display:flex; align-items:center; justify-content:center;
@@ -89,6 +85,11 @@
 .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
 .home-tmdb-meta-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px; }
 .home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
+/* "Very slightly" bigger — this is Discover's public TMDB score, kept
+   modest since it's someone else's aggregate rating, not the user's
+   own. list-view.html's own MSS score gets a much bigger, standalone
+   treatment instead (that one is the user's own rating, not TMDB's). */
+.dl-score-big { font-size:clamp(13px, 3vw, 15px); }
 
 .dl-sentinel { height:1px; }
 .dl-end-msg { text-align:center; padding:2.5rem 0; color:var(--text-3); font-size:13px; }
@@ -207,21 +208,22 @@ function _dlListRowHTML(it, rank) {
   const scoreStr = _discFloorScore(it.score);
   const typeLabel = _dlTypeLabel(it);
   const typeCls = it.media_type === 'movie' ? 'type-label' : 'type-label type-label-tv';
-  const genreNames = _discGenreNames(it.genre_ids);
+  // TMDB's discover/list data doesn't include runtime or episode count
+  // (that only exists on the per-item detail endpoint) — this stays
+  // empty for essentially every item here, not a bug, just a real data
+  // gap on this specific data source.
   return `<div class="dl-list-row ${_dlIsRanked ? 'dl-ranked' : ''}" ${_discClickAttr(it)}>
     ${rankCol}
-    <div class="dl-list-poster">${posterInner}</div>
+    <div class="dl-list-poster" style="position:relative">${posterInner}${typeLabel ? `<span class="${typeCls} type-label-overlay-bottom">${typeLabel}</span>` : ''}</div>
     <div style="min-width:0">
-      <div class="dl-list-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div class="dl-list-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
         ${_dlEsc(it.title)}
-        ${typeLabel ? `<span class="${typeCls}">${typeLabel}</span>` : ''}
+        <span class="dl-list-year">${it.year ? _dlEsc(it.year) : ''}</span>
       </div>
-      ${genreNames.length ? `<div class="dl-list-genres">${genreHTML(genreNames, 3)}</div>` : ''}
       ${it.overview ? `<div class="dl-list-desc">${_dlEsc(it.overview)}</div>` : ''}
-      <div class="dl-list-year">${it.year ? _dlEsc(it.year) : ''}</div>
     </div>
     <div class="dl-list-right">
-      ${scoreStr ? `<span class="home-tmdb-score">★ ${scoreStr}</span>` : ''}
+      ${scoreStr ? `<span class="home-tmdb-score dl-score-big">★ ${scoreStr}</span>` : ''}
     </div>
   </div>`;
 }
