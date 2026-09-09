@@ -2497,18 +2497,20 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .cg-rank-3  { background:linear-gradient(145deg,#7A4E2A,#A06B3E); color:#fff5ee; }
 .cg-rank-other { background:rgba(70,70,70,0.82); color:#d8d8d8; backdrop-filter:blur(3px); }
 
-/* Score badge — same positioning as ranking badge */
+/* Score badge — same positioning as ranking badge. "New" MSS-rating
+   refresh: bigger, bolder, star-prefixed (added in the JS builder),
+   and every tier now a genuine solid color rather than a gradient. */
 .cg-score-badge {
   position:absolute; top:7px; left:7px; z-index:2;
-  padding:3px 8px; border-radius:5px; min-width:32px; text-align:center;
-  font-size:11px; font-weight:700; letter-spacing:0.4px;
+  padding:4px 9px; border-radius:5px; min-width:38px; text-align:center;
+  font-size:12px; font-weight:700; letter-spacing:0.3px;
   box-shadow:0 2px 8px rgba(0,0,0,0.35); line-height:1.5;
 }
-.cg-score-10 { background:linear-gradient(145deg,#B8912A,#D4AC48); color:#1a1200; }
-.cg-score-9  { background:linear-gradient(145deg,#0d4a2d,#166534); color:#ffffff; }
-.cg-score-8  { background:linear-gradient(145deg,#1d6b3c,#16a34a); color:#ffffff; }
-.cg-score-7  { background:linear-gradient(145deg,#4a7c3f,#86efac); color:#1a3a1f; }
-.cg-score-6  { background:linear-gradient(145deg,#8a5a2a,#ca8a04); color:#1a1a1a; }
+.cg-score-10 { background:#B8912A; color:#1a1200; }
+.cg-score-9  { background:#166534; color:#ffffff; }
+.cg-score-8  { background:#16a34a; color:#ffffff; }
+.cg-score-7  { background:#4a7c3f; color:#ffffff; }
+.cg-score-6  { background:#a3720f; color:#ffffff; }
 .cg-score-3-5 { background:#991b1b; color:#ffffff; }
 .cg-score-0-2 { background:#5b21b6; color:#ffffff; }
 .cg-score-none { background:rgba(120,120,120,0.55); color:#fff; }
