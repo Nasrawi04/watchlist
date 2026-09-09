@@ -2833,7 +2833,8 @@ body { font-size:15px; }
      had none. */
   #homeRecentlyViewedGrid .w-ep-badge, #homeWatchlistGrid .w-ep-badge { font-size:7px; padding:1px 4px; }
   #homeRecentlyViewedGrid .q-title, #homeWatchlistGrid .q-title { font-size:11px; }
-  #homeRecentlyViewedGrid .q-genre, #homeWatchlistGrid .q-genre { font-size:9px; }
+  #homeRecentlyViewedGrid .genre-dot, #homeWatchlistGrid .genre-dot,
+  #homeRecentlyViewedGrid .type-label, #homeWatchlistGrid .type-label { font-size:9px; }
   .w-ep-total { font-size:8px; }
   .w-ep-row { gap:5px; margin-bottom:4px; }
   .wg-ep {
@@ -2873,7 +2874,8 @@ body { font-size:15px; }
   .w-card  { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
   .w-poster { width:64px; height:90px; }
   .w-title  { font-size:13px; }
-  .w-genre  { font-size:9px; gap:4px; margin-bottom:5px; }
+  .w-genre  { gap:4px; margin-bottom:5px; }
+  .w-card .genre-dot, .w-card .type-label { font-size:9px; }
   .w-genre .genre-dot, .w-genre .type-label, .w-genre .cat-badge { font-size:8px; padding:1px 4px; }
   .cg-score-badge { font-size:8px; padding:2px 5px; min-width:24px; top:5px; left:5px; }
   /* Items 3/4/5: always show controls on mobile, scaled down */
@@ -3050,7 +3052,8 @@ body { font-size:15px; }
      was staying at the ≤640px size on the narrowest phones instead of
      scaling down to match. */
   .w-title { font-size:12px; }
-  .w-genre { font-size:8px; gap:3px; margin-bottom:4px; }
+  .w-genre { gap:3px; margin-bottom:4px; }
+  .w-card .genre-dot, .w-card .type-label { font-size:8px; }
   .comp-row { padding:8px 10px; gap:10px; }
   .comp-poster { width:56px; height:80px; }
   .comp-score  { font-size:15px !important; }
@@ -3087,7 +3090,8 @@ body { font-size:15px; }
   .wg-controls { gap:3px !important; }
   #homeRecentlyViewedGrid .w-ep-badge, #homeWatchlistGrid .w-ep-badge { font-size:6px; padding:1px 3px; }
   #homeRecentlyViewedGrid .q-title, #homeWatchlistGrid .q-title { font-size:10px; }
-  #homeRecentlyViewedGrid .q-genre, #homeWatchlistGrid .q-genre { font-size:8px; }
+  #homeRecentlyViewedGrid .genre-dot, #homeWatchlistGrid .genre-dot,
+  #homeRecentlyViewedGrid .type-label, #homeWatchlistGrid .type-label { font-size:8px; }
   .w-ep-total { font-size:7px; }
   .w-ep-row { gap:4px; }
   /* Grid: 2 col on very small phones */
@@ -3123,6 +3127,25 @@ body { font-size:15px; }
     width:100% !important;
     max-width:180px !important;
     scroll-snap-align:unset !important;
+  }
+  /* Card width shrinks to a 180px cap at this breakpoint, but nothing
+     was reducing the title/genre text to match — .q-title/.wg-title
+     stay at their full desktop size (13-14px) here, which looks
+     oversized against a card this narrow. Only ≤640px and ≤400px had
+     scaling before; this fills the gap for the tablet range between
+     them. */
+  .wg-title, .q-title { font-size:12px; }
+  /* .wg-genre/.q-genre are just containers — the actual genre/type
+     tags are the shared .genre-dot/.type-label classes, which have
+     their own explicit clamp()-based font-size that doesn't inherit
+     from a parent, so they need to be targeted directly here. Also,
+     that clamp's formula (2vw) always exceeds its own 10.5px cap
+     throughout this entire 641-1024px range, meaning it was already
+     flatlined at maximum size the whole time — an override is needed
+     to actually shrink it, not just extend the existing curve. */
+  .wg-card .genre-dot, .wg-card .type-label, .wg-card .w-ep-badge, .wg-card .cat-badge,
+  .q-card .genre-dot, .q-card .type-label, .q-card .w-ep-badge, .q-card .cat-badge {
+    font-size:8px;
   }
   /* Hide nav buttons on tablet since grid wraps */
   .grid-nav-wrap .grid-nav-btn { display:none !important; }
