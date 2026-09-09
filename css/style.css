@@ -2825,10 +2825,15 @@ body { font-size:15px; }
   /* Genre dots + cat badges now scale smoothly via clamp() in the base
      rule — no fixed per-breakpoint override needed here anymore. */
 
-  /* Latest Entries: badge in narrow horizontal-scroll cards */
-  #homeRecentGrid .w-ep-badge { font-size:7px; padding:1px 4px; }
-  #homeRecentGrid .q-title { font-size:11px; }
-  #homeRecentGrid .q-genre { font-size:9px; }
+  /* Latest Entries: badge in narrow horizontal-scroll cards.
+     Fixed ID — this was #homeRecentGrid, which doesn't match any real
+     element (the actual grid built by _homeHScrollSection has id
+     "homeRecentlyViewedGrid"), so these rules silently never applied
+     at all. Added matching rules for the Watchlist grid too, which
+     had none. */
+  #homeRecentlyViewedGrid .w-ep-badge, #homeWatchlistGrid .w-ep-badge { font-size:7px; padding:1px 4px; }
+  #homeRecentlyViewedGrid .q-title, #homeWatchlistGrid .q-title { font-size:11px; }
+  #homeRecentlyViewedGrid .q-genre, #homeWatchlistGrid .q-genre { font-size:9px; }
   .w-ep-total { font-size:8px; }
   .w-ep-row { gap:5px; margin-bottom:4px; }
   .wg-ep {
@@ -3040,6 +3045,12 @@ body { font-size:15px; }
   .page-stat-label { font-size:8px; letter-spacing:.5px; }
   .w-card  { padding:8px 10px; gap:10px; }
   .w-poster { width:56px; height:80px; }
+  /* .w-title/.w-genre had a ≤640px reduction but nothing further here,
+     even though .w-poster does shrink further at this width — text
+     was staying at the ≤640px size on the narrowest phones instead of
+     scaling down to match. */
+  .w-title { font-size:12px; }
+  .w-genre { font-size:8px; gap:3px; margin-bottom:4px; }
   .comp-row { padding:8px 10px; gap:10px; }
   .comp-poster { width:56px; height:80px; }
   .comp-score  { font-size:15px !important; }
@@ -3074,9 +3085,9 @@ body { font-size:15px; }
   .wg-controls--done .continue-btn { height:24px !important; font-size:10px !important; }
   .wg-controls .ep-btn { width:22px !important; height:22px !important; font-size:12px !important; }
   .wg-controls { gap:3px !important; }
-  #homeRecentGrid .w-ep-badge { font-size:6px; padding:1px 3px; }
-  #homeRecentGrid .q-title { font-size:10px; }
-  #homeRecentGrid .q-genre { font-size:8px; }
+  #homeRecentlyViewedGrid .w-ep-badge, #homeWatchlistGrid .w-ep-badge { font-size:6px; padding:1px 3px; }
+  #homeRecentlyViewedGrid .q-title, #homeWatchlistGrid .q-title { font-size:10px; }
+  #homeRecentlyViewedGrid .q-genre, #homeWatchlistGrid .q-genre { font-size:8px; }
   .w-ep-total { font-size:7px; }
   .w-ep-row { gap:4px; }
   /* Grid: 2 col on very small phones */
