@@ -1433,7 +1433,7 @@ function renderTab0() {
   function card(e, rank) {
     var score = liveScore(e)!=null ? Number(liveScore(e)) : null;
     var scoreCls = score==null?'':(score>=10?'cg-score-10':score>=9?'cg-score-9':score>=8?'cg-score-8':score>=7?'cg-score-7':score>=6?'cg-score-6':score>=3?'cg-score-3-5':'cg-score-0-2');
-    var scoreBadge = score!=null ? ('<div class="cg-score-badge '+scoreCls+'">'+score.toFixed(2)+'</div>') : '';
+    var scoreBadge = score!=null ? ('<div class="cg-score-badge '+scoreCls+'">★ '+score.toFixed(2)+'</div>') : '';
     return '<div class="q-card" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="cursor:pointer">'
       +'<div class="q-poster" style="position:relative">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div>'+scoreBadge+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'</div>'
       +'<div class="q-info"><div class="q-title">'+esc(e.title)+'</div><div class="q-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div></div></div>';
@@ -1513,13 +1513,13 @@ function _libEnjoymentBadge(e){
   var val=_libEnjoymentVal(e);
   if(val==null)return '<div class="cg-score-badge cg-score-none">-</div>';
   var cls=val>=10?'cg-score-10':val>=9?'cg-score-9':val>=8?'cg-score-8':val>=7?'cg-score-7':val>=6?'cg-score-6':val>=3?'cg-score-3-5':'cg-score-0-2';
-  return '<div class="cg-score-badge '+cls+'">'+val.toFixed(2)+'</div>';
+  return '<div class="cg-score-badge '+cls+'">★ '+val.toFixed(2)+'</div>';
 }
 function _libRatingBadge(e,key){
   var val=_ratingVal(e,key);
   if(val==null)return '<div class="cg-score-badge cg-score-none">-</div>';
   var cls=val>=10?'cg-score-10':val>=9?'cg-score-9':val>=8?'cg-score-8':val>=7?'cg-score-7':val>=6?'cg-score-6':val>=3?'cg-score-3-5':'cg-score-0-2';
-  return '<div class="cg-score-badge '+cls+'">'+val.toFixed(2)+'</div>';
+  return '<div class="cg-score-badge '+cls+'">★ '+val.toFixed(2)+'</div>';
 }
 
 /* This page mixes every category, so the rating list is the full union
@@ -1709,7 +1709,7 @@ function renderLibrary(){
       var ep=isM?rt:(e.season!=null?'S'+e.season+' E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
       var _wgScore=liveScore(e)!=null?Number(liveScore(e)):null;
       var _wgScoreCls=_wgScore==null?'':(_wgScore>=10?'cg-score-10':_wgScore>=9?'cg-score-9':_wgScore>=8?'cg-score-8':_wgScore>=7?'cg-score-7':_wgScore>=6?'cg-score-6':_wgScore>=3?'cg-score-3-5':'cg-score-0-2');
-      var _wgScoreBadge=_wgScore!=null?'<div class="cg-score-badge '+_wgScoreCls+'">'+_wgScore.toFixed(2)+'</div>':'';
+      var _wgScoreBadge=_wgScore!=null?'<div class="cg-score-badge '+_wgScoreCls+'">★ '+_wgScore.toFixed(2)+'</div>':'';
       var _typeCls=(isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+_wgScoreBadge+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
         +(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">Taking<br>a Break</span></div>':'')
@@ -1749,7 +1749,7 @@ function renderLibrary(){
   if(!queue.length){qc='<div class="fv-empty">Nothing on your watchlist.</div>';}
   else if(_libQueueView==='grid'){
     var qg='libqg';
-    var qcs=queue.map(function(e){var scope=_libQueueScope(e);return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<div class="wg-overlay"></div>'+'</div><div class="wg-info"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px;"><div class="wg-title" style="margin-bottom:0;">'+esc(e.title)+'</div>'+(scope?'<span style="font-size:11px;font-weight:600;color:var(--olive-light);white-space:nowrap;flex-shrink:0;">'+scope+'</span>':'')+'</div><div class="wg-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div></div></div>';}).join('');
+    var qcs=queue.map(function(e){var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeClsQ=(isMq?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsQ+'">'+(isMq?'Movie':'TV Show')+'</span>'+'</div><div class="wg-info"><div class="wg-title" style="margin-bottom:6px;display:flex;align-items:baseline;gap:6px;">'+esc(e.title)+(e.year?'<span style="font-size:11px;font-weight:400;color:var(--text-3);">'+e.year+'</span>':'')+'</div>'+(scope?'<div class="wg-genre"><span class="w-ep-badge">'+scope+'</span></div>':'')+'</div></div>';}).join('');
     qc=_libGridWrap(qg,'<div class="watching-grid" id="'+qg+'">'+qcs+'</div>');
   } else {
     qc='<div class="watch-list">'+queue.map(function(e){var scope=_libQueueScope(e);return '<div class="w-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e)+'</div><div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);margin-left:8px;">'+e.year+'</span>':'')+'</div></div><div class="w-ep-row">'+getTypeBadge(e,'friend')+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div></div>';}).join('')+'</div>';
