@@ -72,7 +72,7 @@
      consistency across every page using this same horizontal-scroll
      pattern) — no scoped override needed here anymore. */
   /* Corner badges on these two sections' posters — type top-left,
-     runtime/ep bottom-left — use the shared .poster-type-badge/
+     runtime/ep bottom-left — use the shared .type-label-overlay/
      .poster-ep-badge classes from style.css (added there rather than
      scoped here, since getTypeBadgeOverlay() is also used by
      completed.html and friend-view.html). */
@@ -253,9 +253,11 @@ function _tmdbCardHTML(posterUrl, title, year, onclick, mediaType) {
   const posterInner = posterUrl
     ? `<img src="${posterUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_homeEsc((title||'?')[0].toUpperCase())}</div>`;
-  const typeLabel = mediaType === 'movie' ? 'Movie' : mediaType === 'tv' ? 'TV Show' : '';
+  const isMovieT = mediaType === 'movie';
+  const typeLabel = isMovieT ? 'Movie' : mediaType === 'tv' ? 'TV Show' : '';
+  const typeCls = isMovieT ? 'type-label type-label-overlay' : 'type-label type-label-tv type-label-overlay';
   return `<div class="q-card" onclick="${onclick}">
-    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${typeLabel ? `<span class="poster-type-badge">${typeLabel}</span>` : ''}</div>
+    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${typeLabel ? `<span class="${typeCls}">${typeLabel}</span>` : ''}</div>
     <div class="q-info">
       <div class="q-title">${_homeEsc(title)}</div>
       ${year ? `<div class="q-genre home-tmdb-year">${_homeEsc(year)}</div>` : ''}
