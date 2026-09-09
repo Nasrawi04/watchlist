@@ -826,8 +826,8 @@ function renderWatchingGrid(items) {
     const isDone   = !isPaused && (pct >= 100 || (!e.total_eps && (e.episode??0) > 0));
     const epStr    = e.season != null ? `S${e.season} E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '');
     const score    = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
-    const _ctx = catContext();
-    const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
+    const isMovieG = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+    const typeCls = (isMovieG ? 'type-label' : 'type-label type-label-tv') + ' type-label-overlay-bottom';
     return `<div class="wg-card" onclick="openCatInfoPopup('${e.id}')">
       <div class="wg-poster" style="position:relative;">
         ${posterHTML(e, 'big')}
@@ -836,15 +836,15 @@ function renderWatchingGrid(items) {
                <span style="font-size:10px;font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">Taking<br>a Break</span>
              </div>`
           : ''}
-        <div class="wg-overlay" style="z-index:2">${epStr ? `<span class="wg-ep">${epStr}</span>` : ''}</div>
+        <span class="${typeCls}">${isMovieG ? 'Movie' : 'TV Show'}</span>
         ${score ? _cgScoreBadge(score) : ''}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
       </div>
       <div class="wg-info">
         <div style="margin-bottom:6px;">
-          <div class="wg-title" style="margin-bottom:4px;">${e.title}</div>
+          <div class="wg-title" style="margin-bottom:4px;display:flex;align-items:baseline;gap:6px;">${e.title}${e.year ? `<span style="font-size:11px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}</div>
         </div>
-        <div class="wg-genre">${_badge}${genreHTML(e.genres, 3)}</div>
+        ${epStr ? `<div class="wg-genre"><span class="w-ep-badge">${epStr}</span></div>` : ''}
         ${e.total_eps ? `<div class="wg-prog-track" style="margin-bottom:3px;"><div class="wg-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
         <div style="font-size:10px;color:var(--text-3);margin-bottom:4px;">${e.watched??0} / ${e.total_eps} eps · ${pct}%</div>` : ''}
         <div class="wg-controls${isDone?' wg-controls--done':''}" onclick="event.stopPropagation()">
