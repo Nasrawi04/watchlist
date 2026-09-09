@@ -3038,7 +3038,7 @@ body { font-size:15px; }
   .page-stat { padding:.65rem .5rem; }
   .page-stat-num { font-size:18px; }
   .page-stat-label { font-size:8px; letter-spacing:.5px; }
-  .w-card  { padding:8px 10px; gap:10px; }
+  .w-card  { padding:8px 10px; gap:10px; height:auto !important; min-height:90px; }
   .w-poster { width:70px; height:100px; }
   .comp-row { padding:8px 10px; gap:10px; }
   .comp-poster { width:56px; height:80px; }
