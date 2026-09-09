@@ -328,10 +328,12 @@ function getTypeBadge(entry, context) {
 
 /* Overlay variant — no poster tag, returns empty (label appears before genres only) */
 /*
- * getTypeBadgeOverlay(entry, context) — Movie/TV Show type tag styled
- * for a poster overlay (top-left corner, dark glass background so it
- * stays legible over any poster art), as opposed to getTypeBadge()'s
- * plain solid-fill tag meant for a text/meta row below a poster.
+ * getTypeBadgeOverlay(entry, context) — Movie/TV Show type tag pinned
+ * to a poster's top-left corner. Reuses the exact same .type-label/
+ * .type-label-tv classes (solid olive for Movie, solid blue for TV
+ * Show) used everywhere else on the site for this same distinction —
+ * .type-label-overlay only adds the corner positioning on top of that
+ * existing look, rather than introducing a separate badge style.
  */
 function getTypeBadgeOverlay(entry, context) {
   var cat = (entry && entry.cat) || '';
@@ -345,7 +347,8 @@ function getTypeBadgeOverlay(entry, context) {
     isMovie = mediaType === 'movie';
   }
   var label = isMovie ? 'Movie' : 'TV Show';
-  return '<span class="poster-type-badge">' + label + '</span>';
+  var cls = isMovie ? 'type-label type-label-overlay' : 'type-label type-label-tv type-label-overlay';
+  return '<span class="' + cls + '">' + label + '</span>';
 }
 
 /* ── Navigation helpers ── */
