@@ -131,7 +131,7 @@
 .note-body{flex:1;min-width:0;}
 
 .note-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.note-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:4px;}
+.note-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:4px;}
 .note-date{font-size:11px;color:var(--text-3);white-space:nowrap;}
 
 .note-text{font-size:13px;color:var(--text-2);font-style:italic;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:6px;}
@@ -207,10 +207,12 @@
 
 .fv-w-ep{margin-bottom:7px;display:flex;align-items:center;gap:10px}
 
-@media(max-width:640px){.w-ep-badge{font-size:9px;padding:2px 7px;}}
-@media(max-width:400px){.w-ep-badge{font-size:8px;padding:1px 5px;}}
+.fv-w-ep-badge{padding:3px 10px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);font-size:11px;font-weight:500}
+@media(max-width:640px){.fv-w-ep-badge{font-size:9px;padding:2px 7px;}}
+@media(max-width:400px){.fv-w-ep-badge{font-size:8px;padding:1px 5px;}}
 
 .fv-w-prog-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+[data-theme="light"] .fv-w-prog-track{background:rgba(0,0,0,0.16)}
 
 .fv-w-prog-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .5s var(--ease)}
 
@@ -238,7 +240,7 @@
 
 .fv-rank-title{font-size:18px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden;}
 
-.fv-rank-meta{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.fv-rank-meta{font-size:12px;color:var(--text-3);margin-top:6px}
 
 .fv-rank-score{font-family:var(--serif);font-size:32px;font-weight:300;color:var(--olive-light);text-align:right;flex-shrink:0}
 
@@ -751,7 +753,7 @@
   .note-row { padding:12px 14px; gap:12px; border-radius:var(--radius); }
   .note-poster { width:64px; height:90px; font-size:20px; }
   .note-title { font-size:15px; }
-  .note-tags { gap:4px; margin-bottom:3px; }
+  .note-tags { gap:3px; margin-bottom:3px; }
   .note-text { font-size:11px; margin-top:4px; }
   .note-score { font-size:20px; }
   .note-date { font-size:10px; }
@@ -863,7 +865,7 @@
 .note-popup2-poster img{width:100%;height:100%;object-fit:cover;}
 .note-popup2-info{flex:1;min-width:0;}
 .note-popup2-title{font-family:var(--serif);font-size:20px;font-weight:300;color:var(--text);margin-bottom:5px;line-height:1.2;}
-.note-popup2-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:5px;}
+.note-popup2-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:5px;}
 .note-popup2-date{font-size:11px;color:var(--text-3);}
 .note-popup2-close{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;line-height:1;padding:0;flex-shrink:0;transition:color .15s;}
 .note-popup2-close:hover{color:var(--text);}
@@ -906,7 +908,7 @@
 .pvi-poster img { width:100%;height:100%;object-fit:cover; }
 .pvi-meta-wrap { flex:1;min-width:0;padding-top:2px; }
 .pvi-title { font-family:var(--serif);font-size:clamp(16px,4.5vw,22px);font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text); }
-.pvi-tags { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0; }
+.pvi-tags { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:0; }
 .pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px; }
 .pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s; }
 .pvi-close:hover { color:var(--text); }
@@ -1432,9 +1434,6 @@ function _libApplySort(arr,by){
   }
   if(by==='alpha')return a.sort(function(x,y){return (x.title||'').localeCompare(y.title||'');});
   if(by==='zalpha')return a.sort(function(x,y){return (y.title||'').localeCompare(x.title||'');});
-  if(by==='release'){
-    return a.sort(function(x,y){return getReleaseDateValue(y)-getReleaseDateValue(x);});
-  }
   return a;
 }
 
@@ -1450,18 +1449,12 @@ function _libSortBar(sec){
   var showRating=sec==='completed';
   var isRating=cur.indexOf('rating:')===0;
   var ratingLabel=isRating?_ratingFilterLabelAll(cur.slice(7)):null;
-  var opts=[['newest','Newest'],['oldest','Oldest']].concat(!isQ?[['highest','Highest'],['lowest','Lowest']]:[]).concat([['alpha','A\u2192Z'],['zalpha','Z\u2192A'],['release','Release Date']]);
+  var opts=[['newest','Newest'],['oldest','Oldest']].concat(!isQ?[['highest','Highest'],['lowest','Lowest']]:[]).concat([['alpha','A\u2192Z'],['zalpha','Z\u2192A']]);
   var staticBtns=opts.map(function(o){return '<button class="sort-btn'+(cur===o[0]?' active':'')+'" onclick="setLibSort(\''+sec+'\',\''+o[0]+'\')">'+o[1]+'</button>';}).join('');
   var ratingBtn=showRating?('<button class="sort-btn'+(isRating?' active':'')+'" onclick="openRatingFilter(\''+sec+'\')" data-short="'+(isRating?_ratingShortLabel(ratingLabel):'Rating')+'">'+(isRating?'Rating: '+ratingLabel:'Rating \u25be')+'</button>'):'';
   return '<div class="sort-bar">'+staticBtns+ratingBtn+'</div>';
 }
-async function setLibSort(sec,val){
-  _libSort[sec]=val;
-  if(val==='release'){
-    await ensureReleaseDatesFetched(_libEntries);
-  }
-  renderLibrary();
-}
+function setLibSort(sec,val){_libSort[sec]=val;renderLibrary();}
 function setLibStatus(s){_libStatusFilter=s;renderLibrary();}
 function setLibCat(c){_libCatFilter=c;renderLibrary();}
 
@@ -1607,8 +1600,10 @@ function renderLibrary(){
       var cs=ip?'background:var(--olive-faint);border-color:var(--border-olive);':'';
       return '<div class="fv-w-card" style="cursor:pointer;'+cs+'" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.55);display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">Taking<br>a Break</span></div>':'')+'</div>'
-        +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+(ep?'<span class="w-ep-badge">'+ep+'</span>':'')+(rt?'<span class="w-ep-badge">'+rt+'</span>':'')+' </div>'
-        +'<div class="fv-w-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'
+        +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);">'+e.year+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
+        +(ep?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+ep+'</span>'+(e.total_eps?'<span style="font-size:11px;color:var(--text-3);">/ '+e.total_eps+' eps</span>':'')+'</div>':'')
+        +(rt?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')
+        +(!ep&&!rt?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'</div>':'')
         +((!isM&&e.total_eps)?'<div class="fv-w-prog-track" style="margin-top:6px;"><div class="fv-w-prog-fill" style="width:'+pct+'%'+(ip?';background:var(--text-3)':'')+';"></div></div><div class="fv-w-prog-label">'+(e.watched||0)+' / '+e.total_eps+' eps \u00b7 '+pct+'%</div>':(!isM&&e.watched?'<div class="fv-w-prog-label">'+e.watched+' watched</div>':''))
         +'</div>'+(liveScore(e)!=null?'<div class="fv-w-score">'+Number(liveScore(e)).toFixed(2)+'</div>':'')
         +'</div>';
@@ -1620,10 +1615,10 @@ function renderLibrary(){
   if(!queue.length){qc='<div class="fv-empty">Nothing on your watchlist.</div>';}
   else if(_libQueueView==='grid'){
     var qg='libqg';
-    var qcs=queue.map(function(e){var scope=_libQueueScope(e);return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<div class="wg-overlay">'+(scope?'<span class="wg-ep">'+scope+'</span>':'')+'</div>'+'</div><div class="wg-info"><div class="wg-title" style="margin-bottom:4px;">'+esc(e.title)+'</div><div class="wg-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div></div></div>';}).join('');
+    var qcs=queue.map(function(e){var scope=_libQueueScope(e);return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<div class="wg-overlay"></div>'+'</div><div class="wg-info"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px;"><div class="wg-title" style="margin-bottom:0;">'+esc(e.title)+'</div>'+(scope?'<span style="font-size:11px;font-weight:600;color:var(--olive-light);white-space:nowrap;flex-shrink:0;">'+scope+'</span>':'')+'</div><div class="wg-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div></div></div>';}).join('');
     qc=_libGridWrap(qg,'<div class="watching-grid" id="'+qg+'">'+qcs+'</div>');
   } else {
-    qc='<div class="watch-list">'+queue.map(function(e){var scope=_libQueueScope(e);return '<div class="w-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e)+'</div><div class="w-body"><div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div><div class="w-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div></div></div>';}).join('')+'</div>';
+    qc='<div class="watch-list">'+queue.map(function(e){var scope=_libQueueScope(e);return '<div class="w-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e)+'</div><div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);margin-left:8px;">'+e.year+'</span>':'')+'</div></div><div class="w-ep-row">'+getTypeBadge(e,'friend')+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div></div>';}).join('')+'</div>';
   }
 
   // Completed
@@ -1643,28 +1638,27 @@ function renderLibrary(){
       var cls=i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other';
       var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
       var catLabel=(CAT_META[e.cat]&&CAT_META[e.cat].label)||'';
-      var _isAnimeOrCartoon = e.cat==='anime'||e.cat==='cartoons';
-      var catBadge=(catLabel&&_isAnimeOrCartoon)?'<span class="cat-badge">'+catLabel+'</span>':'';
-      var typeBadge=getTypeBadge(e,'friend');
+      var typeBadge=catLabel?'<span class="type-label">'+catLabel+'</span>':'';
       var dateSpan=date?'<span class="genre-dot" style="color:var(--text-3)">'+date+'</span>':'';
       var isMovie=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var metaHtml='';
       if(isMovie){
         var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
-        if(rtH||rtM)metaHtml=(rtH?rtH+'h '+rtM+'m':rtM+'m');
+        if(rtH||rtM)metaHtml='<div class="w-ep-row"><span class="w-ep-badge">'+(rtH?rtH+'h '+rtM+'m':rtM+'m')+'</span></div>';
       } else if(e.status==='ongoing'&&e.season!=null&&e.episode!=null){
-        metaHtml='S'+e.season+' E'+e.episode;
+        metaHtml='<div class="w-ep-row"><span class="w-ep-badge">S'+e.season+' E'+e.episode+'</span></div>';
       } else {
         var bd=Array.isArray(e.ratings&&e.ratings._season_breakdown)?e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number):[];
         var bdTot=bd.reduce(function(a,b){return a+b;},0);
         var scope=bd.length?'S'+bd.length+' E'+bdTot:(e.total_seasons&&e.total_eps?'S'+e.total_seasons+' E'+e.total_eps:e.total_seasons?'S'+e.total_seasons:e.total_eps?e.total_eps+' eps':'');
-        if(scope)metaHtml=scope;
+        if(scope)metaHtml='<div class="w-ep-row"><span class="w-ep-badge">'+scope+'</span></div>';
       }
       return '<div class="wg-card cg-card-wrap" style="cursor:pointer;">'
-        +'<div class="wg-poster" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+'<div class="wg-overlay">'+(metaHtml?'<span class="wg-ep">'+metaHtml+'</span>':'')+'</div>'+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+' </div>'
+        +'<div class="wg-poster" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+'<div class="wg-overlay"></div>'+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+' </div>'
         +'<div class="cg-grid-info" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="wg-title">'+esc(e.title)+'</div>'
-        +'<div class="wg-genre">'+catBadge+typeBadge+genreHTML(e.genres||[], 3)+'</div>'
+        +'<div class="wg-genre">'+typeBadge+genreHTML(e.genres||[], 3)+'</div>'
+        +metaHtml
         +'<div class="cg-score-row"><span class="cg-score">'+(sc||'—')+'</span><span class="cg-score-lbl">score</span></div>'
         +'</div>'
         +'<div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">'
@@ -1681,7 +1675,7 @@ function renderLibrary(){
         +(isRanked?'<div class="fv-rank-num '+(i<3?'top3':'')+'">'+(i+1)+'</div>':'')
         +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):'')+'</div>'
         +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
-        +'<div class="fv-rank-meta">'+((CAT_META[e.cat]&&CAT_META[e.cat].label&&(e.cat==='anime'||e.cat==='cartoons'))?'<span class="cat-badge">'+CAT_META[e.cat].label+'</span>':'')+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'
+        +'<div class="fv-rank-meta">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)||'')+(e.genres&&e.genres.length?' · '+e.genres.slice(0,3).join(' · '):'')+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
         +renderFavChips(e.ratings,e.cat)
         +'</div><div class="fv-rank-score">'+sc+'</div></div>'
@@ -2247,7 +2241,7 @@ function _injectLibCommentsPopup(prefix) {
   var el = document.createElement('div');
   el.className = 'lcc-overlay';
   el.id = id;
-  el.innerHTML = '<div class="lcc-card" id="'+prefix+'LccCard">'    +'<div style="display:flex;align-items:flex-start;gap:16px;padding:20px;border-bottom:0.5px solid var(--border);flex-shrink:0;">'+'<div id="'+prefix+'LccPoster" style="width:56px;height:76px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);"></div>'+'<div style="flex:1;min-width:0;">'+'<div id="'+prefix+'LccName" style="font-family:var(--serif);font-size:18px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text);"></div>'+'<div id="'+prefix+'LccMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:6px;"></div>'+'<div id="'+prefix+'LccCount" style="font-size:12px;color:var(--olive-light);font-weight:500;display:none;"></div>'+'</div>'+'<button class="lcc-close" onclick="closeLibComments(\''+prefix+'\')">✕</button>'+'</div>'    +'<div class="lcc-list" id="'+prefix+'LccList"><div class="lcc-empty">Loading…</div></div>'    +'<div class="lcc-form"><input class="lcc-input" id="'+prefix+'LccInput" placeholder="Write a comment…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();postLibComment(\''+prefix+'\')}"><button class="lcc-send" onclick="postLibComment(\''+prefix+'\')">Send</button></div>'    +'</div>';
+  el.innerHTML = '<div class="lcc-card" id="'+prefix+'LccCard">'    +'<div style="display:flex;align-items:flex-start;gap:16px;padding:20px;border-bottom:0.5px solid var(--border);flex-shrink:0;">'+'<div id="'+prefix+'LccPoster" style="width:56px;height:76px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);"></div>'+'<div style="flex:1;min-width:0;">'+'<div id="'+prefix+'LccName" style="font-family:var(--serif);font-size:18px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text);"></div>'+'<div id="'+prefix+'LccMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px;"></div>'+'<div id="'+prefix+'LccCount" style="font-size:12px;color:var(--olive-light);font-weight:500;display:none;"></div>'+'</div>'+'<button class="lcc-close" onclick="closeLibComments(\''+prefix+'\')">✕</button>'+'</div>'    +'<div class="lcc-list" id="'+prefix+'LccList"><div class="lcc-empty">Loading…</div></div>'    +'<div class="lcc-form"><input class="lcc-input" id="'+prefix+'LccInput" placeholder="Write a comment…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();postLibComment(\''+prefix+'\')}"><button class="lcc-send" onclick="postLibComment(\''+prefix+'\')">Send</button></div>'    +'</div>';
   el.addEventListener('click', function(e){if(e.target===el)closeLibComments(prefix);});
   document.body.appendChild(el);
 }
