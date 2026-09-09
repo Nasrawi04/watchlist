@@ -61,6 +61,21 @@
     .home-tmdb-poster-fallback { font-size:22px; }
     .home-tmdb-year { font-size:11px; }
   }
+
+  /* Currently Watching card sizing is now the shared .w-card/.w-poster
+     default in style.css (bumped there for consistency across every
+     page using this same list-card pattern) — no scoped override
+     needed here anymore. */
+
+  /* Recently Viewed / From Your Watchlist card sizing is now the
+     shared .queue-grid default in style.css (bumped there for
+     consistency across every page using this same horizontal-scroll
+     pattern) — no scoped override needed here anymore. */
+  /* Corner badges on these two sections' posters — type top-left,
+     runtime/ep bottom-left — use the shared .poster-type-badge/
+     .poster-ep-badge classes from style.css (added there rather than
+     scoped here, since getTypeBadgeOverlay() is also used by
+     completed.html and friend-view.html). */
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -234,12 +249,13 @@ function _homeHScrollSection(containerId, gridId, eyebrow, title, cardsHTML) {
 // Card for a TMDB-sourced item (Trending/Top Picks/Upcoming/Recently Viewed) —
 // these aren't local library entries, so they use their own light card
 // instead of posterHTML()/genreHTML() which expect the local entry shape.
-function _tmdbCardHTML(posterUrl, title, year, onclick) {
+function _tmdbCardHTML(posterUrl, title, year, onclick, mediaType) {
   const posterInner = posterUrl
     ? `<img src="${posterUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_homeEsc((title||'?')[0].toUpperCase())}</div>`;
+  const typeLabel = mediaType === 'movie' ? 'Movie' : mediaType === 'tv' ? 'TV Show' : '';
   return `<div class="q-card" onclick="${onclick}">
-    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div></div>
+    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${typeLabel ? `<span class="poster-type-badge">${typeLabel}</span>` : ''}</div>
     <div class="q-info">
       <div class="q-title">${_homeEsc(title)}</div>
       ${year ? `<div class="q-genre home-tmdb-year">${_homeEsc(year)}</div>` : ''}
@@ -261,15 +277,29 @@ function renderHomeWatchlist(entries) {
     const goto = (e.tmdb_id && e.tmdb_type)
       ? `goToTitle('${e.tmdb_type}', ${e.tmdb_id})`
       : `goToDetail('${e.id}','index.html')`;
+    // Same runtime/episode-scope logic used elsewhere (category.js,
+    // completed.html) — a queued item hasn't started, so this shows
+    // its overall shape (total runtime, or S/E count) rather than a
+    // watched position.
+    const isMovieQ = e.cat === 'movies' || e.ratings?._media_type === 'movie';
+    let scope = '';
+    if (isMovieQ) {
+      const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
+      if (rtH || rtM) scope = rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
+    } else {
+      const bd = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
+      const bdTot = bd.reduce((a,b) => a+b, 0);
+      scope = bd.length ? `S${bd.length} E${bdTot}` : (e.total_seasons && e.total_eps ? `S${e.total_seasons} E${e.total_eps}` : e.total_seasons ? `S${e.total_seasons}` : e.total_eps ? `${e.total_eps} eps` : '');
+    }
     return `<div class="q-card" onclick="${goto}">
-    <div class="q-poster" style="position:relative">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${getTypeBadgeOverlay(e,'latest')}</div>
+    <div class="q-poster" style="position:relative">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${getTypeBadgeOverlay(e,'latest')}${scope ? `<span class="poster-ep-badge">${scope}</span>` : ''}</div>
     <div class="q-info"><div class="q-title">${e.title}</div><div class="q-genre">${genreHTML(e.genres,3)}</div></div>
   </div>`;
   }).join('');
   _homeHScrollSection('homeWatchlist', 'homeWatchlistGrid', 'Saved', 'From Your Watchlist', cards);
 }
 function renderHomeRecentlyViewed(rows) {
-  const cards = rows.map(r => _tmdbCardHTML(r.poster_url, r.title, null, `goToTitle('${r.tmdb_type}', ${r.tmdb_id})`)).join('');
+  const cards = rows.map(r => _tmdbCardHTML(r.poster_url, r.title, null, `goToTitle('${r.tmdb_type}', ${r.tmdb_id})`, r.tmdb_type)).join('');
   _homeHScrollSection('homeRecentlyViewed', 'homeRecentlyViewedGrid', 'History', 'Recently Viewed', cards);
 }
 
@@ -307,17 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const epStr = !isMovH ? (e.season != null ? `S${e.season} E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '')) : '';
             const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
             const rtStr = isMovH && (rtH||rtM) ? (rtH ? `${rtH}h ${rtM}m` : `${rtM}m`) : '';
-            const cat   = CAT_META[e.cat];
             return `<div class="w-card" onclick="goToDetail('${e.id}','index.html')">
               <div class="w-poster">${posterHTML(e)}</div>
               <div class="w-body">
-                <div class="w-top">
-                  <div class="w-title">${e.title}</div>
-                  <span class="cat-badge-mini" style="color:var(--text-3);display:flex">${icon(cat?.icon||'tv', 13)}</span>
-                </div>
-                <div class="w-genre">${genreHTML(e.genres, 3)}</div>
-                ${epStr ? `<div class="w-ep-row"><span class="w-ep-badge">${epStr}</span><span class="w-ep-total">${e.total_eps ? `/ ${e.total_eps} eps` : ''}</span></div>` : ''}
-                ${rtStr ? `<div class="w-ep-row"><span class="w-ep-badge">${rtStr}</span></div>` : ''}
+                <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${epStr ? `<span class="w-ep-badge">${epStr}</span>` : ''}${rtStr ? `<span class="w-ep-badge">${rtStr}</span>` : ''}</div></div>
+                <div class="w-genre">${getTypeBadge(e,'friend')}${genreHTML(e.genres, 3)}</div>
                 <div class="w-prog-track"><div class="w-prog-fill" style="width:${pct}%"></div></div>
               </div>
             </div>`;
