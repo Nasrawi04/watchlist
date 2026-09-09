@@ -14,37 +14,7 @@
   .mobile-search-bar { display:none !important; }
   .home-hero { padding-bottom: 0.5rem; }
 
-  /* ── Discover ticker — infinite scrolling marquee of category shortcuts ── */
-  .disc-marquee {
-    overflow: hidden;
-    width: 100%;
-    margin-bottom: 2.5rem;
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
-  }
-  .disc-marquee__inner {
-    display: flex;
-    width: max-content;
-    animation: discMarquee 55s linear infinite;
-  }
-  .disc-marquee:hover .disc-marquee__inner { animation-play-state: paused; }
-  .disc-marquee__group { display: flex; flex-shrink: 0; }
-  .disc-marquee-card {
-    flex-direction: column; align-items: center; text-align: center;
-    margin: 0 10px; width: 250px; flex-shrink: 0;
-    text-decoration: none;
-  }
-  .disc-marquee-card .cat-card-arrow { align-self: center; }
-  @keyframes discMarquee {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-  @media(max-width:640px) {
-    .disc-marquee-card { width: 200px; margin: 0 8px; }
-    .disc-marquee__inner { animation-duration: 42s; }
-  }
-
-  /* TMDB-sourced home cards (Recently Viewed) —
+  /* TMDB-sourced home cards (Trending/Top Picks/Upcoming/Recently Viewed) —
      poster-fallback letter and year text, scaled to match how .q-card
      itself already shrinks at the site's existing breakpoints. */
   .home-tmdb-poster-fallback {
@@ -61,21 +31,6 @@
     .home-tmdb-poster-fallback { font-size:22px; }
     .home-tmdb-year { font-size:11px; }
   }
-
-  /* Currently Watching card sizing is now the shared .w-card/.w-poster
-     default in style.css (bumped there for consistency across every
-     page using this same list-card pattern) — no scoped override
-     needed here anymore. */
-
-  /* Recently Viewed / From Your Watchlist card sizing is now the
-     shared .queue-grid default in style.css (bumped there for
-     consistency across every page using this same horizontal-scroll
-     pattern) — no scoped override needed here anymore. */
-  /* Corner badges on these two sections' posters — type top-left,
-     runtime/ep bottom-left — use the shared .type-label-overlay/
-     .w-ep-badge-overlay classes from style.css (added there rather than
-     scoped here, since getTypeBadgeOverlay() is also used by
-     completed.html and friend-view.html). */
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -106,104 +61,15 @@
     </button>
   </div>
 
-  <!-- DISCOVER TICKER -->
-  <div class="disc-marquee fade-up" aria-label="Explore Discover categories">
-    <div class="disc-marquee__inner">
-      <div class="disc-marquee__group">
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=popular&title=What%27s%20Popular">
-          <div class="cat-card-content">
-            <div class="cat-card-title">What's Popular</div>
-            <div class="cat-card-count">Trending across the board</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top_rated_mss&title=Top%20Rated%20on%20MSS">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top Rated on MSS</div>
-            <div class="cat-card-count">Highest rated by our community</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_movies&title=Top%20250%20Movies">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Movies</div>
-            <div class="cat-card-count">The best movies, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_shows&title=Top%20250%20Shows">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Shows</div>
-            <div class="cat-card-count">The best shows, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_anime&title=Top%20250%20Anime">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Anime</div>
-            <div class="cat-card-count">The best anime, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_cartoons&title=Top%20250%20Cartoons">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Cartoons</div>
-            <div class="cat-card-count">The best cartoons, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-      </div>
-      <div class="disc-marquee__group" aria-hidden="true">
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=popular&title=What%27s%20Popular">
-          <div class="cat-card-content">
-            <div class="cat-card-title">What's Popular</div>
-            <div class="cat-card-count">Trending across the board</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top_rated_mss&title=Top%20Rated%20on%20MSS">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top Rated on MSS</div>
-            <div class="cat-card-count">Highest rated by our community</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_movies&title=Top%20250%20Movies">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Movies</div>
-            <div class="cat-card-count">The best movies, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_shows&title=Top%20250%20Shows">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Shows</div>
-            <div class="cat-card-count">The best shows, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_anime&title=Top%20250%20Anime">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Anime</div>
-            <div class="cat-card-count">The best anime, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_cartoons&title=Top%20250%20Cartoons">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Cartoons</div>
-            <div class="cat-card-count">The best cartoons, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-      </div>
-    </div>
+  <!-- CATEGORY CARDS -->
+  <div class="category-grid" id="categoryGrid">
+    <div class="page-loading" style="grid-column:1/-1"><div class="spinner"></div></div>
   </div>
 
   <!-- CURRENTLY WATCHING -->
   <div id="homeWatching" style="margin-top:4rem"></div>
 
-  <!-- SAVED (FROM YOUR WATCHLIST) -->
+  <!-- FROM YOUR WATCHLIST -->
   <div id="homeWatchlist" style="margin-top:3rem"></div>
 
   <!-- RECENTLY VIEWED (MyScreenScore view history) -->
@@ -249,15 +115,12 @@ function _homeHScrollSection(containerId, gridId, eyebrow, title, cardsHTML) {
 // Card for a TMDB-sourced item (Trending/Top Picks/Upcoming/Recently Viewed) —
 // these aren't local library entries, so they use their own light card
 // instead of posterHTML()/genreHTML() which expect the local entry shape.
-function _tmdbCardHTML(posterUrl, title, year, onclick, mediaType) {
+function _tmdbCardHTML(posterUrl, title, year, onclick) {
   const posterInner = posterUrl
     ? `<img src="${posterUrl}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_homeEsc((title||'?')[0].toUpperCase())}</div>`;
-  const isMovieT = mediaType === 'movie';
-  const typeLabel = isMovieT ? 'Movie' : mediaType === 'tv' ? 'TV Show' : '';
-  const typeCls = isMovieT ? 'type-label type-label-overlay' : 'type-label type-label-tv type-label-overlay';
   return `<div class="q-card" onclick="${onclick}">
-    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${typeLabel ? `<span class="${typeCls}">${typeLabel}</span>` : ''}</div>
+    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div></div>
     <div class="q-info">
       <div class="q-title">${_homeEsc(title)}</div>
       ${year ? `<div class="q-genre home-tmdb-year">${_homeEsc(year)}</div>` : ''}
@@ -275,37 +138,29 @@ function renderHomeWatchlist(entries) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   const queue = shuffled.slice(0, 12);
-  const cards = queue.map(e => {
-    const goto = (e.tmdb_id && e.tmdb_type)
-      ? `goToTitle('${e.tmdb_type}', ${e.tmdb_id})`
-      : `goToDetail('${e.id}','index.html')`;
-    // Same runtime/episode-scope logic used elsewhere (category.js,
-    // completed.html) — a queued item hasn't started, so this shows
-    // its overall shape (total runtime, or S/E count) rather than a
-    // watched position.
-    const isMovieQ = e.cat === 'movies' || e.ratings?._media_type === 'movie';
-    let scope = '';
-    if (isMovieQ) {
-      const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
-      if (rtH || rtM) scope = rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
-    } else {
-      const bd = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
-      const bdTot = bd.reduce((a,b) => a+b, 0);
-      scope = bd.length ? `S${bd.length} E${bdTot}` : (e.total_seasons && e.total_eps ? `S${e.total_seasons} E${e.total_eps}` : e.total_seasons ? `S${e.total_seasons}` : e.total_eps ? `${e.total_eps} eps` : '');
-    }
-    return `<div class="q-card" onclick="${goto}">
-    <div class="q-poster" style="position:relative">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${getTypeBadgeOverlay(e,'latest')}${scope ? `<span class="w-ep-badge w-ep-badge-overlay">${scope}</span>` : ''}</div>
+  const cards = queue.map(e => `<div class="q-card" onclick="goToDetail('${e.id}','index.html')">
+    <div class="q-poster" style="position:relative">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${getTypeBadgeOverlay(e,'latest')}</div>
     <div class="q-info"><div class="q-title">${e.title}</div><div class="q-genre">${genreHTML(e.genres,3)}</div></div>
-  </div>`;
-  }).join('');
+  </div>`).join('');
   _homeHScrollSection('homeWatchlist', 'homeWatchlistGrid', 'Saved', 'From Your Watchlist', cards);
 }
 function renderHomeRecentlyViewed(rows) {
-  const cards = rows.map(r => _tmdbCardHTML(r.poster_url, r.title, null, `goToTitle('${r.tmdb_type}', ${r.tmdb_id})`, r.tmdb_type)).join('');
+  const cards = rows.map(r => _tmdbCardHTML(r.poster_url, r.title, null, `goToTitle('${r.tmdb_type}', ${r.tmdb_id})`)).join('');
   _homeHScrollSection('homeRecentlyViewed', 'homeRecentlyViewedGrid', 'History', 'Recently Viewed', cards);
 }
 
 function renderGuestLanding() {
+  // Show category cards as previews — same style as logged-in home
+  document.getElementById('categoryGrid').innerHTML = Object.entries(CAT_META).map(([k, m], i) =>
+    `<a class="cat-card fade-up fade-up-${i+1}" href="${m.page}">
+      <div class="cat-icon">${icon(m.icon, 20)}</div>
+      <div class="cat-card-content">
+        <div class="cat-card-title">${m.label}</div>
+        <div class="cat-card-count">Sign in to track</div>
+      </div>
+      <div class="cat-card-arrow">→</div>
+    </a>`
+  ).join('');
   document.getElementById('homeWatching').innerHTML = '';
   document.getElementById('homeWatchlist').innerHTML = '';
   document.getElementById('homeRecentlyViewed').innerHTML = '';
@@ -318,13 +173,32 @@ function renderGuestLanding() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initDiscoverSearch('heroSearch', { max: 20, connected: true, includePersons: true });
-  attachClearButton('heroSearch');
   initPageGuest(async (user) => {
     if (!user) { renderGuestLanding(); return; }
     _homeUser = user;
 
     const entries = await getEntries(user.id);
     window._homeEntries = entries;
+
+    /* Category cards */
+    document.getElementById('categoryGrid').innerHTML = Object.entries(CAT_META).map(([k, m], i) => {
+      const catEntries = entries.filter(e => e.cat === k);
+      const watching   = catEntries.filter(e => e.status === 'watching').length;
+      const completed  = catEntries.filter(e => e.status === 'completed').length;
+      const queue      = catEntries.filter(e => e.status === 'queue').length;
+      const countLabel = catEntries.length === 1 ? m.singular : m.label;
+      const subtitle   = k === 'movies'
+        ? `${catEntries.length} ${countLabel} · ${queue} in queue · ${completed} completed`
+        : `${catEntries.length} ${countLabel} · ${watching} watching · ${completed} completed`;
+      return `<a class="cat-card fade-up fade-up-${i+1}" href="${m.page}">
+        <div class="cat-icon">${icon(m.icon, 20)}</div>
+        <div class="cat-card-content">
+          <div class="cat-card-title">${m.label}</div>
+          <div class="cat-card-count">${subtitle}</div>
+        </div>
+        <div class="cat-card-arrow">→</div>
+      </a>`;
+    }).join('');
 
     /* Currently watching */
     const watching = entries.filter(e => e.status === 'watching');
@@ -342,8 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<div class="w-card" onclick="goToDetail('${e.id}','index.html')">
               <div class="w-poster">${posterHTML(e)}</div>
               <div class="w-body">
-                <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${epStr ? `<span class="w-ep-badge">${epStr}</span>` : ''}${rtStr ? `<span class="w-ep-badge">${rtStr}</span>` : ''}</div></div>
-                <div class="w-genre">${getTypeBadge(e,'friend')}${genreHTML(e.genres, 3)}</div>
+                <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}</div></div>
+                <div class="w-ep-row">
+                  ${getTypeBadge(e,'friend')}
+                  ${epStr ? `<span class="w-ep-badge">${epStr}</span><span class="w-ep-total">${e.total_eps ? `/ ${e.total_eps} eps` : ''}</span>` : ''}
+                  ${rtStr ? `<span class="w-ep-badge">${rtStr}</span>` : ''}
+                </div>
                 <div class="w-prog-track"><div class="w-prog-fill" style="width:${pct}%"></div></div>
               </div>
             </div>`;
@@ -357,11 +235,12 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHomeWatchlist(entries);
 
     getRecentlyViewed(user.id, 12).then(renderHomeRecentlyViewed);
+
     /* Friend comments inbox */
     const inbox = await getInboxComments(user.id, 8);
     if (inbox.length) {
       document.getElementById('homeComments').innerHTML = `
-        <div class="section-eyebrow">Community</div>
+        <div class="section-eyebrow">Social</div>
         <div class="section-title comments-section-toggle" onclick="_toggleComments()">
           Friend Comments
           <span class="comments-section-chevron" id="commentsChev">${icon('chevdown',18)}</span>
@@ -482,7 +361,7 @@ setTimeout(() => {
     </div>
     <div class="hc-list" id="hcList"></div>
     <div class="hc-form">
-      <input class="hc-input" id="hcInput" maxlength="1000" placeholder="Write a comment&hellip;">
+      <input class="hc-input" id="hcInput" placeholder="Write a comment&hellip;">
       <button class="hc-send" onclick="hcSubmit()">Send</button>
     </div>
   </div>
@@ -592,7 +471,6 @@ function hcReply(commentId, username) {
   var inp = document.createElement('input');
   inp.className = 'det-reply-input';
   inp.id = 'hc-ri-' + commentId;
-  inp.maxLength = 1000;
   inp.placeholder = 'Reply to @' + username + '…';
   inp.value = '@' + username + ' ';
   inp.addEventListener('keydown', function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();hcPostReply(commentId);} });
@@ -627,7 +505,7 @@ async function hcPostReply(commentId) {
     await addComment(_hcEntryId, content, commentId);
     hcCancelReply(commentId);
     await hcLoad();
-  } catch(err) { if(typeof showToast !== 'undefined') showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to post reply.'); input.disabled = false; }
+  } catch(err) { if(typeof showToast !== 'undefined') showToast('Failed to post reply.'); input.disabled = false; }
 }
 
 async function hcSubmit() {
@@ -644,22 +522,16 @@ async function hcSubmit() {
 }
 
 async function hcDelete(commentId) {
-  const el = document.getElementById('hcm-' + commentId);
-  // Optimistic: hide immediately rather than waiting for the delete to
-  // confirm — restore visibility if the request fails.
-  if (el) el.style.display = 'none';
   try {
     await deleteComment(commentId);
+    const el = document.getElementById('hcm-' + commentId);
     if (el) el.remove();
     const list = document.getElementById('hcList');
     const countEl = document.getElementById('hcCount');
     const remaining = list.querySelectorAll('.hc-comment').length;
     if (!remaining) { list.innerHTML = '<div class="hc-empty">No comments yet.</div>'; countEl.style.display='none'; }
     else countEl.textContent = remaining;
-  } catch(err) {
-    if (el) el.style.display = '';
-    if(typeof showToast !== 'undefined') showToast('Failed to delete.');
-  }
+  } catch(err) { if(typeof showToast !== 'undefined') showToast('Failed to delete.'); }
 }
 </script>
 </body>
