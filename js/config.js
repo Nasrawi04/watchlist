@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════
    config.js  — Supabase init + app-wide constants
-   EDIT the two lines marked CONFIGURE below
+   ✏️  EDIT the two lines marked CONFIGURE below
 ══════════════════════════════════════════ */
 
 // Apply saved theme immediately to avoid flash of wrong mode
@@ -21,23 +21,6 @@ try {
 } catch(e) {
   console.error('Supabase failed to init — check SUPABASE_URL and SUPABASE_ANON_KEY in js/config.js');
 }
-
-/* ── Rate-limit error handling — shared across every page, including
-   pre-auth ones like login.html that don't load nav.js. tmdbFetch()
-   itself (the actual request queue) lives in nav.js since only pages
-   doing TMDB work need it, but the error class + detection helper
-   need to be available anywhere a rate-limited Supabase call could
-   happen, login included. ── */
-class TmdbRateLimitError extends Error {
-  constructor(message) { super(message); this.name = 'TmdbRateLimitError'; }
-}
-function isRateLimitError(err) {
-  if (!err) return false;
-  if (err instanceof TmdbRateLimitError) return true;
-  const msg = String(err.message || err.details || '');
-  return msg.includes('rate_limit_exceeded') || err.code === 'P0001';
-}
-const RATE_LIMIT_MESSAGE = "You're doing that a bit too fast — give it a moment and try again.";
 
 /* ── Inline SVG icon system (Lucide outline, 1.75 stroke) ── */
 const ICONS = {
@@ -75,36 +58,6 @@ const ICONS = {
   repeat:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>`,
   layers:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
   info:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
-  compass:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>`,
-  thumbsUp:   `<svg viewBox="0 0 32 32" fill="currentColor" stroke="none"><path d="M29.845,17.099l-2.489,8.725C26.989,27.105,25.804,28,24.473,28H11c-0.553,0-1-0.448-1-1V13  c0-0.215,0.069-0.425,0.198-0.597l5.392-7.24C16.188,4.414,17.05,4,17.974,4C19.643,4,21,5.357,21,7.026V12h5.002  c1.265,0,2.427,0.579,3.188,1.589C29.954,14.601,30.192,15.88,29.845,17.099z"/><path d="M7,12H3c-0.553,0-1,0.448-1,1v14c0,0.552,0.447,1,1,1h4c0.553,0,1-0.448,1-1V13C8,12.448,7.553,12,7,12z   M5,25.5c-0.828,0-1.5-0.672-1.5-1.5c0-0.828,0.672-1.5,1.5-1.5c0.828,0,1.5,0.672,1.5,1.5C6.5,24.828,5.828,25.5,5,25.5z"/></svg>`,
-  thumbsDown: `<svg viewBox="0 0 32 32" fill="currentColor" stroke="none"><path d="M2.156,14.901l2.489-8.725C5.012,4.895,6.197,4,7.528,4h13.473C21.554,4,22,4.448,22,5v14  c0,0.215-0.068,0.425-0.197,0.597l-5.392,7.24C15.813,27.586,14.951,28,14.027,28c-1.669,0-3.026-1.357-3.026-3.026V20H5.999  c-1.265,0-2.427-0.579-3.188-1.589C2.047,17.399,1.809,16.12,2.156,14.901z"/><path d="M25.001,20h4C29.554,20,30,19.552,30,19V5c0-0.552-0.446-1-0.999-1h-4c-0.553,0-1,0.448-1,1v14  C24.001,19.552,24.448,20,25.001,20z M27.001,6.5c0.828,0,1.5,0.672,1.5,1.5c0,0.828-0.672,1.5-1.5,1.5c-0.828,0-1.5-0.672-1.5-1.5  C25.501,7.172,26.173,6.5,27.001,6.5z"/></svg>`,
-  thumbsUpFilled:   `<svg viewBox="0 0 32 32" fill="currentColor" stroke="none"><path d="M29.845,17.099l-2.489,8.725C26.989,27.105,25.804,28,24.473,28H11c-0.553,0-1-0.448-1-1V13  c0-0.215,0.069-0.425,0.198-0.597l5.392-7.24C16.188,4.414,17.05,4,17.974,4C19.643,4,21,5.357,21,7.026V12h5.002  c1.265,0,2.427,0.579,3.188,1.589C29.954,14.601,30.192,15.88,29.845,17.099z"/><path d="M7,12H3c-0.553,0-1,0.448-1,1v14c0,0.552,0.447,1,1,1h4c0.553,0,1-0.448,1-1V13C8,12.448,7.553,12,7,12z   M5,25.5c-0.828,0-1.5-0.672-1.5-1.5c0-0.828,0.672-1.5,1.5-1.5c0.828,0,1.5,0.672,1.5,1.5C6.5,24.828,5.828,25.5,5,25.5z"/></svg>`,
-  thumbsDownFilled: `<svg viewBox="0 0 32 32" fill="currentColor" stroke="none"><path d="M2.156,14.901l2.489-8.725C5.012,4.895,6.197,4,7.528,4h13.473C21.554,4,22,4.448,22,5v14  c0,0.215-0.068,0.425-0.197,0.597l-5.392,7.24C15.813,27.586,14.951,28,14.027,28c-1.669,0-3.026-1.357-3.026-3.026V20H5.999  c-1.265,0-2.427-0.579-3.188-1.589C2.047,17.399,1.809,16.12,2.156,14.901z"/><path d="M25.001,20h4C29.554,20,30,19.552,30,19V5c0-0.552-0.446-1-0.999-1h-4c-0.553,0-1,0.448-1,1v14  C24.001,19.552,24.448,20,25.001,20z M27.001,6.5c0.828,0,1.5,0.672,1.5,1.5c0,0.828-0.672,1.5-1.5,1.5c-0.828,0-1.5-0.672-1.5-1.5  C25.501,7.172,26.173,6.5,27.001,6.5z"/></svg>`,
-
-  // ── Notebook — for Notes, unified across nav and profile. Was
-  // sharing the plain "list" icon with the List/Grid view toggle
-  // buttons AND the Reply button, three unrelated meanings on one icon.
-  notebook: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 3v4l2-1.3L13 7V3"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>`,
-
-  // ── Reply — bent arrow, distinct from Notes/List View which all
-  // previously shared the same "list" icon.
-  reply: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 10 4 15 9 20"/><path d="M4 15h11a5 5 0 0 0 5-5V4"/></svg>`,
-
-  // ── Edit (pencil) — promoted from a one-off local copy in
-  // lists.html into a shared icon, since it was needed elsewhere too
-  // (category.js was incorrectly using the "list" icon for its Edit
-  // button).
-  edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
-
-  // ── Anime — a simple character face, standing in for "animated
-  // character" rather than the generic sparkle/starburst that was
-  // also (correctly) used for Plot Twist Quality and Watch Next
-  // elsewhere, so it never fit here to begin with.
-  animeFace: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C7 2 4 5 4 10c0 5 3 9 8 9s8-4 8-9c0-5-3-8-8-8z"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M9 14c1 1 5 1 6 0"/></svg>`,
-
-  // ── Cartoons — a crown, reading as "family/playful" content,
-  // instead of the paintbrush that didn't read clearly at small sizes.
-  crown: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8z"/><line x1="5" y1="21" x2="19" y2="21"/></svg>`,
 };
 
 function icon(name, size = 18) {
@@ -115,10 +68,10 @@ function icon(name, size = 18) {
 
 /* ── Data constants ── */
 const CAT_META = {
-  tv:       { label: 'TV Shows',  icon: 'tv',       singular: 'TV Show',  page: 'tv-shows.html' },
-  movies:   { label: 'Movies',    icon: 'film',      singular: 'Movie',    page: 'movies.html' },
-  anime:    { label: 'Anime',     icon: 'animeFace',  singular: 'Anime',    page: 'anime.html' },
-  cartoons: { label: 'Cartoons',  icon: 'crown',     singular: 'Cartoon',  page: 'cartoons.html' },
+  tv:       { label: 'TV Shows',  icon: 'tv',       singular: 'TV Show',  page: 'tv-shows.html',  emoji: '📺' },
+  movies:   { label: 'Movies',    icon: 'film',      singular: 'Movie',    page: 'movies.html',    emoji: '🎬' },
+  anime:    { label: 'Anime',     icon: 'sparkles',  singular: 'Anime',    page: 'anime.html',     emoji: '🎌' },
+  cartoons: { label: 'Cartoons',  icon: 'brush',     singular: 'Cartoon',  page: 'cartoons.html',  emoji: '🎨' },
 };
 
 /* ── Anime / Cartoon specific ratings ── */
@@ -301,39 +254,29 @@ function genreHTML(genres, max) {
 }
 
 /*
- * getTypeBadge(entry, context) — Movie / TV Show type tag, shown for
- * every entry (not just anime/cartoons) so the type is visible at a
- * glance everywhere genres/runtime are shown. Uses the same chip
- * design as genre tags, with a second accent color for TV so the two
- * types read apart without needing to read the text.
+ * getTypeBadge(entry, context) — subtle text label for anime/cartoon entries only.
+ * Only shown when the entry has _media_type set (Movie or TV Show).
+ * Returns a plain muted text label to appear before genres, or ''.
  */
 function getTypeBadge(entry, context) {
   var cat = (entry && entry.cat) || '';
-  var isMovie;
-  if (cat === 'movies') {
-    isMovie = true;
-  } else if (cat === 'tv') {
-    isMovie = false;
-  } else {
-    // anime / cartoons: only these track an explicit movie-vs-show
-    // distinction on the entry itself, since a single category can
-    // contain both (e.g. a Ghibli film vs. an anime series).
-    var mediaType = (entry && entry.ratings && entry.ratings._media_type) || 'show';
-    isMovie = mediaType === 'movie';
-  }
-  var label = isMovie ? 'Movie' : 'TV Show';
-  var cls = isMovie ? 'type-label' : 'type-label type-label-tv';
-  return '<span class="' + cls + '">' + label + '</span>';
+  var isAnimated = cat === 'anime' || cat === 'cartoons';
+  if (!isAnimated) return '';
+  // Default to 'show' if not explicitly set — matches detail.html behaviour
+  var mediaType = (entry && entry.ratings && entry.ratings._media_type) || 'show';
+  var label = mediaType === 'movie' ? 'Movie' : 'TV Show';
+  return '<span class="type-label">' + label + '</span>';
 }
 
 /* Overlay variant — no poster tag, returns empty (label appears before genres only) */
 /*
  * getTypeBadgeOverlay(entry, context) — Movie/TV Show type tag pinned
- * to a poster's top-left corner. Reuses the exact same .type-label/
+ * to a poster's bottom-left corner. Reuses the exact same .type-label/
  * .type-label-tv classes (solid olive for Movie, solid blue for TV
  * Show) used everywhere else on the site for this same distinction —
- * .type-label-overlay only adds the corner positioning on top of that
- * existing look, rather than introducing a separate badge style.
+ * .type-label-overlay-bottom only adds the corner positioning on top
+ * of that existing look, rather than introducing a separate badge
+ * style.
  */
 function getTypeBadgeOverlay(entry, context) {
   var cat = (entry && entry.cat) || '';
@@ -347,7 +290,7 @@ function getTypeBadgeOverlay(entry, context) {
     isMovie = mediaType === 'movie';
   }
   var label = isMovie ? 'Movie' : 'TV Show';
-  var cls = isMovie ? 'type-label type-label-overlay' : 'type-label type-label-tv type-label-overlay';
+  var cls = isMovie ? 'type-label type-label-overlay-bottom' : 'type-label type-label-tv type-label-overlay-bottom';
   return '<span class="' + cls + '">' + label + '</span>';
 }
 
