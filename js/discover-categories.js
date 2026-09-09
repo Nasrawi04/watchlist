@@ -9,6 +9,22 @@
 
 const _ANIMATION_GENRE = 16;
 
+// TMDB's genre ID → name mapping. This is TMDB's own stable, publicly
+// documented list (https://developer.themoviedb.org/reference/genre-movie-list,
+// genre-tv-list) — movie and TV genre IDs mostly overlap, with a
+// handful of TV-only entries (10759, 10762–10768) added on top.
+const _TMDB_GENRE_NAMES = {
+  28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime',
+  99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History',
+  27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance',
+  878: 'Sci-Fi', 10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western',
+  10759: 'Action', 10762: 'Kids', 10763: 'News', 10764: 'Reality',
+  10765: 'Sci-Fi', 10766: 'Soap', 10767: 'Talk', 10768: 'Politics',
+};
+function _discGenreNames(genreIds) {
+  return (genreIds || []).map(id => _TMDB_GENRE_NAMES[id]).filter(Boolean);
+}
+
 function _discTodayStr() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -36,6 +52,7 @@ function _discNormalize(r, mediaType) {
     origin_country: r.origin_country || [],
     original_language: r.original_language || '',
     genre_ids: r.genre_ids || [],
+    overview: r.overview || '',
   };
 }
 
