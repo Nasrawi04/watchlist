@@ -41,7 +41,7 @@ function _injectCatInfoPopup() {
         <div id="profInfoDetails"></div>
       </div>
       <div class="pvi-actions">
-        <button class="pvi-action-btn" id="catInfoEditBtn">${icon('edit',14)} Edit</button>
+        <button class="pvi-action-btn" id="catInfoEditBtn">${icon('list',14)} Edit</button>
         <button class="pvi-action-btn pvi-action-primary" id="catInfoDiscoverBtn">${icon('search',14)} Discover</button>
         <button class="pvi-action-btn" id="catInfoCardBtn" onclick="createShareCard(_catInfoId, 3, true)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Discover Card</button>
       </div>
@@ -212,15 +212,13 @@ function closeCatInfoPopup() {
 
 
 /* ── Shared ep/runtime badge helper ── */
-/* ── Ep/runtime meta text (plain value — callers wrap it: .wg-ep on a
-   poster overlay for grid cards, .w-ep-badge next to the title for
-   list rows) ── */
 function _entryMeta(e) {
   const isMovie = e.cat === 'movies' || (e.ratings?._media_type === 'movie');
   if (isMovie) {
     const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
     if (!rtH && !rtM) return '';
-    return rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
+    const label = rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
+    return `<div class="w-ep-row"><span class="w-ep-badge">${label}</span></div>`;
   }
   // Same logic as _queueScope — show shape of the show
   const bd = Array.isArray(e.ratings?._season_breakdown)
@@ -230,17 +228,24 @@ function _entryMeta(e) {
     : (e.total_seasons && e.total_eps) ? `S${e.total_seasons} E${e.total_eps}`
     : e.total_seasons ? `S${e.total_seasons}`
     : e.total_eps ? `${e.total_eps} eps` : '';
-  return scope;
+  if (!scope) return '';
+  return `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>`;
 }
 
-/* ── Ongoing meta: shows last watched position (S3 E10) — same plain-
-   text contract as _entryMeta above ── */
+/* ── Ongoing badge: shows last watched position (S3 E10) ── */
 function _ongoingMeta(e) {
   const isMovie = e.ratings?._media_type === 'movie';
   if (isMovie) return _entryMeta(e);
-  if (e.season != null && e.episode != null) return `S${e.season} E${e.episode}`;
-  if (e.season != null) return `S${e.season}`;
-  if (e.watched) return `${e.watched} eps watched`;
+  // Show current position — where the user stopped watching
+  if (e.season != null && e.episode != null) {
+    return `<div class="w-ep-row"><span class="w-ep-badge">S${e.season} E${e.episode}</span></div>`;
+  }
+  if (e.season != null) {
+    return `<div class="w-ep-row"><span class="w-ep-badge">S${e.season}</span></div>`;
+  }
+  if (e.watched) {
+    return `<div class="w-ep-row"><span class="w-ep-badge">${e.watched} eps</span><span class="w-ep-total">watched</span></div>`;
+  }
   return '';
 }
 
@@ -301,9 +306,6 @@ function applySort(arr, sortBy) {
   }
   if (sortBy === 'alpha')   return a.sort((x,y) => (x.title||'').localeCompare(y.title||''));
   if (sortBy === 'zalpha')  return a.sort((x,y) => (y.title||'').localeCompare(x.title||''));
-  if (sortBy === 'release') {
-    return a.sort((x,y) => getReleaseDateValue(y) - getReleaseDateValue(x));
-  }
   return a;
 }
 
@@ -317,7 +319,6 @@ function sortBar(section) {
     ['newest', 'Newest', 'New'], ['oldest', 'Oldest', 'Old'],
     ...(!isQueue ? [['highest','Highest Rank','High'],['lowest','Lowest Rank','Low']] : []),
     ['alpha', 'A → Z', 'A→Z'], ['zalpha', 'Z → A', 'Z→A'],
-    ['release', 'Release Date', 'Release'],
   ];
   const staticBtns = opts.map(([v,l,s]) =>
     `<button class="sort-btn${cur===v?' active':''}" onclick="setSort('${section}','${v}')" data-short="${s}">${l}</button>`
@@ -391,9 +392,8 @@ function _sortWatching(items, sortBy) {
   return [...active, ...paused];
 }
 
-async function setSort(section, value) {
+function setSort(section, value) {
   _sort[section] = value;
-  if (value === 'release') { await ensureReleaseDatesFetched(_catAll); }
   let base;
   if (section === 'watching') base = _catAll.filter(e => e.status === 'watching' || e.status === 'paused');
   else if (section === 'queue') base = _catAll.filter(e => e.status === 'queue');
@@ -687,7 +687,7 @@ function renderMoviesWatchingList(items) {
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
     const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
-    const rt  = (rtH||rtM) ? (rtH?`${rtH}h ${rtM}m`:`${rtM}m`) : '';
+    const rtStr = (rtH||rtM) ? (rtH ? `${rtH}h ${rtM}m` : `${rtM}m`) : '';
     return `<div class="w-card" style="${cardStyle}" onclick="openCatInfoPopup('${e.id}')">
       <div class="w-poster" style="position:relative">
         ${posterHTML(e)}
@@ -696,9 +696,8 @@ function renderMoviesWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}${rt ? `<span class="w-ep-badge">${rt}</span>` : ''}</div>${score}</div>
-        <div class="w-genre">${_badge}${genreHTML(e.genres, 3)}</div>
-        ${e.year ? `<span style="font-size:11px;color:var(--text-3);margin-top:3px;display:inline-block">${e.year}</span>` : ''}
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>${score}</div>
+        <div class="w-genre">${_badge}${rtStr ? `<span class="w-ep-badge">${rtStr}</span>` : ''}</div>
       </div>
       <div class="w-ep-controls" onclick="event.stopPropagation()">
         ${isPaused
@@ -770,13 +769,14 @@ function renderWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}<span class="w-ep-badge">${epStr}</span></div>${score}</div>
-        <div class="w-genre">${_badge}${genreHTML(e.genres, 3)}</div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>${score}</div>
         <div class="w-ep-row">
-          <span class="w-ep-total">${e.total_eps ? `${e.watched??0} / ${e.total_eps} eps` : ''}</span>
+          ${_badge}
+          <span class="w-ep-badge">${epStr}</span>
+          <span class="w-ep-total">${e.total_eps ? `/ ${e.total_eps} eps` : ''}</span>
         </div>
         <div class="w-prog-track"><div class="w-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
-        <div class="w-prog-label">${e.total_eps ? `${pct}% complete` : ''}</div>
+        <div class="w-prog-label">${e.total_eps ? `${e.watched??0} / ${e.total_eps} eps · ${pct}%` : (e.episode ? `Ep ${e.episode}` : '')}</div>
       </div>
       <div class="w-ep-controls${isDone?' w-ep-controls--done':''}" onclick="event.stopPropagation()">
         ${isPaused
@@ -870,13 +870,14 @@ function renderQueueGrid(items) {
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
     return `<div class="wg-card" onclick="openCatInfoPopup('${e.id}')">
-      <div class="wg-poster" style="position:relative;">
+      <div class="wg-poster">
         ${posterHTML(e, 'big')}
-        <div class="wg-overlay">${scope ? `<span class="wg-ep">${scope}</span>` : ''}</div>
+        <div class="wg-overlay"></div>
       </div>
       <div class="wg-info" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
         <div style="margin-bottom:6px;">
           <div class="wg-title" style="margin-bottom:4px;">${e.title}</div>
+          ${scope ? `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>` : ''}
         </div>
         <div class="wg-genre">${_badge}${genreHTML(e.genres, 3)}</div>
       </div>
@@ -1027,8 +1028,8 @@ function openGridPopup(id) {
     `<a href="#" onclick="goToDetail('${e.id}','${currentFile()}');return false;" style="font-size:11px;color:var(--text-3);text-decoration:none;align-self:center;margin-left:4px;">Edit →</a>`;
   // Ep/runtime badge
   const _metaEl = document.getElementById('cgPopupMeta');
-  const _metaText = _entryMeta(e);
-  if (_metaText) _metaEl.insertAdjacentHTML('beforeend', `<span class="w-ep-badge">${_metaText}</span>`);
+  const _metaHTML = _entryMeta(e);
+  if (_metaHTML) _metaEl.insertAdjacentHTML('beforeend', _metaHTML);
   // Score
   const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
   // Info bar (season breakdown / runtime) now renders inside the body, above the ratings
@@ -1102,7 +1103,7 @@ function _injectCommentsPopup() {
         "></div>
         <div style="flex:1;min-width:0;">
           <div id="commentsPopupTitle" style="font-family:var(--serif);font-size:18px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
-          <div id="commentsPopupMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+          <div id="commentsPopupMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px;"></div>
           <div id="commentsPopupCount" style="font-size:12px;color:var(--olive-light);font-weight:500;"></div>
         </div>
         <button onclick="closeCommentsPopup()" style="
@@ -1399,17 +1400,17 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
     const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
-    const _meta = e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e);
     return `<div class="wg-card cg-card-wrap" style="cursor:pointer;">
       <div class="wg-poster" onclick="openGridPopup('${e.id}')" style="position:relative;">
         ${posterHTML(e,'big')}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
-        <div class="wg-overlay">${_meta ? `<span class="wg-ep">${_meta}</span>` : ''}</div>
+        <div class="wg-overlay"></div>
         ${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(i+1) : '')}
       </div>
       <div class="cg-grid-info" onclick="openGridPopup('${e.id}')">
         <div class="wg-title">${e.title}</div>
         <div class="wg-genre">${_badge}${genreHTML(e.genres, 3)}</div>
+        ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
         <div class="cg-score-row"><span class="cg-score">${score||'—'}</span><span class="cg-score-lbl">score</span></div>
       </div>
       <div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">
@@ -1482,26 +1483,16 @@ async function adjustEp(id, delta) {
   }
 
   if (!justFinished) {
-    // Optimistic: apply + re-render immediately, since this is the
-    // single most frequently tapped action in the app — roll back the
-    // exact prior values if the save actually fails.
-    const prevWatched = entry.watched, prevEpisode = entry.episode, prevSeason = entry.season, prevTotalEps = entry.total_eps;
-    entry.watched = newWatched;
-    entry.episode = newEp;
-    entry.season  = newSeason;
-    const watching = _catAll.filter(e => e.status === 'watching' || e.status === 'paused').sort((a,b) => (a.status==='paused')-(b.status==='paused'));
-    const inner = document.querySelector('#body-watching .accordion-inner');
-    if (inner) inner.innerHTML = sortBar('watching') + buildWatching(watching);
-
     try {
       await updateProgress(id, _catUser.id, { watched: newWatched, episode: newEp, season: newSeason });
+      entry.watched = newWatched;
+      entry.episode = newEp;
+      entry.season  = newSeason;
+      const watching = _catAll.filter(e => e.status === 'watching' || e.status === 'paused').sort((a,b) => (a.status==='paused')-(b.status==='paused'));
+      const inner = document.querySelector('#body-watching .accordion-inner');
+      if (inner) inner.innerHTML = sortBar('watching') + buildWatching(watching);
       showToast('Progress updated');
-    } catch(e) {
-      entry.watched = prevWatched; entry.episode = prevEpisode; entry.season = prevSeason; entry.total_eps = prevTotalEps;
-      const watching2 = _catAll.filter(e => e.status === 'watching' || e.status === 'paused').sort((a,b) => (a.status==='paused')-(b.status==='paused'));
-      if (inner) inner.innerHTML = sortBar('watching') + buildWatching(watching2);
-      showToast('Error updating progress.', 'err');
-    }
+    } catch(e) { showToast('Error updating progress.', 'err'); }
   } else {
     // For movies: auto-complete. For shows: ask Completed or Ongoing
     const isMovie = entry.cat === 'movies' || entry.ratings?._media_type === 'movie';
@@ -1533,21 +1524,15 @@ async function markMovieComplete(event, id) {
   const entry = _catAll.find(e => e.id === id);
   if (!entry) return;
 
-  const prevStatus = entry.status, prevDate = entry.completed_date;
-  const now = new Date();
-  const isoDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  entry.status = 'completed';
-  entry.completed_date = isoDate;
-  renderSections();
-  _showRateNowPopup(entry.title, id);
-
   try {
+    const now = new Date();
+    const isoDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     await updateProgress(id, _catUser.id, { status: 'completed', completed_date: isoDate });
-  } catch(e) {
-    entry.status = prevStatus;
-    entry.completed_date = prevDate;
+    entry.status = 'completed';
+    entry.completed_date = isoDate;
     renderSections();
-    document.getElementById('_rateNowOverlay')?.remove();
+    _showRateNowPopup(entry.title, id);
+  } catch(e) {
     showToast('Error marking complete.', 'err');
   }
 }
@@ -1627,9 +1612,9 @@ function renderPausedList(items) {
     return `<div class="w-card" onclick="openCatInfoPopup('${e.id}')">
       <div class="w-poster">${posterHTML(e)}</div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title">${e.title}</div></div>
-        <div class="w-genre">${_badge}${genreHTML(e.genres, 3)}</div>
+        <div class="w-top"><div class="w-title">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);margin-left:8px;">${e.year}</span>` : ''}</div></div>
         <div class="w-ep-row">
+          ${_badge}
           <span class="w-ep-badge" style="background:rgba(168,168,168,0.12);color:var(--text-2);border-color:var(--border-2)">On Pause</span>
           ${epStr ? `<span class="w-ep-badge" style="margin-left:6px">${epStr}</span>` : ''}
           <span class="w-ep-total">${e.total_eps ? `/ ${e.total_eps} eps` : ''}</span>
@@ -1644,35 +1629,23 @@ function renderPausedList(items) {
 }
 
 async function resumeEntry(id) {
-  const entry = _catAll.find(e => e.id === id);
-  if (!entry) return;
-  const prevStatus = entry.status;
-  entry.status = 'watching';
-  renderSections();
   try {
     await updateProgress(id, _catUser.id, { status: 'watching' });
-    showToast('Resumed!');
-  } catch(e) {
-    entry.status = prevStatus;
+    const entry = _catAll.find(e => e.id === id);
+    if (entry) entry.status = 'watching';
     renderSections();
-    showToast('Error resuming.', 'err');
-  }
+    showToast('Resumed!');
+  } catch(e) { showToast('Error resuming.', 'err'); }
 }
 
 async function pauseEntry(id) {
-  const entry = _catAll.find(e => e.id === id);
-  if (!entry) return;
-  const prevStatus = entry.status;
-  entry.status = 'paused';
-  renderSections();
   try {
     await updateProgress(id, _catUser.id, { status: 'paused' });
-    showToast('Taking a break!');
-  } catch(e) {
-    entry.status = prevStatus;
+    const entry = _catAll.find(e => e.id === id);
+    if (entry) entry.status = 'paused';
     renderSections();
-    showToast('Error updating.', 'err');
-  }
+    showToast('Taking a break!');
+  } catch(e) { showToast('Error updating.', 'err'); }
 }
 
 /* ════════ QUEUE / WATCHLIST ════════ */
@@ -1708,8 +1681,8 @@ function renderQueueList(items) {
     return `<div class="w-card" style="cursor:default;">
       <div class="w-poster" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">${posterHTML(e)}</div>
       <div class="w-body" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${scope ? `<span class="w-ep-badge">${scope}</span>` : ''}</div></div>
-        <div class="w-genre">${_badge}${genreHTML(e.genres, 3)}</div>
+        <div class="w-top"><div class="w-title">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);margin-left:8px;">${e.year}</span>` : ''}</div></div>
+        <div class="w-ep-row">${_badge}${scope ? `<span class="w-ep-badge">${scope}</span>` : ''}</div>
       </div>
       <div style="display:flex;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">
         <button onclick="startWatching('${e.id}')" class="w-list-action-btn w-list-play-btn" title="Start Watching">${icon('play',14)}</button>
@@ -1735,14 +1708,14 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
     const score = e.final_score != null ? Number(liveScore(e)).toFixed(2) : '—';
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
-    const _meta = e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e);
     return `<div class="cc-block">
       <div class="comp-row" style="cursor:pointer;" onclick="openGridPopup('${e.id}')">
         ${isRanked ? `<div style="font-family:var(--serif);font-size:26px;font-weight:300;color:${i<3?'var(--olive-light)':'var(--text-2)'};text-align:center;min-width:44px;flex-shrink:0;">${i+1}</div>` : ''}
         <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : ''}</div>
         <div class="comp-info">
-          <div class="comp-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}${_meta ? `<span class="w-ep-badge">${_meta}</span>` : ''}</div>
-          <div class="comp-meta">${_badge}${genreHTML(e.genres, 3)}</div>
+          <div class="comp-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+          <div class="comp-meta">${_badge}${e.genres?.length ? e.genres.slice(0,3).map(g=>`<span style="color:var(--text-3)">· ${g}</span>`).join('') : ''}</div>
+          ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
           ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">"${e.notes}"</div>` : ''}
           ${renderFavChips(e.ratings, e.cat)}
         </div>
@@ -1761,25 +1734,20 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
 
 /* ── Continue Watching (from Ongoing) ── */
 async function startWatching(id) {
-  const entry = _catAll.find(e => e.id === id);
-  const isMovie = !entry || entry.cat === 'movies' || entry.ratings?._media_type === 'movie';
-  const updates = { status: 'watching' };
-  if (!isMovie) {
-    updates.season  = entry?.season  || 1;
-    updates.episode = 0;
-    updates.watched = 0;
-  }
-
-  const prevStatus = entry?.status, prevSeason = entry?.season, prevEpisode = entry?.episode, prevWatched = entry?.watched;
-  if (entry) { entry.status = 'watching'; if (!isMovie) { entry.season = updates.season; entry.episode = 0; entry.watched = 0; } }
-  renderSections();
-
   try {
+    const entry = _catAll.find(e => e.id === id);
+    const isMovie = !entry || entry.cat === 'movies' || entry.ratings?._media_type === 'movie';
+    const updates = { status: 'watching' };
+    if (!isMovie) {
+      updates.season  = entry?.season  || 1;
+      updates.episode = 0;
+      updates.watched = 0;
+    }
     await updateProgress(id, _catUser.id, updates);
+    if (entry) { entry.status = 'watching'; if (!isMovie) { entry.season = updates.season; entry.episode = 0; entry.watched = 0; } }
     showToast('Moved to Currently Watching!');
-  } catch(e) {
-    if (entry) { entry.status = prevStatus; entry.season = prevSeason; entry.episode = prevEpisode; entry.watched = prevWatched; }
     renderSections();
+  } catch(e) {
     showToast('Error updating. Please try again.', 'err');
     console.error(e);
   }
@@ -2045,7 +2013,7 @@ function _injectQPModal() {
         "></div>
         <div style="flex:1;min-width:0;">
           <div id="qpTitle" style="font-family:var(--serif);font-size:17px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
-          <div id="qpMeta" style="font-size:10px;color:var(--text-3);margin-bottom:4px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+          <div id="qpMeta" style="font-size:10px;color:var(--text-3);margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px;"></div>
           <div style="font-size:11px;color:var(--olive-light);font-weight:500;">From your watchlist</div>
         </div>
         <button onclick="closeQueuePicker()" style="
