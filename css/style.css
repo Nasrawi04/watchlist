@@ -763,23 +763,23 @@ nav {
 ════════════════════════════════════════════ */
 .watch-list { display:flex; flex-direction:column; gap:10px; }
 .w-card {
-  display:flex; align-items:center; gap:20px;
+  display:flex; align-items:center; gap:22px;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:20px 24px; cursor:pointer; transition:all var(--trans) var(--ease);
-  height:160px; overflow:hidden;
+  padding:22px 26px; cursor:pointer; transition:all var(--trans) var(--ease);
+  height:180px; overflow:hidden;
 }
 .w-ep-controls { min-height:80px; justify-content:center; }
 .w-card:hover { border-color:var(--border-olive); background:var(--card-2); }
 .w-card:active { transform:scale(0.99); }
 .w-poster {
-  width:84px; height:120px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0;
+  width:96px; height:136px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0;
   background:var(--bg-3); display:flex; align-items:center; justify-content:center;
   box-shadow:var(--shadow);
 }
 .w-poster img { width:100%; height:100%; object-fit:cover; }
 .w-body { flex:1; min-width:0; }
 .w-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px; }
-.w-title { font-size:18px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.w-title { font-size:19px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .w-score { font-family:var(--serif); font-size:24px; color:var(--olive-light); flex-shrink:0; }
 .w-genre { font-size:12px; color:var(--text-3); margin-bottom:10px; display:flex; gap:6px; flex-wrap:wrap; }
 .w-ep-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; flex-wrap:wrap; }
@@ -1365,17 +1365,17 @@ nav {
 ════════════════════════════════════════════ */
 .completed-list { display:flex; flex-direction:column; gap:10px; }
 .comp-row {
-  display:flex; align-items:center; gap:20px;
+  display:flex; align-items:center; gap:22px;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:20px 24px; cursor:pointer; transition:all var(--trans) var(--ease);
-  height:180px; overflow:hidden;
+  padding:22px 26px; cursor:pointer; transition:all var(--trans) var(--ease);
+  height:200px; overflow:hidden;
 }
 .comp-row:hover { border-color:var(--border-olive); background:var(--card-2); }
-.comp-poster { width:100px; height:140px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); }
+.comp-poster { width:112px; height:156px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); }
 .comp-poster img { width:100%; height:100%; object-fit:cover; }
 .comp-info { flex:1; min-width:0; }
 .comp-rank { font-size:11px; color:var(--text-3); display:block; margin-bottom:4px; letter-spacing:1px; }
-.comp-title { font-size:20px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.comp-title { font-size:22px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .comp-meta { font-size:13px; color:var(--text-3); margin-top:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .comp-date { color:var(--text-3); }
 .comp-score-wrap { text-align:right; flex-shrink:0; }
@@ -1664,19 +1664,19 @@ nav {
 }
 .fav-watching-grid::-webkit-scrollbar { display:none; }
 .fav-watching-grid .q-card {
-  flex:0 0 200px; min-width:200px; width:200px;
+  flex:0 0 220px; min-width:220px; width:220px;
   scroll-snap-align:start;
   flex-shrink:0 !important;
   display:flex !important; flex-direction:column !important;
   height:auto !important;
 }
-@media(min-width:1200px) { .fav-watching-grid .q-card { flex:0 0 220px; min-width:220px; width:220px; } }
+@media(min-width:1200px) { .fav-watching-grid .q-card { flex:0 0 240px; min-width:240px; width:240px; } }
 
 /* Tablet (641–1024px): CSS grid wrapping, contained scroll, no nav buttons */
 @media(min-width:641px) and (max-width:1024px) {
   .fav-watching-grid {
     display:grid !important;
-    grid-template-columns:repeat(auto-fill,minmax(150px,1fr)) !important;
+    grid-template-columns:repeat(auto-fill,minmax(160px,1fr)) !important;
     flex-direction:unset !important; flex-wrap:unset !important;
     overflow-x:hidden !important; overflow-y:visible !important;
     gap:12px !important; padding-bottom:0 !important;
@@ -1712,7 +1712,7 @@ nav {
   .fav-grid-container .grid-nav-btn { display:none !important; }
 }
 @media(max-width:400px) {
-  .fav-watching-grid { grid-template-columns:repeat(2,1fr) !important; }
+  .fav-watching-grid { grid-template-columns:repeat(3,1fr) !important; }
   .fav-grid-container { max-height:360px; }
 }
 
@@ -1754,7 +1754,7 @@ nav {
 }
 .fav-scroll-grid::-webkit-scrollbar { display:none; }
 .fav-scroll-grid .q-card {
-  flex:0 0 180px;min-width:180px;
+  flex:0 0 200px;min-width:200px;
   scroll-snap-align:start;
 }
 /* Nav arrows */
@@ -1771,11 +1771,11 @@ nav {
 .fav-scroll-btn.left  { left:-14px; }
 .fav-scroll-btn.right { right:-14px; }
 @media(max-width:640px) {
-  .fav-scroll-grid .q-card { flex:0 0 140px;min-width:140px; }
+  .fav-scroll-grid .q-card { flex:0 0 160px;min-width:160px; }
   .fav-scroll-btn { display:none; }
 }
 @media(max-width:400px) {
-  .fav-scroll-grid .q-card { flex:0 0 120px;min-width:120px; }
+  .fav-scroll-grid .q-card { flex:0 0 135px;min-width:135px; }
 }
 
 /* ── Fav edit button (shared) ── */
@@ -2554,17 +2554,17 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   display:flex; align-items:center; gap:20px;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
   padding:20px 24px; cursor:pointer; transition:all var(--trans) var(--ease);
-  height:160px; overflow:hidden;
+  height:180px; overflow:hidden;
 }
 .ql-row:hover { border-color:var(--border-olive); background:var(--card-2); }
 .ql-poster {
-  width:84px; height:120px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0;
+  width:96px; height:136px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0;
   background:var(--bg-3); display:flex; align-items:center; justify-content:center;
   box-shadow:var(--shadow);
 }
 .ql-poster img { width:100%; height:100%; object-fit:cover; }
 .ql-info { flex:1; min-width:0; }
-.ql-title { font-size:18px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ql-title { font-size:20px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ql-meta  { font-size:12px; color:var(--text-3); margin-top:6px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .ql-arrow { color:var(--text-3); display:flex; align-items:center; flex-shrink:0; opacity:.5; transition:opacity var(--trans) var(--ease); }
 .ql-row:hover .ql-arrow { opacity:1; color:var(--olive-light); }
@@ -2711,7 +2711,7 @@ body { font-size:15px; }
 .completed-grid .cg-card,
 .fav-watching-grid .q-card {
   flex-shrink:0 !important;
-  width:200px;
+  width:220px;
   scroll-snap-align:start;
   display:flex !important;
   flex-direction:column !important;
@@ -2721,17 +2721,11 @@ body { font-size:15px; }
 .cg-card { min-height:0; }
 
 @media(max-width:640px) {
-  .watching-grid .wg-card,
-  .watching-grid .q-card,
-  .watching-grid .cg-card,
-  .queue-grid .q-card,
-  .completed-grid .cg-card { width:160px; }
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
   .accordion-body.open:has(.completed-list) { max-height:55vh; }
 }
 @media(max-width:400px) {
-  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card { width:140px; }
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
   .accordion-body.open:has(.completed-list) { max-height:50vh; }
@@ -2740,7 +2734,7 @@ body { font-size:15px; }
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
   .accordion-body.open:has(.completed-list) { max-height:65vh; }
-  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card, .fav-watching-grid .q-card { width:220px; }
+  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card, .fav-watching-grid .q-card { width:240px; }
 }
 
 /* ════════════════════════════════════════════
@@ -2872,8 +2866,8 @@ body { font-size:15px; }
 
   /* ── List cards: compact ── */
   .w-card  { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
-  .w-poster { width:64px; height:90px; }
-  .w-title  { font-size:13px; }
+  .w-poster { width:72px; height:102px; }
+  .w-title  { font-size:14px; }
   .w-genre  { gap:4px; margin-bottom:5px; }
   .w-card .genre-dot, .w-card .type-label { font-size:9px; }
   .w-genre .genre-dot, .w-genre .type-label, .w-genre .cat-badge { font-size:8px; padding:1px 4px; }
@@ -2959,16 +2953,16 @@ body { font-size:15px; }
   .cc-reply-form input, .fv-reply-form input { font-size:11px; padding:4px 8px; }
 
   .comp-row    { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
-  .comp-poster { width:64px; height:90px; }
-  .comp-title  { font-size:13px; }
+  .comp-poster { width:72px; height:102px; }
+  .comp-title  { font-size:14px; }
   .comp-score  { font-size:18px !important; }
   .comp-score-label { font-size:9px; }
   .comp-meta   { font-size:10px; gap:4px; margin-top:4px; }
   .comp-meta .genre-dot, .comp-meta .type-label { font-size:8px; padding:1px 4px; }
 
   .ql-row    { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
-  .ql-poster { width:64px; height:90px; }
-  .ql-title  { font-size:13px; }
+  .ql-poster { width:72px; height:102px; }
+  .ql-title  { font-size:14px; }
   .ql-info .genre-dot, .ql-info .type-label, .ql-info .cat-badge { font-size:8px; padding:1px 4px; }
 
   /* ── Section header wrap ── */
@@ -3045,20 +3039,22 @@ body { font-size:15px; }
   .page-stat { padding:.65rem .5rem; }
   .page-stat-num { font-size:18px; }
   .page-stat-label { font-size:8px; letter-spacing:.5px; }
-  .w-card  { padding:8px 10px; gap:10px; }
-  .w-poster { width:56px; height:80px; }
+  .w-card  { padding:8px 10px; gap:10px; height:auto !important; min-height:90px; }
+  .w-poster { width:64px; height:90px; }
   /* .w-title/.w-genre had a ≤640px reduction but nothing further here,
      even though .w-poster does shrink further at this width — text
      was staying at the ≤640px size on the narrowest phones instead of
      scaling down to match. */
-  .w-title { font-size:12px; }
+  .w-title { font-size:13px; }
   .w-genre { gap:3px; margin-bottom:4px; }
   .w-card .genre-dot, .w-card .type-label { font-size:8px; }
-  .comp-row { padding:8px 10px; gap:10px; }
-  .comp-poster { width:56px; height:80px; }
+  .comp-row { padding:8px 10px; gap:10px; height:auto !important; min-height:90px; }
+  .comp-poster { width:64px; height:90px; }
+  .comp-title { font-size:14px; }
   .comp-score  { font-size:15px !important; }
-  .ql-row   { padding:8px 10px; gap:10px; }
-  .ql-poster { width:56px; height:80px; }
+  .ql-row   { padding:8px 10px; gap:10px; height:auto !important; min-height:90px; }
+  .ql-poster { width:64px; height:90px; }
+  .ql-title { font-size:14px; }
   .cg-score-badge { font-size:7px; padding:1px 4px; min-width:20px; }
   .category-grid { gap:6px; }
   .accordion-inner { padding:10px; }
@@ -3094,9 +3090,20 @@ body { font-size:15px; }
   #homeRecentlyViewedGrid .type-label, #homeWatchlistGrid .type-label { font-size:8px; }
   .w-ep-total { font-size:7px; }
   .w-ep-row { gap:4px; }
-  /* Grid: 2 col on very small phones */
+  /* Grid: 3 col on phones, not 2. Width:100% with matching compound
+     selectors — not a fixed pixel guess — since the base horizontal-
+     scroll rule (.watching-grid .wg-card, etc.) has higher specificity
+     than a plain .wg-card rule and would otherwise silently win here
+     regardless of !important, exactly like it did at the tablet
+     breakpoint before that was fixed the same way. */
   .watching-grid, .queue-grid, .completed-grid {
-    grid-template-columns:repeat(2,1fr) !important;
+    grid-template-columns:repeat(3,1fr) !important;
+  }
+  .wg-card, .q-card, .cg-card,
+  .watching-grid .wg-card, .watching-grid .q-card, .watching-grid .cg-card,
+  .queue-grid .q-card, .completed-grid .cg-card {
+    width:100% !important;
+    max-width:100% !important;
   }
   /* Score on tiny phones */
   .cg-score { font-size:14px; }
@@ -3112,7 +3119,7 @@ body { font-size:15px; }
   .queue-grid,
   .completed-grid {
     display:grid !important;
-    grid-template-columns:repeat(auto-fill, minmax(150px, 180px)) !important;
+    grid-template-columns:repeat(auto-fill, minmax(160px, 200px)) !important;
     flex-direction:unset !important;
     flex-wrap:unset !important;
     overflow-x:visible !important;
@@ -3125,7 +3132,7 @@ body { font-size:15px; }
   .wg-card, .q-card, .cg-card {
     flex-shrink:unset !important;
     width:100% !important;
-    max-width:180px !important;
+    max-width:200px !important;
     scroll-snap-align:unset !important;
   }
   /* Card width shrinks to a 180px cap at this breakpoint, but nothing
@@ -3134,7 +3141,7 @@ body { font-size:15px; }
      oversized against a card this narrow. Only ≤640px and ≤400px had
      scaling before; this fills the gap for the tablet range between
      them. */
-  .wg-title, .q-title { font-size:12px; }
+  .wg-title, .q-title { font-size:13px; }
   /* .wg-genre/.q-genre are just containers — the actual genre/type
      tags are the shared .genre-dot/.type-label classes, which have
      their own explicit clamp()-based font-size that doesn't inherit
@@ -3145,7 +3152,7 @@ body { font-size:15px; }
      to actually shrink it, not just extend the existing curve. */
   .wg-card .genre-dot, .wg-card .type-label, .wg-card .w-ep-badge, .wg-card .cat-badge,
   .q-card .genre-dot, .q-card .type-label, .q-card .w-ep-badge, .q-card .cat-badge {
-    font-size:8px;
+    font-size:9px;
   }
   /* Hide nav buttons on tablet since grid wraps */
   .grid-nav-wrap .grid-nav-btn { display:none !important; }
@@ -3179,7 +3186,7 @@ body { font-size:15px; }
    LARGE DISPLAYS — 1536px+
 ───────────────────────────────────────── */
 @media (min-width: 1536px) {
-  .wg-card, .q-card, .cg-card { width:220px !important; }
+  .wg-card, .q-card, .cg-card { width:260px !important; }
   .watching-grid, .queue-grid, .completed-grid { gap:18px !important; }
 }
 
@@ -3187,7 +3194,7 @@ body { font-size:15px; }
    TV / ULTRAWIDE — 1920px+
 ───────────────────────────────────────── */
 @media (min-width: 1920px) {
-  .wg-card, .q-card, .cg-card { width:240px !important; }
+  .wg-card, .q-card, .cg-card { width:280px !important; }
   .home-title  { font-size:80px; }
   .category-grid { grid-template-columns:repeat(4,1fr); }
 }
