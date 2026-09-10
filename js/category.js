@@ -904,7 +904,7 @@ function _cgScoreBadge(score) {
   else if (score >= 6) cls = 'cg-score-6';
   else if (score >= 3) cls = 'cg-score-3-5';
   else cls = 'cg-score-0-2';
-  return `<div class="cg-score-badge ${cls}">${Number(score).toFixed(2)}</div>`;
+  return `<div class="cg-score-badge ${cls}">★ ${Number(score).toFixed(2)}</div>`;
 }
 
 function _cgEnjoymentBadge(e) {
@@ -1395,21 +1395,20 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
   const curSort     = _sort[sectionKey] || '';
   const ratingKey   = curSort.startsWith('rating:') ? curSort.slice(7) : null;
   const gid = `wg-${sectionKey}`;
-  const _ctx = catContext();
   const cards = items.map((e, i) => {
     const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
-    const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
+    const isMc  = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+    const typeClsC = (isMc ? 'type-label' : 'type-label type-label-tv') + ' type-label-overlay-bottom';
     return `<div class="wg-card cg-card-wrap" style="cursor:pointer;">
       <div class="wg-poster" onclick="openGridPopup('${e.id}')" style="position:relative;">
         ${posterHTML(e,'big')}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
-        <div class="wg-overlay"></div>
         ${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(i+1) : '')}
+        <span class="${typeClsC}">${isMc ? 'Movie' : 'TV Show'}</span>
       </div>
       <div class="cg-grid-info" onclick="openGridPopup('${e.id}')">
-        <div class="wg-title">${e.title}</div>
-        <div class="wg-genre">${_badge}${genreHTML(e.genres, 3)}</div>
+        <div class="wg-title" style="display:flex;align-items:baseline;gap:6px;">${e.title}${e.year ? `<span style="font-size:11px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}</div>
         ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
         <div class="cg-score-row"><span class="cg-score">${score||'—'}</span><span class="cg-score-lbl">score</span></div>
       </div>
@@ -1705,7 +1704,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
   const ratingKey = curSort.startsWith('rating:') ? curSort.slice(7) : null;
   return `<div class="completed-list">${sorted.map((e, i) => {
     const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
-    const score = e.final_score != null ? Number(liveScore(e)).toFixed(2) : '—';
+    const score = e.final_score != null ? Number(liveScore(e)).toFixed(2) : null;
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
     return `<div class="cc-block">
@@ -1713,14 +1712,14 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
         ${isRanked ? `<div style="font-family:var(--serif);font-size:26px;font-weight:300;color:${i<3?'var(--olive-light)':'var(--text-2)'};text-align:center;min-width:44px;flex-shrink:0;">${i+1}</div>` : ''}
         <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : ''}</div>
         <div class="comp-info">
-          <div class="comp-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
-          <div class="comp-meta">${_badge}${e.genres?.length ? e.genres.slice(0,3).map(g=>`<span style="color:var(--text-3)">· ${g}</span>`).join('') : ''}</div>
+          <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+          <div class="comp-meta">${_badge}</div>
           ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
           ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">"${e.notes}"</div>` : ''}
           ${renderFavChips(e.ratings, e.cat)}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;" onclick="event.stopPropagation()">
-          <div style="font-family:var(--serif);font-size:36px;font-weight:300;color:var(--olive-light);line-height:1;">${score}</div>
+          <div style="font-family:var(--serif);font-size:36px;font-weight:300;color:var(--olive-light);line-height:1;">${score != null ? `★ ${score}` : '—'}</div>
           ${e.status === 'ongoing' ? `<button class="w-list-action-btn w-list-play-btn" onclick="continueWatching('${e.id}')" title="Continue">${icon('play',14)}</button>` : ''}
         </div>
       </div>
