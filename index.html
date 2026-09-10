@@ -140,7 +140,7 @@ function renderHomeWatchlist(entries) {
   const queue = shuffled.slice(0, 12);
   const cards = queue.map(e => `<div class="q-card" onclick="goToDetail('${e.id}','index.html')">
     <div class="q-poster" style="position:relative">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${getTypeBadgeOverlay(e,'latest')}</div>
-    <div class="q-info"><div class="q-title">${e.title}</div><div class="q-genre">${genreHTML(e.genres,3)}</div></div>
+    <div class="q-info"><div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${e.title}</div>${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}</div></div>
   </div>`).join('');
   _homeHScrollSection('homeWatchlist', 'homeWatchlistGrid', 'Saved', 'From Your Watchlist', cards);
 }
