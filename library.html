@@ -1658,7 +1658,7 @@ function renderLibrary(){
         +'<div class="cg-grid-info" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+e.year+'</span>':'')+'</div>'
         +metaHtml
-        +'<div class="cg-score-row"><span class="cg-score">'+(sc!=null?'★ '+sc:'—')+'</span><span class="cg-score-lbl">score</span></div>'
+        +'<div class="cg-score-row"><span class="cg-score">'+(sc!=null?'★ '+sc:'—')+'</span></div>'
         +'</div>'
         +'<div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">'
         +_libCcBtn('prof',e.id)
