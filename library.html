@@ -201,7 +201,7 @@
 
 .fv-w-body{flex:1;min-width:0}
 
-.fv-w-title{font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.fv-w-title{font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;min-width:0}
 
 .fv-w-genre{font-size:12px;color:var(--text-3);margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap}
 
@@ -747,7 +747,6 @@
   .fv-w-card { padding:10px 12px; gap:10px; min-height:unset; }
   .fv-w-poster { width:56px; height:78px; }
   .fv-w-title { font-size:14px; }
-  .fv-w-score { font-size:18px; }
   .note-row { padding:12px 14px; gap:12px; border-radius:var(--radius); }
   .note-poster { width:64px; height:90px; font-size:20px; }
   .note-title { font-size:15px; }
@@ -1603,7 +1602,7 @@ function renderLibrary(){
         +(rt?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')
         +(!ep&&!rt?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'</div>':'')
         +((!isM&&e.total_eps)?'<div class="fv-w-prog-track" style="margin-top:6px;"><div class="fv-w-prog-fill" style="width:'+pct+'%'+(ip?';background:var(--text-3)':'')+';"></div></div><div class="fv-w-prog-label">'+(e.watched||0)+' / '+e.total_eps+' eps \u00b7 '+pct+'%</div>':(!isM&&e.watched?'<div class="fv-w-prog-label">'+e.watched+' watched</div>':''))
-        +'</div>'+(liveScore(e)!=null?'<div class="fv-w-score">'+Number(liveScore(e)).toFixed(2)+'</div>':'')
+        +'</div>'+(liveScore(e)!=null?'<div class="fv-w-score">★ '+Number(liveScore(e)).toFixed(2)+'</div>':'')
         +'</div>';
     }).join('')+'</div>';
   }
