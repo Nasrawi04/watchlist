@@ -410,6 +410,10 @@ function setSort(section, value) {
 }
 
 const IS_MOVIE_CAT = () => window.PAGE_CAT === 'movies';
+// Type tag (Movie/TV Show label on cards) is redundant on the Movies/TV
+// Shows pages (the whole page is already one type) but still useful on
+// Anime/Cartoons pages, where movie and show entries mix together.
+const SHOW_TYPE_TAG = () => window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
 /* Returns the badge context string for the current page */
 function catContext() {
   const c = window.PAGE_CAT;
@@ -733,7 +737,7 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
              </div>`
           : ''}
         ${score ? _cgScoreBadge(score) : ''}
-        <span class="${typeClsPcg}">Movie</span>
+        ${SHOW_TYPE_TAG() ? `<span class="${typeClsPcg}">Movie</span>` : ''}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
       </div>
       <div class="wg-info" style="padding:8px 12px;gap:6px;">
@@ -839,7 +843,7 @@ function renderWatchingGrid(items) {
                <span style="font-size:10px;font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">Taking<br>a Break</span>
              </div>`
           : ''}
-        <span class="${typeCls}">${isMovieG ? 'Movie' : 'TV Show'}</span>
+        ${SHOW_TYPE_TAG() ? `<span class="${typeCls}">${isMovieG ? 'Movie' : 'TV Show'}</span>` : ''}
         ${score ? _cgScoreBadge(score) : ''}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
       </div>
@@ -879,7 +883,11 @@ function renderQueueGrid(items) {
       </div>
       <div class="wg-info" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
         <div style="margin-bottom:6px;">
-          <div class="wg-title" style="margin-bottom:4px;">${e.title}</div>
+          <div class="title-year-row">
+            <div class="wg-title" style="margin-bottom:4px;">${e.title}</div>
+            ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
+          </div>
+          ${e.year ? `<div class="title-year-below">${e.year}</div>` : ''}
           ${scope ? `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>` : ''}
         </div>
         <div class="wg-genre">${_badge}${genreHTML(e.genres, 3)}</div>
@@ -1408,7 +1416,7 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
         ${posterHTML(e,'big')}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
         ${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(i+1) : '')}
-        <span class="${typeClsC}">${isMc ? 'Movie' : 'TV Show'}</span>
+        ${SHOW_TYPE_TAG() ? `<span class="${typeClsC}">${isMc ? 'Movie' : 'TV Show'}</span>` : ''}
       </div>
       <div class="cg-grid-info" onclick="openGridPopup('${e.id}')">
         <div class="title-year-row">
