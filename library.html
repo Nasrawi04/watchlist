@@ -1350,6 +1350,13 @@ function renderTab0() {
 
 /* ── Tab 1: Library ── */
 
+// Always shows Movie/TV Show regardless of category — unlike getTypeBadge()
+// (which only shows for anime/cartoons), library.html mixes all categories
+// in one section, so every entry needs the tag, matching what the grid
+// views here already do.
+function _libTypeBadge(isMovie) {
+  return '<span class="'+(isMovie?'type-label':'type-label type-label-tv')+'">'+(isMovie?'Movie':'TV Show')+'</span>';
+}
 function _libQueueScope(e) {
   if (e.cat==='movies'||e.ratings?._media_type==='movie') {
     var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
@@ -1595,9 +1602,9 @@ function renderLibrary(){
       return '<div class="fv-w-card" style="cursor:pointer;'+cs+'" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.55);display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">Taking<br>a Break</span></div>':'')+'</div>'
         +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);flex-shrink:0;">'+e.year+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+'</div>'
-        +(ep?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+ep+'</span>'+(e.total_eps?'<span style="font-size:11px;color:var(--text-3);">/ '+e.total_eps+' eps</span>':'')+'</div>':'')
-        +(rt?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')
-        +(!ep&&!rt?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'</div>':'')
+        +(ep?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+ep+'</span>'+(e.total_eps?'<span style="font-size:11px;color:var(--text-3);">/ '+e.total_eps+' eps</span>':'')+'</div>':'')
+        +(rt?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')
+        +(!ep&&!rt?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'</div>':'')
         +((!isM&&e.total_eps)?'<div class="fv-w-prog-track" style="margin-top:6px;"><div class="fv-w-prog-fill" style="width:'+pct+'%'+(ip?';background:var(--text-3)':'')+';"></div></div><div class="fv-w-prog-label">'+(e.watched||0)+' / '+e.total_eps+' eps \u00b7 '+pct+'%</div>':(!isM&&e.watched?'<div class="fv-w-prog-label">'+e.watched+' watched</div>':''))
         +'</div></div>';
     }).join('')+'</div>';
@@ -1611,7 +1618,7 @@ function renderLibrary(){
     var qcs=queue.map(function(e){var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeClsQ=(isMq?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsQ+'">'+(isMq?'Movie':'TV Show')+'</span>'+'</div><div class="wg-info"><div class="title-year-row" style="margin-bottom:6px;"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+e.year+'</span>':'')+'</div>'+(scope?'<div class="wg-genre"><span class="w-ep-badge">'+scope+'</span></div>':'')+'</div></div>';}).join('');
     qc=_libGridWrap(qg,'<div class="watching-grid" id="'+qg+'">'+qcs+'</div>');
   } else {
-    qc='<div class="watch-list">'+queue.map(function(e){var scope=_libQueueScope(e);return '<div class="w-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e)+'</div><div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);margin-left:8px;">'+e.year+'</span>':'')+'</div></div><div class="w-ep-row">'+getTypeBadge(e,'friend')+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div></div>';}).join('')+'</div>';
+    qc='<div class="watch-list">'+queue.map(function(e){var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeBadgeQ='<span class="'+(isMq?'type-label':'type-label type-label-tv')+'">'+(isMq?'Movie':'TV Show')+'</span>';return '<div class="w-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e)+'</div><div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);margin-left:8px;">'+e.year+'</span>':'')+'</div></div><div class="w-ep-row">'+typeBadgeQ+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div></div>';}).join('')+'</div>';
   }
 
   // Completed
@@ -1662,12 +1669,13 @@ function renderLibrary(){
     cc=statusTabs+'<div class="fv-ranked-list">'+completed.map(function(e,i){
       var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
       var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
+      var isMc=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       return '<div class="fv-entry-block">'
         +'<div class="fv-rank-row" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
         +(isRanked?'<div class="fv-rank-num '+(i<3?'top3':'')+'">'+(i+1)+'</div>':'')
         +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):'')+'</div>'
         +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);">'+e.year+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
-        +'<div class="fv-rank-meta">'+getTypeBadge(e,'friend')+'</div>'
+        +'<div class="fv-rank-meta">'+_libTypeBadge(isMc)+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
         +renderFavChips(e.ratings,e.cat)
         +'</div><div class="fv-rank-score">'+(sc!=null?'★ '+sc:'—')+'</div></div>'
