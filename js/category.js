@@ -687,7 +687,6 @@ function buildWatching(items) {
 function renderMoviesWatchingList(items) {
   return `<div class="watch-list">${items.map(e => {
     const isPaused = e.status === 'paused';
-    const score = liveScore(e) != null ? `<span class="w-score">★ ${Number(liveScore(e)).toFixed(2)}</span>` : '';
     const cardStyle = isPaused ? 'background:var(--olive-faint);border-color:var(--border-olive);opacity:0.85' : '';
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
@@ -701,7 +700,7 @@ function renderMoviesWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>${score}</div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
         <div class="w-genre">${_badge}${rtStr ? `<span class="w-ep-badge">${rtStr}</span>` : ''}</div>
       </div>
       <div class="w-ep-controls" onclick="event.stopPropagation()">
@@ -724,7 +723,6 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
   const gid = 'wg-movies-watching';
   const cards = allItems.map(e => {
     const isPaused = e.status === 'paused';
-    const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
     const rt  = (rtH||rtM) ? (rtH?`${rtH}h ${rtM}m`:`${rtM}m`) : '';
     const typeClsPcg = 'type-label type-label-overlay-bottom';
@@ -745,7 +743,7 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
           ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
         </div>
         ${e.year ? `<div class="title-year-below">${e.year}</div>` : ''}
-        ${(rt || score) ? `<div class="wg-genre" style="font-size:11px;">${rt ? `<span class="w-ep-badge">${rt}</span>` : ''}${score ? `<span class="w-score" style="margin-left:auto">★ ${score}</span>` : ''}</div>` : ''}
+        ${rt ? `<div class="wg-genre" style="font-size:11px;"><span class="w-ep-badge">${rt}</span></div>` : ''}
         <div class="wg-controls" onclick="event.stopPropagation()" style="margin-top:auto;">
           ${isPaused
             ? `<button class="ep-btn ep-btn-resume" onclick="resumeEntry('${e.id}')">Resume</button>`
@@ -763,7 +761,6 @@ function renderWatchingList(items) {
     const pct      = e.total_eps ? Math.round(((e.watched??0) / e.total_eps) * 100) : 0;
     const isDone   = !isPaused && (pct >= 100 || (!e.total_eps && (e.episode??0) > 0));
     const epStr    = e.season != null ? `S${e.season} E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : 'Ep 1');
-    const score    = liveScore(e) != null ? `<span class="w-score">★ ${Number(liveScore(e)).toFixed(2)}</span>` : '';
     const cardStyle = isPaused ? 'background:var(--olive-faint);border-color:var(--border-olive);opacity:0.85' : '';
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
@@ -775,7 +772,7 @@ function renderWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>${score}</div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
         <div class="w-ep-row">
           ${_badge}
           <span class="w-ep-badge">${epStr}</span>
@@ -831,7 +828,6 @@ function renderWatchingGrid(items) {
     const pct      = e.total_eps ? Math.round(((e.watched??0) / e.total_eps) * 100) : 0;
     const isDone   = !isPaused && (pct >= 100 || (!e.total_eps && (e.episode??0) > 0));
     const epStr    = e.season != null ? `S${e.season} E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '');
-    const score    = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     const isMovieG = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
     const typeCls = (isMovieG ? 'type-label' : 'type-label type-label-tv') + ' type-label-overlay-bottom';
     return `<div class="wg-card" onclick="openCatInfoPopup('${e.id}')">
@@ -849,7 +845,7 @@ function renderWatchingGrid(items) {
         <div style="margin-bottom:6px;">
           <div class="wg-title" style="margin-bottom:4px;display:flex;align-items:baseline;gap:6px;">${e.title}${e.year ? `<span style="font-size:clamp(10px,2.4vw,12.5px);font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}</div>
         </div>
-        ${(epStr || score) ? `<div class="wg-genre">${epStr ? `<span class="w-ep-badge">${epStr}</span>` : ''}${score ? `<span class="w-score" style="margin-left:auto">★ ${score}</span>` : ''}</div>` : ''}
+        ${epStr ? `<div class="wg-genre"><span class="w-ep-badge">${epStr}</span></div>` : ''}
         ${e.total_eps ? `<div class="wg-prog-track" style="margin-bottom:3px;"><div class="wg-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
         <div style="font-size:10px;color:var(--text-3);margin-bottom:4px;">${e.watched??0} / ${e.total_eps} eps · ${pct}%</div>` : ''}
         <div class="wg-controls${isDone?' wg-controls--done':''}" onclick="event.stopPropagation()">
