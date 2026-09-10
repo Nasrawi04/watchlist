@@ -843,7 +843,10 @@ function renderWatchingGrid(items) {
       </div>
       <div class="wg-info">
         <div style="margin-bottom:6px;">
-          <div class="wg-title" style="margin-bottom:4px;display:flex;align-items:baseline;gap:6px;">${e.title}${e.year ? `<span style="font-size:clamp(10px,2.4vw,12.5px);font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}</div>
+          <div class="title-year-row" style="margin-bottom:4px;">
+            <div class="wg-title">${e.title}</div>
+            ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
+          </div>
         </div>
         ${epStr ? `<div class="wg-genre"><span class="w-ep-badge">${epStr}</span></div>` : ''}
         ${e.total_eps ? `<div class="wg-prog-track" style="margin-bottom:3px;"><div class="wg-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
