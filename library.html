@@ -1650,7 +1650,6 @@ function renderLibrary(){
         +'<div class="wg-poster" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsG+'">'+(isMovieG?'Movie':'TV Show')+'</span>'+' </div>'
         +'<div class="cg-grid-info" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+e.year+'</span>':'')+'</div>'
-        +(e.year?'<div class="title-year-below">'+e.year+'</div>':'')
         +metaHtml
         +'<div class="cg-score-row"><span class="cg-score">'+(sc!=null?'★ '+sc:'—')+'</span><span class="cg-score-lbl">score</span></div>'
         +'</div>'
