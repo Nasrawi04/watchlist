@@ -1406,9 +1406,10 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
         <span class="${typeClsC}">${isMc ? 'Movie' : 'TV Show'}</span>
       </div>
       <div class="cg-grid-info" onclick="openGridPopup('${e.id}')">
-        <div class="wg-title" style="display:flex;align-items:baseline;gap:6px;">${e.title}${e.year ? `<span style="font-size:11px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}</div>
+        <div class="wg-title">${e.title}</div>
+        ${e.year ? `<div style="font-size:11px;font-weight:400;color:var(--text-3);text-align:left;margin-bottom:4px;">${e.year}</div>` : ''}
         ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
-        <div class="cg-score-row"><span class="cg-score">${score||'—'}</span><span class="cg-score-lbl">score</span></div>
+        <div class="cg-score-row"><span class="cg-score">${score != null ? `★ ${score}` : '—'}</span><span class="cg-score-lbl">score</span></div>
       </div>
       <div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">
         ${e.status === 'ongoing' ? `<button class="continue-btn" onclick="continueWatching('${e.id}')">Continue</button>` : ''}
