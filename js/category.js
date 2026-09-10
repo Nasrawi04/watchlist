@@ -1719,7 +1719,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
           ${renderFavChips(e.ratings, e.cat)}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;" onclick="event.stopPropagation()">
-          <div style="font-family:var(--serif);font-size:36px;font-weight:300;color:var(--olive-light);line-height:1;">${score != null ? `★ ${score}` : '—'}</div>
+          <div style="color:var(--olive-light);font-size:clamp(13px, 3vw, 15px);font-weight:600;">${score != null ? `★ ${score}` : '—'}</div>
           ${e.status === 'ongoing' ? `<button class="w-list-action-btn w-list-play-btn" onclick="continueWatching('${e.id}')" title="Continue">${icon('play',14)}</button>` : ''}
         </div>
       </div>
