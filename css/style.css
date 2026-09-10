@@ -60,7 +60,7 @@
      screen size. Tuned so the transition actually happens across
      typical laptop-resize widths (~950-1200px) instead of maxing out
      almost immediately like a steeper vw coefficient would. */
-  --badge-font-size: clamp(10.5px, 1.05vw, 13px);
+  --badge-font-size: clamp(9.5px, 1.05vw, 13px);
 }
 
 /* ── Reset ── */
@@ -2799,12 +2799,12 @@ body { font-size:15px; }
   .page-stat-num { font-size:22px; }
   .page-stat-label { font-size:9px; letter-spacing:1px; margin-top:4px; }
 
-  /* ── Grid views → 3-column compact wrap on mobile ── */
+  /* ── Grid views → 2-column compact wrap on mobile ── */
   .watching-grid,
   .queue-grid,
   .completed-grid {
     display:grid !important;
-    grid-template-columns:repeat(3,1fr) !important;
+    grid-template-columns:repeat(2,1fr) !important;
     flex-direction:unset !important;
     flex-wrap:unset !important;
     overflow-x:visible !important;
@@ -2818,6 +2818,20 @@ body { font-size:15px; }
   .queue-grid ~ .grid-nav-wrap .grid-nav-btn,
   .completed-grid ~ .grid-nav-wrap .grid-nav-btn,
   .grid-nav-wrap .grid-nav-btn { display:none !important; }
+
+  /* At 2 per row the card is much wider than it was at 3, and since
+     the poster is a fixed 2:3 ratio that means proportionally much
+     taller too — cap the ratio a bit shorter and tighten the info
+     section's padding so the overall card doesn't balloon in height. */
+  .watching-grid .wg-poster,
+  .queue-grid .wg-poster,
+  .completed-grid .cg-poster { aspect-ratio:2/2.35; }
+  .watching-grid .wg-info,
+  .queue-grid .wg-info { padding:8px 8px 10px; }
+  .watching-grid .wg-title,
+  .queue-grid .wg-title { margin-bottom:2px; }
+  .watching-grid .wg-genre,
+  .queue-grid .wg-genre { margin-bottom:5px; }
 
   .wg-card, .q-card, .cg-card {
     flex-shrink:unset !important;
@@ -2901,7 +2915,7 @@ body { font-size:15px; }
   .cg-score-badge { font-size:8px; padding:2px 5px; min-width:24px; top:5px; left:5px; }
   /* Items 3/4/5: always show controls on mobile, scaled down */
   .w-ep-controls { display:flex !important; gap:5px !important; flex-direction:column !important; align-items:center !important; min-height:80px !important; }
-  .ep-btn { width:30px !important; height:30px !important; font-size:15px !important; }
+  .w-ep-controls .ep-btn { width:30px !important; height:30px !important; font-size:15px !important; }
   .w-pause-btn {
     width:26px !important; height:26px !important;
     font-size:11px !important;
@@ -2914,14 +2928,14 @@ body { font-size:15px; }
   .fab svg { width:20px !important; height:20px !important; }
 
   /* Resume button — icon only on mobile (hide text label, make circular) */
-  .ep-btn-resume {
+  .w-ep-controls .ep-btn-resume {
     width:auto !important;
     height:32px !important;
     padding:0 10px !important;
     border-radius:var(--radius-sm) !important;
     font-size:9px !important;
   }
-  .ep-btn-resume .resume-label { display:inline !important; font-size:9px; }
+  .w-ep-controls .ep-btn-resume .resume-label { display:inline !important; font-size:9px; }
   /* Done button scaling — list view (icon only, matches pause) */
   .w-ep-controls .w-list-action-btn.w-list-done-btn {
     width:32px !important; height:32px !important;
@@ -3094,14 +3108,14 @@ body { font-size:15px; }
   #homeRecentlyViewedGrid .type-label, #homeWatchlistGrid .type-label { font-size:8px; }
   .w-ep-total { font-size:7px; }
   .w-ep-row { gap:4px; }
-  /* Grid: 3 col on phones, not 2. Width:100% with matching compound
+  /* Grid: 2 col on phones. Width:100% with matching compound
      selectors — not a fixed pixel guess — since the base horizontal-
      scroll rule (.watching-grid .wg-card, etc.) has higher specificity
      than a plain .wg-card rule and would otherwise silently win here
      regardless of !important, exactly like it did at the tablet
      breakpoint before that was fixed the same way. */
   .watching-grid, .queue-grid, .completed-grid {
-    grid-template-columns:repeat(3,1fr) !important;
+    grid-template-columns:repeat(2,1fr) !important;
   }
   .wg-card, .q-card, .cg-card,
   .watching-grid .wg-card, .watching-grid .q-card, .watching-grid .cg-card,
@@ -3216,7 +3230,9 @@ body { font-size:15px; }
 @media (hover: none) and (pointer: coarse) {
   .sort-btn   { padding:7px 12px; min-height:36px; }
   .vt-btn     { width:34px; height:30px; }
-  .ep-btn     { width:40px; height:40px; }
+  /* .ep-btn now scales via clamp() in its base rule at every width,
+     touch devices included — a flat override here previously pinned
+     it to 40px regardless of screen size */
   .nav-icon-btn { width:40px; height:40px; }
   .fv-cat-btn { padding:8px 16px; }
   .sort-btn   { padding:7px 12px; }
