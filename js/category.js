@@ -568,6 +568,7 @@ function renderSections(
   html += buildSection('completed',icon('check',15)   + ' Watched',    completed.length, buildCompleted(sc));
 
   document.getElementById('sectionsWrap').innerHTML = html;
+  if (typeof fitTitleYear === 'function') fitTitleYear(document.getElementById('sectionsWrap'));
 }
 
 /* ════════ SECTION ACCORDION ════════ */
@@ -629,6 +630,7 @@ function switchView(section, view) {
                 : section === 'ongoing'  ? buildCompleted(sorted, 'ongoing')
                 :                          buildCompleted(sorted, 'completed');
   inner.innerHTML = sortBar(section) + content;
+  if (typeof fitTitleYear === 'function') fitTitleYear(inner);
 }
 
 /* ════════ CURRENTLY WATCHING ════════ */
@@ -721,8 +723,7 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
     const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
     const rt  = (rtH||rtM) ? (rtH?`${rtH}h ${rtM}m`:`${rtM}m`) : '';
-    const _ctx = catContext();
-    const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
+    const typeClsPcg = 'type-label type-label-overlay-bottom';
     return `<div class="wg-card" onclick="openCatInfoPopup('${e.id}')">
       <div class="wg-poster" style="position:relative;">
         ${posterHTML(e, 'big')}
@@ -731,13 +732,17 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
                <span style="font-size:10px;font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">Taking<br>a Break</span>
              </div>`
           : ''}
-        <div class="wg-overlay" style="z-index:2">${rt ? `<span class="wg-ep">${rt}</span>` : ''}</div>
         ${score ? _cgScoreBadge(score) : ''}
+        <span class="${typeClsPcg}">Movie</span>
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
       </div>
       <div class="wg-info" style="padding:8px 12px;gap:6px;">
-        <div class="wg-title" style="margin-bottom:4px;font-size:13px;">${e.title}</div>
-        <div class="wg-genre" style="font-size:11px;">${_badge}${genreHTML(e.genres, 3)}</div>
+        <div class="title-year-row">
+          <div class="wg-title" style="margin-bottom:0;font-size:13px;">${e.title}</div>
+          ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
+        </div>
+        ${e.year ? `<div class="title-year-below">${e.year}</div>` : ''}
+        ${rt ? `<div class="wg-genre" style="font-size:11px;"><span class="w-ep-badge">${rt}</span></div>` : ''}
         <div class="wg-controls" onclick="event.stopPropagation()" style="margin-top:auto;">
           ${isPaused
             ? `<button class="ep-btn ep-btn-resume" onclick="resumeEntry('${e.id}')">Resume</button>`
@@ -1406,8 +1411,11 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
         <span class="${typeClsC}">${isMc ? 'Movie' : 'TV Show'}</span>
       </div>
       <div class="cg-grid-info" onclick="openGridPopup('${e.id}')">
-        <div class="wg-title">${e.title}</div>
-        ${e.year ? `<div style="font-size:11px;font-weight:400;color:var(--text-3);text-align:left;margin-bottom:4px;">${e.year}</div>` : ''}
+        <div class="title-year-row">
+          <div class="wg-title">${e.title}</div>
+          ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
+        </div>
+        ${e.year ? `<div class="title-year-below">${e.year}</div>` : ''}
         ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
         <div class="cg-score-row"><span class="cg-score">${score != null ? `★ ${score}` : '—'}</span><span class="cg-score-lbl">score</span></div>
       </div>
@@ -1488,7 +1496,7 @@ async function adjustEp(id, delta) {
       entry.season  = newSeason;
       const watching = _catAll.filter(e => e.status === 'watching' || e.status === 'paused').sort((a,b) => (a.status==='paused')-(b.status==='paused'));
       const inner = document.querySelector('#body-watching .accordion-inner');
-      if (inner) inner.innerHTML = sortBar('watching') + buildWatching(watching);
+      if (inner) { inner.innerHTML = sortBar('watching') + buildWatching(watching); if (typeof fitTitleYear === 'function') fitTitleYear(inner); }
       showToast('Progress updated');
     } catch(e) { showToast('Error updating progress.', 'err'); }
   } else {
