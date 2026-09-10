@@ -2315,6 +2315,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
   overflow:hidden; cursor:pointer; transition:all var(--trans) var(--ease);
   display:flex; flex-direction:column;
+  width:100%; max-width:100%;
 }
 .wg-card:hover { border-color:var(--border-olive); transform:translateY(-1px); box-shadow:var(--shadow); }
 .wg-card:active { transform:scale(0.97) translateY(0); }
@@ -2423,11 +2424,8 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
    inline year and reveals the below-title version instead — so long
    titles get their room back rather than colliding with the year. */
 .title-year-row { display:flex; align-items:baseline; gap:6px; min-width:0; }
-.title-year-row .wg-title, .title-year-row .w-title { flex:1 1 auto; min-width:0; margin-bottom:0; }
+.title-year-row .wg-title, .title-year-row .w-title { flex:1 1 auto; min-width:0; max-width:100%; margin-bottom:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .title-year-inline { flex-shrink:0; font-size:clamp(10px, 2.4vw, 12.5px); font-weight:400; color:var(--text-3); white-space:nowrap; }
-.title-year-below { font-size:clamp(10px, 2.4vw, 12.5px); font-weight:400; color:var(--text-3); text-align:left; margin-bottom:4px; display:none; }
-.title-year-row.year-overflow + .title-year-below { display:block; }
-.title-year-row.year-overflow .title-year-inline { display:none; }
 .wg-genre { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .wg-controls {
   display:flex; align-items:center; justify-content:space-between;
@@ -2833,6 +2831,19 @@ body { font-size:15px; }
   .watching-grid .wg-genre,
   .queue-grid .wg-genre { margin-bottom:5px; }
 
+  /* The base (non-media) rule above fixes .wg-card to width:220px for
+     the desktop horizontal-scroll layout — reset it back to fill the
+     2-column grid cell here, same fix already applied at ≤400px, so
+     phones in the 401-640px range don't get a shrunk, fixed-width card
+     sitting inside a much wider column. */
+  .wg-card, .q-card, .cg-card,
+  .watching-grid .wg-card, .watching-grid .q-card, .watching-grid .cg-card,
+  .queue-grid .q-card, .completed-grid .cg-card {
+    width:100% !important;
+    max-width:100% !important;
+    flex-shrink:1 !important;
+  }
+
   .wg-card, .q-card, .cg-card {
     flex-shrink:unset !important;
     width:100% !important;
@@ -2897,7 +2908,10 @@ body { font-size:15px; }
     aspect-ratio:2/3; /* keep proportion */
   }
   .cg-grid-info { padding:6px 7px 8px; }
-  .cg-grid-info .wg-title { font-size:10px; margin-bottom:2px; }
+  /* .cg-grid-info .wg-title now scales via the same clamp() base rule
+     as every other card's title — a flat 10px here previously made
+     Completed-section titles noticeably smaller than Watching/
+     Watchlist titles at the same screen width */
   .cg-grid-info .wg-genre {
     max-height:none; /* allow full genre display */
     overflow:visible;
