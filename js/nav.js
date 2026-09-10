@@ -1570,3 +1570,25 @@ function _closeDupWarn() {
   if (el) el.remove();
   document.body.style.overflow = '';
 }
+/*
+ * fitTitleYear — measures every ".title-year-row" on the page (or
+ * within a given root) and decides whether the year fits inline next
+ * to the title or needs to drop to its own line below. Call this
+ * after any HTML that includes ".title-year-row" is inserted into
+ * the DOM — a fresh render, a re-sort, a view-toggle, etc. — since
+ * the measurement only makes sense once the elements have real
+ * rendered widths.
+ */
+function fitTitleYear(root) {
+  const scope = root || document;
+  scope.querySelectorAll('.title-year-row').forEach(row => {
+    const title = row.querySelector('.wg-title, .w-title');
+    if (!title) return;
+    // Reset to inline first so the measurement reflects the
+    // "year competing for space" case, not the already-collapsed one.
+    row.classList.remove('year-overflow');
+    if (title.scrollWidth > title.clientWidth + 1) {
+      row.classList.add('year-overflow');
+    }
+  });
+}
