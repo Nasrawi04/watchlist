@@ -1428,6 +1428,7 @@ nav {
 .comp-rank { font-size:11px; color:var(--text-3); display:block; margin-bottom:4px; letter-spacing:1px; }
 .comp-title { font-size:22px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .comp-meta { font-size:13px; color:var(--text-3); margin-top:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.fv-rank-meta { font-size:13px; color:var(--text-3); margin-top:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .comp-date { color:var(--text-3); }
 .comp-score-wrap { text-align:right; flex-shrink:0; }
 .comp-score { font-family:var(--serif); font-size:32px; color:var(--olive-light); line-height:1; }
@@ -3038,6 +3039,8 @@ body { font-size:15px; }
   .comp-score-label { font-size:9px; }
   .comp-meta   { font-size:10px; gap:4px; margin-top:4px; }
   .comp-meta .genre-dot, .comp-meta .type-label { font-size:8px; padding:1px 4px; }
+  .fv-rank-meta   { font-size:10px; gap:4px; margin-top:4px; }
+  .fv-rank-meta .genre-dot, .fv-rank-meta .type-label { font-size:8px; padding:1px 4px; }
 
   .ql-row    { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
   .ql-poster { width:72px; height:102px; }
