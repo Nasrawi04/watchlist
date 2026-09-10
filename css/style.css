@@ -2861,13 +2861,11 @@ body { font-size:15px; }
   .completed-grid ~ .grid-nav-wrap .grid-nav-btn,
   .grid-nav-wrap .grid-nav-btn { display:none !important; }
 
-  /* At 2 per row the card is much wider than it was at 3, and since
-     the poster is a fixed 2:3 ratio that means proportionally much
-     taller too — cap the ratio a bit shorter and tighten the info
-     section's padding so the overall card doesn't balloon in height. */
-  .watching-grid .wg-poster,
-  .queue-grid .wg-poster,
-  .completed-grid .cg-poster { aspect-ratio:2/2.35; }
+  /* At 2 per row the card is much wider than it was at 3. Posters keep
+     their natural 2:3 ratio (uncropped, full artwork) — only the info
+     section's padding is trimmed so the overall card isn't taller than
+     it needs to be, instead of shortening the poster box itself, which
+     was cropping faces/text near the top and bottom of the artwork. */
   .watching-grid .wg-info,
   .queue-grid .wg-info { padding:8px 8px 10px; }
   .watching-grid .wg-title,
