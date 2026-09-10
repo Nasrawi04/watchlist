@@ -53,6 +53,14 @@
   --ease:   cubic-bezier(0.4,0,0.2,1);
   --spring: cubic-bezier(0.34,1.56,0.64,1);
   --trans:  220ms;
+
+  /* Shared badge type scale — genre/type/runtime tags AND the inline
+     score badge on grid cards all read from this one curve, so they
+     stay the same size as each other and scale down together at every
+     screen size. Tuned so the transition actually happens across
+     typical laptop-resize widths (~950-1200px) instead of maxing out
+     almost immediately like a steeper vw coefficient would. */
+  --badge-font-size: clamp(10.5px, 1.05vw, 13px);
 }
 
 /* ── Reset ── */
@@ -790,9 +798,9 @@ nav {
 .w-prog-label { font-size:11px; color:var(--text-3); margin-top:6px; }
 .w-ep-controls { display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
 .ep-btn {
-  width:32px; height:32px; border-radius:50%;
+  width:clamp(28px, 7vw, 34px); height:clamp(28px, 7vw, 34px); border-radius:50%;
   border:0.5px solid var(--border-2); background:var(--bg-3);
-  color:var(--text-2); font-size:16px; line-height:1;
+  color:var(--text-2); font-size:clamp(13px, 3.4vw, 17px); line-height:1;
   display:flex; align-items:center; justify-content:center;
   cursor:pointer; transition:all var(--trans) var(--ease);
   flex-shrink:0;
@@ -832,7 +840,7 @@ nav {
 .w-list-done-btn:hover { background:var(--olive-light); border-color:var(--olive-light); color:#fff; }
 
 /* Resume — GRID VIEW: text only, pill */
-.ep-btn-resume { font-size:12px; flex:1; width:auto !important; border-radius:var(--radius-sm) !important; height:32px !important; padding:0 12px !important; }
+.ep-btn-resume { font-size:clamp(11px, 2.8vw, 13px); flex:1; width:auto !important; border-radius:var(--radius-sm) !important; height:clamp(28px, 7vw, 34px) !important; padding:0 12px !important; }
 
 /* ── Done button — same style as continue-btn everywhere ── */
 .ep-btn-done,
@@ -842,7 +850,7 @@ nav {
   color:#fff !important;
   border:none !important;
   font-family:var(--sans) !important;
-  font-size:12px !important;
+  font-size:clamp(11px, 2.8vw, 13px) !important;
   font-weight:600 !important;
   border-radius:var(--radius-sm) !important;
   cursor:pointer !important;
@@ -853,7 +861,7 @@ nav {
   flex:1 1 0 !important;
   min-width:0 !important;
   width:auto !important;
-  height:32px !important;
+  height:clamp(28px, 7vw, 34px) !important;
   padding:0 10px !important;
   flex-shrink:1 !important;
   display:flex !important;
@@ -871,7 +879,7 @@ nav {
 .ep-btn-done:active,
 .wg-done-btn:active { transform:scale(0.97) !important; }
 
-.ep-btn-minus { border-radius:50% !important; width:32px !important; height:32px !important; font-size:16px !important; flex-shrink:0 !important; }
+.ep-btn-minus { border-radius:50% !important; width:clamp(28px, 7vw, 34px) !important; height:clamp(28px, 7vw, 34px) !important; font-size:clamp(13px, 3.4vw, 17px) !important; flex-shrink:0 !important; }
 
 /* ── Rank badge circle ── */
 .rank-badge{
@@ -1391,7 +1399,7 @@ nav {
 ════════════════════════════════════════════ */
 .genre-dot, .type-label, .w-ep-badge, .cat-badge {
   font-family:var(--sans); font-weight:600;
-  font-size:clamp(8.5px, 2vw, 10.5px);
+  font-size:var(--badge-font-size);
   padding:clamp(2px, 0.5vw, 3px) clamp(6px, 1.6vw, 9px);
   border-radius:3px;
   color:#fff; letter-spacing:0.3px;
@@ -1399,6 +1407,12 @@ nav {
 }
 .genre-dot, .w-ep-badge, .cat-badge {
   background:var(--olive); border:0.5px solid var(--olive);
+}
+/* Score in the grid-card badge row (Currently Watching) — reads off
+   the same shared --badge-font-size scale as the badges beside it. */
+.wg-genre .w-score {
+  font-size:var(--badge-font-size);
+  font-weight:700;
 }
 /* Movie variant of the type tag — its own color, distinct from genre
    tags (olive) and the TV variant (blue) below, so all three read
@@ -2402,7 +2416,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .wg-prog-track { height:2px; background:rgba(255,255,255,0.2); border-radius:2px; overflow:hidden; }
 .wg-prog-fill  { height:100%; background:var(--olive-light); border-radius:2px; transition:width .4s var(--ease); }
 .wg-info { padding:10px 10px 12px; display:flex; flex-direction:column; flex:1; }
-.wg-title { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+.wg-title { font-size:clamp(12.5px, 3vw, 15px); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
 /* Title+year: year sits inline next to the title by default. A small
    JS pass (fitTitleYear in nav.js) measures whether the title is
    being truncated once the year takes up space, and if so hides the
@@ -2410,11 +2424,11 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
    titles get their room back rather than colliding with the year. */
 .title-year-row { display:flex; align-items:baseline; gap:6px; min-width:0; }
 .title-year-row .wg-title, .title-year-row .w-title { flex:1 1 auto; min-width:0; margin-bottom:0; }
-.title-year-inline { flex-shrink:0; font-size:11px; font-weight:400; color:var(--text-3); white-space:nowrap; }
-.title-year-below { font-size:11px; font-weight:400; color:var(--text-3); text-align:left; margin-bottom:4px; display:none; }
+.title-year-inline { flex-shrink:0; font-size:clamp(10px, 2.4vw, 12.5px); font-weight:400; color:var(--text-3); white-space:nowrap; }
+.title-year-below { font-size:clamp(10px, 2.4vw, 12.5px); font-weight:400; color:var(--text-3); text-align:left; margin-bottom:4px; display:none; }
 .title-year-row.year-overflow + .title-year-below { display:block; }
 .title-year-row.year-overflow .title-year-inline { display:none; }
-.wg-genre { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.wg-genre { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .wg-controls {
   display:flex; align-items:center; justify-content:space-between;
   gap:6px; margin-top:auto; overflow:hidden; min-width:0;
@@ -2616,13 +2630,6 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 
 @media(max-width:600px) {
   .completed-grid { grid-template-columns:repeat(2,1fr); gap:12px; }
-  /* Scale tags for 3-column watching/queue grid on phones */
-  .wg-genre .genre-dot,
-  .wg-genre .type-label,
-  .wg-genre .cat-badge,
-  .wg-genre .w-ep-badge { font-size:6px; padding:1px 3px; letter-spacing:0; }
-  .w-ep-badge  { font-size:6px; padding:1px 4px; }
-  .wg-title    { font-size:11px; }
   .wg-genre    { gap:4px; margin-bottom:5px; }
 }
 
@@ -2932,29 +2939,10 @@ body { font-size:15px; }
     width:30px !important; height:30px !important;
     font-size:15px !important; flex-shrink:0 !important;
   }
-  /* Done button scaling — keep olive style, adjust size only */
-  .wg-controls .wg-done-btn {
-    height:28px !important;
-    font-size:11px !important;
-    padding:0 8px !important;
-    flex:1 !important;
-    min-width:0 !important;
-    overflow:hidden !important;
-    text-overflow:ellipsis !important;
-  }
+  /* .wg-controls buttons (wg-done-btn, ep-btn-minus, continue-btn) now
+     scale via clamp() in their base rules */
   .wg-controls--done {
     gap:4px !important;
-  }
-  .wg-controls--done .ep-btn-minus {
-    width:32px !important; height:32px !important;
-    font-size:16px !important; flex-shrink:0 !important;
-  }
-  /* Done button in TV grid: fill remaining space */
-  .wg-controls--done .continue-btn {
-    width:auto !important; flex:1 !important; height:32px !important;
-  }
-  .wg-done-continue {
-    width:auto !important; flex:1 !important; height:32px !important;
   }
 
   /* Comments strip — tighter on mobile */
@@ -3089,21 +3077,17 @@ body { font-size:15px; }
   .vt-btn svg { width:11px; height:11px; }
   .stab { padding:3px 8px; font-size:9px; }
   .sec-right { gap:3px; }
-  .wg-title { font-size:11px; }
+  /* .wg-title now scales via clamp() in the base rule */
   /* Extra small tags */
   .fav-chip { font-size:8px; padding:1px 4px; }
   /* genre-dot / type-label / w-ep-badge now scale via clamp() in the base rule */
   /* Done button tiny phones */
   .w-ep-controls--done .w-list-action-btn { width:22px; height:22px; }
   .w-ep-controls--done .w-list-action-btn svg { width:10px; height:10px; }
-  .w-ep-controls--done .ep-btn-minus { width:26px !important; height:26px !important; font-size:13px !important; }
   .w-list-action-btn { width:22px; height:22px; }
   .w-list-action-btn svg { width:10px; height:10px; }
-  .wg-controls--done .wg-done-btn { font-size:10px !important; padding:0 6px !important; height:26px !important; white-space:nowrap; overflow:hidden; }
-  .wg-controls--done .ep-btn-minus { width:24px !important; height:24px !important; font-size:13px !important; flex-shrink:0 !important; }
-  .wg-controls--done .continue-btn { height:24px !important; font-size:10px !important; }
-  .wg-controls .ep-btn { width:22px !important; height:22px !important; font-size:12px !important; }
-  .wg-controls { gap:3px !important; }
+  /* .wg-controls buttons (ep-btn, ep-btn-minus, wg-done-btn, continue-btn)
+     now scale via clamp() in their base rules */
   #homeRecentlyViewedGrid .w-ep-badge, #homeWatchlistGrid .w-ep-badge { font-size:6px; padding:1px 3px; }
   #homeRecentlyViewedGrid .q-title, #homeWatchlistGrid .q-title { font-size:10px; }
   #homeRecentlyViewedGrid .genre-dot, #homeWatchlistGrid .genre-dot,
@@ -3339,20 +3323,8 @@ body { font-size:15px; }
     opacity:1 !important;
     pointer-events:auto !important;
   }
-  .wg-controls .ep-btn {
-    width:26px !important;
-    height:26px !important;
-    font-size:14px !important;
-    flex-shrink:0 !important;
-  }
-  .wg-controls .ep-btn-resume {
-    height:26px !important;
-    padding:0 8px !important;
-    font-size:10px !important;
-  }
-  .wg-controls {
-    gap:4px !important;
-  }
+  /* .wg-controls buttons (ep-btn, ep-btn-resume) now scale via clamp()
+     in their base rules instead of a flat override here */
 }
 /* Touch devices: always visible regardless of hover */
 @media (hover: none) and (pointer: coarse) {
@@ -3399,9 +3371,9 @@ body { font-size:15px; }
 
 /* ── Continue Watching button — Ongoing section ── */
 .continue-btn {
-  width:100%; height:32px;
+  width:100%; height:clamp(28px, 7vw, 34px);
   border-radius:var(--radius-sm);
-  font-size:12px; font-weight:600;
+  font-size:clamp(11px, 2.8vw, 13px); font-weight:600;
   background:var(--olive); color:#fff;
   border:none; cursor:pointer;
   transition:background .15s, transform .12s;
@@ -3448,15 +3420,7 @@ body { font-size:15px; }
 @media(max-width:360px) {
   .start-watching-btn:not(.w-start-icon-btn) { font-size:9px; padding:3px 8px; }
 }
-@media(max-width:640px) {
-  .continue-btn { height:28px; font-size:10px; }
-  /* continue-btn is grid-only, no icon override needed */
-  .continue-btn-list { font-size:11px; padding:5px 16px; }
-}
-@media(max-width:400px) {
-  .continue-btn { height:24px; font-size:9px; }
-  .continue-btn-list { font-size:10px; padding:4px 12px; }
-}
+/* .continue-btn now scales via clamp() in the base rule */
 
 /* ── fv-entry-block: list view wrapper for completed cards ── */
 .fv-entry-block { display:flex; flex-direction:column; }
