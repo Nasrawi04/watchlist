@@ -14,6 +14,36 @@
   .mobile-search-bar { display:none !important; }
   .home-hero { padding-bottom: 0.5rem; }
 
+  /* ── Discover ticker — infinite scrolling marquee of category shortcuts ── */
+  .disc-marquee {
+    overflow: hidden;
+    width: 100%;
+    margin-bottom: 2.5rem;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  }
+  .disc-marquee__inner {
+    display: flex;
+    width: max-content;
+    animation: discMarquee 55s linear infinite;
+  }
+  .disc-marquee:hover .disc-marquee__inner { animation-play-state: paused; }
+  .disc-marquee__group { display: flex; flex-shrink: 0; }
+  .disc-marquee-card {
+    flex-direction: column; align-items: center; text-align: center;
+    margin: 0 10px; width: 250px; flex-shrink: 0;
+    text-decoration: none;
+  }
+  .disc-marquee-card .cat-card-arrow { align-self: center; }
+  @keyframes discMarquee {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @media(max-width:640px) {
+    .disc-marquee-card { width: 200px; margin: 0 8px; }
+    .disc-marquee__inner { animation-duration: 42s; }
+  }
+
   /* TMDB-sourced home cards (Trending/Top Picks/Upcoming/Recently Viewed) —
      poster-fallback letter and year text, scaled to match how .q-card
      itself already shrinks at the site's existing breakpoints. */
@@ -61,9 +91,98 @@
     </button>
   </div>
 
-  <!-- CATEGORY CARDS -->
-  <div class="category-grid" id="categoryGrid">
-    <div class="page-loading" style="grid-column:1/-1"><div class="spinner"></div></div>
+  <!-- DISCOVER TICKER -->
+  <div class="disc-marquee fade-up" aria-label="Explore Discover categories">
+    <div class="disc-marquee__inner">
+      <div class="disc-marquee__group">
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=popular&title=What%27s%20Popular">
+          <div class="cat-card-content">
+            <div class="cat-card-title">What's Popular</div>
+            <div class="cat-card-count">Trending across the board</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top_rated_mss&title=Top%20Rated%20on%20MSS">
+          <div class="cat-card-content">
+            <div class="cat-card-title">Top Rated on MSS</div>
+            <div class="cat-card-count">Highest rated by our community</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_movies&title=Top%20250%20Movies">
+          <div class="cat-card-content">
+            <div class="cat-card-title">Top 250 Movies</div>
+            <div class="cat-card-count">The best movies, ranked</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_shows&title=Top%20250%20Shows">
+          <div class="cat-card-content">
+            <div class="cat-card-title">Top 250 Shows</div>
+            <div class="cat-card-count">The best shows, ranked</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_anime&title=Top%20250%20Anime">
+          <div class="cat-card-content">
+            <div class="cat-card-title">Top 250 Anime</div>
+            <div class="cat-card-count">The best anime, ranked</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_cartoons&title=Top%20250%20Cartoons">
+          <div class="cat-card-content">
+            <div class="cat-card-title">Top 250 Cartoons</div>
+            <div class="cat-card-count">The best cartoons, ranked</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+      </div>
+      <div class="disc-marquee__group" aria-hidden="true">
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=popular&title=What%27s%20Popular">
+          <div class="cat-card-content">
+            <div class="cat-card-title">What's Popular</div>
+            <div class="cat-card-count">Trending across the board</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top_rated_mss&title=Top%20Rated%20on%20MSS">
+          <div class="cat-card-content">
+            <div class="cat-card-title">Top Rated on MSS</div>
+            <div class="cat-card-count">Highest rated by our community</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_movies&title=Top%20250%20Movies">
+          <div class="cat-card-content">
+            <div class="cat-card-title">Top 250 Movies</div>
+            <div class="cat-card-count">The best movies, ranked</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_shows&title=Top%20250%20Shows">
+          <div class="cat-card-content">
+            <div class="cat-card-title">Top 250 Shows</div>
+            <div class="cat-card-count">The best shows, ranked</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_anime&title=Top%20250%20Anime">
+          <div class="cat-card-content">
+            <div class="cat-card-title">Top 250 Anime</div>
+            <div class="cat-card-count">The best anime, ranked</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_cartoons&title=Top%20250%20Cartoons">
+          <div class="cat-card-content">
+            <div class="cat-card-title">Top 250 Cartoons</div>
+            <div class="cat-card-count">The best cartoons, ranked</div>
+          </div>
+          <div class="cat-card-arrow">→</div>
+        </a>
+      </div>
+    </div>
   </div>
 
   <!-- CURRENTLY WATCHING -->
@@ -150,17 +269,6 @@ function renderHomeRecentlyViewed(rows) {
 }
 
 function renderGuestLanding() {
-  // Show category cards as previews — same style as logged-in home
-  document.getElementById('categoryGrid').innerHTML = Object.entries(CAT_META).map(([k, m], i) =>
-    `<a class="cat-card fade-up fade-up-${i+1}" href="${m.page}">
-      <div class="cat-icon">${icon(m.icon, 20)}</div>
-      <div class="cat-card-content">
-        <div class="cat-card-title">${m.label}</div>
-        <div class="cat-card-count">Sign in to track</div>
-      </div>
-      <div class="cat-card-arrow">→</div>
-    </a>`
-  ).join('');
   document.getElementById('homeWatching').innerHTML = '';
   document.getElementById('homeWatchlist').innerHTML = '';
   document.getElementById('homeRecentlyViewed').innerHTML = '';
@@ -179,26 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const entries = await getEntries(user.id);
     window._homeEntries = entries;
-
-    /* Category cards */
-    document.getElementById('categoryGrid').innerHTML = Object.entries(CAT_META).map(([k, m], i) => {
-      const catEntries = entries.filter(e => e.cat === k);
-      const watching   = catEntries.filter(e => e.status === 'watching').length;
-      const completed  = catEntries.filter(e => e.status === 'completed').length;
-      const queue      = catEntries.filter(e => e.status === 'queue').length;
-      const countLabel = catEntries.length === 1 ? m.singular : m.label;
-      const subtitle   = k === 'movies'
-        ? `${catEntries.length} ${countLabel} · ${queue} in queue · ${completed} completed`
-        : `${catEntries.length} ${countLabel} · ${watching} watching · ${completed} completed`;
-      return `<a class="cat-card fade-up fade-up-${i+1}" href="${m.page}">
-        <div class="cat-icon">${icon(m.icon, 20)}</div>
-        <div class="cat-card-content">
-          <div class="cat-card-title">${m.label}</div>
-          <div class="cat-card-count">${subtitle}</div>
-        </div>
-        <div class="cat-card-arrow">→</div>
-      </a>`;
-    }).join('');
 
     /* Currently watching */
     const watching = entries.filter(e => e.status === 'watching');
