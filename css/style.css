@@ -805,16 +805,16 @@ nav {
    list view looked broken/unstyled compared to every other list. ── */
 .fv-watch-list { display:flex; flex-direction:column; gap:10px; }
 .fv-w-card {
-  display:flex; align-items:center; gap:16px;
+  display:flex; align-items:center; gap:22px;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:14px 16px; cursor:pointer; transition:all var(--trans) var(--ease);
-  overflow:hidden;
+  padding:22px 26px; cursor:pointer; transition:all var(--trans) var(--ease);
+  height:180px; overflow:hidden;
 }
 .fv-w-card:hover { border-color:var(--border-olive); background:var(--card-2); }
 .fv-w-card:active { transform:scale(0.99); }
 .fv-w-card-no-hover:hover { border-color:var(--border); background:var(--card); }
 .fv-w-poster {
-  position:relative; width:64px; height:92px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0;
+  position:relative; width:96px; height:136px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0;
   background:var(--bg-3); display:flex; align-items:center; justify-content:center;
   box-shadow:var(--shadow);
 }
@@ -837,8 +837,15 @@ nav {
 .fv-w-prog-fill { height:100%; background:var(--olive-light); border-radius:2px; transition:width .5s var(--ease); }
 .fv-w-prog-label { font-size:11px; color:var(--text-3); margin-top:6px; }
 @media(max-width:480px) {
-  .fv-w-card { padding:10px 12px; gap:12px; }
-  .fv-w-poster { width:52px; height:76px; }
+  /* Matches .w-card's own ≤600px tier exactly for consistency */
+  .fv-w-card { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
+  .fv-w-poster { width:72px; height:102px; }
+  .fv-w-title { font-size:14px; }
+}
+@media(max-width:400px) {
+  /* Matches .w-card's own ≤400px tier exactly for consistency */
+  .fv-w-card { padding:8px 10px; gap:10px; height:auto !important; min-height:90px; }
+  .fv-w-poster { width:64px; height:90px; }
 }
 .ep-btn {
   width:clamp(28px, 7vw, 34px); height:clamp(28px, 7vw, 34px); border-radius:50%;
@@ -2468,7 +2475,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
    inline year and reveals the below-title version instead — so long
    titles get their room back rather than colliding with the year. */
 .title-year-row { display:flex; align-items:baseline; gap:6px; min-width:0; }
-.title-year-row .wg-title, .title-year-row .w-title { flex:1 1 auto; min-width:0; max-width:100%; margin-bottom:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.title-year-row .wg-title, .title-year-row .w-title, .title-year-row .q-title, .title-year-row .fv-w-title { flex:1 1 auto; min-width:0; max-width:100%; margin-bottom:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .title-year-inline { flex-shrink:0; font-size:clamp(10px, 2.4vw, 12.5px); font-weight:400; color:var(--text-3); white-space:nowrap; }
 .wg-genre { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .wg-controls {
@@ -2866,12 +2873,11 @@ body { font-size:15px; }
      section's padding is trimmed so the overall card isn't taller than
      it needs to be, instead of shortening the poster box itself, which
      was cropping faces/text near the top and bottom of the artwork. */
-  .watching-grid .wg-info,
-  .queue-grid .wg-info { padding:8px 8px 10px; }
-  .watching-grid .wg-title,
-  .queue-grid .wg-title { margin-bottom:2px; }
-  .watching-grid .wg-genre,
-  .queue-grid .wg-genre { margin-bottom:5px; }
+  /* .wg-info/.wg-title/.wg-genre padding and spacing now match the
+     same base rule used at every other screen size (10px/10px/12px
+     padding, same title/genre margins) — a mobile-only trim here
+     previously made cards on phones noticeably more cramped than the
+     exact same card on a tablet or desktop for no real reason. */
 
   /* The base (non-media) rule above fixes .wg-card to width:220px for
      the desktop horizontal-scroll layout — reset it back to fill the
