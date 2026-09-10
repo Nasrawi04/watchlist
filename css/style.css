@@ -2723,7 +2723,7 @@ body { font-size:15px; }
 .accordion-body.open:has(.completed-list),
 .accordion-body.open:has(.fv-watch-list),
 .accordion-body.open:has(.fv-ranked-list) {
-  max-height:60vh;
+  max-height:68vh;
   overflow-y:auto !important;overscroll-behavior-y:contain;
   overflow-x:hidden !important;
   scrollbar-width:none;
@@ -2793,17 +2793,17 @@ body { font-size:15px; }
 @media(max-width:640px) {
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
-  .accordion-body.open:has(.completed-list) { max-height:55vh; }
+  .accordion-body.open:has(.completed-list) { max-height:70vh; }
 }
 @media(max-width:400px) {
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
-  .accordion-body.open:has(.completed-list) { max-height:50vh; }
+  .accordion-body.open:has(.completed-list) { max-height:66vh; }
 }
 @media(min-width:1200px) {
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
-  .accordion-body.open:has(.completed-list) { max-height:65vh; }
+  .accordion-body.open:has(.completed-list) { max-height:70vh; }
   .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card, .fav-watching-grid .q-card { width:240px; }
 }
 
@@ -2897,7 +2897,7 @@ body { font-size:15px; }
   .accordion-body.open:has(.completed-grid) {
     overflow-y:auto !important;overscroll-behavior-y:contain;
     overflow-x:hidden !important;
-    max-height:55vh !important;
+    max-height:70vh !important;
     scrollbar-width:none !important;
   }
 
@@ -3237,7 +3237,7 @@ body { font-size:15px; }
   .accordion-body.open:has(.completed-grid) {
     overflow-y:auto !important;overscroll-behavior-y:contain;
     overflow-x:hidden !important;
-    max-height:60vh !important;
+    max-height:68vh !important;
     scrollbar-width:none !important;
   }
 
