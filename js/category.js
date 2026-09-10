@@ -1427,7 +1427,7 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
           ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
         </div>
         ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
-        <div class="cg-score-row"><span class="cg-score">${score != null ? `★ ${score}` : '—'}</span><span class="cg-score-lbl">score</span></div>
+        <div class="cg-score-row"><span class="cg-score">${score != null ? `★ ${score}` : '—'}</span></div>
       </div>
       <div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">
         ${e.status === 'ongoing' ? `<button class="continue-btn" onclick="continueWatching('${e.id}')">Continue</button>` : ''}
