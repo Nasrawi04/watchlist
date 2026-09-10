@@ -752,7 +752,7 @@ function _renderCompGrid(items) {
       <div class="cg-grid-info" onclick="cpOpenPopup('${e.id}')">
         <div class="wg-title">${e.title}</div>
         <div class="wg-genre">${genreHTML(e.genres, 3)}</div>
-        <div class="cg-score-row"><span class="cg-score">${score||'—'}</span><span class="cg-score-lbl">score</span></div>
+        <div class="cg-score-row"><span class="cg-score">${score||'—'}</span></div>
       </div>
       <div onclick="event.stopPropagation()" style="padding:0 10px 10px;">
         <button class="cc-strip" style="margin-top:0;" onclick="cpOpenPopupToComments('${e.id}')">
