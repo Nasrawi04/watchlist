@@ -1653,8 +1653,8 @@ function renderLibrary(){
       return '<div class="wg-card cg-card-wrap" style="cursor:pointer;">'
         +'<div class="wg-poster" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsG+'">'+(isMovieG?'Movie':'TV Show')+'</span>'+' </div>'
         +'<div class="cg-grid-info" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
-        +'<div class="wg-title">'+esc(e.title)+'</div>'
-        +(e.year?'<div style="font-size:11px;font-weight:400;color:var(--text-3);text-align:left;margin-bottom:4px;">'+e.year+'</div>':'')
+        +'<div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+e.year+'</span>':'')+'</div>'
+        +(e.year?'<div class="title-year-below">'+e.year+'</div>':'')
         +metaHtml
         +'<div class="cg-score-row"><span class="cg-score">'+(sc!=null?'★ '+sc:'—')+'</span><span class="cg-score-lbl">score</span></div>'
         +'</div>'
@@ -1685,6 +1685,7 @@ function renderLibrary(){
     +_libSection('watching',icon('play',14)+' Currently Watching',watching.length,'watch','watching',wc)
     +_libSection('queue',icon('bookmark',14)+' Watchlist',queue.length,'queue','queue',qc)
     +_libSection('completed',icon('check',14)+' Watched',completed.length,'comp','completed',cc);
+  if (typeof fitTitleYear === 'function') fitTitleYear(el);
   if(loading)loading.style.display='none';
   el.style.display='block';
 }
