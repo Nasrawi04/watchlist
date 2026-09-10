@@ -241,8 +241,7 @@ function _tmdbCardHTML(posterUrl, title, year, onclick) {
   return `<div class="q-card" onclick="${onclick}">
     <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div></div>
     <div class="q-info">
-      <div class="q-title">${_homeEsc(title)}</div>
-      ${year ? `<div class="q-genre home-tmdb-year">${_homeEsc(year)}</div>` : ''}
+      <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${_homeEsc(title)}</div>${year ? `<span class="title-year-inline">${_homeEsc(year)}</span>` : ''}</div>
     </div>
   </div>`;
 }
