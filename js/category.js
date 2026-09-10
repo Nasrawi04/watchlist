@@ -733,7 +733,7 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
         ${posterHTML(e, 'big')}
         ${isPaused
           ? `<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1">
-               <span style="font-size:10px;font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">Taking<br>a Break</span>
+               <span style="font-size:clamp(9px,2.4vw,12px);font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">Taking<br>a Break</span>
              </div>`
           : ''}
         ${SHOW_TYPE_TAG() ? `<span class="${typeClsPcg}">Movie</span>` : ''}
@@ -741,7 +741,7 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
       </div>
       <div class="wg-info" style="padding:8px 12px;gap:6px;">
         <div class="title-year-row">
-          <div class="wg-title" style="margin-bottom:0;font-size:13px;">${e.title}</div>
+          <div class="wg-title" style="margin-bottom:0;">${e.title}</div>
           ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
         </div>
         ${e.year ? `<div class="title-year-below">${e.year}</div>` : ''}
@@ -839,7 +839,7 @@ function renderWatchingGrid(items) {
         ${posterHTML(e, 'big')}
         ${isPaused
           ? `<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1">
-               <span style="font-size:10px;font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">Taking<br>a Break</span>
+               <span style="font-size:clamp(9px,2.4vw,12px);font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">Taking<br>a Break</span>
              </div>`
           : ''}
         ${SHOW_TYPE_TAG() ? `<span class="${typeCls}">${isMovieG ? 'Movie' : 'TV Show'}</span>` : ''}
@@ -847,7 +847,7 @@ function renderWatchingGrid(items) {
       </div>
       <div class="wg-info">
         <div style="margin-bottom:6px;">
-          <div class="wg-title" style="margin-bottom:4px;display:flex;align-items:baseline;gap:6px;">${e.title}${e.year ? `<span style="font-size:11px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}</div>
+          <div class="wg-title" style="margin-bottom:4px;display:flex;align-items:baseline;gap:6px;">${e.title}${e.year ? `<span style="font-size:clamp(10px,2.4vw,12.5px);font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}</div>
         </div>
         ${(epStr || score) ? `<div class="wg-genre">${epStr ? `<span class="w-ep-badge">${epStr}</span>` : ''}${score ? `<span class="w-score" style="margin-left:auto">★ ${score}</span>` : ''}</div>` : ''}
         ${e.total_eps ? `<div class="wg-prog-track" style="margin-bottom:3px;"><div class="wg-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
