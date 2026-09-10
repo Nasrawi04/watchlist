@@ -2533,7 +2533,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   text-align:center; padding-top:8px;
   border-top:0.5px solid var(--border);
 }
-.cg-score { font-family:var(--serif); font-size:24px; font-weight:300; color:var(--olive-light); line-height:1; display:block; }
+.cg-score { color:var(--olive-light); font-size:clamp(13px, 3vw, 15px); font-weight:600; display:block; }
 .cg-score-lbl { font-size:9px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; display:block; margin-top:2px; }
 
 /* The card itself — no overflow:hidden so content shows, allow full height */
@@ -2870,7 +2870,6 @@ body { font-size:15px; }
     max-height:none; /* allow full genre display */
     overflow:visible;
   }
-  .cg-score { font-size:16px; }
   .cg-score-lbl { font-size:7px; letter-spacing:0.5px; }
   .cg-score-row { padding-top:5px; }
 
@@ -3116,7 +3115,6 @@ body { font-size:15px; }
     max-width:100% !important;
   }
   /* Score on tiny phones */
-  .cg-score { font-size:14px; }
   .cg-score-lbl { font-size:6px; }
 }
 
