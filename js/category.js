@@ -890,7 +890,7 @@ function renderQueueGrid(items) {
           ${e.year ? `<div class="title-year-below">${e.year}</div>` : ''}
           ${scope ? `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>` : ''}
         </div>
-        <div class="wg-genre">${_badge}${genreHTML(e.genres, 3)}</div>
+        <div class="wg-genre">${_badge}</div>
       </div>
       <div class="start-watching-wrap" onclick="event.stopPropagation()">
         <button onclick="startWatching('${e.id}')" class="continue-btn">Start</button>
