@@ -779,8 +779,8 @@ nav {
 .w-poster img { width:100%; height:100%; object-fit:cover; }
 .w-body { flex:1; min-width:0; }
 .w-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px; }
-.w-title { font-size:19px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.w-score { font-family:var(--serif); font-size:24px; color:var(--olive-light); flex-shrink:0; }
+.w-title { font-size:19px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.w-score { color:var(--olive-light); font-size:clamp(13px, 3vw, 15px); font-weight:600; flex-shrink:0; }
 .w-genre { font-size:12px; color:var(--text-3); margin-bottom:10px; display:flex; gap:6px; flex-wrap:wrap; }
 .w-ep-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; flex-wrap:wrap; }
 .w-ep-total { font-size:10px; color:var(--text-3); white-space:nowrap; }
@@ -2506,13 +2506,13 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   font-size:12px; font-weight:700; letter-spacing:0.3px;
   box-shadow:0 2px 8px rgba(0,0,0,0.35); line-height:1.5;
 }
-.cg-score-10 { background:#B8912A; color:#1a1200; }
-.cg-score-9  { background:#166534; color:#ffffff; }
-.cg-score-8  { background:#16a34a; color:#ffffff; }
-.cg-score-7  { background:#4a7c3f; color:#ffffff; }
-.cg-score-6  { background:#a3720f; color:#ffffff; }
-.cg-score-3-5 { background:#991b1b; color:#ffffff; }
-.cg-score-0-2 { background:#5b21b6; color:#ffffff; }
+.cg-score-10 { background:#C9A227; color:#1a1200; }
+.cg-score-9  { background:#256B3D; color:#ffffff; }
+.cg-score-8  { background:#4CAF50; color:#0d2e0f; }
+.cg-score-7  { background:#8BC34A; color:#1a2e0a; }
+.cg-score-6  { background:#D4A017; color:#1a1200; }
+.cg-score-3-5 { background:#C0392B; color:#ffffff; }
+.cg-score-0-2 { background:#7B241C; color:#ffffff; }
 .cg-score-none { background:rgba(120,120,120,0.55); color:#fff; }
 
 /* Card wrapper — flex column so info fills remaining space */
@@ -2627,7 +2627,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .score-badge-md { width:44px; height:44px; font-size:18px; }
 .score-badge-lg { width:54px; height:54px; font-size:22px; }
 .card-score-badge { position:absolute; top:8px; right:8px; z-index:2; }
-.w-score { font-family:var(--serif); font-size:20px; flex-shrink:0; line-height:1; }
+.w-score { color:var(--olive-light); font-size:clamp(13px, 3vw, 15px); font-weight:600; flex-shrink:0; line-height:1; }
 
 /* ════════════════════════════════════════════
    GLOBAL SPACING + TYPOGRAPHY
