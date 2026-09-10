@@ -681,8 +681,7 @@ function buildWatching(items) {
 function renderMoviesWatchingList(items) {
   return `<div class="watch-list">${items.map(e => {
     const isPaused = e.status === 'paused';
-    const clr   = scoreColor(liveScore(e));
-    const score = clr ? `<span class="w-score" style="color:${clr.bg}">${Number(liveScore(e)).toFixed(2)}</span>` : '';
+    const score = liveScore(e) != null ? `<span class="w-score">★ ${Number(liveScore(e)).toFixed(2)}</span>` : '';
     const cardStyle = isPaused ? 'background:var(--olive-faint);border-color:var(--border-olive);opacity:0.85' : '';
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
@@ -756,8 +755,7 @@ function renderWatchingList(items) {
     const pct      = e.total_eps ? Math.round(((e.watched??0) / e.total_eps) * 100) : 0;
     const isDone   = !isPaused && (pct >= 100 || (!e.total_eps && (e.episode??0) > 0));
     const epStr    = e.season != null ? `S${e.season} E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : 'Ep 1');
-    const clr      = scoreColor(liveScore(e));
-    const score    = clr ? `<span class="w-score" style="color:${clr.bg}">${Number(liveScore(e)).toFixed(2)}</span>` : '';
+    const score    = liveScore(e) != null ? `<span class="w-score">★ ${Number(liveScore(e)).toFixed(2)}</span>` : '';
     const cardStyle = isPaused ? 'background:var(--olive-faint);border-color:var(--border-olive);opacity:0.85' : '';
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
@@ -769,7 +767,7 @@ function renderWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${e.title}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>${score}</div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>${score}</div>
         <div class="w-ep-row">
           ${_badge}
           <span class="w-ep-badge">${epStr}</span>
