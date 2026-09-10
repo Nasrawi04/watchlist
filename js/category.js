@@ -246,7 +246,11 @@ function _ongoingMeta(e) {
   if (e.watched) {
     return `<div class="w-ep-row"><span class="w-ep-badge">${e.watched} eps</span><span class="w-ep-total">watched</span></div>`;
   }
-  return '';
+  // No current-position data — fall back to the same season/episode
+  // totals the popup already reads (_season_breakdown/total_seasons/
+  // total_eps), so an entry with totals filled in but no tracked
+  // position still shows something instead of a blank badge.
+  return _entryMeta(e);
 }
 
 function _enjoymentVal(e) {
@@ -742,7 +746,6 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
           <div class="wg-title" style="margin-bottom:0;">${e.title}</div>
           ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
         </div>
-        ${e.year ? `<div class="title-year-below">${e.year}</div>` : ''}
         ${rt ? `<div class="wg-genre" style="font-size:11px;"><span class="w-ep-badge">${rt}</span></div>` : ''}
         <div class="wg-controls" onclick="event.stopPropagation()" style="margin-top:auto;">
           ${isPaused
@@ -884,7 +887,6 @@ function renderQueueGrid(items) {
             <div class="wg-title" style="margin-bottom:4px;">${e.title}</div>
             ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
           </div>
-          ${e.year ? `<div class="title-year-below">${e.year}</div>` : ''}
           ${scope ? `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>` : ''}
         </div>
         <div class="wg-genre">${_badge}</div>
@@ -1424,7 +1426,6 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
           <div class="wg-title">${e.title}</div>
           ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
         </div>
-        ${e.year ? `<div class="title-year-below">${e.year}</div>` : ''}
         ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
         <div class="cg-score-row"><span class="cg-score">${score != null ? `★ ${score}` : '—'}</span><span class="cg-score-lbl">score</span></div>
       </div>
