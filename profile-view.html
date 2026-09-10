@@ -1703,7 +1703,7 @@ function renderPvLibrary() {
         (!ep&&!rt?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'</div>':'')+
         (!isM&&e.total_eps?'<div class="fv-w-prog-track"><div class="fv-w-prog-fill" style="width:'+pct+'%'+(ip?";background:var(--text-3)":'')+';"></div></div>':'')+
         (lbl?'<div class="fv-w-prog-label">'+lbl+'</div>':'')+
-        '</div>'+(liveScore(e)!=null?'<div class="fv-w-score">'+Number(liveScore(e)).toFixed(2)+'</div>':'')
+        '</div>'+(liveScore(e)!=null?'<div class="fv-w-score">★ '+Number(liveScore(e)).toFixed(2)+'</div>':'')
         +'</div>';
     }).join('')+'</div>';
   }
