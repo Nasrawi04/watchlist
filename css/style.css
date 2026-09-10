@@ -2533,7 +2533,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   text-align:center; padding-top:8px;
   border-top:0.5px solid var(--border);
 }
-.cg-score { color:var(--olive-light); font-size:clamp(13px, 3vw, 15px); font-weight:600; display:block; }
+.cg-score { color:var(--olive-light); font-size:clamp(15px, 3.4vw, 17px); font-weight:600; display:block; }
 .cg-score-lbl { font-size:9px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; display:block; margin-top:2px; }
 
 /* The card itself — no overflow:hidden so content shows, allow full height */
