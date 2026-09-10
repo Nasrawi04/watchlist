@@ -1669,17 +1669,17 @@ function renderLibrary(){
     cc=statusTabs+_libGridWrap(cg,'<div class="watching-grid" id="'+cg+'">'+ccs+'</div>');
   } else {
     cc=statusTabs+'<div class="fv-ranked-list">'+completed.map(function(e,i){
-      var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):'—';
+      var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
       var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
       return '<div class="fv-entry-block">'
         +'<div class="fv-rank-row" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
         +(isRanked?'<div class="fv-rank-num '+(i<3?'top3':'')+'">'+(i+1)+'</div>':'')
         +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):'')+'</div>'
-        +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
-        +'<div class="fv-rank-meta">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)||'')+(e.genres&&e.genres.length?' · '+e.genres.slice(0,3).join(' · '):'')+'</div>'
+        +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);">'+e.year+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
+        +'<div class="fv-rank-meta">'+getTypeBadge(e,'friend')+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
         +renderFavChips(e.ratings,e.cat)
-        +'</div><div class="fv-rank-score">'+sc+'</div></div>'
+        +'</div><div class="fv-rank-score">'+(sc!=null?'★ '+sc:'—')+'</div></div>'
         +_libCcBtn('prof',e.id)
         +'</div>';
     }).join('')+'</div>';
