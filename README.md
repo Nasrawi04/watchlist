@@ -15,6 +15,10 @@ Track everything you watch. MyScreenScore is a personal entertainment tracker fo
 - Progress tracking for shows and episodic content
 - Movie runtime tracking with cumulative watch time stats
 - Ongoing series support (completed but still airing)
+- Rewatch tracking with visible rewatch-count badges
+- Discover page for browsing trending, top-rated, and upcoming movies & shows (TMDB)
+- Personal custom lists, separate from the four built-in libraries
+- Dedicated Notes page for freeform personal notes per entry
 - Friends system with threaded comments and profile sharing
 - Home page comment inbox with inline reply support
 - User avatars with Supabase Storage
@@ -74,17 +78,7 @@ Objective Score  =  average of all 8 core ratings
 Final Score      =  (Objective Score × 70%) + (Enjoyment × 30%)
 ```
 
-**Score Color Coding**
-
-| Range | Color |
-|-------|-------|
-| 10.0 | Gold |
-| 9.0 – 9.9 | Dark Green |
-| 8.0 – 8.9 | Green |
-| 7.0 – 7.9 | Light Green |
-| 6.0 – 6.9 | Amber |
-| 3.0 – 5.9 | Red |
-| 0.0 – 2.9 | Purple |
+Scores are color-coded on entry cards — see [MSS Rating Display](#mss-rating-display) below for the full color scale.
 
 ---
 
@@ -105,14 +99,36 @@ These are displayed in the entry detail popup on category pages.
 
 ---
 
-### Episode & Runtime Metadata
+### Episode & Runtime Metadata, Type Badges & Rewatching
 
 All entry cards display contextual metadata badges:
 
 - **TV Shows / Anime Shows / Cartoon Shows** — displays total seasons and episodes (e.g. `4 Seasons · 142 Episodes`) across Queue, Completed, Latest Entries, and Friend View. Currently Watching shows current position (e.g. `S3 E7`)
 - **Movies / Anime Movies / Cartoon Movies** — displays runtime (e.g. `2h 14m`) wherever available
+- **Type badge** — a solid-color Movie / TV Show tag appears on every card (olive for Movie, blue for TV Show), positioned on the poster itself in grid view and inline with the runtime/episode badge in list view
+- **Year** — shown next to the title by default; if the title is long enough that showing the year would truncate it, the year automatically drops to its own line below the title instead
 
 Badges scale responsively on smaller screen sizes.
+
+**Rewatch tracking** — re-completing an entry increments a rewatch counter, shown as a small badge on the card (grid and list view) so you can tell at a glance which titles you've gone back to.
+
+---
+
+### MSS Rating Display
+
+Your own score for an entry — as distinct from any public rating shown elsewhere — is always shown the same way across the app: a solid olive-green `★` followed by the score to two decimals (e.g. `★ 8.81`). This applies everywhere your own rating appears — Currently Watching, Watch Later, Completed, and Discover.
+
+Corner-overlay score badges (used on poster thumbnails in grid views) are color-coded by score tier, using solid colors rather than gradients for clean readability and accessible contrast in both dark and light mode:
+
+| Range | Color |
+|-------|-------|
+| 10.0 | Gold |
+| 9.0 – 9.9 | Dark Green |
+| 8.0 – 8.9 | Green |
+| 7.0 – 7.9 | Light Green |
+| 6.0 – 6.9 | Amber |
+| 3.0 – 5.9 | Red |
+| 0.0 – 2.9 | Deep Red |
 
 ---
 
@@ -135,6 +151,31 @@ The Completed page shows all finished entries in two modes:
 - **Ranked** — sorted by Final Score
 
 Also includes a dedicated **Ongoing** section for entries marked as Completed / Ongoing. Filterable by category (All / TV Shows / Movies / Anime / Cartoons). Stats update live when a filter is applied. Each entry displays a color-coded score badge and episode/runtime metadata in both grid and list views.
+
+---
+
+### Discover
+
+A dedicated page for browsing what's out there, independent of your own library — powered by the TMDB API. Categories include Trending This Week, Top Picks, Upcoming, Top 250 Movies/Shows, Airing Today, and genre-driven "best of" lists, plus separate Anime/Cartoon-flavored categories.
+
+Each category opens its own list page (`discover-list.html`) with:
+
+- **Grid and list view**, toggle persisted per user
+- Infinite-scroll pagination as you browse
+- Movie/TV Show type badges, ranked-list numbering for Top 250-style categories, and public TMDB scores
+- Tapping a title jumps straight into adding it to your own library
+
+---
+
+### Personal Lists
+
+Beyond the four built-in libraries, you can create your own custom lists — a way to group titles by theme, mood, or anything else that doesn't map to a status or category (e.g. "Best Comfort Rewatches" or "Movies to Watch With Friends"). Lists have their own dedicated view (`list-view.html`) with the same grid/list toggle, type badges, and score display used everywhere else, and are managed from `lists.html`.
+
+---
+
+### Notes
+
+A dedicated Notes page (`notes.html`) for freeform personal notes tied to your entries — separate from the short in-line notes field on the entry detail page, for longer-form thoughts you want to keep track of on their own.
 
 ---
 
@@ -295,11 +336,22 @@ Dark and light mode, toggled from a pill switch in the bottom-right corner. The 
 ├── movies.html                             — Movies library
 ├── anime.html                              — Anime library
 ├── cartoons.html                           — Cartoons library
+├── library.html                            — Unified library view
 ├── detail.html                             — Entry detail / edit
+├── title.html                              — TMDB title detail (from Discover)
+├── person.html                             — TMDB person/cast detail
 ├── completed.html                          — Completed list + rankings
+├── discover.html                           — Discover home (category ticker)
+├── discover-list.html                      — Discover category browsing (grid/list)
+├── lists.html                              — Personal custom lists management
+├── list-view.html                          — View a single personal list
+├── notes.html                              — Dedicated Notes page
+├── favorites.html                          — Favorites / Top Picks
 ├── friends.html                            — Friends management
 ├── friend-view.html                        — View a friend's lists
 ├── profile.html                            — Settings, avatar, public toggle, PDF export
+├── profile-view.html                       — View another user's profile
+├── settings.html                           — Account settings
 ├── user.html                               — Public profile (no auth required)
 ├── search.html                             — Search results
 ├── login.html                              — Sign in / Create account
@@ -312,8 +364,13 @@ Dark and light mode, toggled from a pill switch in the bottom-right corner. The 
 ├── js/
 │   ├── config.js                           — Supabase init, constants, icons, utilities
 │   ├── db.js                               — Data layer (all Supabase queries)
-│   ├── nav.js                              — Nav injection, auth guard, modals
+│   ├── nav.js                              — Nav injection, auth guard, modals, shared layout helpers
 │   ├── category.js                         — Category page logic (all sections)
+│   ├── discover-categories.js              — Discover category definitions + TMDB/AniList fetchers
+│   ├── rewatch.js                          — Rewatch count tracking + badge rendering
+│   ├── create-card.js                      — Shared "add new entry" card UI
+│   ├── fav-lists-popup.js                  — Favorites / personal-lists picker popup
+│   ├── tmbd.js                             — TMDB/AniList API helpers
 │   └── export.js                           — PDF export (pure jsPDF)
 └── sql/
     ├── supabase-schema.sql                 — Core schema (run first)
