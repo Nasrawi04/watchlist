@@ -20,8 +20,8 @@
 
 /* ── Grid view ── */
 .dl-grid {
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(clamp(80px, 26vw, 200px), 1fr));
-  gap:clamp(10px, 1.8vw, 32px);
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+  gap:14px;
   align-items:start; grid-auto-rows:max-content;
 }
 @media(min-width:1024px) {
@@ -33,6 +33,9 @@
 }
 @media(min-width:1600px) {
   .dl-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
+}
+@media(max-width:640px) {
+  .dl-grid { grid-template-columns:repeat(2,1fr); }
 }
 .dl-card {
   opacity:0; transform:translateY(18px); width:100%; box-sizing:border-box;
@@ -49,7 +52,6 @@
   opacity:0; transform:translateX(-10px);
   transition:opacity .4s var(--ease), transform .4s var(--ease), border-color .15s, background .15s;
 }
-.dl-list-row.dl-ranked { grid-template-columns:44px 96px 1fr auto; }
 .dl-list-row.dl-in-view { opacity:1; transform:none; }
 .dl-list-row:hover { border-color:var(--border-olive); background:var(--card-2); }
 .dl-list-rank { font-family:var(--serif); font-size:24px; color:var(--text-3); text-align:center; }
@@ -71,7 +73,6 @@
   .dl-grid { gap:10px; }
   .dl-rank-badge { min-width:22px; height:22px; font-size:13px; }
   .dl-list-row { grid-template-columns:64px 1fr auto; gap:14px; padding:10px 16px 10px 10px; }
-  .dl-list-row.dl-ranked { grid-template-columns:30px 64px 1fr auto; }
   .dl-list-poster { width:64px; height:92px; }
   .dl-list-rank { font-size:18px; }
   .dl-list-title { font-size:15px; }
@@ -196,8 +197,8 @@ function _dlListRowHTML(it, rank) {
   const posterInner = it.poster_url
     ? `<img src="${it.poster_url}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
-  const rankCol = _dlIsRanked
-    ? `<div class="dl-list-rank">${rank}</div>`
+  const rankBadge = _dlIsRanked
+    ? `<div class="cg-rank-badge ${_dlRankCls(rank)}">${rank}</div>`
     : '';
   const scoreStr = _discFloorScore(it.score);
   const typeLabel = _dlTypeLabel(it);
@@ -206,9 +207,8 @@ function _dlListRowHTML(it, rank) {
   // (that only exists on the per-item detail endpoint) — this stays
   // empty for essentially every item here, not a bug, just a real data
   // gap on this specific data source.
-  return `<div class="dl-list-row ${_dlIsRanked ? 'dl-ranked' : ''}" ${_discClickAttr(it)}>
-    ${rankCol}
-    <div class="dl-list-poster">${posterInner}</div>
+  return `<div class="dl-list-row" ${_discClickAttr(it)}>
+    <div class="dl-list-poster" style="position:relative">${posterInner}${rankBadge}</div>
     <div style="min-width:0">
       <div class="dl-list-title-row">
         <div class="dl-list-title">${_dlEsc(it.title)}</div>
