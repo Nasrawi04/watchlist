@@ -194,8 +194,8 @@
   <!-- RECENTLY VIEWED (MyScreenScore view history) -->
   <div id="homeRecentlyViewed" style="margin-top:3rem"></div>
 
-  <!-- FRIEND COMMENTS INBOX -->
-  <div id="homeComments" style="margin-top:3rem"></div>
+  <!-- GUEST SIGN-IN CTA (shown only when logged out) -->
+  <div id="guestCta" style="margin-top:3rem"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -204,12 +204,6 @@
 <script src="js/nav.js"></script>
 <script>
 let _homeUser = null;
-let _commentsOpen = false;
-function _toggleComments() {
-  _commentsOpen = !_commentsOpen;
-  document.getElementById('commentsList').style.display = _commentsOpen ? 'flex' : 'none';
-  document.getElementById('commentsChev').classList.toggle('open', _commentsOpen);
-}
 
 const _NAV_LEFT_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const _NAV_RIGHT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
@@ -271,7 +265,7 @@ function renderGuestLanding() {
   document.getElementById('homeWatching').innerHTML = '';
   document.getElementById('homeWatchlist').innerHTML = '';
   document.getElementById('homeRecentlyViewed').innerHTML = '';
-  document.getElementById('homeComments').innerHTML = `
+  document.getElementById('guestCta').innerHTML = `
     <div class="guest-cta">
       <a href="login.html" class="guest-btn-primary">Sign In</a>
       <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
@@ -323,36 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     getRecentlyViewed(user.id, 12).then(renderHomeRecentlyViewed);
 
-    /* Friend comments inbox */
-    const inbox = await getInboxComments(user.id, 8);
-    if (inbox.length) {
-      document.getElementById('homeComments').innerHTML = `
-        <div class="section-eyebrow">Social</div>
-        <div class="section-title comments-section-toggle" onclick="_toggleComments()">
-          Friend Comments
-          <span class="comments-section-chevron" id="commentsChev">${icon('chevdown',18)}</span>
-        </div>
-        <div id="commentsList" style="display:none;flex-direction:column;gap:10px;margin-top:1rem;">
-          ${inbox.map(c => {
-            const username = c.profiles?.username || 'Someone';
-            const initial  = username[0].toUpperCase();
-            const title    = c.entry?.title || 'an entry';
-            const cat      = CAT_META[c.entry?.cat];
-            const date     = new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
-            const avatarHTML = c.profiles?.avatar_url
-              ? `<div class="comment-inbox-avatar"><img src="${c.profiles.avatar_url}"></div>`
-              : `<div class="comment-inbox-avatar">${initial}</div>`;
-            return `<div class="comment-inbox-row" style="cursor:pointer" onclick="openHomeComments('${c.entry_id}', this)">
-              ${avatarHTML}
-              <div class="comment-inbox-body">
-                <div class="comment-inbox-who">@${username} <span>commented on</span> <strong>${title}</strong>${cat ? ` <span style="display:inline-flex;align-items:center;vertical-align:middle;opacity:.4;margin-left:2px">${icon(cat.icon,11)}</span>` : ''}</div>
-                <div class="comment-inbox-text">"${c.content}"</div>
-              </div>
-              <div class="comment-inbox-date">${date}</div>
-            </div>`;
-          }).join('')}
-        </div>`;
-    }
   });
 });
 </script>
@@ -381,245 +345,5 @@ setTimeout(() => {
 }, 10000);
 </script>
 
-<!-- ═══ HOME COMMENTS MODAL ═══ -->
-<style>
-.hc-overlay{
-  position:fixed;inset:0;z-index:1100;
-  background:rgba(0,0,0,0.55);
-  display:flex;align-items:center;justify-content:center;
-  padding:16px;
-  opacity:0;pointer-events:none;
-  transition:opacity .22s ease;
-}
-.hc-overlay.open{opacity:1;pointer-events:auto;}
-.hc-card{
-  width:100%;max-width:520px;
-  background:var(--bg-2);
-  border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);
-  border-radius:var(--radius-lg);
-  display:flex;flex-direction:column;
-  max-height:80vh;
-  transform:scale(.96);
-  transition:transform .25s cubic-bezier(0.4,0,0.2,1);
-}
-.hc-overlay.open .hc-card{transform:scale(1);}
-.hc-header{ flex-shrink:0; }
-.hc-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--olive-light);flex:1;}
-.hc-count{font-size:11px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);padding:1px 7px;border-radius:20px;}
-.hc-entry-name{width:100%;font-size:12px;color:var(--text-2);margin-top:2px;}
-.hc-close{background:none;border:none;cursor:pointer;color:var(--text-3);font-size:18px;line-height:1;padding:2px 4px;transition:color .15s;}
-.hc-close:hover{color:var(--text);}
-.hc-list{flex:1;overflow-y:auto;overscroll-behavior-y:contain;padding:12px 20px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;}
-.hc-comment{background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 14px;}
-.hc-author{font-size:11px;font-weight:600;color:var(--olive-light);margin-bottom:4px;}
-.hc-text{font-size:13px;color:var(--text);line-height:1.55;word-break:break-word;}
-.hc-meta{font-size:10px;color:var(--text-3);margin-top:6px;display:flex;align-items:center;gap:10px;}
-.hc-del{background:none;border:none;cursor:pointer;color:var(--text-3);font-size:10px;padding:0;transition:color .15s;}
-.hc-del:hover{color:#f87171;}
-.hc-empty{font-size:13px;color:var(--text-3);text-align:center;padding:2rem 0;}
-.hc-form{display:flex;gap:10px;padding:14px 20px;border-top:0.5px solid var(--border);}
-.hc-input{
-  flex:1;background:var(--bg-3);border:0.5px solid var(--border-2);
-  border-radius:var(--radius);padding:10px 14px;
-  color:var(--text);font-size:13px;font-family:inherit;
-  transition:border-color .15s;outline:none;
-}
-.hc-input::placeholder{color:var(--text-3);}
-.hc-input:focus{border-color:var(--olive-light);box-shadow:0 0 0 2px rgba(126,184,108,.15);}
-.hc-send{
-  background:var(--olive);color:#fff;border:none;
-  border-radius:var(--radius);padding:10px 18px;
-  font-size:13px;font-weight:600;cursor:pointer;
-  transition:background .15s;white-space:nowrap;
-}
-.hc-send:hover{background:var(--olive-2);}
-</style>
-<div class="hc-overlay" id="hcOverlay" onclick="if(event.target===this)closeHomeComments()">
-  <div class="hc-card">
-    <div class="hc-header" style="display:flex;align-items:flex-start;gap:16px;padding:20px;border-bottom:0.5px solid var(--border);flex-shrink:0;">
-      <div id="hcPoster" style="width:56px;height:76px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);"></div>
-      <div style="flex:1;min-width:0;">
-        <div id="hcEntryName" style="font-family:var(--serif);font-size:18px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text);"></div>
-        <div id="hcMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px;"></div>
-        <div id="hcCount" style="font-size:12px;color:var(--olive-light);font-weight:500;display:none;"></div>
-      </div>
-      <button class="hc-close" onclick="closeHomeComments()">&#x2715;</button>
-    </div>
-    <div class="hc-list" id="hcList"></div>
-    <div class="hc-form">
-      <input class="hc-input" id="hcInput" placeholder="Write a comment&hellip;">
-      <button class="hc-send" onclick="hcSubmit()">Send</button>
-    </div>
-  </div>
-</div>
-<script>
-let _hcEntryId = null;
-function _hcEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function _hcMention(s){ return _hcEsc(s).replace(/(@[\w]+)/g,'<span style="color:var(--olive-light);font-weight:600">$1</span>'); }
-
-function openHomeComments(entryId, rowEl) {
-  _hcEntryId = entryId;
-  // Find entry data
-  var entry = window._homeEntries ? window._homeEntries.find(function(e){ return e.id === entryId; }) : null;
-  var strong = rowEl && rowEl.querySelector ? rowEl.querySelector('.comment-inbox-body strong') : null;
-  var title = entry ? entry.title : (strong ? strong.textContent : '');
-  document.getElementById('hcEntryName').textContent = title;
-  // Poster
-  var posterEl = document.getElementById('hcPoster');
-  if (posterEl) posterEl.innerHTML = entry ? posterHTML(entry) : '';
-  // Meta chips
-  var metaEl = document.getElementById('hcMeta');
-  if (metaEl && entry) {
-    var chips = [];
-    if (CAT_META && CAT_META[entry.cat] && CAT_META[entry.cat].label) chips.push(CAT_META[entry.cat].label);
-    if (entry.genres) entry.genres.slice(0,3).forEach(function(g){ chips.push(g); });
-    metaEl.innerHTML = chips.map(function(m){
-      return '<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:12px;padding:1px 6px;font-size:9px;letter-spacing:.3px">'+m+'</span>';
-    }).join('');
-  } else if (metaEl) { metaEl.innerHTML = ''; }
-  document.getElementById('hcCount').style.display = 'none';
-  document.getElementById('hcList').innerHTML = '<div class="hc-empty">Loading…</div>';
-  document.getElementById('hcOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  hcLoad();
-  setTimeout(() => document.getElementById('hcInput').focus(), 300);
-}
-
-function closeHomeComments() {
-  document.getElementById('hcOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-  _hcEntryId = null;
-}
-
-document.addEventListener('keydown', function(e){ if(e.key==='Escape' && document.getElementById('hcOverlay')?.classList.contains('open')) closeHomeComments(); });
-document.getElementById('hcInput').addEventListener('keydown', function(e){
-  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); hcSubmit(); }
-});
-
-async function hcLoad() {
-  if (!_hcEntryId) return;
-  const list = document.getElementById('hcList');
-  const countEl = document.getElementById('hcCount');
-  const comments = await getComments(_hcEntryId);
-  const me = _homeUser ? _homeUser.id : null;
-  if (!comments.length) {
-    list.innerHTML = '<div class="hc-empty">No comments yet — be the first!</div>';
-    countEl.style.display = 'none';
-    return;
-  }
-  const topLevel = comments.filter(function(c){ return !c.reply_to; });
-  const replies  = comments.filter(function(c){ return  c.reply_to; });
-  countEl.textContent = comments.length + ' comment' + (comments.length !== 1 ? 's' : '');
-  countEl.style.display = 'block';
-  list.innerHTML = topLevel.map(function(c) {
-    const uname  = _hcEsc(c.profiles && c.profiles.username ? c.profiles.username : 'Unknown');
-    const date   = new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    const canDel = me && c.author_id === me;
-    const reps   = replies.filter(function(r){ return r.reply_to === c.id; });
-    const repHTML = reps.map(function(r) {
-      const runame  = _hcEsc(r.profiles && r.profiles.username ? r.profiles.username : 'Unknown');
-      const rdate   = new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-      const rCanDel = me && r.author_id === me;
-      return '<div class="det-reply-item" id="hcm-' + r.id + '">'
-        + '<div class="det-reply-author">@' + runame + '</div>'
-        + '<div class="det-reply-text">' + _hcMention(r.content) + '</div>'
-        + '<div class="det-reply-meta"><span>' + rdate + '</span>'
-        + (rCanDel ? '<button class="det-comment-del" onclick="hcDelete(\'' + r.id + '\')">' + 'delete</button>' : '')
-        + '</div></div>';
-    }).join('');
-    return '<div class="hc-comment" id="hcm-' + c.id + '">'
-      + '<div class="hc-author">@' + uname + '</div>'
-      + '<div class="hc-text">' + _hcMention(c.content) + '</div>'
-      + '<div class="hc-meta"><span>' + date + '</span>'
-      + '<button class="det-comment-reply-btn" onclick="hcReply(\'' + c.id + '\',\'' + uname + '\')">' + 'Reply</button>'
-      + (canDel ? '<button class="det-comment-del" onclick="hcDelete(\'' + c.id + '\')">' + 'delete</button>' : '')
-      + '</div>'
-      + repHTML
-      + '<div id="hc-reply-form-' + c.id + '"></div>'
-      + '</div>';
-  }).join('');
-}
-
-let _hcReplyFor = null;
-
-function hcReply(commentId, username) {
-  if (_hcReplyFor) {
-    var old = document.getElementById('hc-reply-form-' + _hcReplyFor);
-    if (old) old.innerHTML = '';
-  }
-  if (_hcReplyFor === commentId) { _hcReplyFor = null; return; }
-  _hcReplyFor = commentId;
-  var box = document.getElementById('hc-reply-form-' + commentId);
-  if (!box) return;
-  // Build reply form with DOM to avoid quoting issues
-  var form = document.createElement('div');
-  form.className = 'det-reply-form';
-  var inp = document.createElement('input');
-  inp.className = 'det-reply-input';
-  inp.id = 'hc-ri-' + commentId;
-  inp.placeholder = 'Reply to @' + username + '…';
-  inp.value = '@' + username + ' ';
-  inp.addEventListener('keydown', function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();hcPostReply(commentId);} });
-  var sendBtn = document.createElement('button');
-  sendBtn.className = 'det-reply-send';
-  sendBtn.textContent = 'Send';
-  sendBtn.onclick = function(){ hcPostReply(commentId); };
-  var cancelBtn = document.createElement('button');
-  cancelBtn.className = 'det-comment-del';
-  cancelBtn.textContent = '✕';
-  cancelBtn.style.marginLeft = '4px';
-  cancelBtn.onclick = function(){ hcCancelReply(commentId); };
-  form.appendChild(inp);
-  form.appendChild(sendBtn);
-  form.appendChild(cancelBtn);
-  box.appendChild(form);
-  setTimeout(function(){ inp.focus(); }, 50);
-}
-function hcCancelReply(commentId) {
-  var box = document.getElementById('hc-reply-form-' + commentId);
-  if (box) box.innerHTML = '';
-  _hcReplyFor = null;
-}
-
-async function hcPostReply(commentId) {
-  var input = document.getElementById('hc-ri-' + commentId);
-  if (!input) return;
-  var content = input.value.trim();
-  if (!content) return;
-  input.disabled = true;
-  try {
-    await addComment(_hcEntryId, content, commentId);
-    hcCancelReply(commentId);
-    await hcLoad();
-  } catch(err) { if(typeof showToast !== 'undefined') showToast('Failed to post reply.'); input.disabled = false; }
-}
-
-async function hcSubmit() {
-  const input = document.getElementById('hcInput');
-  const content = input.value.trim();
-  if (!content || !_hcEntryId) return;
-  input.disabled = true;
-  try {
-    await addComment(_hcEntryId, content);
-    input.value = '';
-    await hcLoad();
-  } catch(err) { if(typeof showToast !== 'undefined') showToast('Failed to post.'); }
-  finally { input.disabled = false; input.focus(); }
-}
-
-async function hcDelete(commentId) {
-  try {
-    await deleteComment(commentId);
-    const el = document.getElementById('hcm-' + commentId);
-    if (el) el.remove();
-    const list = document.getElementById('hcList');
-    const countEl = document.getElementById('hcCount');
-    const remaining = list.querySelectorAll('.hc-comment').length;
-    if (!remaining) { list.innerHTML = '<div class="hc-empty">No comments yet.</div>'; countEl.style.display='none'; }
-    else countEl.textContent = remaining;
-  } catch(err) { if(typeof showToast !== 'undefined') showToast('Failed to delete.'); }
-}
-</script>
 </body>
 </html>
