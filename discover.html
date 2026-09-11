@@ -45,7 +45,7 @@
     font-size:clamp(22px, 6vw, 32px);
   }
   .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
-  .home-tmdb-meta-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px; }
+  .home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
   .home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
 
   @media(max-width:900px) {
@@ -115,7 +115,7 @@ function _discCardHTML(it) {
     <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div></div>
     <div class="q-info">
       <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${_discEsc(it.title)}</div>${it.year ? `<span class="title-year-inline">${_discEsc(it.year)}</span>` : ''}</div>
-      ${scoreStr ? `<div class="home-tmdb-meta-row" style="justify-content:flex-end;"><span class="home-tmdb-score">★ ${scoreStr}</span></div>` : ''}
+      ${scoreStr ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${scoreStr}</span></div>` : ''}
     </div>
   </div>`;
 }
