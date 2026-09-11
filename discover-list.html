@@ -43,20 +43,21 @@
 /* ── List view ── */
 .dl-list { display:flex; flex-direction:column; gap:8px; }
 .dl-list-row {
-  display:grid; grid-template-columns:80px 1fr auto; align-items:center; gap:20px;
+  display:grid; grid-template-columns:96px 1fr auto; align-items:center; gap:22px;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
-  padding:14px 22px 14px 14px; cursor:pointer;
+  padding:16px 24px 16px 16px; cursor:pointer;
   opacity:0; transform:translateX(-10px);
   transition:opacity .4s var(--ease), transform .4s var(--ease), border-color .15s, background .15s;
 }
-.dl-list-row.dl-ranked { grid-template-columns:44px 80px 1fr auto; }
+.dl-list-row.dl-ranked { grid-template-columns:44px 96px 1fr auto; }
 .dl-list-row.dl-in-view { opacity:1; transform:none; }
 .dl-list-row:hover { border-color:var(--border-olive); background:var(--card-2); }
 .dl-list-rank { font-family:var(--serif); font-size:24px; color:var(--text-3); text-align:center; }
-.dl-list-poster { width:80px; height:112px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.dl-list-poster { width:96px; height:136px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
 .dl-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.dl-list-title { font-size:18px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dl-list-year { font-size:14px; color:var(--text-3); font-weight:400; }
+.dl-list-title-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; min-width:0; }
+.dl-list-title { font-size:18px; font-weight:500; color:var(--text); }
+.dl-list-year { font-size:14px; color:var(--text-3); font-weight:400; flex-shrink:0; }
 .dl-list-badges-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .dl-list-desc {
   font-size:12px; color:var(--text-3); margin-top:4px; line-height:1.4;
@@ -69,9 +70,9 @@
   .dl-head { margin-bottom:1.5rem; }
   .dl-grid { gap:10px; }
   .dl-rank-badge { min-width:22px; height:22px; font-size:13px; }
-  .dl-list-row { grid-template-columns:56px 1fr auto; gap:14px; padding:10px 16px 10px 10px; }
-  .dl-list-row.dl-ranked { grid-template-columns:30px 56px 1fr auto; }
-  .dl-list-poster { width:56px; height:80px; }
+  .dl-list-row { grid-template-columns:64px 1fr auto; gap:14px; padding:10px 16px 10px 10px; }
+  .dl-list-row.dl-ranked { grid-template-columns:30px 64px 1fr auto; }
+  .dl-list-poster { width:64px; height:92px; }
   .dl-list-rank { font-size:18px; }
   .dl-list-title { font-size:15px; }
   .dl-list-year { font-size:12px; }
@@ -84,7 +85,7 @@
   font-size:clamp(22px, 6vw, 32px);
 }
 .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
-.home-tmdb-meta-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px; }
+.home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
 .home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
 /* "Very slightly" bigger — this is Discover's public TMDB score, kept
    modest since it's someone else's aggregate rating, not the user's
@@ -185,11 +186,8 @@ function _dlCardHTML(it, rank) {
       ${typeLabel ? `<span class="${typeCls} type-label-overlay-bottom">${typeLabel}</span>` : ''}
     </div>
     <div class="q-info">
-      <div class="q-title">${_dlEsc(it.title)}</div>
-      <div class="home-tmdb-meta-row">
-        <span class="home-tmdb-year">${it.year ? _dlEsc(it.year) : ''}</span>
-        ${scoreStr ? `<span class="home-tmdb-score">★ ${scoreStr}</span>` : ''}
-      </div>
+      <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${_dlEsc(it.title)}</div>${it.year ? `<span class="title-year-inline">${_dlEsc(it.year)}</span>` : ''}</div>
+      ${scoreStr ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${scoreStr}</span></div>` : ''}
     </div>
   </div>`;
 }
@@ -212,9 +210,9 @@ function _dlListRowHTML(it, rank) {
     ${rankCol}
     <div class="dl-list-poster">${posterInner}</div>
     <div style="min-width:0">
-      <div class="dl-list-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
-        ${_dlEsc(it.title)}
-        <span class="dl-list-year">${it.year ? _dlEsc(it.year) : ''}</span>
+      <div class="dl-list-title-row">
+        <div class="dl-list-title">${_dlEsc(it.title)}</div>
+        ${it.year ? `<span class="dl-list-year">${_dlEsc(it.year)}</span>` : ''}
       </div>
       ${typeLabel ? `<div class="dl-list-badges-row"><span class="${typeCls}">${typeLabel}</span></div>` : ''}
       ${it.overview ? `<div class="dl-list-desc">${_dlEsc(it.overview)}</div>` : ''}
