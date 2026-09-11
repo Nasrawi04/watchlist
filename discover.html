@@ -21,13 +21,18 @@
     background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
     padding:.85rem; max-height:calc(100vh - var(--page-pt) - 120px); overflow-y:auto;
   }
+  /* Mobile nav dropdown — hidden on desktop, shown once the sidebar hides */
+  .disc-nav-dd-wrap { display:none; margin-bottom:1.5rem; }
+  .disc-nav-dd-wrap .sel-dd { width:100%; }
+  .disc-nav-dd-wrap .sel-dd-trigger { width:100%; }
+  .disc-nav-dd-wrap .sel-dd-menu { max-height:60vh; overflow-y:auto; }
   .disc-side-link {
     display:block; padding:9px 14px; border-radius:var(--radius-sm); font-size:13.5px;
-    color:var(--text-2); text-decoration:none; border-left:2px solid transparent;
+    color:var(--text-2); text-decoration:none; border:1.5px solid transparent;
     transition:all .15s var(--ease); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .disc-side-link:hover { color:var(--text); background:var(--card); }
-  .disc-side-link.active { color:var(--olive-light); border-left-color:var(--olive-light); background:var(--olive-faint); }
+  .disc-side-link.active { color:var(--olive-light); border-color:var(--border-olive); background:var(--olive-faint); }
   .disc-main { flex:1; min-width:0; }
 
   .disc-section { margin-bottom:3.5rem; scroll-margin-top:calc(var(--page-pt) + 88px); }
@@ -50,6 +55,7 @@
 
   @media(max-width:900px) {
     .disc-side-nav { display:none; }
+    .disc-nav-dd-wrap { display:block; }
   }
   @media(max-width:640px) {
     .home-tmdb-poster-fallback { font-size:26px; }
@@ -84,6 +90,8 @@
       <span>Search</span>
     </button>
   </div>
+
+  <div class="disc-nav-dd-wrap" id="discNavDD"></div>
 
   <div class="disc-layout">
     <!-- SIDE NAV -->
@@ -126,6 +134,8 @@ function _discBuildLayout() {
   const nav = document.getElementById('discSideNav');
   const main = document.getElementById('discMain');
   nav.innerHTML = DISCOVER_CATEGORIES.map(c => `<a class="disc-side-link" href="#disc-${c.key}">${_discEsc(c.navLabel)}</a>`).join('');
+  const ddOptions = DISCOVER_CATEGORIES.map(c => ({ value: `disc-${c.key}`, label: c.navLabel }));
+  document.getElementById('discNavDD').innerHTML = _selDDHTML('discNavDD-sel', ddOptions, ddOptions[0].value, 'discNavJump');
   main.innerHTML = DISCOVER_CATEGORIES.map(c => `
     <div class="disc-section" id="disc-${c.key}">
       <div class="disc-section-head">
@@ -152,7 +162,12 @@ async function _discLoadCategory(cat) {
       document.getElementById(`disc-${cat.key}`).style.display = 'none';
       return;
     }
-    grid.innerHTML = items.slice(0, 12).map(it =>
+    // Phones wrap this row top-to-bottom instead of side-scrolling, so a
+    // shorter list keeps it from taking over the whole page — matches the
+    // same ≤640px breakpoint where the CSS switches .queue-grid to a
+    // 2-column wrap.
+    const limit = window.matchMedia('(max-width:640px)').matches ? 6 : 12;
+    grid.innerHTML = items.slice(0, limit).map(it =>
       _discCardHTML(it)
     ).join('');
   } catch (e) {
@@ -163,10 +178,16 @@ async function _discLoadCategory(cat) {
 }
 
 // Side nav active-state on scroll
+function discNavJump(value) {
+  const el = document.getElementById(value);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function _initDiscSideNavScrollSpy() {
   const links = Array.from(document.querySelectorAll('.disc-side-link'));
   const sections = links.map(l => document.querySelector(l.getAttribute('href'))).filter(Boolean);
   if (!sections.length) return;
+  const ddEl = document.getElementById('discNavDD-sel');
   const obs = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       const idx = sections.indexOf(entry.target);
@@ -174,6 +195,17 @@ function _initDiscSideNavScrollSpy() {
       if (entry.isIntersecting) {
         links.forEach(l => l.classList.remove('active'));
         links[idx].classList.add('active');
+        // Sync the mobile dropdown's shown label without firing its
+        // onchange callback (which would trigger another scroll).
+        if (ddEl) {
+          const value = sections[idx].id;
+          ddEl.dataset.value = value;
+          const opt = ddEl.querySelector(`.sel-dd-opt[data-value="${value}"]`);
+          if (opt) {
+            ddEl.querySelector('.sel-dd-label').textContent = opt.textContent;
+            ddEl.querySelectorAll('.sel-dd-opt').forEach(o => o.classList.toggle('active', o === opt));
+          }
+        }
       }
     });
   }, { rootMargin: '-20% 0px -70% 0px' });
