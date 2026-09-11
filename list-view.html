@@ -91,8 +91,8 @@
 
 /* ── Grid view ── */
 .lv-grid {
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(clamp(80px, 26vw, 200px), 1fr));
-  gap:clamp(10px, 1.8vw, 32px);
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+  gap:14px;
   align-items:start; grid-auto-rows:max-content;
 }
 @media(min-width:1024px) {
@@ -100,6 +100,9 @@
 }
 @media(min-width:1600px) {
   .lv-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
+}
+@media(max-width:640px) {
+  .lv-grid { grid-template-columns:repeat(2,1fr); }
 }
 .lv-card {
   opacity:0; transform:translateY(18px); width:100%; box-sizing:border-box;
@@ -122,12 +125,14 @@
    before (80×112), just scaled up, rather than distorting it. */
 .lv-list-poster { width:96px; height:136px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
 .lv-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.lv-list-title { font-size:19px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lv-list-year { font-size:14px; color:var(--text-3); font-weight:400; }
+.lv-list-title-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; min-width:0; }
+.lv-list-title { font-size:18px; font-weight:500; color:var(--text); }
+.lv-list-year { font-size:14px; color:var(--text-3); font-weight:400; flex-shrink:0; }
 .lv-list-badges-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 /* Own MSS score's dedicated column — a real standout element, not a
    line sharing space with year/genre text the way it used to. */
-.lv-list-score-wrap { display:flex; align-items:center; justify-content:center; min-width:60px; }
+.lv-list-score-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.lv-list-score-wrap .home-tmdb-score { font-size:clamp(13px, 3vw, 15px); }
 
 .home-tmdb-poster-fallback {
   width:100%; height:100%; display:flex; align-items:center; justify-content:center;
@@ -135,7 +140,7 @@
   font-size:clamp(22px, 6vw, 32px);
 }
 .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
-.home-tmdb-meta-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px; }
+.home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
 .home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
 /* Your own MSS rating — a genuine standout now, not just "slightly
    bigger": large serif numerals matching the same treatment
@@ -148,8 +153,8 @@
   .lv-grid { gap:10px; }
   .lv-list-row { grid-template-columns:64px 1fr auto; gap:14px; padding:10px 16px 10px 10px; }
   .lv-list-poster { width:64px; height:92px; }
-  .lv-list-title { font-size:16px; }
-  .lv-list-year { font-size:13px; }
+  .lv-list-title { font-size:15px; }
+  .lv-list-year { font-size:12px; }
 }
 </style>
   <!-- PWA -->
@@ -270,13 +275,10 @@ function _lvCardHTML(e, rank) {
   const scoreStr = _lvOwnScoreHTML(e);
   const typeLabel = _lvTypeLabel(e);
   return `<div class="q-card lv-card" ${clickAttr}>
-    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${_lvRankBadgeHTML(rank)}${typeLabel ? `<span class="${_lvTypeCls(e)} type-label-overlay">${typeLabel}</span>` : ''}</div>
+    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${_lvRankBadgeHTML(rank)}${typeLabel ? `<span class="${_lvTypeCls(e)} type-label-overlay-bottom">${typeLabel}</span>` : ''}</div>
     <div class="q-info">
-      <div class="q-title">${_lvEsc(e.title)}</div>
-      <div class="home-tmdb-meta-row">
-        <span class="home-tmdb-year">${e.year ? _lvEsc(e.year) : ''}</span>
-        ${scoreStr}
-      </div>
+      <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${_lvEsc(e.title)}</div>${e.year ? `<span class="title-year-inline">${_lvEsc(e.year)}</span>` : ''}</div>
+      ${scoreStr ? `<div class="home-tmdb-meta-row">${scoreStr}</div>` : ''}
     </div>
   </div>`;
 }
@@ -288,32 +290,14 @@ function _lvListRowHTML(e, rank) {
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
   const scoreStr = _lvOwnScoreHTML(e);
   const typeLabel = _lvTypeLabel(e);
-  // Runtime/ep scope — only meaningful for full personal library
-  // entries (season/episode/runtime data), not for a pure TMDB
-  // reference added straight from Discover, which carries none of
-  // this. genreHTML() already renders nothing for an empty/missing
-  // genres array, so no separate guard is needed there.
-  const isMovieRow = e.tmdb_type === 'movie' || e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-  let scope = '';
-  if (isMovieRow) {
-    const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
-    if (rtH || rtM) scope = rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
-  } else if (e.season != null) {
-    scope = `S${e.season} E${e.episode ?? 0}`;
-  } else if (e.watched) {
-    scope = `Ep ${e.watched}`;
-  }
   return `<div class="lv-list-row" ${clickAttr}>
     <div class="lv-list-poster" style="position:relative">${posterInner}${_lvRankBadgeHTML(rank)}</div>
     <div style="min-width:0">
-      <div class="lv-list-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
-        ${_lvEsc(e.title)}
-        <span class="lv-list-year">${e.year ? _lvEsc(e.year) : ''}</span>
+      <div class="lv-list-title-row">
+        <div class="lv-list-title">${_lvEsc(e.title)}</div>
+        ${e.year ? `<span class="lv-list-year">${_lvEsc(e.year)}</span>` : ''}
       </div>
-      <div class="lv-list-badges-row">
-        ${typeLabel ? `<span class="${_lvTypeCls(e)}">${typeLabel}</span>` : ''}
-        ${scope ? `<span class="w-ep-badge">${scope}</span>` : ''}
-      </div>
+      ${typeLabel ? `<div class="lv-list-badges-row"><span class="${_lvTypeCls(e)}">${typeLabel}</span></div>` : ''}
     </div>
     <div class="lv-list-score-wrap">${scoreStr}</div>
   </div>`;
@@ -325,13 +309,14 @@ function _lvListRowHTML(e, rank) {
 // is a real personal entry (not something added straight from
 // Discover, which has no personal score to show).
 function _lvOwnScoreHTML(e) {
-  const isOwner = _lvUser && _lvList && _lvList.user_id === _lvUser.id;
-  if (!isOwner || _lvList.ranked !== true) return '';
+  // Shows the rating whenever the entry actually has one — the site has
+  // no private-account model, so a real score is public data regardless
+  // of who owns the list or whether the list itself is flagged "ranked".
   const isTmdbOnly = typeof e.id === 'string' && e.id.startsWith('tmdb:');
   if (isTmdbOnly) return '';
   const score = liveScore(e);
   if (score == null) return '';
-  return `<span class="lv-own-score">★ ${Number(score).toFixed(1)}</span>`;
+  return `<span class="home-tmdb-score">★ ${Number(score).toFixed(1)}</span>`;
 }
 
 function _lvRenderViewToggle() {
