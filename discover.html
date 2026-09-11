@@ -114,11 +114,8 @@ function _discCardHTML(it) {
   return `<div class="q-card" ${_discClickAttr(it)}>
     <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div></div>
     <div class="q-info">
-      <div class="q-title">${_discEsc(it.title)}</div>
-      <div class="home-tmdb-meta-row">
-        <span class="home-tmdb-year">${it.year ? _discEsc(it.year) : ''}</span>
-        ${scoreStr ? `<span class="home-tmdb-score">★ ${scoreStr}</span>` : ''}
-      </div>
+      <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${_discEsc(it.title)}</div>${it.year ? `<span class="title-year-inline">${_discEsc(it.year)}</span>` : ''}</div>
+      ${scoreStr ? `<div class="home-tmdb-meta-row" style="justify-content:flex-end;"><span class="home-tmdb-score">★ ${scoreStr}</span></div>` : ''}
     </div>
   </div>`;
 }
