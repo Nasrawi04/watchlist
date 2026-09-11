@@ -2580,6 +2580,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   font-size:12px; font-weight:700; letter-spacing:0.3px;
   box-shadow:0 2px 8px rgba(0,0,0,0.35); line-height:1.5;
 }
+.cg-score-badge-bottom { top:auto; bottom:7px; }
 .cg-score-10 { background:#C9A227; color:#1a1200; }
 .cg-score-9  { background:#256B3D; color:#ffffff; }
 .cg-score-8  { background:#4CAF50; color:#0d2e0f; }
