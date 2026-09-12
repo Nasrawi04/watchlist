@@ -1602,7 +1602,7 @@ function renderLibrary(){
       return '<div class="fv-w-card" style="cursor:pointer;'+cs+'" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.55);display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">Taking<br>a Break</span></div>':'')+'</div>'
         +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);flex-shrink:0;">'+e.year+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+'</div>'
-        +(ep?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+ep+'</span>'+(e.total_eps?'<span style="font-size:11px;color:var(--text-3);">/ '+e.total_eps+' eps</span>':'')+'</div>':'')
+        +(ep?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+ep+'</span></div>':'')
         +(rt?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')
         +(!ep&&!rt?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'</div>':'')
         +((!isM&&e.total_eps)?'<div class="fv-w-prog-track" style="margin-top:6px;"><div class="fv-w-prog-fill" style="width:'+pct+'%'+(ip?';background:var(--text-3)':'')+';"></div></div><div class="fv-w-prog-label">'+(e.watched||0)+' / '+e.total_eps+' eps \u00b7 '+pct+'%</div>':(!isM&&e.watched?'<div class="fv-w-prog-label">'+e.watched+' watched</div>':''))
