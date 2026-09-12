@@ -1741,10 +1741,10 @@ nav {
 @media(min-width:641px) and (max-width:1024px) {
   .fav-watching-grid {
     display:grid !important;
-    grid-template-columns:repeat(auto-fill,minmax(160px,1fr)) !important;
+    grid-template-columns:repeat(auto-fill,minmax(200px,1fr)) !important;
     flex-direction:unset !important; flex-wrap:unset !important;
     overflow-x:hidden !important; overflow-y:visible !important;
-    gap:12px !important; padding-bottom:0 !important;
+    gap:14px !important; padding-bottom:0 !important;
     scroll-snap-type:unset !important;
   }
   .fav-watching-grid .q-card {
@@ -1757,11 +1757,12 @@ nav {
   .fav-grid-container .grid-nav-btn { display:none !important; }
 }
 
-/* Mobile (≤640px): 3-col grid, contained scroll, no nav buttons */
+/* Mobile (≤640px): 2-col grid, matching the same breakpoint used
+   site-wide for Watching/Watchlist/Completed grids */
 @media(max-width:640px) {
   .fav-watching-grid {
     display:grid !important;
-    grid-template-columns:repeat(3,1fr) !important;
+    grid-template-columns:repeat(2,1fr) !important;
     flex-direction:unset !important; flex-wrap:unset !important;
     overflow-x:hidden !important; overflow-y:visible !important;
     gap:8px !important; padding-bottom:0 !important;
