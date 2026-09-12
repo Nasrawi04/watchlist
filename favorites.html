@@ -354,8 +354,8 @@ function _favEntryMeta(e) {
     return '';
   }
   const bd = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0) : [];
-  if (bd.length) return `S${bd.length} E${bd.reduce((s, n) => s + parseInt(n), 0)}`;
-  if (e.total_seasons && e.total_eps) return `S${e.total_seasons} E${e.total_eps}`;
+  if (bd.length) return `S${bd.length} · E${bd.reduce((s, n) => s + parseInt(n), 0)}`;
+  if (e.total_seasons && e.total_eps) return `S${e.total_seasons} · E${e.total_eps}`;
   if (e.total_seasons) return `S${e.total_seasons}`;
   if (e.total_eps) return `${e.total_eps} eps`;
   return '';
