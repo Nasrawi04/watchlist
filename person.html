@@ -56,6 +56,7 @@
 }
 .pp-section-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
 .pp-section-title.pp-mt { margin-top:2.5rem; }
+.pp-mode-toggle-row { margin-top:2.5rem; display:flex; }
 
 .pp-bio { font-size:clamp(13.5px, 3vw, 14.5px); line-height:1.75; color:var(--text-2); white-space:pre-line; }
 .pp-bio.clamped { display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
@@ -131,7 +132,8 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replac
 
 const _ppParams = new URLSearchParams(location.search);
 const _ppId = _ppParams.get('id');
-const _ppMode = _ppParams.get('mode') === 'directing' ? 'directing' : 'acting';
+let _ppMode = _ppParams.get('mode') === 'directing' ? 'directing' : 'acting';
+let _ppPerson = null;
 const TMDB_GENDER = { 0: '', 1: 'Female', 2: 'Male', 3: 'Non-binary' };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -146,6 +148,7 @@ async function loadPerson() {
     const res = await tmdbFetch(`${TMDB_BASE}/person/${_ppId}?api_key=${TMDB_KEY}&language=en-US&append_to_response=combined_credits`);
     if (!res.ok) { renderPpError('Could not load this person — they may not exist on TMDB.'); return; }
     const p = await res.json();
+    _ppPerson = p;
     renderPerson(p);
   } catch (e) {
     console.error(e);
@@ -189,6 +192,13 @@ function renderPerson(p) {
   const movieCredits = allCredits.filter(cr => cr.media_type === 'movie');
   const tvCredits     = allCredits.filter(cr => cr.media_type === 'tv');
 
+  // Only worth a toggle when the person genuinely has both kinds of
+  // credits — most people are one or the other, and showing a toggle
+  // that just leads to an empty state isn't useful.
+  const hasActingCredits = (p.combined_credits?.cast || []).some(cr => cr.poster_path);
+  const hasDirectingCredits = (p.combined_credits?.crew || []).some(cr => (cr.job === 'Director' || cr.job === 'Creator') && cr.poster_path);
+  const showModeToggle = hasActingCredits && hasDirectingCredits;
+
   const knownCreditsCount = (p.combined_credits?.cast?.length || 0) + (p.combined_credits?.crew?.length || 0);
   const akaList = (p.also_known_as || []).filter(n => n && n !== p.name).slice(0, 4);
 
@@ -216,6 +226,15 @@ function renderPerson(p) {
           <div class="pp-section-title">Biography</div>
           <div class="pp-bio clamped" id="ppBio">${esc(bio)}</div>
           <button class="pp-bio-toggle" id="ppBioToggle" onclick="_ppToggleBio()">Read more</button>
+        ` : ''}
+
+        ${showModeToggle ? `
+          <div class="pp-mode-toggle-row pp-mt">
+            <div class="view-toggle">
+              <button class="vt-btn ${_ppMode==='acting'?'active':''}" onclick="_ppSetMode('acting')">Acting</button>
+              <button class="vt-btn ${_ppMode==='directing'?'active':''}" onclick="_ppSetMode('directing')">Directing</button>
+            </div>
+          </div>
         ` : ''}
 
         ${allCredits.length ? `
@@ -259,6 +278,15 @@ function _ppCreditGrid(list) {
       </div>
     </a>`;
   }).join('');
+}
+
+function _ppSetMode(mode) {
+  if (mode === _ppMode || !_ppPerson) return;
+  _ppMode = mode;
+  const url = new URL(location.href);
+  url.searchParams.set('mode', mode);
+  history.replaceState(null, '', url);
+  renderPerson(_ppPerson);
 }
 
 function _ppToggleBio() {
