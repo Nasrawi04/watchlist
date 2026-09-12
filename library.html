@@ -1364,8 +1364,8 @@ function _libQueueScope(e) {
     return '';
   }
   var bd=Array.isArray(e.ratings?._season_breakdown)?e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number):[];
-  if (bd.length){var tot=bd.reduce(function(a,b){return a+b;},0);return 'S'+bd.length+' E'+tot;}
-  if (e.total_seasons&&e.total_eps) return 'S'+e.total_seasons+' E'+e.total_eps;
+  if (bd.length){var tot=bd.reduce(function(a,b){return a+b;},0);return 'S'+bd.length+' · E'+tot;}
+  if (e.total_seasons&&e.total_eps) return 'S'+e.total_seasons+' · E'+e.total_eps;
   if (e.total_seasons) return 'S'+e.total_seasons;
   if (e.total_eps) return e.total_eps+' eps';
   return '';
@@ -1576,7 +1576,7 @@ function renderLibrary(){
       var isM=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
       var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
-      var ep=isM?rt:(e.season!=null?'S'+e.season+' E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
+      var ep=isM?rt:(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
       var _typeCls=(isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
         +(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">Taking<br>a Break</span></div>':'')
@@ -1594,7 +1594,7 @@ function renderLibrary(){
       var ip=e.status==='paused';
       var isM=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var pct=e.total_eps?Math.round(((e.watched||0)/e.total_eps)*100):0;
-      var ep=isM?'':(e.season!=null?'S'+e.season+' E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
+      var ep=isM?'':(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
       var lbl=isM?'':(e.total_eps?(e.watched||0)+' / '+e.total_eps+' eps · '+pct+'%':'');
       var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
       var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
@@ -1644,11 +1644,11 @@ function renderLibrary(){
         var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
         if(rtH||rtM)metaHtml='<div class="w-ep-row"><span class="w-ep-badge">'+(rtH?rtH+'h '+rtM+'m':rtM+'m')+'</span></div>';
       } else if(e.status==='ongoing'&&e.season!=null&&e.episode!=null){
-        metaHtml='<div class="w-ep-row"><span class="w-ep-badge">S'+e.season+' E'+e.episode+'</span></div>';
+        metaHtml='<div class="w-ep-row"><span class="w-ep-badge">S'+e.season+' · E'+e.episode+'</span></div>';
       } else {
         var bd=Array.isArray(e.ratings&&e.ratings._season_breakdown)?e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number):[];
         var bdTot=bd.reduce(function(a,b){return a+b;},0);
-        var scope=bd.length?'S'+bd.length+' E'+bdTot:(e.total_seasons&&e.total_eps?'S'+e.total_seasons+' E'+e.total_eps:e.total_seasons?'S'+e.total_seasons:e.total_eps?e.total_eps+' eps':'');
+        var scope=bd.length?'S'+bd.length+' · E'+bdTot:(e.total_seasons&&e.total_eps?'S'+e.total_seasons+' · E'+e.total_eps:e.total_seasons?'S'+e.total_seasons:e.total_eps?e.total_eps+' eps':'');
         if(scope)metaHtml='<div class="w-ep-row"><span class="w-ep-badge">'+scope+'</span></div>';
       }
       var isMovieG=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
