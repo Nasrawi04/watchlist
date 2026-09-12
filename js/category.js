@@ -496,7 +496,7 @@ function _catTypeFilterBar() {
   const isAnimated = window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
   if (!isAnimated) { wrap.innerHTML = ''; return; }
   const opts = [['all','All'],['movie','Movie'],['tv','TV Show']];
-  wrap.innerHTML = `<div class="sort-bar">${opts.map(([v,l]) =>
+  wrap.innerHTML = `<div class="sort-bar" style="background:transparent;margin:0;padding:0;">${opts.map(([v,l]) =>
     `<button class="sort-btn${_catTypeFilter===v?' active':''}" onclick="setCatTypeFilter('${v}')">${l}</button>`
   ).join('')}</div>`;
 }
