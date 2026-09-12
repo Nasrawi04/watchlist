@@ -538,6 +538,24 @@ function _favNavScroll(id, dir) {
   target.scrollBy({ left: dir * (target.clientWidth * 0.75 || 220), behavior: 'smooth' });
 }
 
+// Runtime (movies) / season+episode count (shows) badge — same logic as
+// category.js's _entryMeta(), inlined here since lists.html doesn't
+// load category.js.
+function _favEntryMeta(e) {
+  const isMovie = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+  if (isMovie) {
+    const rtH = Number(e.runtime_h) || 0, rtM = Number(e.runtime_m) || 0;
+    if (rtH || rtM) return rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
+    return '';
+  }
+  const bd = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0) : [];
+  if (bd.length) return `S${bd.length} · E${bd.reduce((s, n) => s + parseInt(n), 0)}`;
+  if (e.total_seasons && e.total_eps) return `S${e.total_seasons} · E${e.total_eps}`;
+  if (e.total_seasons) return `S${e.total_seasons}`;
+  if (e.total_eps) return `${e.total_eps} eps`;
+  return '';
+}
+
 let _listsUser = null;
 let _listsEntries = [];
 let _listsAll = [];
@@ -702,16 +720,16 @@ function favCard(e, rank) {
   const score = !isTmdbOnly && liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
   const rankCls = rank === 0 ? 'cg-rank-1' : rank === 1 ? 'cg-rank-2' : rank === 2 ? 'cg-rank-3' : 'cg-rank-other';
   const rankBadge = rank != null ? `<div class="cg-rank-badge ${rankCls}">${rank + 1}</div>` : '';
-  const scoreHTML = score ? `<div style="font-family:var(--serif);font-size:15px;font-weight:300;color:var(--olive-light);margin-top:4px;text-align:right">${score}</div>` : '';
+  const scoreHTML = score ? `<div class="cg-score-row"><span class="cg-score">★ ${score}</span></div>` : '';
   const clickAttr = isTmdbOnly ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : `onclick="openFavPopup('${e.id}')"`;
-  const metaLine = isTmdbOnly
-    ? (e.year ? `<div class="home-tmdb-year">${esc(e.year)}</div>` : '')
-    : `<div class="q-genre">${getTypeBadge(e,'friend')}${genreHTML(e.genres, 3)}</div>`;
+  const isM = isTmdbOnly ? e.tmdb_type === 'movie' : (e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie'));
+  const typeBadge = `<span class="${isM ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${isM ? 'Movie' : 'TV Show'}</span>`;
+  const meta = isTmdbOnly ? '' : _favEntryMeta(e);
   return `<div class="q-card" ${clickAttr} style="cursor:pointer;">
-    <div class="q-poster" style="position:relative;">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${rankBadge}</div>
+    <div class="q-poster" style="position:relative;">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${rankBadge}${typeBadge}</div>
     <div class="q-info">
-      <div class="q-title">${esc(e.title)}</div>
-      ${metaLine}
+      <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${esc(e.title)}</div>${e.year ? `<span class="title-year-inline">${esc(e.year)}</span>` : ''}</div>
+      ${meta ? `<div class="wg-genre"><span class="w-ep-badge">${meta}</span></div>` : ''}
       ${scoreHTML}
     </div>
   </div>`;
