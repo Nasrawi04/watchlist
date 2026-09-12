@@ -334,7 +334,7 @@ async function _drawCardPage1(myToken) {
 
     // ── Info column content, measured first so the header row's overall
     // height (and therefore the poster/score column heights) is known ──
-    let iy = 4;
+    let iy = PAD;
     const title = e.title || '';
     const tFS = title.length > 22 ? 32 : title.length > 14 ? 38 : 42;
     ctx.save();
