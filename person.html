@@ -63,7 +63,16 @@
 
 /* ── Credits grid — self-contained, no shared-class dependency ── */
 .pp-grid {
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(clamp(110px, 28vw, 150px), 1fr)); gap:clamp(10px, 3vw, 18px);
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px;
+}
+@media(min-width:1024px) {
+  .pp-grid { grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
+}
+@media(min-width:1600px) {
+  .pp-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
+}
+@media(max-width:640px) {
+  .pp-grid { grid-template-columns:repeat(2,1fr); }
 }
 .pp-credit-card {
   display:block; text-decoration:none; color:inherit;
@@ -241,12 +250,12 @@ function _ppCreditGrid(list) {
     const roleLabel = _ppMode === 'directing' ? (cr.job || '') : (cr.character || '');
     return `<a class="pp-credit-card" href="title.html?type=${isMovie ? 'movie' : 'tv'}&id=${cr.id}">
       <div class="pp-credit-poster">
-        <img src="${TMDB_IMG}${cr.poster_path}" loading="lazy" alt="">
-        <span class="pp-credit-badge">${isMovie ? 'Movie' : 'TV'}</span>
+        <img src="${TMDB_IMG.replace('w185','w500')}${cr.poster_path}" loading="lazy" alt="">
+        <span class="${isMovie ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${isMovie ? 'Movie' : 'TV Show'}</span>
       </div>
       <div class="pp-credit-info">
-        <div class="pp-credit-title">${esc(title)}</div>
-        <div class="pp-credit-role">${esc(roleLabel)}${year ? (roleLabel ? ' · ' : '') + year : ''}</div>
+        <div class="title-year-row"><div class="pp-credit-title" style="margin-bottom:0;">${esc(title)}</div>${year ? `<span class="title-year-inline">${esc(year)}</span>` : ''}</div>
+        ${roleLabel ? `<div class="pp-credit-role">${esc(roleLabel)}</div>` : ''}
       </div>
     </a>`;
   }).join('');
