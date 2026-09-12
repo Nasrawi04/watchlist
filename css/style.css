@@ -1749,7 +1749,7 @@ nav {
     flex:unset !important; width:100% !important;
     min-width:0 !important; scroll-snap-align:unset !important;
   }
-  .fav-grid-container { max-height:500px; overflow-y:auto;overscroll-behavior-y:contain; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:var(--border-olive) transparent; }
+  .fav-grid-container { max-height:680px; overflow-y:auto;overscroll-behavior-y:contain; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:var(--border-olive) transparent; }
   .fav-grid-container::-webkit-scrollbar { width:4px; }
   .fav-grid-container::-webkit-scrollbar-thumb { background:var(--border-olive); border-radius:2px; }
   .fav-grid-container .grid-nav-btn { display:none !important; }
@@ -1770,14 +1770,13 @@ nav {
     flex:unset !important; width:100% !important;
     min-width:0 !important; scroll-snap-align:unset !important;
   }
-  .fav-grid-container { max-height:420px; overflow-y:auto;overscroll-behavior-y:contain; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:var(--border-olive) transparent; }
+  .fav-grid-container { max-height:580px; overflow-y:auto;overscroll-behavior-y:contain; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:var(--border-olive) transparent; }
   .fav-grid-container::-webkit-scrollbar { width:4px; }
   .fav-grid-container::-webkit-scrollbar-thumb { background:var(--border-olive); border-radius:2px; }
   .fav-grid-container .grid-nav-btn { display:none !important; }
 }
 @media(max-width:400px) {
-  .fav-watching-grid { grid-template-columns:repeat(3,1fr) !important; }
-  .fav-grid-container { max-height:360px; }
+  .fav-grid-container { max-height:500px; }
 }
 
 /* ── Favorites grid container (fixed height, vertical scroll on wrap) ── */
@@ -1786,7 +1785,7 @@ nav {
 }
 @media(min-width:641px) and (max-width:1024px) {
   .fav-grid-container {
-    max-height:500px;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;
+    max-height:680px;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;
     scrollbar-width:thin;scrollbar-color:var(--border-olive) transparent;
     padding-right:2px;
   }
@@ -1795,7 +1794,7 @@ nav {
 }
 @media(max-width:640px) {
   .fav-grid-container {
-    max-height:420px;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;
+    max-height:580px;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;
     scrollbar-width:thin;scrollbar-color:var(--border-olive) transparent;
     padding-right:2px;
   }
@@ -1803,7 +1802,7 @@ nav {
   .fav-grid-container::-webkit-scrollbar-thumb { background:var(--border-olive);border-radius:2px; }
 }
 @media(max-width:400px) {
-  .fav-grid-container { max-height:360px; }
+  .fav-grid-container { max-height:500px; }
 }
 
 .fav-scroll-wrap {
@@ -2730,7 +2729,7 @@ body { font-size:15px; }
 .accordion-body.open:has(.completed-list),
 .accordion-body.open:has(.fv-watch-list),
 .accordion-body.open:has(.fv-ranked-list) {
-  max-height:68vh;
+  max-height:78vh;
   overflow-y:auto !important;overscroll-behavior-y:contain;
   overflow-x:hidden !important;
   scrollbar-width:none;
@@ -2803,17 +2802,17 @@ body { font-size:15px; }
 @media(max-width:640px) {
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
-  .accordion-body.open:has(.completed-list) { max-height:70vh; }
+  .accordion-body.open:has(.completed-list) { max-height:80vh; }
 }
 @media(max-width:400px) {
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
-  .accordion-body.open:has(.completed-list) { max-height:66vh; }
+  .accordion-body.open:has(.completed-list) { max-height:76vh; }
 }
 @media(min-width:1200px) {
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
-  .accordion-body.open:has(.completed-list) { max-height:70vh; }
+  .accordion-body.open:has(.completed-list) { max-height:80vh; }
 }
 
 /* ════════════════════════════════════════════
@@ -2905,7 +2904,7 @@ body { font-size:15px; }
   .accordion-body.open:has(.completed-grid) {
     overflow-y:auto !important;overscroll-behavior-y:contain;
     overflow-x:hidden !important;
-    max-height:70vh !important;
+    max-height:80vh !important;
     scrollbar-width:none !important;
   }
 
@@ -3245,7 +3244,7 @@ body { font-size:15px; }
   .accordion-body.open:has(.completed-grid) {
     overflow-y:auto !important;overscroll-behavior-y:contain;
     overflow-x:hidden !important;
-    max-height:68vh !important;
+    max-height:78vh !important;
     scrollbar-width:none !important;
   }
 
