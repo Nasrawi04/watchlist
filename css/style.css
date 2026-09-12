@@ -565,7 +565,7 @@ nav {
   content:''; position:absolute; left:0; right:0; top:-10px; height:10px;
   background:var(--card-solid);
 }
-.sort-btn { background:transparent; border:1px solid var(--border); border-radius:var(--radius-xs); padding:5px 12px; font-size:11px; font-weight:500; color:var(--text-3); cursor:pointer; transition:all var(--trans) var(--ease); white-space:nowrap; letter-spacing:.3px; }
+.sort-btn { background:transparent; border:1px solid var(--border); border-radius:var(--radius-xs); padding:clamp(4px, 1vw, 5px) clamp(9px, 2.2vw, 12px); font-size:clamp(10px, 2.3vw, 11px); font-weight:500; color:var(--text-3); cursor:pointer; transition:all var(--trans) var(--ease); white-space:nowrap; letter-spacing:.3px; }
 .sort-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
 .sort-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); font-weight:600; }
 .guest-page-state { text-align:center; padding:5rem 2rem; }
@@ -3070,7 +3070,7 @@ body { font-size:15px; }
 
   /* ── Sort bar ── */
   .sort-bar { gap:3px; padding:8px 14px 10px; margin-bottom:12px; margin-left:-14px; margin-right:-14px; background:var(--card-solid); }
-  .sort-btn  { font-size:10px; padding:4px 8px; border-radius:14px; }
+  .sort-btn  { border-radius:14px; }
   .sort-btn[data-short]::before { content: attr(data-short); }
   .sort-btn[data-short] { font-size:0; padding:5px 9px; }
   .sort-btn[data-short]::before { font-size:10px; }
@@ -3146,7 +3146,7 @@ body { font-size:15px; }
   .category-grid { gap:6px; }
   .accordion-inner { padding:10px; }
   .sort-bar { gap:3px; padding:6px 10px 8px; margin-bottom:10px; margin-left:-10px; margin-right:-10px; }
-  .sort-btn { font-size:9px; padding:3px 6px; border-radius:12px; }
+  .sort-btn { border-radius:12px; }
   .sort-btn[data-short]::before { font-size:9px; }
   .sort-btn[data-short] { padding:4px 7px; }
   .section-block-header { padding:10px 8px; gap:6px; }
@@ -3252,7 +3252,6 @@ body { font-size:15px; }
   .cat-page-title { font-size:clamp(32px,5vw,42px); }
   .category-grid { grid-template-columns:repeat(2,1fr); }
   .page-stats { grid-template-columns:repeat(2,1fr); }
-  .sort-btn { font-size:11px; }
   .sec-right { gap:6px; }
 
   /* ISSUE 1: tag scaling on tablet */
@@ -3291,14 +3290,13 @@ body { font-size:15px; }
    TOUCH EXPERIENCE
 ───────────────────────────────────────── */
 @media (hover: none) and (pointer: coarse) {
-  .sort-btn   { padding:7px 12px; min-height:36px; }
+  .sort-btn   { min-height:36px; }
   .vt-btn     { width:34px; height:30px; }
   /* .ep-btn now scales via clamp() in its base rule at every width,
      touch devices included — a flat override here previously pinned
      it to 40px regardless of screen size */
   .nav-icon-btn { width:40px; height:40px; }
   .fv-cat-btn { padding:8px 16px; }
-  .sort-btn   { padding:7px 12px; }
   .field-input, .modal-input, .cc-input, .fv-cinput {
     padding:12px 14px; font-size:16px;
   }
@@ -3307,12 +3305,11 @@ body { font-size:15px; }
 }
 /* Cancel touch inflation on phones */
 @media (hover: none) and (pointer: coarse) and (max-width: 640px) {
-  .sort-btn { padding:4px 8px; min-height:unset; font-size:10px; }
+  .sort-btn { min-height:unset; }
   .cf-btn   { padding:4px 9px; font-size:10px; }
   .stab     { padding:4px 9px; font-size:10px; }
 }
 @media (hover: none) and (pointer: coarse) and (max-width: 400px) {
-  .sort-btn { padding:3px 6px; font-size:9px; }
   .cf-btn   { padding:3px 7px; font-size:9px; }
   .stab     { padding:3px 8px; font-size:9px; }
 }
