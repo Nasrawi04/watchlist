@@ -224,8 +224,8 @@ function _entryMeta(e) {
   const bd = Array.isArray(e.ratings?._season_breakdown)
     ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
   const _bdTot = bd.reduce((a,b)=>a+b,0);
-  const scope = bd.length ? `S${bd.length} E${_bdTot}`
-    : (e.total_seasons && e.total_eps) ? `S${e.total_seasons} E${e.total_eps}`
+  const scope = bd.length ? `S${bd.length} · E${_bdTot}`
+    : (e.total_seasons && e.total_eps) ? `S${e.total_seasons} · E${e.total_eps}`
     : e.total_seasons ? `S${e.total_seasons}`
     : e.total_eps ? `${e.total_eps} eps` : '';
   if (!scope) return '';
@@ -238,7 +238,7 @@ function _ongoingMeta(e) {
   if (isMovie) return _entryMeta(e);
   // Show current position — where the user stopped watching
   if (e.season != null && e.episode != null) {
-    return `<div class="w-ep-row"><span class="w-ep-badge">S${e.season} E${e.episode}</span></div>`;
+    return `<div class="w-ep-row"><span class="w-ep-badge">S${e.season} · E${e.episode}</span></div>`;
   }
   if (e.season != null) {
     return `<div class="w-ep-row"><span class="w-ep-badge">S${e.season}</span></div>`;
@@ -804,7 +804,7 @@ function renderWatchingList(items) {
     const isPaused = e.status === 'paused';
     const pct      = e.total_eps ? Math.round(((e.watched??0) / e.total_eps) * 100) : 0;
     const isDone   = !isPaused && (pct >= 100 || (!e.total_eps && (e.episode??0) > 0));
-    const epStr    = e.season != null ? `S${e.season} E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : 'Ep 1');
+    const epStr    = e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : 'Ep 1');
     const cardStyle = isPaused ? 'background:var(--olive-faint);border-color:var(--border-olive);opacity:0.85' : '';
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
@@ -871,7 +871,7 @@ function renderWatchingGrid(items) {
     const isPaused = e.status === 'paused';
     const pct      = e.total_eps ? Math.round(((e.watched??0) / e.total_eps) * 100) : 0;
     const isDone   = !isPaused && (pct >= 100 || (!e.total_eps && (e.episode??0) > 0));
-    const epStr    = e.season != null ? `S${e.season} E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '');
+    const epStr    = e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '');
     const isMovieG = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
     const typeCls = (isMovieG ? 'type-label' : 'type-label type-label-tv') + ' type-label-overlay-bottom';
     return `<div class="wg-card" onclick="openCatInfoPopup('${e.id}')">
@@ -1663,7 +1663,7 @@ function buildPaused(items) {
 function renderPausedList(items) {
   return `<div class="watch-list">${items.map(e => {
     const pct   = e.total_eps ? Math.round(((e.watched??0) / e.total_eps) * 100) : 0;
-    const epStr = e.season != null ? `S${e.season} E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '');
+    const epStr = e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '');
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
     return `<div class="w-card" onclick="openCatInfoPopup('${e.id}')">
@@ -1716,8 +1716,8 @@ function _queueScope(e) {
   const bd = Array.isArray(e.ratings?._season_breakdown)
     ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number)
     : [];
-  if (bd.length) { const tot=bd.reduce((a,b)=>a+b,0); return `S${bd.length} E${tot}`; }
-  if (e.total_seasons && e.total_eps) return `S${e.total_seasons} E${e.total_eps}`;
+  if (bd.length) { const tot=bd.reduce((a,b)=>a+b,0); return `S${bd.length} · E${tot}`; }
+  if (e.total_seasons && e.total_eps) return `S${e.total_seasons} · E${e.total_eps}`;
   if (e.total_seasons) return `S${e.total_seasons}`;
   if (e.total_eps) return `${e.total_eps} eps`;
   return '';
