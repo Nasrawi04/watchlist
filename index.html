@@ -291,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${watching.slice(0, 6).map(e => {
             const pct   = e.total_eps ? Math.round(((e.watched??0) / e.total_eps) * 100) : 0;
             const isMovH = e.cat === 'movies' || e.ratings?._type === 'movie';
-            const epStr = !isMovH ? (e.season != null ? `S${e.season} E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '')) : '';
+            const epStr = !isMovH ? (e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '')) : '';
             const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
             const rtStr = isMovH && (rtH||rtM) ? (rtH ? `${rtH}h ${rtM}m` : `${rtM}m`) : '';
             return `<div class="w-card" onclick="goToDetail('${e.id}','index.html')">
