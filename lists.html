@@ -183,8 +183,10 @@
 }
 
 /* ── Social list rows ── */
-.social-list-rows { display:grid; grid-template-columns:repeat(2, 1fr); gap:18px; }
-@media(max-width:760px) { .social-list-rows { grid-template-columns:1fr; } }
+.social-list-rows { display:grid; grid-template-columns:repeat(4, 1fr); gap:18px; }
+@media(max-width:1400px) { .social-list-rows { grid-template-columns:repeat(3, 1fr); } }
+@media(max-width:1024px) { .social-list-rows { grid-template-columns:repeat(2, 1fr); } }
+@media(max-width:640px)  { .social-list-rows { grid-template-columns:1fr; } }
 .social-list-row { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.1rem 1.25rem; transition:border-color .15s; cursor:pointer; }
 .social-list-row:hover { border-color:var(--border-olive); }
 .social-list-owner { display:flex; align-items:center; gap:8px; margin-bottom:.75rem; }
@@ -894,7 +896,25 @@ function renderListsPage() {
   }
 
   document.getElementById('listsPageContent').innerHTML = html;
+  _updateGridNavVisibility();
 }
+
+// Hides the scroll arrows on a .grid-nav-wrap when its content doesn't
+// actually overflow — otherwise, with only a couple of items, the wrap
+// still spans the full row width and the absolutely-positioned arrows
+// end up sitting at the far edges of the page, nowhere near the (much
+// narrower) visible cards.
+function _updateGridNavVisibility() {
+  document.querySelectorAll('.grid-nav-wrap').forEach(wrap => {
+    const grid = wrap.querySelector('.fav-watching-grid, .queue-grid, .watching-grid, .completed-grid');
+    if (!grid) return;
+    const overflowing = grid.scrollWidth > grid.clientWidth + 2;
+    wrap.querySelectorAll('.grid-nav-btn').forEach(btn => {
+      btn.style.display = overflowing ? '' : 'none';
+    });
+  });
+}
+window.addEventListener('resize', () => { if (typeof _updateGridNavVisibility === 'function') _updateGridNavVisibility(); });
 
 /* ── Double-tap-to-like (touch screens) ── */
 let _dtLastTap = {};
@@ -1238,7 +1258,6 @@ function renderSocialLists() {
         <div class="social-list-username">@${esc(l.username || 'user')}</div>
       </div>
       <div class="social-list-title">${esc(l.title)}${_rankedBadgeHTML(l.id, l.ranked, false)}</div>
-      ${l.description ? `<div class="social-list-desc">${esc(l.description)}</div>` : ''}
       <div class="social-list-count">${items.length} item${items.length !== 1 ? 's' : ''}</div>
       ${posters.length ? `<div class="social-list-posters">${posters.map(e => `<div class="social-list-poster-thumb">${posterHTML(e,'big')}</div>`).join('')}</div>` : ''}
       <div class="social-list-reactions" style="margin-top:10px;">
