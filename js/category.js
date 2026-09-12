@@ -824,7 +824,6 @@ function renderWatchingList(items) {
         <div class="w-ep-row">
           ${_badge}
           <span class="w-ep-badge">${epStr}</span>
-          <span class="w-ep-total">${e.total_eps ? `/ ${e.total_eps} eps` : ''}</span>
         </div>
         <div class="w-prog-track"><div class="w-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
         <div class="w-prog-label">${e.total_eps ? `${e.watched??0} / ${e.total_eps} eps · ${pct}%` : (e.episode ? `Ep ${e.episode}` : '')}</div>
@@ -1678,9 +1677,9 @@ function renderPausedList(items) {
           ${_badge}
           <span class="w-ep-badge" style="background:rgba(168,168,168,0.12);color:var(--text-2);border-color:var(--border-2)">On Pause</span>
           ${epStr ? `<span class="w-ep-badge" style="margin-left:6px">${epStr}</span>` : ''}
-          <span class="w-ep-total">${e.total_eps ? `/ ${e.total_eps} eps` : ''}</span>
         </div>
         <div class="w-prog-track"><div class="w-prog-fill" style="width:${pct}%;background:var(--text-3)"></div></div>
+        <div class="w-prog-label">${e.total_eps ? `${e.watched??0} / ${e.total_eps} eps · ${pct}%` : (e.episode ? `Ep ${e.episode}` : '')}</div>
       </div>
       <div class="w-ep-controls" onclick="event.stopPropagation()">
         <button class="w-list-action-btn" onclick="resumeEntry('${e.id}')" title="Resume">${icon('play',14)}</button>
