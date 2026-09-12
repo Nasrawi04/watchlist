@@ -257,8 +257,8 @@ function _entryMeta(e) {
   const bd = Array.isArray(e.ratings?._season_breakdown)
     ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
   const _bdTot = bd.reduce((a,b)=>a+b,0);
-  const scope = bd.length ? `S${bd.length} E${_bdTot}`
-    : (e.total_seasons && e.total_eps) ? `S${e.total_seasons} E${e.total_eps}`
+  const scope = bd.length ? `S${bd.length} · E${_bdTot}`
+    : (e.total_seasons && e.total_eps) ? `S${e.total_seasons} · E${e.total_eps}`
     : e.total_seasons ? `S${e.total_seasons}`
     : e.total_eps ? `${e.total_eps} eps` : '';
   return scope;
