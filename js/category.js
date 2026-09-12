@@ -610,7 +610,11 @@ function renderSections(
 
   // Only show ongoing section for non-movie categories
   const isMovieCat = IS_MOVIE_CAT();
-  if (!isMovieCat) {
+  // "To Be Continued" doesn't apply to movies — hide it on movies.html
+  // itself, and also when Anime/Cartoons' Movie/TV Show filter is
+  // narrowed down to just Movie (a filtered-to-movies view shouldn't
+  // show a section that can only ever be empty).
+  if (!isMovieCat && _catTypeFilter !== 'movie') {
     html += buildSection('ongoing', icon('refresh-cw',15) + ' To Be Continued', ongoing.length, buildCompleted(so, 'ongoing'));
   }
 
