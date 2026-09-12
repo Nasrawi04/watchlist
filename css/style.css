@@ -1728,14 +1728,12 @@ nav {
   align-items:stretch;
 }
 .fav-watching-grid::-webkit-scrollbar { display:none; }
-.fav-watching-grid .q-card {
-  flex:0 0 220px; min-width:220px; width:220px;
-  scroll-snap-align:start;
-  flex-shrink:0 !important;
-  display:flex !important; flex-direction:column !important;
-  height:auto !important;
-}
-@media(min-width:1200px) { .fav-watching-grid .q-card { flex:0 0 240px; min-width:240px; width:240px; } }
+/* Card width/scaling now comes entirely from the shared rule below
+   (.watching-grid .wg-card, ..., .fav-watching-grid .q-card) — this
+   used to duplicate it locally with a fixed flex-basis (flex:0 0 220px),
+   which silently overrode the shared rule's width forever regardless
+   of screen size, since flex-basis takes precedence over width in flex
+   layout when it isn't auto. */
 
 /* Tablet (641–1024px): CSS grid wrapping, contained scroll, no nav buttons */
 @media(min-width:641px) and (max-width:1024px) {
@@ -2782,7 +2780,10 @@ body { font-size:15px; }
 .queue-grid::-webkit-scrollbar,
 .completed-grid::-webkit-scrollbar { display:none; }
 
-/* ── Grid cards (inside horizontal scroll grids) ── */
+/* ── Grid cards (inside horizontal scroll grids) ──
+   Card width scales continuously with viewport instead of jumping at
+   fixed breakpoints (220→240→260→280px), matching the same clamp()
+   approach used everywhere else in the design system. */
 .watching-grid .wg-card,
 .watching-grid .q-card,
 .watching-grid .cg-card,
@@ -2790,7 +2791,7 @@ body { font-size:15px; }
 .completed-grid .cg-card,
 .fav-watching-grid .q-card {
   flex-shrink:0 !important;
-  width:220px;
+  width:clamp(220px, 20vw, 280px);
   scroll-snap-align:start;
   display:flex !important;
   flex-direction:column !important;
@@ -2813,7 +2814,6 @@ body { font-size:15px; }
   .accordion-body.open:has(.watch-list),
   .accordion-body.open:has(.queue-list),
   .accordion-body.open:has(.completed-list) { max-height:70vh; }
-  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card, .fav-watching-grid .q-card { width:240px; }
 }
 
 /* ════════════════════════════════════════════
@@ -3269,7 +3269,6 @@ body { font-size:15px; }
    LARGE DISPLAYS — 1536px+
 ───────────────────────────────────────── */
 @media (min-width: 1536px) {
-  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card, .fav-watching-grid .q-card { width:260px !important; }
   .watching-grid, .queue-grid, .completed-grid { gap:18px !important; }
 }
 
@@ -3277,7 +3276,6 @@ body { font-size:15px; }
    TV / ULTRAWIDE — 1920px+
 ───────────────────────────────────────── */
 @media (min-width: 1920px) {
-  .watching-grid .wg-card, .watching-grid .q-card, .queue-grid .q-card, .completed-grid .cg-card, .fav-watching-grid .q-card { width:280px !important; }
   .home-title  { font-size:80px; }
   .category-grid { grid-template-columns:repeat(4,1fr); }
 }
