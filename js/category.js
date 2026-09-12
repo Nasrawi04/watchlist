@@ -496,7 +496,7 @@ function _catTypeFilterBar() {
   const isAnimated = window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
   if (!isAnimated) { wrap.innerHTML = ''; return; }
   const opts = [['all','All'],['movie','Movie'],['tv','TV Show']];
-  wrap.innerHTML = `<div class="sort-bar" style="background:transparent;margin:0;padding:0;">${opts.map(([v,l]) =>
+  wrap.innerHTML = `<div class="sort-bar" style="background:transparent;margin:0 0 18px;padding:0;border-bottom:none;">${opts.map(([v,l]) =>
     `<button class="sort-btn${_catTypeFilter===v?' active':''}" onclick="setCatTypeFilter('${v}')">${l}</button>`
   ).join('')}</div>`;
 }
@@ -915,12 +915,13 @@ function renderQueueGrid(items) {
   const gid = 'wg-queue';
   const cards = items.map(e => {
     const scope = _queueScope(e);
-    const _ctx = catContext();
-    const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
+    const isMq = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+    const typeClsQ = (isMq ? 'type-label' : 'type-label type-label-tv') + ' type-label-overlay-bottom';
     return `<div class="wg-card" onclick="openCatInfoPopup('${e.id}')">
-      <div class="wg-poster">
+      <div class="wg-poster" style="position:relative;">
         ${posterHTML(e, 'big')}
         <div class="wg-overlay"></div>
+        ${SHOW_TYPE_TAG() ? `<span class="${typeClsQ}">${isMq ? 'Movie' : 'TV Show'}</span>` : ''}
       </div>
       <div class="wg-info" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
         <div style="margin-bottom:6px;">
@@ -930,7 +931,6 @@ function renderQueueGrid(items) {
           </div>
           ${scope ? `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>` : ''}
         </div>
-        <div class="wg-genre">${_badge}</div>
       </div>
       <div class="start-watching-wrap" onclick="event.stopPropagation()">
         <button onclick="startWatching('${e.id}')" class="continue-btn">Start</button>
