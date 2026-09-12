@@ -52,64 +52,21 @@
 #mainContent::-webkit-scrollbar{display:block;width:3px;}
 #mainContent::-webkit-scrollbar-thumb{background:var(--border-olive);border-radius:2px;}
 
-/* Ranked list */
-.ranked-table{display:flex;flex-direction:column;gap:10px;max-height:65vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none;}
-.ranked-table::-webkit-scrollbar{display:none;}
-
-/* Recent list */
-.recent-list{display:flex;flex-direction:column;gap:10px;max-height:65vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none;}
-.recent-list::-webkit-scrollbar{display:none;}
-
-@media(max-width:640px){
-  .ranked-table,.recent-list{max-height:55vh;}
-}
-@media(max-width:400px){
-  .ranked-table,.recent-list{max-height:50vh;}
-}
-@media(min-width:1200px){
-  .ranked-table,.recent-list{max-height:70vh;}
-}
-.rank-row{
-  display:flex;align-items:center;gap:20px;
-  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);
-  padding:20px 24px;cursor:pointer;transition:all .25s;
-  height:160px;overflow:hidden;
-}
-.rank-row:hover{border-color:var(--border-olive);background:var(--card-2);}
-.rank-num{
-  font-family:var(--serif);font-size:26px;font-weight:300;
-  color:var(--text-2);text-align:center;min-width:44px;flex-shrink:0;
-}
-.rank-num.top3{color:var(--olive-light)}
-.rank-poster{width:96px;height:136px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,0.3)}
-.rank-poster img{width:100%;height:100%;object-fit:cover}
-.rank-info{flex:1;min-width:0}
-.rank-title{font-size:18px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden;}
-.rank-meta{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;gap:6px;align-items:center}
-.rank-score-wrap{text-align:right;flex-shrink:0}
-.rank-score{
-  font-family:var(--serif);font-size:34px;font-weight:300;
-  color:var(--olive-light);line-height:1;
-}
-.rank-score-label{font-size:10px;color:var(--text-3);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
-
-/* Recent list — no own max-height, parent handles it */
-.recent-list{display:flex;flex-direction:column;gap:10px;}
-.recent-row{
-  display:flex;align-items:center;gap:20px;
-  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);
-  padding:20px 24px;cursor:pointer;transition:all .25s;
-  height:160px;overflow:hidden;
-}
-.recent-row:hover{border-color:var(--border-olive);background:var(--card-2);}
-.recent-poster{width:96px;height:136px;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 12px rgba(0,0,0,0.3)}
-.recent-poster img{width:100%;height:100%;object-fit:cover}
-.recent-info{flex:1;min-width:0}
-.recent-title{font-size:18px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden;}
-.recent-meta{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
-.recent-date-wrap{text-align:right;flex-shrink:0}
-.recent-date{font-size:12px;color:var(--text-2);margin-top:4px}
-.recent-score{font-family:var(--serif);font-size:34px;font-weight:300;color:var(--olive-light);line-height:1;text-align:right}
+/* Ranked/recent list — matches library.html's .fv-ranked-list exactly */
+.fv-ranked-list{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none;}
+.fv-ranked-list::-webkit-scrollbar{display:none;}
+.fv-entry-block{display:flex;flex-direction:column;}
+.fv-rank-row{display:flex;align-items:center;gap:20px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;min-height:160px;overflow:hidden;box-sizing:border-box;cursor:pointer;transition:border-color var(--trans) var(--ease),background var(--trans) var(--ease);}
+.fv-rank-row:hover{border-color:var(--border-olive);background:var(--card-2);}
+.fv-rank-num{font-family:var(--serif);font-size:26px;font-weight:300;color:var(--text-2);text-align:center;min-width:44px;flex-shrink:0}
+.fv-rank-num.top3{color:var(--olive-light)}
+.fv-rank-poster{width:84px;height:120px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+.fv-rank-poster img{width:100%;height:100%;object-fit:cover}
+.fv-rank-info{flex:1;min-width:0}
+.fv-rank-title{font-size:18px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden;}
+.fv-rank-meta{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.fv-rank-score{color:var(--olive-light);font-size:clamp(13px, 3vw, 15px);font-weight:600;white-space:nowrap;text-align:right;flex-shrink:0}
+.fv-rank-date{font-size:11px;color:var(--text-3);margin-top:4px;text-align:right;}
 
 .cat-badge{
   font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);
@@ -135,6 +92,11 @@
 }
 
 /* ── Mobile overrides ── */
+@media(max-width:900px) {
+  .fv-rank-row { padding:14px 16px; gap:14px; }
+  .fv-rank-poster { width:70px; height:98px; }
+  .fv-rank-title { font-size:15px; }
+}
 @media(max-width:600px) {
   .comp-header { flex-direction:column; align-items:flex-start; gap:.75rem; margin-bottom:1.5rem; }
   .comp-controls { width:100%; justify-content:flex-end; }
@@ -147,22 +109,15 @@
   .cat-filter { gap:3px; margin-bottom:1.25rem; flex-wrap:wrap; }
   .cf-btn { font-size:10px; padding:4px 9px; border-radius:16px; }
 
-  /* List rows — stack poster + info nicely on small screens */
-  .rank-row, .recent-row {
-    padding:12px 14px; gap:12px; height:auto; min-height:100px;
-  }
-  .rank-poster, .recent-poster { width:72px; height:102px; }
-  .rank-title, .recent-title { font-size:14px; }
-  .rank-meta, .recent-meta { font-size:11px; flex-wrap:wrap; gap:6px; }
-  .rank-score { font-size:24px; }
-  .recent-score { font-size:24px; }
-  .rank-num { font-size:20px; min-width:28px; }
-  /* hide date label on tiny screens to save space */
-  .recent-date { display:none; }
+  /* List rows — matches library.html's .fv-rank-row mobile tiers exactly */
+  .fv-rank-row { padding:10px 12px; gap:10px; min-height:unset; }
+  .fv-rank-poster { width:56px; height:78px; }
+  .fv-rank-title { font-size:13px; }
+  .fv-rank-num { font-size:20px; min-width:32px; }
 }
 @media(max-width:400px) {
-  .rank-poster, .recent-poster { width:64px; height:90px; }
-  .rank-score, .recent-score { font-size:20px; }
+  .fv-rank-row { padding:8px 10px; gap:8px; }
+  .fv-rank-poster { width:48px; height:66px; }
   .cf-btn { font-size:9px; padding:3px 7px; }
   .cat-filter { gap:2px; }
   .comp-stat-card { padding:.6rem .7rem; }
@@ -1062,25 +1017,18 @@ function renderMain() {
 
   if (_compSort === 'highest' || _compSort === 'lowest') {
     const sorted = _sortedItems;
-    el.innerHTML = `<div class="ranked-table">${sorted.map((e, i) => {
+    el.innerHTML = `<div class="fv-ranked-list">${sorted.map((e, i) => {
       const score = liveScore(e) != null ? '★ ' + Number(liveScore(e)).toFixed(2) : '—';
-      const cat   = CAT_META[e.cat];
-      const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
-      return `<div class="comp-entry-block">
-        <div class="rank-row" onclick="cpOpenPopup('${e.id}')" style="cursor:pointer;">
-          <div class="rank-num ${i < 3 ? 'top3' : ''}">${i + 1}</div>
-          <div class="rank-poster">${posterHTML(e)}</div>
-          <div class="rank-info">
-            <div class="rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
-              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0;max-width:100%;">${e.title}</span>
-              ${e.year ? `<span style="font-size:13px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}
-              ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}
-              ${_entryMeta(e) ? `<span class="w-ep-badge">${_entryMeta(e)}</span>` : ''}
-            </div>
-            <div class="rank-meta">${_compTypeBadgeInline(e)}</div>
+      return `<div class="fv-entry-block">
+        <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
+          <div class="fv-rank-num ${i < 3 ? 'top3' : ''}">${i + 1}</div>
+          <div class="fv-rank-poster">${posterHTML(e)}</div>
+          <div class="fv-rank-info">
+            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-meta">${_compTypeBadgeInline(e)}</div>
             ${renderFavChips(e.ratings, e.cat)}
           </div>
-          <div class="rank-score-wrap"><div class="rank-score">${score}</div></div>
+          <div class="fv-rank-score">${score}</div>
         </div>
         <button class="cc-strip" style="margin-top:0;" onclick="event.stopPropagation();cpOpenPopupToComments('${e.id}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -1091,23 +1039,21 @@ function renderMain() {
   } else {
     const recentSorted = _sortedItems;
     const ratingKey = (_compSort||'').startsWith('rating:') ? _compSort.slice(7) : null;
-    el.innerHTML = `<div class="recent-list">${recentSorted.map(e => {
+    el.innerHTML = `<div class="fv-ranked-list">${recentSorted.map(e => {
       const score = liveScore(e) != null ? '★ ' + Number(liveScore(e)).toFixed(2) : '—';
-      const cat   = CAT_META[e.cat];
-      return `<div class="comp-entry-block">
-        <div class="recent-row" onclick="cpOpenPopup('${e.id}')" style="cursor:pointer;">
-        <div class="recent-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : ''}</div>
-        <div class="recent-info">
-          <div class="recent-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
-            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0;max-width:100%;">${e.title}</span>
-            ${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}
-            ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}
-            ${_entryMeta(e) ? `<span class="w-ep-badge">${_entryMeta(e)}</span>` : ''}
+      const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+      return `<div class="fv-entry-block">
+        <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
+          <div class="fv-rank-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : ''}</div>
+          <div class="fv-rank-info">
+            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-meta">${_compTypeBadgeInline(e)}</div>
+            ${renderFavChips(e.ratings, e.cat)}
           </div>
-          <div class="recent-meta">${_compTypeBadgeInline(e)}</div>
-          ${renderFavChips(e.ratings, e.cat)}
-        </div>
-        <div class="recent-date-wrap"><div class="recent-score">${score}</div></div>
+          <div>
+            <div class="fv-rank-score">${score}</div>
+            ${date ? `<div class="fv-rank-date">${date}</div>` : ''}
+          </div>
         </div>
         <button class="cc-strip" style="margin-top:0;" onclick="event.stopPropagation();cpOpenPopupToComments('${e.id}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
