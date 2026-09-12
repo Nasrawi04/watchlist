@@ -628,7 +628,7 @@
           <div id="dStatusDD"></div>
 
           <div id="dTypeGroup" style="display:none">
-            <select id="dMediaType" onchange="updateStatusUI()" style="display:none">
+            <select id="dMediaType" onchange="updateTypeSelector()" style="display:none">
               <option value="show">Show / Series</option>
               <option value="movie">Movie</option>
             </select>
@@ -1163,7 +1163,7 @@ function updateProgBar() {
   if (fill)  fill.style.width = pct + '%';
   if (label) {
     if (breakdown.length > 0 && (curSeason > 0 || curEp > 0)) {
-      label.textContent = `S${curSeason} E${curEp}  ·  ${watched} / ${totalEps} Episodes  ·  ${pct.toFixed(2)}%`;
+      label.textContent = `S${curSeason} · E${curEp}  ·  ${watched} / ${totalEps} Episodes  ·  ${pct.toFixed(2)}%`;
     } else if (totalEps > 0) {
       label.textContent = `${watched} / ${totalEps} episodes — ${pct.toFixed(2)}%`;
     } else {
@@ -1214,7 +1214,11 @@ function _makeShadowDD(selectId, wrapId) {
 function updateTypeSelector() {
   const cat = document.getElementById('dCat').value;
   const isAnimeOrCartoon = cat === 'anime' || cat === 'cartoons';
-  const isMovies = cat === 'movies';
+  // Whether episode/season fields make sense depends on the actual
+  // media type — for Movies/TV Shows pages that's just the category,
+  // but Anime/Cartoons can hold either, so it has to come from the
+  // Movie/TV Show sub-type selector instead once that's relevant.
+  const isMovies = isAnimeOrCartoon ? getMediaType() === 'movie' : cat === 'movies';
   const animeSection = document.getElementById('animeGenreSection');
   if (animeSection) animeSection.style.display = cat === 'anime' ? '' : 'none';
   document.getElementById('dTypeGroup').style.display = isAnimeOrCartoon ? '' : 'none';
@@ -1803,7 +1807,11 @@ async function doDelete() {
 <script>
 /* ── TMDB prefill from quick create ── */
 function _applyTMDBPrefill(p) {
-  if (!p) return;
+  if (!p) {
+    const btnSave = document.getElementById('btnSave');
+    if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Save Entry'; }
+    return;
+  }
   console.log('[TMDB] applying prefill:', p);
   if (p.description) { const el = document.getElementById('dDesc'); if(el && !el.value) el.value = p.description; }
   if (p.genres && p.genres.length) {
@@ -1836,16 +1844,21 @@ function _applyTMDBPrefill(p) {
   if (p.runtime_h != null || p.runtime_m != null) {
     const catEl = document.getElementById('dCat');
     if (catEl) catEl.dispatchEvent(new Event('change'));
-    setTimeout(() => {
-      if (p.runtime_h != null) { const el = document.getElementById('dRuntimeH'); if(el) el.value = p.runtime_h; }
-      if (p.runtime_m != null) { const el = document.getElementById('dRuntimeM'); if(el) el.value = p.runtime_m; }
-      if (typeof updateRuntimeDisplay === 'function') updateRuntimeDisplay();
-    }, 100);
+    if (p.runtime_h != null) { const el = document.getElementById('dRuntimeH'); if(el) el.value = p.runtime_h; }
+    if (p.runtime_m != null) { const el = document.getElementById('dRuntimeM'); if(el) el.value = p.runtime_m; }
+    if (typeof updateRuntimeDisplay === 'function') updateRuntimeDisplay();
   }
   if (p.ratings?._type) {
     const el = document.getElementById('dMediaType');
     if (el) { el.value = p.ratings._type; el._ddSync?.(); el.dispatchEvent(new Event('change')); }
   }
+  // Unlock Save now that the real TMDB data (media type, runtime,
+  // season/episode counts, etc.) has actually been applied — it was
+  // previously possible to hit Save during the blind loading delay
+  // below, before this data ever arrived, leaving a new anime/cartoon
+  // entry stuck defaulting to "show" even when it was really a movie.
+  const btnSave = document.getElementById('btnSave');
+  if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Save Entry'; }
   showToast && showToast('Details filled from TMDB ✓');
 }
 
@@ -1854,7 +1867,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const prefill = sessionStorage.getItem('tmdbPrefill');
   if (prefill) {
     sessionStorage.removeItem('tmdbPrefill');
-    try { setTimeout(() => _applyTMDBPrefill(JSON.parse(prefill)), 1200); } catch(e) {}
+    // Lock Save immediately — the form is showing placeholder/default
+    // values (media type defaults to "show") until the real TMDB data
+    // below actually applies, and letting someone save in that window
+    // is exactly what was creating movies that stuck as "TV Show".
+    const btnSave = document.getElementById('btnSave');
+    if (btnSave) { btnSave.disabled = true; btnSave.textContent = 'Loading details…'; }
+    try { setTimeout(() => _applyTMDBPrefill(JSON.parse(prefill)), 50); } catch(e) {
+      if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Save Entry'; }
+    }
   }
 
   /* ── Init TMDB search on title field ── */
