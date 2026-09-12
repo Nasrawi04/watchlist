@@ -2475,7 +2475,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
    inline year and reveals the below-title version instead — so long
    titles get their room back rather than colliding with the year. */
 .title-year-row { display:flex; align-items:baseline; gap:6px; min-width:0; }
-.title-year-row .wg-title, .title-year-row .w-title, .title-year-row .q-title, .title-year-row .fv-w-title { flex:1 1 auto; min-width:0; max-width:100%; margin-bottom:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.title-year-row .wg-title, .title-year-row .w-title, .title-year-row .q-title, .title-year-row .fv-w-title, .title-year-row .pp-credit-title { flex:1 1 auto; min-width:0; max-width:100%; margin-bottom:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .title-year-inline { flex-shrink:0; font-size:clamp(10px, 2.4vw, 12.5px); font-weight:400; color:var(--text-3); white-space:nowrap; }
 .wg-genre { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .wg-controls {
