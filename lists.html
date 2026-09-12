@@ -16,6 +16,9 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
 <style>
+/* Score styling — matches Discover's grid card exactly */
+.home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
+.home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
 /* ── Lists page (mirrors favorites.html's list styling) ── */
 .fav-page-list-header {
   display:block;
@@ -720,7 +723,7 @@ function favCard(e, rank) {
   const score = !isTmdbOnly && liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
   const rankCls = rank === 0 ? 'cg-rank-1' : rank === 1 ? 'cg-rank-2' : rank === 2 ? 'cg-rank-3' : 'cg-rank-other';
   const rankBadge = rank != null ? `<div class="cg-rank-badge ${rankCls}">${rank + 1}</div>` : '';
-  const scoreHTML = score ? `<div class="cg-score-row"><span class="cg-score">★ ${score}</span></div>` : '';
+  const scoreHTML = score ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${score}</span></div>` : '';
   const clickAttr = isTmdbOnly ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : `onclick="openFavPopup('${e.id}')"`;
   const isM = isTmdbOnly ? e.tmdb_type === 'movie' : (e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie'));
   const typeBadge = `<span class="${isM ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${isM ? 'Movie' : 'TV Show'}</span>`;
