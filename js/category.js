@@ -416,8 +416,11 @@ function setSort(section, value) {
 const IS_MOVIE_CAT = () => window.PAGE_CAT === 'movies';
 // Type tag (Movie/TV Show label on cards) is redundant on the Movies/TV
 // Shows pages (the whole page is already one type) but still useful on
-// Anime/Cartoons pages, where movie and show entries mix together.
-const SHOW_TYPE_TAG = () => window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
+// Anime/Cartoons pages, where movie and show entries mix together —
+// unless the person has filtered that page down to just one type via
+// the Movie/TV Show filter, at which point it's redundant there too.
+const SHOW_TYPE_TAG = () => (window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons')
+  && (typeof _catTypeFilter === 'undefined' || _catTypeFilter === 'all');
 /* Returns the badge context string for the current page */
 function catContext() {
   const c = window.PAGE_CAT;
@@ -473,10 +476,48 @@ function currentFile() {
 }
 
 /* ════════ FETCH + FULL RENDER ════════ */
+let _catAllRaw = [];
+let _catTypeFilter = 'all'; // 'all' | 'movie' | 'tv' — anime/cartoons only, since those are
+                             // the categories that mix movie and show entries together.
+
+function _catEntryIsMovie(e) {
+  return e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+}
+
+function _applyCatTypeFilter(arr) {
+  if (_catTypeFilter === 'all') return arr;
+  const wantMovie = _catTypeFilter === 'movie';
+  return arr.filter(e => _catEntryIsMovie(e) === wantMovie);
+}
+
+function _catTypeFilterBar() {
+  const wrap = document.getElementById('catTypeFilterWrap');
+  if (!wrap) return;
+  const isAnimated = window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
+  if (!isAnimated) { wrap.innerHTML = ''; return; }
+  const opts = [['all','All'],['movie','Movie'],['tv','TV Show']];
+  wrap.innerHTML = `<div class="sort-bar">${opts.map(([v,l]) =>
+    `<button class="sort-btn${_catTypeFilter===v?' active':''}" onclick="setCatTypeFilter('${v}')">${l}</button>`
+  ).join('')}</div>`;
+}
+
+function setCatTypeFilter(value) {
+  _catTypeFilter = value;
+  _catAll = _applyCatTypeFilter(_catAllRaw);
+  _catTypeFilterBar();
+  _catRenderStatsAndSections();
+}
+
 async function renderPage() {
   if (!_catUser) return;
   showLoading();
-  _catAll = await getEntries(_catUser.id, { cat: window.PAGE_CAT });
+  _catAllRaw = await getEntries(_catUser.id, { cat: window.PAGE_CAT });
+  _catAll = _applyCatTypeFilter(_catAllRaw);
+  _catTypeFilterBar();
+  _catRenderStatsAndSections();
+}
+
+function _catRenderStatsAndSections() {
 
   const watching  = _catAll.filter(e => e.status === 'watching' || e.status === 'paused');
   const queue     = _catAll.filter(e => e.status === 'queue');
