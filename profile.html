@@ -1096,6 +1096,13 @@ var _SVG_L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 var _SVG_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 
 /* ── Init ── */
+// Returning via browser back/forward can restore this page from the
+// bfcache with stale data (e.g. an entry just added/edited elsewhere
+// wouldn't show up here) instead of re-running this page's scripts.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+
 document.addEventListener('DOMContentLoaded', function() {
   initPage(async function(user, profile) {
     if (!user) {
