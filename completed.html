@@ -447,6 +447,7 @@ function cpOpenPopup(id) {
   ov.style.opacity = '1';
   document.getElementById('cpPopupCard').style.transform = 'translateY(0)';
   document.body.style.overflow = 'hidden';
+  _refreshTmdbSeasonData(e, _compUser.id, renderMain);
 }
 
 function cpOpenPopupToComments(id) {
