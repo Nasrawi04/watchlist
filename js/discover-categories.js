@@ -316,7 +316,13 @@ const DISCOVER_CATEGORIES = [
       if (error) { console.error('Top Rated (MyScreenScore) fetch error:', error); return []; }
       return (data || []).map(r => ({
         id: r.tmdb_id,
-        media_type: r.tmdb_type,
+        // Falls back to derived_type (computed server-side from the
+        // entry's own category — movies vs. everything else) whenever
+        // tmdb_type itself is null. That fallback was already being
+        // returned by the RPC and just never actually used here, so
+        // every group with a null tmdb_type (common for older/unlinked
+        // entries) rendered with a missing/wrong type tag instead.
+        media_type: r.tmdb_type || r.derived_type,
         title: r.title,
         poster_url: r.poster_url || null,
         year: '',
