@@ -566,6 +566,18 @@ async function modalQuickCreate() {
   try {
     // If a TMDB result was selected, merge its data into the quick create
     const prefill = window._tmdbPrefill || {};
+    // Everything that only lives inside the ratings JSON blob (not its
+    // own column) — completion year for ended shows, the detailed
+    // per-season episode breakdown, and the Movie/TV sub-type marker
+    // for anime/cartoons — has to be explicitly collected here, since
+    // quickCreate() only saves whatever ratings object it's actually
+    // given.
+    const ratings = {};
+    if (prefill._completion_year) ratings._completion_year = prefill._completion_year;
+    if (prefill._season_breakdown && prefill._season_breakdown.length) ratings._season_breakdown = prefill._season_breakdown;
+    if (prefill.ratings && prefill.ratings._type) ratings._type = prefill.ratings._type;
+    else if (prefill.tmdb_type) ratings._media_type = prefill.tmdb_type;
+
     const entry = await quickCreate({
       title:         prefill.title         || title,
       cat:           prefill.cat           || document.getElementById('mCat').dataset.value,
@@ -580,6 +592,7 @@ async function modalQuickCreate() {
       runtime_m:     prefill.runtime_m     || null,
       tmdb_id:       prefill.tmdb_id       || null,
       tmdb_type:     prefill.tmdb_type     || null,
+      ratings:       Object.keys(ratings).length ? ratings : null,
     }, user.id);
 
     closeModal();
