@@ -1591,11 +1591,17 @@ function _openPosterPicker() {
   document.getElementById('posterPickerOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   const grid = document.getElementById('posterPickerGrid');
-  if (_detEntry && _detEntry.tmdb_id && _detEntry.tmdb_type) {
-    grid.innerHTML = `<div style="grid-column:1/-1;padding:24px;text-align:center;"><div class="spinner"></div></div>`;
-    _loadTmdbPosterOptions(_detEntry.tmdb_id, _detEntry.tmdb_type);
+  // Uses the pending tmdb_id/type (kept current by Update Details the
+  // moment a match is picked) rather than _detEntry's, which only
+  // reflects whatever was loaded from the database — otherwise picking
+  // a new match via Update Details and then immediately trying to pick
+  // a poster would still show alternates for the OLD title until the
+  // entry was saved and reloaded.
+  if (_pendingTmdbId && _pendingTmdbType) {
+    grid.innerHTML = `<div style="padding:24px;text-align:center;"><div class="spinner"></div></div>`;
+    _loadTmdbPosterOptions(_pendingTmdbId, _pendingTmdbType);
   } else {
-    grid.innerHTML = `<div style="grid-column:1/-1;padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">This entry isn't linked to TMDB, so there aren't alternate posters to choose from — use "Upload Your Own" below.</div>`;
+    grid.innerHTML = `<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">This entry isn't linked to TMDB, so there aren't alternate posters to choose from — use "Upload Your Own" below.</div>`;
   }
 }
 
@@ -1635,7 +1641,7 @@ async function _loadTmdbPosterOptions(tmdbId, tmdbType) {
     const data = await res.json();
     const posters = (data.posters || []).sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
     if (!posters.length) {
-      grid.innerHTML = `<div style="grid-column:1/-1;padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">No alternate posters found for this title.</div>`;
+      grid.innerHTML = `<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">No alternate posters found for this title.</div>`;
       return;
     }
     // Grouped by language with a section header per group, instead of
@@ -1676,7 +1682,7 @@ async function _loadTmdbPosterOptions(tmdbId, tmdbType) {
     }).join('');
   } catch (err) {
     console.error(err);
-    grid.innerHTML = `<div style="grid-column:1/-1;padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">Couldn't load posters right now — please try again.</div>`;
+    grid.innerHTML = `<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">Couldn't load posters right now — please try again.</div>`;
   }
 }
 
@@ -2206,7 +2212,14 @@ function _applyTMDBPrefill(p) {
       el.classList.toggle('selected', p.genres.includes(el.textContent.trim()));
     });
   }
-  if (p.poster_url) {
+  if (p.poster_url && !_posterUrl) {
+    // Only fills the poster when one isn't already set — a fresh new
+    // entry has none yet, so TMDB's default poster is a good fill-in.
+    // But an existing entry being re-synced via Update Details already
+    // has SOME poster (either TMDB's original or one the person chose
+    // deliberately via the poster picker), and overwriting that every
+    // time Update Details is used would silently discard a poster
+    // choice the person made on purpose.
     _posterUrl = p.poster_url;
     const img = document.getElementById('dPosterImg');
     const letter = document.getElementById('dPosterLetter');
