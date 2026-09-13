@@ -8,6 +8,38 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
+/* ── TMDB-locked fields — title, year, completion year, description,
+   genres, runtime, and season breakdown are all sourced directly from
+   TMDB once an entry is properly linked, so they're locked from manual
+   editing by default (the app's own TMDB auto-refresh can still update
+   them). Each section has its own small lock icon the person can click
+   to unlock that data and edit it manually if they need to — mainly
+   meant for fixing older entries that ended up with nulls from earlier
+   bugs, without permanently disabling the protection for everyone. ── */
+.tmdb-lock-btn {
+  display:none; align-items:center; gap:4px; flex-shrink:0;
+  background:none; border:none; cursor:pointer; padding:2px 4px;
+  font-size:12px; color:var(--text-3); transition:color .15s;
+}
+.tmdb-lock-btn svg { width:13px; height:13px; }
+#updateDetailsOverlay {
+  position:fixed; inset:0; z-index:1300;
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+#updateDetailsOverlay.open { opacity:1; pointer-events:auto; }
+.tmdb-lock-btn:hover { color:var(--olive-light); }
+.tmdb-lock-btn.linked { display:inline-flex; }
+.field-locked {
+  opacity:0.7 !important; cursor:not-allowed !important;
+  background:var(--bg-3) !important;
+}
+.genre-picker.locked .genre-opt { pointer-events:none; opacity:0.7; }
+#dSeasonList.locked input { pointer-events:none; }
+#dSeasonList.locked button { display:none !important; }
+</style>
+<style>
 /* ── Final Score ── */
 .final-score-section{
   background:var(--olive-faint);
@@ -637,6 +669,7 @@
         </div>
 
         <div class="det-year-box">
+          <button class="tmdb-lock-btn" id="tmdbLockBtn-title" onclick="_toggleTmdbFieldLock('title')" title="Synced from TMDB — click to edit manually"></button>
           <div class="det-year-field">
             <label>Release<span class="det-year-label-full"> Year</span></label>
             <input class="det-year-input" id="dYear" type="number" min="1900" max="2030" placeholder="Year">
@@ -673,7 +706,7 @@
         <div class="det-card-title">Details</div>
         <div class="det-fields-grid">
           <div class="field-group">
-            <div class="field-label">Genres</div>
+            <div class="field-label">Genres <button class="tmdb-lock-btn" id="tmdbLockBtn-genres" onclick="_toggleTmdbFieldLock('genres')" title="Synced from TMDB — click to edit manually"></button></div>
             <div class="genre-picker" id="dGenres" style="justify-content:space-between;">
               <span class="genre-opt" onclick="toggleGenre(this)">Action</span>
               <span class="genre-opt" onclick="toggleGenre(this)">Adventure</span>
@@ -718,7 +751,7 @@
           </div>
 
           <div class="field-group">
-            <div class="field-label">Description</div>
+            <div class="field-label">Description <button class="tmdb-lock-btn" id="tmdbLockBtn-desc" onclick="_toggleTmdbFieldLock('desc')" title="Synced from TMDB — click to edit manually"></button></div>
             <textarea class="field-input" id="dDesc" placeholder="Synopsis…"></textarea>
           </div>
         </div>
@@ -736,7 +769,7 @@
         <div class="det-card-title">Progress</div>
 
         <div id="dProgressSection" class="progress-edit-section">
-          <div class="progress-edit-title">Season Breakdown</div>
+          <div class="progress-edit-title">Season Breakdown <button class="tmdb-lock-btn" id="tmdbLockBtn-season" onclick="_toggleTmdbFieldLock('season')" title="Synced from TMDB — click to edit manually"></button></div>
           <div id="dSeasonList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
           <button onclick="addSeason()" style="width:100%;padding:7px;font-size:11px;letter-spacing:.5px;text-transform:uppercase;border:0.5px dashed var(--border-2);border-radius:var(--radius-xs);background:transparent;color:var(--text-3);cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--border-olive)';this.style.color='var(--olive-light)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text-3)'">+ Add Season</button>
 
@@ -759,7 +792,7 @@
         </div>
 
         <div id="dRuntimeSection" style="display:none;" class="field-group">
-          <div class="progress-edit-title">Runtime</div>
+          <div class="progress-edit-title">Runtime <button class="tmdb-lock-btn" id="tmdbLockBtn-runtime" onclick="_toggleTmdbFieldLock('runtime')" title="Synced from TMDB — click to edit manually"></button></div>
           <div class="ep-grid">
             <div class="ep-field"><label>Hours</label><input type="number" id="dRuntimeH" min="0" placeholder="0" oninput="updateRuntimeDisplay()"></div>
             <div class="ep-field"><label>Minutes</label><input type="number" id="dRuntimeM" min="0" max="59" placeholder="0" oninput="updateRuntimeDisplay()"></div>
@@ -865,6 +898,10 @@
         <button class="popup-action-btn" id="dDiscoverBtn" style="display:none;" onclick="_detGoToDiscover(this)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           Discover
+        </button>
+        <button class="popup-action-btn" id="btnUpdateDetails" style="display:none;" onclick="_openUpdateDetailsPicker()" title="Re-search TMDB to fix missing or outdated details">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+          Update Details
         </button>
         <button class="btn-comments" id="dCommentsBtn" style="display:none" onclick="openCommentsModal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -1105,15 +1142,197 @@ function updateSeasonEps(i, val) {
 function renderSeasonRows() {
   const container = document.getElementById('dSeasonList');
   if (!container) return;
+  const locked = container.classList.contains('locked');
   container.innerHTML = _seasonBreakdown.map((eps, i) => `
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:12px;color:var(--text-3);min-width:68px;flex-shrink:0;">Season ${i+1}</span>
       <input type="number" min="1" value="${eps || ''}" placeholder="Episodes"
              onchange="updateSeasonEps(${i},this.value)" oninput="updateSeasonEps(${i},this.value)"
-             class="field-input" style="flex:1;padding:6px 10px;font-size:13px;">
+             class="field-input${locked ? ' field-locked' : ''}" ${locked ? 'readonly' : ''} style="flex:1;padding:6px 10px;font-size:13px;">
       <button onclick="removeSeasonRow(${i})" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:15px;padding:2px 6px;transition:color .2s;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='var(--text-3)'">✕</button>
     </div>`).join('');
   updateSeasonTotals();
+}
+
+// Locks/unlocks the fields that come directly from TMDB once an entry
+// is linked (tmdb_id set) — title, years, description, genres, runtime,
+// and the season breakdown. The app's own TMDB auto-refresh can still
+// update these programmatically; this only blocks manual editing, and
+// only when the person hasn't clicked one of the lock icons to
+// deliberately unlock everything and fix it by hand.
+let _tmdbFieldsLinked = false; // is this entry actually tmdb-linked?
+// Each section locks independently — clicking one lock icon only
+// unlocks that section's fields, not all of them.
+let _tmdbLockState = { title: true, genres: true, desc: true, season: true, runtime: true };
+// The actual tmdb_id/tmdb_type to save — carried forward from the loaded
+// entry (or from a fresh TMDB match via Update Details/new-entry prefill)
+// and included explicitly in every save. Without this, saveEntry()'s
+// payload never mentioned these fields at all, and db.js's `|| null`
+// fallback then silently wiped tmdb_id/tmdb_type to null on every single
+// save of an already-linked entry — not just the entries actually added
+// with a bug, but any of them the person ever so much as re-saved after.
+let _pendingTmdbId = null;
+let _pendingTmdbType = null;
+
+const TMDB_LOCK_SECTIONS = {
+  title:   { btnId: 'tmdbLockBtn-title',   fieldIds: ['dTitle', 'dYear', 'dCompletionYear'] },
+  genres:  { btnId: 'tmdbLockBtn-genres',  fieldIds: [] },
+  desc:    { btnId: 'tmdbLockBtn-desc',    fieldIds: ['dDesc'] },
+  season:  { btnId: 'tmdbLockBtn-season',  fieldIds: [] },
+  runtime: { btnId: 'tmdbLockBtn-runtime', fieldIds: ['dRuntimeH', 'dRuntimeM'] },
+};
+
+function _applyTmdbLock(isLinked) {
+  _tmdbFieldsLinked = isLinked;
+  Object.keys(_tmdbLockState).forEach(k => _tmdbLockState[k] = isLinked); // (re-)lock everything whenever freshly (re-)linked
+  _renderTmdbLockUI();
+}
+
+function _toggleTmdbFieldLock(section) {
+  if (!_tmdbFieldsLinked || !TMDB_LOCK_SECTIONS[section]) return;
+  _tmdbLockState[section] = !_tmdbLockState[section];
+  _renderTmdbLockUI();
+  if (!_tmdbLockState[section]) {
+    showToast('Unlocked — edit this manually, or use "Update Details" to re-sync from TMDB.');
+  }
+}
+
+function _renderTmdbLockUI() {
+  Object.entries(TMDB_LOCK_SECTIONS).forEach(([section, cfg]) => {
+    const locked = _tmdbFieldsLinked && _tmdbLockState[section];
+    const btn = document.getElementById(cfg.btnId);
+    if (btn) {
+      btn.classList.toggle('linked', _tmdbFieldsLinked);
+      btn.innerHTML = icon(locked ? 'lock' : 'unlock', 13);
+      btn.title = locked ? 'Synced from TMDB — click to edit manually' : 'Unlocked — click to lock again';
+    }
+    cfg.fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.readOnly = locked;
+      el.classList.toggle('field-locked', locked);
+    });
+  });
+
+  const genrePicker = document.getElementById('dGenres');
+  if (genrePicker) genrePicker.classList.toggle('locked', _tmdbFieldsLinked && _tmdbLockState.genres);
+
+  const seasonList = document.getElementById('dSeasonList');
+  const seasonLocked = _tmdbFieldsLinked && _tmdbLockState.season;
+  if (seasonList) {
+    seasonList.classList.toggle('locked', seasonLocked);
+    renderSeasonRows();
+  }
+  const addSeasonBtn = document.querySelector('button[onclick="addSeason()"]');
+  if (addSeasonBtn) addSeasonBtn.style.display = seasonLocked ? 'none' : '';
+
+  const updateBtn = document.getElementById('btnUpdateDetails');
+  // Shown for any existing entry, linked or not — this is the tool for
+  // fixing entries that ended up unlinked/null from earlier bugs, so it
+  // needs to be available precisely when an entry ISN'T linked, not
+  // just when it already is.
+  if (updateBtn) updateBtn.style.display = _detId ? '' : 'none';
+}
+
+// Opens the same TMDB search picker used when adding a new entry, with
+// the current title pre-filled — meant for fixing older entries that
+// ended up with missing/null TMDB data from bugs in earlier versions
+// of the add flow, without having to delete and re-add them. Reuses
+// the same live search already wired up on the title field itself.
+function _openUpdateDetailsPicker() {
+  if (!_detEntry) return;
+  _injectUpdateDetailsOverlay();
+  const input = document.getElementById('updateDetailsSearchInput');
+  input.value = _detEntry.title || '';
+  document.getElementById('updateDetailsResultsList').innerHTML = '';
+  _updateDetailsResults = [];
+  document.getElementById('updateDetailsOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // Kick off a search immediately using the current title, same as
+  // picking a result from a fresh add — saves having to retype it.
+  _onUpdateDetailsSearchInput(input.value);
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) setTimeout(() => input.focus(), 150);
+}
+
+function _injectUpdateDetailsOverlay() {
+  if (document.getElementById('updateDetailsOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'updateDetailsOverlay';
+  el.innerHTML = `<div id="updateDetailsCard" style="width:100%;max-width:460px;max-height:80vh;background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;overflow:hidden;">
+    <div class="rf-header">
+      <div class="rf-title">Update Details</div>
+      <button class="rf-close" onclick="_closeUpdateDetailsPicker()">${icon('x', 18)}</button>
+    </div>
+    <div class="card-link-input-wrap">
+      <input class="card-link-input" id="updateDetailsSearchInput" placeholder="Search movies & TV shows…" oninput="_onUpdateDetailsSearchInput(this.value)">
+    </div>
+    <div class="rf-list" id="updateDetailsResultsList"></div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) _closeUpdateDetailsPicker(); });
+  document.body.appendChild(el);
+}
+
+function _closeUpdateDetailsPicker() {
+  const ov = document.getElementById('updateDetailsOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+let _updateDetailsResults = [];
+let _updateDetailsSearchTimer = null;
+
+function _onUpdateDetailsSearchInput(query) {
+  clearTimeout(_updateDetailsSearchTimer);
+  const q = query.trim();
+  const listEl = document.getElementById('updateDetailsResultsList');
+  if (!q) { listEl.innerHTML = ''; _updateDetailsResults = []; return; }
+  _updateDetailsSearchTimer = setTimeout(async () => {
+    const results = await _tmdbSearch(q, 8);
+    _updateDetailsResults = results;
+    if (!results.length) {
+      listEl.innerHTML = `<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">No matches found.</div>`;
+      return;
+    }
+    listEl.innerHTML = results.map((r, i) => {
+      const title = r.title || r.name || 'Untitled';
+      const date = r.release_date || r.first_air_date || '';
+      const year = date ? date.slice(0, 4) : '';
+      const typeLabel = r.media_type === 'movie' ? 'Movie' : 'TV Show';
+      const posterEl = r.poster_path
+        ? `<img src="${TMDB_FULL}${r.poster_path}" loading="lazy">`
+        : (title[0] || '?').toUpperCase();
+      return `<div class="card-link-result" onclick="_pickUpdateDetailsMatch(${i})">
+        <div class="card-link-result-poster">${posterEl}</div>
+        <div>
+          <div class="card-link-result-title">${title}</div>
+          <div class="card-link-result-meta">${typeLabel}${year ? ' · ' + year : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }, 350);
+}
+
+async function _pickUpdateDetailsMatch(i) {
+  const r = _updateDetailsResults[i];
+  _closeUpdateDetailsPicker();
+  if (!r) return;
+  showToast('Fetching details…');
+  try {
+    const isMovie = r.media_type === 'movie';
+    const detail = isMovie ? await _tmdbMovie(r.id) : await _tmdbTV(r.id);
+    const entry = _tmdbToEntry(r, detail);
+    if (document.getElementById('dCat')?.dataset.value === 'anime' || document.getElementById('dCat')?.dataset.value === 'cartoons') {
+      entry.cat = document.getElementById('dCat').dataset.value;
+    }
+    if (entry.title) document.getElementById('dTitle').value = entry.title;
+    if (entry.year)  document.getElementById('dYear').value = entry.year;
+    _applyTMDBPrefill(entry);
+  } catch (err) {
+    console.error(err);
+    showToast('Error fetching TMDB details.', 'err');
+  }
 }
 
 function updateSeasonTotals() {
@@ -1412,6 +1631,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.genre-opt').forEach(opt => {
       opt.classList.toggle('selected', e && e.genres && e.genres.includes(opt.textContent));
     });
+
+    // Lock TMDB-sourced fields once this entry is actually linked —
+    // must run after the season rows/genres above are populated, since
+    // it re-renders the season list and toggles the genre picker.
+    _applyTmdbLock(!!(e && e.tmdb_id));
+    _pendingTmdbId = (e && e.tmdb_id) || null;
+    _pendingTmdbType = (e && e.tmdb_type) || null;
 
     // Poster
     const pImg = document.getElementById('dPosterImg');
@@ -1741,6 +1967,8 @@ async function doSave() {
     notes:         document.getElementById('dNotes').value,
     completed_date: _parseCompletedDate(),
     ratings:       ratingsWithType,
+    tmdb_id:       _pendingTmdbId,
+    tmdb_type:     _pendingTmdbType,
   };
 
   // Only show completion popup when transitioning INTO completed for the first time
@@ -1859,6 +2087,11 @@ function _applyTMDBPrefill(p) {
   // entry stuck defaulting to "show" even when it was really a movie.
   const btnSave = document.getElementById('btnSave');
   if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Save Entry'; }
+  // p always has a tmdb_id here (that's what "prefill from TMDB" means),
+  // so this entry is linked and its TMDB-sourced fields lock immediately.
+  _applyTmdbLock(!!p.tmdb_id);
+  _pendingTmdbId = p.tmdb_id || null;
+  _pendingTmdbType = p.tmdb_type || null;
   showToast && showToast('Details filled from TMDB ✓');
 }
 
