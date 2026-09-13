@@ -639,7 +639,10 @@
 
       <div class="det-header-main">
       <div class="det-header-info det-row-2col-half">
-        <input class="det-title-input" id="dTitle" type="text" placeholder="Untitled…" oninput="updatePosterLetter()">
+        <div class="det-title-row" style="position:relative;">
+          <input class="det-title-input" id="dTitle" type="text" placeholder="Untitled…" oninput="updatePosterLetter()" style="padding-right:32px;">
+          <button class="tmdb-lock-btn" id="tmdbLockBtn-title" onclick="_toggleTmdbFieldLock('title')" title="Synced from TMDB — click to edit manually" style="position:absolute;right:0;top:4px;"></button>
+        </div>
 
         <div class="det-eyebrow-row">
           <select id="dCat" onchange="updateTypeSelector()" style="display:none">
@@ -669,7 +672,7 @@
         </div>
 
         <div class="det-year-box">
-          <button class="tmdb-lock-btn" id="tmdbLockBtn-title" onclick="_toggleTmdbFieldLock('title')" title="Synced from TMDB — click to edit manually"></button>
+          <button class="tmdb-lock-btn" id="tmdbLockBtn-year" onclick="_toggleTmdbFieldLock('year')" title="Synced from TMDB — click to edit manually"></button>
           <div class="det-year-field">
             <label>Release<span class="det-year-label-full"> Year</span></label>
             <input class="det-year-input" id="dYear" type="number" min="1900" max="2030" placeholder="Year">
@@ -1163,7 +1166,7 @@ function renderSeasonRows() {
 let _tmdbFieldsLinked = false; // is this entry actually tmdb-linked?
 // Each section locks independently — clicking one lock icon only
 // unlocks that section's fields, not all of them.
-let _tmdbLockState = { title: true, genres: true, desc: true, season: true, runtime: true };
+let _tmdbLockState = { title: true, year: true, genres: true, desc: true, season: true, runtime: true };
 // The actual tmdb_id/tmdb_type to save — carried forward from the loaded
 // entry (or from a fresh TMDB match via Update Details/new-entry prefill)
 // and included explicitly in every save. Without this, saveEntry()'s
@@ -1175,7 +1178,8 @@ let _pendingTmdbId = null;
 let _pendingTmdbType = null;
 
 const TMDB_LOCK_SECTIONS = {
-  title:   { btnId: 'tmdbLockBtn-title',   fieldIds: ['dTitle', 'dYear', 'dCompletionYear'] },
+  title:   { btnId: 'tmdbLockBtn-title',   fieldIds: ['dTitle'] },
+  year:    { btnId: 'tmdbLockBtn-year',    fieldIds: ['dYear', 'dCompletionYear'] },
   genres:  { btnId: 'tmdbLockBtn-genres',  fieldIds: [] },
   desc:    { btnId: 'tmdbLockBtn-desc',    fieldIds: ['dDesc'] },
   season:  { btnId: 'tmdbLockBtn-season',  fieldIds: [] },
