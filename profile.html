@@ -2913,6 +2913,7 @@ function openProfInfoPopup(id) {
 
   var discBtn = document.getElementById('profInfoDiscoverBtn');
   if (discBtn) discBtn.onclick = function(){ _profGoDiscover(e, discBtn); };
+  _refreshTmdbSeasonData(e, _pUser.id, renderLibrary);
   } catch(err) { console.error('openProfInfoPopup error:', err); }
 }
 
