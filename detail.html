@@ -29,6 +29,34 @@
   opacity:0; pointer-events:none; transition:opacity .2s ease;
 }
 #updateDetailsOverlay.open { opacity:1; pointer-events:auto; }
+
+#posterPickerOverlay {
+  position:fixed; inset:0; z-index:1300;
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+#posterPickerOverlay.open { opacity:1; pointer-events:auto; }
+#posterPickerCard {
+  width:100%; max-width:640px; max-height:82vh;
+  background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#posterPickerGrid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:12px;
+  padding:14px; overflow-y:auto; flex:1;
+}
+.poster-picker-opt {
+  position:relative; aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden;
+  cursor:pointer; border:2px solid transparent; transition:border-color .15s;
+}
+.poster-picker-opt:hover { border-color:var(--border-olive); }
+.poster-picker-opt.selected { border-color:var(--olive-light); }
+.poster-picker-opt img { width:100%; height:100%; object-fit:cover; display:block; }
+.poster-picker-lang {
+  position:absolute; bottom:4px; right:4px; background:rgba(0,0,0,0.7); color:#fff;
+  font-size:9px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:.3px;
+}
 .tmdb-lock-btn:hover { color:var(--olive-light); }
 .tmdb-lock-btn.linked { display:inline-flex; }
 .field-locked {
@@ -623,7 +651,7 @@
 
     <!-- ═══ HEADER ═══ -->
     <div class="det-header">
-      <div class="detail-poster-wrap" onclick="document.getElementById('posterFile').click()">
+      <div class="detail-poster-wrap" onclick="_openPosterPicker()">
         <div class="detail-poster-letter" id="dPosterLetter">?</div>
         <img id="dPosterImg" style="display:none" alt="">
         <div class="poster-upload-overlay">
@@ -1536,6 +1564,90 @@ function updatePosterLetter() {
 function toggleGenre(el) { el.classList.toggle('selected'); }
 
 /* ── Poster upload ── */
+// Poster picker — lets the person choose from every poster TMDB has
+// for this title (different language releases, fan uploads, etc.) or
+// fall back to uploading their own image, instead of only ever being
+// able to upload. Since poster_url is the same field every other page
+// (category, completed, profile, profile-view, lists, favorites,
+// notes) already reads via posterHTML(), picking one here is all
+// that's needed for it to show up everywhere once saved.
+function _openPosterPicker() {
+  _injectPosterPickerOverlay();
+  document.getElementById('posterPickerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  const grid = document.getElementById('posterPickerGrid');
+  if (_detEntry && _detEntry.tmdb_id && _detEntry.tmdb_type) {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:24px;text-align:center;"><div class="spinner"></div></div>`;
+    _loadTmdbPosterOptions(_detEntry.tmdb_id, _detEntry.tmdb_type);
+  } else {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">This entry isn't linked to TMDB, so there aren't alternate posters to choose from — use "Upload Your Own" below.</div>`;
+  }
+}
+
+function _injectPosterPickerOverlay() {
+  if (document.getElementById('posterPickerOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'posterPickerOverlay';
+  el.innerHTML = `<div id="posterPickerCard">
+    <div class="rf-header">
+      <div class="rf-title">Choose a Poster</div>
+      <button class="rf-close" onclick="_closePosterPicker()">${icon('x', 18)}</button>
+    </div>
+    <div id="posterPickerGrid"></div>
+    <div style="padding:14px;border-top:0.5px solid var(--border);">
+      <button class="popup-action-btn" style="width:100%;justify-content:center;" onclick="_closePosterPicker();document.getElementById('posterFile').click()">
+        ${icon('image', 14)} Upload Your Own
+      </button>
+    </div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) _closePosterPicker(); });
+  document.body.appendChild(el);
+}
+
+function _closePosterPicker() {
+  const ov = document.getElementById('posterPickerOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function _loadTmdbPosterOptions(tmdbId, tmdbType) {
+  const grid = document.getElementById('posterPickerGrid');
+  try {
+    const path = tmdbType === 'movie' ? 'movie' : 'tv';
+    const res = await tmdbFetch(`${TMDB_BASE}/${path}/${tmdbId}/images?api_key=${TMDB_KEY}`);
+    if (!res.ok) throw new Error('TMDB images fetch failed');
+    const data = await res.json();
+    const posters = (data.posters || []).sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+    if (!posters.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">No alternate posters found for this title.</div>`;
+      return;
+    }
+    grid.innerHTML = posters.map(p => {
+      const full = `${TMDB_FULL}${p.file_path}`;
+      const isCurrent = _posterUrl && _posterUrl.includes(p.file_path);
+      return `<div class="poster-picker-opt${isCurrent ? ' selected' : ''}" onclick="_selectTmdbPoster('${full}')">
+        <img src="https://image.tmdb.org/t/p/w300${p.file_path}" loading="lazy">
+        ${p.iso_639_1 ? `<span class="poster-picker-lang">${p.iso_639_1.toUpperCase()}</span>` : ''}
+      </div>`;
+    }).join('');
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">Couldn't load posters right now — please try again.</div>`;
+  }
+}
+
+function _selectTmdbPoster(url) {
+  _posterUrl = url;
+  const img = document.getElementById('dPosterImg');
+  img.src = url;
+  img.style.display = 'block';
+  const letter = document.getElementById('dPosterLetter');
+  if (letter) letter.style.display = 'none';
+  _closePosterPicker();
+  showToast('Poster updated — hit Save Entry to keep it.');
+}
+
 async function handlePosterUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
