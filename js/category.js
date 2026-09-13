@@ -57,48 +57,9 @@ function _injectCatInfoPopup() {
    TMDB for a linked show whenever its detail popup opens or the person
    starts/resumes watching it, and updates the entry in the background
    if TMDB now shows more seasons/episodes than what's stored. */
-async function _refreshTmdbSeasonData(entry) {
-  try {
-    if (!entry || !entry.tmdb_id || entry.tmdb_type !== 'tv') return;
-    const isMovie = entry.cat === 'movies' || entry.ratings?._media_type === 'movie';
-    if (isMovie) return;
-
-    const res = await tmdbFetch(`${TMDB_BASE}/tv/${entry.tmdb_id}?api_key=${TMDB_KEY}&language=en-US`);
-    if (!res.ok) return;
-    const data = await res.json();
-
-    const seasons = (data.seasons || []).filter(s => s.season_number > 0);
-    const newBreakdown = seasons.map(s => s.episode_count);
-    const newTotalSeasons = data.number_of_seasons || newBreakdown.length || null;
-    const newTotalEps = data.number_of_episodes || newBreakdown.reduce((a, b) => a + b, 0) || null;
-
-    const oldTotalSeasons = Number(entry.total_seasons) || 0;
-    const oldTotalEps = Number(entry.total_eps) || 0;
-    const hasNewData = (newTotalSeasons && newTotalSeasons > oldTotalSeasons) ||
-                        (newTotalEps && newTotalEps > oldTotalEps);
-    if (!hasNewData) return;
-
-    const newRatings = { ...(entry.ratings || {}), _season_breakdown: newBreakdown };
-    await updateProgress(entry.id, _catUser.id, {
-      total_seasons: newTotalSeasons,
-      total_eps: newTotalEps,
-      ratings: newRatings,
-    });
-
-    // Update the in-memory entry (same object reference _catAll/_catAllRaw
-    // both point to) and re-render so the new counts show immediately.
-    entry.total_seasons = newTotalSeasons;
-    entry.total_eps = newTotalEps;
-    entry.ratings = newRatings;
-    renderSections();
-    showToast(`${entry.title}: updated to ${newTotalSeasons} season${newTotalSeasons !== 1 ? 's' : ''}`);
-  } catch (err) {
-    // Silent failure — this is a background convenience check, not a
-    // user-initiated action, so it shouldn't surface an error toast for
-    // something like a flaky network request.
-    console.error('TMDB season refresh error:', err);
-  }
-}
+/* ── _refreshTmdbSeasonData now lives in nav.js, shared across every
+   page with its own entry-info popup (this one, library, profile,
+   completed) instead of duplicated per page. ── */
 
 function openCatInfoPopup(id) {
   try {
@@ -161,7 +122,7 @@ function openCatInfoPopup(id) {
   ov.classList.add('open');
   document.getElementById('profInfoCard').style.transform = 'translateY(0)';
   document.body.style.overflow = 'hidden';
-  _refreshTmdbSeasonData(e);
+  _refreshTmdbSeasonData(e, _catUser.id, renderSections);
   } catch(err) { console.error('openCatInfoPopup error:', err); }
 }
 
@@ -1756,7 +1717,7 @@ async function resumeEntry(id) {
     if (entry) entry.status = 'watching';
     renderSections();
     showToast('Resumed!');
-    if (entry) _refreshTmdbSeasonData(entry);
+    if (entry) _refreshTmdbSeasonData(entry, _catUser.id, renderSections);
   } catch(e) { showToast('Error resuming.', 'err'); }
 }
 
@@ -1869,7 +1830,7 @@ async function startWatching(id) {
     if (entry) { entry.status = 'watching'; if (!isMovie) { entry.season = updates.season; entry.episode = 0; entry.watched = 0; } }
     showToast('Moved to Currently Watching!');
     renderSections();
-    if (entry) _refreshTmdbSeasonData(entry);
+    if (entry) _refreshTmdbSeasonData(entry, _catUser.id, renderSections);
   } catch(e) {
     showToast('Error updating. Please try again.', 'err');
     console.error(e);
