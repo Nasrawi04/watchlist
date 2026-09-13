@@ -353,6 +353,13 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replac
 
 let _tdUser = null, _tdType = null, _tdId = null, _tdDetail = null, _tdOwnEntry = null;
 
+// Returning via browser back/forward can restore this page from the
+// bfcache with stale data (e.g. this title's own-entry status after
+// adding it to the library) instead of re-running this page's scripts.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   _tdType = params.get('type');
@@ -673,6 +680,21 @@ async function _tdAddToLibrary() {
   } else {
     payload.total_seasons = d.number_of_seasons || null;
     payload.total_eps     = d.number_of_episodes || null;
+    // total_seasons/total_eps above are just the aggregate counts — the
+    // detailed per-season breakdown and completion year only ever live
+    // inside ratings, which this payload previously never included at
+    // all, so both were silently lost for every entry added this way.
+    const seasons = (d.seasons || []).filter(s => s.season_number > 0);
+    payload.ratings = { _season_breakdown: seasons.map(s => s.episode_count) };
+    if ((d.status === 'Ended' || d.status === 'Canceled') && d.last_air_date) {
+      payload.ratings._completion_year = d.last_air_date.split('-')[0];
+    }
+  }
+  // Anime/Cartoons mix movie and show entries within the same category —
+  // without this marker, an anime movie added here defaults to being
+  // treated as a show everywhere else in the app.
+  if (cat === 'anime' || cat === 'cartoons') {
+    payload.ratings = { ...(payload.ratings || {}), _media_type: _tdType };
   }
 
   try {
