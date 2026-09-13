@@ -151,7 +151,14 @@ async function quickCreate(payload, userId) {
     runtime_m:     payload.runtime_m     || null,
     tmdb_id:       payload.tmdb_id       || null,
     tmdb_type:     payload.tmdb_type     || null,
-    ratings:       {},
+    // Was hardcoded to {} — silently discarding anything the caller
+    // passed here (completion year for ended shows, the detailed
+    // per-season episode breakdown, the anime/cartoons Movie/TV
+    // sub-type marker) regardless of whether TMDB actually had that
+    // data. Every quick-created entry lost these fields permanently
+    // unless the person happened to also edit it via the full detail
+    // page afterward.
+    ratings:       payload.ratings || {},
     watched:       0,
   };
   const { data, error } = await sb.from('entries').insert(record).select().single();
