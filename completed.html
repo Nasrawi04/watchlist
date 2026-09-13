@@ -66,7 +66,7 @@
 .fv-rank-title{font-size:18px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden;}
 .fv-rank-meta{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
 .fv-rank-score{color:var(--olive-light);font-size:clamp(13px, 3vw, 15px);font-weight:600;white-space:nowrap;text-align:right;flex-shrink:0}
-.fv-rank-date{font-size:11px;color:var(--text-3);margin-top:4px;text-align:right;}
+.fv-rank-date{font-size:clamp(9px, 2.2vw, 11px);color:var(--text-3);margin-top:4px;text-align:right;}
 
 .cat-badge{
   font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);
@@ -779,6 +779,13 @@ async function setCompSort(v) {
   _compSortBar();
   renderMain();
 }
+// Returning via browser back/forward can restore this page from the
+// bfcache with stale data (e.g. an entry just added/edited elsewhere
+// wouldn't show up here) instead of re-running this page's scripts.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   initPage(async (user) => {
     if (!user) {
