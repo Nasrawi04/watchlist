@@ -212,6 +212,13 @@ function _initDiscSideNavScrollSpy() {
   sections.forEach(s => obs.observe(s));
 }
 
+// Returning via browser back/forward can restore this page from the
+// bfcache with stale data (e.g. an entry just added/edited elsewhere
+// wouldn't show up here) instead of re-running this page's scripts.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   initDiscoverSearch('heroSearch', { max: 20, connected: true, includePersons: true });
   initPageGuest(async () => {
