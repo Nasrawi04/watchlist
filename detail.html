@@ -38,30 +38,40 @@
 }
 #posterPickerOverlay.open { opacity:1; pointer-events:auto; }
 #posterPickerCard {
-  width:100%; max-width:640px; max-height:82vh;
+  width:100%; max-width:760px; height:82vh; max-height:82vh;
   background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--radius-lg);
   display:flex; flex-direction:column; overflow:hidden;
 }
 #posterPickerGrid {
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:12px;
-  padding:14px; overflow-y:auto; flex:1;
+  display:grid !important; grid-template-columns:repeat(3, 1fr) !important; gap:24px !important;
+  padding:24px; overflow-y:auto; flex:1 1 auto; min-height:0;
+  align-content:start;
 }
 .poster-picker-opt {
-  position:relative; aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden;
-  cursor:pointer; border:2px solid transparent; transition:border-color .15s;
+  position:relative; width:100%; aspect-ratio:2/3 !important; border-radius:var(--radius-sm);
+  overflow:hidden !important; cursor:pointer; border:2px solid transparent;
+  transition:border-color .15s, transform .15s;
+  box-shadow:0 2px 10px rgba(0,0,0,0.25);
 }
-.poster-picker-opt:hover { border-color:var(--border-olive); }
+.poster-picker-opt:hover { border-color:var(--border-olive); transform:translateY(-2px); }
 .poster-picker-opt.selected { border-color:var(--olive-light); }
-.poster-picker-opt img { width:100%; height:100%; object-fit:cover; display:block; }
+.poster-picker-opt img {
+  position:absolute !important; inset:0 !important;
+  width:100% !important; height:100% !important; object-fit:cover !important; display:block;
+}
 .poster-picker-lang {
-  position:absolute; bottom:4px; right:4px; background:rgba(0,0,0,0.7); color:#fff;
-  font-size:9px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:.3px;
+  position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,0.7); color:#fff;
+  font-size:10px; font-weight:700; padding:3px 6px; border-radius:5px; letter-spacing:.3px;
+}
+@media(max-width:640px) {
+  #posterPickerCard { height:78vh; max-height:78vh; }
+  #posterPickerGrid { grid-template-columns:repeat(2, 1fr) !important; gap:14px !important; padding:14px; }
+  .poster-picker-lang { font-size:9px; padding:2px 5px; }
 }
 .tmdb-lock-btn:hover { color:var(--olive-light); }
 .tmdb-lock-btn.linked { display:inline-flex; }
 .field-locked {
   opacity:0.7 !important; cursor:not-allowed !important;
-  background:var(--bg-3) !important;
 }
 .genre-picker.locked .genre-opt { pointer-events:none; opacity:0.7; }
 #dSeasonList.locked input { pointer-events:none; }
@@ -1627,7 +1637,7 @@ async function _loadTmdbPosterOptions(tmdbId, tmdbType) {
       const full = `${TMDB_FULL}${p.file_path}`;
       const isCurrent = _posterUrl && _posterUrl.includes(p.file_path);
       return `<div class="poster-picker-opt${isCurrent ? ' selected' : ''}" onclick="_selectTmdbPoster('${full}')">
-        <img src="https://image.tmdb.org/t/p/w300${p.file_path}" loading="lazy">
+        <img src="https://image.tmdb.org/t/p/w500${p.file_path}" loading="lazy">
         ${p.iso_639_1 ? `<span class="poster-picker-lang">${p.iso_639_1.toUpperCase()}</span>` : ''}
       </div>`;
     }).join('');
