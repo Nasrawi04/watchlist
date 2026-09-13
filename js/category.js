@@ -480,6 +480,16 @@ function catContext() {
   return null; // tv / movies → no badges in category pages
 }
 
+// Back/forward navigation (e.g. returning from detail.html after adding
+// or editing an entry) can restore the page from the browser's bfcache
+// instead of re-running this script — meaning _catAll stays whatever it
+// was BEFORE that add/edit happened, so a just-added entry's tmdb_id
+// (and everything else) silently looks missing until an actual reload.
+// event.persisted is true specifically for a bfcache restore.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted && _catUser) renderPage();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   initPage(async (user) => {
     _catUser = user;
