@@ -43,9 +43,11 @@
   display:flex; flex-direction:column; overflow:hidden;
 }
 #posterPickerGrid {
-  display:grid !important; grid-template-columns:repeat(3, 1fr) !important; gap:24px !important;
+  display:flex !important; flex-direction:column; gap:20px;
   padding:24px; overflow-y:auto; flex:1 1 auto; min-height:0;
-  align-content:start;
+}
+.poster-picker-group-grid {
+  display:grid !important; grid-template-columns:repeat(3, 1fr) !important; gap:24px !important;
 }
 .poster-picker-opt {
   position:relative; width:100%; aspect-ratio:2/3 !important; border-radius:var(--radius-sm);
@@ -59,14 +61,17 @@
   position:absolute !important; inset:0 !important;
   width:100% !important; height:100% !important; object-fit:cover !important; display:block;
 }
-.poster-picker-lang {
-  position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,0.7); color:#fff;
-  font-size:10px; font-weight:700; padding:3px 6px; border-radius:5px; letter-spacing:.3px;
+.poster-picker-group-label {
+  display:flex; align-items:baseline; gap:8px;
+  font-size:13px; font-weight:600; color:var(--text-2);
+  padding-bottom:8px; border-bottom:0.5px solid var(--border);
+  margin-bottom:16px;
 }
+.poster-picker-group-count { font-size:11px; font-weight:400; color:var(--text-3); }
 @media(max-width:640px) {
   #posterPickerCard { height:78vh; max-height:78vh; }
-  #posterPickerGrid { grid-template-columns:repeat(2, 1fr) !important; gap:14px !important; padding:14px; }
-  .poster-picker-lang { font-size:9px; padding:2px 5px; }
+  #posterPickerGrid { gap:14px !important; padding:14px; }
+  .poster-picker-group-grid { grid-template-columns:repeat(2, 1fr) !important; gap:14px !important; }
 }
 .tmdb-lock-btn:hover { color:var(--olive-light); }
 .tmdb-lock-btn.linked { display:inline-flex; }
@@ -1633,12 +1638,40 @@ async function _loadTmdbPosterOptions(tmdbId, tmdbType) {
       grid.innerHTML = `<div style="grid-column:1/-1;padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">No alternate posters found for this title.</div>`;
       return;
     }
-    grid.innerHTML = posters.map(p => {
-      const full = `${TMDB_FULL}${p.file_path}`;
-      const isCurrent = _posterUrl && _posterUrl.includes(p.file_path);
-      return `<div class="poster-picker-opt${isCurrent ? ' selected' : ''}" onclick="_selectTmdbPoster('${full}')">
-        <img src="https://image.tmdb.org/t/p/w500${p.file_path}" loading="lazy">
-        ${p.iso_639_1 ? `<span class="poster-picker-lang">${p.iso_639_1.toUpperCase()}</span>` : ''}
+    // Grouped by language with a section header per group, instead of
+    // one flat strip — TMDB often has many posters that reuse the exact
+    // same key art with just the title text translated, and seeing that
+    // many near-identical crops in a row read as a repeating mess. This
+    // still shows every poster, just organized so it's clear WHY there
+    // are so many similar-looking ones, and lets someone jump straight
+    // to a language they care about.
+    let langNamer = null;
+    try { langNamer = new Intl.DisplayNames(['en'], { type: 'language' }); } catch (e) {}
+    const groups = new Map(); // key: lang code or 'none', value: posters[]
+    posters.forEach(p => {
+      const key = p.iso_639_1 || 'none';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    });
+    // "No Language" (textless/international) group first, then
+    // alphabetically by language name.
+    const sortedKeys = [...groups.keys()].sort((a, b) => {
+      if (a === 'none') return -1;
+      if (b === 'none') return 1;
+      return a.localeCompare(b);
+    });
+    grid.innerHTML = sortedKeys.map(key => {
+      const label = key === 'none' ? 'No Language / Textless' : (langNamer ? (langNamer.of(key) || key.toUpperCase()) : key.toUpperCase());
+      const items = groups.get(key).map(p => {
+        const full = `${TMDB_FULL}${p.file_path}`;
+        const isCurrent = _posterUrl && _posterUrl.includes(p.file_path);
+        return `<div class="poster-picker-opt${isCurrent ? ' selected' : ''}" onclick="_selectTmdbPoster('${full}')">
+          <img src="https://image.tmdb.org/t/p/w500${p.file_path}" loading="lazy">
+        </div>`;
+      }).join('');
+      return `<div>
+        <div class="poster-picker-group-label">${label} <span class="poster-picker-group-count">${groups.get(key).length}</span></div>
+        <div class="poster-picker-group-grid">${items}</div>
       </div>`;
     }).join('');
   } catch (err) {
