@@ -38,6 +38,7 @@
   --text-3:       #808080; /* was #6E6E6E — ~3.7:1 contrast against --bg, below WCAG AA's 4.5:1 for normal text. This is used everywhere (item counts, years, hints, muted labels), so it was the actual weak point in dark mode. #808080 lands at ~4.7:1. */
 
   --serif: 'Cormorant Garamond', Georgia, serif;
+  --bebas: 'Bebas Neue', var(--sans);
   --sans:  'Inter', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
 
   --radius-xs: 8px;
@@ -956,13 +957,13 @@ nav {
 }
 .fd-cols { display:flex; gap:20px; flex-wrap:wrap; }
 .fd-col  { flex:1; min-width:180px; }
-.fd-section-hd { font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:8px; padding-bottom:6px; border-bottom:0.5px solid var(--border); }
+.fd-section-hd { font-family:var(--bebas); font-size:13px; letter-spacing:1.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:8px; padding-bottom:6px; border-bottom:0.5px solid var(--border); }
 .fd-rating-row  { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:0.5px solid rgba(255,255,255,0.04); }
-.fd-rating-label{ font-size:14px; color:var(--text-2); }
-.fd-rating-val  { font-family:var(--serif); font-size:18px; color:var(--olive-light); }
+.fd-rating-label{ font-family:var(--bebas); font-size:16px; letter-spacing:.3px; color:var(--text-2); }
+.fd-rating-val  { font-family:var(--bebas); font-size:20px; color:var(--olive-light); }
 .fd-final       { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
-.fd-final span  { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); }
-.fd-final strong{ font-family:var(--serif); font-size:34px; font-weight:300; color:var(--olive-light); }
+.fd-final span  { font-family:var(--bebas); font-size:13px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); }
+.fd-final strong{ font-family:var(--bebas); font-size:38px; font-weight:400; color:var(--olive-light); }
 .fd-notes       { font-size:14px; color:var(--text-2); font-style:italic; line-height:1.6; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
 .fd-description { font-size:14.5px; color:var(--text-2); line-height:1.65; margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
 .popup-info-block { margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
@@ -1068,15 +1069,6 @@ nav {
 .pvi-title-year { font-size:0.62em;font-weight:500;color:var(--text-2);vertical-align:middle; }
 .pvi-tags { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0; }
 .pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px;font-family:var(--sans); }
-/* Genre pills and the completed-date badge share this treatment —
-   matches title.html's .td-genre-chip exactly, just via theme
-   variables instead of hardcoded colors so it still respects light
-   mode. */
-.pvi-genre-chip {
-  font-family:var(--sans); font-size:clamp(10px, 1.5vw, 13px); font-weight:500;
-  padding:5px 14px; border-radius:20px;
-  background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light);
-}
 .pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s; }
 .pvi-close:hover { color:var(--text); }
 .pvi-body { padding:16px 20px 20px; }
@@ -1147,7 +1139,6 @@ nav {
   .pvi-season-num { font-size:17px; }
   .pvi-runtime { padding:8px 14px; }
   .pvi-runtime-val { font-size:20px; }
-  .pvi-genre-chip { padding:4px 10px; }
   .pvi-score-val { font-size:26px; }
   #profInfoCard { width:97%; }
   .pvi-actions { padding:0 14px 14px; }
