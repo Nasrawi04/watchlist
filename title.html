@@ -470,7 +470,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
   }
 
   const castSource = isMovie ? (d.credits?.cast || []) : (d.aggregate_credits?.cast || d.credits?.cast || []);
-  const cast = castSource.slice(0, 10);
+  const cast = castSource;
 
   // Age/content rating (PG-13, R, TV-14, TV-MA, etc.) — movies expose
   // this via release_dates (per-country certifications, several release
