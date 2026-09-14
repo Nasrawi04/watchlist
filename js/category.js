@@ -284,6 +284,28 @@ function _entryMeta(e) {
   return `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>`;
 }
 
+// Same content as _entryMeta() but without the wrapping <div class="w-ep-row">
+// (which adds its own margin-bottom, meant for stacking it above other
+// card content) — used where the badge needs to sit inline alongside
+// other badges/tags instead of as its own standalone row.
+function _entryMetaBadgeOnly(e) {
+  const isMovie = e.cat === 'movies' || (e.ratings?._media_type === 'movie');
+  if (isMovie) {
+    const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
+    if (!rtH && !rtM) return '';
+    const label = rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
+    return `<span class="w-ep-badge">${label}</span>`;
+  }
+  const bd = Array.isArray(e.ratings?._season_breakdown)
+    ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
+  const _bdTot = bd.reduce((a,b)=>a+b,0);
+  const scope = bd.length ? `S${bd.length} · E${_bdTot}`
+    : (e.total_seasons && e.total_eps) ? `S${e.total_seasons} · E${e.total_eps}`
+    : e.total_seasons ? `S${e.total_seasons}`
+    : e.total_eps ? `${e.total_eps} eps` : '';
+  return scope ? `<span class="w-ep-badge">${scope}</span>` : '';
+}
+
 /* ── Ongoing badge: shows last watched position (S3 E10) ── */
 function _ongoingMeta(e) {
   const isMovie = e.ratings?._media_type === 'movie';
@@ -1150,8 +1172,7 @@ function openGridPopup(id) {
 
   // Ep/runtime badge sits in its own row under genres.
   const metaRowEl = document.getElementById('cgPopupMetaRow');
-  const epBadgeHTML = _entryMeta(e) ? `<span class="w-ep-badge">${_entryMeta(e)}</span>` : '';
-  metaRowEl.innerHTML = epBadgeHTML;
+  metaRowEl.innerHTML = _entryMetaBadgeOnly(e);
 
   // Score
   const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
