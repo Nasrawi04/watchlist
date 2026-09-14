@@ -166,6 +166,23 @@ async function _catInfoDeleteEntry(e) {
   }
 }
 
+async function _cgPopupDeleteEntry() {
+  const e = _catAll.find(en => en.id === _cgPopupEntryId);
+  if (!e) return;
+  if (!confirm(`Delete "${e.title}" from your library? This can't be undone.`)) return;
+  try {
+    await deleteEntry(e.id, _catUser.id);
+    _catAllRaw = _catAllRaw.filter(x => x.id !== e.id);
+    _catAll = _catAll.filter(x => x.id !== e.id);
+    closeGridPopup();
+    renderSections();
+    showToast('Deleted.');
+  } catch (err) {
+    console.error(err);
+    showToast('Error deleting entry.', 'err');
+  }
+}
+
 async function _catGoDiscover(e, btn) {
   if (e.tmdb_id && e.tmdb_type) {
     goToTitle(e.tmdb_type, e.tmdb_id);
@@ -1077,7 +1094,7 @@ function _injectGridPopup() {
     <div id="cgPopupCard" style="
       background:var(--bg-2);border:1.5px solid var(--olive-light);
       box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-      width:100%;max-width:min(97vw, 760px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
+      width:100%;max-width:min(97vw, 920px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
       position:relative;box-sizing:border-box;
       transform:translateY(18px);transition:transform 260ms var(--ease);
     ">
@@ -1093,8 +1110,9 @@ function _injectGridPopup() {
           box-shadow:var(--shadow);
         "></div>
         <div style="flex:1;min-width:0;padding-top:4px;">
-          <div id="cgPopupTitle" style="font-family:var(--sans);font-size:24px;font-weight:600;line-height:1.15;margin-bottom:8px;color:var(--text);"></div>
+          <div id="cgPopupTitle" style="font-family:'Oswald',var(--sans);font-size:24px;font-weight:600;line-height:1.15;margin-bottom:8px;color:var(--text);"></div>
           <div id="cgPopupTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+          <div id="cgPopupDateRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
           <div id="cgPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;"></div>
           <div id="cgPopupInfo" style="margin-top:4px;"></div>
         </div>
@@ -1135,6 +1153,10 @@ function _injectGridPopup() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           Discover Card
         </button>
+        <button class="popup-action-btn popup-action-danger" onclick="_cgPopupDeleteEntry()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Delete
+        </button>
       </div>
     </div>`;
   el.addEventListener('click', e => { if (e.target === el) closeGridPopup(); });
@@ -1151,26 +1173,35 @@ function openGridPopup(id) {
 
   // Poster
   document.getElementById('cgPopupPoster').innerHTML = posterHTML(e);
-  // Title
+  // Title — year uses Bebas Neue, distinct from the title's own Oswald.
   const _pyEsc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const _pyIsMovie = e.cat==='movies'||e.ratings?._media_type==='movie';
   const _pyStart = e.year || null;
   const _pyEnd = e.ratings?._completion_year || null;
   let _pyStr = '';
   if (_pyStart) {
-    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ` <span style="font-size:0.55em;font-weight:400;color:var(--text-2);vertical-align:middle;">${_pyStart}</span>`;
-    else _pyStr = ` <span style="font-size:0.55em;font-weight:400;color:var(--text-2);vertical-align:middle;">${_pyStart}\u2013${_pyEnd||'Present'}</span>`;
+    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ` <span style="font-family:var(--bebas);font-size:0.65em;font-weight:400;color:var(--text-2);vertical-align:middle;">${_pyStart}</span>`;
+    else _pyStr = ` <span style="font-family:var(--bebas);font-size:0.65em;font-weight:400;color:var(--text-2);vertical-align:middle;">${_pyStart}\u2013${_pyEnd||'Present'}</span>`;
   }
   document.getElementById('cgPopupTitle').innerHTML = _pyEsc(e.title) + _pyStr;
 
-  // Genre pills (+ category label) use the exact same solid badge
-  // style as the ep/runtime badge, for full consistency between them.
+  // Genre pills (+ category label) — same solid badge as the ep/runtime
+  // badge, text set in Manrope.
   const tags = [CAT_META[e.cat]?.label, ...((e.genres||[]).map(g => g))].filter(Boolean);
   document.getElementById('cgPopupTags').innerHTML =
-    tags.map(t => `<span class="w-ep-badge">${_pyEsc(String(t))}</span>`).join('') +
+    tags.map(t => `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">${_pyEsc(String(t))}</span>`).join('') +
     (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
 
-  // Ep/runtime badge sits in its own row under genres.
+  // Date Completed — same green pill as genres, text in Bebas Neue —
+  // sits under genres, with the ep/runtime badge under that.
+  const completedDateStr = e.completed_date
+    ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
+  document.getElementById('cgPopupDateRow').innerHTML = completedDateStr
+    ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Completed On: ${completedDateStr}</span>`
+    : '';
+
+  // Ep/runtime badge sits under the date-completed badge.
   const metaRowEl = document.getElementById('cgPopupMetaRow');
   metaRowEl.innerHTML = _entryMetaBadgeOnly(e);
 
@@ -1510,15 +1541,15 @@ function _buildCgDetail(e) {
 
   const favs = e.ratings?._favorites || {};
   const favChips = [
-    favs.character ? `<span class="fav-chip"><span class="fav-chip-label">Fav Character</span>${esc(favs.character)}</span>` : '',
-    (!isMovies && favs.episode) ? `<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span>${esc(favs.episode)}</span>` : '',
-    (!isMovies && favs.season)  ? `<span class="fav-chip"><span class="fav-chip-label">Fav Season</span>${esc(favs.season)}</span>` : '',
+    favs.character ? `<span class="fav-chip"><span class="fav-chip-label">Fav Character</span><span class="fav-chip-val">${esc(favs.character)}</span></span>` : '',
+    (!isMovies && favs.episode) ? `<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span><span class="fav-chip-val">${esc(favs.episode)}</span></span>` : '',
+    (!isMovies && favs.season)  ? `<span class="fav-chip"><span class="fav-chip-label">Fav Season</span><span class="fav-chip-val">${esc(favs.season)}</span></span>` : '',
   ].filter(Boolean).join('');
   const lows = e.ratings?._lowlights || e.ratings?._favorites?._lowlights || {};
   const lowChips = [
-    lows.character ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Character</span>${esc(lows.character)}</span>` : '',
-    (!isMovies && lows.episode) ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Episode</span>${esc(lows.episode)}</span>` : '',
-    (!isMovies && lows.season)  ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span>${esc(lows.season)}</span>` : '',
+    lows.character ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Character</span><span class="fav-chip-val">${esc(lows.character)}</span></span>` : '',
+    (!isMovies && lows.episode) ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Episode</span><span class="fav-chip-val">${esc(lows.episode)}</span></span>` : '',
+    (!isMovies && lows.season)  ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span><span class="fav-chip-val">${esc(lows.season)}</span></span>` : '',
   ].filter(Boolean).join('');
 
   return `${e.description ? `<div class="fd-description">${esc(e.description)}</div>` : ''}
@@ -1527,11 +1558,10 @@ function _buildCgDetail(e) {
     ${(coreRows||animRow) ? `<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>${coreRows}${animRow}</div>` : ''}
     ${bonusRows ? `<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>${bonusRows}</div>` : ''}
   </div>
-  <div class="fd-final"><span>Final Score</span><strong>${score}</strong></div>
+  <div class="fd-final"><span>Final Score</span><strong>★ ${score}</strong></div>
   ${favChips ? `<div class="fav-chips" style="margin-top:8px;">${favChips}</div>` : ''}
   ${lowChips ? `<div class="fav-chips" style="margin-top:6px;">${lowChips}</div>` : ''}
-  ${e.notes ? `<div class="fd-notes">"${esc(e.notes)}"</div>` : ''}
-  <a href="#" class="fd-edit-link" onclick="goToDetail('${e.id}','${currentFile()}');return false;">Edit entry →</a>`;
+  ${e.notes ? `<div class="fd-notes">"${esc(e.notes)}"</div>` : ''}`;
 }
 
 function renderCompletedGrid(items, sectionKey = 'completed') {
@@ -1983,9 +2013,9 @@ function renderFavChips(ratings, cat) {
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   
   const chips = [
-    favs.character ? `<span class="fav-chip"><span class="fav-chip-label">Fav Character</span>${esc(favs.character)}</span>` : '',
-    (!isMovies && favs.episode) ? `<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span>${esc(favs.episode)}</span>` : '',
-    (!isMovies && favs.season)  ? `<span class="fav-chip"><span class="fav-chip-label">Fav Season</span>${esc(favs.season)}</span>` : '',
+    favs.character ? `<span class="fav-chip"><span class="fav-chip-label">Fav Character</span><span class="fav-chip-val">${esc(favs.character)}</span></span>` : '',
+    (!isMovies && favs.episode) ? `<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span><span class="fav-chip-val">${esc(favs.episode)}</span></span>` : '',
+    (!isMovies && favs.season)  ? `<span class="fav-chip"><span class="fav-chip-label">Fav Season</span><span class="fav-chip-val">${esc(favs.season)}</span></span>` : '',
   ].filter(Boolean).join('');
 
   return chips ? `<div class="fav-chips" style="margin-top:8px;">${chips}</div>` : '';
