@@ -1057,39 +1057,58 @@ nav {
 }
 .pvi-header { display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0; }
 .pvi-poster {
-  width:clamp(52px,14vw,80px);height:clamp(73px,19.5vw,112px);
+  width:clamp(76px,20vw,112px);height:clamp(107px,28vw,157px);
   flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;
   background:var(--bg-3);display:flex;align-items:center;justify-content:center;
   box-shadow:var(--shadow);font-family:var(--serif);font-size:28px;color:var(--text-3);
 }
 .pvi-poster img { width:100%;height:100%;object-fit:cover; }
 .pvi-meta-wrap { flex:1;min-width:0;padding-top:2px; }
-.pvi-title { font-family:var(--serif);font-size:clamp(16px,4.5vw,22px);font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text); }
+.pvi-title { font-family:var(--sans);font-size:clamp(16px,4.5vw,22px);font-weight:600;line-height:1.2;margin-bottom:6px;color:var(--text); }
+.pvi-title-year { font-size:0.62em;font-weight:500;color:var(--text-2);vertical-align:middle; }
 .pvi-tags { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0; }
-.pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px; }
+.pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px;font-family:var(--sans); }
+/* Genre pills and the completed-date badge share this treatment —
+   matches title.html's .td-genre-chip exactly, just via theme
+   variables instead of hardcoded colors so it still respects light
+   mode. */
+.pvi-genre-chip {
+  font-family:var(--sans); font-size:clamp(10px, 1.5vw, 13px); font-weight:500;
+  padding:5px 14px; border-radius:20px;
+  background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light);
+}
 .pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s; }
 .pvi-close:hover { color:var(--text); }
 .pvi-body { padding:16px 20px 20px; }
-.pvi-desc { font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:16px; }
-.pvi-section-label { font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;display:flex;align-items:center;gap:10px; }
+.pvi-desc { font-family:var(--sans);font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:16px; }
+.pvi-section-label { font-family:var(--sans);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;display:flex;align-items:center;gap:10px; }
 .pvi-section-label::after { content:'';flex:1;height:0.5px;background:var(--border); }
 .pvi-seasons { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px; }
 .pvi-season-chip { display:flex;flex-direction:column;align-items:center;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;min-width:58px;transition:border-color .15s; }
 .pvi-season-chip:hover { border-color:var(--border-olive); }
-.pvi-season-num { font-family:var(--serif);font-size:20px;font-weight:300;color:var(--olive-light);line-height:1; }
-.pvi-season-eps { font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-top:3px;white-space:nowrap; }
-.pvi-runtime { display:inline-flex;align-items:center;gap:10px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;margin-bottom:16px; }
-.pvi-runtime-val { font-family:var(--serif);font-size:24px;font-weight:300;color:var(--olive-light); }
-.pvi-runtime-lbl { font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px; }
-.pvi-actions { display:flex;gap:10px;padding:0 20px 20px; }
+.pvi-season-num { font-family:var(--sans);font-size:20px;font-weight:700;color:var(--olive-light);line-height:1; }
+.pvi-season-eps { font-family:var(--sans);font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-top:3px;white-space:nowrap; }
+/* Runtime/episode badge + completed-date badge now sit side by side
+   under genres, rather than runtime alone getting its own big block. */
+.pvi-meta-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0 16px; }
+.pvi-runtime { display:inline-flex;align-items:center;gap:10px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px; }
+.pvi-runtime-val { font-family:var(--sans);font-size:24px;font-weight:700;color:var(--olive-light); }
+.pvi-runtime-lbl { font-family:var(--sans);font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px; }
+/* Prominent MSS score — the person's own final rating, not TMDB's. */
+.pvi-score-row { display:flex; align-items:baseline; gap:8px; margin-bottom:16px; }
+.pvi-score-val { font-family:var(--sans); font-size:32px; font-weight:700; color:var(--olive-light); line-height:1; }
+.pvi-score-lbl { font-family:var(--sans); font-size:10px; color:var(--text-3); text-transform:uppercase; letter-spacing:1.5px; }
+.pvi-actions { display:flex;flex-wrap:wrap;gap:10px;padding:0 20px 20px; }
 .pvi-action-btn {
   flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
-  padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;
+  min-width:110px;
+  padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;font-family:var(--sans);
   cursor:pointer;text-decoration:none;transition:opacity .15s;border:0.5px solid var(--border-olive);
   background:var(--olive-faint);color:var(--olive-light);
 }
 .pvi-action-btn:hover { opacity:.8; }
 .pvi-action-btn.pvi-action-primary { background:var(--olive); color:#fff; border-color:var(--olive); }
+.pvi-action-btn.pvi-action-danger { background:rgba(248,113,113,0.12); border-color:rgba(248,113,113,0.4); color:#f87171; }
 
 /* ── Discover confirmation picker — lets the person pick the right
    TMDB match instead of auto-navigating to a possibly-wrong title.
@@ -1128,6 +1147,8 @@ nav {
   .pvi-season-num { font-size:17px; }
   .pvi-runtime { padding:8px 14px; }
   .pvi-runtime-val { font-size:20px; }
+  .pvi-genre-chip { padding:4px 10px; }
+  .pvi-score-val { font-size:26px; }
   #profInfoCard { width:97%; }
   .pvi-actions { padding:0 14px 14px; }
 }
@@ -3759,42 +3780,8 @@ body { font-size:15px; }
   transform:translateY(18px);transition:transform 260ms var(--ease);
 }
 .pvi-header { display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0; }
-.pvi-poster {
-  width:clamp(52px,14vw,80px);height:clamp(73px,19.5vw,112px);
-  flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;
-  background:var(--bg-3);display:flex;align-items:center;justify-content:center;
-  box-shadow:var(--shadow);font-family:var(--serif);font-size:28px;color:var(--text-3);
-}
-.pvi-poster img { width:100%;height:100%;object-fit:cover; }
-.pvi-meta-wrap { flex:1;min-width:0;padding-top:2px; }
-.pvi-title { font-family:var(--serif);font-size:clamp(16px,4.5vw,22px);font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text); }
-.pvi-tags { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0; }
-.pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px; }
-.pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s; }
-.pvi-close:hover { color:var(--text); }
-.pvi-body { padding:16px 20px 20px; }
-.pvi-desc { font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:16px; }
-.pvi-section-label { font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;display:flex;align-items:center;gap:10px; }
-.pvi-section-label::after { content:'';flex:1;height:0.5px;background:var(--border); }
-.pvi-seasons { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px; }
-.pvi-season-chip { display:flex;flex-direction:column;align-items:center;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;min-width:58px;transition:border-color .15s; }
-.pvi-season-chip:hover { border-color:var(--border-olive); }
-.pvi-season-num { font-family:var(--serif);font-size:20px;font-weight:300;color:var(--olive-light);line-height:1; }
-.pvi-season-eps { font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-top:3px;white-space:nowrap; }
-.pvi-runtime { display:inline-flex;align-items:center;gap:10px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;margin-bottom:16px; }
-.pvi-runtime-val { font-family:var(--serif);font-size:24px;font-weight:300;color:var(--olive-light); }
-.pvi-runtime-lbl { font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px; }
 .pv-add-queue-btn { display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:opacity .15s; }
 .pv-add-queue-btn:hover { opacity:.85; }
-@media(max-width:600px) {
-  .pvi-header { padding:14px 14px 0;gap:12px; }
-  .pvi-body { padding:12px 14px 16px; }
-  .pvi-desc { font-size:12px; }
-  .pvi-season-chip { padding:6px 10px;min-width:46px; }
-  .pvi-season-num { font-size:17px; }
-  .pvi-runtime { padding:8px 14px; }
-  .pvi-runtime-val { font-size:20px; }
-}
 
 /* ══════════════════════════════════════
    Popup Action Buttons
