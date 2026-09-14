@@ -957,15 +957,15 @@ nav {
 }
 .fd-cols { display:flex; gap:20px; flex-wrap:wrap; }
 .fd-col  { flex:1; min-width:180px; }
-.fd-section-hd { font-family:var(--sans); font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:8px; padding-bottom:6px; border-bottom:0.5px solid var(--border); }
+.fd-section-hd { font-family:'Oswald',var(--sans); font-weight:600; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:8px; padding-bottom:6px; border-bottom:0.5px solid var(--border); }
 .fd-rating-row  { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:0.5px solid rgba(255,255,255,0.04); }
-.fd-rating-label{ font-family:var(--sans); font-size:14px; color:var(--text-2); }
-.fd-rating-val  { font-family:var(--bebas); font-size:20px; letter-spacing:.5px; color:var(--olive-light); }
+.fd-rating-label{ font-family:'Manrope',var(--sans); font-weight:500; font-size:14px; color:var(--text-2); }
+.fd-rating-val  { font-family:var(--bebas); font-weight:400; font-size:20px; letter-spacing:.5px; color:var(--olive-light); }
 .fd-final       { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
-.fd-final span  { font-family:var(--sans); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); }
+.fd-final span  { font-family:'Oswald',var(--sans); font-weight:600; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); }
 .fd-final strong{ font-family:var(--bebas); font-size:38px; letter-spacing:.5px; font-weight:400; color:var(--olive-light); }
-.fd-notes       { font-size:14px; color:var(--text-2); font-style:italic; line-height:1.6; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
-.fd-description { font-size:14.5px; color:var(--text-2); line-height:1.65; margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
+.fd-notes       { font-family:'Manrope',var(--sans); font-weight:500; font-size:14px; color:var(--text-2); font-style:italic; line-height:1.6; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
+.fd-description { font-family:'Manrope',var(--sans); font-weight:500; font-size:14.5px; color:var(--text-2); line-height:1.65; margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
 .popup-info-block { margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
 
 /* ── Popup info bar (season chips / runtime) ── */
@@ -977,10 +977,10 @@ nav {
 }
 .popup-info-season-chip:hover { border-color:var(--border-olive); }
 .popup-info-season-num {
-  font-family:var(--serif);font-size:17px;color:var(--olive-light);line-height:1;
+  font-family:var(--bebas);font-weight:400;font-size:17px;letter-spacing:.3px;color:var(--olive-light);line-height:1;
 }
 .popup-info-season-eps {
-  font-size:10px;color:var(--text-3);text-transform:uppercase;
+  font-family:'Manrope',var(--sans);font-weight:500;font-size:10px;color:var(--text-3);text-transform:uppercase;
   letter-spacing:0.8px;margin-top:2px;
 }
 .popup-info-runtime {
@@ -989,13 +989,13 @@ nav {
   border-radius:var(--radius-sm);padding:6px 14px;
 }
 .popup-info-runtime-val {
-  font-family:var(--serif);font-size:20px;color:var(--olive-light);
+  font-family:var(--bebas);font-weight:400;font-size:20px;letter-spacing:.3px;color:var(--olive-light);
 }
 .popup-info-runtime-lbl {
-  font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.8px;
+  font-family:'Manrope',var(--sans);font-weight:500;font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.8px;
 }
 .popup-info-label {
-  font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:'Oswald',var(--sans);font-weight:600;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
   color:var(--text-3);margin-bottom:5px;
 }
 @media(max-width:600px) {
@@ -1225,26 +1225,20 @@ nav {
 ════════════════════════════════════════════ */
 .fav-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
 .fav-chip {
-  font-size:11px; color:var(--text-2);
-  background:var(--bg-2); border:0.5px solid var(--border-2);
+  font-size:11px; color:#fff;
+  background:var(--olive); border:0.5px solid var(--olive);
   border-radius:var(--radius-xs); padding:3px 9px;
   display:inline-flex; align-items:center; gap:5px;
 }
-.fav-chip-label { color:var(--text-3); font-size:10px; letter-spacing:0.5px; }
+.fav-chip-label { font-family:'Manrope',var(--sans); font-weight:500; color:rgba(255,255,255,0.75); font-size:10px; letter-spacing:0.5px; }
+.fav-chip-val { font-family:'Oswald',var(--sans); font-weight:500; color:#fff; }
 .low-chip {
-  color:#f87171;
-  background:rgba(248,113,113,0.08);
-  border-color:rgba(248,113,113,0.3);
+  color:#fff;
+  background:#b91c1c;
+  border-color:#b91c1c;
 }
-.low-chip .fav-chip-label { color:rgba(248,113,113,0.6); }
+.low-chip .fav-chip-label { color:rgba(255,255,255,0.75); }
 
-/* Light mode — darker red for contrast */
-[data-theme="light"] .low-chip {
-  color:#c0392b;
-  background:rgba(192,57,43,0.09);
-  border-color:rgba(192,57,43,0.35);
-}
-[data-theme="light"] .low-chip .fav-chip-label { color:rgba(192,57,43,0.65); }
 
 /* ── Completed entry comment blocks ── */
 .cc-block { position:relative; margin-bottom:10px; }
@@ -3786,6 +3780,20 @@ body { font-size:15px; }
   cursor:pointer;transition:all .15s;white-space:nowrap;
   flex:1;min-width:0;
   justify-content:center;
+}
+/* Scoped to the category ratings popup specifically, per current
+   request — other popups' buttons keep the default font for now. */
+#cgPopupActions .popup-action-btn { font-family:'Manrope',var(--sans); font-weight:500; }
+/* Filled look — solid olive background instead of the neutral outline
+   style, matching the badges/pills used throughout this popup. */
+#cgPopupActions .popup-action-btn {
+  background:var(--olive); color:#fff; border-color:var(--olive);
+}
+#cgPopupActions .popup-action-btn:hover { background:var(--olive-light); border-color:var(--olive-light); color:#fff; }
+@media(max-width:600px) {
+  /* One button per line on phones instead of wrapping 2-3 to a row. */
+  #cgPopupActions { flex-direction:column; }
+  #cgPopupActions .popup-action-btn { width:100%; flex:none; }
 }
 .popup-action-btn:hover {
   border-color:var(--border-olive);color:var(--olive-light);
