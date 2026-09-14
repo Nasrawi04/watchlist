@@ -81,7 +81,7 @@ function openCatInfoPopup(id) {
   const catLabel = CAT_META[e.cat] ? CAT_META[e.cat].label : '';
   document.getElementById('profInfoTags').innerHTML =
     (catLabel ? `<span class="pvi-tag">${esc2(catLabel)}</span>` : '') +
-    (e.genres || []).map(g => `<span class="pvi-genre-chip">${esc2(String(g))}</span>`).join('');
+    (e.genres || []).map(g => `<span class="pvi-tag">${esc2(String(g))}</span>`).join('');
 
   const dEl = document.getElementById('profInfoDesc');
   if (e.description) { dEl.textContent = e.description; dEl.style.color = ''; }
@@ -105,7 +105,7 @@ function openCatInfoPopup(id) {
   const completedDateStr = e.completed_date
     ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
     : null;
-  const completedDateBadge = completedDateStr ? `<span class="pvi-genre-chip">${icon('check', 11)} ${completedDateStr}</span>` : '';
+  const completedDateBadge = completedDateStr ? `<span class="pvi-tag">${icon('check', 11)} ${completedDateStr}</span>` : '';
 
   if (!isMovie) {
     const bd = Array.isArray(e.ratings?._season_breakdown)
@@ -1072,14 +1072,15 @@ function _injectGridPopup() {
         padding:20px 20px 0;
       ">
         <div id="cgPopupPoster" style="
-          width:72px;height:100px;flex-shrink:0;border-radius:var(--radius-sm);
+          width:110px;height:156px;flex-shrink:0;border-radius:var(--radius-sm);
           overflow:hidden;background:var(--bg-3);
           display:flex;align-items:center;justify-content:center;
           box-shadow:var(--shadow);
         "></div>
         <div style="flex:1;min-width:0;padding-top:4px;">
-          <div id="cgPopupTitle" style="font-family:var(--serif);font-size:28px;font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text)"></div>
-          <div id="cgPopupMeta"  style="font-size:12px;color:var(--text-3);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+          <div id="cgPopupTitle" style="font-family:var(--bebas);font-size:32px;font-weight:400;line-height:1.15;margin-bottom:8px;color:var(--text);letter-spacing:.3px;"></div>
+          <div id="cgPopupTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+          <div id="cgPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;"></div>
           <div id="cgPopupInfo" style="margin-top:4px;"></div>
         </div>
         <button onclick="closeGridPopup()" style="
@@ -1099,6 +1100,10 @@ function _injectGridPopup() {
       </div>
       <!-- Action buttons -->
       <div id="cgPopupActions" style="display:flex;gap:8px;padding:0 20px 20px;flex-wrap:wrap;">
+        <button class="popup-action-btn" onclick="goToDetail(_cgPopupEntryId,currentFile())">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
         <button class="popup-action-btn" onclick="openFavListsPopup(_cgPopupEntryId)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           Add to Favorites
@@ -1138,25 +1143,26 @@ function openGridPopup(id) {
   const _pyEnd = e.ratings?._completion_year || null;
   let _pyStr = '';
   if (_pyStart) {
-    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ` <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">${_pyStart}</span>`;
-    else _pyStr = ` <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">${_pyStart}\u2013${_pyEnd||'Present'}</span>`;
+    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ` <span style="font-size:0.55em;font-weight:400;color:var(--text-2);vertical-align:middle;">${_pyStart}</span>`;
+    else _pyStr = ` <span style="font-size:0.55em;font-weight:400;color:var(--text-2);vertical-align:middle;">${_pyStart}\u2013${_pyEnd||'Present'}</span>`;
   }
   document.getElementById('cgPopupTitle').innerHTML = _pyEsc(e.title) + _pyStr;
-  // Meta (genres + date + cat + edit link)
+
+  // Genre pills (+ category label) — same .pvi-tag style used in
+  // library/profile's own popups, not a different/bigger badge.
+  const tags = [CAT_META[e.cat]?.label, ...((e.genres||[]).map(g => g))].filter(Boolean);
+  document.getElementById('cgPopupTags').innerHTML =
+    tags.map(t => `<span class="pvi-tag">${_pyEsc(String(t))}</span>`).join('') +
+    (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
+
+  // Ep/runtime badge + completed-date badge sit together in their own
+  // row under genres, instead of everything being crammed onto one line.
   const date = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
-  const meta = [
-    CAT_META[e.cat]?.label,
-    ...((e.genres||[]).map(g => g)),
-    date,
-  ].filter(Boolean);
-  document.getElementById('cgPopupMeta').innerHTML =
-    meta.map(m => `<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:20px;padding:2px 8px;font-size:10px;letter-spacing:.4px">${m}</span>`).join('') +
-    (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '') +
-    `<a href="#" onclick="goToDetail('${e.id}','${currentFile()}');return false;" style="font-size:11px;color:var(--text-3);text-decoration:none;align-self:center;margin-left:4px;">Edit →</a>`;
-  // Ep/runtime badge
-  const _metaEl = document.getElementById('cgPopupMeta');
-  const _metaHTML = _entryMeta(e);
-  if (_metaHTML) _metaEl.insertAdjacentHTML('beforeend', _metaHTML);
+  const metaRowEl = document.getElementById('cgPopupMetaRow');
+  const epBadgeHTML = _entryMeta(e) ? `<span class="w-ep-badge">${_entryMeta(e)}</span>` : '';
+  const dateBadgeHTML = date ? `<span class="pvi-tag">${_pyEsc(date)}</span>` : '';
+  metaRowEl.innerHTML = epBadgeHTML + dateBadgeHTML;
+
   // Score
   const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
   // Info bar (season breakdown / runtime) now renders inside the body, above the ratings
@@ -1171,7 +1177,7 @@ function openGridPopup(id) {
   if (actionsEl) {
     const alreadyWatching = e.status === 'watching' || e.status === 'paused';
     const btns = actionsEl.querySelectorAll('.popup-action-btn');
-    if (btns[1]) btns[1].style.display = alreadyWatching ? 'none' : '';
+    if (btns[2]) btns[2].style.display = alreadyWatching ? 'none' : '';
     const discBtn = document.getElementById('cgPopupDiscoverBtn');
     if (discBtn) discBtn.style.display = (e.status !== 'completed' && e.status !== 'ongoing') ? '' : 'none';
   }
