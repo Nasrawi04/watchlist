@@ -80,8 +80,8 @@ function openCatInfoPopup(id) {
   // tag; genres get the bigger td-genre-chip-style pill.
   const catLabel = CAT_META[e.cat] ? CAT_META[e.cat].label : '';
   document.getElementById('profInfoTags').innerHTML =
-    (catLabel ? `<span class="pvi-tag">${esc2(catLabel)}</span>` : '') +
-    (e.genres || []).map(g => `<span class="pvi-tag">${esc2(String(g))}</span>`).join('');
+    (catLabel ? `<span class="w-ep-badge">${esc2(catLabel)}</span>` : '') +
+    (e.genres || []).map(g => `<span class="w-ep-badge">${esc2(String(g))}</span>`).join('');
 
   const dEl = document.getElementById('profInfoDesc');
   if (e.description) { dEl.textContent = e.description; dEl.style.color = ''; }
@@ -99,13 +99,6 @@ function openCatInfoPopup(id) {
 
   const detEl = document.getElementById('profInfoDetails');
   const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
-  // Runtime/episode badge and the completed-date badge now sit side by
-  // side in one row, under genres, instead of runtime getting its own
-  // separate full-width block.
-  const completedDateStr = e.completed_date
-    ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-    : null;
-  const completedDateBadge = completedDateStr ? `<span class="pvi-tag">${icon('check', 11)} ${completedDateStr}</span>` : '';
 
   if (!isMovie) {
     const bd = Array.isArray(e.ratings?._season_breakdown)
@@ -120,16 +113,16 @@ function openCatInfoPopup(id) {
       }
       seasonsHTML = `<div class="pvi-section-label">TV Show Breakdown</div><div class="pvi-seasons">${chips}</div>`;
     } else if (e.total_eps) {
-      seasonsHTML = `<div class="pvi-meta-row"><div class="pvi-runtime"><div class="pvi-runtime-val">${e.total_eps}</div><div class="pvi-runtime-lbl">Total Episodes</div></div>${completedDateBadge}</div>`;
+      seasonsHTML = `<div class="pvi-meta-row"><div class="pvi-runtime"><div class="pvi-runtime-val">${e.total_eps}</div><div class="pvi-runtime-lbl">Total Episodes</div></div></div>`;
       detEl.innerHTML = seasonsHTML;
       return _finishCatInfoPopup(e);
     }
-    detEl.innerHTML = seasonsHTML + (completedDateBadge ? `<div class="pvi-meta-row">${completedDateBadge}</div>` : '');
+    detEl.innerHTML = seasonsHTML;
   } else {
     const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
     const rtStr = rtH ? `${rtH}h ${rtM}m` : (rtM ? `${rtM}m` : null);
-    detEl.innerHTML = (rtStr || completedDateBadge)
-      ? `<div class="pvi-meta-row">${rtStr ? `<div class="pvi-runtime"><div class="pvi-runtime-val">${rtStr}</div><div class="pvi-runtime-lbl">Movie Runtime</div></div>` : ''}${completedDateBadge}</div>`
+    detEl.innerHTML = rtStr
+      ? `<div class="pvi-meta-row"><div class="pvi-runtime"><div class="pvi-runtime-val">${rtStr}</div><div class="pvi-runtime-lbl">Movie Runtime</div></div></div>`
       : '';
   }
   _finishCatInfoPopup(e);
@@ -1078,7 +1071,7 @@ function _injectGridPopup() {
           box-shadow:var(--shadow);
         "></div>
         <div style="flex:1;min-width:0;padding-top:4px;">
-          <div id="cgPopupTitle" style="font-family:var(--bebas);font-size:32px;font-weight:400;line-height:1.15;margin-bottom:8px;color:var(--text);letter-spacing:.3px;"></div>
+          <div id="cgPopupTitle" style="font-family:var(--sans);font-size:24px;font-weight:600;line-height:1.15;margin-bottom:8px;color:var(--text);"></div>
           <div id="cgPopupTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
           <div id="cgPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;"></div>
           <div id="cgPopupInfo" style="margin-top:4px;"></div>
@@ -1148,20 +1141,17 @@ function openGridPopup(id) {
   }
   document.getElementById('cgPopupTitle').innerHTML = _pyEsc(e.title) + _pyStr;
 
-  // Genre pills (+ category label) — same .pvi-tag style used in
-  // library/profile's own popups, not a different/bigger badge.
+  // Genre pills (+ category label) use the exact same solid badge
+  // style as the ep/runtime badge, for full consistency between them.
   const tags = [CAT_META[e.cat]?.label, ...((e.genres||[]).map(g => g))].filter(Boolean);
   document.getElementById('cgPopupTags').innerHTML =
-    tags.map(t => `<span class="pvi-tag">${_pyEsc(String(t))}</span>`).join('') +
+    tags.map(t => `<span class="w-ep-badge">${_pyEsc(String(t))}</span>`).join('') +
     (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
 
-  // Ep/runtime badge + completed-date badge sit together in their own
-  // row under genres, instead of everything being crammed onto one line.
-  const date = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+  // Ep/runtime badge sits in its own row under genres.
   const metaRowEl = document.getElementById('cgPopupMetaRow');
   const epBadgeHTML = _entryMeta(e) ? `<span class="w-ep-badge">${_entryMeta(e)}</span>` : '';
-  const dateBadgeHTML = date ? `<span class="pvi-tag">${_pyEsc(date)}</span>` : '';
-  metaRowEl.innerHTML = epBadgeHTML + dateBadgeHTML;
+  metaRowEl.innerHTML = epBadgeHTML;
 
   // Score
   const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
