@@ -3790,6 +3790,10 @@ body { font-size:15px; }
   background:var(--olive); color:#fff; border-color:var(--olive);
 }
 #cgPopupActions .popup-action-btn:hover { background:var(--olive-light); border-color:var(--olive-light); color:#fff; }
+#cgPopupActions .popup-action-btn.popup-action-danger {
+  background:#b91c1c; border-color:#b91c1c; color:#fff;
+}
+#cgPopupActions .popup-action-btn.popup-action-danger:hover { background:#dc2626; border-color:#dc2626; }
 @media(max-width:600px) {
   /* One button per line on phones instead of wrapping 2-3 to a row. */
   #cgPopupActions { flex-direction:column; }
