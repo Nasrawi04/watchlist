@@ -1336,7 +1336,7 @@ function _onUpdateDetailsSearchInput(query) {
   const listEl = document.getElementById('updateDetailsResultsList');
   if (!q) { listEl.innerHTML = ''; _updateDetailsResults = []; return; }
   _updateDetailsSearchTimer = setTimeout(async () => {
-    const results = await _tmdbSearch(q, 8);
+    const results = await _tmdbSearch(q, 30);
     _updateDetailsResults = results;
     if (!results.length) {
       listEl.innerHTML = `<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">No matches found.</div>`;
