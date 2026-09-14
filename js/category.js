@@ -16,14 +16,14 @@ const _sort = { watching: 'newest', queue: 'newest', completed: 'newest', ongoin
 ══════════════════════════════════════════ */
 let _catInfoId = null;
 
-function _catYearSpanHTML(e, escFn) {
+function _catYearSpanHTML(e, escFn, cls) {
   const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
   const start = e.year || null;
   const end = e.ratings?._completion_year || null;
   const title = escFn(e.title);
   if (!start) return title;
   const yr = (isMovie || String(end) === String(start)) ? start : (start + '\u2013' + (end || 'Present'));
-  return `${title} <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">${yr}</span>`;
+  return `${title} <span class="${cls || ''}" style="font-size:0.6em;vertical-align:middle;">${yr}</span>`;
 }
 
 function _injectCatInfoPopup() {
@@ -37,6 +37,7 @@ function _injectCatInfoPopup() {
         <button class="pvi-close" onclick="closeCatInfoPopup()">✕</button>
       </div>
       <div class="pvi-body">
+        <div id="profInfoScore"></div>
         <div class="pvi-desc" id="profInfoDesc"></div>
         <div id="profInfoDetails"></div>
       </div>
@@ -44,6 +45,7 @@ function _injectCatInfoPopup() {
         <button class="pvi-action-btn" id="catInfoEditBtn">${icon('list',14)} Edit</button>
         <button class="pvi-action-btn pvi-action-primary" id="catInfoDiscoverBtn">${icon('search',14)} Discover</button>
         <button class="pvi-action-btn" id="catInfoCardBtn" onclick="createShareCard(_catInfoId, 3, true)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Discover Card</button>
+        <button class="pvi-action-btn pvi-action-danger" id="catInfoDeleteBtn">${icon('trash',14)} Delete</button>
       </div>
     </div>`;
   el.addEventListener('click', ev => { if (ev.target === el) closeCatInfoPopup(); });
@@ -72,41 +74,69 @@ function openCatInfoPopup(id) {
   const pEl = document.getElementById('profInfoPoster');
   pEl.innerHTML = e.poster_url ? `<img src="${e.poster_url}" loading="lazy">` : esc2((e.title||'?')[0].toUpperCase());
 
-  document.getElementById('profInfoTitle').innerHTML = _catYearSpanHTML(e, esc2);
+  document.getElementById('profInfoTitle').innerHTML = _catYearSpanHTML(e, esc2, 'pvi-title-year');
 
-  const tags = [];
-  if (CAT_META[e.cat]) tags.push(CAT_META[e.cat].label);
-  (e.genres||[]).forEach(g => tags.push(g));
-  document.getElementById('profInfoTags').innerHTML = tags.map(t => `<span class="pvi-tag">${esc2(String(t))}</span>`).join('');
+  // Category label (Movie/TV Show/Anime/Cartoons) stays its own small
+  // tag; genres get the bigger td-genre-chip-style pill.
+  const catLabel = CAT_META[e.cat] ? CAT_META[e.cat].label : '';
+  document.getElementById('profInfoTags').innerHTML =
+    (catLabel ? `<span class="pvi-tag">${esc2(catLabel)}</span>` : '') +
+    (e.genres || []).map(g => `<span class="pvi-genre-chip">${esc2(String(g))}</span>`).join('');
 
   const dEl = document.getElementById('profInfoDesc');
   if (e.description) { dEl.textContent = e.description; dEl.style.color = ''; }
   else { dEl.textContent = '—'; dEl.style.color = 'var(--text-3)'; }
 
+  // MSS score — the person's own rating, not TMDB's.
+  const scoreEl = document.getElementById('profInfoScore');
+  const score = liveScore(e);
+  if (scoreEl) {
+    scoreEl.innerHTML = score != null
+      ? `<span class="pvi-score-val">★ ${Number(score).toFixed(2)}</span><span class="pvi-score-lbl">MSS Score</span>`
+      : '';
+    scoreEl.style.display = score != null ? '' : 'none';
+  }
+
   const detEl = document.getElementById('profInfoDetails');
   const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
+  // Runtime/episode badge and the completed-date badge now sit side by
+  // side in one row, under genres, instead of runtime getting its own
+  // separate full-width block.
+  const completedDateStr = e.completed_date
+    ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
+  const completedDateBadge = completedDateStr ? `<span class="pvi-genre-chip">${icon('check', 11)} ${completedDateStr}</span>` : '';
+
   if (!isMovie) {
     const bd = Array.isArray(e.ratings?._season_breakdown)
       ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
     const totalS = bd.length || Number(e.total_seasons) || 0;
+    let seasonsHTML = '';
     if (totalS > 0) {
       let chips = '';
       for (let i = 0; i < totalS; i++) {
         const eps = bd[i] || null;
         chips += `<div class="pvi-season-chip"><div class="pvi-season-num">S${i+1}</div><div class="pvi-season-eps">${eps ? eps+' eps' : 'S'+(i+1)}</div></div>`;
       }
-      detEl.innerHTML = `<div class="pvi-section-label">TV Show Breakdown</div><div class="pvi-seasons">${chips}</div>`;
+      seasonsHTML = `<div class="pvi-section-label">TV Show Breakdown</div><div class="pvi-seasons">${chips}</div>`;
     } else if (e.total_eps) {
-      detEl.innerHTML = `<div class="pvi-section-label">Episodes</div><div class="pvi-runtime"><div class="pvi-runtime-val">${e.total_eps}</div><div class="pvi-runtime-lbl">Total Episodes</div></div>`;
-    } else { detEl.innerHTML = ''; }
+      seasonsHTML = `<div class="pvi-meta-row"><div class="pvi-runtime"><div class="pvi-runtime-val">${e.total_eps}</div><div class="pvi-runtime-lbl">Total Episodes</div></div>${completedDateBadge}</div>`;
+      detEl.innerHTML = seasonsHTML;
+      return _finishCatInfoPopup(e);
+    }
+    detEl.innerHTML = seasonsHTML + (completedDateBadge ? `<div class="pvi-meta-row">${completedDateBadge}</div>` : '');
   } else {
     const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
-    if (rtH || rtM) {
-      const rtStr = rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
-      detEl.innerHTML = `<div class="pvi-section-label">Movie Runtime</div><div class="pvi-runtime"><div class="pvi-runtime-val">${rtStr}</div><div class="pvi-runtime-lbl">Movie Runtime</div></div>`;
-    } else { detEl.innerHTML = ''; }
+    const rtStr = rtH ? `${rtH}h ${rtM}m` : (rtM ? `${rtM}m` : null);
+    detEl.innerHTML = (rtStr || completedDateBadge)
+      ? `<div class="pvi-meta-row">${rtStr ? `<div class="pvi-runtime"><div class="pvi-runtime-val">${rtStr}</div><div class="pvi-runtime-lbl">Movie Runtime</div></div>` : ''}${completedDateBadge}</div>`
+      : '';
   }
+  _finishCatInfoPopup(e);
+  } catch(err) { console.error('openCatInfoPopup error:', err); }
+}
 
+function _finishCatInfoPopup(e) {
   const editBtn = document.getElementById('catInfoEditBtn');
   if (editBtn) editBtn.onclick = () => goToDetail(e.id, currentFile());
 
@@ -118,12 +148,29 @@ function openCatInfoPopup(id) {
     discBtn.onclick = () => _catGoDiscover(e, discBtn);
   }
 
+  const delBtn = document.getElementById('catInfoDeleteBtn');
+  if (delBtn) delBtn.onclick = () => _catInfoDeleteEntry(e);
+
   const ov = document.getElementById('profInfoOverlay');
   ov.classList.add('open');
   document.getElementById('profInfoCard').style.transform = 'translateY(0)';
   document.body.style.overflow = 'hidden';
   _refreshTmdbSeasonData(e, _catUser.id, renderSections);
-  } catch(err) { console.error('openCatInfoPopup error:', err); }
+}
+
+async function _catInfoDeleteEntry(e) {
+  if (!confirm(`Delete "${e.title}" from your library? This can't be undone.`)) return;
+  try {
+    await deleteEntry(e.id, _catUser.id);
+    _catAllRaw = _catAllRaw.filter(x => x.id !== e.id);
+    _catAll = _catAll.filter(x => x.id !== e.id);
+    closeCatInfoPopup();
+    renderSections();
+    showToast('Deleted.');
+  } catch (err) {
+    console.error(err);
+    showToast('Error deleting entry.', 'err');
+  }
 }
 
 async function _catGoDiscover(e, btn) {
