@@ -109,6 +109,18 @@ let _cardRenderToken = 0;
 async function _drawCard() {
   const myToken = ++_cardRenderToken;
   try {
+    // Canvas text silently falls back to the fallback font if a webfont
+    // hasn't actually finished loading yet, even with the <link> tag
+    // already in the page — a stylesheet reference isn't the same as
+    // the font being ready to paint. Explicitly loading (or waiting on)
+    // all three fonts first avoids an inconsistent first render.
+    if (document.fonts && document.fonts.load) {
+      await Promise.all([
+        document.fonts.load('600 40px "Oswald"'),
+        document.fonts.load('400 40px "Bebas Neue"'),
+        document.fonts.load('500 40px "Manrope"'),
+      ]).catch(() => {});
+    }
     if (_cardPage === 3) await _drawDiscoverCard(myToken);
     else await _drawCardPage1(myToken);
   } catch (err) {
@@ -127,6 +139,14 @@ function _cardUsername() {
     (window._navUser?.email)                                        ? window._navUser.email.split('@')[0] :
     '';
   return un ? '@' + un : '';
+}
+
+function _cardAvatarUrl() {
+  return (typeof _pProfile   !== 'undefined' && _pProfile?.avatar_url)   ? _pProfile.avatar_url   :
+    (typeof _sProfile   !== 'undefined' && _sProfile?.avatar_url)   ? _sProfile.avatar_url   :
+    (typeof _favProfile !== 'undefined' && _favProfile?.avatar_url) ? _favProfile.avatar_url :
+    (window._navUserProfile?.avatar_url)                            ? window._navUserProfile.avatar_url :
+    null;
 }
 
 function _cardPalette(D) {
@@ -235,32 +255,34 @@ async function _drawCardPage1(myToken) {
   // card, light panel on the dark card — so they always read as a
   // distinct, contrasting section rather than blending into whichever
   // background surrounds them.
-  const ACCENT = D ? '#aac48c' : '#3e5c35';
-  const INK = D ? '#e6e0d4' : '#232920';
-  // Text/accent colors for content sitting on the INK panel — these
-  // invert opposite to ACCENT/TEXT, since the panel itself is already
-  // inverted relative to the main card background.
-  const PANEL_ACCENT = D ? '#3e5c35' : '#aac48c';
-  const PANEL_TEXT = D ? '#18180f' : '#eae6de';
-  const PANEL_TEXT2 = D ? '#5a5248' : '#9aa392';
-  const BG = D ? '#1e2219' : '#f4efe5';
-  const BG_POST = D ? '#2a2f24' : '#e6e0d4';
-  const BG_BORDER = D ? 'rgba(170,196,140,0.35)' : 'rgba(62,92,53,0.3)';
-  const MUTED = D ? '#9a9488' : '#5a5248';
-  const TEXT = D ? '#eae6de' : '#18180f';
-  const TEXT2 = D ? '#c7c1ac' : '#3a3428';
-  const LOW = D ? '#e08585' : '#a33333';
-  const TRACK_BG = D ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)';
-  // Fixed (non-theme-adaptive) pair for the footer and genre pills —
-  // these are branding/badge elements meant to look consistent
-  // regardless of theme, not panels that should invert with it.
-  const FIXED_ACCENT = '#aac48c';
-  const FIXED_INK = '#232920';
+  // Real website theme values (from style.css's :root / [data-theme="light"]
+  // blocks) instead of the previous made-up approximations, so the card
+  // actually matches the site's own olive palette in both modes.
+  const ACCENT = D ? '#7EB86C' : '#1E5C26'; // --olive-light
+  const INK = D ? '#4A6741' : '#1A4520'; // --olive — solid badge/panel fill
+  // Text/accent colors for content sitting on the INK panel — INK is a
+  // solid olive fill in both themes (matching .w-ep-badge elsewhere on
+  // the site), so text on it stays white-based in both modes too,
+  // rather than inverting per theme.
+  const PANEL_ACCENT = '#ffffff';
+  const PANEL_TEXT = 'rgba(255,255,255,0.92)';
+  const PANEL_TEXT2 = 'rgba(255,255,255,0.68)';
+  const BG = D ? '#0A0A0E' : '#E2DAD0'; // --bg
+  const BG_POST = D ? '#19191F' : '#CEC5B8'; // --bg-3
+  const BG_BORDER = D ? 'rgba(74,103,65,0.44)' : 'rgba(26,69,32,0.45)'; // --border-olive
+  const MUTED = D ? '#808080' : '#6A6A6A'; // --text-3
+  const TEXT = D ? '#EDEDED' : '#1A1A1A'; // --text
+  const TEXT2 = D ? '#A8A8A8' : '#4A4A4A'; // --text-2
+  const LOW = D ? '#f87171' : '#c0392b';
+  const TRACK_BG = D ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'; // --border
 
   const W = 1000, PAD = 28;
 
   let posterImg = null;
   if (e.poster_url) { try { posterImg = await _loadImage(e.poster_url); } catch { posterImg = null; } }
+  let avatarImg = null;
+  const avatarUrl = _cardAvatarUrl();
+  if (avatarUrl) { try { avatarImg = await _loadImage(avatarUrl); } catch { avatarImg = null; } }
   let logoImg = null;
   try { logoImg = await _loadImage('icons/logo-nav.png'); } catch { logoImg = null; }
 
@@ -277,7 +299,7 @@ async function _drawCardPage1(myToken) {
   function layout(ctx, draw) {
     const pillRow = (items, xx, yy, maxW, textColor, bgColor, borderColor) => {
       ctx.save();
-      ctx.font = '700 12px "Inter", Arial, sans-serif';
+      ctx.font = '600 12px \"Manrope\", Arial, sans-serif';
       const pPX = 12, pPY = 5, pGap = 8, pR = 6;
       const pillH = 12 + pPY * 2;
       let gx = xx, rows = 1;
@@ -306,10 +328,10 @@ async function _drawCardPage1(myToken) {
       if (draw) {
         ctx.save();
         let nameFS = 12.5;
-        ctx.font = `400 ${nameFS}px "Inter", Arial, sans-serif`;
+        ctx.font = `400 ${nameFS}px "Manrope", Arial, sans-serif`;
         while (ctx.measureText(label).width > nameW && nameFS > 9) {
           nameFS -= 0.5;
-          ctx.font = `400 ${nameFS}px "Inter", Arial, sans-serif`;
+          ctx.font = `400 ${nameFS}px "Manrope", Arial, sans-serif`;
         }
         ctx.fillStyle = TEXT;
         ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -321,7 +343,7 @@ async function _drawCardPage1(myToken) {
         ctx.fillStyle = ACCENT;
         _rrect(ctx, barX, yy + 4, Math.max(barW * pct, 4), 5, 3); ctx.fill();
         ctx.save();
-        ctx.font = '700 14px "Inter", Arial, sans-serif';
+        ctx.font = '400 18px "Bebas Neue", Arial, sans-serif';
         ctx.fillStyle = ACCENT;
         ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
         ctx.fillText(Number(value).toFixed(1), xx + colW, yy + 7);
@@ -338,16 +360,33 @@ async function _drawCardPage1(myToken) {
     const title = e.title || '';
     const tFS = title.length > 22 ? 32 : title.length > 14 ? 38 : 42;
     ctx.save();
-    ctx.font = `600 ${tFS}px "Cormorant Garamond", Georgia, serif`;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.font = `600 ${tFS}px "Oswald", Georgia, serif`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     const titleLines = _wrap(ctx, title, INFO_W).slice(0, 2);
-    if (draw) { ctx.fillStyle = TEXT; titleLines.forEach((ln, i) => ctx.fillText(ln, INFO_X, iy + i * (tFS + 2))); }
+    if (draw) {
+      ctx.fillStyle = TEXT;
+      // Baseline-aligned per line (not 'top') so the year drawn below
+      // can share the exact same baseline as the title's last line —
+      // aligning both texts' bottoms regardless of their size difference.
+      titleLines.forEach((ln, i) => ctx.fillText(ln, INFO_X, iy + (i + 1) * (tFS + 2) - 6));
+      if (e.year) {
+        const lastLineIdx = titleLines.length - 1;
+        const lastLineW = ctx.measureText(titleLines[lastLineIdx]).width;
+        const titleBaselineY = iy + (lastLineIdx + 1) * (tFS + 2) - 6;
+        ctx.save();
+        ctx.font = `400 ${Math.round(tFS * 0.5)}px "Bebas Neue", Georgia, serif`;
+        ctx.fillStyle = TEXT2;
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(String(e.year), INFO_X + lastLineW + 10, titleBaselineY);
+        ctx.restore();
+      }
+    }
     ctx.restore();
     iy += titleLines.length * (tFS + 2) + 14;
 
     const genres = (e.genres || []).slice(0, 4);
     if (genres.length) {
-      const gh = pillRow(genres, INFO_X, iy, INFO_W, FIXED_INK, FIXED_ACCENT, FIXED_INK);
+      const gh = pillRow(genres, INFO_X, iy, INFO_W, '#ffffff', INK, INK);
       iy += gh + 14;
     }
 
@@ -355,7 +394,7 @@ async function _drawCardPage1(myToken) {
     let descLines = [];
     if (desc) {
       ctx.save();
-      ctx.font = '400 15px "Inter", Arial, sans-serif';
+      ctx.font = '400 15px "Manrope", Arial, sans-serif';
       ctx.textBaseline = 'top';
       const dwords = desc.split(/\s+/);
       const dshort = dwords.length > 55 ? dwords.slice(0, 55).join(' ') + '…' : desc;
@@ -410,26 +449,9 @@ async function _drawCardPage1(myToken) {
         ctx.fillRect(PAD, PAD, POSTER_W, POSTER_H);
         ctx.save();
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = '300 60px "Cormorant Garamond", Georgia, serif';
+        ctx.font = '500 60px "Oswald", Georgia, serif';
         ctx.fillStyle = ACCENT;
         ctx.fillText((e.title || '?')[0].toUpperCase(), PAD + POSTER_W / 2, PAD + POSTER_H / 2);
-        ctx.restore();
-      }
-      // Diagonal corner badge with the year, top-left of the poster
-      if (e.year) {
-        const bs = 90;
-        ctx.beginPath();
-        ctx.moveTo(PAD, PAD);
-        ctx.lineTo(PAD + bs, PAD);
-        ctx.lineTo(PAD, PAD + bs);
-        ctx.closePath();
-        ctx.fillStyle = INK;
-        ctx.fill();
-        ctx.save();
-        ctx.font = '700 14px "Inter", Arial, sans-serif';
-        ctx.fillStyle = PANEL_ACCENT;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.fillText(String(e.year), PAD + 10, PAD + 14);
         ctx.restore();
       }
       ctx.restore();
@@ -446,24 +468,25 @@ async function _drawCardPage1(myToken) {
       const cx = SCORE_X + SCORE_W / 2;
       const midY = PAD + SCORE_BOX_H / 2;
       ctx.save();
-      ctx.font = '700 12px "Inter", Arial, sans-serif';
+      ctx.font = '700 12px "Oswald", Arial, sans-serif';
       ctx.fillStyle = MUTED;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('OVERALL SCORE', cx, midY - 48);
       ctx.restore();
       ctx.save();
+      const scoreLabel = score ? `★ ${score}` : '—';
       let scoreFS = 66;
-      ctx.font = `600 ${scoreFS}px "Cormorant Garamond", Georgia, serif`;
-      while (ctx.measureText(score || '—').width > SCORE_W - 24 && scoreFS > 40) {
+      ctx.font = `400 ${scoreFS}px "Bebas Neue", Georgia, serif`;
+      while (ctx.measureText(scoreLabel).width > SCORE_W - 24 && scoreFS > 40) {
         scoreFS -= 4;
-        ctx.font = `600 ${scoreFS}px "Cormorant Garamond", Georgia, serif`;
+        ctx.font = `400 ${scoreFS}px "Bebas Neue", Georgia, serif`;
       }
-      ctx.fillStyle = TEXT;
+      ctx.fillStyle = ACCENT;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(score || '—', cx, midY);
+      ctx.fillText(scoreLabel, cx, midY);
       ctx.restore();
       ctx.save();
-      ctx.font = '700 11px "Inter", Arial, sans-serif';
+      ctx.font = '700 11px "Oswald", Arial, sans-serif';
       ctx.fillStyle = MUTED;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('OUT OF 10', cx, midY + 48);
@@ -490,14 +513,14 @@ async function _drawCardPage1(myToken) {
             ctx.fillStyle = barColor;
             ctx.fillRect(cx + 14, rowY + 9, 3, rowH - 18);
             ctx.save();
-            ctx.font = `700 ${hasLow ? 8.5 : 9.5}px "Inter", Arial, sans-serif`;
+            ctx.font = `600 ${hasLow ? 8.5 : 9.5}px "Manrope", Arial, sans-serif`;
             ctx.fillStyle = MUTED;
             ctx.textAlign = 'left'; ctx.textBaseline = 'top';
             ctx.fillText(it.label.toUpperCase(), cx + 24, rowY + 9);
             ctx.restore();
             ctx.save();
             const valFS = hasLow ? 11 : 12.5;
-            ctx.font = `700 ${valFS}px "Inter", Arial, sans-serif`;
+            ctx.font = `600 ${valFS}px "Manrope", Arial, sans-serif`;
             ctx.fillStyle = TEXT;
             ctx.textAlign = 'left'; ctx.textBaseline = 'top';
             const maxW = colW - 34;
@@ -526,7 +549,9 @@ async function _drawCardPage1(myToken) {
 
     let y = PAD + headerH + 30;
 
-    // ── Breakdown bar (dark ink background) ──
+    // ── Breakdown bar removed — the ratings grid below already lists
+    // the individual category scores; the CORE/ENJOYMENT/BONUS % math
+    // display was redundant and used non-website colors. ──
     const ratings = e.ratings || {};
     const cat = e.cat;
     const isAnimated = cat === 'anime' || cat === 'cartoons';
@@ -538,91 +563,6 @@ async function _drawCardPage1(myToken) {
     if (!isAnimated && hasVal(ratings.animation)) coreItems.push({ label: 'Animation Quality', value: ratings.animation });
     const enjoyVal = hasVal(ratings.enjoyment) ? ratings.enjoyment : null;
     const bonusItems = bonusArr.map(r => ({ label: r.label, value: ratings[r.key] })).filter(r => hasVal(r.value));
-
-    const breakdownParts = [];
-    if (coreItems.length) breakdownParts.push({ label: 'CORE', pct: 70, desc: 'Story, plot, acting, writing, world building and more.' });
-    if (enjoyVal != null) breakdownParts.push({ label: 'ENJOYMENT', pct: 20, desc: 'How engaging, fun, and impactful the experience is.' });
-    if (bonusItems.length) breakdownParts.push({ label: 'BONUS', pct: 10, desc: 'Extra points for the little things that elevate it.' });
-
-    if (score && breakdownParts.length) {
-      const bdPadY = 26, bdPadX = 30;
-      const opW = 40, finalW = 200;
-      const boxW = W - PAD * 2;
-      const partsW = boxW - opW * breakdownParts.length - finalW;
-      const partW = partsW / breakdownParts.length;
-      const bdH = bdPadY * 2 + 96;
-      if (draw) {
-        ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-        _rrect(ctx, PAD, y, boxW, bdH, 14); ctx.stroke();
-      }
-      let bx = PAD + bdPadX;
-      breakdownParts.forEach((p, pi) => {
-        const colCenter = bx + partW / 2;
-        if (draw) {
-          ctx.save();
-          ctx.font = '700 12px "Inter", Arial, sans-serif';
-          ctx.fillStyle = TEXT2;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-          ctx.fillText(p.label, colCenter, y + bdPadY);
-          ctx.restore();
-          ctx.save();
-          ctx.font = '600 40px "Cormorant Garamond", Georgia, serif';
-          ctx.fillStyle = ACCENT;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-          ctx.fillText(p.pct + '%', colCenter, y + bdPadY + 20);
-          ctx.restore();
-          ctx.save();
-          ctx.font = '400 11.5px "Inter", Arial, sans-serif';
-          ctx.fillStyle = TEXT2;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-          const dl = _wrap(ctx, p.desc, partW - 6).slice(0, 3);
-          dl.forEach((ln, li) => ctx.fillText(ln, colCenter, y + bdPadY + 78 + li * 15));
-          ctx.restore();
-        }
-        bx += partW;
-        // Only draw a "+" between parts — not after the last one, which
-        // is where the "=" belongs instead (drawing both in the same
-        // slot was the overlap bug).
-        if (pi < breakdownParts.length - 1) {
-          if (draw) {
-            ctx.save();
-            ctx.font = '700 26px "Inter", Arial, sans-serif';
-            ctx.fillStyle = TEXT2;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('+', bx + opW / 2, y + bdH / 2);
-            ctx.restore();
-          }
-          bx += opW;
-        }
-      });
-      if (draw) {
-        ctx.save();
-        ctx.font = '700 26px "Inter", Arial, sans-serif';
-        ctx.fillStyle = TEXT2;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('=', bx + opW / 2, y + bdH / 2);
-        ctx.restore();
-        bx += opW;
-        const finalColW = finalW - bdPadX;
-        const finalCenter = bx + finalColW / 2;
-        const fbY = y + 8, fbH = bdH - 16;
-        ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-        _rrect(ctx, bx, fbY, finalColW, fbH, 12); ctx.stroke();
-        ctx.save();
-        ctx.font = '700 12px "Inter", Arial, sans-serif';
-        ctx.fillStyle = TEXT2;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-        ctx.fillText('FINAL SCORE', finalCenter, y + bdPadY);
-        ctx.restore();
-        ctx.save();
-        ctx.font = '700 66px "Cormorant Garamond", Georgia, serif';
-        ctx.fillStyle = ACCENT;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(score, finalCenter, y + bdH / 2);
-        ctx.restore();
-      }
-      y += bdH + 24;
-    }
 
     // ── Ratings — three columns (Core | Enjoyment | Bonus), its own box ──
     if (coreItems.length || enjoyVal != null || bonusItems.length) {
@@ -651,14 +591,10 @@ async function _drawCardPage1(myToken) {
         let cy = y + 20;
         if (draw) {
           ctx.save();
-          ctx.font = '700 14px "Inter", Arial, sans-serif';
+          ctx.font = '700 14px "Oswald", Arial, sans-serif';
           ctx.fillStyle = TEXT;
           ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-          ctx.fillText(col.title + '  ', cx, cy);
-          const w1 = ctx.measureText(col.title + '  ').width;
-          ctx.font = '600 13px "Inter", Arial, sans-serif';
-          ctx.fillStyle = TEXT2;
-          ctx.fillText('(' + col.pct + '%)', cx + w1, cy);
+          ctx.fillText(col.title, cx, cy);
           ctx.restore();
         }
         cy += 30;
@@ -673,7 +609,7 @@ async function _drawCardPage1(myToken) {
       if (bonusItems.length) capParts.push('10% BONUS');
       if (draw) {
         ctx.save();
-        ctx.font = '600 11px "Inter", Arial, sans-serif';
+        ctx.font = '600 11px "Manrope", Arial, sans-serif';
         ctx.fillStyle = MUTED;
         ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         ctx.fillText('SCORE BREAKDOWN: ' + capParts.join(' + '), W / 2, y);
@@ -689,7 +625,7 @@ async function _drawCardPage1(myToken) {
       const noteWords = note.split(/\s+/);
       const noteExcerpt = noteWords.length > 150 ? noteWords.slice(0, 150).join(' ') + '…' : note;
       ctx.save();
-      ctx.font = 'italic 300 15px "Cormorant Garamond", Georgia, serif';
+      ctx.font = 'italic 300 15px "Manrope", Georgia, serif';
       const nlines = _wrap(ctx, noteExcerpt, W - PAD * 2 - boxPadX * 2);
       ctx.restore();
       const LINE_H = 25;
@@ -701,13 +637,13 @@ async function _drawCardPage1(myToken) {
         ctx.fillStyle = ACCENT;
         ctx.fillRect(PAD, boxY, 4, boxH);
         ctx.save();
-        ctx.font = '700 12.5px "Inter", Arial, sans-serif';
+        ctx.font = '700 12.5px "Oswald", Arial, sans-serif';
         ctx.fillStyle = TEXT;
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         ctx.fillText('PERSONAL NOTE', PAD + boxPadX, boxY + 8);
         ctx.restore();
         ctx.save();
-        ctx.font = 'italic 400 15px "Cormorant Garamond", Georgia, serif';
+        ctx.font = 'italic 400 15px "Manrope", Georgia, serif';
         ctx.fillStyle = TEXT;
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         nlines.forEach((ln, i) => ctx.fillText(ln, PAD + boxPadX, boxY + boxPadTop + i * LINE_H));
@@ -748,23 +684,35 @@ async function _drawCardPage1(myToken) {
     const avatarR = 14;
     const avatarCX = PAD + avatarR, avatarCY = footerMidY;
     ctx.save();
-    ctx.fillStyle = FIXED_ACCENT;
-    ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.fill();
-    ctx.font = '700 13px "Inter", Arial, sans-serif';
-    ctx.fillStyle = FIXED_INK;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText((username.replace('@', '')[0] || '?').toUpperCase(), avatarCX, avatarCY + 1);
+    if (avatarImg) {
+      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.clip();
+      const ir = avatarImg.width / avatarImg.height;
+      let dw, dh, dx, dy;
+      if (ir > 1) { dh = avatarR * 2; dw = dh * ir; dx = avatarCX - dw / 2; dy = avatarCY - avatarR; }
+      else { dw = avatarR * 2; dh = dw / ir; dx = avatarCX - avatarR; dy = avatarCY - dh / 2; }
+      ctx.drawImage(avatarImg, dx, dy, dw, dh);
+    } else {
+      // Solid olive fill + white initial — same treatment as the site's
+      // own badges, so it reads clearly in both light and dark mode
+      // instead of the previous low-contrast accent-on-accent look.
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.fill();
+      ctx.font = '600 13px \"Manrope\", Arial, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText((username.replace('@', '')[0] || '?').toUpperCase(), avatarCX, avatarCY + 1);
+    }
     ctx.restore();
     ctx.save();
-    ctx.font = '700 13.5px "Inter", Arial, sans-serif';
-    ctx.fillStyle = TEXT;
+    ctx.font = '600 13.5px \"Manrope\", Arial, sans-serif';
+    ctx.fillStyle = ACCENT;
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(username, PAD + avatarR * 2 + 10, footerMidY);
     ctx.restore();
   }
   ctx.save();
-  ctx.font = '700 14px "Inter", Arial, sans-serif';
-  ctx.fillStyle = TEXT;
+  ctx.font = '700 14px "Oswald", Arial, sans-serif';
+  ctx.fillStyle = ACCENT;
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   const msLabel = 'MyScreenScore';
   const msW = ctx.measureText(msLabel).width;
@@ -793,7 +741,7 @@ async function _fetchDiscoverData(e) {
   if (_cardDiscoverEntryKey === key && _cardDiscoverData) return _cardDiscoverData;
   if (!e.tmdb_id || !e.tmdb_type) { _cardDiscoverData = null; _cardDiscoverEntryKey = key; return null; }
   try {
-    const extra = e.tmdb_type === 'movie' ? 'credits,release_dates' : 'credits,content_ratings';
+    const extra = e.tmdb_type === 'movie' ? 'credits,release_dates' : 'credits,aggregate_credits,content_ratings';
     const url = `${TMDB_BASE}/${e.tmdb_type}/${e.tmdb_id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=${extra}`;
     const res = await tmdbFetch(url);
     if (!res.ok) throw new Error('TMDB fetch failed: ' + res.status);
@@ -811,11 +759,12 @@ async function _fetchDiscoverData(e) {
         .filter(c => ['Writer', 'Screenplay', 'Story'].includes(c.job))
         .map(c => c.name)
     )].slice(0, 3).join(', ');
-    const cast = (data.credits?.cast || []).slice(0, 6).map(c => ({
+    const castSource = e.tmdb_type === 'movie' ? (data.credits?.cast || []) : (data.aggregate_credits?.cast || data.credits?.cast || []);
+    const cast = castSource.map(c => ({
       name: c.name,
       photo: c.profile_path ? `${TMDB_IMG}${c.profile_path}` : null,
-      character: c.character || ''
-    })).filter(c => c.name);
+      character: c.character || c.roles?.[0]?.character || ''
+    })).filter(c => c.name).slice(0, 6);
     const production = (data.production_companies || []).map(c => c.name).slice(0, 3).filter(Boolean);
     const overview = (data.overview || '').trim();
     const releaseDate = e.tmdb_type === 'movie' ? (data.release_date || '') : (data.first_air_date || '');
@@ -976,15 +925,16 @@ async function _drawDiscoverCard(myToken) {
   if (promptEl) promptEl.style.display = data ? 'none' : '';
 
   const D = _cardTheme === 'dark';
-  const BG      = D ? '#1e2219' : '#f4efe5';
-  const CARD_BG = D ? '#1e2219' : '#f4efe5';
-  const TEXT    = D ? '#eae6de' : '#18180f';
-  const TEXT2   = D ? '#c7c1ac' : '#3a3428';
-  const MUTED   = D ? '#9a9488' : '#5a5248';
-  const ACCENT  = D ? '#aac48c' : '#3e5c35';
-  const BORDER  = D ? 'rgba(170,196,140,0.35)' : 'rgba(62,92,53,0.3)';
-  const PILL_BG = D ? 'rgba(170,196,140,0.1)' : 'rgba(62,92,53,0.07)';
-  const BG_POST = D ? '#2a2f24' : '#e6e0d4';
+  const BG      = D ? '#0A0A0E' : '#E2DAD0'; // --bg
+  const CARD_BG = D ? '#0A0A0E' : '#E2DAD0'; // --bg
+  const TEXT    = D ? '#EDEDED' : '#1A1A1A'; // --text
+  const TEXT2   = D ? '#A8A8A8' : '#4A4A4A'; // --text-2
+  const MUTED   = D ? '#808080' : '#6A6A6A'; // --text-3
+  const ACCENT  = D ? '#7EB86C' : '#1E5C26'; // --olive-light
+  const INK     = D ? '#4A6741' : '#1A4520'; // --olive
+  const BORDER  = D ? 'rgba(74,103,65,0.44)' : 'rgba(26,69,32,0.45)'; // --border-olive
+  const PILL_BG = D ? 'rgba(74,103,65,0.11)' : 'rgba(26,69,32,0.1)'; // --olive-faint
+  const BG_POST = D ? '#19191F' : '#CEC5B8'; // --bg-3
 
   const W = 1000, PAD = 40, GAP = 32;
   const POSTER_W = 280, POSTER_H = 420;
@@ -992,6 +942,9 @@ async function _drawDiscoverCard(myToken) {
 
   let posterImg = null;
   if (e.poster_url) { try { posterImg = await _loadImage(e.poster_url); } catch { posterImg = null; } }
+  let avatarImg = null;
+  const avatarUrl = _cardAvatarUrl();
+  if (avatarUrl) { try { avatarImg = await _loadImage(avatarUrl); } catch { avatarImg = null; } }
   let logoImg = null;
   try { logoImg = await _loadImage('icons/logo-nav.png'); } catch { logoImg = null; }
 
@@ -1013,7 +966,7 @@ async function _drawDiscoverCard(myToken) {
     const sectionLabel = (label, xx, yy) => {
       if (draw) {
         ctx.save();
-        ctx.font = '700 12px "Inter", Arial, sans-serif';
+        ctx.font = '700 12px "Oswald", Arial, sans-serif';
         ctx.fillStyle = ACCENT;
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         ctx.letterSpacing = '2px';
@@ -1023,9 +976,9 @@ async function _drawDiscoverCard(myToken) {
       }
       return yy + 12 + 14;
     };
-    const pillRow = (items, xx, yy, maxW, textColor) => {
+    const pillRow = (items, xx, yy, maxW) => {
       ctx.save();
-      ctx.font = '500 13px "Inter", Arial, sans-serif';
+      ctx.font = '500 13px "Manrope", Arial, sans-serif';
       const pPX = 13, pPY = 7, pGap = 8, pR = 13;
       const pillH = 13 + pPY * 2;
       let gx = xx, rows = 1;
@@ -1034,11 +987,14 @@ async function _drawDiscoverCard(myToken) {
         if (gx + gw > xx + maxW && gx > xx) { gx = xx; rows++; }
         if (draw) {
           const ry = yy + (rows - 1) * (pillH + 8);
-          ctx.fillStyle = PILL_BG;
+          // Solid olive fill + white text — same treatment as the
+          // site's own genre badges (.w-ep-badge), for real contrast
+          // in both themes instead of a translucent tinted pill.
+          ctx.fillStyle = INK;
           _rrect(ctx, gx, ry, gw, pillH, pR); ctx.fill();
-          ctx.strokeStyle = BORDER; ctx.lineWidth = 0.7;
+          ctx.strokeStyle = INK; ctx.lineWidth = 0.7;
           _rrect(ctx, gx, ry, gw, pillH, pR); ctx.stroke();
-          ctx.fillStyle = textColor;
+          ctx.fillStyle = '#ffffff';
           ctx.textBaseline = 'middle';
           ctx.fillText(it, gx + pPX, ry + pillH / 2);
         }
@@ -1065,7 +1021,7 @@ async function _drawDiscoverCard(myToken) {
         ctx.drawImage(posterImg, dx, dy, dw, dh);
       } else {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = '300 64px "Cormorant Garamond", Georgia, serif';
+        ctx.font = '500 64px "Oswald", Georgia, serif';
         ctx.fillStyle = ACCENT;
         ctx.fillText((e.title || '?')[0].toUpperCase(), PAD + POSTER_W / 2, PAD + POSTER_H / 2);
       }
@@ -1080,7 +1036,7 @@ async function _drawDiscoverCard(myToken) {
 
     if (draw) {
       ctx.save();
-      ctx.font = '700 11px "Inter", Arial, sans-serif';
+      ctx.font = '700 11px "Oswald", Arial, sans-serif';
       ctx.fillStyle = ACCENT;
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       ctx.letterSpacing = '2.5px';
@@ -1093,7 +1049,7 @@ async function _drawDiscoverCard(myToken) {
     const title = e.title || '';
     const titleFS = title.length > 26 ? 32 : title.length > 16 ? 38 : 44;
     ctx.save();
-    ctx.font = `600 ${titleFS}px "Cormorant Garamond", Georgia, serif`;
+    ctx.font = `600 ${titleFS}px "Oswald", Georgia, serif`;
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     const titleLines = _wrap(ctx, title, infoW).slice(0, 3);
     if (draw) { ctx.fillStyle = TEXT; titleLines.forEach((ln, i) => ctx.fillText(ln, infoX, hy + i * (titleFS + 4))); }
@@ -1110,7 +1066,7 @@ async function _drawDiscoverCard(myToken) {
     if (data?.certification) metaBits.push(data.certification);
     if (draw) {
       ctx.save();
-      ctx.font = '400 15px "Inter", Arial, sans-serif';
+      ctx.font = '400 15px "Manrope", Arial, sans-serif';
       ctx.fillStyle = TEXT2;
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       ctx.fillText(_truncate(ctx, metaBits.join('  ·  '), infoW), infoX, hy);
@@ -1119,13 +1075,13 @@ async function _drawDiscoverCard(myToken) {
     hy += 15 + 22;
 
     if (e.genres?.length && infoW > 0) {
-      hy += pillRow(e.genres.slice(0, 4), infoX, hy, infoW, ACCENT) + 12;
+      hy += pillRow(e.genres.slice(0, 4), infoX, hy, infoW) + 12;
     }
 
     if (data?.budget) {
       if (draw) {
         ctx.save();
-        ctx.font = '700 11px "Inter", Arial, sans-serif';
+        ctx.font = '700 11px "Oswald", Arial, sans-serif';
         ctx.fillStyle = MUTED;
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         ctx.letterSpacing = '1.5px';
@@ -1136,7 +1092,7 @@ async function _drawDiscoverCard(myToken) {
       hy += 11 + 6;
       if (draw) {
         ctx.save();
-        ctx.font = '600 20px "Cormorant Garamond", Georgia, serif';
+        ctx.font = '400 20px "Bebas Neue", Georgia, serif';
         ctx.fillStyle = ACCENT;
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         ctx.fillText(_truncate(ctx, '$' + data.budget.toLocaleString('en-US'), infoW), infoX, hy);
@@ -1150,7 +1106,7 @@ async function _drawDiscoverCard(myToken) {
       if (!value) return;
       if (draw) {
         ctx.save();
-        ctx.font = '700 11px "Inter", Arial, sans-serif';
+        ctx.font = '700 11px "Oswald", Arial, sans-serif';
         ctx.fillStyle = MUTED;
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         ctx.letterSpacing = '1.5px';
@@ -1160,7 +1116,7 @@ async function _drawDiscoverCard(myToken) {
       }
       hy += 11 + 6;
       ctx.save();
-      ctx.font = '500 15.5px "Inter", Arial, sans-serif';
+      ctx.font = '500 15.5px "Manrope", Arial, sans-serif';
       const allLines = _wrap(ctx, value, infoW);
       const lines = allLines.slice(0, 2);
       const truncated = allLines.length > 2;
@@ -1186,7 +1142,7 @@ async function _drawDiscoverCard(myToken) {
       const boxPadX = 30, boxPadY = 24;
       const maxTextW = W - PAD * 2 - boxPadX * 2;
       ctx.save();
-      ctx.font = '400 15.5px "Inter", Arial, sans-serif';
+      ctx.font = '400 15.5px "Manrope", Arial, sans-serif';
       const allDescLines = _wrap(ctx, description, maxTextW);
       const descLines = allDescLines.slice(0, 5);
       if (allDescLines.length > 5 && descLines.length) {
@@ -1198,7 +1154,7 @@ async function _drawDiscoverCard(myToken) {
       drawBox(y, boxH);
       let dy = sectionLabel('Description', PAD + boxPadX, y + boxPadY - 6) + 4;
       ctx.save();
-      ctx.font = '400 15.5px "Inter", Arial, sans-serif';
+      ctx.font = '400 15.5px "Manrope", Arial, sans-serif';
       ctx.fillStyle = TEXT2;
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       if (draw) descLines.forEach((ln, i) => ctx.fillText(ln, PAD + boxPadX, dy + i * lineH));
@@ -1219,7 +1175,7 @@ async function _drawDiscoverCard(myToken) {
       // Pre-wrap each character name (max 2 lines) so the box can grow to
       // fit the tallest one instead of letting long names spill out.
       ctx.save();
-      ctx.font = '400 11.5px "Inter", Arial, sans-serif';
+      ctx.font = '400 11.5px "Manrope", Arial, sans-serif';
       const charLinesList = castRow.map(c => {
         if (!c.character) return [];
         const allLines = _wrap(ctx, c.character, textW);
@@ -1252,7 +1208,7 @@ async function _drawDiscoverCard(myToken) {
             ctx.drawImage(img, dx, dy, dw, dh);
           } else {
             ctx.fillStyle = PILL_BG; ctx.fillRect(ccx - avatarD / 2, cy, avatarD, avatarD);
-            ctx.fillStyle = ACCENT; ctx.font = '600 28px "Cormorant Garamond", Georgia, serif';
+            ctx.fillStyle = ACCENT; ctx.font = '600 28px "Oswald", Georgia, serif';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText((c.name || '?')[0].toUpperCase(), ccx, cy + avatarD / 2);
           }
@@ -1261,7 +1217,7 @@ async function _drawDiscoverCard(myToken) {
           ctx.beginPath(); ctx.arc(ccx, cy + avatarD / 2, avatarD / 2, 0, Math.PI * 2); ctx.stroke();
 
           ctx.save();
-          ctx.font = '600 13px "Inter", Arial, sans-serif';
+          ctx.font = '600 13px "Manrope", Arial, sans-serif';
           ctx.fillStyle = TEXT;
           ctx.textAlign = 'center'; ctx.textBaseline = 'top';
           ctx.fillText(_truncate(ctx, c.name, textW), ccx, cy + avatarD + 12);
@@ -1270,7 +1226,7 @@ async function _drawDiscoverCard(myToken) {
           const charLines = charLinesList[i];
           if (charLines.length) {
             ctx.save();
-            ctx.font = '400 11.5px "Inter", Arial, sans-serif';
+            ctx.font = '400 11.5px "Manrope", Arial, sans-serif';
             ctx.fillStyle = MUTED;
             ctx.textAlign = 'center'; ctx.textBaseline = 'top';
             charLines.forEach((ln, li) => ctx.fillText(ln, ccx, cy + avatarD + 30 + li * charLineH));
@@ -1283,7 +1239,7 @@ async function _drawDiscoverCard(myToken) {
 
     if (!data) {
       ctx.save();
-      ctx.font = '400 15px "Inter", Arial, sans-serif';
+      ctx.font = '400 15px "Manrope", Arial, sans-serif';
       ctx.fillStyle = MUTED;
       ctx.textAlign = 'center'; ctx.textBaseline = 'top';
       if (draw) ctx.fillText("This title isn't linked to TMDB — showing available details only.", W / 2, y);
@@ -1321,23 +1277,32 @@ async function _drawDiscoverCard(myToken) {
     const avatarR = 14;
     const avatarCX = PAD + avatarR, avatarCY = footerMidY;
     ctx.save();
-    ctx.fillStyle = ACCENT;
-    ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.fill();
-    ctx.font = '700 13px "Inter", Arial, sans-serif';
-    ctx.fillStyle = BG;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText((username.replace('@', '')[0] || '?').toUpperCase(), avatarCX, avatarCY + 1);
+    if (avatarImg) {
+      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.clip();
+      const ir = avatarImg.width / avatarImg.height;
+      let dw, dh, dx, dy;
+      if (ir > 1) { dh = avatarR * 2; dw = dh * ir; dx = avatarCX - dw / 2; dy = avatarCY - avatarR; }
+      else { dw = avatarR * 2; dh = dw / ir; dx = avatarCX - avatarR; dy = avatarCY - dh / 2; }
+      ctx.drawImage(avatarImg, dx, dy, dw, dh);
+    } else {
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.fill();
+      ctx.font = '600 13px \"Manrope\", Arial, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText((username.replace('@', '')[0] || '?').toUpperCase(), avatarCX, avatarCY + 1);
+    }
     ctx.restore();
     ctx.save();
-    ctx.font = '700 13.5px "Inter", Arial, sans-serif';
-    ctx.fillStyle = TEXT;
+    ctx.font = '600 13.5px \"Manrope\", Arial, sans-serif';
+    ctx.fillStyle = ACCENT;
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(username, PAD + avatarR * 2 + 10, footerMidY);
     ctx.restore();
   }
   ctx.save();
-  ctx.font = '700 14px "Inter", Arial, sans-serif';
-  ctx.fillStyle = TEXT;
+  ctx.font = '700 14px "Oswald", Arial, sans-serif';
+  ctx.fillStyle = ACCENT;
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   const msLabel = 'MyScreenScore';
   const msW = ctx.measureText(msLabel).width;
