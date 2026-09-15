@@ -965,7 +965,7 @@ nav {
 .fd-final span  { font-family:'Oswald',var(--sans); font-weight:600; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); }
 .fd-final strong{ font-family:var(--bebas); font-size:38px; letter-spacing:.5px; font-weight:400; color:var(--olive-light); }
 .fd-notes       { font-family:'Manrope',var(--sans); font-weight:500; font-size:14px; color:var(--text-2); font-style:italic; line-height:1.6; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
-.fd-description { font-family:'Manrope',var(--sans); font-weight:500; font-size:14.5px; color:var(--text-2); line-height:1.65; margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
+.fd-description { font-family:'Manrope',var(--sans); font-weight:500; font-size:15px; color:var(--text); line-height:1.65; margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
 .popup-info-block { margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
 
 /* ── Popup info bar (season chips / runtime) ── */
@@ -1142,6 +1142,14 @@ nav {
   .pvi-score-val { font-size:26px; }
   #profInfoCard { width:97%; }
   .pvi-actions { padding:0 14px 14px; }
+  /* Ratings popup header shrinks to fit and drops the score box to its
+     own row below instead of squeezing 3 columns into a narrow screen. */
+  #cgPopupHeader { flex-wrap:wrap; padding:16px 16px 0; gap:12px; }
+  #cgPopupPoster { width:100px; height:150px; }
+  #cgPopupTitle { font-size:20px; }
+  #cgPopupScoreBox { order:3; flex-direction:row; min-width:0; width:100%; padding:10px 16px; gap:12px; }
+  #cgPopupScoreBox > div:first-child { margin-bottom:0; }
+  #cgPopupScoreVal { font-size:28px; }
 }
 
 /* ── Rating filter picker — lets the person sort/filter a section by any
