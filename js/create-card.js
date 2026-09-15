@@ -978,12 +978,13 @@ async function _drawDiscoverCard(myToken) {
     };
     const pillRow = (items, xx, yy, maxW) => {
       ctx.save();
-      ctx.font = '500 13px "Manrope", Arial, sans-serif';
-      const pPX = 13, pPY = 7, pGap = 8, pR = 13;
-      const pillH = 13 + pPY * 2;
+      ctx.font = '600 12px "Manrope", Arial, sans-serif';
+      const pPX = 12, pPY = 5, pGap = 8, pR = 6;
+      const pillH = 12 + pPY * 2;
       let gx = xx, rows = 1;
       items.forEach(it => {
-        const gw = ctx.measureText(it).width + pPX * 2;
+        const label = it.toUpperCase();
+        const gw = ctx.measureText(label).width + pPX * 2;
         if (gx + gw > xx + maxW && gx > xx) { gx = xx; rows++; }
         if (draw) {
           const ry = yy + (rows - 1) * (pillH + 8);
@@ -992,11 +993,11 @@ async function _drawDiscoverCard(myToken) {
           // in both themes instead of a translucent tinted pill.
           ctx.fillStyle = INK;
           _rrect(ctx, gx, ry, gw, pillH, pR); ctx.fill();
-          ctx.strokeStyle = INK; ctx.lineWidth = 0.7;
+          ctx.strokeStyle = INK; ctx.lineWidth = 1;
           _rrect(ctx, gx, ry, gw, pillH, pR); ctx.stroke();
           ctx.fillStyle = '#ffffff';
           ctx.textBaseline = 'middle';
-          ctx.fillText(it, gx + pPX, ry + pillH / 2);
+          ctx.fillText(label, gx + pPX, ry + pillH / 2);
         }
         gx += gw + pGap;
       });
