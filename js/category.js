@@ -76,11 +76,13 @@ function openCatInfoPopup(id) {
 
   document.getElementById('profInfoTitle').innerHTML = _catYearSpanHTML(e, esc2, 'pvi-title-year');
 
-  // Category label (Movie/TV Show/Anime/Cartoons) stays its own small
-  // tag; genres get the bigger td-genre-chip-style pill.
+  // Category label (Movie/TV Show/Anime/Cartoons) uses the real
+  // Movie/TV type-badge colors (matching every poster overlay on the
+  // site) instead of being lumped in with genres as a plain olive tag.
   const catLabel = CAT_META[e.cat] ? CAT_META[e.cat].label : '';
+  const catIsMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
   document.getElementById('profInfoTags').innerHTML =
-    (catLabel ? `<span class="w-ep-badge">${esc2(catLabel)}</span>` : '') +
+    (catLabel ? `<span class="${catIsMovie ? 'type-label' : 'type-label type-label-tv'}">${esc2(catLabel)}</span>` : '') +
     (e.genres || []).map(g => `<span class="w-ep-badge">${esc2(String(g))}</span>`).join('');
 
   const dEl = document.getElementById('profInfoDesc');
@@ -1100,21 +1102,32 @@ function _injectGridPopup() {
     ">
       <!-- header -->
       <div id="cgPopupHeader" style="
-        display:flex;align-items:flex-start;gap:16px;
-        padding:20px 20px 0;
+        display:flex;align-items:flex-start;gap:20px;
+        padding:24px 24px 0;
       ">
         <div id="cgPopupPoster" style="
-          width:110px;height:156px;flex-shrink:0;border-radius:var(--radius-sm);
+          width:150px;height:225px;flex-shrink:0;border-radius:var(--radius-sm);
           overflow:hidden;background:var(--bg-3);
           display:flex;align-items:center;justify-content:center;
           box-shadow:var(--shadow);
         "></div>
         <div style="flex:1;min-width:0;padding-top:4px;">
-          <div id="cgPopupTitle" style="font-family:'Oswald',var(--sans);font-size:24px;font-weight:600;line-height:1.15;margin-bottom:8px;color:var(--text);"></div>
+          <div id="cgPopupTitle" style="font-family:'Oswald',var(--sans);font-size:26px;font-weight:600;line-height:1.15;margin-bottom:10px;color:var(--text);"></div>
           <div id="cgPopupTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
           <div id="cgPopupDateRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
-          <div id="cgPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;"></div>
+          <div id="cgPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;"></div>
+          <div id="cgPopupDesc" class="fd-description" style="margin-bottom:0;padding-bottom:0;border-bottom:none;"></div>
           <div id="cgPopupInfo" style="margin-top:4px;"></div>
+        </div>
+        <div id="cgPopupScoreBox" style="
+          flex-shrink:0;text-align:center;align-self:stretch;position:relative;
+          min-width:170px;padding:18px 20px;border-radius:var(--radius-sm);
+          background:transparent;border:2px solid var(--olive);
+        ">
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:100%;">
+            <div style="font-family:'Oswald',var(--sans);font-weight:600;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;text-align:center;width:100%;">Overall Score</div>
+            <div id="cgPopupScoreVal" style="font-family:var(--bebas);font-size:48px;color:var(--olive);line-height:1;display:flex;align-items:center;justify-content:center;width:100%;gap:6px;"></div>
+          </div>
         </div>
         <button onclick="closeGridPopup()" style="
           background:none;border:none;color:var(--text-3);cursor:pointer;
@@ -1123,7 +1136,7 @@ function _injectGridPopup() {
         " onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-3)'">✕</button>
       </div>
       <!-- ratings body -->
-      <div id="cgPopupBody" style="padding:16px 20px 4px;"></div>
+      <div id="cgPopupBody" style="padding:20px 24px 6px;"></div>
       <!-- comments button -->
       <div style="padding:0 20px 12px;">
         <button id="cgPopupCcBtn" class="cc-strip" style="margin-top:4px;" onclick="openCommentsPopup(_cgPopupEntryId)">
@@ -1132,7 +1145,7 @@ function _injectGridPopup() {
         </button>
       </div>
       <!-- Action buttons -->
-      <div id="cgPopupActions" style="display:flex;gap:8px;padding:0 20px 20px;flex-wrap:wrap;">
+      <div id="cgPopupActions" style="display:flex;gap:8px;padding:4px 24px 24px;flex-wrap:wrap;">
         <button class="popup-action-btn" onclick="goToDetail(_cgPopupEntryId,currentFile())">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           Edit
@@ -1185,11 +1198,15 @@ function openGridPopup(id) {
   }
   document.getElementById('cgPopupTitle').innerHTML = _pyEsc(e.title) + _pyStr;
 
-  // Genre pills (+ category label) — same solid badge as the ep/runtime
-  // badge, text set in Manrope.
-  const tags = [CAT_META[e.cat]?.label, ...((e.genres||[]).map(g => g))].filter(Boolean);
+  // Category label uses the real Movie/TV type-badge colors; genres
+  // keep the solid olive treatment.
+  const catLabel = CAT_META[e.cat]?.label;
+  const catIsMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
+  const catLabelHTML = catLabel ? `<span class="${catIsMovie ? 'type-label' : 'type-label type-label-tv'}" style="font-family:'Manrope',var(--sans);font-weight:500;">${_pyEsc(catLabel)}</span>` : '';
+  const genreTags = (e.genres || []);
   document.getElementById('cgPopupTags').innerHTML =
-    tags.map(t => `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">${_pyEsc(String(t))}</span>`).join('') +
+    catLabelHTML +
+    genreTags.map(t => `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">${_pyEsc(String(t))}</span>`).join('') +
     (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
 
   // Date Completed — same green pill as genres, text in Bebas Neue —
@@ -1205,8 +1222,24 @@ function openGridPopup(id) {
   const metaRowEl = document.getElementById('cgPopupMetaRow');
   metaRowEl.innerHTML = _entryMetaBadgeOnly(e);
 
+  // Description now sits in the header's info column, right under the
+  // tags/meta rows and next to the poster — not spanning the full
+  // width below the poster — matching the shareable card's layout.
+  const descEl = document.getElementById('cgPopupDesc');
+  if (descEl) {
+    descEl.textContent = e.description || '';
+    descEl.style.display = e.description ? '' : 'none';
+  }
+
   // Score
-  const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
+  const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
+  // Prominent score box next to the poster/title — matches the "OVERALL
+  // SCORE" placement used in the shareable card, instead of only
+  // showing the final score buried at the end of the ratings breakdown.
+  const scoreBoxEl = document.getElementById('cgPopupScoreBox');
+  const scoreValEl = document.getElementById('cgPopupScoreVal');
+  if (scoreBoxEl) scoreBoxEl.style.display = score != null ? '' : 'none';
+  if (scoreValEl) scoreValEl.textContent = score != null ? `★ ${score}` : '';
   // Info bar (season breakdown / runtime) now renders inside the body, above the ratings
   const _infoEl = document.getElementById('cgPopupInfo');
   if (_infoEl) _infoEl.innerHTML = '';
@@ -1518,7 +1551,6 @@ function _cgBreakdownHTML(e) {
 }
 
 function _buildCgDetail(e) {
-  const score    = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
   const isMovies = e.cat === 'movies';
   const esc      = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const { core: coreArr, bonus: bonusArr } = getRatings(e.cat);
@@ -1552,16 +1584,15 @@ function _buildCgDetail(e) {
     (!isMovies && lows.season)  ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span><span class="fav-chip-val">${esc(lows.season)}</span></span>` : '',
   ].filter(Boolean).join('');
 
-  return `${e.description ? `<div class="fd-description">${esc(e.description)}</div>` : ''}
-  ${_cgBreakdownHTML(e)}
+  return `${_cgBreakdownHTML(e)}
   <div class="fd-cols">
     ${(coreRows||animRow) ? `<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>${coreRows}${animRow}</div>` : ''}
     ${bonusRows ? `<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>${bonusRows}</div>` : ''}
   </div>
-  <div class="fd-final"><span>Final Score</span><strong>★ ${score}</strong></div>
-  ${favChips ? `<div class="fav-chips" style="margin-top:8px;">${favChips}</div>` : ''}
+  ${(favChips || lowChips) ? `<div class="fd-section-hd" style="margin-top:16px;">Highlights</div>` : ''}
+  ${favChips ? `<div class="fav-chips" style="margin-top:6px;">${favChips}</div>` : ''}
   ${lowChips ? `<div class="fav-chips" style="margin-top:6px;">${lowChips}</div>` : ''}
-  ${e.notes ? `<div class="fd-notes">"${esc(e.notes)}"</div>` : ''}`;
+  ${e.notes ? `<div class="fd-section-hd" style="margin-top:16px;">Notes</div><div class="fd-notes" style="margin-top:0;padding-top:0;border-top:none;">"${esc(e.notes)}"</div>` : ''}`;
 }
 
 function renderCompletedGrid(items, sectionKey = 'completed') {
