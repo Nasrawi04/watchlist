@@ -1091,7 +1091,7 @@ function _injectGridPopup() {
     ">
       <!-- header -->
       <div id="cgPopupHeader" style="
-        display:flex;align-items:flex-start;gap:20px;
+        display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;
         padding:24px 24px 0;
       ">
         <div id="cgPopupPoster" style="
@@ -1107,14 +1107,16 @@ function _injectGridPopup() {
           <div id="cgPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;"></div>
           <div id="cgPopupInfo" style="margin-top:4px;"></div>
         </div>
-        <!-- Full-width row of its own, below poster+info+score on
-             desktop (order:4, after score's order:3); reordered to sit
-             ABOVE the score box once things wrap on mobile instead
-             (see the media query — order swaps there). -->
-        <div id="cgPopupDesc" class="fd-description" style="flex-basis:100%;order:4;margin:16px 0 0;"></div>
-        <div id="cgPopupScoreBox" style="
-          flex-shrink:0;text-align:center;align-self:stretch;position:relative;order:3;
-          min-width:170px;padding:18px 20px;border-radius:var(--radius-sm);
+        <!-- Score box sits beside poster/title on wide layouts (order:3,
+             before description's order:4). A container query below
+             swaps this once the CARD ITSELF gets too narrow to fit
+             them side by side — tied to the popup's actual width, not
+             the browser viewport, so it can't drift out of sync with
+             the real wrap point the way a viewport media query would. -->
+        <div id="cgPopupDesc" class="fd-description cg-desc-block" style="margin:16px 0 0;"></div>
+        <div id="cgPopupScoreBox" class="cg-score-box" style="
+          flex-shrink:0;flex-grow:0;text-align:center;align-self:stretch;position:relative;
+          padding:18px 20px;border-radius:var(--radius-sm);
           background:transparent;border:2px solid var(--olive);
         ">
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:100%;">
@@ -1126,12 +1128,9 @@ function _injectGridPopup() {
           background:none;border:none;color:var(--text-3);cursor:pointer;
           font-size:22px;line-height:1;flex-shrink:0;
           transition:color .15s;
-          position:absolute;top:20px;right:20px;z-index:1;
+          position:absolute;top:24px;right:24px;z-index:1;
         " onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-3)'">✕</button>
       </div>
-      <!-- description — its own full-width block under the header/poster,
-           rather than squeezed into the narrow info column beside it -->
-      <div id="cgPopupDesc" class="fd-description" style="margin:16px 24px 0;"></div>
       <!-- ratings body -->
       <div id="cgPopupBody" style="padding:20px 24px 6px;"></div>
       <!-- comments button -->
@@ -1175,8 +1174,25 @@ function _injectGridPopup() {
 
 let _cgPopupEntryId = null;
 
+function _cgSetupNarrowObserver() {
+  const card = document.getElementById('cgPopupCard');
+  if (!card || card._cgObserverAttached) return;
+  card._cgObserverAttached = true;
+  const apply = () => card.classList.toggle('cg-narrow', card.getBoundingClientRect().width <= 600);
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(apply).observe(card);
+  } else {
+    // Fallback for browsers without ResizeObserver — check on window
+    // resize instead, which covers the common case (popup width tracks
+    // viewport width) even if it misses some resizing edge cases.
+    window.addEventListener('resize', apply);
+  }
+  apply();
+}
+
 function openGridPopup(id) {
   _injectGridPopup();
+  _cgSetupNarrowObserver();
   const e = _catAll.find(en => en.id === id);
   if (!e) return;
   _cgPopupEntryId = id;
