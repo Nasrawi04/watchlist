@@ -1069,7 +1069,7 @@ nav {
 .pvi-title-year { font-family:var(--bebas);font-size:0.62em;font-weight:400;color:var(--text-2);vertical-align:middle; }
 .pvi-tags { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0; }
 .pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px;font-family:var(--sans); }
-.pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;flex-shrink:0;transition:color .15s;position:absolute;top:20px;right:20px;z-index:1; }
+.pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;flex-shrink:0;transition:color .15s;position:absolute;top:24px;right:24px;z-index:1; }
 .pvi-close:hover { color:var(--text); }
 .pvi-body { padding:16px 20px 20px; }
 .pvi-desc { font-family:'Manrope',var(--sans);font-weight:500;font-size:14px;color:var(--text);line-height:1.7;margin-bottom:16px; }
@@ -1151,10 +1151,7 @@ nav {
   #cgPopupTags, #cgPopupDateRow, #cgPopupMetaRow { gap:5px; }
   /* Order swaps here vs desktop — description sits above the score box
      once everything wraps, instead of the score box appearing first. */
-  #cgPopupDesc { font-size:13px; margin:12px 0 0; order:3; }
-  #cgPopupScoreBox { flex-basis:100%; align-self:auto; min-width:0; min-height:110px; padding:32px 14px; margin-top:8px; order:4; }
-  #cgPopupScoreLbl { font-size:12px; }
-  #cgPopupScoreVal { font-size:36px; gap:8px !important; }
+  #cgPopupDesc { font-size:13px; margin:12px 0 0; }
   #cgPopupBody { padding:14px 16px 4px; }
   .fd-description { font-size:13px; }
   .fd-cols { flex-direction:column; gap:4px; }
@@ -1170,6 +1167,18 @@ nav {
   .fd-notes { font-size:13px; }
   #cgPopupActions { padding:4px 16px 16px; }
 }
+
+/* Toggled by JS (ResizeObserver on #cgPopupCard). order/flex-basis live
+   here (not inline in the markup) specifically so this override can
+   actually take effect — inline styles beat any stylesheet rule
+   regardless of specificity, which is what silently defeated every
+   earlier media-query/container-query attempt at this exact swap. */
+.cg-desc-block { flex-basis:100%; order:4; }
+.cg-score-box { order:3; width:190px; margin-right:32px; }
+#cgPopupCard.cg-narrow .cg-desc-block { order:3; }
+#cgPopupCard.cg-narrow .cg-score-box { order:4; width:100%; flex-basis:100%; margin-right:0; min-height:110px; padding:32px 14px; margin-top:8px; }
+#cgPopupCard.cg-narrow #cgPopupScoreVal { font-size:36px; gap:8px !important; }
+#cgPopupCard.cg-narrow #cgPopupScoreLbl { font-size:12px; }
 
 /* ── Rating filter picker — lets the person sort/filter a section by any
    specific rating (core or bonus) instead of just overall score. A full
