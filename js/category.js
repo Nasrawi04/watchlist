@@ -37,7 +37,6 @@ function _injectCatInfoPopup() {
         <button class="pvi-close" onclick="closeCatInfoPopup()">✕</button>
       </div>
       <div class="pvi-body">
-        <div id="profInfoScore"></div>
         <div class="pvi-desc" id="profInfoDesc"></div>
         <div id="profInfoDetails"></div>
       </div>
@@ -88,16 +87,6 @@ function openCatInfoPopup(id) {
   const dEl = document.getElementById('profInfoDesc');
   if (e.description) { dEl.textContent = e.description; dEl.style.color = ''; }
   else { dEl.textContent = '—'; dEl.style.color = 'var(--text-3)'; }
-
-  // MSS score — the person's own rating, not TMDB's.
-  const scoreEl = document.getElementById('profInfoScore');
-  const score = liveScore(e);
-  if (scoreEl) {
-    scoreEl.innerHTML = score != null
-      ? `<span class="pvi-score-val">★ ${Number(score).toFixed(2)}</span><span class="pvi-score-lbl">MSS Score</span>`
-      : '';
-    scoreEl.style.display = score != null ? '' : 'none';
-  }
 
   const detEl = document.getElementById('profInfoDetails');
   const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
@@ -1116,7 +1105,6 @@ function _injectGridPopup() {
           <div id="cgPopupTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
           <div id="cgPopupDateRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
           <div id="cgPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;"></div>
-          <div id="cgPopupDesc" class="fd-description" style="margin-bottom:0;padding-bottom:0;border-bottom:none;"></div>
           <div id="cgPopupInfo" style="margin-top:4px;"></div>
         </div>
         <div id="cgPopupScoreBox" style="
@@ -1136,6 +1124,9 @@ function _injectGridPopup() {
           position:absolute;top:20px;right:20px;z-index:1;
         " onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-3)'">✕</button>
       </div>
+      <!-- description — its own full-width block under the header/poster,
+           rather than squeezed into the narrow info column beside it -->
+      <div id="cgPopupDesc" class="fd-description" style="margin:16px 24px 0;"></div>
       <!-- ratings body -->
       <div id="cgPopupBody" style="padding:20px 24px 6px;"></div>
       <!-- comments button -->
