@@ -1107,8 +1107,13 @@ function _injectGridPopup() {
           <div id="cgPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;"></div>
           <div id="cgPopupInfo" style="margin-top:4px;"></div>
         </div>
+        <!-- Full-width row of its own, below poster+info+score on
+             desktop (order:4, after score's order:3); reordered to sit
+             ABOVE the score box once things wrap on mobile instead
+             (see the media query — order swaps there). -->
+        <div id="cgPopupDesc" class="fd-description" style="flex-basis:100%;order:4;margin:16px 0 0;"></div>
         <div id="cgPopupScoreBox" style="
-          flex-shrink:0;text-align:center;align-self:stretch;position:relative;
+          flex-shrink:0;text-align:center;align-self:stretch;position:relative;order:3;
           min-width:170px;padding:18px 20px;border-radius:var(--radius-sm);
           background:transparent;border:2px solid var(--olive);
         ">
