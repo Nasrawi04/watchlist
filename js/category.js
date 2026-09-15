@@ -1125,14 +1125,15 @@ function _injectGridPopup() {
           background:transparent;border:2px solid var(--olive);
         ">
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:100%;">
-            <div style="font-family:'Oswald',var(--sans);font-weight:600;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;text-align:center;width:100%;">Overall Score</div>
+            <div id="cgPopupScoreLbl" style="font-family:'Oswald',var(--sans);font-weight:600;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;text-align:center;width:100%;">Overall Score</div>
             <div id="cgPopupScoreVal" style="font-family:var(--bebas);font-size:48px;color:var(--olive);line-height:1;display:flex;align-items:center;justify-content:center;width:100%;gap:6px;"></div>
           </div>
         </div>
         <button onclick="closeGridPopup()" style="
           background:none;border:none;color:var(--text-3);cursor:pointer;
-          font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;
+          font-size:22px;line-height:1;flex-shrink:0;
           transition:color .15s;
+          position:absolute;top:20px;right:20px;z-index:1;
         " onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-3)'">✕</button>
       </div>
       <!-- ratings body -->
