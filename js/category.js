@@ -1101,7 +1101,7 @@ function _injectGridPopup() {
           box-shadow:var(--shadow);
         "></div>
         <div style="flex:1;min-width:0;padding-top:4px;">
-          <div id="cgPopupTitle" style="font-family:'Oswald',var(--sans);font-size:26px;font-weight:600;line-height:1.15;margin-bottom:10px;color:var(--text);"></div>
+          <div id="cgPopupTitle" class="cg-popup-title" style="font-family:'Oswald',var(--sans);font-weight:600;line-height:1.15;color:var(--text);"></div>
           <div id="cgPopupTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
           <div id="cgPopupDateRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
           <div id="cgPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;"></div>
@@ -1124,11 +1124,11 @@ function _injectGridPopup() {
             <div id="cgPopupScoreVal" style="font-family:var(--bebas);font-size:48px;color:var(--olive);line-height:1;display:flex;align-items:center;justify-content:center;width:100%;gap:6px;"></div>
           </div>
         </div>
-        <button onclick="closeGridPopup()" style="
+        <button class="cg-close-btn" onclick="closeGridPopup()" style="
           background:none;border:none;color:var(--text-3);cursor:pointer;
           font-size:22px;line-height:1;flex-shrink:0;
           transition:color .15s;
-          position:absolute;top:24px;right:24px;z-index:1;
+          position:absolute;z-index:1;
         " onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-3)'">✕</button>
       </div>
       <!-- ratings body -->
