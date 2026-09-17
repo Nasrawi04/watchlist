@@ -3956,59 +3956,56 @@ body { font-size:15px; }
 /* ══════════════════════════════════════
    Rewatch System
 ══════════════════════════════════════ */
-/* Badge in popup meta area */
+/* All three contexts now share one consistent solid-pill treatment —
+   olive fill, white text — matching the genre/type badges used
+   elsewhere, instead of three different styles (outlined pill, dark
+   rectangle, bare colored text) with three different sizes. */
 .rewatch-badge {
-  display:inline-flex;align-items:center;gap:3px;
-  padding:2px 8px;border-radius:20px;
-  background:var(--olive-faint);border:0.5px solid var(--border-olive);
-  color:var(--olive-light);font-size:10px;font-weight:600;
-  letter-spacing:.3px;font-family:var(--sans);
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:20px;
+  background:var(--olive);border:0.5px solid var(--olive);
+  color:#fff;font-size:11px;font-weight:600;
+  letter-spacing:.3px;font-family:'Manrope',var(--sans);
   white-space:nowrap;flex-shrink:0;
 }
-.rewatch-badge svg { flex-shrink:0; }
+.rewatch-badge svg { flex-shrink:0;width:11px;height:11px; }
 
 /* Icon on grid cards (top-right of poster) */
 .rewatch-card-icon {
   position:absolute;top:6px;right:6px;z-index:3;
-  display:inline-flex;align-items:center;gap:2px;
-  padding:2px 5px;border-radius:4px;
-  background:rgba(74,103,65,0.88);color:#fff;
-  font-size:9px;font-weight:700;font-family:var(--sans);
-  backdrop-filter:blur(4px);
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:20px;
+  background:var(--olive);color:#fff;border:0.5px solid var(--olive);
+  font-size:11px;font-weight:600;font-family:'Manrope',var(--sans);
   white-space:nowrap;
 }
-.rewatch-card-icon svg { flex-shrink:0; }
+.rewatch-card-icon svg { flex-shrink:0;width:11px;height:11px; }
 
 /* Icon on list cards (inline with score) */
 .rewatch-list-icon {
-  display:inline-flex;align-items:center;gap:3px;
-  font-size:10px;color:var(--olive-light);font-family:var(--sans);
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:20px;
+  background:var(--olive);border:0.5px solid var(--olive);
+  font-size:11px;color:#fff;font-family:'Manrope',var(--sans);
   font-weight:600;vertical-align:middle;margin-left:6px;
   white-space:nowrap;flex-shrink:0;
 }
-.rewatch-list-icon svg { flex-shrink:0; }
+.rewatch-list-icon svg { flex-shrink:0;width:11px;height:11px; }
 
-/* ── Rewatch badge responsive scaling ── */
+/* ── Rewatch badge responsive scaling — same size across all three,
+   scaled down together instead of drifting independently ── */
 @media(max-width:640px) {
-  .rewatch-badge {
-    font-size:9px;padding:1px 6px;gap:2px;
+  .rewatch-badge, .rewatch-card-icon, .rewatch-list-icon {
+    font-size:10px;padding:3px 9px;gap:3px;
   }
-  .rewatch-badge svg { width:8px;height:8px; }
-  .rewatch-card-icon {
-    font-size:8px;padding:2px 4px;gap:1px;
-    top:4px;right:4px;
-  }
-  .rewatch-card-icon svg { width:7px;height:7px; }
+  .rewatch-badge svg, .rewatch-card-icon svg, .rewatch-list-icon svg { width:10px;height:10px; }
+  .rewatch-card-icon { top:4px;right:4px; }
 }
 @media(max-width:400px) {
-  .rewatch-badge {
-    font-size:8px;padding:1px 5px;gap:2px;
+  .rewatch-badge, .rewatch-card-icon, .rewatch-list-icon {
+    font-size:9px;padding:3px 8px;
   }
-  .rewatch-badge svg { width:7px;height:7px; }
-  .rewatch-card-icon {
-    font-size:7px;padding:1px 3px;
-    top:3px;right:3px;
-  }
+  .rewatch-card-icon { top:3px;right:3px; }
   .rewatch-card-icon svg { width:6px;height:6px; }
 }
 
