@@ -1058,7 +1058,7 @@ nav {
 }
 .pvi-header { display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0; }
 .pvi-poster {
-  width:clamp(76px,20vw,112px);height:clamp(107px,28vw,157px);
+  width:clamp(100px,26vw,150px);height:clamp(150px,39vw,225px);
   flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;
   background:var(--bg-3);display:flex;align-items:center;justify-content:center;
   box-shadow:var(--shadow);font-family:var(--serif);font-size:28px;color:var(--text-3);
@@ -1172,7 +1172,7 @@ nav {
   .popup-info-season-num { font-size:15px; }
   .popup-info-runtime { padding:6px 12px; }
   .popup-info-runtime-val { font-size:17px; }
-  .fav-chip { font-size:12px; padding:4px 10px; }
+  .fav-chip { font-size:13px; padding:5px 11px; }
   .fd-notes { font-size:13px; }
   #cgPopupActions { padding:4px 16px 16px; }
   #cgPopupActions .popup-action-btn { font-size:14px; padding:12px 14px; }
@@ -1271,13 +1271,13 @@ nav {
 ════════════════════════════════════════════ */
 .fav-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
 .fav-chip {
-  font-size:11px; color:#fff;
+  font-size:13px; color:#fff;
   background:var(--olive); border:0.5px solid var(--olive);
-  border-radius:var(--radius-xs); padding:3px 9px;
-  display:inline-flex; align-items:center; gap:5px;
+  border-radius:var(--radius-xs); padding:6px 12px;
+  display:inline-flex; align-items:center; gap:6px;
 }
-.fav-chip-label { font-family:'Manrope',var(--sans); font-weight:500; color:rgba(255,255,255,0.75); font-size:10px; letter-spacing:0.5px; }
-.fav-chip-val { font-family:'Oswald',var(--sans); font-weight:500; color:#fff; }
+.fav-chip-label { font-family:'Manrope',var(--sans); font-weight:500; color:rgba(255,255,255,0.75); font-size:12px; letter-spacing:0.5px; }
+.fav-chip-val { font-family:'Oswald',var(--sans); font-weight:500; color:#fff; font-size:14px; }
 .low-chip {
   color:#fff;
   background:#b91c1c;
