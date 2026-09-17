@@ -1130,10 +1130,15 @@ nav {
 .cat-disc-name { font-size:14px; font-weight:500; color:var(--text); }
 .cat-disc-meta { font-size:11.5px; color:var(--text-3); margin-top:2px; }
 .cat-disc-none { padding:1.5rem 0.5rem; text-align:center; color:var(--text-3); font-size:13px; }
+.cg-close-btn { top:24px; right:24px; }
+.cg-popup-title { font-size:26px; margin-bottom:10px; }
+
 @media(max-width:768px) {
   .pvi-header { padding:14px 14px 0;gap:12px;flex-wrap:wrap; }
   .pvi-body { padding:12px 14px 16px; }
-  .pvi-desc { font-size:12px; }
+  .pvi-desc { font-size:13px; }
+  .pvi-title { padding-right:30px; }
+  .pvi-tags .w-ep-badge, .pvi-tags .type-label { font-size:12px; padding:5px 10px; }
   .pvi-season-chip { padding:6px 10px;min-width:46px; }
   .pvi-season-num { font-size:17px; }
   .pvi-runtime { padding:8px 14px; }
@@ -1141,14 +1146,18 @@ nav {
   .pvi-score-val { font-size:26px; }
   #profInfoCard { width:97%; }
   .pvi-actions { padding:0 14px 14px;flex-direction:column; }
-  .pvi-action-btn { width:100%;flex:none; }
+  .pvi-action-btn { width:100%;flex:none;font-size:14px;padding:12px 14px; }
+  .pvi-close { top:20px; right:16px; }
   /* Ratings popup — full mobile pass across every section: header,
      poster, title, tags/badges, description, score box, ratings
      columns, season chips, highlights, and actions. */
   #cgPopupHeader { flex-wrap:wrap; padding:16px 16px 0; gap:12px; }
   #cgPopupPoster { width:90px; height:135px; }
-  #cgPopupTitle { font-size:19px; margin-bottom:8px; }
+  #cgPopupTitle { font-size:19px; margin-bottom:8px; padding-right:30px; }
   #cgPopupTags, #cgPopupDateRow, #cgPopupMetaRow { gap:5px; }
+  #cgPopupTags .w-ep-badge, #cgPopupTags .type-label,
+  #cgPopupDateRow .w-ep-badge, #cgPopupMetaRow .w-ep-badge { font-size:12px; padding:5px 10px; }
+  .cg-close-btn { top:20px; right:16px; }
   /* Order swaps here vs desktop — description sits above the score box
      once everything wraps, instead of the score box appearing first. */
   #cgPopupDesc { font-size:13px; margin:12px 0 0; }
@@ -1163,9 +1172,10 @@ nav {
   .popup-info-season-num { font-size:15px; }
   .popup-info-runtime { padding:6px 12px; }
   .popup-info-runtime-val { font-size:17px; }
-  .fav-chip { font-size:10px; padding:3px 8px; }
+  .fav-chip { font-size:12px; padding:4px 10px; }
   .fd-notes { font-size:13px; }
   #cgPopupActions { padding:4px 16px 16px; }
+  #cgPopupActions .popup-action-btn { font-size:14px; padding:12px 14px; }
 }
 
 /* Toggled by JS (ResizeObserver on #cgPopupCard). order/flex-basis live
