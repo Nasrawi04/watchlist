@@ -362,14 +362,18 @@ function _tdShowAllCast() {
   const cast = window._tdFullCast || [];
   const scrollEl = document.getElementById('tdCastScroll');
   const btnEl = document.getElementById('tdCastMoreBtn');
-  if (!scrollEl) return;
-  scrollEl.innerHTML = cast.map(p => `
+  if (!scrollEl || !btnEl) return;
+  const expanded = btnEl.dataset.expanded === '1';
+  const shown = expanded ? cast.slice(0, 10) : cast;
+  scrollEl.innerHTML = shown.map(p => `
     <a class="td-cast-card" href="person.html?id=${p.id}">
       <div class="td-cast-photo">${p.profile_path ? `<img src="${TMDB_IMG}${p.profile_path}" loading="lazy">` : esc((p.name||'?')[0])}</div>
       <div class="td-cast-name">${esc(p.name)}</div>
       <div class="td-cast-char">${esc(p.character || p.roles?.[0]?.character || '')}</div>
     </a>`).join('');
-  if (btnEl) btnEl.remove();
+  btnEl.textContent = expanded ? `See More (${cast.length - 10} more)` : 'See Less';
+  btnEl.dataset.expanded = expanded ? '0' : '1';
+  if (expanded) scrollEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 let _tdUser = null, _tdType = null, _tdId = null, _tdDetail = null, _tdOwnEntry = null;
@@ -565,7 +569,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
           <div class="td-cast-char">${esc(p.character || p.roles?.[0]?.character || '')}</div>
         </a>`).join('')}
     </div>
-    ${cast.length > 10 ? `<button class="td-cast-more-btn" id="tdCastMoreBtn" onclick="_tdShowAllCast()">See More (${cast.length - 10} more)</button>` : ''}` : ''}
+    ${cast.length > 10 ? `<button class="td-cast-more-btn" id="tdCastMoreBtn" data-expanded="0" onclick="_tdShowAllCast()">See More (${cast.length - 10} more)</button>` : ''}` : ''}
 
     ${!isMovie ? _tdSeasonsHTML(d) : ''}
 
