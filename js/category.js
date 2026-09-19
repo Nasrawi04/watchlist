@@ -841,7 +841,7 @@ function renderMoviesWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:15px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
         <div class="w-genre">${_badge}${rtStr ? `<span class="w-ep-badge">${rtStr}</span>` : ''}</div>
       </div>
       <div class="w-ep-controls" onclick="event.stopPropagation()">
@@ -912,7 +912,7 @@ function renderWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:15px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
         <div class="w-ep-row">
           ${_badge}
           <span class="w-ep-badge">${epStr}</span>
@@ -1832,7 +1832,7 @@ function renderPausedList(items) {
     return `<div class="w-card" onclick="openCatInfoPopup('${e.id}')">
       <div class="w-poster">${posterHTML(e)}</div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);margin-left:8px;">${e.year}</span>` : ''}</div></div>
+        <div class="w-top"><div class="w-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:15px;font-weight:400;color:var(--text-3);margin-left:8px;">${e.year}</span>` : ''}</div></div>
         <div class="w-ep-row">
           ${_badge}
           <span class="w-ep-badge" style="background:rgba(168,168,168,0.12);color:var(--text-2);border-color:var(--border-2)">On Pause</span>
@@ -1902,7 +1902,7 @@ function renderQueueList(items) {
     return `<div class="w-card" style="cursor:default;">
       <div class="w-poster" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">${posterHTML(e)}</div>
       <div class="w-body" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
-        <div class="w-top"><div class="w-title">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);margin-left:8px;">${e.year}</span>` : ''}</div></div>
+        <div class="w-top"><div class="w-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:15px;font-weight:400;color:var(--text-3);margin-left:8px;">${e.year}</span>` : ''}</div></div>
         <div class="w-ep-row">${_badge}${scope ? `<span class="w-ep-badge">${scope}</span>` : ''}</div>
       </div>
       <div style="display:flex;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">
@@ -1934,7 +1934,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
         ${isRanked ? `<div style="font-family:var(--serif);font-size:26px;font-weight:300;color:${i<3?'var(--olive-light)':'var(--text-2)'};text-align:center;min-width:44px;flex-shrink:0;">${i+1}</div>` : ''}
         <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : ''}</div>
         <div class="comp-info">
-          <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+          <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:15px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
           <div class="comp-meta">${_badge}</div>
           ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
           ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">"${e.notes}"</div>` : ''}
@@ -2334,7 +2334,7 @@ function _renderQPCardContent(e) {
       <div style="width:100%;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;text-align:center;">
         <div>
           <div style="font-size:11px;color:var(--text-3);margin-bottom:3px;">Year</div>
-          <div style="font-size:13px;color:var(--text);font-weight:500;">${e.year || '—'}</div>
+          <div style="font-family:var(--bebas);font-size:15px;color:var(--text);font-weight:400;">${e.year || '—'}</div>
         </div>
         <div>
           <div style="font-size:11px;color:var(--text-3);margin-bottom:3px;">Status</div>
