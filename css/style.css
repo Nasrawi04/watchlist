@@ -37,9 +37,9 @@
   --text-2:       #A8A8A8;
   --text-3:       #808080; /* was #6E6E6E — ~3.7:1 contrast against --bg, below WCAG AA's 4.5:1 for normal text. This is used everywhere (item counts, years, hints, muted labels), so it was the actual weak point in dark mode. #808080 lands at ~4.7:1. */
 
-  --serif: 'Cormorant Garamond', Georgia, serif;
+  --serif: 'Oswald', Georgia, sans-serif;
   --bebas: 'Bebas Neue', var(--sans);
-  --sans:  'Inter', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  --sans:  'Manrope', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
 
   --radius-xs: 8px;
   --radius-sm: 10px;
@@ -1488,12 +1488,12 @@ nav {
 .comp-poster img { width:100%; height:100%; object-fit:cover; }
 .comp-info { flex:1; min-width:0; }
 .comp-rank { font-size:11px; color:var(--text-3); display:block; margin-bottom:4px; letter-spacing:1px; }
-.comp-title { font-size:22px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.comp-title { font-family:'Oswald',var(--sans); font-size:22px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .comp-meta { font-size:13px; color:var(--text-3); margin-top:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .fv-rank-meta { font-size:13px; color:var(--text-3); margin-top:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .comp-date { color:var(--text-3); }
 .comp-score-wrap { text-align:right; flex-shrink:0; }
-.comp-score { font-family:var(--serif); font-size:32px; color:var(--olive-light); line-height:1; }
+.comp-score { font-family:var(--bebas); font-size:36px; font-weight:400; color:var(--olive-light); line-height:1; }
 .comp-score-label { font-size:10px; color:var(--text-3); letter-spacing:1px; text-transform:uppercase; margin-top:4px; }
 
 /* ════════════════════════════════════════════
@@ -1603,7 +1603,7 @@ nav {
 .fav-picker-info { flex:1;min-width:0; }
 .fav-picker-name { font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 .fav-picker-sub  { font-size:12px;color:var(--text-3);margin-top:3px; }
-.fav-picker-score { font-family:var(--serif);font-size:20px;color:var(--olive-light);flex-shrink:0; }
+.fav-picker-score { font-family:var(--bebas);font-size:22px;font-weight:400;color:var(--olive-light);flex-shrink:0; }
 .fav-picker-check {
   width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border-2);
   flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;
@@ -2226,7 +2226,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   padding:1.5rem; display:flex; align-items:center; gap:1.5rem; margin-top:1.5rem;
 }
 .final-score-left { text-align:center; flex-shrink:0; min-width:88px; }
-.final-score-num { font-family:var(--serif); font-size:68px; font-weight:300; color:var(--olive-light); line-height:1; letter-spacing:-2px; }
+.final-score-num { font-family:var(--bebas); font-size:74px; font-weight:400; color:var(--olive-light); line-height:1; letter-spacing:-2px; }
 .final-score-label { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--text-3); margin-top:4px; }
 .final-score-right { flex:1; }
 .score-breakdown { display:flex; flex-direction:column; gap:6px; }
@@ -2234,7 +2234,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .score-breakdown-row label { color:var(--text-3); width:78px; flex-shrink:0; }
 .score-mini-bar { flex:1; height:2px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
 .score-mini-fill { height:100%; background:var(--olive-light); border-radius:2px; transition:width .5s var(--ease); }
-.score-mini-val { color:var(--olive-light); font-family:var(--serif); font-size:13px; min-width:28px; text-align:right; }
+.score-mini-val { color:var(--olive-light); font-family:var(--bebas); font-weight:400; font-size:15px; min-width:28px; text-align:right; }
 
 .det-prog-track { height:2px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; margin-top:8px; }
 .det-prog-fill { height:100%; background:var(--olive-light); border-radius:2px; transition:width .4s var(--ease); }
@@ -2451,7 +2451,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .facts-body { padding:16px 18px 18px; display:flex; flex-direction:column; gap:10px; }
 .facts-title-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
 .facts-title { font-family:var(--serif); font-size:19px; font-weight:600; color:var(--text); line-height:1.2; }
-.facts-year { font-family:var(--serif); font-size:14px; color:var(--text-3); font-weight:400; }
+.facts-year { font-family:var(--bebas); font-size:16px; color:var(--text-3); font-weight:400; }
 .facts-genre-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 .facts-rows { display:flex; flex-direction:column; gap:6px; margin-top:2px; padding-top:10px; border-top:0.5px solid var(--border); }
 .facts-row { display:flex; flex-direction:column; gap:1px; font-size:12.5px; }
