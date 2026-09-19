@@ -61,7 +61,7 @@
      screen size. Tuned so the transition actually happens across
      typical laptop-resize widths (~950-1200px) instead of maxing out
      almost immediately like a steeper vw coefficient would. */
-  --badge-font-size: clamp(9.5px, 1.05vw, 13px);
+  --badge-font-size: clamp(10.5px, 1.15vw, 14px);
 }
 
 /* ── Reset ── */
@@ -569,7 +569,7 @@ nav {
 /* Same hairline-seam-cap fix as #compSortBar in completed.html — this
    standalone type filter bar isn't sticky, so it never needed this. */
 #catTypeFilterWrap .sort-bar::before { content:none; }
-.sort-btn { background:transparent; border:1px solid var(--border); border-radius:var(--radius-xs); padding:clamp(4px, 1vw, 5px) clamp(9px, 2.2vw, 12px); font-size:clamp(10px, 2.3vw, 11px); font-weight:500; color:var(--text-3); cursor:pointer; transition:all var(--trans) var(--ease); white-space:nowrap; letter-spacing:.3px; }
+.sort-btn { font-family:'Manrope',var(--sans); background:transparent; border:1px solid var(--border); border-radius:var(--radius-xs); padding:clamp(4px, 1vw, 5px) clamp(9px, 2.2vw, 12px); font-size:clamp(11px, 2.5vw, 12.5px); font-weight:500; color:var(--text-3); cursor:pointer; transition:all var(--trans) var(--ease); white-space:nowrap; letter-spacing:.3px; }
 .sort-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
 .sort-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); font-weight:600; }
 .guest-page-state { text-align:center; padding:5rem 2rem; }
@@ -647,8 +647,8 @@ nav {
   display:flex; align-items:center; gap:7px;
 }
 .cat-page-eyebrow svg { width:13px; height:13px; }
-.cat-page-title { font-family:var(--serif); font-size:42px; font-weight:300; line-height:1; letter-spacing:-0.5px; padding-top:14px; }
-.cat-page-sub { font-size:13px; color:var(--text-2); margin-top:6px; }
+.cat-page-title { font-family:'Oswald',var(--sans); font-size:47px; font-weight:600; line-height:1; letter-spacing:-0.5px; padding-top:14px; }
+.cat-page-sub { font-family:'Manrope',var(--sans); font-weight:500; font-size:14.5px; color:var(--text-2); margin-top:6px; }
 
 .btn-add-entry {
   display:flex; align-items:center; gap:8px;
@@ -673,8 +673,8 @@ nav {
   transition:border-color var(--trans) var(--ease);
 }
 .page-stat:hover { border-color:var(--border-olive); }
-.page-stat-num { font-family:var(--serif); font-size:28px; font-weight:300; color:var(--olive-light); line-height:1; }
-.page-stat-label { font-size:9px; color:var(--text-3); text-transform:uppercase; letter-spacing:1.5px; margin-top:5px; }
+.page-stat-num { font-family:var(--bebas); font-size:28px; font-weight:400; color:var(--olive-light); line-height:1; }
+.page-stat-label { font-family:'Oswald',var(--sans); font-weight:600; font-size:9px; color:var(--text-3); text-transform:uppercase; letter-spacing:1.5px; margin-top:5px; }
 
 /* Desktop — all in one row */
 @media(min-width:641px) {
@@ -743,10 +743,10 @@ nav {
 .chevron-btn:hover { color:var(--text-2); background:var(--card-3); }
 .chevron-btn svg { width:15px; height:15px; }
 
-.section-block-title { font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px; letter-spacing:0.1px; }
+.section-block-title { font-family:'Oswald',var(--sans); font-size:14.5px; font-weight:600; display:flex; align-items:center; gap:8px; letter-spacing:0.1px; }
 .section-block-title svg { width:14px; height:14px; color:var(--olive-light); }
 .section-pill {
-  font-size:10px; padding:2px 9px; border-radius:20px;
+  font-family:var(--bebas); font-size:13px; font-weight:400; padding:2px 9px; border-radius:20px;
   background:var(--olive-faint); border:0.5px solid var(--border-olive);
   color:var(--olive-light);
 }
@@ -791,7 +791,7 @@ nav {
 .w-poster img { width:100%; height:100%; object-fit:cover; }
 .w-body { flex:1; min-width:0; }
 .w-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px; }
-.w-title { font-size:19px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.w-title { font-family:'Oswald',var(--sans); font-weight:600; font-size:21px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .w-score { color:var(--olive-light); font-size:clamp(13px, 3vw, 15px); font-weight:600; flex-shrink:0; }
 .w-genre { font-size:12px; color:var(--text-3); margin-bottom:10px; display:flex; gap:6px; flex-wrap:wrap; }
 .w-ep-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; flex-wrap:wrap; }
@@ -959,13 +959,13 @@ nav {
 .fd-col  { flex:1; min-width:180px; }
 .fd-section-hd { font-family:'Oswald',var(--sans); font-weight:600; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:8px; padding-bottom:6px; border-bottom:0.5px solid var(--border); }
 .fd-rating-row  { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:0.5px solid rgba(255,255,255,0.04); }
-.fd-rating-label{ font-family:'Manrope',var(--sans); font-weight:500; font-size:14px; color:var(--text); }
+.fd-rating-label{ font-family:'Manrope',var(--sans); font-weight:500; font-size:15.5px; color:var(--text); }
 .fd-rating-val  { font-family:var(--bebas); font-weight:400; font-size:20px; letter-spacing:.5px; color:var(--olive-light); }
 .fd-final       { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
 .fd-final span  { font-family:'Oswald',var(--sans); font-weight:600; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); }
 .fd-final strong{ font-family:var(--bebas); font-size:38px; letter-spacing:.5px; font-weight:400; color:var(--olive-light); }
 .fd-notes       { font-family:'Manrope',var(--sans); font-weight:500; font-size:14px; color:var(--text); font-style:italic; line-height:1.6; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
-.fd-description { font-family:'Manrope',var(--sans); font-weight:500; font-size:15px; color:var(--text); line-height:1.65; margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
+.fd-description { font-family:'Manrope',var(--sans); font-weight:500; font-size:16.5px; color:var(--text); line-height:1.65; margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
 .popup-info-block { margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
 
 /* ── Popup info bar (season chips / runtime) ── */
@@ -1072,7 +1072,7 @@ nav {
 .pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;flex-shrink:0;transition:color .15s;position:absolute;top:24px;right:24px;z-index:1; }
 .pvi-close:hover { color:var(--text); }
 .pvi-body { padding:16px 20px 20px; }
-.pvi-desc { font-family:'Manrope',var(--sans);font-weight:500;font-size:14px;color:var(--text);line-height:1.7;margin-bottom:16px; }
+.pvi-desc { font-family:'Manrope',var(--sans);font-weight:500;font-size:15.5px;color:var(--text);line-height:1.7;margin-bottom:16px; }
 .pvi-section-label { font-family:'Oswald',var(--sans);font-weight:600;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;display:flex;align-items:center;gap:10px; }
 .pvi-section-label::after { content:'';flex:1;height:0.5px;background:var(--border); }
 .pvi-seasons { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px; }
@@ -1517,8 +1517,9 @@ nav {
 /* Score in the grid-card badge row (Currently Watching) — reads off
    the same shared --badge-font-size scale as the badges beside it. */
 .wg-genre .w-score {
+  font-family:var(--bebas);
   font-size:var(--badge-font-size);
-  font-weight:700;
+  font-weight:400;
 }
 /* Movie variant of the type tag — its own color, distinct from genre
    tags (olive) and the TV variant (blue) below, so all three read
@@ -2521,7 +2522,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .wg-prog-track { height:2px; background:rgba(255,255,255,0.2); border-radius:2px; overflow:hidden; }
 .wg-prog-fill  { height:100%; background:var(--olive-light); border-radius:2px; transition:width .4s var(--ease); }
 .wg-info { padding:10px 10px 12px; display:flex; flex-direction:column; flex:1; }
-.wg-title { font-size:clamp(12.5px, 3vw, 15px); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+.wg-title { font-family:'Oswald',var(--sans); font-weight:600; font-size:clamp(13.5px, 3.2vw, 16.5px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
 /* Title+year: year sits inline next to the title by default. A small
    JS pass (fitTitleYear in nav.js) measures whether the title is
    being truncated once the year takes up space, and if so hides the
@@ -2529,7 +2530,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
    titles get their room back rather than colliding with the year. */
 .title-year-row { display:flex; align-items:baseline; gap:6px; min-width:0; }
 .title-year-row .wg-title, .title-year-row .w-title, .title-year-row .q-title, .title-year-row .fv-w-title, .title-year-row .pp-credit-title { flex:1 1 auto; min-width:0; max-width:100%; margin-bottom:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.title-year-inline { flex-shrink:0; font-size:clamp(10px, 2.4vw, 12.5px); font-weight:400; color:var(--text-3); white-space:nowrap; }
+.title-year-inline { font-family:var(--bebas); flex-shrink:0; font-size:clamp(13px, 2.9vw, 15.5px); font-weight:400; color:var(--text-3); white-space:nowrap; }
 .wg-genre { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .wg-controls {
   display:flex; align-items:center; justify-content:space-between;
@@ -2630,7 +2631,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .cg-score-badge {
   position:absolute; top:7px; left:7px; z-index:2;
   padding:4px 9px; border-radius:5px; min-width:38px; text-align:center;
-  font-size:12px; font-weight:700; letter-spacing:0.3px;
+  font-family:var(--bebas); font-size:17px; font-weight:400; letter-spacing:0.3px;
   box-shadow:0 2px 8px rgba(0,0,0,0.35); line-height:1.5;
 }
 .cg-score-badge-bottom { top:auto; bottom:7px; }
@@ -2661,8 +2662,8 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   text-align:center; padding-top:8px;
   border-top:0.5px solid var(--border);
 }
-.cg-score { color:var(--olive-light); font-size:clamp(15px, 3.4vw, 17px); font-weight:600; display:block; }
-.cg-score-lbl { font-size:9px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; display:block; margin-top:2px; }
+.cg-score { font-family:var(--bebas); color:var(--olive-light); font-size:clamp(19px, 4.2vw, 23px); font-weight:400; display:block; }
+.cg-score-lbl { font-family:'Oswald',var(--sans); font-weight:600; font-size:9px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; display:block; margin-top:2px; }
 
 /* The card itself — no overflow:hidden so content shows, allow full height */
 .cg-card {
