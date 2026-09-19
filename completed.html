@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* .sort-bar::before is a decorative hairline-seam cap meant for the
@@ -398,6 +398,14 @@ function _cpInjectPopup() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
           Rewatch
         </button>
+        <button class="popup-action-btn" onclick="goToDetail(_cpPopupEntryId,'completed.html')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+        <button class="popup-action-btn" onclick="_cpGoDiscover(_cpPopupEntryId)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Discover
+        </button>
         <button class="popup-action-btn" onclick="createShareCard(_cpPopupEntryId)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
           Create Card
@@ -452,6 +460,34 @@ function cpOpenPopup(id) {
 
 function cpOpenPopupToComments(id) {
   openCommentsPopupCompleted(id);
+}
+
+async function _cpGoDiscover(id) {
+  const e = _allCompleted.find(en => en.id === id);
+  if (!e) return;
+  if (e.tmdb_id && e.tmdb_type) {
+    goToTitle(e.tmdb_type, e.tmdb_id);
+    return;
+  }
+  if (typeof _tmdbSearch !== 'function') {
+    showToast('Discover is unavailable right now.', 'err');
+    return;
+  }
+  try {
+    const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
+    const results = await _tmdbSearch(e.title);
+    const sorted = [...results].sort((a, b) => {
+      const aMatch = (a.media_type === 'movie') === isMovie ? 0 : 1;
+      const bMatch = (b.media_type === 'movie') === isMovie ? 0 : 1;
+      return aMatch - bMatch;
+    });
+    const best = sorted[0];
+    if (best) goToTitle(best.media_type, best.id);
+    else showToast("Couldn't find this title on TMDB.", 'err');
+  } catch (err) {
+    console.error(err);
+    showToast('Error searching TMDB.', 'err');
+  }
 }
 
 function cpClosePopup() {
