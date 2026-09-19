@@ -52,7 +52,7 @@
     background:var(--bg-3); font-family:var(--serif); color:var(--olive-light);
     font-size:clamp(22px, 6vw, 32px);
   }
-  .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
+  .home-tmdb-year { font-family:var(--bebas); color:var(--text-3); font-size:clamp(13px, 2.9vw, 15px); }
   @media(max-width:640px) {
     .home-tmdb-poster-fallback { font-size:26px; }
     .home-tmdb-year { font-size:12px; }
@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<div class="w-card" onclick="goToDetail('${e.id}','index.html')">
               <div class="w-poster">${posterHTML(e)}</div>
               <div class="w-body">
-                <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
+                <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:15px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
                 ${epStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${epStr}</span></div>` : ''}
                 ${rtStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${rtStr}</span></div>` : ''}
                 ${!epStr && !rtStr ? `<div class="w-ep-row">${typeBadge}</div>` : ''}
