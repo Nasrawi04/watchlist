@@ -1941,7 +1941,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
           ${renderFavChips(e.ratings, e.cat)}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;" onclick="event.stopPropagation()">
-          <div style="font-family:var(--bebas);color:var(--olive-light);font-size:clamp(15px, 3.4vw, 17px);font-weight:400;">${score != null ? `★ ${score}` : '—'}</div>
+          <div style="font-family:var(--bebas);color:var(--olive-light);font-size:clamp(17px, 3.8vw, 19px);font-weight:400;">${score != null ? `★ ${score}` : '—'}</div>
           ${e.status === 'ongoing' ? `<button class="w-list-action-btn w-list-play-btn" onclick="continueWatching('${e.id}')" title="Continue">${icon('play',14)}</button>` : ''}
         </div>
       </div>
