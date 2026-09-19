@@ -1931,7 +1931,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
     return `<div class="cc-block">
       <div class="comp-row" style="cursor:pointer;" onclick="openGridPopup('${e.id}')">
-        ${isRanked ? `<div style="font-family:var(--serif);font-size:26px;font-weight:300;color:${i<3?'var(--olive-light)':'var(--text-2)'};text-align:center;min-width:44px;flex-shrink:0;">${i+1}</div>` : ''}
+        ${isRanked ? `<div style="font-family:var(--bebas);font-size:28px;font-weight:400;color:${i<3?'var(--olive-light)':'var(--text-2)'};text-align:center;min-width:44px;flex-shrink:0;">${i+1}</div>` : ''}
         <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : ''}</div>
         <div class="comp-info">
           <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:15px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
@@ -1941,7 +1941,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
           ${renderFavChips(e.ratings, e.cat)}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;" onclick="event.stopPropagation()">
-          <div style="color:var(--olive-light);font-size:clamp(13px, 3vw, 15px);font-weight:600;">${score != null ? `★ ${score}` : '—'}</div>
+          <div style="font-family:var(--bebas);color:var(--olive-light);font-size:clamp(15px, 3.4vw, 17px);font-weight:400;">${score != null ? `★ ${score}` : '—'}</div>
           ${e.status === 'ongoing' ? `<button class="w-list-action-btn w-list-play-btn" onclick="continueWatching('${e.id}')" title="Continue">${icon('play',14)}</button>` : ''}
         </div>
       </div>
