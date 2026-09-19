@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
 .lv-back {
@@ -91,15 +91,15 @@
 
 /* ── Grid view ── */
 .lv-grid {
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 220px));
   gap:14px;
   align-items:start; grid-auto-rows:max-content;
 }
 @media(min-width:1024px) {
-  .lv-grid { grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
+  .lv-grid { grid-template-columns:repeat(auto-fit, minmax(220px, 240px)); }
 }
 @media(min-width:1600px) {
-  .lv-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
+  .lv-grid { grid-template-columns:repeat(auto-fit, minmax(240px, 260px)); }
 }
 @media(max-width:640px) {
   .lv-grid { grid-template-columns:repeat(2,1fr); }
