@@ -135,6 +135,15 @@ function _discInterleave(a, b) {
   return merged;
 }
 
+// For categories branded as a ranking (Top 250 Cartoons/Anime, mixing
+// movies+TV) — each half arrives pre-sorted by score from TMDB, but
+// interleaving them by type ignores score entirely once merged, so a
+// lower-scored movie can land ahead of a higher-scored show. This
+// merges both halves into one list genuinely sorted by score.
+function _discMergeByScore(a, b) {
+  return [...a, ...b].sort((x, y) => (y.score ?? -1) - (x.score ?? -1));
+}
+
 // Click handler for a Discover card. If we have a real TMDB id, route
 // straight to title.html as usual. If not (e.g. a MyScreenScore-rated
 // title where nobody has linked it to TMDB yet), open a popup letting
@@ -370,7 +379,7 @@ const DISCOVER_CATEGORIES = [
       ]);
       const movies = (movData.results || []).map(r => _discNormalize(r, 'movie'));
       const shows  = (tvData.results || []).map(r => _discNormalize(r, 'tv'));
-      return _discInterleave(movies, shows);
+      return _discMergeByScore(movies, shows);
     }
   },
   {
@@ -390,7 +399,7 @@ const DISCOVER_CATEGORIES = [
         .filter(r => !_discIsAnimeOrigin(r) && !r.is_mature_animation);
       const shows = (await Promise.all((tvData.results || []).map(r => _discNormalizeChecked(r, 'tv'))))
         .filter(r => !_discIsAnimeOrigin(r) && !r.is_mature_animation);
-      return _discInterleave(movies, shows);
+      return _discMergeByScore(movies, shows);
     }
   },
   {
