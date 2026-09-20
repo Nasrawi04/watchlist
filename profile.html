@@ -2826,7 +2826,7 @@ function _tdYearSpanHTML(e, escFn) {
   var yr;
   if (isMovie || String(end) === String(start)) yr = start;
   else yr = start + '\u2013' + (end || 'Present');
-  return title + ' <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">' + yr + '</span>';
+  return title + ' <span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);vertical-align:middle;">' + yr + '</span>';
 }
 
 function _injectProfInfoPopup() {
@@ -2867,12 +2867,11 @@ function openProfInfoPopup(id) {
 
   document.getElementById('profInfoTitle').innerHTML = _tdYearSpanHTML(e, esc2);
 
-  var tags = [];
-  if (CAT_META[e.cat]) tags.push(CAT_META[e.cat].label);
-  (e.genres||[]).forEach(function(g){ tags.push(g); });
-  document.getElementById('profInfoTags').innerHTML = tags.map(function(t){
-    return '<span class="pvi-tag">'+esc2(String(t))+'</span>';
-  }).join('');
+  var catIsMovie = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+  var catLabel = CAT_META[e.cat] ? CAT_META[e.cat].label : '';
+  document.getElementById('profInfoTags').innerHTML =
+    (catLabel ? '<span class="'+(catIsMovie ? 'type-label' : 'type-label type-label-tv')+'">'+esc2(catLabel)+'</span>' : '') +
+    (e.genres||[]).map(function(g){ return '<span class="w-ep-badge">'+esc2(String(g))+'</span>'; }).join('');
 
   var dEl = document.getElementById('profInfoDesc');
   if (e.description) { dEl.textContent = e.description; dEl.style.color = ''; }
