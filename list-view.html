@@ -91,15 +91,15 @@
 
 /* ── Grid view ── */
 .lv-grid {
-  display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 220px));
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
   gap:14px;
   align-items:start; grid-auto-rows:max-content;
 }
 @media(min-width:1024px) {
-  .lv-grid { grid-template-columns:repeat(auto-fit, minmax(220px, 240px)); }
+  .lv-grid { grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
 }
 @media(min-width:1600px) {
-  .lv-grid { grid-template-columns:repeat(auto-fit, minmax(240px, 260px)); }
+  .lv-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
 }
 @media(max-width:640px) {
   .lv-grid { grid-template-columns:repeat(2,1fr); }
