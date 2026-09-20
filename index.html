@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<div class="w-card" onclick="goToDetail('${e.id}','index.html')">
               <div class="w-poster">${posterHTML(e)}</div>
               <div class="w-body">
-                <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:15px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
+                <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
                 ${epStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${epStr}</span></div>` : ''}
                 ${rtStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${rtStr}</span></div>` : ''}
                 ${!epStr && !rtStr ? `<div class="w-ep-row">${typeBadge}</div>` : ''}
