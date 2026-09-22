@@ -397,23 +397,562 @@ function applySort(arr, sortBy) {
 
 function sortBar(section) {
   const cur = _sort[section] || 'newest';
-  const isQueue = section === 'queue';
-  const showRating = section === 'completed' || section === 'ongoing';
-  const isRating = cur.startsWith('rating:');
-  const ratingLabel = isRating ? _ratingFilterLabel(window.PAGE_CAT, cur.slice(7)) : null;
-  const opts = [
-    ['newest', 'Newest', 'New'], ['oldest', 'Oldest', 'Old'],
-    ...(!isQueue ? [['highest','Highest Rank','High'],['lowest','Lowest Rank','Low']] : []),
-    ['alpha', 'A → Z', 'A→Z'], ['zalpha', 'Z → A', 'Z→A'],
-  ];
-  const staticBtns = opts.map(([v,l,s]) =>
-    `<button class="sort-btn${cur===v?' active':''}" onclick="setSort('${section}','${v}')" data-short="${s}">${l}</button>`
-  ).join('');
-  const ratingBtn = showRating
-    ? `<button class="sort-btn${isRating?' active':''}" onclick="openRatingFilter('${section}')" data-short="${isRating ? _ratingShortLabel(ratingLabel) : 'Rating'}">${isRating ? 'Rating: ' + ratingLabel : 'Rating ▾'}</button>`
-    : '';
-  return `<div class="sort-bar">${staticBtns}${ratingBtn}</div>`;
+  const f = _sfFilter[section] || {};
+  const filterCount = (f.genres || []).length + (f.yearMin || f.yearMax ? 1 : 0) + (f.scoreMin || f.scoreMax ? 1 : 0) + (f.lengthMin || f.lengthMax ? 1 : 0) + (f.person ? 1 : 0);
+  return `<div class="sort-bar sf-trigger-row">
+    <button class="sf-icon-btn${cur!=='newest' ? ' active' : ''}" onclick="openSortPopup('${section}')" aria-label="Sort">
+      ${icon('sort', 15)}<span class="sf-icon-btn-label">${cur!=='newest' ? _sfSortShortLabel(section, cur) : 'Sort'}</span>
+    </button>
+    <button class="sf-icon-btn${filterCount ? ' active' : ''}" onclick="openFilterPopup('${section}')" aria-label="Filter">
+      ${icon('filter', 15)}<span class="sf-icon-btn-label">${filterCount ? `Filter (${filterCount})` : 'Filter'}</span>
+    </button>
+  </div>`;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Sort & Filter — two separate popups (Sort, Filter), each holding
+   its own STAGED state that only commits to the real _sort/_sfFilter
+   on "Apply". Closing via X, backdrop, or Cancel discards the staged
+   copy entirely — nothing changes until Apply is pressed. Filter
+   criteria are presented as their own dropdown triggers (genre as a
+   checkbox list, decade as a single-select list) rather than a flat
+   wall of pills, per the reference screenshots. Config-driven off
+   SF_SORT_GROUPS + per-section genre/decade collection, so reusing
+   this elsewhere later only needs a base-array getter + render
+   dispatcher for that page.
+   ══════════════════════════════════════════════════════════════════ */
+
+const _sfFilter = {};       // committed filter state per section
+let _sfStagedSort = null;   // staged value while the Sort popup is open
+let _sfStagedFilter = null; // staged {genres,decade,scoreMin,scoreMax} while Filter popup is open
+let _sfSection = null;
+
+// Flat, grouped sort options, matching the exact list requested.
+// 'episode' (TV only) needs each show's latest-aired-episode date,
+// captured by _refreshTmdbSeasonData into ratings._last_episode_date —
+// entries that haven't been refreshed since that field was added just
+// sort to the back rather than breaking anything. 'length' covers both
+// movies (runtime) and TV (total episode count, as the closest
+// available proxy since there's no single per-show runtime number).
+const SF_SORT_GROUPS = [
+  { header: 'Alphabetical', opts: [['alpha','A → Z'], ['zalpha','Z → A']] },
+  { header: 'Added',        opts: [['newest','Latest'], ['oldest','Earliest']] },
+  { header: 'Release Date', opts: [['releaseNewest','Latest'], ['releaseOldest','Earliest']] },
+  { header: 'Episode',      opts: [['episodeNewest','Latest'], ['episodeOldest','Earliest']], onlyFor: ['__tvOnly__'] },
+  { header: 'Ratings',      opts: [['highest','Highest'], ['lowest','Lowest']], skipFor: ['queue'] },
+  { header: 'Length',       opts: [['longest','Longest'], ['shortest','Shortest']] },
+];
+
+function _sfBaseEntries(section) {
+  if (section === 'watching') return _catAll.filter(e => e.status === 'watching' || e.status === 'paused');
+  if (section === 'queue')    return _catAll.filter(e => e.status === 'queue');
+  if (section === 'ongoing')  return _catAll.filter(e => e.status === 'ongoing');
+  return _catAll.filter(e => e.status === 'completed');
+}
+
+function _sfActiveSortGroups(section) {
+  const isMovies = typeof IS_MOVIE_CAT === 'function' && IS_MOVIE_CAT();
+  return SF_SORT_GROUPS.filter(g => {
+    if (g.skipFor && g.skipFor.includes(section)) return false;
+    if (g.onlyFor && g.onlyFor.includes('__tvOnly__') && isMovies) return false;
+    return true;
+  });
+}
+
+// Fixed master genre list (standard TMDB set) rather than deriving
+// options from whatever's currently in the section — a section only
+// having, say, 8 distinct genres represented among its own entries is
+// normal (titles typically carry 1-3 genres each), but the filter
+// should still offer every genre so it's not limited by what happens
+// to already be there.
+const SF_ALL_GENRES = [
+  'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary',
+  'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery',
+  'Romance', 'Science Fiction', 'Thriller', 'TV Movie', 'War', 'Western',
+];
+
+function _sfGenresForSection(section) {
+  return SF_ALL_GENRES;
+}
+
+// Movies: actual runtime. TV: total episode count, the closest
+// available "length" proxy since there's no single per-show runtime.
+function _sfRuntimeMinutes(e) {
+  const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
+  if (isMovie) return (Number(e.runtime_h) || 0) * 60 + (Number(e.runtime_m) || 0);
+  return Number(e.total_eps) || 0;
+}
+
+function _sfSortShortLabel(section, value) {
+  if (value.startsWith('rating:')) return _ratingShortLabel(_ratingFilterLabel(window.PAGE_CAT, value.slice(7)));
+  for (const g of SF_SORT_GROUPS) for (const [v, l] of g.opts) if (v === value) return g.opts.length > 1 ? g.header : l;
+  return 'Sort';
+}
+
+function _sfSortEntries(section, base, value) {
+  if (value === 'releaseNewest') return [...base].sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
+  if (value === 'releaseOldest') return [...base].sort((a, b) => (Number(a.year) || 0) - (Number(b.year) || 0));
+  if (value === 'episodeNewest') return [...base].sort((a, b) => new Date(b.ratings?._last_episode_date || 0) - new Date(a.ratings?._last_episode_date || 0));
+  if (value === 'episodeOldest') return [...base].sort((a, b) => new Date(a.ratings?._last_episode_date || 0) - new Date(b.ratings?._last_episode_date || 0));
+  if (value === 'shortest') return [...base].sort((a, b) => _sfRuntimeMinutes(a) - _sfRuntimeMinutes(b));
+  if (value === 'longest') return [...base].sort((a, b) => _sfRuntimeMinutes(b) - _sfRuntimeMinutes(a));
+  return section === 'watching' ? _sortWatching(base, value) : applySort(base, value);
+}
+
+function _applySortFilter(section) {
+  let base = _sfBaseEntries(section);
+  const f = _sfFilter[section] || {};
+  if (f.genres && f.genres.length) base = base.filter(e => (e.genres || []).some(g => f.genres.includes(g)));
+  if (f.yearMin) base = base.filter(e => e.year && Number(e.year) >= Number(f.yearMin));
+  if (f.yearMax) base = base.filter(e => e.year && Number(e.year) <= Number(f.yearMax));
+  if (f.scoreMin) base = base.filter(e => liveScore(e) != null && liveScore(e) >= Number(f.scoreMin));
+  if (f.scoreMax) base = base.filter(e => liveScore(e) != null && liveScore(e) <= Number(f.scoreMax));
+  if (f.lengthMin) base = base.filter(e => _sfRuntimeMinutes(e) >= Number(f.lengthMin));
+  if (f.lengthMax) base = base.filter(e => _sfRuntimeMinutes(e) <= Number(f.lengthMax));
+  if (f._personMatchIds) base = base.filter(e => f._personMatchIds.includes(e.id));
+  const value = _sort[section] || 'newest';
+  const sorted = _sfSortEntries(section, base, value);
+  const inner = document.querySelector(`#body-${section} .accordion-inner`);
+  if (!inner) return;
+  const content = section === 'watching' ? buildWatching(sorted)
+                : section === 'queue'    ? buildQueue(sorted)
+                : section === 'ongoing'  ? buildCompleted(sorted, 'ongoing')
+                :                          buildCompleted(sorted, 'completed');
+  inner.innerHTML = sortBar(section) + content;
+}
+
+function setSort(section, value) {
+  _sort[section] = value;
+  _applySortFilter(section);
+}
+
+/* ── Sort popup ── */
+
+function _injectSortOverlay() {
+  if (document.getElementById('sfSortOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'sfSortOverlay';
+  el.innerHTML = `<div id="sfSortCard">
+    <div class="sf-header">
+      <div class="sf-title">Sort</div>
+      <button class="sf-close" onclick="closeSortPopup()">${icon('x', 18)}</button>
+    </div>
+    <div class="sf-body" id="sfSortBody"></div>
+    <div class="sf-footer">
+      <button class="sf-clear-btn" onclick="_sfResetStagedSort()">Reset</button>
+      <button class="sf-apply-btn" onclick="_sfApplySort()">Apply</button>
+    </div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) closeSortPopup(); });
+  document.body.appendChild(el);
+}
+
+function openSortPopup(section) {
+  _injectSortOverlay();
+  _sfSection = section;
+  _sfStagedSort = _sort[section] || 'newest';
+  document.getElementById('sfSortBody').innerHTML = _sfSortBodyHTML(section);
+  document.getElementById('sfSortOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSortPopup() {
+  const ov = document.getElementById('sfSortOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+  _sfStagedSort = null;
+}
+
+function _sfSortBodyHTML(section) {
+  const staged = _sfStagedSort;
+  const groups = _sfActiveSortGroups(section);
+  const showRating = section === 'completed' || section === 'ongoing';
+  const isRating = staged.startsWith('rating:');
+
+  // Each criterion is its own dropdown row — trigger shows just the
+  // criterion's name (not the currently-picked option), and opening
+  // it shows only that criterion's own options. The row whose option
+  // is the active sort is highlighted so it's clear which is applied.
+  let html = `<div class="sf-section-label">Sort By</div><div class="sf-dd-stack">`;
+  groups.forEach((g, i) => {
+    const ddId = `sfSortDD-${i}`;
+    const isActiveGroup = g.opts.some(([v]) => v === staged);
+    // Trigger shows just the criterion name normally; once this group
+    // IS the active sort, it shows "Header: Option" so the applied
+    // value is visible without opening the menu.
+    const label = isActiveGroup ? `${g.header}: ${g.opts.find(([v]) => v === staged)[1]}` : g.header;
+    const menu = g.opts.map(([v, l]) => `<div class="td-dd-opt${staged===v?' active':''}" onclick="event.stopPropagation();_sfStageSort('${v}')">${l}</div>`).join('');
+    html += `
+    <div class="td-dd sf-dd sf-dd-wide" id="${ddId}">
+      <button type="button" class="td-dd-trigger sf-dd-trigger${isActiveGroup?' active':''}" onclick="event.stopPropagation();_sfToggleDD('${ddId}')">
+        <span class="td-dd-label">${label}</span>
+        <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="td-dd-menu">${menu}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  if (showRating) {
+    const opts = _ratingFilterOptions(window.PAGE_CAT);
+    let lastGroup = null;
+    let menu = '';
+    opts.forEach(o => {
+      if (o.group !== lastGroup) { menu += `<div class="sf-dd-subgroup-label">${o.group}</div>`; lastGroup = o.group; }
+      menu += `<div class="td-dd-opt${isRating && staged.slice(7)===o.key?' active':''}" onclick="event.stopPropagation();_sfStageSort('rating:${o.key}')">${o.label}</div>`;
+    });
+    html += `<div class="sf-section-label">Rating</div>
+    <div class="td-dd sf-dd sf-dd-wide" id="sfSortDD-rating">
+      <button type="button" class="td-dd-trigger sf-dd-trigger${isRating?' active':''}" onclick="event.stopPropagation();_sfToggleDD('sfSortDD-rating')">
+        <span class="td-dd-label">Specific Rating${isRating ? `: ${_ratingFilterLabel(window.PAGE_CAT, staged.slice(7))}` : ''}</span>
+        <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="td-dd-menu">${menu}</div>
+    </div>`;
+  }
+  return html;
+}
+
+function _sfStageSort(value) {
+  _sfStagedSort = value;
+  document.getElementById('sfSortBody').innerHTML = _sfSortBodyHTML(_sfSection);
+}
+
+// "Reset" stages the sort back to the default (Added: Latest) without
+// closing the popup — distinct from Cancel/X/backdrop, which discard
+// the staged pick and leave whatever sort was already applied alone.
+// Still requires Apply to actually take effect, same as any other pick.
+function _sfResetStagedSort() {
+  _sfStagedSort = 'newest';
+  document.getElementById('sfSortBody').innerHTML = _sfSortBodyHTML(_sfSection);
+}
+
+const _sfEpisodeDateCache = {}; // tmdb_id -> air_date string, in-memory for the session
+
+async function _sfFetchLastEpisodeDate(entry) {
+  if (entry.ratings?._last_episode_date) return entry.ratings._last_episode_date;
+  if (!entry.tmdb_id || entry.tmdb_type !== 'tv') return null;
+  if (_sfEpisodeDateCache[entry.tmdb_id] !== undefined) return _sfEpisodeDateCache[entry.tmdb_id];
+  try {
+    const res = await tmdbFetch(`${TMDB_BASE}/tv/${entry.tmdb_id}?api_key=${TMDB_KEY}&language=en-US`);
+    const date = res.ok ? (await res.json()).last_episode_to_air?.air_date || null : null;
+    _sfEpisodeDateCache[entry.tmdb_id] = date;
+    // Persist to the DB (not just this in-memory session cache), so
+    // this fetch never has to happen again for this entry — matching
+    // the same ratings-blob pattern _refreshTmdbSeasonData already uses
+    // for season/episode counts, just for this one extra field.
+    if (date) {
+      const newRatings = { ...(entry.ratings || {}), _last_episode_date: date };
+      updateProgress(entry.id, _catUser.id, { ratings: newRatings }).catch(() => {});
+      entry.ratings = newRatings;
+    }
+    return date;
+  } catch { _sfEpisodeDateCache[entry.tmdb_id] = null; return null; }
+}
+
+async function _sfApplySort() {
+  const section = _sfSection;
+  const value = _sfStagedSort;
+  if (!section || !value) { closeSortPopup(); return; }
+
+  // Episode sort needs each TV entry's latest-aired-episode date, which
+  // for most entries has never been fetched (it's normally only backfilled
+  // incidentally when that show's own info popup happens to be opened).
+  // Fetching it here on demand — same pattern as the Actor/Director
+  // filter — means the sort actually works immediately instead of
+  // silently doing nothing for entries missing that field.
+  if (value === 'episodeNewest' || value === 'episodeOldest') {
+    const applyBtn = document.querySelector('#sfSortCard .sf-apply-btn');
+    if (applyBtn) { applyBtn.textContent = 'Loading…'; applyBtn.disabled = true; }
+    const base = _sfBaseEntries(section);
+    await Promise.all(base.map(async e => {
+      const date = await _sfFetchLastEpisodeDate(e);
+      if (date) e.ratings = { ...(e.ratings || {}), _last_episode_date: date };
+    }));
+    if (applyBtn) { applyBtn.textContent = 'Apply'; applyBtn.disabled = false; }
+  }
+
+  setSort(section, value);
+  closeSortPopup();
+}
+
+/* ── Filter popup ── */
+
+function _injectFilterOverlay() {
+  if (document.getElementById('sfFilterOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'sfFilterOverlay';
+  el.innerHTML = `<div id="sfFilterCard">
+    <div class="sf-header">
+      <div class="sf-title">Filter</div>
+      <button class="sf-close" onclick="closeFilterPopup()">${icon('x', 18)}</button>
+    </div>
+    <div class="sf-body" id="sfFilterBody"></div>
+    <div class="sf-footer">
+      <button class="sf-clear-btn" onclick="_sfClearStagedFilter()">Clear</button>
+      <button class="sf-apply-btn" onclick="_sfApplyFilter()">Apply</button>
+    </div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) closeFilterPopup(); });
+  document.body.appendChild(el);
+}
+
+function openFilterPopup(section) {
+  _injectFilterOverlay();
+  _sfSection = section;
+  const cur = _sfFilter[section] || {};
+  _sfStagedFilter = {
+    genres: [...(cur.genres || [])],
+    yearMin: cur.yearMin || '', yearMax: cur.yearMax || '',
+    scoreMin: cur.scoreMin || '', scoreMax: cur.scoreMax || '',
+    lengthMin: cur.lengthMin || '', lengthMax: cur.lengthMax || '',
+    person: cur.person || '',
+  };
+  document.getElementById('sfFilterBody').innerHTML = _sfFilterBodyHTML(section);
+  document.getElementById('sfFilterOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFilterPopup() {
+  const ov = document.getElementById('sfFilterOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+  _sfStagedFilter = null;
+}
+
+const _sfCastCache = {}; // tmdb_id -> { director, cast:[names] }, in-memory for the session
+
+async function _sfFetchCredits(entry) {
+  if (entry.ratings?._director != null || entry.ratings?._cast_names) {
+    return { director: entry.ratings._director || '', cast: entry.ratings._cast_names || [] };
+  }
+  if (!entry.tmdb_id || !entry.tmdb_type) return null;
+  if (_sfCastCache[entry.tmdb_id]) return _sfCastCache[entry.tmdb_id];
+  try {
+    const res = await tmdbFetch(`${TMDB_BASE}/${entry.tmdb_type}/${entry.tmdb_id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const director = (data.credits?.crew || []).find(c => c.job === 'Director')?.name || '';
+    const cast = (data.credits?.cast || []).slice(0, 12).map(c => c.name);
+    const result = { director, cast };
+    _sfCastCache[entry.tmdb_id] = result;
+    // Persist to the DB so this fetch never has to happen again for
+    // this entry, same pattern as the episode-date fetch above.
+    const newRatings = { ...(entry.ratings || {}), _director: director, _cast_names: cast };
+    updateProgress(entry.id, _catUser.id, { ratings: newRatings }).catch(() => {});
+    entry.ratings = newRatings;
+    return result;
+  } catch { return null; }
+}
+
+function _sfFilterBodyHTML(section) {
+  const f = _sfStagedFilter;
+  const genres = _sfGenresForSection(section);
+
+  const genreLabel = f.genres.length ? f.genres.join(', ') : 'Any Genre';
+  const genreMenu = genres.map(g => `
+    <label class="sf-check-row" onclick="event.stopPropagation();">
+      <input type="checkbox" ${f.genres.includes(g)?'checked':''} onchange="_sfStageGenre('${g.replace(/'/g,"\\'")}')">
+      <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+      <span>${g}</span>
+    </label>`).join('');
+
+  const isMovies = typeof IS_MOVIE_CAT === 'function' && IS_MOVIE_CAT();
+
+  return `
+    <div class="sf-section-label">Genre</div>
+    <div class="td-dd sf-dd sf-dd-wide" id="sfGenreDD">
+      <button type="button" class="td-dd-trigger sf-dd-trigger${f.genres.length?' active':''}" onclick="event.stopPropagation();_sfToggleDD('sfGenreDD')">
+        <span class="td-dd-label">${genreLabel}</span>
+        <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="td-dd-menu sf-check-menu">${genreMenu || '<div class="sf-empty">No genres in this section yet.</div>'}</div>
+    </div>
+
+    <div class="sf-section-label">Release Year</div>
+    <div class="sf-range-row">
+      <input type="number" class="sf-range-input" id="sfYearMin" placeholder="From" value="${f.yearMin}" oninput="_sfStageRanges()">
+      <span class="sf-range-to">to</span>
+      <input type="number" class="sf-range-input" id="sfYearMax" placeholder="To" value="${f.yearMax}" oninput="_sfStageRanges()">
+    </div>
+
+    <div class="sf-section-label">MyScreenScore <span class="sf-section-hint">(rated items only)</span></div>
+    <div class="sf-range-row">
+      <input type="number" step="0.1" min="0" max="10" class="sf-range-input" id="sfScoreMin" placeholder="Min" value="${f.scoreMin}" oninput="_sfStageRanges()">
+      <span class="sf-range-to">to</span>
+      <input type="number" step="0.1" min="0" max="10" class="sf-range-input" id="sfScoreMax" placeholder="Max" value="${f.scoreMax}" oninput="_sfStageRanges()">
+    </div>
+
+    <div class="sf-section-label">${isMovies ? 'Runtime (minutes)' : 'Episode Count'}</div>
+    <div class="sf-range-row">
+      <input type="number" min="0" class="sf-range-input" id="sfLengthMin" placeholder="Min" value="${f.lengthMin}" oninput="_sfStageRanges()">
+      <span class="sf-range-to">to</span>
+      <input type="number" min="0" class="sf-range-input" id="sfLengthMax" placeholder="Max" value="${f.lengthMax}" oninput="_sfStageRanges()">
+    </div>
+
+    <div class="sf-section-label">Actor / Director</div>
+    <div class="td-dd sf-dd sf-dd-wide" id="sfPersonDD">
+      <input type="text" class="sf-range-input sf-text-input sf-dd-trigger" id="sfPerson" placeholder="Search by name…" autocomplete="off"
+        value="${f.person || ''}" oninput="_sfPersonInput(event.target.value)" onfocus="event.stopPropagation();_sfOpenPersonDD()" onclick="event.stopPropagation();">
+      <div class="td-dd-menu" id="sfPersonMenu"></div>
+    </div>
+    <div class="sf-section-hint sf-person-hint">Names are pulled from each title's cast &amp; crew the first time you search a section — may take a moment to load initially, then it's instant.</div>`;
+}
+
+// Actor/director suggestions per section: null = not yet fetched,
+// otherwise a sorted array of unique names built from every entry's
+// cached credits (see _sfFetchCredits, which is also reused by Apply's
+// actual filtering — this just gives the input something to suggest
+// against instead of the person guessing exact spelling/name order).
+const _sfPersonNames = {};
+
+async function _sfOpenPersonDD() {
+  // Focus pre-fetches the section's cast/crew names in the background
+  // so they're ready by the time the person actually types something,
+  // but the dropdown itself stays closed until there's a real query —
+  // showing the full (possibly huge) name list on a bare focus isn't
+  // useful and just gets in the way.
+  const section = _sfSection;
+  if (_sfPersonNames[section]) return;
+  const base = _sfBaseEntries(section);
+  const names = new Set();
+  await Promise.all(base.map(async e => {
+    const credits = await _sfFetchCredits(e);
+    if (!credits) return;
+    if (credits.director) names.add(credits.director);
+    credits.cast.forEach(n => names.add(n));
+  }));
+  _sfPersonNames[section] = [...names].sort((a, b) => a.localeCompare(b));
+  if (_sfSection === section) _sfRenderPersonMenu();
+}
+
+function _sfPersonInput(value) {
+  _sfStagedFilter.person = value;
+  _sfRenderPersonMenu();
+}
+
+function _sfRenderPersonMenu() {
+  const dd = document.getElementById('sfPersonDD');
+  const menuEl = document.getElementById('sfPersonMenu');
+  if (!dd || !menuEl) return;
+  const query = (_sfStagedFilter.person || '').trim().toLowerCase();
+  if (query.length < 2) {
+    dd.classList.remove('open');
+    menuEl.style.cssText = '';
+    return;
+  }
+  const all = _sfPersonNames[_sfSection];
+  if (!all) {
+    menuEl.innerHTML = `<div class="sf-empty">Loading actors &amp; directors…</div>`;
+  } else {
+    const matches = all.filter(n => n.toLowerCase().includes(query)).slice(0, 50);
+    menuEl.innerHTML = matches.length
+      ? matches.map(n => `<div class="td-dd-opt" onclick="event.stopPropagation();_sfPickPerson('${n.replace(/'/g,"\\'")}')">${n}</div>`).join('')
+      : `<div class="sf-empty">No matching names.</div>`;
+  }
+  dd.classList.add('open');
+  _sfPositionDD(dd);
+}
+
+function _sfPickPerson(name) {
+  _sfStagedFilter.person = name;
+  document.getElementById('sfPerson').value = name;
+  document.getElementById('sfPersonDD').classList.remove('open');
+  document.getElementById('sfPersonMenu').style.cssText = '';
+}
+
+function _sfPositionDD(target) {
+  // The menu is normally position:absolute, but that gets clipped by
+  // .sf-body's own overflow:auto once it extends past that container's
+  // edge — no amount of z-index fixes that, since overflow clipping
+  // applies regardless of stacking order. Switching to position:fixed
+  // with coordinates computed from the trigger's actual screen position
+  // escapes that clipping entirely, and flips upward automatically if
+  // there isn't room below.
+  const trigger = target.querySelector('.sf-dd-trigger');
+  const menu = target.querySelector('.td-dd-menu');
+  const rect = trigger.getBoundingClientRect();
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const menuMaxHeight = 220;
+  const openUp = spaceBelow < menuMaxHeight + 16 && rect.top > menuMaxHeight;
+  menu.style.cssText = `position:fixed; left:${rect.left}px; width:${rect.width}px; z-index:1400; display:block; ` +
+    (openUp ? `bottom:${window.innerHeight - rect.top}px; top:auto; border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-top:0.5px solid var(--olive-light); border-bottom:none;`
+            : `top:${rect.bottom}px; bottom:auto;`);
+}
+
+function _sfToggleDD(id) {
+  const target = document.getElementById(id);
+  const wasOpen = target.classList.contains('open');
+  document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; });
+  if (wasOpen) return;
+  target.classList.add('open');
+  _sfPositionDD(target);
+}
+document.addEventListener('click', () => document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; }));
+window.addEventListener('resize', () => document.querySelectorAll('.sf-dd.open').forEach(el => el.classList.remove('open')));
+document.addEventListener('scroll', ev => {
+  if (ev.target.classList?.contains('sf-body')) document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; });
+}, true);
+
+function _sfStageGenre(genre) {
+  const cur = _sfStagedFilter.genres;
+  _sfStagedFilter.genres = cur.includes(genre) ? cur.filter(g => g !== genre) : [...cur, genre];
+  // Update just the trigger label and this checkbox's own state directly,
+  // rather than re-rendering the whole dropdown — rebuilding the menu's
+  // HTML resets its scroll position to the top, which is exactly the
+  // annoying jump this avoids when picking several genres in a row.
+  const dd = document.getElementById('sfGenreDD');
+  const trigger = dd.querySelector('.sf-dd-trigger');
+  const label = _sfStagedFilter.genres.length ? _sfStagedFilter.genres.join(', ') : 'Any Genre';
+  trigger.querySelector('.td-dd-label').textContent = label;
+  trigger.classList.toggle('active', _sfStagedFilter.genres.length > 0);
+}
+
+function _sfStageRanges() {
+  const val = id => document.getElementById(id)?.value ?? '';
+  _sfStagedFilter.yearMin = val('sfYearMin'); _sfStagedFilter.yearMax = val('sfYearMax');
+  _sfStagedFilter.scoreMin = val('sfScoreMin'); _sfStagedFilter.scoreMax = val('sfScoreMax');
+  _sfStagedFilter.lengthMin = val('sfLengthMin'); _sfStagedFilter.lengthMax = val('sfLengthMax');
+}
+
+function _sfClearStagedFilter() {
+  _sfStagedFilter = { genres: [], yearMin: '', yearMax: '', scoreMin: '', scoreMax: '', lengthMin: '', lengthMax: '', person: '' };
+  document.getElementById('sfFilterBody').innerHTML = _sfFilterBodyHTML(_sfSection);
+}
+
+async function _sfApplyFilter() {
+  const section = _sfSection;
+  if (!section || !_sfStagedFilter) { closeFilterPopup(); return; }
+  const staged = { ..._sfStagedFilter };
+  const applyBtn = document.querySelector('#sfFilterCard .sf-apply-btn');
+
+  // Actor/director needs a credits fetch per entry (cached after the
+  // first lookup), so only pay that cost when the field is actually used.
+  if (staged.person && staged.person.trim()) {
+    const query = staged.person.trim().toLowerCase();
+    if (applyBtn) { applyBtn.textContent = 'Searching…'; applyBtn.disabled = true; }
+    const base = _sfBaseEntries(section);
+    const matches = new Set();
+    await Promise.all(base.map(async e => {
+      const credits = await _sfFetchCredits(e);
+      if (!credits) return;
+      const hit = credits.director.toLowerCase().includes(query) || credits.cast.some(n => n.toLowerCase().includes(query));
+      if (hit) matches.add(e.id);
+    }));
+    staged._personMatchIds = [...matches];
+    if (applyBtn) { applyBtn.textContent = 'Apply'; applyBtn.disabled = false; }
+  } else {
+    staged._personMatchIds = null;
+  }
+
+  _sfFilter[section] = staged;
+  _applySortFilter(section);
+  closeFilterPopup();
+}
+
+
 
 /* ── Rating filter popup — lets the person sort a section by any specific
    rating instead of just overall score. See openRatingFilter(). ── */
@@ -476,23 +1015,6 @@ function _sortWatching(items, sortBy) {
   const active = applySort(items.filter(e => e.status !== 'paused'), sortBy);
   const paused = applySort(items.filter(e => e.status === 'paused'), sortBy);
   return [...active, ...paused];
-}
-
-function setSort(section, value) {
-  _sort[section] = value;
-  let base;
-  if (section === 'watching') base = _catAll.filter(e => e.status === 'watching' || e.status === 'paused');
-  else if (section === 'queue') base = _catAll.filter(e => e.status === 'queue');
-  else if (section === 'ongoing') base = _catAll.filter(e => e.status === 'ongoing');
-  else base = _catAll.filter(e => e.status === 'completed');
-  const sorted = section === 'watching' ? _sortWatching(base, value) : applySort(base, value);
-  const inner  = document.querySelector(`#body-${section} .accordion-inner`);
-  if (!inner) return;
-  const content = section === 'watching' ? buildWatching(sorted)
-                : section === 'queue'    ? buildQueue(sorted)
-                : section === 'ongoing'  ? buildCompleted(sorted, 'ongoing')
-                :                          buildCompleted(sorted, 'completed');
-  inner.innerHTML = sortBar(section) + content;
 }
 
 const IS_MOVIE_CAT = () => window.PAGE_CAT === 'movies';
