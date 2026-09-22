@@ -1158,14 +1158,20 @@ async function _refreshTmdbSeasonData(entry, userId, rerender) {
     const newBreakdown = seasons.map(s => s.episode_count);
     const newTotalSeasons = data.number_of_seasons || newBreakdown.length || null;
     const newTotalEps = data.number_of_episodes || newBreakdown.reduce((a, b) => a + b, 0) || null;
+    // Latest aired episode's date — used for the "Episode: Latest/Earliest"
+    // sort option, which needs to reflect how recently a show has actually
+    // aired new content, not just when it was originally released.
+    const newLastEpDate = data.last_episode_to_air?.air_date || null;
 
     const oldTotalSeasons = Number(entry.total_seasons) || 0;
     const oldTotalEps = Number(entry.total_eps) || 0;
+    const oldLastEpDate = entry.ratings?._last_episode_date || null;
     const hasNewData = (newTotalSeasons && newTotalSeasons > oldTotalSeasons) ||
-                        (newTotalEps && newTotalEps > oldTotalEps);
+                        (newTotalEps && newTotalEps > oldTotalEps) ||
+                        (newLastEpDate && newLastEpDate !== oldLastEpDate);
     if (!hasNewData) return;
 
-    const newRatings = { ...(entry.ratings || {}), _season_breakdown: newBreakdown };
+    const newRatings = { ...(entry.ratings || {}), _season_breakdown: newBreakdown, _last_episode_date: newLastEpDate || oldLastEpDate };
     await updateProgress(entry.id, userId, {
       total_seasons: newTotalSeasons,
       total_eps: newTotalEps,
