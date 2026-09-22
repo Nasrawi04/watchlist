@@ -891,7 +891,17 @@ function _sfToggleDD(id) {
   _sfPositionDD(target);
 }
 document.addEventListener('click', () => document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; }));
-window.addEventListener('resize', () => document.querySelectorAll('.sf-dd.open').forEach(el => el.classList.remove('open')));
+// Only close open dropdowns on a genuine width change (real resize or
+// orientation change) — a mobile keyboard opening fires 'resize' too
+// (the visible viewport height shrinks), and closing the dropdown the
+// instant the Actor/Director field is focused made it look completely
+// broken on phone.
+let _sfLastWidth = window.innerWidth;
+window.addEventListener('resize', () => {
+  if (window.innerWidth === _sfLastWidth) return;
+  _sfLastWidth = window.innerWidth;
+  document.querySelectorAll('.sf-dd.open').forEach(el => el.classList.remove('open'));
+});
 document.addEventListener('scroll', ev => {
   if (ev.target.classList?.contains('sf-body')) document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; });
 }, true);
