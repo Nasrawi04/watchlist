@@ -1372,8 +1372,7 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 .sf-apply-btn:hover { background:var(--olive-light); border-color:var(--olive-light); }
 
 @media(max-width:520px) {
-  #sfSortOverlay, #sfFilterOverlay { align-items:flex-end; padding:0; }
-  #sfSortCard, #sfFilterCard { max-width:100%; border-radius:var(--radius-lg) var(--radius-lg) 0 0; margin-top:0; max-height:85dvh; }
+  #sfSortCard, #sfFilterCard { max-width:94%; max-height:88dvh; }
   .sf-dd .td-dd-menu { max-height:180px; }
   .sf-section-label { font-size:10px; }
   .sf-radio-text, .sf-dd-trigger, .sf-check-row span:last-child, .sf-range-input { font-size:13px; }
