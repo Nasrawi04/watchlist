@@ -1133,10 +1133,69 @@ function _catTypeFilterBar() {
   if (!wrap) return;
   const isAnimated = window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
   if (!isAnimated) { wrap.innerHTML = ''; return; }
-  const opts = [['all','All'],['movie','Movie'],['tv','TV Show']];
-  wrap.innerHTML = `<div class="sort-bar" style="background:transparent;margin:0 0 18px;padding:0;border-bottom:none;">${opts.map(([v,l]) =>
-    `<button class="sort-btn${_catTypeFilter===v?' active':''}" onclick="setCatTypeFilter('${v}')">${l}</button>`
-  ).join('')}</div>`;
+  const labels = { all: 'All Types', movie: 'Movies', tv: 'TV Shows' };
+  wrap.innerHTML = `<div class="sf-trigger-row" style="margin:0 0 18px;justify-content:flex-start;">
+    <button class="sf-icon-btn${_catTypeFilter!=='all'?' active':''}" onclick="openCatTypeFilterPopup()" aria-label="Filter">
+      ${icon('filter', 15)}<span class="sf-icon-btn-label">${_catTypeFilter!=='all'?labels[_catTypeFilter]:'Filter'}</span>
+    </button>
+  </div>`;
+}
+
+let _catStagedTypeFilter = 'all';
+
+function _injectCatTypeFilterOverlay() {
+  if (document.getElementById('sfFilterOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'sfFilterOverlay';
+  el.innerHTML = `<div id="sfFilterCard">
+    <div class="sf-header">
+      <div class="sf-title">Filter</div>
+      <button class="sf-close" onclick="closeCatTypeFilterPopup()">${icon('x', 18)}</button>
+    </div>
+    <div class="sf-body" id="catTypeFilterBody"></div>
+    <div class="sf-footer">
+      <button class="sf-clear-btn" onclick="_catClearStagedTypeFilter()">Clear</button>
+      <button class="sf-apply-btn" onclick="_catApplyTypeFilterPopup()">Apply</button>
+    </div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) closeCatTypeFilterPopup(); });
+  document.body.appendChild(el);
+}
+
+function openCatTypeFilterPopup() {
+  _injectCatTypeFilterOverlay();
+  _catStagedTypeFilter = _catTypeFilter;
+  document.getElementById('catTypeFilterBody').innerHTML = _catTypeFilterBodyHTML();
+  document.getElementById('sfFilterOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCatTypeFilterPopup() {
+  const ov = document.getElementById('sfFilterOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function _catTypeFilterBodyHTML() {
+  const labels = { all: 'All Types', movie: 'Movies', tv: 'TV Shows' };
+  const rows = Object.entries(labels).map(([v, l]) => `
+    <label class="sf-check-row">
+      <input type="checkbox" name="catTypeStaged" ${_catStagedTypeFilter===v?'checked':''} onchange="_catStagedTypeFilter='${v}';document.getElementById('catTypeFilterBody').innerHTML=_catTypeFilterBodyHTML();">
+      <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+      <span>${l}</span>
+    </label>`).join('');
+  return `<div class="sf-section-label">Type</div><div class="sf-check-list">${rows}</div>`;
+}
+
+function _catClearStagedTypeFilter() {
+  _catStagedTypeFilter = 'all';
+  document.getElementById('catTypeFilterBody').innerHTML = _catTypeFilterBodyHTML();
+}
+
+function _catApplyTypeFilterPopup() {
+  setCatTypeFilter(_catStagedTypeFilter);
+  closeCatTypeFilterPopup();
 }
 
 function setCatTypeFilter(value) {
