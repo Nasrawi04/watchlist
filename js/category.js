@@ -2597,15 +2597,19 @@ async function chooseFinishStatus(status) {
 }
 
 function renderFavChips(ratings, cat) {
-  if (!ratings || !ratings._favorites) return '';
+  if (!ratings || (!ratings._favorites && !ratings._lowlights)) return '';
   const favs = ratings._favorites;
+  const low = ratings._lowlights || ratings._favorites?._lowlights;
   const isMovies = cat === 'movies';
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  
+
   const chips = [
-    favs.character ? `<span class="fav-chip"><span class="fav-chip-label">Fav Character</span><span class="fav-chip-val">${esc(favs.character)}</span></span>` : '',
-    (!isMovies && favs.episode) ? `<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span><span class="fav-chip-val">${esc(favs.episode)}</span></span>` : '',
-    (!isMovies && favs.season)  ? `<span class="fav-chip"><span class="fav-chip-label">Fav Season</span><span class="fav-chip-val">${esc(favs.season)}</span></span>` : '',
+    favs?.character ? `<span class="fav-chip"><span class="fav-chip-label">Fav Character</span><span class="fav-chip-val">${esc(favs.character)}</span></span>` : '',
+    (!isMovies && favs?.episode) ? `<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span><span class="fav-chip-val">${esc(favs.episode)}</span></span>` : '',
+    (!isMovies && favs?.season)  ? `<span class="fav-chip"><span class="fav-chip-label">Fav Season</span><span class="fav-chip-val">${esc(favs.season)}</span></span>` : '',
+    low?.character ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Character</span><span class="fav-chip-val">${esc(low.character)}</span></span>` : '',
+    (!isMovies && low?.episode) ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Episode</span><span class="fav-chip-val">${esc(low.episode)}</span></span>` : '',
+    (!isMovies && low?.season)  ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span><span class="fav-chip-val">${esc(low.season)}</span></span>` : '',
   ].filter(Boolean).join('');
 
   return chips ? `<div class="fav-chips" style="margin-top:8px;">${chips}</div>` : '';
