@@ -34,18 +34,6 @@
   transition:all .2s;white-space:nowrap;
 }
 .export-btn:hover{background:var(--olive-faint)}
-.comp-stats{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;
-  margin-bottom:2rem;
-}
-.comp-stat-card{
-  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);
-  padding:.9rem 1rem;
-}
-.comp-stat-num{font-family:var(--serif);font-size:28px;font-weight:300;color:var(--olive-light);line-height:1}
-.comp-stat-label{font-size:9px;color:var(--text-3);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
-@media(max-width:1080px) and (min-width:481px){.comp-stats{grid-template-columns:repeat(4,1fr);gap:8px}.comp-stat-num{font-size:22px}.comp-stat-card{padding:.75rem .85rem}}
-@media(max-width:480px){.comp-stats{grid-template-columns:repeat(3,1fr);gap:8px}.comp-stat-num{font-size:20px}.comp-stat-card{padding:.65rem .6rem}.comp-stat-label{font-size:8px;letter-spacing:.3px}}
 
 /* Main content scroll container */
 #mainContent{min-height:200px;overflow-x:hidden;}
@@ -100,10 +88,6 @@
 @media(max-width:600px) {
   .comp-header { flex-direction:column; align-items:flex-start; gap:.75rem; margin-bottom:1.5rem; }
   .comp-controls { width:100%; justify-content:flex-end; }
-  .comp-stats { grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:1.5rem; }
-  .comp-stat-card { padding:.75rem .85rem; }
-  .comp-stat-num { font-size:22px; }
-  .comp-stat-label { font-size:9px; letter-spacing:.5px; }
   .sort-bar { flex-wrap:wrap; gap:3px; }
   .sort-btn { font-size:10px; padding:4px 8px; border-radius:14px; }
   .cat-filter { gap:3px; margin-bottom:1.25rem; flex-wrap:wrap; }
@@ -120,9 +104,6 @@
   .fv-rank-poster { width:48px; height:66px; }
   .cf-btn { font-size:9px; padding:3px 7px; }
   .cat-filter { gap:2px; }
-  .comp-stat-card { padding:.6rem .7rem; }
-  .comp-stat-num { font-size:18px; }
-  .comp-stat-label { font-size:8px; }
 }
 </style>
   <!-- PWA -->
@@ -148,7 +129,7 @@
   </div>
 
   <!-- Stats -->
-  <div class="comp-stats fade-up fade-up-1" id="compStats"></div>
+  <div class="page-stats fade-up fade-up-1" id="compStats"></div>
 
   <!-- Sort + Filter + view toggle, all on one line -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem;" class="fade-up fade-up-2">
@@ -1483,13 +1464,13 @@ function renderStats() {
   const completedCount = (_catFilter ? _allCompleted.filter(e => e.cat === _catFilter && e.status === 'completed') : _allCompleted.filter(e => e.status === 'completed')).length;
 
   document.getElementById('compStats').innerHTML = `
-    <div class="comp-stat-card"><div class="comp-stat-label">Watched</div><div class="comp-stat-num">${completedCount}</div></div>
-    <div class="comp-stat-card"><div class="comp-stat-label">To Be Continued</div><div class="comp-stat-num">${ongoingCount}</div></div>
-    <div class="comp-stat-card"><div class="comp-stat-label">Avg Score</div><div class="comp-stat-num">${avg}</div></div>
-    <div class="comp-stat-card"><div class="comp-stat-label">Rated</div><div class="comp-stat-num">${rated.length}</div></div>
-    <div class="comp-stat-card"><div class="comp-stat-label">Top Category</div><div class="comp-stat-num">${topCatLabel}</div></div>
-    ${totalEps > 0 ? `<div class="comp-stat-card"><div class="comp-stat-label">${epsLabel}</div><div class="comp-stat-num">${totalEps.toLocaleString()}</div></div>` : ''}
-    ${watchTimeLabel ? `<div class="comp-stat-card"><div class="comp-stat-label">Movie Watch Time</div><div class="comp-stat-num">${watchTimeLabel}</div></div>` : ''}`;
+    <div class="page-stat"><div class="page-stat-num">${completedCount}</div><div class="page-stat-label">Watched</div></div>
+    <div class="page-stat"><div class="page-stat-num">${ongoingCount}</div><div class="page-stat-label">To Be Continued</div></div>
+    <div class="page-stat"><div class="page-stat-num">${avg}</div><div class="page-stat-label">Avg Score</div></div>
+    <div class="page-stat"><div class="page-stat-num">${rated.length}</div><div class="page-stat-label">Rated</div></div>
+    <div class="page-stat"><div class="page-stat-num">${topCatLabel}</div><div class="page-stat-label">Top Category</div></div>
+    ${totalEps > 0 ? `<div class="page-stat"><div class="page-stat-num">${totalEps.toLocaleString()}</div><div class="page-stat-label">${epsLabel}</div></div>` : ''}
+    ${watchTimeLabel ? `<div class="page-stat"><div class="page-stat-num">${watchTimeLabel}</div><div class="page-stat-label">Movie Watch Time</div></div>` : ''}`;
 }
 
 function renderMain() {
