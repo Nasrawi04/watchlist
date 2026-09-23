@@ -1260,7 +1260,7 @@ nav {
 .sf-title { font-family:'Oswald',var(--sans); font-weight:600; font-size:18px; color:var(--text); }
 .sf-close { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:18px; line-height:1; padding:0; transition:color .15s; }
 .sf-close:hover { color:var(--text); }
-.sf-body { overflow-y:auto; overscroll-behavior-y:contain; padding:8px 20px 4px; flex:1; min-height:0; }
+.sf-body { overflow-y:auto; overscroll-behavior-y:contain; padding:8px 20px 4px; flex:1; min-height:0; scrollbar-gutter:stable; }
 
 .sf-section-label {
   font-family:'Oswald',var(--sans); font-weight:600; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
@@ -1430,6 +1430,10 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 .fav-picker-search {
   width:auto; margin:12px 20px 0; flex-shrink:0;
 }
+/* The nav's .search-wrap grows wider on focus — override that here so
+   the popup's width and this search box stay completely fixed while
+   typing, since a shifting layout while searching read as buggy. */
+.fav-picker-search:focus-within { width:auto; border-color:var(--border-olive); box-shadow:0 0 0 3px var(--olive-faint); }
 .fav-picker-search .search-icon-wrap {
   left:12px; right:auto; width:auto; height:auto; background:none; color:var(--text-3);
 }
