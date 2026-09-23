@@ -1174,8 +1174,8 @@ nav {
   .popup-info-runtime-val { font-size:17px; }
   .fav-chip { font-size:13px; padding:5px 11px; }
   .fd-notes { font-size:13px; }
-  #cgPopupActions { padding:4px 16px 16px; }
-  #cgPopupActions .popup-action-btn { font-size:14px; padding:12px 14px; }
+  #cgPopupActions, [id$="PopupActions"] { padding:4px 16px 16px; }
+  #cgPopupActions .popup-action-btn, [id$="PopupActions"] .popup-action-btn { font-size:14px; padding:12px 14px; }
 }
 
 /* Toggled by JS (ResizeObserver on #cgPopupCard). order/flex-basis live
@@ -4104,21 +4104,21 @@ body { font-size:15px; }
 }
 /* Scoped to the category ratings popup specifically, per current
    request — other popups' buttons keep the default font for now. */
-#cgPopupActions .popup-action-btn { font-family:'Manrope',var(--sans); font-weight:500; }
+#cgPopupActions .popup-action-btn, [id$="PopupActions"] .popup-action-btn { font-family:'Manrope',var(--sans); font-weight:500; }
 /* Filled look — solid olive background instead of the neutral outline
    style, matching the badges/pills used throughout this popup. */
-#cgPopupActions .popup-action-btn {
+#cgPopupActions .popup-action-btn, [id$="PopupActions"] .popup-action-btn {
   background:var(--olive); color:#fff; border-color:var(--olive);
 }
-#cgPopupActions .popup-action-btn:hover { background:var(--olive-light); border-color:var(--olive-light); color:#fff; }
-#cgPopupActions .popup-action-btn.popup-action-danger {
+#cgPopupActions .popup-action-btn:hover, [id$="PopupActions"] .popup-action-btn:hover { background:var(--olive-light); border-color:var(--olive-light); color:#fff; }
+#cgPopupActions .popup-action-btn.popup-action-danger, [id$="PopupActions"] .popup-action-btn.popup-action-danger {
   background:#b91c1c; border-color:#b91c1c; color:#fff;
 }
-#cgPopupActions .popup-action-btn.popup-action-danger:hover { background:#dc2626; border-color:#dc2626; }
+#cgPopupActions .popup-action-btn.popup-action-danger:hover, [id$="PopupActions"] .popup-action-btn.popup-action-danger:hover { background:#dc2626; border-color:#dc2626; }
 @media(max-width:600px) {
   /* One button per line on phones instead of wrapping 2-3 to a row. */
-  #cgPopupActions { flex-direction:column; }
-  #cgPopupActions .popup-action-btn { width:100%; flex:none; }
+  #cgPopupActions, [id$="PopupActions"] { flex-direction:column; }
+  #cgPopupActions .popup-action-btn, [id$="PopupActions"] .popup-action-btn { width:100%; flex:none; }
 }
 .popup-action-btn:hover {
   border-color:var(--border-olive);color:var(--olive-light);
