@@ -1423,6 +1423,22 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 }
 .fav-list-row:hover { background:var(--bg-3); }
 
+/* Search box at the top of the Character/Episode pickers — the same
+   .search-wrap component used in the nav bar, just widened to fill
+   the popup instead of the nav's fixed narrow clamp() width, and
+   without the nav variant's circular gradient button on the right. */
+.fav-picker-search {
+  width:auto; margin:12px 20px 0; flex-shrink:0;
+}
+.fav-picker-search .search-icon-wrap {
+  left:12px; right:auto; width:auto; height:auto; background:none; color:var(--text-3);
+}
+.fav-picker-search input {
+  background:transparent; border:none; color:var(--text); width:100%; box-sizing:border-box;
+  font-family:'Manrope',var(--sans); font-size:13.5px; padding:10px 14px 10px 36px; outline:none;
+}
+.fav-picker-search input::placeholder { color:var(--text-3); }
+
 @media(max-width:520px) {
   #favSeasonCard, #favEpisodeCard { max-width:94%; }
 }
