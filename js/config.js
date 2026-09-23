@@ -213,12 +213,16 @@ function liveScore(e) {
 function _favEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function renderFavChips(ratings, cat) {
   const f = ratings?._favorites;
-  if (!f) return '';
+  const low = ratings?._lowlights || ratings?._favorites?._lowlights;
+  if (!f && !low) return '';
   const isMovies = cat === 'movies';
   const chips = [];
-  if (f.character) chips.push(`<span class="fav-chip"><span class="fav-chip-label">Fav Character</span>${_favEsc(f.character)}</span>`);
-  if (f.episode && !isMovies) chips.push(`<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span>${_favEsc(f.episode)}</span>`);
-  if (f.season && !isMovies) chips.push(`<span class="fav-chip"><span class="fav-chip-label">Fav Season</span>${_favEsc(f.season)}</span>`);
+  if (f?.character) chips.push(`<span class="fav-chip"><span class="fav-chip-label">Fav Character</span><span class="fav-chip-val">${_favEsc(f.character)}</span></span>`);
+  if (f?.episode && !isMovies) chips.push(`<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span><span class="fav-chip-val">${_favEsc(f.episode)}</span></span>`);
+  if (f?.season && !isMovies) chips.push(`<span class="fav-chip"><span class="fav-chip-label">Fav Season</span><span class="fav-chip-val">${_favEsc(f.season)}</span></span>`);
+  if (low?.character) chips.push(`<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Character</span><span class="fav-chip-val">${_favEsc(low.character)}</span></span>`);
+  if (low?.episode && !isMovies) chips.push(`<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Episode</span><span class="fav-chip-val">${_favEsc(low.episode)}</span></span>`);
+  if (low?.season && !isMovies) chips.push(`<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span><span class="fav-chip-val">${_favEsc(low.season)}</span></span>`);
   return chips.length ? `<div class="fav-chips">${chips.join('')}</div>` : '';
 }
 
