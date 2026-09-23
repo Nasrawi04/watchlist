@@ -60,10 +60,10 @@
 .fv-rank-row:hover{border-color:var(--border-olive);background:var(--card-2);}
 .fv-rank-num{font-family:var(--bebas);font-size:28px;font-weight:400;color:var(--text-2);text-align:center;min-width:44px;flex-shrink:0}
 .fv-rank-num.top3{color:var(--olive-light)}
-.fv-rank-poster{width:84px;height:120px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+.fv-rank-poster{width:96px;height:136px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
 .fv-rank-poster img{width:100%;height:100%;object-fit:cover}
 .fv-rank-info{flex:1;min-width:0}
-.fv-rank-title{font-size:18px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden;}
+.fv-rank-title{font-family:'Oswald',var(--sans);font-size:19px;font-weight:600;color:var(--text);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;overflow:hidden;}
 .fv-rank-meta{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
 .fv-rank-score{font-family:var(--bebas);color:var(--olive-light);font-size:clamp(17px, 3.7vw, 19px);font-weight:400;white-space:nowrap;text-align:right;flex-shrink:0}
 .fv-rank-date{font-size:clamp(9px, 2.2vw, 11px);color:var(--text-3);margin-top:4px;text-align:right;}
@@ -150,26 +150,15 @@
   <!-- Stats -->
   <div class="comp-stats fade-up fade-up-1" id="compStats"></div>
 
-  <!-- Sort bar + view toggle -->
-  <div style="display:flex;align-items:center;gap:12px;" class="fade-up fade-up-2">
-    <div class="sort-bar" id="compSortBar" style="flex:1;border-bottom:none;padding:0;margin:0;background:transparent;position:relative;backdrop-filter:none;-webkit-backdrop-filter:none;"></div>
+  <!-- Sort + Filter + view toggle, all on one line -->
+  <div style="display:flex;align-items:center;gap:8px;" class="fade-up fade-up-2">
+    <div class="sort-bar" id="compSortBar" style="border-bottom:none;padding:0;margin:0;background:transparent;position:relative;backdrop-filter:none;-webkit-backdrop-filter:none;"></div>
+    <button class="sf-icon-btn" id="compFilterTriggerBtn" onclick="openCompFilterPopup()" aria-label="Filter">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      <span class="sf-icon-btn-label" id="compFilterTriggerLabel">Filter</span>
+    </button>
+    <div style="flex:1;"></div>
     <div class="view-toggle" id="compViewToggle"></div>
-  </div>
-
-  <!-- Category filters -->
-  <div class="cat-filter fade-up fade-up-3" id="catFilter" style="margin-top:1.5rem;">
-    <button class="cf-btn active" data-cat="" onclick="setCat(this,'')">All</button>
-    <button class="cf-btn" data-cat="tv"       onclick="setCat(this,'tv')">TV Shows</button>
-    <button class="cf-btn" data-cat="movies"   onclick="setCat(this,'movies')">Movies</button>
-    <button class="cf-btn" data-cat="anime"    onclick="setCat(this,'anime')">Anime</button>
-    <button class="cf-btn" data-cat="cartoons" onclick="setCat(this,'cartoons')">Cartoons</button>
-  </div>
-
-  <!-- Status filters -->
-  <div class="cat-filter fade-up fade-up-3" id="statusFilter" style="margin-top:1rem;margin-bottom:1.5rem;">
-    <button class="cf-btn active" data-status="" onclick="setStatus(this,'')">All</button>
-    <button class="cf-btn" data-status="completed" onclick="setStatus(this,'completed')">Watched</button>
-    <button class="cf-btn" data-status="ongoing"   onclick="setStatus(this,'ongoing')">To Be Continued</button>
   </div>
 
   <!-- Main content (pdf-able) -->
@@ -197,6 +186,7 @@ let _allCompleted = [];
 let _compSort    = 'newest';
 let _compView    = localStorage.getItem('mss_compView') || 'list';
 let _catFilter   = '';
+let _statusFilter = '';
 let _exportTheme = 'dark';
 
 /* ── Ep/runtime meta text (plain value — callers wrap it: .wg-ep on a
@@ -802,17 +792,148 @@ function setCompView(v) {
 function _compSortBar() {
   const el = document.getElementById('compSortBar');
   if (!el) return;
-  const isRating = (_compSort||'').startsWith('rating:');
-  const ratingLabel = isRating ? _ratingFilterLabelAll(_compSort.slice(7)) : null;
-  const staticBtns = [['newest','Newest'],['oldest','Oldest'],['highest','Highest Rank'],['lowest','Lowest Rank'],['alpha','A → Z'],['zalpha','Z → A'],['release','Release Date']]
-    .map(([v,l]) => `<button class="sort-btn${_compSort===v?' active':''}" onclick="setCompSort('${v}')">${l}</button>`).join('');
-  const ratingBtn = `<button class="sort-btn${isRating?' active':''}" onclick="openRatingFilter()" data-short="${isRating ? _ratingShortLabel(ratingLabel) : 'Rating'}">${isRating ? 'Rating: ' + ratingLabel : 'Rating ▾'}</button>`;
-  el.innerHTML = staticBtns + ratingBtn;
+  el.innerHTML = `
+    <button class="sf-icon-btn" id="compSortTriggerBtn" onclick="openCompSortPopup()" aria-label="Sort">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>
+      <span class="sf-icon-btn-label" id="compSortTriggerLabel">Sort</span>
+    </button>`;
+  _compUpdateSortTriggerLabel();
 }
+
+const COMP_SORT_GROUPS = [
+  { header: 'Alphabetical', opts: [['alpha','A → Z'], ['zalpha','Z → A']] },
+  { header: 'Added',        opts: [['newest','Latest'], ['oldest','Earliest']] },
+  { header: 'Release Date', opts: [['release','Latest'], ['release_asc','Earliest']] },
+  { header: 'Ratings',      opts: [['highest','Highest'], ['lowest','Lowest']] },
+];
+
+function _compSortLabelFor(value) {
+  if ((value||'').startsWith('rating:')) return `Rating: ${_ratingFilterLabelAll(value.slice(7))}`;
+  for (const g of COMP_SORT_GROUPS) for (const [v, l] of g.opts) if (v === value) return g.opts.length > 1 ? `${g.header}: ${l}` : g.header;
+  return 'Sort';
+}
+
+function _compUpdateSortTriggerLabel() {
+  const btn = document.getElementById('compSortTriggerBtn');
+  const labelEl = document.getElementById('compSortTriggerLabel');
+  if (!btn || !labelEl) return;
+  const active = _compSort !== 'newest';
+  btn.classList.toggle('active', active);
+  labelEl.textContent = active ? _compSortLabelFor(_compSort) : 'Sort';
+}
+
+let _compStagedSort = 'newest';
+
+function _injectCompSortOverlay() {
+  if (document.getElementById('sfSortOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'sfSortOverlay';
+  el.innerHTML = `<div id="sfSortCard">
+    <div class="sf-header">
+      <div class="sf-title">Sort</div>
+      <button class="sf-close" onclick="closeCompSortPopup()">${typeof icon === 'function' ? icon('x',18) : '✕'}</button>
+    </div>
+    <div class="sf-body" id="compSortBody"></div>
+    <div class="sf-footer">
+      <button class="sf-clear-btn" onclick="_compResetStagedSort()">Reset</button>
+      <button class="sf-apply-btn" onclick="_compApplySort()">Apply</button>
+    </div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) closeCompSortPopup(); });
+  document.body.appendChild(el);
+}
+
+function openCompSortPopup() {
+  _injectCompSortOverlay();
+  _compStagedSort = _compSort;
+  document.getElementById('compSortBody').innerHTML = _compSortBodyHTML();
+  document.getElementById('sfSortOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCompSortPopup() {
+  const ov = document.getElementById('sfSortOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function _compSortBodyHTML() {
+  const staged = _compStagedSort;
+  const isRating = (staged||'').startsWith('rating:');
+  let html = `<div class="sf-dd-stack">`;
+  COMP_SORT_GROUPS.forEach((g, i) => {
+    const ddId = `compSortDD-${i}`;
+    const isActiveGroup = g.opts.some(([v]) => v === staged);
+    const label = isActiveGroup ? `${g.header}: ${g.opts.find(([v]) => v === staged)[1]}` : g.header;
+    const menu = g.opts.map(([v, l]) => `<div class="td-dd-opt${staged===v?' active':''}" onclick="event.stopPropagation();_compStageSort('${v}')">${l}</div>`).join('');
+    html += `
+    <div class="td-dd sf-dd sf-dd-wide" id="${ddId}">
+      <button type="button" class="td-dd-trigger sf-dd-trigger${isActiveGroup?' active':''}" onclick="event.stopPropagation();_compToggleDD('${ddId}')">
+        <span class="td-dd-label">${label}</span>
+        <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="td-dd-menu">${menu}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  const opts = _ratingFilterOptionsAll();
+  let lastGroup = null, ratingMenu = '';
+  opts.forEach(o => {
+    if (o.group !== lastGroup) { ratingMenu += `<div class="sf-dd-subgroup-label">${o.group}</div>`; lastGroup = o.group; }
+    ratingMenu += `<div class="td-dd-opt${isRating && staged.slice(7)===o.key?' active':''}" onclick="event.stopPropagation();_compStageSort('rating:${o.key}')">${o.label}</div>`;
+  });
+  html += `<div class="td-dd sf-dd sf-dd-wide" id="compSortDD-rating" style="margin-top:8px;">
+    <button type="button" class="td-dd-trigger sf-dd-trigger${isRating?' active':''}" onclick="event.stopPropagation();_compToggleDD('compSortDD-rating')">
+      <span class="td-dd-label">${isRating ? `Rating: ${_ratingFilterLabelAll(staged.slice(7))}` : 'Specific Rating'}</span>
+      <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="td-dd-menu">${ratingMenu}</div>
+  </div>`;
+  return html;
+}
+
+function _compStageSort(value) {
+  _compStagedSort = value;
+  document.getElementById('compSortBody').innerHTML = _compSortBodyHTML();
+}
+
+function _compResetStagedSort() {
+  _compStagedSort = 'newest';
+  document.getElementById('compSortBody').innerHTML = _compSortBodyHTML();
+}
+
+async function _compApplySort() {
+  await setCompSort(_compStagedSort);
+  _compUpdateSortTriggerLabel();
+  closeCompSortPopup();
+}
+
+function _compToggleDD(id) {
+  const target = document.getElementById(id);
+  const wasOpen = target.classList.contains('open');
+  document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; });
+  if (wasOpen) return;
+  target.classList.add('open');
+  const trigger = target.querySelector('.sf-dd-trigger');
+  const menu = target.querySelector('.td-dd-menu');
+  const rect = trigger.getBoundingClientRect();
+  const margin = 12;
+  const spaceBelow = window.innerHeight - rect.bottom - margin;
+  const spaceAbove = rect.top - margin;
+  const openUp = spaceBelow < 140 && spaceAbove > spaceBelow;
+  const available = Math.max(110, Math.min(openUp ? spaceAbove : spaceBelow, 150));
+  menu.style.cssText = `position:fixed; left:${rect.left}px; width:${rect.width}px; z-index:1400; display:block; max-height:${available}px; overflow-y:auto; ` +
+    (openUp ? `bottom:${window.innerHeight - rect.top}px; top:auto; border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-top:0.5px solid var(--olive-light); border-bottom:none;`
+            : `top:${rect.bottom}px; bottom:auto;`);
+}
+document.addEventListener('click', () => document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; }));
+window.addEventListener('scroll', () => document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; }), true);
 
 async function setCompSort(v) {
   _compSort = v;
-  if (v === 'release') { await ensureReleaseDatesFetched(_allCompleted); }
+  if (v === 'release' || v === 'release_asc') { await ensureReleaseDatesFetched(_allCompleted); }
   _compSortBar();
   renderMain();
 }
@@ -846,6 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _allCompleted = [...comp, ...ong];
     _compSortBar();
     _compViewBar();
+    _compUpdateFilterTriggerLabel();
     renderStats();
     renderMain();
   });
@@ -956,26 +1078,284 @@ function _buildCompExpansion(e) {
   <a href="#" class="fd-edit-link" onclick="goToDetail('${e.id}','completed.html');return false;">Edit entry →</a>`;
 }
 
-function setCat(btn, cat) {
-  _catFilter = cat;
-  document.querySelectorAll('.cf-btn[data-cat]').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderStats();
-  renderMain();
+let _compStagedCat = '';
+let _compStagedStatus = '';
+
+const _compCatLabels = { '':'All Types', tv:'TV Shows', movies:'Movies', anime:'Anime', cartoons:'Cartoons' };
+const _compStatusLabels = { '':'All Statuses', completed:'Watched', ongoing:'To Be Continued' };
+
+function _compUpdateFilterTriggerLabel() {
+  const btn = document.getElementById('compFilterTriggerBtn');
+  const labelEl = document.getElementById('compFilterTriggerLabel');
+  if (!btn || !labelEl) return;
+  const active = !!(_catFilter || _statusFilter);
+  btn.classList.toggle('active', active);
+  labelEl.textContent = active
+    ? [_catFilter && _compCatLabels[_catFilter], _statusFilter && _compStatusLabels[_statusFilter]].filter(Boolean).join(' · ')
+    : 'Filter';
 }
 
-let _statusFilter = '';
-function setStatus(btn, status) {
-  _statusFilter = status;
-  document.querySelectorAll('.cf-btn[data-status]').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+function _injectCompFilterOverlay() {
+  if (document.getElementById('sfFilterOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'sfFilterOverlay';
+  el.innerHTML = `<div id="sfFilterCard">
+    <div class="sf-header">
+      <div class="sf-title">Filter</div>
+      <button class="sf-close" onclick="closeCompFilterPopup()">${typeof icon === 'function' ? icon('x',18) : '✕'}</button>
+    </div>
+    <div class="sf-body" id="compFilterBody"></div>
+    <div class="sf-footer">
+      <button class="sf-clear-btn" onclick="_compClearStagedFilter()">Clear</button>
+      <button class="sf-apply-btn" onclick="_compApplyFilter()">Apply</button>
+    </div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) closeCompFilterPopup(); });
+  document.body.appendChild(el);
+}
+
+function openCompFilterPopup() {
+  _injectCompFilterOverlay();
+  _compStagedCat = _catFilter;
+  _compStagedStatus = _statusFilter;
+  document.getElementById('compFilterBody').innerHTML = _compFilterBodyHTML();
+  document.getElementById('sfFilterOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCompFilterPopup() {
+  const ov = document.getElementById('sfFilterOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Type & Status use the same checkbox visual as Genre (bold + dark
+// green + checkmark when picked), even though each group is still
+// single-select — clicking one in a group deselects any other in that
+// same group, so it behaves like a radio but looks consistent with
+// the multi-select Genre checkboxes right below it.
+function _compCheckGroupRows(groupName, labels, staged, stageFn) {
+  return Object.entries(labels).map(([v, l]) => `
+    <label class="sf-check-row">
+      <input type="checkbox" name="${groupName}" ${staged===v?'checked':''} onchange="${stageFn}('${v}')">
+      <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+      <span>${l}</span>
+    </label>`).join('');
+}
+
+function _compStageCat(v) { _compStagedCat = v; document.getElementById('compFilterBody').innerHTML = _compFilterBodyHTML(); }
+function _compStageStatusVal(v) { _compStagedStatus = v; document.getElementById('compFilterBody').innerHTML = _compFilterBodyHTML(); }
+
+const _compAllGenres = [
+  'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary',
+  'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery',
+  'Romance', 'Science Fiction', 'Thriller', 'TV Movie', 'War', 'Western',
+];
+
+let _compStagedFilter = { genres: [], yearMin: '', yearMax: '', scoreMin: '', scoreMax: '', lengthMin: '', lengthMax: '', person: '' };
+const _compFilter = { genres: [], yearMin: '', yearMax: '', scoreMin: '', scoreMax: '', lengthMin: '', lengthMax: '', person: '' };
+const _compCastCache = {};
+const _compPersonNames = { list: null };
+
+function _compRuntimeMinutes(e) {
+  const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
+  if (isMovie) return (Number(e.runtime_h) || 0) * 60 + (Number(e.runtime_m) || 0);
+  return Number(e.total_eps) || 0;
+}
+
+async function _compFetchCredits(entry) {
+  if (entry.ratings?._director != null || entry.ratings?._cast_names) {
+    return { director: entry.ratings._director || '', cast: entry.ratings._cast_names || [] };
+  }
+  if (!entry.tmdb_id || !entry.tmdb_type) return null;
+  if (_compCastCache[entry.tmdb_id]) return _compCastCache[entry.tmdb_id];
+  try {
+    const res = await tmdbFetch(`${TMDB_BASE}/${entry.tmdb_type}/${entry.tmdb_id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const director = (data.credits?.crew || []).find(c => c.job === 'Director')?.name || '';
+    const cast = (data.credits?.cast || []).slice(0, 12).map(c => c.name);
+    const result = { director, cast };
+    _compCastCache[entry.tmdb_id] = result;
+    const newRatings = { ...(entry.ratings || {}), _director: director, _cast_names: cast };
+    updateProgress(entry.id, _compUser.id, { ratings: newRatings }).catch(() => {});
+    entry.ratings = newRatings;
+    return result;
+  } catch { return null; }
+}
+
+function _compFilterBodyHTML() {
+  const catRows = _compCheckGroupRows('compCatStaged', _compCatLabels, _compStagedCat, '_compStageCat');
+  const statusRows = _compCheckGroupRows('compStatusStaged', _compStatusLabels, _compStagedStatus, '_compStageStatusVal');
+  const f = _compStagedFilter;
+
+  const genreLabel = f.genres.length ? f.genres.join(', ') : 'Any Genre';
+  const genreMenu = _compAllGenres.map(g => `
+    <label class="sf-check-row" onclick="event.stopPropagation();">
+      <input type="checkbox" ${f.genres.includes(g)?'checked':''} onchange="_compStageGenre('${g.replace(/'/g,"\\'")}')">
+      <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+      <span>${g}</span>
+    </label>`).join('');
+
+  return `
+    <div class="sf-section-label">Type</div><div class="sf-check-list">${catRows}</div>
+    <div class="sf-section-label">Status</div><div class="sf-check-list">${statusRows}</div>
+
+    <div class="sf-section-label">Genre</div>
+    <div class="td-dd sf-dd sf-dd-wide" id="compGenreDD">
+      <button type="button" class="td-dd-trigger sf-dd-trigger${f.genres.length?' active':''}" onclick="event.stopPropagation();_compToggleDD('compGenreDD')">
+        <span class="td-dd-label">${genreLabel}</span>
+        <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="td-dd-menu sf-check-menu">${genreMenu}</div>
+    </div>
+
+    <div class="sf-section-label">Release Year</div>
+    <div class="sf-range-row">
+      <input type="number" class="sf-range-input" id="compYearMin" placeholder="From" value="${f.yearMin}" oninput="_compStageRanges()">
+      <span class="sf-range-to">to</span>
+      <input type="number" class="sf-range-input" id="compYearMax" placeholder="To" value="${f.yearMax}" oninput="_compStageRanges()">
+    </div>
+
+    <div class="sf-section-label">MyScreenScore <span class="sf-section-hint">(rated items only)</span></div>
+    <div class="sf-range-row">
+      <input type="number" step="0.1" min="0" max="10" class="sf-range-input" id="compScoreMin" placeholder="Min" value="${f.scoreMin}" oninput="_compStageRanges()">
+      <span class="sf-range-to">to</span>
+      <input type="number" step="0.1" min="0" max="10" class="sf-range-input" id="compScoreMax" placeholder="Max" value="${f.scoreMax}" oninput="_compStageRanges()">
+    </div>
+
+    <div class="sf-section-label">Runtime / Episode Count</div>
+    <div class="sf-range-row">
+      <input type="number" min="0" class="sf-range-input" id="compLengthMin" placeholder="Min" value="${f.lengthMin}" oninput="_compStageRanges()">
+      <span class="sf-range-to">to</span>
+      <input type="number" min="0" class="sf-range-input" id="compLengthMax" placeholder="Max" value="${f.lengthMax}" oninput="_compStageRanges()">
+    </div>
+
+    <div class="sf-section-label">Actor / Director</div>
+    <div class="td-dd sf-dd sf-dd-wide" id="compPersonDD">
+      <input type="text" class="sf-range-input sf-text-input sf-dd-trigger" id="compPersonSearch" placeholder="Search by name…" autocomplete="off"
+        value="${f.person || ''}" oninput="_compPersonInput(event.target.value)" onfocus="event.stopPropagation();_compOpenPersonDD()" onclick="event.stopPropagation();">
+      <div class="td-dd-menu" id="compPersonMenu"></div>
+    </div>
+    <div class="sf-section-hint sf-person-hint">Checked against each title's cast &amp; director — may take a moment the first time.</div>`;
+}
+
+async function _compOpenPersonDD() {
+  if (_compPersonNames.list) return;
+  const names = new Set();
+  await Promise.all(_allCompleted.map(async e => {
+    const credits = await _compFetchCredits(e);
+    if (!credits) return;
+    if (credits.director) names.add(credits.director);
+    credits.cast.forEach(n => names.add(n));
+  }));
+  _compPersonNames.list = [...names].sort((a, b) => a.localeCompare(b));
+  _compRenderPersonMenu();
+}
+
+function _compPersonInput(value) {
+  _compStagedFilter.person = value;
+  _compRenderPersonMenu();
+}
+
+function _compRenderPersonMenu() {
+  const dd = document.getElementById('compPersonDD');
+  const menuEl = document.getElementById('compPersonMenu');
+  if (!dd || !menuEl) return;
+  const query = (_compStagedFilter.person || '').trim().toLowerCase();
+  if (query.length < 2) { dd.classList.remove('open'); menuEl.style.cssText = ''; return; }
+  const all = _compPersonNames.list;
+  if (!all) { menuEl.innerHTML = `<div class="sf-empty">Loading actors &amp; directors…</div>`; }
+  else {
+    const matches = all.filter(n => n.toLowerCase().includes(query)).slice(0, 50);
+    menuEl.innerHTML = matches.length
+      ? matches.map(n => `<div class="td-dd-opt" onclick="event.stopPropagation();_compPickPerson('${n.replace(/'/g,"\\'")}')">${n}</div>`).join('')
+      : `<div class="sf-empty">No matching names.</div>`;
+  }
+  dd.classList.add('open');
+  _compPositionOpenDD(dd);
+}
+
+function _compPositionOpenDD(dd) {
+  const trigger = dd.querySelector('.sf-dd-trigger');
+  const menu = dd.querySelector('.td-dd-menu');
+  const rect = trigger.getBoundingClientRect();
+  const margin = 12;
+  const spaceBelow = window.innerHeight - rect.bottom - margin;
+  menu.style.cssText = `position:fixed; left:${rect.left}px; width:${rect.width}px; z-index:1400; display:block; max-height:${Math.max(110,Math.min(spaceBelow,150))}px; overflow-y:auto; top:${rect.bottom}px;`;
+}
+
+function _compPickPerson(name) {
+  _compStagedFilter.person = name;
+  document.getElementById('compPersonSearch').value = name;
+  document.getElementById('compPersonDD').classList.remove('open');
+  document.getElementById('compPersonMenu').style.cssText = '';
+}
+
+function _compStageGenre(genre) {
+  const cur = _compStagedFilter.genres;
+  _compStagedFilter.genres = cur.includes(genre) ? cur.filter(g => g !== genre) : [...cur, genre];
+  const dd = document.getElementById('compGenreDD');
+  const trigger = dd.querySelector('.sf-dd-trigger');
+  const label = _compStagedFilter.genres.length ? _compStagedFilter.genres.join(', ') : 'Any Genre';
+  trigger.querySelector('.td-dd-label').textContent = label;
+  trigger.classList.toggle('active', _compStagedFilter.genres.length > 0);
+}
+
+function _compStageRanges() {
+  const val = id => document.getElementById(id)?.value ?? '';
+  _compStagedFilter.yearMin = val('compYearMin'); _compStagedFilter.yearMax = val('compYearMax');
+  _compStagedFilter.scoreMin = val('compScoreMin'); _compStagedFilter.scoreMax = val('compScoreMax');
+  _compStagedFilter.lengthMin = val('compLengthMin'); _compStagedFilter.lengthMax = val('compLengthMax');
+}
+
+function _compClearStagedFilter() {
+  _compStagedCat = '';
+  _compStagedStatus = '';
+  _compStagedFilter = { genres: [], yearMin: '', yearMax: '', scoreMin: '', scoreMax: '', lengthMin: '', lengthMax: '', person: '' };
+  document.getElementById('compFilterBody').innerHTML = _compFilterBodyHTML();
+}
+
+async function _compApplyFilter() {
+  const staged = { ..._compStagedFilter };
+  const applyBtn = document.querySelector('#sfFilterCard .sf-apply-btn');
+  if (staged.person && staged.person.trim()) {
+    const query = staged.person.trim().toLowerCase();
+    if (applyBtn) { applyBtn.textContent = 'Searching…'; applyBtn.disabled = true; }
+    const matches = new Set();
+    await Promise.all(_allCompleted.map(async e => {
+      const credits = await _compFetchCredits(e);
+      if (!credits) return;
+      const hit = credits.director.toLowerCase().includes(query) || credits.cast.some(n => n.toLowerCase().includes(query));
+      if (hit) matches.add(e.id);
+    }));
+    staged._personMatchIds = [...matches];
+    if (applyBtn) { applyBtn.textContent = 'Apply'; applyBtn.disabled = false; }
+  } else {
+    staged._personMatchIds = null;
+  }
+  Object.assign(_compFilter, staged);
+  _catFilter = _compStagedCat;
+  _statusFilter = _compStagedStatus;
+  _compUpdateFilterTriggerLabel();
   renderStats();
   renderMain();
+  closeCompFilterPopup();
 }
 
 function filtered() {
   let result = _catFilter ? _allCompleted.filter(e => e.cat === _catFilter) : _allCompleted;
   if (_statusFilter) result = result.filter(e => e.status === _statusFilter);
+  const f = _compFilter;
+  if (f.genres.length) result = result.filter(e => (e.genres || []).some(g => f.genres.includes(g)));
+  if (f.yearMin) result = result.filter(e => e.year && Number(e.year) >= Number(f.yearMin));
+  if (f.yearMax) result = result.filter(e => e.year && Number(e.year) <= Number(f.yearMax));
+  if (f.scoreMin) result = result.filter(e => liveScore(e) != null && liveScore(e) >= Number(f.scoreMin));
+  if (f.scoreMax) result = result.filter(e => liveScore(e) != null && liveScore(e) <= Number(f.scoreMax));
+  if (f.lengthMin) result = result.filter(e => _compRuntimeMinutes(e) >= Number(f.lengthMin));
+  if (f.lengthMax) result = result.filter(e => _compRuntimeMinutes(e) <= Number(f.lengthMax));
+  if (f._personMatchIds) result = result.filter(e => f._personMatchIds.includes(e.id));
   return result;
 }
 
@@ -1051,6 +1431,9 @@ function renderMain() {
     if (_compSort === 'release') {
       return a.sort((x,y) => getReleaseDateValue(y) - getReleaseDateValue(x));
     }
+    if (_compSort === 'release_asc') {
+      return a.sort((x,y) => getReleaseDateValue(x) - getReleaseDateValue(y));
+    }
     return a;
   })();
 
@@ -1063,13 +1446,17 @@ function renderMain() {
     const sorted = _sortedItems;
     el.innerHTML = `<div class="fv-ranked-list">${sorted.map((e, i) => {
       const score = liveScore(e) != null ? '★ ' + Number(liveScore(e)).toFixed(2) : '—';
+      const completedDateStr = e.completed_date
+        ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+        : null;
       return `<div class="fv-entry-block">
         <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
           <div class="fv-rank-num ${i < 3 ? 'top3' : ''}">${i + 1}</div>
           <div class="fv-rank-poster">${posterHTML(e)}</div>
           <div class="fv-rank-info">
-            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:10px;">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
             <div class="fv-rank-meta">${_compTypeBadgeInline(e)}</div>
+            ${completedDateStr ? `<div class="fv-rank-meta"><span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Completed On: ${completedDateStr}</span></div>` : ''}
             ${renderFavChips(e.ratings, e.cat)}
           </div>
           <div class="fv-rank-score">${score}</div>
@@ -1090,13 +1477,13 @@ function renderMain() {
         <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
           <div class="fv-rank-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : ''}</div>
           <div class="fv-rank-info">
-            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-size:12px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:10px;">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
             <div class="fv-rank-meta">${_compTypeBadgeInline(e)}</div>
+            ${date ? `<div class="fv-rank-meta"><span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Completed On: ${date}</span></div>` : ''}
             ${renderFavChips(e.ratings, e.cat)}
           </div>
           <div>
             <div class="fv-rank-score">${score}</div>
-            ${date ? `<div class="fv-rank-date">${date}</div>` : ''}
           </div>
         </div>
         <button class="cc-strip" style="margin-top:0;" onclick="event.stopPropagation();cpOpenPopupToComments('${e.id}')">
