@@ -1388,6 +1388,22 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 .fav-person-trigger span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; width:100%; }
 .fav-person-placeholder { color:var(--text-3); font-weight:400; }
 
+/* Trigger + clear (×) button pair — the clear button only takes up
+   room once a value is actually set, so an empty field's trigger still
+   spans the field's full width exactly as before. */
+.fav-trigger-row { display:flex; align-items:stretch; gap:0; }
+.fav-trigger-row .fav-person-trigger { border-radius:var(--radius-sm); }
+.fav-clear-btn {
+  display:none; align-items:center; justify-content:center; flex-shrink:0;
+  width:0; padding:0; margin-left:0; overflow:hidden;
+  background:var(--bg-3); border:0.5px solid var(--border-2);
+  border-radius:var(--radius-sm);
+  color:var(--text-3); font-size:16px; line-height:1; cursor:pointer;
+  transition:background .15s, color .15s;
+}
+.fav-clear-btn.visible { display:flex; width:34px; padding:0 4px; margin-left:6px; }
+.fav-clear-btn:hover { background:#b91c1c; border-color:#b91c1c; color:#fff; }
+
 #favPersonOverlay {
   position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
   display:flex; align-items:center; justify-content:center; padding:16px;
