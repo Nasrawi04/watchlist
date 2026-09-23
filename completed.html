@@ -151,7 +151,7 @@
   <div class="comp-stats fade-up fade-up-1" id="compStats"></div>
 
   <!-- Sort + Filter + view toggle, all on one line -->
-  <div style="display:flex;align-items:center;gap:8px;" class="fade-up fade-up-2">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem;" class="fade-up fade-up-2">
     <div class="sort-bar" id="compSortBar" style="border-bottom:none;padding:0;margin:0;background:transparent;position:relative;backdrop-filter:none;-webkit-backdrop-filter:none;"></div>
     <button class="sf-icon-btn" id="compFilterTriggerBtn" onclick="openCompFilterPopup()" aria-label="Filter">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
@@ -207,6 +207,14 @@ function _entryMeta(e) {
     : e.total_seasons ? `S${e.total_seasons}`
     : e.total_eps ? `${e.total_eps} eps` : '';
   return scope;
+}
+
+// Same runtime/episode info as _entryMeta, wrapped as the solid pill
+// badge used everywhere else (category pages, the ratings popup) —
+// _entryMeta itself returns bare text with no markup.
+function _entryMetaBadge(e) {
+  const text = _entryMeta(e);
+  return text ? `<span class="w-ep-badge">${text}</span>` : '';
 }
 
 // Plain inline version of the always-show type badge — getTypeBadgeOverlay()
@@ -350,27 +358,60 @@ function _cpInjectPopup() {
   if (document.getElementById('cpPopupOverlay')) return;
   const el = document.createElement('div');
   el.id = 'cpPopupOverlay';
+  el.style.cssText = `
+    position:fixed;inset:0;z-index:900;
+    background:rgba(0,0,0,0.72);
+    display:flex;align-items:center;justify-content:center;
+    padding:16px;box-sizing:border-box;
+    opacity:0;transition:opacity 220ms var(--ease);
+    pointer-events:none;
+  `;
   el.innerHTML = `
-    <div id="cpPopupCard">
+    <div id="cpPopupCard" style="
+      background:var(--bg-2);border:1.5px solid var(--olive-light);
+      box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
+      width:100%;max-width:min(97vw, 920px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
+      position:relative;box-sizing:border-box;
+      transform:translateY(18px);transition:transform 260ms var(--ease);
+    ">
       <!-- header -->
-      <div style="display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0;">
+      <div id="cpPopupHeader" style="
+        display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;
+        padding:24px 24px 0;
+      ">
         <div id="cpPopupPoster" style="
-          width:72px;height:100px;flex-shrink:0;border-radius:var(--radius-sm);
+          width:150px;height:225px;flex-shrink:0;border-radius:var(--radius-sm);
           overflow:hidden;background:var(--bg-3);
-          display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);
+          display:flex;align-items:center;justify-content:center;
+          box-shadow:var(--shadow);
         "></div>
         <div style="flex:1;min-width:0;padding-top:4px;">
-          <div id="cpPopupTitle" style="font-family:var(--serif);font-size:28px;font-weight:300;line-height:1.2;margin-bottom:6px;color:var(--text)"></div>
-          <div id="cpPopupMeta"  style="font-size:12px;color:var(--text-3);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+          <div id="cpPopupTitle" class="cg-popup-title" style="font-family:'Oswald',var(--sans);font-weight:600;line-height:1.15;color:var(--text);"></div>
+          <div id="cpPopupTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+          <div id="cpPopupDateRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+          <div id="cpPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;"></div>
           <div id="cpPopupInfo" style="margin-top:4px;"></div>
         </div>
-        <button onclick="cpClosePopup()" style="
+        <div id="cpPopupDesc" class="fd-description cg-desc-block" style="margin:16px 0 0;"></div>
+        <div id="cpPopupScoreBox" class="cg-score-box" style="
+          flex-shrink:0;flex-grow:0;text-align:center;align-self:stretch;position:relative;
+          padding:18px 20px;border-radius:var(--radius-sm);
+          background:transparent;border:2px solid var(--olive);
+        ">
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:100%;">
+            <div style="font-family:'Oswald',var(--sans);font-weight:600;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;text-align:center;width:100%;">Overall Score</div>
+            <div id="cpPopupScoreVal" style="font-family:var(--bebas);font-size:48px;color:var(--olive);line-height:1;display:flex;align-items:center;justify-content:center;width:100%;gap:6px;"></div>
+          </div>
+        </div>
+        <button class="cg-close-btn" onclick="cpClosePopup()" style="
           background:none;border:none;color:var(--text-3);cursor:pointer;
-          font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s;
+          font-size:22px;line-height:1;flex-shrink:0;
+          transition:color .15s;
+          position:absolute;z-index:1;
         " onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-3)'">✕</button>
       </div>
-      <!-- ratings -->
-      <div id="cpPopupBody" style="padding:16px 20px 4px;"></div>
+      <!-- ratings body -->
+      <div id="cpPopupBody" style="padding:20px 24px 6px;"></div>
       <!-- comments button -->
       <div style="padding:0 20px 12px;">
         <button id="cpPopupCcBtn" class="cc-strip" style="margin-top:4px;" onclick="openCommentsPopupCompleted(_cpPopupEntryId)">
@@ -379,7 +420,11 @@ function _cpInjectPopup() {
         </button>
       </div>
       <!-- Action buttons -->
-      <div style="display:flex;gap:8px;padding:0 20px 20px;flex-wrap:wrap;">
+      <div id="cpPopupActions" style="display:flex;gap:8px;padding:4px 24px 24px;flex-wrap:wrap;">
+        <button class="popup-action-btn" onclick="goToDetail(_cpPopupEntryId,'completed.html')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
         <button class="popup-action-btn" onclick="openFavListsPopup(_cpPopupEntryId)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           Add to Favorites
@@ -388,17 +433,17 @@ function _cpInjectPopup() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
           Rewatch
         </button>
-        <button class="popup-action-btn" onclick="goToDetail(_cpPopupEntryId,'completed.html')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Edit
-        </button>
-        <button class="popup-action-btn" onclick="_cpGoDiscover(_cpPopupEntryId)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          Discover
-        </button>
         <button class="popup-action-btn" onclick="createShareCard(_cpPopupEntryId)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
           Create Card
+        </button>
+        <button class="popup-action-btn" id="cpPopupDiscoverBtn" style="display:none;" onclick="createShareCard(_cpPopupEntryId, 3, true)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Discover Card
+        </button>
+        <button class="popup-action-btn popup-action-danger" onclick="_cpPopupDeleteEntry()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Delete
         </button>
       </div>
     </div>`;
@@ -406,10 +451,33 @@ function _cpInjectPopup() {
   document.body.appendChild(el);
 }
 
+function _cgSetupNarrowObserver_cp() {
+  const card = document.getElementById('cpPopupCard');
+  if (!card || card._cgObserverAttached) return;
+  card._cgObserverAttached = true;
+  const apply = () => card.classList.toggle('cg-narrow', card.getBoundingClientRect().width <= 600);
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(apply).observe(card);
+  else window.addEventListener('resize', apply);
+  apply();
+}
+
+function _cpPopupDeleteEntry() {
+  const id = _cpPopupEntryId;
+  if (!id) return;
+  if (!confirm('Delete this entry? This cannot be undone.')) return;
+  deleteEntry(id, _compUser.id).then(() => {
+    _allCompleted = _allCompleted.filter(e => e.id !== id);
+    cpClosePopup();
+    renderStats();
+    renderMain();
+  });
+}
+
 let _cpPopupEntryId  = null;
 
 function cpOpenPopup(id) {
   _cpInjectPopup();
+  _cgSetupNarrowObserver_cp();
   const e = _allCompleted.find(en => en.id === id);
   if (!e) return;
   _cpPopupEntryId  = id;
@@ -421,24 +489,50 @@ function cpOpenPopup(id) {
   const _pyEnd = e.ratings?._completion_year || null;
   let _pyStr = '';
   if (_pyStart) {
-    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ` <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">${_pyStart}</span>`;
-    else _pyStr = ` <span style="font-size:0.6em;font-weight:400;color:var(--text-3);vertical-align:middle;">${_pyStart}\u2013${_pyEnd||'Present'}</span>`;
+    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ` <span style="font-family:var(--bebas);font-size:0.65em;font-weight:400;color:var(--text-2);vertical-align:middle;">${_pyStart}</span>`;
+    else _pyStr = ` <span style="font-family:var(--bebas);font-size:0.65em;font-weight:400;color:var(--text-2);vertical-align:middle;">${_pyStart}\u2013${_pyEnd||'Present'}</span>`;
   }
   document.getElementById('cpPopupTitle').innerHTML = _pyEsc(e.title) + _pyStr;
 
-  const date = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
-  const meta = [CAT_META[e.cat]?.label, ...((e.genres||[])), date].filter(Boolean);
-  document.getElementById('cpPopupMeta').innerHTML = meta.map(m =>
-    `<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:20px;padding:2px 8px;font-size:10px;letter-spacing:.4px">${m}</span>`
-  ).join('') +
-  (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '') +
-  `<a href="#" onclick="goToDetail('${e.id}','completed.html');return false;" style="font-size:11px;color:var(--text-3);text-decoration:none;align-self:center;margin-left:4px;">Edit →</a>`;
+  // Category label uses the real Movie/TV type-badge colors; genres
+  // keep the solid olive treatment — same convention as the category
+  // pages' popup.
+  const catLabel = CAT_META[e.cat]?.label;
+  const catIsMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
+  const catLabelHTML = catLabel ? `<span class="${catIsMovie ? 'type-label' : 'type-label type-label-tv'}" style="font-family:'Manrope',var(--sans);font-weight:500;">${_pyEsc(catLabel)}</span>` : '';
+  const genreTags = (e.genres || []);
+  document.getElementById('cpPopupTags').innerHTML =
+    catLabelHTML +
+    genreTags.map(t => `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">${_pyEsc(String(t))}</span>`).join('') +
+    (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
 
-  const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
-  // Info bar (season breakdown / runtime) now renders inside the body, above the ratings
+  const completedDateStr = e.completed_date
+    ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
+  document.getElementById('cpPopupDateRow').innerHTML = completedDateStr
+    ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Completed On: ${completedDateStr}</span>`
+    : '';
+
+  document.getElementById('cpPopupMetaRow').innerHTML = _entryMetaBadge(e);
+
+  const descEl = document.getElementById('cpPopupDesc');
+  if (descEl) {
+    descEl.textContent = e.description || '';
+    descEl.style.display = e.description ? '' : 'none';
+  }
+
+  const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
+  const scoreBoxEl = document.getElementById('cpPopupScoreBox');
+  const scoreValEl = document.getElementById('cpPopupScoreVal');
+  if (scoreBoxEl) scoreBoxEl.style.display = score != null ? '' : 'none';
+  if (scoreValEl) scoreValEl.textContent = score != null ? `★ ${score}` : '';
+
   const _cpInfoEl = document.getElementById('cpPopupInfo');
   if (_cpInfoEl) _cpInfoEl.innerHTML = '';
   document.getElementById('cpPopupBody').innerHTML = _buildCompExpansion(e);
+
+  const discBtn = document.getElementById('cpPopupDiscoverBtn');
+  if (discBtn) discBtn.style.display = (e.status !== 'completed' && e.status !== 'ongoing') ? '' : 'none';
 
   const ov = document.getElementById('cpPopupOverlay');
   ov.style.pointerEvents = 'auto';
@@ -801,10 +895,12 @@ function _compSortBar() {
 }
 
 const COMP_SORT_GROUPS = [
-  { header: 'Alphabetical', opts: [['alpha','A → Z'], ['zalpha','Z → A']] },
-  { header: 'Added',        opts: [['newest','Latest'], ['oldest','Earliest']] },
-  { header: 'Release Date', opts: [['release','Latest'], ['release_asc','Earliest']] },
-  { header: 'Ratings',      opts: [['highest','Highest'], ['lowest','Lowest']] },
+  { header: 'Alphabetical',    opts: [['alpha','A → Z'], ['zalpha','Z → A']] },
+  { header: 'Added',           opts: [['newest','Latest'], ['oldest','Earliest']] },
+  { header: 'Release Date',    opts: [['release','Latest'], ['release_asc','Earliest']] },
+  { header: 'Ratings',         opts: [['highest','Highest'], ['lowest','Lowest']] },
+  { header: 'Runtime',         opts: [['runtime_longest','Longest'], ['runtime_shortest','Shortest']] },
+  { header: 'Episode Count',   opts: [['eps_most','Longest'], ['eps_least','Shortest']] },
 ];
 
 function _compSortLabelFor(value) {
@@ -929,7 +1025,7 @@ function _compToggleDD(id) {
             : `top:${rect.bottom}px; bottom:auto;`);
 }
 document.addEventListener('click', () => document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; }));
-window.addEventListener('scroll', () => document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; }), true);
+window.addEventListener('scroll', () => document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; }));
 
 async function setCompSort(v) {
   _compSort = v;
@@ -1029,7 +1125,6 @@ function _cpBreakdownHTML(e) {
 }
 
 function _buildCompExpansion(e) {
-  const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : '—';
   const isMovies = e.cat === 'movies';
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
@@ -1054,28 +1149,26 @@ function _buildCompExpansion(e) {
 
   const favs = e.ratings?._favorites || {};
   const favChips = [
-    favs.character ? `<span class="fav-chip"><span class="fav-chip-label">Fav Character</span>${esc(favs.character)}</span>` : '',
-    (!isMovies && favs.episode) ? `<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span>${esc(favs.episode)}</span>` : '',
-    (!isMovies && favs.season)  ? `<span class="fav-chip"><span class="fav-chip-label">Fav Season</span>${esc(favs.season)}</span>` : '',
+    favs.character ? `<span class="fav-chip"><span class="fav-chip-label">Fav Character</span><span class="fav-chip-val">${esc(favs.character)}</span></span>` : '',
+    (!isMovies && favs.episode) ? `<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span><span class="fav-chip-val">${esc(favs.episode)}</span></span>` : '',
+    (!isMovies && favs.season)  ? `<span class="fav-chip"><span class="fav-chip-label">Fav Season</span><span class="fav-chip-val">${esc(favs.season)}</span></span>` : '',
   ].filter(Boolean).join('');
   const lows = e.ratings?._lowlights || e.ratings?._favorites?._lowlights || {};
   const lowChips = [
-    lows.character ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Character</span>${esc(lows.character)}</span>` : '',
-    (!isMovies && lows.episode) ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Episode</span>${esc(lows.episode)}</span>` : '',
-    (!isMovies && lows.season)  ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span>${esc(lows.season)}</span>` : '',
+    lows.character ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Character</span><span class="fav-chip-val">${esc(lows.character)}</span></span>` : '',
+    (!isMovies && lows.episode) ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Episode</span><span class="fav-chip-val">${esc(lows.episode)}</span></span>` : '',
+    (!isMovies && lows.season)  ? `<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span><span class="fav-chip-val">${esc(lows.season)}</span></span>` : '',
   ].filter(Boolean).join('');
 
-  return `${e.description ? `<div class="fd-description">${esc(e.description)}</div>` : ''}
-  ${_cpBreakdownHTML(e)}
+  return `${_cpBreakdownHTML(e)}
   <div class="fd-cols">
-    ${(coreRows || animRow) ? `<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>${coreRows}${animRow}</div>` : ''}
+    ${(coreRows||animRow) ? `<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>${coreRows}${animRow}</div>` : ''}
     ${bonusRows ? `<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>${bonusRows}</div>` : ''}
   </div>
-  <div class="fd-final"><span>Final Score</span><strong>${score}</strong></div>
-  ${favChips ? `<div class="fav-chips" style="margin-top:8px;">${favChips}</div>` : ''}
+  ${(favChips || lowChips) ? `<div class="fd-section-hd" style="margin-top:16px;">Highlights</div>` : ''}
+  ${favChips ? `<div class="fav-chips" style="margin-top:6px;">${favChips}</div>` : ''}
   ${lowChips ? `<div class="fav-chips" style="margin-top:6px;">${lowChips}</div>` : ''}
-  ${e.notes ? `<div class="fd-notes">"${esc(e.notes)}"</div>` : ''}
-  <a href="#" class="fd-edit-link" onclick="goToDetail('${e.id}','completed.html');return false;">Edit entry →</a>`;
+  ${e.notes ? `<div class="fd-section-hd" style="margin-top:16px;">Notes</div><div class="fd-notes" style="margin-top:0;padding-top:0;border-top:none;">"${esc(e.notes)}"</div>` : ''}`;
 }
 
 let _compStagedCat = '';
@@ -1434,6 +1527,22 @@ function renderMain() {
     if (_compSort === 'release_asc') {
       return a.sort((x,y) => getReleaseDateValue(x) - getReleaseDateValue(y));
     }
+    if (_compSort === 'runtime_longest' || _compSort === 'runtime_shortest') {
+      const isMovie = e => e.cat === 'movies' || e.ratings?._media_type === 'movie';
+      const movies = a.filter(isMovie);
+      const rest = a.filter(e => !isMovie(e));
+      movies.sort((x,y) => _compSort === 'runtime_longest' ? _compRuntimeMinutes(y) - _compRuntimeMinutes(x) : _compRuntimeMinutes(x) - _compRuntimeMinutes(y));
+      rest.sort((x,y) => getDate(y) - getDate(x)); // no runtime concept for these — default (newest) order
+      return [...movies, ...rest];
+    }
+    if (_compSort === 'eps_most' || _compSort === 'eps_least') {
+      const isMovie = e => e.cat === 'movies' || e.ratings?._media_type === 'movie';
+      const shows = a.filter(e => !isMovie(e));
+      const movies = a.filter(isMovie);
+      shows.sort((x,y) => _compSort === 'eps_most' ? (Number(y.total_eps)||0) - (Number(x.total_eps)||0) : (Number(x.total_eps)||0) - (Number(y.total_eps)||0));
+      movies.sort((x,y) => getDate(y) - getDate(x)); // movies have no episode count — default (newest) order
+      return [...shows, ...movies];
+    }
     return a;
   })();
 
@@ -1454,8 +1563,8 @@ function renderMain() {
           <div class="fv-rank-num ${i < 3 ? 'top3' : ''}">${i + 1}</div>
           <div class="fv-rank-poster">${posterHTML(e)}</div>
           <div class="fv-rank-info">
-            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:10px;">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
-            <div class="fv-rank-meta">${_compTypeBadgeInline(e)}</div>
+            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:2px;">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-meta">${_compTypeBadgeInline(e)} ${_entryMetaBadge(e)}</div>
             ${completedDateStr ? `<div class="fv-rank-meta"><span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Completed On: ${completedDateStr}</span></div>` : ''}
             ${renderFavChips(e.ratings, e.cat)}
           </div>
@@ -1477,8 +1586,8 @@ function renderMain() {
         <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
           <div class="fv-rank-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : ''}</div>
           <div class="fv-rank-info">
-            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:10px;">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
-            <div class="fv-rank-meta">${_compTypeBadgeInline(e)}</div>
+            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:2px;">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-meta">${_compTypeBadgeInline(e)} ${_entryMetaBadge(e)}</div>
             ${date ? `<div class="fv-rank-meta"><span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Completed On: ${date}</span></div>` : ''}
             ${renderFavChips(e.ratings, e.cat)}
           </div>
