@@ -1388,21 +1388,21 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 .fav-person-trigger span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; width:100%; }
 .fav-person-placeholder { color:var(--text-3); font-weight:400; }
 
-/* Trigger + clear (×) button pair — the clear button only takes up
-   room once a value is actually set, so an empty field's trigger still
-   spans the field's full width exactly as before. */
-.fav-trigger-row { display:flex; align-items:stretch; gap:0; }
-.fav-trigger-row .fav-person-trigger { border-radius:var(--radius-sm); }
+/* Clear (×) button — sits inline with the field's own label row, so
+   the trigger button below it always stays full width regardless of
+   content length (a long episode name no longer pushes anything
+   around), and clearing a field is a small, secondary action next to
+   its name rather than competing with the trigger for space. */
+.fav-label-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.fav-label-row label { margin-bottom:0 !important; }
 .fav-clear-btn {
   display:none; align-items:center; justify-content:center; flex-shrink:0;
-  width:0; padding:0; margin-left:0; overflow:hidden;
-  background:var(--bg-3); border:0.5px solid var(--border-2);
-  border-radius:var(--radius-sm);
-  color:var(--text-3); font-size:16px; line-height:1; cursor:pointer;
-  transition:background .15s, color .15s;
+  width:16px; height:16px; padding:0; background:none; border:none;
+  color:var(--text-3); font-size:14px; line-height:1; cursor:pointer;
+  border-radius:4px; transition:background .15s, color .15s;
 }
-.fav-clear-btn.visible { display:flex; width:34px; padding:0 4px; margin-left:6px; }
-.fav-clear-btn:hover { background:#b91c1c; border-color:#b91c1c; color:#fff; }
+.fav-clear-btn.visible { display:flex; }
+.fav-clear-btn:hover { background:#b91c1c; color:#fff; }
 
 #favPersonOverlay {
   position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
