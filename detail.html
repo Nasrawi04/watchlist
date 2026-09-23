@@ -879,66 +879,66 @@
             <div class="field-label">Favorites</div>
             <div class="fav-section-inner">
               <div class="fav-field">
-                <label>Favorite Character</label>
-                <div class="fav-trigger-row">
-                  <button type="button" class="field-input fav-person-trigger" id="favCharacterBtn" onclick="_favOpenPersonPicker('fav')" style="text-align:left;">
-                    <span id="favCharacterLabel" class="fav-person-placeholder">Choose from cast…</span>
-                  </button>
-                  <button type="button" class="fav-clear-btn" id="favCharacterClearBtn" onclick="event.stopPropagation();_favClearField('fav','Character')" aria-label="Clear favorite character">&times;</button>
+                <div class="fav-label-row">
+                  <label>Favorite Character</label>
+                  <button type="button" class="fav-clear-btn" id="favCharacterClearBtn" onclick="_favClearField('fav','Character')" aria-label="Clear favorite character">&times;</button>
                 </div>
+                <button type="button" class="field-input fav-person-trigger" id="favCharacterBtn" onclick="_favOpenPersonPicker('fav')" style="text-align:left;">
+                  <span id="favCharacterLabel" class="fav-person-placeholder">Choose from cast…</span>
+                </button>
                 <input type="hidden" id="favCharacter">
               </div>
               <div class="fav-field" id="favEpisodeWrap">
-                <label>Favorite Episode</label>
-                <div class="fav-trigger-row">
-                  <button type="button" class="field-input fav-person-trigger" onclick="_favOpenEpisodePicker('fav')" style="text-align:left;">
-                    <span id="favEpisodeLabel" class="fav-person-placeholder">Choose an episode…</span>
-                  </button>
-                  <button type="button" class="fav-clear-btn" id="favEpisodeClearBtn" onclick="event.stopPropagation();_favClearField('fav','Episode')" aria-label="Clear favorite episode">&times;</button>
+                <div class="fav-label-row">
+                  <label>Favorite Episode</label>
+                  <button type="button" class="fav-clear-btn" id="favEpisodeClearBtn" onclick="_favClearField('fav','Episode')" aria-label="Clear favorite episode">&times;</button>
                 </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenEpisodePicker('fav')" style="text-align:left;">
+                  <span id="favEpisodeLabel" class="fav-person-placeholder">Choose an episode…</span>
+                </button>
                 <input type="hidden" id="favEpisode">
               </div>
               <div class="fav-field" id="favSeasonWrap">
-                <label>Favorite Season</label>
-                <div class="fav-trigger-row">
-                  <button type="button" class="field-input fav-person-trigger" onclick="_favOpenSeasonPicker('fav')" style="text-align:left;">
-                    <span id="favSeasonLabel" class="fav-person-placeholder">Choose a season…</span>
-                  </button>
-                  <button type="button" class="fav-clear-btn" id="favSeasonClearBtn" onclick="event.stopPropagation();_favClearField('fav','Season')" aria-label="Clear favorite season">&times;</button>
+                <div class="fav-label-row">
+                  <label>Favorite Season</label>
+                  <button type="button" class="fav-clear-btn" id="favSeasonClearBtn" onclick="_favClearField('fav','Season')" aria-label="Clear favorite season">&times;</button>
                 </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenSeasonPicker('fav')" style="text-align:left;">
+                  <span id="favSeasonLabel" class="fav-person-placeholder">Choose a season…</span>
+                </button>
                 <input type="hidden" id="favSeason">
               </div>
             </div>
             <div class="field-label" style="margin-top:1rem;">Lowlights</div>
             <div class="fav-section-inner">
               <div class="fav-field low-field">
-                <label>Least Favorite Character</label>
-                <div class="fav-trigger-row">
-                  <button type="button" class="field-input fav-person-trigger" id="lowCharacterBtn" onclick="_favOpenPersonPicker('low')" style="text-align:left;">
-                    <span id="lowCharacterLabel" class="fav-person-placeholder">Choose from cast…</span>
-                  </button>
-                  <button type="button" class="fav-clear-btn" id="lowCharacterClearBtn" onclick="event.stopPropagation();_favClearField('low','Character')" aria-label="Clear least favorite character">&times;</button>
+                <div class="fav-label-row">
+                  <label>Least Favorite Character</label>
+                  <button type="button" class="fav-clear-btn" id="lowCharacterClearBtn" onclick="_favClearField('low','Character')" aria-label="Clear least favorite character">&times;</button>
                 </div>
+                <button type="button" class="field-input fav-person-trigger" id="lowCharacterBtn" onclick="_favOpenPersonPicker('low')" style="text-align:left;">
+                  <span id="lowCharacterLabel" class="fav-person-placeholder">Choose from cast…</span>
+                </button>
                 <input type="hidden" id="lowCharacter">
               </div>
               <div class="fav-field low-field" id="lowEpisodeWrap">
-                <label>Least Favorite Episode</label>
-                <div class="fav-trigger-row">
-                  <button type="button" class="field-input fav-person-trigger" onclick="_favOpenEpisodePicker('low')" style="text-align:left;">
-                    <span id="lowEpisodeLabel" class="fav-person-placeholder">Choose an episode…</span>
-                  </button>
-                  <button type="button" class="fav-clear-btn" id="lowEpisodeClearBtn" onclick="event.stopPropagation();_favClearField('low','Episode')" aria-label="Clear least favorite episode">&times;</button>
+                <div class="fav-label-row">
+                  <label>Least Favorite Episode</label>
+                  <button type="button" class="fav-clear-btn" id="lowEpisodeClearBtn" onclick="_favClearField('low','Episode')" aria-label="Clear least favorite episode">&times;</button>
                 </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenEpisodePicker('low')" style="text-align:left;">
+                  <span id="lowEpisodeLabel" class="fav-person-placeholder">Choose an episode…</span>
+                </button>
                 <input type="hidden" id="lowEpisode">
               </div>
               <div class="fav-field low-field" id="lowSeasonWrap">
-                <label>Least Favorite Season</label>
-                <div class="fav-trigger-row">
-                  <button type="button" class="field-input fav-person-trigger" onclick="_favOpenSeasonPicker('low')" style="text-align:left;">
-                    <span id="lowSeasonLabel" class="fav-person-placeholder">Choose a season…</span>
-                  </button>
-                  <button type="button" class="fav-clear-btn" id="lowSeasonClearBtn" onclick="event.stopPropagation();_favClearField('low','Season')" aria-label="Clear least favorite season">&times;</button>
+                <div class="fav-label-row">
+                  <label>Least Favorite Season</label>
+                  <button type="button" class="fav-clear-btn" id="lowSeasonClearBtn" onclick="_favClearField('low','Season')" aria-label="Clear least favorite season">&times;</button>
                 </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenSeasonPicker('low')" style="text-align:left;">
+                  <span id="lowSeasonLabel" class="fav-person-placeholder">Choose a season…</span>
+                </button>
                 <input type="hidden" id="lowSeason">
               </div>
             </div>
