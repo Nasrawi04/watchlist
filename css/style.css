@@ -652,12 +652,12 @@ nav {
 
 .btn-add-entry {
   display:flex; align-items:center; gap:8px;
-  background:transparent; border:0.5px solid var(--border-olive);
-  border-radius:var(--radius-sm); color:var(--olive-light);
+  background:var(--olive); border:0.5px solid var(--olive);
+  border-radius:var(--radius-sm); color:#fff;
   font-size:13px; font-weight:500; padding:9px 18px; cursor:pointer;
   transition:all var(--trans) var(--ease); white-space:nowrap;
 }
-.btn-add-entry:hover { background:var(--olive-faint); }
+.btn-add-entry:hover { background:var(--olive-light); border-color:var(--olive-light); }
 .btn-add-entry:active { transform:scale(0.97); }
 .btn-add-entry svg { width:15px; height:15px; }
 
@@ -746,9 +746,9 @@ nav {
 .section-block-title { font-family:'Oswald',var(--sans); font-size:14.5px; font-weight:600; display:flex; align-items:center; gap:8px; letter-spacing:0.1px; }
 .section-block-title svg { width:14px; height:14px; color:var(--olive-light); }
 .section-pill {
-  font-family:var(--bebas); font-size:13px; font-weight:400; padding:2px 9px; border-radius:20px;
-  background:var(--olive-faint); border:0.5px solid var(--border-olive);
-  color:var(--olive-light);
+  font-family:var(--bebas); font-size:13px; font-weight:400; padding:2px 10px; border-radius:6px;
+  background:var(--olive); border:0.5px solid var(--olive);
+  color:#fff;
 }
 .section-tabs { display:flex; gap:3px; }
 .stab {
@@ -2620,7 +2620,6 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 [data-theme="light"] .score-mini-fill { background:var(--olive-light); }
 [data-theme="light"] .final-score-section { background:var(--olive-faint); }
 [data-theme="light"] .view-toggle { background:var(--bg-2); }
-[data-theme="light"] .vt-btn.active { background:rgba(26,69,32,0.14); }
 [data-theme="light"] .theme-toggle-pill { background:var(--bg-2); }
 
 .theme-transitioning,
@@ -2678,7 +2677,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 }
 .vt-btn svg { width:14px; height:14px; }
 .vt-btn:hover { color:var(--text-2); }
-.vt-btn.active { background:var(--card-3); color:var(--olive-light); box-shadow:0 1px 4px rgba(0,0,0,0.2); }
+.vt-btn.active { background:var(--olive); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
 
 .accordion-chevron svg { width:16px; height:16px; transition:transform 220ms var(--ease); }
 
