@@ -1744,6 +1744,10 @@ function _favPickSeason(seasonNumber) {
   _favCloseSeasonPicker();
 }
 
+function _favEpisodeLabel(seasonNumber, ep) {
+  return `S${seasonNumber}E${ep.number} - "${ep.name}"`;
+}
+
 async function _favOpenEpisodePicker(which) {
   _favPersonTarget = which;
   if (!document.getElementById('favEpisodeOverlay')) {
@@ -1754,11 +1758,17 @@ async function _favOpenEpisodePicker(which) {
         <div class="sf-title">Choose an Episode</div>
         <button class="sf-close" onclick="_favCloseEpisodePicker()">${typeof icon === 'function' ? icon('x',18) : '✕'}</button>
       </div>
+      <div class="search-wrap fav-picker-search">
+        <span class="search-icon-wrap">${typeof icon === 'function' ? icon('search',14) : '🔍'}</span>
+        <input type="text" id="favEpisodeSearch" placeholder="Search episodes…" autocomplete="off" oninput="_favFilterEpisodeList(this.value)">
+      </div>
       <div class="sf-body" id="favEpisodeList"></div>
     </div>`;
     el.addEventListener('click', ev => { if (ev.target === el) _favCloseEpisodePicker(); });
     document.body.appendChild(el);
   }
+  const searchEl = document.getElementById('favEpisodeSearch');
+  searchEl.value = '';
   const listEl = document.getElementById('favEpisodeList');
   document.getElementById('favEpisodeOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -1780,14 +1790,34 @@ async function _favOpenEpisodePicker(which) {
   // Guard against the person having closed the popup (or opened a
   // different one) while the fetch above was still in flight.
   if (_favPersonTarget !== which || !document.getElementById('favEpisodeOverlay')?.classList.contains('open')) return;
-  let html = '';
+  // Flatten once into a single searchable list ({seasonNumber, ep}),
+  // rather than re-walking _favData on every keystroke.
+  _favEpisodeFlat = [];
   _favData.seasons.forEach(s => {
-    const eps = _favData.episodesBySeasonNum[s.number] || [];
-    if (!eps.length) return;
-    html += `<div class="sf-dd-group-label">Season ${s.number}</div>`;
-    html += eps.map(ep => `<button type="button" class="fav-list-row" onclick="_favPickEpisode('${String(ep.name).replace(/'/g,"\\'")}')">${ep.number}. ${ep.name}</button>`).join('');
+    (_favData.episodesBySeasonNum[s.number] || []).forEach(ep => _favEpisodeFlat.push({ seasonNumber: s.number, ep }));
   });
-  listEl.innerHTML = html || `<div class="sf-empty">No episodes found.</div>`;
+  _favRenderEpisodeList(_favEpisodeFlat);
+}
+
+let _favEpisodeFlat = [];
+
+function _favRenderEpisodeList(items) {
+  const listEl = document.getElementById('favEpisodeList');
+  if (!items.length) { listEl.innerHTML = `<div class="sf-empty">No episodes found.</div>`; return; }
+  let html = '';
+  let lastSeason = null;
+  items.forEach(({ seasonNumber, ep }) => {
+    if (seasonNumber !== lastSeason) { html += `<div class="sf-dd-group-label">Season ${seasonNumber}</div>`; lastSeason = seasonNumber; }
+    const label = _favEpisodeLabel(seasonNumber, ep);
+    html += `<button type="button" class="fav-list-row" onclick="_favPickEpisode('${label.replace(/'/g,"\\'")}')">${label}</button>`;
+  });
+  listEl.innerHTML = html;
+}
+
+function _favFilterEpisodeList(query) {
+  const q = query.trim().toLowerCase();
+  const matches = q ? _favEpisodeFlat.filter(({ seasonNumber, ep }) => _favEpisodeLabel(seasonNumber, ep).toLowerCase().includes(q)) : _favEpisodeFlat;
+  _favRenderEpisodeList(matches);
 }
 
 function _favCloseEpisodePicker() {
@@ -1816,22 +1846,40 @@ function _favOpenPersonPicker(which) {
         <div class="sf-title">Choose a Character</div>
         <button class="sf-close" onclick="_favClosePersonPicker()">${typeof icon === 'function' ? icon('x',18) : '✕'}</button>
       </div>
+      <div class="search-wrap fav-picker-search">
+        <span class="search-icon-wrap">${typeof icon === 'function' ? icon('search',14) : '🔍'}</span>
+        <input type="text" id="favPersonSearch" placeholder="Search characters…" autocomplete="off" oninput="_favFilterPersonGrid(this.value)">
+      </div>
       <div class="sf-body" id="favPersonGrid"></div>
     </div>`;
     el.addEventListener('click', ev => { if (ev.target === el) _favClosePersonPicker(); });
     document.body.appendChild(el);
   }
+  document.getElementById('favPersonSearch').value = '';
+  _favCastFiltered = (_favData?.cast || []).filter(c => c.character);
+  _favRenderPersonGrid(_favCastFiltered);
+  document.getElementById('favPersonOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+let _favCastFiltered = [];
+
+function _favRenderPersonGrid(cast) {
   const grid = document.getElementById('favPersonGrid');
-  const cast = (_favData?.cast || []).filter(c => c.character);
   grid.innerHTML = cast.length ? `<div class="fav-person-grid">${cast.map(c => `
     <button type="button" class="fav-person-card" onclick="_favPickPerson('${String(c.character).replace(/'/g,"\\'")}')">
       <div class="fav-person-photo">${c.profile_path ? `<img src="https://image.tmdb.org/t/p/w185${c.profile_path}" loading="lazy">` : (c.name[0]||'?')}</div>
       <div class="fav-person-name">${c.character}</div>
       <div class="fav-person-actor">${c.name}</div>
     </button>`).join('')}</div>`
-    : `<div class="sf-empty">No cast data available — link this title to TMDB first.</div>`;
-  document.getElementById('favPersonOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+    : `<div class="sf-empty">No matching characters.</div>`;
+}
+
+function _favFilterPersonGrid(query) {
+  const q = query.trim().toLowerCase();
+  const all = (_favData?.cast || []).filter(c => c.character);
+  const matches = q ? all.filter(c => c.character.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)) : all;
+  _favRenderPersonGrid(matches);
 }
 
 function _favClosePersonPicker() {
