@@ -322,6 +322,13 @@
 }
 .fav-field label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:6px;}
 .fav-field.low-field{border-color:rgba(163,51,51,0.35);}
+@media(max-width:560px) {
+  /* Three fields at their 120px minimum barely fit a phone screen at
+     all, forcing cramped, hard-to-tap trigger buttons — stacking them
+     one per row keeps every trigger comfortably full-width instead. */
+  .fav-section-inner { flex-direction:column; }
+  .fav-field { flex:1 1 auto; width:100%; }
+}
 [data-theme="dark"] .fav-field.low-field{border-color:rgba(224,133,133,0.35);}
 @media(max-width:520px){
   .fav-field{flex:1 1 100%;}
@@ -880,24 +887,16 @@
               </div>
               <div class="fav-field" id="favEpisodeWrap">
                 <label>Favorite Episode</label>
-                <div class="td-dd sf-dd sf-dd-wide" id="favEpisodeDD">
-                  <button type="button" class="td-dd-trigger sf-dd-trigger" onclick="event.stopPropagation();_favToggleEpisodeDD('fav')">
-                    <span class="td-dd-label" id="favEpisodeLabel">Choose an episode…</span>
-                    <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                  <div class="td-dd-menu" id="favEpisodeMenu"></div>
-                </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenEpisodePicker('fav')" style="text-align:left;">
+                  <span id="favEpisodeLabel" class="fav-person-placeholder">Choose an episode…</span>
+                </button>
                 <input type="hidden" id="favEpisode">
               </div>
               <div class="fav-field" id="favSeasonWrap">
                 <label>Favorite Season</label>
-                <div class="td-dd sf-dd sf-dd-wide" id="favSeasonDD">
-                  <button type="button" class="td-dd-trigger sf-dd-trigger" onclick="event.stopPropagation();_favToggleSeasonDD('fav')">
-                    <span class="td-dd-label" id="favSeasonLabel">Choose a season…</span>
-                    <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                  <div class="td-dd-menu" id="favSeasonMenu"></div>
-                </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenSeasonPicker('fav')" style="text-align:left;">
+                  <span id="favSeasonLabel" class="fav-person-placeholder">Choose a season…</span>
+                </button>
                 <input type="hidden" id="favSeason">
               </div>
             </div>
@@ -912,24 +911,16 @@
               </div>
               <div class="fav-field low-field" id="lowEpisodeWrap">
                 <label>Least Favorite Episode</label>
-                <div class="td-dd sf-dd sf-dd-wide" id="lowEpisodeDD">
-                  <button type="button" class="td-dd-trigger sf-dd-trigger" onclick="event.stopPropagation();_favToggleEpisodeDD('low')">
-                    <span class="td-dd-label" id="lowEpisodeLabel">Choose an episode…</span>
-                    <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                  <div class="td-dd-menu" id="lowEpisodeMenu"></div>
-                </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenEpisodePicker('low')" style="text-align:left;">
+                  <span id="lowEpisodeLabel" class="fav-person-placeholder">Choose an episode…</span>
+                </button>
                 <input type="hidden" id="lowEpisode">
               </div>
               <div class="fav-field low-field" id="lowSeasonWrap">
                 <label>Least Favorite Season</label>
-                <div class="td-dd sf-dd sf-dd-wide" id="lowSeasonDD">
-                  <button type="button" class="td-dd-trigger sf-dd-trigger" onclick="event.stopPropagation();_favToggleSeasonDD('low')">
-                    <span class="td-dd-label" id="lowSeasonLabel">Choose a season…</span>
-                    <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                  <div class="td-dd-menu" id="lowSeasonMenu"></div>
-                </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenSeasonPicker('low')" style="text-align:left;">
+                  <span id="lowSeasonLabel" class="fav-person-placeholder">Choose a season…</span>
+                </button>
                 <input type="hidden" id="lowSeason">
               </div>
             </div>
@@ -1705,45 +1696,78 @@ function _favSetLabel(which, field, value) {
   el.classList.toggle('fav-person-placeholder', !value);
 }
 
-/* ── Season dropdown ── */
-function _favToggleSeasonDD(which) {
-  const dd = document.getElementById(`${which}SeasonDD`);
-  const menuEl = document.getElementById(`${which}SeasonMenu`);
-  const wasOpen = dd.classList.contains('open');
-  document.querySelectorAll('.td-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; });
-  if (wasOpen) return;
+
+/* ── Season & Episode pickers — small centered popups (same pattern as
+   the Character picker below), rather than inline dropdowns. An inline
+   dropdown here could open right on top of the next field in the grid
+   (Favorites and Lowlights rows sit close together), tall enough that
+   a still-open dropdown could physically cover the next trigger button
+   and silently swallow a click meant for it. A centered modal has no
+   such neighbor to collide with. ── */
+
+function _favOpenSeasonPicker(which) {
+  _favPersonTarget = which;
+  if (!document.getElementById('favSeasonOverlay')) {
+    const el = document.createElement('div');
+    el.id = 'favSeasonOverlay';
+    el.innerHTML = `<div id="favSeasonCard">
+      <div class="sf-header">
+        <div class="sf-title">Choose a Season</div>
+        <button class="sf-close" onclick="_favCloseSeasonPicker()">${typeof icon === 'function' ? icon('x',18) : '✕'}</button>
+      </div>
+      <div class="sf-body" id="favSeasonList"></div>
+    </div>`;
+    el.addEventListener('click', ev => { if (ev.target === el) _favCloseSeasonPicker(); });
+    document.body.appendChild(el);
+  }
+  const listEl = document.getElementById('favSeasonList');
   const seasons = _favData?.seasons || [];
-  const current = document.getElementById(`${which}Season`).value;
-  menuEl.innerHTML = seasons.length
-    ? seasons.map(s => `<div class="td-dd-opt${current===('Season '+s.number)?' active':''}" onclick="event.stopPropagation();_favPickSeason('${which}',${s.number})">Season ${s.number}${s.name && s.name !== `Season ${s.number}` ? ' – ' + s.name : ''}</div>`).join('')
+  listEl.innerHTML = seasons.length
+    ? seasons.map(s => `<button type="button" class="fav-list-row" onclick="_favPickSeason(${s.number})">Season ${s.number}${s.name && s.name !== `Season ${s.number}` ? ' – ' + s.name : ''}</button>`).join('')
     : `<div class="sf-empty">No season data available — link this title to TMDB first.</div>`;
-  dd.classList.add('open');
-  _favPositionDD(dd);
+  document.getElementById('favSeasonOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
-function _favPickSeason(which, seasonNumber) {
+function _favCloseSeasonPicker() {
+  const ov = document.getElementById('favSeasonOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function _favPickSeason(seasonNumber) {
+  const which = _favPersonTarget;
   const label = `Season ${seasonNumber}`;
   document.getElementById(`${which}Season`).value = label;
   _favSetLabel(which, 'Season', label);
-  document.getElementById(`${which}SeasonDD`).classList.remove('open');
+  _favCloseSeasonPicker();
 }
 
-/* ── Episode dropdown (grouped by season, fetched lazily on first open) ── */
-async function _favToggleEpisodeDD(which) {
-  const dd = document.getElementById(`${which}EpisodeDD`);
-  const menuEl = document.getElementById(`${which}EpisodeMenu`);
-  const wasOpen = dd.classList.contains('open');
-  document.querySelectorAll('.td-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; });
-  if (wasOpen) return;
+async function _favOpenEpisodePicker(which) {
+  _favPersonTarget = which;
+  if (!document.getElementById('favEpisodeOverlay')) {
+    const el = document.createElement('div');
+    el.id = 'favEpisodeOverlay';
+    el.innerHTML = `<div id="favEpisodeCard">
+      <div class="sf-header">
+        <div class="sf-title">Choose an Episode</div>
+        <button class="sf-close" onclick="_favCloseEpisodePicker()">${typeof icon === 'function' ? icon('x',18) : '✕'}</button>
+      </div>
+      <div class="sf-body" id="favEpisodeList"></div>
+    </div>`;
+    el.addEventListener('click', ev => { if (ev.target === el) _favCloseEpisodePicker(); });
+    document.body.appendChild(el);
+  }
+  const listEl = document.getElementById('favEpisodeList');
+  document.getElementById('favEpisodeOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
   if (!_favData?.seasons?.length) {
-    menuEl.innerHTML = `<div class="sf-empty">No episode data available — link this title to TMDB first.</div>`;
-    dd.classList.add('open'); _favPositionDD(dd);
+    listEl.innerHTML = `<div class="sf-empty">No episode data available — link this title to TMDB first.</div>`;
     return;
   }
-  dd.classList.add('open');
-  _favPositionDD(dd);
   if (!_favEpisodesLoaded) {
-    menuEl.innerHTML = `<div class="sf-empty">Loading episodes…</div>`;
+    listEl.innerHTML = `<div class="sf-empty">Loading episodes…</div>`;
     const tmdbId = _pendingTmdbId;
     await Promise.all(_favData.seasons.map(async s => {
       try {
@@ -1753,62 +1777,34 @@ async function _favToggleEpisodeDD(which) {
     }));
     _favEpisodesLoaded = true;
   }
-  _favRenderEpisodeMenu(which);
-  // Reposition after the real content is in — the earlier positioning
-  // call (right when the dropdown opened) used a generic size guess,
-  // but the actual episode list can be much taller once every season's
-  // episodes are loaded in, which can flip whether it should open up
-  // or down. Repositioning now against the menu's real final size is
-  // what was missing, leaving the menu floating in the wrong spot.
-  _favPositionDD(dd);
-}
-
-function _favRenderEpisodeMenu(which) {
-  const menuEl = document.getElementById(`${which}EpisodeMenu`);
-  const current = document.getElementById(`${which}Episode`).value;
+  // Guard against the person having closed the popup (or opened a
+  // different one) while the fetch above was still in flight.
+  if (_favPersonTarget !== which || !document.getElementById('favEpisodeOverlay')?.classList.contains('open')) return;
   let html = '';
   _favData.seasons.forEach(s => {
     const eps = _favData.episodesBySeasonNum[s.number] || [];
     if (!eps.length) return;
     html += `<div class="sf-dd-group-label">Season ${s.number}</div>`;
-    html += eps.map(ep => `<div class="td-dd-opt${current===ep.name?' active':''}" onclick="event.stopPropagation();_favPickEpisode('${which}','${String(ep.name).replace(/'/g,"\\'")}')">${ep.number}. ${ep.name}</div>`).join('');
+    html += eps.map(ep => `<button type="button" class="fav-list-row" onclick="_favPickEpisode('${String(ep.name).replace(/'/g,"\\'")}')">${ep.number}. ${ep.name}</button>`).join('');
   });
-  menuEl.innerHTML = html || `<div class="sf-empty">No episodes found.</div>`;
+  listEl.innerHTML = html || `<div class="sf-empty">No episodes found.</div>`;
 }
 
-function _favPickEpisode(which, name) {
+function _favCloseEpisodePicker() {
+  const ov = document.getElementById('favEpisodeOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function _favPickEpisode(name) {
+  const which = _favPersonTarget;
   document.getElementById(`${which}Episode`).value = name;
   _favSetLabel(which, 'Episode', name);
-  document.getElementById(`${which}EpisodeDD`).classList.remove('open');
+  _favCloseEpisodePicker();
 }
 
-document.addEventListener('click', () => document.querySelectorAll('.td-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; }));
-
-// These dropdowns live in the normal page flow here (not inside a
-// scroll-locked modal like the Sort/Filter popups), so scrolling the
-// page itself while one is open would otherwise leave the position:fixed
-// menu stranded at its old coordinates while the trigger moves away
-// underneath it — exactly what made the positions look "wrong".
-window.addEventListener('scroll', () => document.querySelectorAll('.td-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; }), true);
-
-function _favPositionDD(target) {
-  const trigger = target.querySelector('.sf-dd-trigger');
-  const menu = target.querySelector('.td-dd-menu');
-  const rect = trigger.getBoundingClientRect();
-  // Measure the menu's real height (capped at its own max-height) rather
-  // than guessing a fixed number — a short "loading…"/error message and
-  // a full multi-season episode list need very different space, and
-  // guessing wrong is what left the menu positioned for the wrong size.
-  const menuHeight = Math.min(menu.scrollHeight || 220, 220);
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const openUp = spaceBelow < menuHeight + 16 && rect.top > menuHeight;
-  menu.style.cssText = `position:fixed; left:${rect.left}px; width:${rect.width}px; z-index:1400; display:block; max-height:220px; overflow-y:auto; ` +
-    (openUp ? `bottom:${window.innerHeight - rect.top}px; top:auto; border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-top:0.5px solid var(--olive-light); border-bottom:none;`
-            : `top:${rect.bottom}px; bottom:auto;`);
-}
-
-/* ── Character picker — a popup grid of cast photos + names ── */
-let _favPersonTarget = null; // 'fav' or 'low'
+let _favPersonTarget = null; // 'fav' or 'low' — shared target for all three pickers (Character/Season/Episode), since only one is ever open at a time
 
 function _favOpenPersonPicker(which) {
   _favPersonTarget = which;
@@ -1818,7 +1814,7 @@ function _favOpenPersonPicker(which) {
     el.innerHTML = `<div id="favPersonCard">
       <div class="sf-header">
         <div class="sf-title">Choose a Character</div>
-        <button class="sf-close" onclick="_favClosePersonPicker()">${icon ? icon('x',18) : '✕'}</button>
+        <button class="sf-close" onclick="_favClosePersonPicker()">${typeof icon === 'function' ? icon('x',18) : '✕'}</button>
       </div>
       <div class="sf-body" id="favPersonGrid"></div>
     </div>`;
