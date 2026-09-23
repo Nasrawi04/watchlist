@@ -869,15 +869,21 @@ function _sfPositionDD(target) {
   // edge — no amount of z-index fixes that, since overflow clipping
   // applies regardless of stacking order. Switching to position:fixed
   // with coordinates computed from the trigger's actual screen position
-  // escapes that clipping entirely, and flips upward automatically if
-  // there isn't room below.
+  // escapes that clipping entirely.
   const trigger = target.querySelector('.sf-dd-trigger');
   const menu = target.querySelector('.td-dd-menu');
   const rect = trigger.getBoundingClientRect();
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const menuMaxHeight = 220;
-  const openUp = spaceBelow < menuMaxHeight + 16 && rect.top > menuMaxHeight;
-  menu.style.cssText = `position:fixed; left:${rect.left}px; width:${rect.width}px; z-index:1400; display:block; ` +
+  const margin = 12;
+  const spaceBelow = window.innerHeight - rect.bottom - margin;
+  const spaceAbove = rect.top - margin;
+  // Cap the menu's own height to whatever's ACTUALLY available in
+  // whichever direction it opens, rather than a flat 220px guess — a
+  // fixed height was tall enough to overlap unrelated rows above it
+  // when little room existed there, which looked like the dropdown
+  // opening in the wrong place even though it was correctly anchored.
+  const openUp = spaceBelow < 140 && spaceAbove > spaceBelow;
+  const available = Math.max(110, Math.min(openUp ? spaceAbove : spaceBelow, 150));
+  menu.style.cssText = `position:fixed; left:${rect.left}px; width:${rect.width}px; z-index:1400; display:block; max-height:${available}px; overflow-y:auto; ` +
     (openUp ? `bottom:${window.innerHeight - rect.top}px; top:auto; border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-top:0.5px solid var(--olive-light); border-bottom:none;`
             : `top:${rect.bottom}px; bottom:auto;`);
 }
