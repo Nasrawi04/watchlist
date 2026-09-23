@@ -1385,6 +1385,7 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
   width:100%; display:flex; align-items:center; cursor:pointer;
   font-family:'Manrope',var(--sans); font-weight:500; font-size:13.5px; color:var(--text);
 }
+.fav-person-trigger span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; width:100%; }
 .fav-person-placeholder { color:var(--text-3); font-weight:400; }
 
 #favPersonOverlay {
@@ -1399,6 +1400,33 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
   border-radius:var(--radius-lg); width:100%; max-width:560px; max-height:calc(100dvh - 32px);
   display:flex; flex-direction:column; box-sizing:border-box; position:relative;
 }
+
+/* Season & Episode pickers — same overlay pattern as the Character
+   picker, just with plain text rows (grouped by season, for episodes)
+   instead of a photo grid. */
+#favSeasonOverlay, #favEpisodeOverlay {
+  position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  padding-top:max(16px, env(safe-area-inset-top)); box-sizing:border-box;
+  opacity:0; transition:opacity 220ms var(--ease); pointer-events:none; overflow-y:auto;
+}
+#favSeasonOverlay.open, #favEpisodeOverlay.open { opacity:1; pointer-events:auto; }
+#favSeasonCard, #favEpisodeCard {
+  background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
+  border-radius:var(--radius-lg); width:100%; max-width:420px; max-height:calc(100dvh - 32px);
+  display:flex; flex-direction:column; box-sizing:border-box; position:relative;
+}
+.fav-list-row {
+  display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  padding:12px 10px; border-radius:var(--radius-sm); font-family:'Manrope',var(--sans);
+  font-size:14px; color:var(--text); transition:background .15s;
+}
+.fav-list-row:hover { background:var(--bg-3); }
+
+@media(max-width:520px) {
+  #favSeasonCard, #favEpisodeCard { max-width:94%; }
+}
+
 .fav-person-grid {
   display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:14px;
   padding:4px 2px 16px;
