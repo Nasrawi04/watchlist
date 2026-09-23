@@ -902,9 +902,17 @@ window.addEventListener('resize', () => {
   _sfLastWidth = window.innerWidth;
   document.querySelectorAll('.sf-dd.open').forEach(el => el.classList.remove('open'));
 });
+// Closes on any scroll that reaches this listener — the .sf-body check
+// covers the popup's own internal scroll, and the window scroll covers
+// the page behind it (some mobile browsers don't fully honor
+// document.body's overflow:hidden for background touch-scroll, so this
+// is a second safety net rather than a redundant one).
 document.addEventListener('scroll', ev => {
-  if (ev.target.classList?.contains('sf-body')) document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; });
+  if (ev.target.classList?.contains('sf-body') || ev.target === document || ev.target === window) {
+    document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; });
+  }
 }, true);
+window.addEventListener('scroll', () => document.querySelectorAll('.sf-dd.open').forEach(el => { el.classList.remove('open'); const m = el.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; }));
 
 function _sfStageGenre(genre) {
   const cur = _sfStagedFilter.genres;
