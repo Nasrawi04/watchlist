@@ -1745,7 +1745,7 @@ function _favPickSeason(seasonNumber) {
 }
 
 function _favEpisodeLabel(seasonNumber, ep) {
-  return `S${seasonNumber}E${ep.number} - "${ep.name}"`;
+  return `S${seasonNumber}E${ep.number} - ${ep.name}`;
 }
 
 async function _favOpenEpisodePicker(which) {
@@ -1801,6 +1801,10 @@ async function _favOpenEpisodePicker(which) {
 
 let _favEpisodeFlat = [];
 
+function _favHtmlEscape(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function _favRenderEpisodeList(items) {
   const listEl = document.getElementById('favEpisodeList');
   if (!items.length) { listEl.innerHTML = `<div class="sf-empty">No episodes found.</div>`; return; }
@@ -1809,7 +1813,10 @@ function _favRenderEpisodeList(items) {
   items.forEach(({ seasonNumber, ep }) => {
     if (seasonNumber !== lastSeason) { html += `<div class="sf-dd-group-label">Season ${seasonNumber}</div>`; lastSeason = seasonNumber; }
     const label = _favEpisodeLabel(seasonNumber, ep);
-    html += `<button type="button" class="fav-list-row" onclick="_favPickEpisode('${label.replace(/'/g,"\\'")}')">${label}</button>`;
+    // Saved value (passed to the click handler) stays the exact plain
+    // "S#E# - Name" string; the visible markup separately bolds just
+    // the episode name so it stands out from the S#E# prefix.
+    html += `<button type="button" class="fav-list-row" onclick="_favPickEpisode('${label.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">S${seasonNumber}E${ep.number} - <strong>${_favHtmlEscape(ep.name)}</strong></button>`;
   });
   listEl.innerHTML = html;
 }
