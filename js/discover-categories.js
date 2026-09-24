@@ -233,11 +233,11 @@ async function _discRunLinkSearch() {
       const poster = r.poster_path ? TMDB_IMG + r.poster_path : null;
       return `<div class="disc-link-result" onclick='_discSelectLinkResult(${r.id}, ${JSON.stringify(mediaType)})' style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s;">
         <div style="width:40px;height:58px;border-radius:4px;overflow:hidden;background:var(--bg-2);flex-shrink:0;">
-          ${poster ? `<img src="${poster}" style="width:100%;height:100%;object-fit:cover;">` : ''}
+          ${poster ? `<img src="${escHTML(poster)}" style="width:100%;height:100%;object-fit:cover;">` : ''}
         </div>
         <div style="min-width:0;">
-          <div style="font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
-          <div style="font-size:12px;color:var(--text-3);">${year || ''}</div>
+          <div style="font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHTML(title)}</div>
+          <div style="font-size:12px;color:var(--text-3);">${escHTML(year || '')}</div>
         </div>
       </div>`;
     }).join('');
@@ -269,7 +269,11 @@ async function _discSelectLinkResult(tmdbId, tmdbType) {
     goToTitle(tmdbType, tmdbId);
   } catch (err) {
     console.error('Link entries error:', err);
-    if (typeof showToast === 'function') showToast('Failed to link — try again.', 'err');
+    if (typeof showToast === 'function') {
+      showToast(isRateLimitError(err)
+        ? "You've linked a lot of titles recently — please try again later."
+        : 'Failed to link — try again.', 'err');
+    }
   }
 }
 
