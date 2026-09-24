@@ -265,10 +265,22 @@ function showToast(msg, type = 'ok') {
 }
 
 /* ── Poster helpers ── */
+/* ── Escaping helpers — use for ANY user- or API-supplied text going into innerHTML ── */
+function escHTML(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// Only http(s) URLs are allowed into src/href — blocks javascript:/data: payloads
+function safeURL(u) {
+  return (typeof u === 'string' && /^https?:\/\//i.test(u.trim())) ? escHTML(u.trim()) : '';
+}
+
 function posterHTML(entry, size) {
-  const letter = (entry.title || '?')[0].toUpperCase();
-  if (entry.poster_url && !entry.poster_url.startsWith('PLACEHOLDER')) {
-    return `<img src="${entry.poster_url}" alt="" loading="lazy">`;
+  const letter = escHTML((entry.title || '?')[0].toUpperCase());
+  const url = safeURL(entry.poster_url);
+  if (url) {
+    return `<img src="${url}" alt="" loading="lazy">`;
   }
   const sz = size === 'big' ? '52px' : size === 'sm' ? '22px' : '36px';
   return `<span style="font-size:${sz};display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--olive-light);font-family:var(--serif)">${letter}</span>`;
@@ -277,7 +289,23 @@ function posterHTML(entry, size) {
 function genreHTML(genres, max) {
   if (!genres || !genres.length) return '';
   const shown = max ? genres.slice(0, max) : genres;
-  return shown.map(g => `<span class="genre-dot">${g}</span>`).join('');
+  return shown.map(g => `<span class="genre-dot">${escHTML(g)}</span>`).join('');
+}
+
+/* ── Rate-limit errors ──
+   Used by every page that shows a "slow down" message. Covers both the
+   Supabase triggers/RPCs (message contains "rate_limit_exceeded", see
+   013/014 SQL) and TMDB 429s (TmdbRateLimitError from tmdbFetch). */
+const RATE_LIMIT_MESSAGE = "You're doing that too fast — please wait a minute and try again.";
+class TmdbRateLimitError extends Error {
+  constructor(msg) { super(msg); this.name = 'TmdbRateLimitError'; }
+}
+function isRateLimitError(err) {
+  if (!err) return false;
+  if (err instanceof TmdbRateLimitError || err.name === 'TmdbRateLimitError') return true;
+  const text = [err.message, err.details, err.hint, typeof err === 'string' ? err : '']
+    .filter(Boolean).join(' ');
+  return text.includes('rate_limit_exceeded');
 }
 
 /*
@@ -356,14 +384,6 @@ function closeModalIfBg(e) {
   if (e.target === document.getElementById('addModal')) closeModal();
 }
 
-function handleGlobalSearch() {
-  const q = document.getElementById('globalSearch')?.value?.trim();
-  if (q && q.length > 1) {
-    sessionStorage.setItem('searchQuery', q);
-    window.location.href = 'search.html';
-  }
-}
-
 /* ── Mark active nav link ── */
 function markActiveNav() {
   const page = window.location.pathname.split('/').pop() || 'index.html';
@@ -390,14 +410,6 @@ function toggleMobileSearch() {
   const isOpen = bar.classList.toggle('open');
   if (isOpen) {
     setTimeout(() => document.getElementById('mobileSearchInput')?.focus(), 120);
-  }
-}
-
-function handleMobileSearch() {
-  const q = document.getElementById('mobileSearchInput')?.value?.trim();
-  if (q && q.length > 1) {
-    sessionStorage.setItem('searchQuery', q);
-    window.location.href = 'search.html';
   }
 }
 
