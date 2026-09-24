@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Inter:wght@300;400;500;600;700&family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
 .pp-wrap { max-width:none; }
@@ -45,6 +45,7 @@
 .pp-info-label { font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); margin-bottom:3px; }
 .pp-info-value { font-size:clamp(12.5px, 3vw, 13.5px); color:var(--text); line-height:1.5; }
 .pp-info-value.muted { color:var(--text-2); }
+.pp-info-num { font-family:var(--bebas); font-size:clamp(17px, 4vw, 20px); letter-spacing:.5px; line-height:1.2; }
 
 /* ── Right column: name + bio + credits ── */
 .pp-eyebrow { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:.5rem; }
@@ -111,6 +112,15 @@
   .pp-info-value { font-size:12px; }
 }
 </style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 </head>
 <body>
 <div class="page-wrap">
@@ -169,6 +179,7 @@ function renderPerson(p) {
   document.getElementById('ppLoading').style.display = 'none';
   const c = document.getElementById('ppContent');
   c.style.display = '';
+  document.title = p.name ? `${p.name} — MyScreenScore` : 'MyScreenScore';
 
   const photo = p.profile_path ? `${TMDB_IMG.replace('w185','w342')}${p.profile_path}` : null;
   const bio = (p.biography || '').trim();
@@ -211,7 +222,7 @@ function renderPerson(p) {
         <div class="pp-info-card">
           <div class="pp-info-title">Personal Info</div>
           ${p.known_for_department ? `<div class="pp-info-row"><div class="pp-info-label">Known For</div><div class="pp-info-value">${esc(p.known_for_department)}</div></div>` : ''}
-          <div class="pp-info-row"><div class="pp-info-label">Known Credits</div><div class="pp-info-value">${knownCreditsCount}</div></div>
+          <div class="pp-info-row"><div class="pp-info-label">Known Credits</div><div class="pp-info-value pp-info-num">${knownCreditsCount}</div></div>
           ${p.gender != null && TMDB_GENDER[p.gender] ? `<div class="pp-info-row"><div class="pp-info-label">Gender</div><div class="pp-info-value">${TMDB_GENDER[p.gender]}</div></div>` : ''}
           ${p.birthday ? `<div class="pp-info-row"><div class="pp-info-label">${p.deathday ? 'Birthday' : 'Birthday'}</div><div class="pp-info-value">${esc(p.birthday)}${age != null ? ' (' + age + ' years old)' : ''}</div></div>` : ''}
           ${p.deathday ? `<div class="pp-info-row"><div class="pp-info-label">Day of Death</div><div class="pp-info-value">${esc(p.deathday)}</div></div>` : ''}
@@ -305,6 +316,15 @@ function _ppAge(birthday, deathday) {
   const m = end.getMonth() - start.getMonth();
   if (m < 0 || (m === 0 && end.getDate() < start.getDate())) age--;
   return age;
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
 }
 </script>
 </body>
