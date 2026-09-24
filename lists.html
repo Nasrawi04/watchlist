@@ -1760,8 +1760,8 @@ async function _favRunDiscoverSearch(q) {
       tmdbFetch(`${TMDB_BASE}/search/movie?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`).then(r => r.json()),
       tmdbFetch(`${TMDB_BASE}/search/tv?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`).then(r => r.json()),
     ]);
-    const movies = (movRes.results || []).slice(0, 8).map(r => ({ pseudoId: `tmdb:movie:${r.id}`, title: r.title, poster_url: r.poster_path ? TMDB_IMG + r.poster_path : null, year: (r.release_date||'').split('-')[0], tmdb_id: r.id, tmdb_type: 'movie' }));
-    const shows  = (tvRes.results || []).slice(0, 8).map(r => ({ pseudoId: `tmdb:tv:${r.id}`, title: r.name, poster_url: r.poster_path ? TMDB_IMG + r.poster_path : null, year: (r.first_air_date||'').split('-')[0], tmdb_id: r.id, tmdb_type: 'tv' }));
+    const movies = (movRes.results || []).slice(0, 8).map(r => ({ pseudoId: `tmdb:movie:${r.id}`, title: r.title, poster_url: r.poster_path ? TMDB_FULL + r.poster_path : null, thumb: r.poster_path ? TMDB_IMG + r.poster_path : null, year: (r.release_date||'').split('-')[0], tmdb_id: r.id, tmdb_type: 'movie' }));
+    const shows  = (tvRes.results || []).slice(0, 8).map(r => ({ pseudoId: `tmdb:tv:${r.id}`, title: r.name, poster_url: r.poster_path ? TMDB_FULL + r.poster_path : null, thumb: r.poster_path ? TMDB_IMG + r.poster_path : null, year: (r.first_air_date||'').split('-')[0], tmdb_id: r.id, tmdb_type: 'tv' }));
     const merged = [];
     const max = Math.max(movies.length, shows.length);
     for (let i = 0; i < max; i++) { if (movies[i]) merged.push(movies[i]); if (shows[i]) merged.push(shows[i]); }
@@ -1773,7 +1773,10 @@ async function _favRunDiscoverSearch(q) {
 
     // Cache immediately so selecting one resolves everywhere (favCard,
     // list-view.html, etc.) without waiting on a separate hydrate call.
-    merged.forEach(m => { _tmdbItemCache[m.pseudoId] = { id: m.pseudoId, title: m.title, poster_url: m.poster_url, tmdb_id: m.tmdb_id, tmdb_type: m.tmdb_type, year: m.year }; });
+    // Full-size (w500) poster goes in the cache — that's what the list's
+    // grid cards render. Never overwrite an item already hydrated from
+    // the details endpoint (it also carries genres/cat).
+    merged.forEach(m => { if (_tmdbItemCache[m.pseudoId]) return; _tmdbItemCache[m.pseudoId] = { id: m.pseudoId, title: m.title, poster_url: m.poster_url, tmdb_id: m.tmdb_id, tmdb_type: m.tmdb_type, year: m.year }; });
 
     document.getElementById('favListPickerList').innerHTML = merged.map(m => {
       const isSel = _favListPickerSelected.includes(m.pseudoId);
@@ -1781,7 +1784,7 @@ async function _favRunDiscoverSearch(q) {
       const rankCls = _favRankCls(slotNum);
       return `<div class="fav-picker-item ${isSel?'selected':''}" onmousedown="toggleFavListItem(this)" data-id="${m.pseudoId}">
         ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onmousedown="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
-        <div class="fav-picker-poster">${safeURL(m.poster_url) ? `<img src="${safeURL(m.poster_url)}" loading="lazy">` : esc((m.title[0]||'?').toUpperCase())}
+        <div class="fav-picker-poster">${safeURL(m.thumb || m.poster_url) ? `<img src="${safeURL(m.thumb || m.poster_url)}" loading="lazy">` : esc((m.title[0]||'?').toUpperCase())}
           ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
         </div>
         <div class="fav-picker-info"><div class="fav-picker-name">${esc(m.title)}</div><div class="fav-picker-sub">${m.tmdb_type==='movie'?'Movie':'TV'}${m.year?' · '+m.year:''}</div></div>
