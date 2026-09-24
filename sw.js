@@ -3,9 +3,19 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'mss-v557';
+const CACHE_VERSION = 'mss-v562';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
-const IMAGE_CACHE   = `${CACHE_VERSION}-images`;
+
+/* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
+   bumps the version, which used to wipe ALL cached posters, fonts and the
+   Supabase library too, so the first visit after every update re-downloaded
+   everything (the "sometimes slow" loads). These rarely change, so they now
+   survive deploys. */
+const IMAGE_CACHE   = 'mss-images';
+const FONT_CACHE    = 'mss-fonts';
+const VENDOR_CACHE  = 'mss-vendor';
+const KEEP_CACHES   = [STATIC_CACHE, IMAGE_CACHE, FONT_CACHE, VENDOR_CACHE];
+const IMAGE_CACHE_MAX = 500;   // oldest posters dropped past this
 
 /* Static assets to pre-cache on install */
 const STATIC_ASSETS = [
@@ -38,6 +48,7 @@ const STATIC_ASSETS = [
   'js/db.js',
   'js/nav.js',
   'js/discover-categories.js',
+  'js/sort-filter.js',
   'js/category.js',
   'js/rewatch.js',
   'js/create-card.js',
@@ -72,7 +83,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(k => k.startsWith('mss-') && k !== STATIC_CACHE && k !== IMAGE_CACHE)
+          .filter(k => k.startsWith('mss-') && !KEEP_CACHES.includes(k))
           .map(k => caches.delete(k))
       )
     )
@@ -102,7 +113,10 @@ self.addEventListener('fetch', event => {
   if (isHardReload && url.origin === self.location.origin) {
     event.respondWith((async () => {
       const keys = await caches.keys();
-      await Promise.all(keys.filter(k => k.startsWith('mss-')).map(k => caches.delete(k)));
+      // Only the versioned page/JS/CSS cache — posters, fonts and vendor
+      // libraries are content-addressed and never go stale in a way a
+      // hard refresh would fix, so wiping them just made the next loads slow.
+      await Promise.all(keys.filter(k => k.startsWith('mss-') && !KEEP_CACHES.includes(k) || k === STATIC_CACHE).map(k => caches.delete(k)));
       try {
         return await fetch(request);
       } catch {
@@ -130,13 +144,20 @@ self.addEventListener('fetch', event => {
 
   // Cloudinary images — cache first, fallback to network
   if (url.hostname.includes('cloudinary.com') || url.hostname.includes('res.cloudinary.com')) {
-    event.respondWith(cacheFirst(request, IMAGE_CACHE));
+    event.respondWith(cacheFirst(request, IMAGE_CACHE, IMAGE_CACHE_MAX));
+    return;
+  }
+
+  // Third-party libraries (Supabase JS etc.) — served instantly from cache,
+  // refreshed in the background.
+  if (url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'cdnjs.cloudflare.com') {
+    event.respondWith(staleWhileRevalidate(request, VENDOR_CACHE));
     return;
   }
 
   // Google Fonts — cache first
   if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE));
+    event.respondWith(cacheFirst(request, FONT_CACHE));
     return;
   }
 
@@ -156,14 +177,17 @@ self.addEventListener('fetch', event => {
 
 /* ══ Strategies ══ */
 
-async function cacheFirst(request, cacheName) {
+async function cacheFirst(request, cacheName, maxEntries) {
   const cached = await caches.match(request);
   if (cached) return cached;
   try {
     const response = await fetch(request);
+    // Opaque (no-cors) responses are skipped on purpose — browsers count
+    // each one as several MB of storage quota, which fills the cache fast.
     if (response.ok) {
       const cache = await caches.open(cacheName);
-      cache.put(request, response.clone());
+      await cache.put(request, response.clone());
+      if (maxEntries) trimCache(cacheName, maxEntries);
     }
     return response;
   } catch {
@@ -190,4 +214,12 @@ async function networkFirst(request) {
     const cached = await caches.match(request);
     return cached || caches.match('offline.html');
   }
+}
+
+// Keeps a cache from growing forever — drops the oldest entries first.
+async function trimCache(cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length <= maxEntries) return;
+  await Promise.all(keys.slice(0, keys.length - maxEntries).map(k => cache.delete(k)));
 }
