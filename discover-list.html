@@ -261,6 +261,42 @@ function _dlSfActive() {
   return _dlHasSF && (SF.getSort('dl', 'all') !== 'rank' || SF.filterCount('dl', 'all') > 0);
 }
 
+/* ── Returning to a list lands exactly where you left ──
+   Everything loaded so far (all the scrolled-in pages), the sort/filter
+   and the scroll position are saved when leaving; coming BACK restores
+   them instantly instead of starting over at page 1 — which is why the
+   page used to jump higher (the rows you'd scrolled past weren't there). */
+const _DL_STATE_KEY = 'dl_state_' + _dlCategory.key;
+const _dlIsBack = (performance.getEntriesByType('navigation')[0] || {}).type === 'back_forward';
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+function _dlSaveState() {
+  try {
+    sessionStorage.setItem(_DL_STATE_KEY, JSON.stringify({
+      t: Date.now(), items: _dlAllItems, page: _dlPage, done: _dlDone, y: window.scrollY,
+      sf: _dlHasSF ? { sort: SF.getSort('dl', 'all'), filter: SF.filterState('dl', 'all') } : null,
+    }));
+  } catch {}
+}
+window.addEventListener('pagehide', _dlSaveState);
+
+function _dlRestoreState() {
+  if (!_dlIsBack) return false;
+  try {
+    const st = JSON.parse(sessionStorage.getItem(_DL_STATE_KEY) || 'null');
+    if (!st || Date.now() - st.t > 30 * 60 * 1000 || !st.items?.length) return false;
+    _dlAllItems = st.items; _dlPage = st.page; _dlDone = st.done;
+    if (_dlHasSF && st.sf) SF.restoreState('dl', 'all', st.sf);
+    _dlRenderAll();
+    if (_dlDone) document.getElementById('dlEndMsg').style.display = '';
+    // Rows render instantly, so the position can be restored right away.
+    // Cards fade in via .dl-in-view — mark them visible so nothing shifts.
+    document.querySelectorAll('#dlGrid .dl-card, #dlGrid .dl-list-row').forEach(el => el.classList.add('dl-in-view'));
+    window.scrollTo({ top: st.y || 0, behavior: 'instant' }); // no smooth-scroll animation on restore
+    return true;
+  } catch { return false; }
+}
+
 async function _dlLoadAll() {
   let guard = 0;
   while (!_dlDone && guard++ < 40) {
@@ -375,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
   _dlRenderViewToggle();
 
   initPageGuest(async () => {
-    await _dlLoadMore();
+    if (!_dlRestoreState()) await _dlLoadMore();
     if (_dlHasSF) document.getElementById('dlSfBar').innerHTML = SF.bar('dl', 'all');
 
     const sentinel = document.getElementById('dlSentinel');
