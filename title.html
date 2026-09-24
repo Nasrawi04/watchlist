@@ -336,7 +336,7 @@
   <meta name="apple-mobile-web-app-title" content="MyScreenScore">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 </head>
 <body>
 <div class="page-wrap">
@@ -472,6 +472,7 @@ async function loadTitle() {
 function _tdBuildHTML(d, mssScore, ownEntry) {
   const isMovie = _tdType === 'movie';
   const title    = isMovie ? d.title : d.name;
+  if (title) document.title = `${title} — MyScreenScore`;
   const date     = isMovie ? d.release_date : d.first_air_date;
   const year     = (date || '').split('-')[0];
   const poster   = d.poster_path ? TMDB_FULL + d.poster_path : null;
@@ -1223,6 +1224,15 @@ async function _tdReactToNote(entryId, isLike) {
     _tdRenderNotes();
     showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
   }
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
 }
 </script>
 </body>
