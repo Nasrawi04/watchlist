@@ -3,7 +3,11 @@
 ══════════════════════════════════════════ */
 
 async function _fillNavUser(user) {
-  const profile  = await getProfile(user.id);
+  // Profile + friend-request badge fetched in parallel (was one after the other)
+  const [profile, pending] = await Promise.all([
+    getProfile(user.id),
+    countPendingRequests(user.id).catch(() => 0),
+  ]);
   window._navUserProfile = profile;  // store globally for create-card etc.
   window._navUser = user;
   const username = profile?.username || user.email?.split('@')[0] || 'You';
@@ -23,7 +27,6 @@ async function _fillNavUser(user) {
   }
   if (nm) nm.textContent = username;
 
-  const pending = await countPendingRequests(user.id);
   if (pending > 0) {
     document.querySelectorAll('[data-page="friends.html"]').forEach(el => {
       el.innerHTML += `<span class="nav-badge">${pending}</span>`;
@@ -57,8 +60,22 @@ async function initPage(onReady) {
     if (typeof onReady === 'function') await onReady(null, null);
     return;
   }
-  const profile = await _fillNavUser(user);
-  if (typeof onReady === 'function') await onReady(user, profile);
+  await _runPageReady(user, onReady);
+}
+
+// Nav fill and the page's own data loading used to run strictly one after
+// the other — the page couldn't start fetching until the nav's profile +
+// badge requests had finished. Now they run at the same time. Pages whose
+// callback takes (user, profile) still get the profile; they just wait for
+// it themselves. Callbacks that only take (user) start immediately.
+async function _runPageReady(user, onReady) {
+  const navP = _fillNavUser(user).catch(err => { console.error('Nav fill error:', err); return null; });
+  if (typeof onReady !== 'function') { await navP; return; }
+  if (onReady.length >= 2) {
+    await onReady(user, await navP);
+  } else {
+    await Promise.all([navP, onReady(user)]);
+  }
 }
 
 /* Guest-friendly init — no redirect; shows Sign In button in nav for unauthenticated visitors */
@@ -83,8 +100,7 @@ async function initPageGuest(onReady) {
     return;
   }
 
-  const profile = await _fillNavUser(user);
-  if (typeof onReady === 'function') await onReady(user, profile);
+  await _runPageReady(user, onReady);
 }
 
 /* ── Inject all chrome ── */
