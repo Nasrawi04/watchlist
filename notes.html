@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="MyScreenScore">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 <style>
 /* ── Personal / Social toggle ── */
 .pn-toggle {
@@ -102,7 +102,7 @@
   display:flex; align-items:center; justify-content:space-between;
   padding:18px 20px; border-bottom:0.5px solid var(--border); flex-shrink:0;
 }
-.notes-search-card-title { font-family:var(--serif); font-size:20px; font-weight:300; color:var(--text); }
+.notes-search-card-title { font-family:var(--serif); font-size:20px; font-weight:500; color:var(--text); }
 .notes-search-card-close { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:20px; line-height:1; }
 .notes-search-card-close:hover { color:var(--text); }
 .notes-search-input-wrap { position:relative; padding:16px 20px 12px; flex-shrink:0; }
@@ -272,7 +272,7 @@
 .note-popup2-poster{width:82px;height:120px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:26px;color:var(--olive-light);border:3px solid var(--bg-2);box-shadow:0 6px 16px rgba(0,0,0,0.35);}
 .note-popup2-poster img{width:100%;height:100%;object-fit:cover;}
 .note-popup2-info{flex:1;min-width:0;padding-bottom:4px;}
-.note-popup2-title{font-family:var(--serif);font-size:21px;font-weight:300;color:var(--text);margin-bottom:5px;line-height:1.2;}
+.note-popup2-title{font-family:var(--serif);font-size:21px;font-weight:500;color:var(--text);margin-bottom:5px;line-height:1.2;}
 .note-popup2-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
 .note-popup2-reactions{display:flex;gap:14px;padding:0 20px 14px;border-bottom:0.5px solid var(--border);}
 .note-popup2-reaction-count{display:inline-flex;align-items:center;gap:6px;color:var(--text-3);font-size:12.5px;font-weight:500;}
@@ -530,7 +530,7 @@ function renderNotesPage() {
     const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     const date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
     const posterEl = e.poster_url
-      ? `<div class="note-poster"><img src="${e.poster_url}" loading="lazy"></div>`
+      ? `<div class="note-poster"><img src="${safeURL(e.poster_url)}" loading="lazy"></div>`
       : `<div class="note-poster">${esc((e.title||'?')[0].toUpperCase())}</div>`;
     const counts = _notesReactionCounts[e.id] || { like: 0, dislike: 0 };
     return `<div class="note-row note-row-personal" onclick="openNotePopup2('${e.id}')">
@@ -731,7 +731,7 @@ async function _nuSearch(val) {
         if (r.type === 'user') {
           const initial = (r.username[0] || '?').toUpperCase();
           const avatarHTML = r.avatar_url
-            ? '<div class="ud-avatar"><img src="' + r.avatar_url + '" loading="lazy"></div>'
+            ? '<div class="ud-avatar"><img src="'+safeURL(r.avatar_url)+'" loading="lazy"></div>'
             : '<div class="ud-avatar">' + initial + '</div>';
           const highlighted = r.username.replace(reg, '<em>$1</em>');
           const display = r.display_name && r.display_name !== r.username ? r.display_name : '';
@@ -743,7 +743,7 @@ async function _nuSearch(val) {
         }
         // title
         const avatarHTML = r.poster_url
-          ? '<div class="ud-avatar"><img src="' + r.poster_url + '" loading="lazy"></div>'
+          ? '<div class="ud-avatar"><img src="'+safeURL(r.poster_url)+'" loading="lazy"></div>'
           : '<div class="ud-avatar">' + ((r.title || '?')[0] || '?').toUpperCase() + '</div>';
         const highlighted = esc(r.title).replace(reg, '<em>$1</em>');
         return '<div class="ud-item" data-i="' + i + '" onmousedown="_nuSelectResult(' + i + ')">'
@@ -1060,7 +1060,7 @@ function _renderSocialNotePopup(n) {
         </button>
       </div>
 
-      <button class="snote-rect-btn" style="width:100%;margin-top:10px;" onclick='openReplyPopup("note", ${JSON.stringify(n.entry_id)}, ${JSON.stringify(n.title)})'>
+      <button class="snote-rect-btn" style="width:100%;margin-top:10px;" onclick='openReplyPopup("note", ${attrJSON(n.entry_id)}, ${attrJSON(n.title)})'>
         ${icon('reply', 15)} View Replies
       </button>
     </div>
@@ -1395,7 +1395,7 @@ function _renderNotesSearchResults() {
   resultsEl.innerHTML = _notesSearchResultsList.map((e, i) => {
     const hasNote = e.notes && e.notes.trim();
     const posterEl = e.poster_url
-      ? `<img src="${e.poster_url}" loading="lazy">`
+      ? `<img src="${safeURL(e.poster_url)}" loading="lazy">`
       : esc((e.title||'?')[0].toUpperCase());
     return `<div class="notes-search-item" data-i="${i}" onclick="_notesPageSearchPick(${i})">
       <div class="notes-search-item-poster">${posterEl}</div>
@@ -1448,7 +1448,7 @@ function openNotePopup2(id) {
   const hasPoster = e.poster_url && !e.poster_url.startsWith('PLACEHOLDER');
   document.getElementById('notePopup2Blur').style.backgroundImage = hasPoster ? `url('${e.poster_url}')` : 'none';
   document.getElementById('notePopup2Blur').style.background = hasPoster ? '' : 'var(--olive-faint)';
-  document.getElementById('notePopup2Poster').innerHTML = hasPoster ? `<img src="${e.poster_url}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase());
+  document.getElementById('notePopup2Poster').innerHTML = hasPoster ? `<img src="${safeURL(e.poster_url)}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase());
   document.getElementById('notePopup2Title').textContent = e.title;
   document.getElementById('notePopup2Tags').innerHTML = genreHTML(e.genres||[], 4) + (date ? `<span class="note-date">${date}</span>` : '');
   document.getElementById('notePopup2Date').innerHTML = '';
