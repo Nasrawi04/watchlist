@@ -214,7 +214,7 @@
               <span>Username</span>
               <span class="field-hint" id="usernameHint"></span>
             </label>
-            <input class="field-input" id="setUsername" placeholder="your_username"
+            <input class="field-input" id="setUsername" placeholder="your_username" maxlength="30"
                    autocomplete="off" spellcheck="false"
                    oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();checkUsernameLive()">
           </div>
@@ -295,8 +295,8 @@ function populateSettings() {
   updateCharCount('setQuote', 'quoteCount', 200);
 
   const av = document.getElementById('settingsAvatar');
-  if (p?.avatar_url) {
-    av.innerHTML = `<img src="${p.avatar_url}" alt="">`;
+  if (safeURL(p?.avatar_url)) {
+    av.innerHTML = `<img src="${safeURL(p.avatar_url)}" alt="">`;
   } else {
     av.textContent = (un[0] || '?').toUpperCase();
   }
