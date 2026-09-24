@@ -837,7 +837,7 @@ async function _anilistSearch(query) {
             media(search: $search, type: ANIME, sort: POPULARITY_DESC) {
               id title { english romaji }
               episodes duration format startDate { year }
-              coverImage { medium large }
+              coverImage { medium large extraLarge }
               genres description(asHtml: false)
               season seasonYear
             }
@@ -926,7 +926,7 @@ function _anilistToEntry(media) {
   const title  = media.title?.english || media.title?.romaji || '';
   const year   = media.startDate?.year ? String(media.startDate.year) : '';
   const genres = (media.genres || []).slice(0, 5);
-  const poster = media.coverImage?.large || media.coverImage?.medium || null;
+  const poster = media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || null;
   const desc   = (media.description || '').replace(/<[^>]+>/g, '').trim();
   const isMovie = media.format === 'MOVIE';
   const duration = media.duration || null; // AniList gives duration in minutes
