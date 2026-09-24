@@ -71,7 +71,7 @@ function openCatInfoPopup(id) {
   const esc2 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   const pEl = document.getElementById('profInfoPoster');
-  pEl.innerHTML = e.poster_url ? `<img src="${e.poster_url}" loading="lazy">` : esc2((e.title||'?')[0].toUpperCase());
+  pEl.innerHTML = safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" loading="lazy">` : esc2((e.title||'?')[0].toUpperCase());
 
   document.getElementById('profInfoTitle').innerHTML = _catYearSpanHTML(e, esc2, 'pvi-title-year');
 
@@ -754,9 +754,9 @@ function _sfFilterBodyHTML(section) {
   const genreLabel = f.genres.length ? f.genres.join(', ') : 'Any Genre';
   const genreMenu = genres.map(g => `
     <label class="sf-check-row" onclick="event.stopPropagation();">
-      <input type="checkbox" ${f.genres.includes(g)?'checked':''} onchange="_sfStageGenre('${g.replace(/'/g,"\\'")}')">
+      <input type="checkbox" ${f.genres.includes(g)?'checked':''} onchange="_sfStageGenre(${attrJSON(g)})">
       <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-      <span>${g}</span>
+      <span>${escHTML(g)}</span>
     </label>`).join('');
 
   const isMovies = typeof IS_MOVIE_CAT === 'function' && IS_MOVIE_CAT();
@@ -849,7 +849,7 @@ function _sfRenderPersonMenu() {
   } else {
     const matches = all.filter(n => n.toLowerCase().includes(query)).slice(0, 50);
     menuEl.innerHTML = matches.length
-      ? matches.map(n => `<div class="td-dd-opt" onclick="event.stopPropagation();_sfPickPerson('${n.replace(/'/g,"\\'")}')">${n}</div>`).join('')
+      ? matches.map(n => `<div class="td-dd-opt" onclick="event.stopPropagation();_sfPickPerson(${attrJSON(n)})">${escHTML(n)}</div>`).join('')
       : `<div class="sf-empty">No matching names.</div>`;
   }
   dd.classList.add('open');
@@ -1446,7 +1446,7 @@ function renderMoviesWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
         <div class="w-genre">${_badge}${rtStr ? `<span class="w-ep-badge">${rtStr}</span>` : ''}</div>
       </div>
       <div class="w-ep-controls" onclick="event.stopPropagation()">
@@ -1485,8 +1485,8 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
       </div>
       <div class="wg-info" style="padding:8px 12px;gap:6px;">
         <div class="title-year-row">
-          <div class="wg-title" style="margin-bottom:0;">${e.title}</div>
-          ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
+          <div class="wg-title" style="margin-bottom:0;">${escHTML(e.title)}</div>
+          ${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}
         </div>
         ${rt ? `<div class="wg-genre" style="font-size:11px;"><span class="w-ep-badge">${rt}</span></div>` : ''}
         <div class="wg-controls" onclick="event.stopPropagation()" style="margin-top:auto;">
@@ -1517,7 +1517,7 @@ function renderWatchingList(items) {
         </div>` : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
         <div class="w-ep-row">
           ${_badge}
           <span class="w-ep-badge">${epStr}</span>
@@ -1588,8 +1588,8 @@ function renderWatchingGrid(items) {
       <div class="wg-info">
         <div style="margin-bottom:6px;">
           <div class="title-year-row" style="margin-bottom:4px;">
-            <div class="wg-title">${e.title}</div>
-            ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
+            <div class="wg-title">${escHTML(e.title)}</div>
+            ${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}
           </div>
         </div>
         ${epStr ? `<div class="wg-genre"><span class="w-ep-badge">${epStr}</span></div>` : ''}
@@ -1626,8 +1626,8 @@ function renderQueueGrid(items) {
       <div class="wg-info" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
         <div style="margin-bottom:6px;">
           <div class="title-year-row">
-            <div class="wg-title" style="margin-bottom:4px;">${e.title}</div>
-            ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
+            <div class="wg-title" style="margin-bottom:4px;">${escHTML(e.title)}</div>
+            ${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}
           </div>
           ${scope ? `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>` : ''}
         </div>
@@ -1928,7 +1928,7 @@ function _injectCommentsPopup() {
           box-shadow:var(--shadow);
         "></div>
         <div style="flex:1;min-width:0;">
-          <div id="commentsPopupTitle" style="font-family:var(--serif);font-size:18px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
+          <div id="commentsPopupTitle" style="font-family:var(--serif);font-size:18px;font-weight:500;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
           <div id="commentsPopupMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px;"></div>
           <div id="commentsPopupCount" style="font-size:12px;color:var(--olive-light);font-weight:500;"></div>
         </div>
@@ -2074,7 +2074,7 @@ function popReply(commentId, username, entryId) {
   const box = document.getElementById('pop-reply-form-' + commentId);
   if (!box) return;
   box.innerHTML = `<div class="det-reply-form">
-    <input class="det-reply-input" id="pop-ri-${commentId}" value="@${username} " placeholder="Reply…"
+    <input class="det-reply-input" id="pop-ri-${commentId}" value="@${escHTML(username)} " placeholder="Reply…"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();popPostReply('${commentId}','${entryId}')}">
     <button class="det-reply-send" onclick="popPostReply('${commentId}','${entryId}')">Send</button>
     <button class="det-comment-del" onclick="document.getElementById('pop-reply-form-${commentId}').innerHTML='';_popReplyFor=null" style="margin-left:4px;">✕</button>
@@ -2232,8 +2232,8 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
       </div>
       <div class="cg-grid-info" onclick="openGridPopup('${e.id}')">
         <div class="title-year-row">
-          <div class="wg-title">${e.title}</div>
-          ${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}
+          <div class="wg-title">${escHTML(e.title)}</div>
+          ${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}
         </div>
         ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
         <div class="cg-score-row"><span class="cg-score">${score != null ? `★ ${score}` : '—'}</span></div>
@@ -2373,7 +2373,7 @@ function _showRateNowPopup(title, id) {
         <div style="width:64px;height:64px;border-radius:50%;background:var(--olive-faint);border:1.5px solid var(--border-olive);display:flex;align-items:center;justify-content:center;">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--olive-light)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
         </div>
-        <div id="_rateNowTitle" style="font-family:var(--serif);font-size:26px;font-weight:300;color:var(--text);"></div>
+        <div id="_rateNowTitle" style="font-family:var(--serif);font-size:26px;font-weight:500;color:var(--text);"></div>
         <div style="font-size:13px;color:var(--text-2);line-height:1.6;max-width:260px;">Add your ratings to rank it in your collection.</div>
         <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:4px;">
           <button id="_rateNowBtn" style="width:100%;padding:12px;background:var(--olive);border:1.5px solid var(--olive-light);box-shadow:3px 3px 0 var(--olive-2);border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">Rate Now</button>
@@ -2407,7 +2407,7 @@ function showFinishedBanner(entry) {
   `;
   banner.innerHTML = `
     <div>
-      <div style="font-size:14px;font-weight:600;color:var(--text)">Finished "${entry.title}"!</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text)">Finished "${escHTML(entry.title)}"!</div>
       <div style="font-size:12px;color:var(--text-2);margin-top:2px">Mark as watched and add ratings?</div>
     </div>
     <button onclick="goToDetail('${entry.id}','${currentFile()}')" style="
@@ -2437,7 +2437,7 @@ function renderPausedList(items) {
     return `<div class="w-card" onclick="openCatInfoPopup('${e.id}')">
       <div class="w-poster">${posterHTML(e)}</div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:8px;">${e.year}</span>` : ''}</div></div>
+        <div class="w-top"><div class="w-title">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:8px;">${escHTML(e.year)}</span>` : ''}</div></div>
         <div class="w-ep-row">
           ${_badge}
           <span class="w-ep-badge" style="background:rgba(168,168,168,0.12);color:var(--text-2);border-color:var(--border-2)">On Pause</span>
@@ -2507,7 +2507,7 @@ function renderQueueList(items) {
     return `<div class="w-card" style="cursor:default;">
       <div class="w-poster" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">${posterHTML(e)}</div>
       <div class="w-body" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
-        <div class="w-top"><div class="w-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:8px;">${e.year}</span>` : ''}</div></div>
+        <div class="w-top"><div class="w-title">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:8px;">${escHTML(e.year)}</span>` : ''}</div></div>
         <div class="w-ep-row">${_badge}${scope ? `<span class="w-ep-badge">${scope}</span>` : ''}</div>
       </div>
       <div style="display:flex;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">
@@ -2539,10 +2539,10 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
         ${isRanked ? `<div style="font-family:var(--bebas);font-size:28px;font-weight:400;color:${i<3?'var(--olive-light)':'var(--text-2)'};text-align:center;min-width:44px;flex-shrink:0;">${i+1}</div>` : ''}
         <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : ''}</div>
         <div class="comp-info">
-          <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+          <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
           <div class="comp-meta">${_badge}</div>
           ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
-          ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">"${e.notes}"</div>` : ''}
+          ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">"${escHTML(e.notes)}"</div>` : ''}
           ${renderFavChips(e.ratings, e.cat)}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;" onclick="event.stopPropagation()">
@@ -2618,7 +2618,7 @@ function showFinishPopup(title) {
         <div style="width:64px;height:64px;border-radius:50%;background:var(--olive-faint);border:1.5px solid var(--border-olive);display:flex;align-items:center;justify-content:center;">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--olive-light)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
         </div>
-        <div style="font-family:var(--serif);font-size:28px;font-weight:300;color:var(--text);" id="_finishTitle">Finished!</div>
+        <div style="font-family:var(--serif);font-size:28px;font-weight:500;color:var(--text);" id="_finishTitle">Finished!</div>
         <div style="font-size:13px;color:var(--text-2);line-height:1.6;max-width:260px;">Is the show fully finished, or are there more seasons coming?</div>
         <div style="display:flex;flex-direction:column;gap:8px;width:100%;margin-top:6px;">
           <button onclick="chooseFinishStatus('completed')" style="width:100%;padding:12px;background:var(--olive);border:1.5px solid var(--olive-light);box-shadow:3px 3px 0 var(--olive-2);border-radius:var(--radius-sm);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">
@@ -2779,7 +2779,7 @@ function ccReply(commentId, entryId, username) {
   const box = document.getElementById('cc-reply-' + commentId);
   if (!box) return;
   box.innerHTML = `<div class="cc-reply-form">
-    <input id="cc-ri-${commentId}" value="@${username} " placeholder="Reply to @${username}…"
+    <input id="cc-ri-${commentId}" value="@${escHTML(username)} " placeholder="Reply to @${escHTML(username)}…"
            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ccPostReply('${entryId}','${commentId}')}">
     <button class="cc-send" onclick="ccPostReply('${entryId}','${commentId}')">Reply</button>
   </div>`;
@@ -2843,7 +2843,7 @@ function _injectQPModal() {
           box-shadow:var(--shadow);
         "></div>
         <div style="flex:1;min-width:0;">
-          <div id="qpTitle" style="font-family:var(--serif);font-size:17px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
+          <div id="qpTitle" style="font-family:var(--serif);font-size:17px;font-weight:500;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
           <div id="qpMeta" style="font-size:10px;color:var(--text-3);margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px;"></div>
           <div style="font-size:11px;color:var(--olive-light);font-weight:500;">From your watchlist</div>
         </div>
@@ -2934,7 +2934,7 @@ function _renderQPCardContent(e) {
   const slot = document.getElementById('qpMediaSection');
   if (!slot) return;
   slot.style.transition = 'opacity 180ms var(--ease), transform 180ms var(--ease)';
-  const posterSrc = e.poster_url ? `<img src="${e.poster_url}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);">` : '';
+  const posterSrc = safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);">` : '';
   slot.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;">
       <div style="width:100%;max-width:200px;max-height:40vh;aspect-ratio:0.67;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;">
@@ -2943,7 +2943,7 @@ function _renderQPCardContent(e) {
       <div style="width:100%;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;text-align:center;">
         <div>
           <div style="font-size:11px;color:var(--text-3);margin-bottom:3px;">Year</div>
-          <div style="font-family:var(--bebas);font-size:15px;color:var(--text);font-weight:400;">${e.year || '—'}</div>
+          <div style="font-family:var(--bebas);font-size:15px;color:var(--text);font-weight:400;">${escHTML(e.year || '—')}</div>
         </div>
         <div>
           <div style="font-size:11px;color:var(--text-3);margin-bottom:3px;">Status</div>
