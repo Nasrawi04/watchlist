@@ -239,11 +239,7 @@ async function requireAuth(redirect = 'login.html') {
   return user;
 }
 
-async function getProfile(userId) {
-  if (!sb) return null;
-  const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
-  return data;
-}
+// getProfile() lives in db.js (loaded on every page that needs it).
 
 async function handleLogout() {
   if (sb) await sb.auth.signOut();
