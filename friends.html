@@ -354,7 +354,7 @@ let _friendships = [];
 /* ── Avatar HTML helper — handles both photo and initial fallback ── */
 function avatarHtml(profile, size = 44, fontSize = 20) {
   const initial = (profile?.username?.[0] || '?').toUpperCase();
-  if (profile?.avatar_url) {
+  if (safeURL(profile?.avatar_url)) {
     return `<img src="${safeURL(profile.avatar_url)}"
                  style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;display:block;"
                  onerror="this.parentNode.innerHTML='${initial}'"
@@ -688,7 +688,7 @@ async function _udSearch(val) {
       }
       drop.innerHTML = _udResults.map((p, i) => {
         const initial = (p.username[0] || '?').toUpperCase();
-        const avatarHTML = p.avatar_url
+        const avatarHTML = safeURL(p.avatar_url)
           ? '<div class="ud-avatar"><img src="'+safeURL(p.avatar_url)+'" loading="lazy"></div>'
           : '<div class="ud-avatar">' + initial + '</div>';
         const reg = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
@@ -834,7 +834,7 @@ async function openMiniProfile(userId, username) {
     // Avatar
     const av = document.getElementById('mpAvatar');
     const un = profile?.username || username;
-    if (profile?.avatar_url) {
+    if (safeURL(profile?.avatar_url)) {
       av.innerHTML = '<img src="'+safeURL(profile.avatar_url)+'" alt="">';
     } else {
       av.textContent = (un[0]||'?').toUpperCase();
@@ -866,7 +866,7 @@ async function openMiniProfile(userId, username) {
     if (top5.length) {
       document.getElementById('mpPicksGrid').innerHTML = top5.map(e =>
         '<div class="mp-pick-card">'
-        + (e.poster_url ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : '<div class="mp-pick-letter">'+(e.title[0]||'?')+'</div>')
+        + (safeURL(e.poster_url) ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : '<div class="mp-pick-letter">'+(e.title[0]||'?')+'</div>')
         + '<div class="mp-pick-overlay"></div>'
         + '<div class="mp-pick-title">'+escHTML(e.title)+'</div>'
         + '</div>'
