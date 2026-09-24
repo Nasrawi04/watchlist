@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   sort-filter.js — Shared Sort & Filter system (v563)
+   sort-filter.js — Shared Sort & Filter system (v564)
 
    One implementation of the Sort / Filter popups for every page.
    Each page registers a "scope" describing what's different about it
@@ -36,6 +36,9 @@
      addedDate: e => e.completed_date || e.created_at,
      postSort: (section, sortedList) => sortedList,   // e.g. paused-to-bottom
      beforeSort: async (section, value) => {},        // e.g. fetch data a sort needs
+     beforeFilter: async (section, filter) => {},     // same, before a filter applies
+     scoreOf: e => number|null,     // what "Ratings" / Score use (default: liveScore)
+     scoreLabel: 'TMDB Score',      // Score filter heading (default: MyScreenScore)
      saveRatings: (entry, newRatings) => {},          // omit on read-only pages
    });
 
@@ -73,6 +76,8 @@ const SF = (() => {
     length:  { header: 'Length',       opts: [['longest', 'Longest'], ['shortest', 'Shortest']] },
     runtime: { header: 'Runtime',      opts: [['runtime_longest', 'Longest'], ['runtime_shortest', 'Shortest']] },
     episodes:{ header: 'Episode Count',opts: [['eps_most', 'Most'], ['eps_least', 'Fewest']] },
+    // Original list position (items carry _rank) — for ranked lists like Top 250
+    rank:    { header: 'Rank',         opts: [['rank', 'Top First'], ['rankRev', 'Bottom First']] },
   };
   const DEFAULT_SORTS   = ['alpha', 'added', 'release', 'ratings', 'length'];
   const DEFAULT_FILTERS = ['genre', 'year', 'score', 'length', 'person'];
@@ -135,11 +140,12 @@ const SF = (() => {
   }
 
   /* ── sorting engine ── */
+  function scoreFn(s) { return s.cfg.scoreOf || (e => liveScore(e)); }
   function sortEntries(s, section, base, value) {
     const a = [...base];
     const added = s.cfg.addedDate || (e => e.completed_date || e.created_at);
     const d = e => new Date(added(e) || 0);
-    const sc = e => liveScore(e) || 0;
+    const sc = e => scoreFn(s)(e) || 0;
     const byCreated = (x, y) => new Date(y.created_at) - new Date(x.created_at);
     let out;
     switch (value) {
@@ -168,6 +174,8 @@ const SF = (() => {
       case 'episodeNewest': out = a.sort((x, y) => new Date(y.ratings?._last_episode_date || 0) - new Date(x.ratings?._last_episode_date || 0)); break;
       case 'episodeOldest': out = a.sort((x, y) => new Date(x.ratings?._last_episode_date || 0) - new Date(y.ratings?._last_episode_date || 0)); break;
       case 'longest':       out = a.sort((x, y) => lengthOf(y) - lengthOf(x)); break;
+      case 'rank':          out = a.sort((x, y) => (x._rank ?? 1e9) - (y._rank ?? 1e9)); break;
+      case 'rankRev':       out = a.sort((x, y) => (y._rank ?? -1) - (x._rank ?? -1)); break;
       case 'shortest':      out = a.sort((x, y) => lengthOf(x) - lengthOf(y)); break;
       default:
         if (value && value.startsWith('rating:') && s.cfg.ratingSort?.value) {
@@ -192,8 +200,9 @@ const SF = (() => {
     if (f.genres?.length) out = out.filter(e => (e.genres || []).some(g => f.genres.includes(g)));
     if (f.yearMin)   out = out.filter(e => e.year && Number(e.year) >= Number(f.yearMin));
     if (f.yearMax)   out = out.filter(e => e.year && Number(e.year) <= Number(f.yearMax));
-    if (f.scoreMin)  out = out.filter(e => liveScore(e) != null && liveScore(e) >= Number(f.scoreMin));
-    if (f.scoreMax)  out = out.filter(e => liveScore(e) != null && liveScore(e) <= Number(f.scoreMax));
+    const sc = scoreFn(s);
+    if (f.scoreMin)  out = out.filter(e => sc(e) != null && sc(e) >= Number(f.scoreMin));
+    if (f.scoreMax)  out = out.filter(e => sc(e) != null && sc(e) <= Number(f.scoreMax));
     if (f.lengthMin) out = out.filter(e => lengthOf(e) >= Number(f.lengthMin));
     if (f.lengthMax) out = out.filter(e => lengthOf(e) <= Number(f.lengthMax));
     if (f._personMatchIds) out = out.filter(e => f._personMatchIds.includes(e.id));
@@ -419,7 +428,7 @@ const SF = (() => {
       html += `<div class="sf-section-label">Release Year</div>` + rangeRow('sfYearMin', 'sfYearMax', f.yearMin, f.yearMax, 'From', 'To');
     }
     if (on.has('score')) {
-      html += `<div class="sf-section-label">MyScreenScore <span class="sf-section-hint">(rated items only)</span></div>` +
+      html += `<div class="sf-section-label">${escHTML(s.cfg.scoreLabel || 'MyScreenScore')} <span class="sf-section-hint">(rated items only)</span></div>` +
         rangeRow('sfScoreMin', 'sfScoreMax', f.scoreMin, f.scoreMax, 'Min', 'Max', 'step="0.1" min="0" max="10"');
     }
     if (on.has('length')) {
@@ -465,6 +474,12 @@ const SF = (() => {
     if (!cur || !stagedFilter) { closeFilter(); return; }
     const { scope, section } = cur, s = S(scope);
     const staged = { ...stagedFilter };
+    if (s.cfg.beforeFilter) {
+      const btn = document.querySelector('#sfFilterCard .sf-apply-btn');
+      if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
+      try { await s.cfg.beforeFilter(section, staged); }
+      finally { if (btn) { btn.textContent = 'Apply'; btn.disabled = false; } }
+    }
     // Actor/director needs each entry's credits (fetched once, then cached).
     if (staged.person && staged.person.trim()) {
       const q = staged.person.trim().toLowerCase();
