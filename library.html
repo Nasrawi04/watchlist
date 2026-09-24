@@ -1011,7 +1011,6 @@ var _libCollapsed = {watching:false,queue:false,completed:false};
 var _libWatchView = localStorage.getItem('prof_libWatchView')||'list';
 var _libQueueView = localStorage.getItem('prof_libQueueView')||'grid';
 var _libCompView  = localStorage.getItem('prof_libCompView')||'list';
-var _libStatusFilter = '';
 var _libCatFilter = '';
 var _libEntries = [];
 var _pendingExport = null, _exportTheme = 'dark';
@@ -1593,7 +1592,7 @@ function _libApplyTypeFilter() {
 function _libSortBar(sec){
   var cur=_libSort[sec]||'newest';
   var f=_libFilter[sec]||{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:''};
-  var filterCount=(f.genres||[]).length+(f.yearMin||f.yearMax?1:0)+(f.scoreMin||f.scoreMax?1:0)+(f.lengthMin||f.lengthMax?1:0)+(f.person?1:0);
+  var filterCount=(f.genres||[]).length+(f.yearMin||f.yearMax?1:0)+(f.scoreMin||f.scoreMax?1:0)+(f.lengthMin||f.lengthMax?1:0)+(f.person?1:0)+(f.status?1:0);
   return '<div class="sort-bar sf-trigger-row">'
     + '<button class="sf-icon-btn'+(cur!=='newest'?' active':'')+'" onclick="openLibSortPopup(\''+sec+'\')" aria-label="Sort">'
     + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>'
@@ -1712,9 +1711,9 @@ document.addEventListener('click',function(){document.querySelectorAll('.sf-dd.o
 window.addEventListener('scroll',function(){document.querySelectorAll('.sf-dd.open').forEach(function(el){el.classList.remove('open');var m=el.querySelector('.td-dd-menu');if(m)m.style.cssText='';});});
 
 /* ── Filter popup (per section): Genre, Year, Score, Runtime/Episode, Actor ── */
-var _libFilter={watching:{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:''},
-                queue:{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:''},
-                completed:{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:''}};
+var _libFilter={watching:{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:'',status:''},
+                queue:{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:'',status:''},
+                completed:{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:'',status:''}};
 var _libStagedFilter=null, _libFilterSection=null;
 var _libAllGenres=['Action','Adventure','Animation','Comedy','Crime','Documentary','Drama','Family','Fantasy','History','Horror','Music','Mystery','Romance','Science Fiction','Thriller','TV Movie','War','Western'];
 var _libCastCache={}, _libPersonNames={};
@@ -1767,7 +1766,7 @@ function openLibFilterPopup(sec){
   _libInjectFilterOverlay();
   _libFilterSection=sec;
   var cur=_libFilter[sec];
-  _libStagedFilter={genres:cur.genres.slice(),yearMin:cur.yearMin,yearMax:cur.yearMax,scoreMin:cur.scoreMin,scoreMax:cur.scoreMax,lengthMin:cur.lengthMin,lengthMax:cur.lengthMax,person:cur.person};
+  _libStagedFilter={genres:cur.genres.slice(),yearMin:cur.yearMin,yearMax:cur.yearMax,scoreMin:cur.scoreMin,scoreMax:cur.scoreMax,lengthMin:cur.lengthMin,lengthMax:cur.lengthMax,person:cur.person,status:cur.status||''};
   document.getElementById('libFilterBody').innerHTML=_libFilterBodyHTML();
   document.getElementById('sfFilterOverlay').classList.add('open');
   document.body.style.overflow='hidden';
@@ -1780,13 +1779,21 @@ function closeLibFilterPopup(){
 }
 function _libFilterBodyHTML(){
   var f=_libStagedFilter;
+  var statusLabels={'':'All','completed':'Watched','ongoing':'To Be Continued'};
+  var statusRows=_libFilterSection==='completed' ? Object.entries(statusLabels).map(function(kv){
+    var v=kv[0],l=kv[1];
+    return '<label class="sf-check-row"><input type="checkbox" name="libStatusStaged" '+(f.status===v?'checked':'')+' onchange="_libStagedFilter.status=\''+v+'\';document.getElementById(\'libFilterBody\').innerHTML=_libFilterBodyHTML();">'
+      +'<span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span>'+l+'</span></label>';
+  }).join('') : '';
+  var statusSection=_libFilterSection==='completed' ? ('<div class="sf-section-label">Status</div><div class="sf-check-list">'+statusRows+'</div>') : '';
   var genreLabel=f.genres.length?f.genres.join(', '):'Any Genre';
   var genreMenu=_libAllGenres.map(function(g){
     return '<label class="sf-check-row" onclick="event.stopPropagation();"><input type="checkbox" '+(f.genres.indexOf(g)>-1?'checked':'')+' onchange="_libStageGenre(\''+g.replace(/'/g,"\\'")+'\')">'
       +'<span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span>'+g+'</span></label>';
   }).join('');
   var lengthLabel=_libCatFilter==='movies'?'Runtime (minutes)':_libCatFilter==='tv'?'Episode Count':'Runtime / Episode Count';
-  return '<div class="sf-section-label">Genre</div>'
+  return statusSection
+    +'<div class="sf-section-label">Genre</div>'
     +'<div class="td-dd sf-dd sf-dd-wide" id="libGenreDD"><button type="button" class="td-dd-trigger sf-dd-trigger'+(f.genres.length?' active':'')+'" onclick="event.stopPropagation();_libToggleDD(\'libGenreDD\')">'
     +'<span class="td-dd-label">'+genreLabel+'</span><svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
     +'<div class="td-dd-menu sf-check-menu">'+genreMenu+'</div></div>'
@@ -1862,7 +1869,7 @@ function _libStageRanges(){
   _libStagedFilter.lengthMin=val('libLengthMin');_libStagedFilter.lengthMax=val('libLengthMax');
 }
 function _libClearStagedFilter(){
-  _libStagedFilter={genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:''};
+  _libStagedFilter={genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:'',status:''};
   document.getElementById('libFilterBody').innerHTML=_libFilterBodyHTML();
 }
 async function _libApplyFilterPopup(){
@@ -1890,6 +1897,7 @@ async function _libApplyFilterPopup(){
 function _libFilterEntries(sec,arr){
   var f=_libFilter[sec];
   var result=arr;
+  if(f.status) result=result.filter(function(e){return e.status===f.status;});
   if(f.genres.length) result=result.filter(function(e){return (e.genres||[]).some(function(g){return f.genres.indexOf(g)>-1;});});
   if(f.yearMin) result=result.filter(function(e){return e.year&&Number(e.year)>=Number(f.yearMin);});
   if(f.yearMax) result=result.filter(function(e){return e.year&&Number(e.year)<=Number(f.yearMax);});
@@ -1901,7 +1909,6 @@ function _libFilterEntries(sec,arr){
   return result;
 }
 function setLibSort(sec,val){_libSort[sec]=val;renderLibrary();}
-function setLibStatus(s){_libStatusFilter=s;renderLibrary();}
 function setLibCat(c){_libCatFilter=c;renderLibrary();}
 
 /* ── Rating filter popup (shared markup/CSS pattern with category.js) ── */
@@ -1995,7 +2002,7 @@ function renderLibrary(){
   var _filteredAll = _pEntries.filter(function(e){return !_libCatFilter||e.cat===_libCatFilter;});
   var _fSt = computeStats(_filteredAll);
   var _fHours = Math.round((_fSt.movieMins||0)/60);
-  var completed=_libApplySort(_libStatusFilter?compAll.filter(function(e){return e.status===_libStatusFilter;}):compAll,_libSort.completed);
+  var completed=_libApplySort(compAll,_libSort.completed);
   var st=computeStats(_libEntries);
 
   // Stats bar
@@ -2065,15 +2072,10 @@ function renderLibrary(){
   }
 
   // Completed
-  var statusTabs='<div class="cat-filter" style="margin-bottom:12px;">'
-    +'<button class="cf-btn'+(_libStatusFilter===''?' active':'')+'" onclick="setLibStatus(this.dataset.s)" data-s="">All</button>'
-    +'<button class="cf-btn'+(_libStatusFilter==='completed'?' active':'')+'" onclick="setLibStatus(this.dataset.s)" data-s="completed">Watched</button>'
-    +'<button class="cf-btn'+(_libStatusFilter==='ongoing'?' active':'')+'" onclick="setLibStatus(this.dataset.s)" data-s="ongoing">To Be Continued</button>'
-    +'</div>';
   var isRanked=_libSort.completed==='highest'||_libSort.completed==='lowest';
   var ratingKey=(_libSort.completed||'').indexOf('rating:')===0?_libSort.completed.slice(7):null;
   var cc;
-  if(!completed.length){cc=statusTabs+'<div class="fv-empty">Nothing here yet.</div>';}
+  if(!completed.length){cc='<div class="fv-empty">Nothing here yet.</div>';}
   else if(_libCompView==='grid'){
     var cg='libcg';
     var ccs=completed.map(function(e,i){
@@ -2107,9 +2109,9 @@ function renderLibrary(){
         +_libCcBtn('prof',e.id)
         +'</div></div>';
     }).join('');
-    cc=statusTabs+_libGridWrap(cg,'<div class="watching-grid" id="'+cg+'">'+ccs+'</div>');
+    cc=_libGridWrap(cg,'<div class="watching-grid" id="'+cg+'">'+ccs+'</div>');
   } else {
-    cc=statusTabs+'<div class="fv-ranked-list">'+completed.map(function(e,i){
+    cc='<div class="fv-ranked-list">'+completed.map(function(e,i){
       var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
       var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
       var isMc=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
