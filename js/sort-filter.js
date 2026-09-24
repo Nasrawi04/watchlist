@@ -584,13 +584,20 @@ const SF = (() => {
     scopes[scope] = { cfg, sort: cfg.sortState || {}, filter: {}, personNames: {} };
   }
   function invalidate(scope) { if (scopes[scope]) scopes[scope].personNames = {}; }
+  // Put back a saved sort/filter (e.g. when returning to a page)
+  function restoreState(scope, section, state) {
+    const s = S(scope);
+    if (!state) return;
+    if (state.sort) s.sort[section] = state.sort;
+    if (state.filter) s.filter[section] = state.filter;
+  }
   function clearFilters(scope, section) {
     const s = S(scope);
     if (section) delete s.filter[section]; else s.filter = {};
   }
 
   return {
-    register, list, refresh, bar, setSort, getSort, invalidate, clearFilters,
+    register, list, refresh, bar, setSort, getSort, invalidate, clearFilters, restoreState,
     openSort, closeSort, openFilter, closeFilter,
     filterCount: (scope, section) => filterCount(getFilter(scope, section)),
     filterState: (scope, section) => getFilter(scope, section),
