@@ -1258,7 +1258,7 @@ function _profStatBox(num, label) {
 }
 
   var friendBtnHTML = _friendBtnHTML();
-  var avHTML = p.avatar_url
+  var avHTML = safeURL(p.avatar_url)
     ? '<img src="'+safeURL(p.avatar_url)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
     : esc((un[0]||'?').toUpperCase());
 
@@ -1613,7 +1613,7 @@ function renderPvNotes() {
   el.innerHTML = withNotes.map(function(e) {
     var score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     var date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '';
-    var posterEl = e.poster_url
+    var posterEl = safeURL(e.poster_url)
       ? '<div class="note-poster"><img src="'+safeURL(e.poster_url)+'" loading="lazy"></div>'
       : '<div class="note-poster">'+(e.title||'?')[0].toUpperCase()+'</div>';
     return '<div class="note-row" onclick="openNotePopup2(this.dataset.id)" data-id="'+e.id+'" style="cursor:pointer">'
@@ -1851,7 +1851,7 @@ function pvOpenNote(id) {
   const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
   const date  = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
   document.getElementById('pvNotePopupInner').innerHTML =
-    (e.poster_url ? '<img class="note-popup-poster" src="'+safeURL(e.poster_url)+'">' : '<div class="note-popup-poster-ph">'+(e.title||'?')[0].toUpperCase()+'</div>')
+    (safeURL(e.poster_url) ? '<img class="note-popup-poster" src="'+safeURL(e.poster_url)+'">' : '<div class="note-popup-poster-ph">'+(e.title||'?')[0].toUpperCase()+'</div>')
     + '<div class="note-popup-body">'
     + '<div class="note-popup-title">'+escHTML(e.title)+'</div>'
     + '<div class="note-popup-meta">'+(CAT_META[e.cat]?.label||'')+(date?' · '+date:'')+(score?'<span class="note-popup-score">'+score+' / 10</span>':'')+'</div>'
@@ -2565,7 +2565,7 @@ function openNotePopup2(id) {
   if (!e) return;
   var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
   var date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
-  document.getElementById('notePopup2Poster').innerHTML = e.poster_url ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : esc((e.title[0]||'?').toUpperCase());
+  document.getElementById('notePopup2Poster').innerHTML = safeURL(e.poster_url) ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : esc((e.title[0]||'?').toUpperCase());
   document.getElementById('notePopup2Title').textContent = e.title;
   document.getElementById('notePopup2Tags').innerHTML = genreHTML(e.genres||[]) + (date?'<span class="note-date">'+date+'</span>':'');
   document.getElementById('notePopup2Date').innerHTML = '';
@@ -2639,7 +2639,7 @@ function openInfoPopup(id) {
   var esc2 = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 
   var pEl = document.getElementById('pviPoster');
-  pEl.innerHTML = e.poster_url ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : esc2((e.title||'?')[0].toUpperCase());
+  pEl.innerHTML = safeURL(e.poster_url) ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : esc2((e.title||'?')[0].toUpperCase());
 
   var isMovie = e.cat==='movies' || (e.ratings && e.ratings._media_type==='movie');
   var start = e.year || null;
