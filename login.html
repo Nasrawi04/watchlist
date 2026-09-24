@@ -452,18 +452,20 @@ async function doSignIn(e) {
   // If username mode, look up email from username
   if (mode === 'username') {
     try {
-      const { data: lookedUpEmail, error } = await sb.rpc('get_email_for_login', { p_username: identifier });
+      // Returns the email only if the password is correct (see 014 SQL) —
+      // wrong password and unknown username get the same NULL response.
+      const { data: lookedUpEmail, error } = await sb.rpc('get_email_for_login', { p_username: identifier, p_password: pass });
       if (error) {
         if (isRateLimitError(error)) {
-          showErr('siError', RATE_LIMIT_MESSAGE);
+          showErr('siError', 'Too many attempts — please wait a minute and try again.');
         } else {
-          showErr('siError', 'Username not found.');
+          showErr('siError', 'Could not sign in — please try again.');
         }
         btn.disabled = false; btn.textContent = "Let's go →";
         return;
       }
       if (!lookedUpEmail) {
-        showErr('siError', 'Username not found.');
+        showErr('siError', 'Invalid username or password.');
         btn.disabled = false; btn.textContent = "Let's go →";
         return;
       }
@@ -530,12 +532,6 @@ async function doSignUp(e) {
   if (data?.session) {
     window.location.href = 'index.html';
   } else if (data?.user) {
-    // Store email in profiles for username login lookup
-    try {
-      await sb.from('profiles').update({ email }).eq('id', data.user.id);
-    } catch(e) {
-      console.warn('Could not store email in profiles:', e);
-    }
     document.querySelector('.flip-card__back').innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:1rem 0;text-align:center">
         <div style="opacity:.5">
