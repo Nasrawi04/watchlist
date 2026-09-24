@@ -63,6 +63,49 @@ async function initPage(onReady) {
   await _runPageReady(user, onReady);
 }
 
+/* ══════════════════════════════════════════
+   Scroll restore on Back / reload (all pages)
+   Most pages reload when you come back (so fresh edits show up) and
+   their content arrives a moment later from the database — the browser
+   restored the scroll against a half-empty page, landing you higher up.
+   Now the position is saved on leave and re-applied once the page has
+   loaded its data, correcting for late content for a moment and
+   stopping the instant you scroll yourself. Pages with their own
+   restore (Discover) set window.MSS_OWN_SCROLL = true.
+══════════════════════════════════════════ */
+const _MSS_SCROLL_KEY = 'mss_scroll:' + location.pathname + location.search;
+const _mssNavType = (performance.getEntriesByType('navigation')[0] || {}).type;
+const _mssReturning = _mssNavType === 'back_forward' || _mssNavType === 'reload';
+if (_mssReturning && 'scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.addEventListener('pagehide', () => {
+  if (window.MSS_OWN_SCROLL) return;
+  try { sessionStorage.setItem(_MSS_SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
+});
+
+let _mssScrollRestored = false;
+function _mssRestoreScroll() {
+  if (_mssScrollRestored || window.MSS_OWN_SCROLL || !_mssReturning) return;
+  _mssScrollRestored = true;
+  const target = Number(sessionStorage.getItem(_MSS_SCROLL_KEY) || 0);
+  if (!target) return;
+  let stop = false;
+  const end = () => { stop = true; obs.disconnect(); clearTimeout(timer); };
+  const apply = () => {
+    if (stop) return;
+    window.scrollTo({ top: target, behavior: 'instant' }); // skip the site's smooth scrolling
+    const maxY = document.documentElement.scrollHeight - window.innerHeight;
+    if (Math.abs(window.scrollY - target) < 4 && maxY >= target) end();
+  };
+  // Late content (images, lazy sections) can still grow the page —
+  // re-apply as it changes, for up to 3s.
+  const obs = new MutationObserver(() => requestAnimationFrame(apply));
+  obs.observe(document.body, { childList: true, subtree: true });
+  const timer = setTimeout(end, 3000);
+  ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(ev =>
+    window.addEventListener(ev, end, { passive: true, once: true }));
+  apply();
+}
+
 // Nav fill and the page's own data loading used to run strictly one after
 // the other — the page couldn't start fetching until the nav's profile +
 // badge requests had finished. Now they run at the same time. Pages whose
@@ -70,11 +113,15 @@ async function initPage(onReady) {
 // it themselves. Callbacks that only take (user) start immediately.
 async function _runPageReady(user, onReady) {
   const navP = _fillNavUser(user).catch(err => { console.error('Nav fill error:', err); return null; });
-  if (typeof onReady !== 'function') { await navP; return; }
-  if (onReady.length >= 2) {
-    await onReady(user, await navP);
-  } else {
-    await Promise.all([navP, onReady(user)]);
+  if (typeof onReady !== 'function') { await navP; _mssRestoreScroll(); return; }
+  try {
+    if (onReady.length >= 2) {
+      await onReady(user, await navP);
+    } else {
+      await Promise.all([navP, onReady(user)]);
+    }
+  } finally {
+    _mssRestoreScroll();
   }
 }
 
@@ -96,7 +143,8 @@ async function initPageGuest(onReady) {
     document.querySelector('.btn-add:not([href])')?.remove();
     document.querySelector('.fab')?.setAttribute('style', 'display:none');
     _updateMobileNavForGuest();
-    if (typeof onReady === 'function') await onReady(null, null);
+    try { if (typeof onReady === 'function') await onReady(null, null); }
+    finally { _mssRestoreScroll(); }
     return;
   }
 
