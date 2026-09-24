@@ -860,7 +860,7 @@ function _onCardLinkSearchInput(query) {
       return `<div class="card-link-result" onclick="_pickCardLinkMatch(${i})">
         <div class="card-link-result-poster">${posterEl}</div>
         <div>
-          <div class="card-link-result-title">${title}</div>
+          <div class="card-link-result-title">${escHTML(title)}</div>
           <div class="card-link-result-meta">${typeLabel}${year ? ' · ' + year : ''}</div>
         </div>
       </div>`;
