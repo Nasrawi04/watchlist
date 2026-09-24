@@ -153,9 +153,53 @@ function _discBuildLayout() {
     </div>`).join('');
 }
 
+/* ── Returning to Discover lands exactly where you left ──
+   Each row's items are kept in sessionStorage for 15 min, so coming BACK
+   renders every row instantly (full height right away) and the saved
+   scroll position is restored before anything can shift it. Previously
+   the page force-reloaded on back and refilled rows one by one, so the
+   browser restored the scroll against a half-empty page and you ended up
+   several rows higher. */
+const _DISC_CACHE_TTL = 15 * 60 * 1000;
+const _discIsBack = (performance.getEntriesByType('navigation')[0] || {}).type === 'back_forward';
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+let _discTargetY = _discIsBack ? Number(sessionStorage.getItem('disc_scrollY') || 0) : 0;
+let _discUserScrolled = false;
+['wheel', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, () => { _discUserScrolled = true; }, { passive: true, once: true }));
+window.addEventListener('pagehide', () => { try { sessionStorage.setItem('disc_scrollY', String(window.scrollY)); } catch {} });
+
+function _discCacheGet(key) {
+  try {
+    const c = JSON.parse(sessionStorage.getItem('disc_cache_' + key) || 'null');
+    return c && Date.now() - c.t < _DISC_CACHE_TTL ? c.items : null;
+  } catch { return null; }
+}
+function _discCacheSet(key, items) {
+  try { sessionStorage.setItem('disc_cache_' + key, JSON.stringify({ t: Date.now(), items })); } catch {}
+}
+// Re-applies the saved position as rows fill in, until it's reached or
+// the person starts scrolling themselves.
+function _discRestoreScroll() {
+  if (!_discTargetY || _discUserScrolled) return;
+  window.scrollTo({ top: _discTargetY, behavior: 'instant' }); // site CSS uses smooth scrolling — skip the animation here
+  if (Math.abs(window.scrollY - _discTargetY) < 4) _discTargetY = 0;
+}
+
+function _discRenderCategory(cat, items) {
+  const grid = document.getElementById(`discGrid-${cat.key}`);
+  if (!grid) return;
+  if (!items.length) {
+    document.getElementById(`disc-${cat.key}`).style.display = 'none';
+    return;
+  }
+  const limit = window.matchMedia('(max-width:640px)').matches ? 6 : 12;
+  grid.innerHTML = items.slice(0, limit).map(it => _discCardHTML(it)).join('');
+}
+
 async function _discLoadCategory(cat) {
   try {
     const items = await cat.fetch(1);
+    _discCacheSet(cat.key, items.slice(0, 12));
     const grid = document.getElementById(`discGrid-${cat.key}`);
     if (!grid) return;
     if (!items.length) {
@@ -170,6 +214,7 @@ async function _discLoadCategory(cat) {
     grid.innerHTML = items.slice(0, limit).map(it =>
       _discCardHTML(it)
     ).join('');
+    _discRestoreScroll();
   } catch (e) {
     console.error(`Discover fetch error (${cat.key}):`, e);
     const section = document.getElementById(`disc-${cat.key}`);
@@ -212,24 +257,29 @@ function _initDiscSideNavScrollSpy() {
   sections.forEach(s => obs.observe(s));
 }
 
-// Returning via browser back/forward can restore this page from the
-// bfcache with stale data (e.g. an entry just added/edited elsewhere
-// wouldn't show up here) instead of re-running this page's scripts.
-window.addEventListener('pageshow', (event) => {
-  if (event.persisted) location.reload();
-});
+// (No forced reload on back/forward here — Discover shows TMDB data, not
+// the person's own entries, so a bfcache restore is already up to date and
+// keeps the exact scroll position for free.)
 
 document.addEventListener('DOMContentLoaded', () => {
   initDiscoverSearch('heroSearch', { max: 20, connected: true, includePersons: true });
+  // Layout + any rows cached from this session are drawn right away (none
+  // of it depends on sign-in), so coming back restores the scroll position
+  // on the very first frame instead of after the auth check.
+  _discBuildLayout();
+  const toFetch = [];
+  DISCOVER_CATEGORIES.forEach(cat => {
+    const cached = _discCacheGet(cat.key);
+    if (cached) _discRenderCategory(cat, cached); else toFetch.push(cat);
+  });
+  _discRestoreScroll();
+  _initDiscSideNavScrollSpy();
+
   initPageGuest(async () => {
-    _discBuildLayout();
-    // Loaded with a small stagger (not all 13+ requests fired at once) —
-    // easier on TMDB's shared API key with many users hitting the page
-    // at the same time, and sections above the fold still appear fast.
-    DISCOVER_CATEGORIES.forEach((cat, i) => {
-      setTimeout(() => _discLoadCategory(cat), i * 220);
-    });
-    _initDiscSideNavScrollSpy();
+    _discRestoreScroll(); // nav just rendered — re-apply once more
+    // Uncached rows load with a small stagger (not all 13+ requests at
+    // once) — easier on TMDB's shared API key.
+    toFetch.forEach((cat, i) => setTimeout(() => _discLoadCategory(cat), i * 220));
   });
 });
 </script>
