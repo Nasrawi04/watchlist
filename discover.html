@@ -163,6 +163,7 @@ function _discBuildLayout() {
 const _DISC_CACHE_TTL = 15 * 60 * 1000;
 const _discIsBack = (performance.getEntriesByType('navigation')[0] || {}).type === 'back_forward';
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.MSS_OWN_SCROLL = true; // this page restores its own position (faster, cached rows)
 let _discTargetY = _discIsBack ? Number(sessionStorage.getItem('disc_scrollY') || 0) : 0;
 let _discUserScrolled = false;
 ['wheel', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, () => { _discUserScrolled = true; }, { passive: true, once: true }));
