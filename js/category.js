@@ -1144,10 +1144,10 @@ function _catTypeFilterBar() {
 let _catStagedTypeFilter = 'all';
 
 function _injectCatTypeFilterOverlay() {
-  if (document.getElementById('sfFilterOverlay')) return;
+  if (document.getElementById('sfTypeFilterOverlay')) return;
   const el = document.createElement('div');
-  el.id = 'sfFilterOverlay';
-  el.innerHTML = `<div id="sfFilterCard">
+  el.id = 'sfTypeFilterOverlay';
+  el.innerHTML = `<div id="sfTypeFilterCard">
     <div class="sf-header">
       <div class="sf-title">Filter</div>
       <button class="sf-close" onclick="closeCatTypeFilterPopup()">${icon('x', 18)}</button>
@@ -1166,12 +1166,12 @@ function openCatTypeFilterPopup() {
   _injectCatTypeFilterOverlay();
   _catStagedTypeFilter = _catTypeFilter;
   document.getElementById('catTypeFilterBody').innerHTML = _catTypeFilterBodyHTML();
-  document.getElementById('sfFilterOverlay').classList.add('open');
+  document.getElementById('sfTypeFilterOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 function closeCatTypeFilterPopup() {
-  const ov = document.getElementById('sfFilterOverlay');
+  const ov = document.getElementById('sfTypeFilterOverlay');
   if (!ov) return;
   ov.classList.remove('open');
   document.body.style.overflow = '';
