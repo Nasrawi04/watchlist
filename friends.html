@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MyScreenScore</title>
+<title>Friends — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -248,7 +248,7 @@
   margin-bottom:.75rem;
 }
 .mp-avatar img { width:100%;height:100%;object-fit:cover;border-radius:50%; }
-.mp-username { font-family:var(--serif);font-size:20px;font-weight:300;margin-bottom:3px; }
+.mp-username { font-family:var(--serif);font-size:20px;font-weight:500;margin-bottom:3px; }
 .mp-bio { font-size:12px;color:var(--text-2);line-height:1.5;max-width:340px;margin-bottom:.75rem; }
 .mp-quote { font-family:var(--serif);font-style:italic;font-size:13px;color:var(--text-3);border-left:2px solid var(--olive-light);padding-left:10px;text-align:left;max-width:340px;margin-bottom:.75rem; }
 .mp-stats { display:flex;gap:1.5rem;justify-content:center;margin-bottom:1rem; }
@@ -284,7 +284,7 @@
   <meta name="apple-mobile-web-app-title" content="MyScreenScore">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 </head>
 <body>
 <div class="page-wrap">
@@ -355,7 +355,7 @@ let _friendships = [];
 function avatarHtml(profile, size = 44, fontSize = 20) {
   const initial = (profile?.username?.[0] || '?').toUpperCase();
   if (profile?.avatar_url) {
-    return `<img src="${profile.avatar_url}"
+    return `<img src="${safeURL(profile.avatar_url)}"
                  style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;display:block;"
                  onerror="this.parentNode.innerHTML='${initial}'"
                  alt="${initial}">`;
@@ -689,12 +689,12 @@ async function _udSearch(val) {
       drop.innerHTML = _udResults.map((p, i) => {
         const initial = (p.username[0] || '?').toUpperCase();
         const avatarHTML = p.avatar_url
-          ? '<div class="ud-avatar"><img src="' + p.avatar_url + '" loading="lazy"></div>'
+          ? '<div class="ud-avatar"><img src="'+safeURL(p.avatar_url)+'" loading="lazy"></div>'
           : '<div class="ud-avatar">' + initial + '</div>';
         const reg = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
         const highlighted = p.username.replace(reg, '<em>$1</em>');
         const display = p.display_name && p.display_name !== p.username ? p.display_name : '';
-        return '<div class="ud-item" data-i="' + i + '" onmousedown="_udSelect(\'' + p.username + '\',\'' + p.id + '\')'  + '">'
+        return '<div class="ud-item" data-i="' + i + '" onmousedown="_udSelect(\'' + escHTML(p.username) + '\',\'' + p.id + '\')'  + '">'
           + avatarHTML
           + '<div class="ud-info"><div class="ud-username">@' + highlighted + '</div>'
           + (display ? '<div class="ud-display">' + display + '</div>' : '')
@@ -835,7 +835,7 @@ async function openMiniProfile(userId, username) {
     const av = document.getElementById('mpAvatar');
     const un = profile?.username || username;
     if (profile?.avatar_url) {
-      av.innerHTML = '<img src="'+profile.avatar_url+'" alt="">';
+      av.innerHTML = '<img src="'+safeURL(profile.avatar_url)+'" alt="">';
     } else {
       av.textContent = (un[0]||'?').toUpperCase();
     }
@@ -866,9 +866,9 @@ async function openMiniProfile(userId, username) {
     if (top5.length) {
       document.getElementById('mpPicksGrid').innerHTML = top5.map(e =>
         '<div class="mp-pick-card">'
-        + (e.poster_url ? '<img src="'+e.poster_url+'" loading="lazy">' : '<div class="mp-pick-letter">'+(e.title[0]||'?')+'</div>')
+        + (e.poster_url ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : '<div class="mp-pick-letter">'+(e.title[0]||'?')+'</div>')
         + '<div class="mp-pick-overlay"></div>'
-        + '<div class="mp-pick-title">'+e.title+'</div>'
+        + '<div class="mp-pick-title">'+escHTML(e.title)+'</div>'
         + '</div>'
       ).join('');
       document.getElementById('mpTopPicks').style.display = '';
