@@ -2655,7 +2655,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 }
 .ttp-btn svg { width:17px; height:17px; }
 .ttp-btn:hover:not(.active) { color:var(--text-2); background:var(--card-3); }
-.ttp-btn.active { background:var(--olive-faint); color:var(--olive-light); box-shadow:0 1px 4px rgba(0,0,0,0.2); }
+.ttp-btn.active { background:var(--olive); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
 @media(max-width:1380px) {
   .theme-toggle-pill { bottom:76px; right:16px; }
   .fab               { bottom:76px; left:20px; right:auto; }
