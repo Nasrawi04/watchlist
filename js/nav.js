@@ -13,10 +13,10 @@ async function _fillNavUser(user) {
   const iniMob = document.getElementById('navUserInitialMobile');
   const nm     = document.getElementById('navUserName');
 
-  if (profile?.avatar_url) {
+  if (safeURL(profile?.avatar_url)) {
     const imgStyle = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
-    if (ini)    { ini.innerHTML    = `<img src="${profile.avatar_url}" style="${imgStyle}">`; ini.style.padding    = '0'; }
-    if (iniMob) { iniMob.innerHTML = `<img src="${profile.avatar_url}" style="${imgStyle}">`; iniMob.style.padding = '0'; }
+    if (ini)    { ini.innerHTML    = `<img src="${safeURL(profile.avatar_url)}" style="${imgStyle}">`; ini.style.padding    = '0'; }
+    if (iniMob) { iniMob.innerHTML = `<img src="${safeURL(profile.avatar_url)}" style="${imgStyle}">`; iniMob.style.padding = '0'; }
   } else {
     if (ini)    ini.textContent    = initial;
     if (iniMob) iniMob.textContent = initial;
@@ -983,7 +983,7 @@ function _selDDHTML(id, options, selected, onchangeFn, placeholder) {
       <svg class="sel-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <div class="sel-dd-menu">
-      ${options.map(o => `<div class="sel-dd-opt${o.value===value?' active':''}" data-value="${o.value}" onclick="event.stopPropagation();_selSelectDD('${id}','${o.value}')">${o.label}</div>`).join('')}
+      ${options.map(o => `<div class="sel-dd-opt${o.value===value?' active':''}" data-value="${escHTML(o.value)}" onclick="event.stopPropagation();_selSelectDD('${id}','${o.value}')">${escHTML(o.label)}</div>`).join('')}
     </div>
   </div>`;
 }
@@ -1362,10 +1362,10 @@ function initDiscoverSearch(inputId, opts = {}) {
           ${r.thumb ? `<img src="${r.thumb}" loading="lazy">` : '<div class="tmdb-thumb-ph"></div>'}
         </div>
         <div class="tmdb-info">
-          <div class="tmdb-title">${r.title || '—'}</div>
+          <div class="tmdb-title">${escHTML(r.title || '—')}</div>
           <div class="tmdb-meta">
             <span class="tmdb-tag">${r.label}</span>
-            ${r.year ? `<span class="tmdb-year">${r.year}</span>` : ''}
+            ${r.year ? `<span class="tmdb-year">${escHTML(r.year)}</span>` : ''}
             ${r.genres.length ? `<span class="tmdb-genres">${r.genres.join(' · ')}</span>` : ''}
           </div>
         </div>
@@ -1533,10 +1533,10 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
           ${r.thumb ? `<img src="${r.thumb}" loading="lazy">` : '<div class="tmdb-thumb-ph"></div>'}
         </div>
         <div class="tmdb-info">
-          <div class="tmdb-title">${r.title || '—'}</div>
+          <div class="tmdb-title">${escHTML(r.title || '—')}</div>
           <div class="tmdb-meta">
             <span class="tmdb-tag">${r.label}</span>
-            ${r.year ? `<span class="tmdb-year">${r.year}</span>` : ''}
+            ${r.year ? `<span class="tmdb-year">${escHTML(r.year)}</span>` : ''}
             ${r.genres.length ? `<span class="tmdb-genres">${r.genres.join(' · ')}</span>` : ''}
           </div>
         </div>
@@ -1606,7 +1606,7 @@ function _showDuplicateWarning(title, catLabel) {
   el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity .2s;pointer-events:none;';
   el.innerHTML = '<div id="dupWarnCard" style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:97%;max-width:440px;padding:28px 28px 24px;box-sizing:border-box;transform:translateY(16px);transition:transform .25s cubic-bezier(.4,0,.2,1);text-align:center;">'
     + '<div style="color:var(--olive-light);margin-bottom:14px;opacity:.7;">' + icon('x', 32) + '</div>'
-    + '<h2 style="font-family:var(--serif);font-size:22px;font-weight:300;margin-bottom:10px;color:var(--text);">This Entry Already Exists</h2>'
+    + '<h2 style="font-family:var(--serif);font-size:22px;font-weight:500;margin-bottom:10px;color:var(--text);">This Entry Already Exists</h2>'
     + '<p style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:6px;"><strong style="color:var(--text);">' + title + '</strong> is already in your library as a <strong style="color:var(--text);">' + catLabel + '</strong>.</p>'
     + '<p style="font-size:13px;color:var(--text-3);margin-bottom:24px;">Close this to update your existing entry instead.</p>'
     + '<button onclick="_closeDupWarn()" style="padding:10px 28px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">Got it</button>'
