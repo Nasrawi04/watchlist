@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MyScreenScore</title>
+<title>Completed — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -600,7 +600,7 @@ function _injectCommentsPopupCompleted() {
           box-shadow:var(--shadow);
         "></div>
         <div style="flex:1;min-width:0;">
-          <div id="commentsPopupCompletedTitle" style="font-family:var(--serif);font-size:18px;font-weight:300;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
+          <div id="commentsPopupCompletedTitle" style="font-family:var(--serif);font-size:18px;font-weight:500;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
           <div id="commentsPopupCompletedMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:6px;"></div>
           <div id="commentsPopupCompletedCount" style="font-size:12px;color:var(--olive-light);font-weight:500;"></div>
         </div>
@@ -748,7 +748,7 @@ function cpReply(commentId, username, entryId) {
   const box = document.getElementById('cp-reply-form-' + commentId);
   if (!box) return;
   box.innerHTML = `<div class="det-reply-form">
-    <input class="det-reply-input" id="cp-ri-${commentId}" maxlength="1000" value="@${username} " placeholder="Reply…"
+    <input class="det-reply-input" id="cp-ri-${commentId}" maxlength="1000" value="@${escHTML(username)} " placeholder="Reply…"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cpPostReply('${commentId}','${entryId}')}">
     <button class="det-reply-send" onclick="cpPostReply('${commentId}','${entryId}')">Send</button>
     <button class="det-comment-del" onclick="document.getElementById('cp-reply-form-${commentId}').innerHTML='';_cpReplyFor=null" style="margin-left:4px;">✕</button>
@@ -821,7 +821,7 @@ function _renderCompGrid(items) {
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
       </div>
       <div class="cg-grid-info" onclick="cpOpenPopup('${e.id}')">
-        <div class="title-year-row"><div class="wg-title" style="margin-bottom:0;">${e.title}</div>${e.year ? `<span class="title-year-inline">${e.year}</span>` : ''}</div>
+        <div class="title-year-row"><div class="wg-title" style="margin-bottom:0;">${escHTML(e.title)}</div>${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}</div>
         ${_meta ? `<div class="wg-genre"><span class="w-ep-badge">${_meta}</span></div>` : ''}
         <div class="cg-score-row"><span class="cg-score">${score ? '★ '+score : '—'}</span></div>
       </div>
@@ -1267,9 +1267,9 @@ function _compFilterBodyHTML() {
   const genreLabel = f.genres.length ? f.genres.join(', ') : 'Any Genre';
   const genreMenu = _compAllGenres.map(g => `
     <label class="sf-check-row" onclick="event.stopPropagation();">
-      <input type="checkbox" ${f.genres.includes(g)?'checked':''} onchange="_compStageGenre('${g.replace(/'/g,"\\'")}')">
+      <input type="checkbox" ${f.genres.includes(g)?'checked':''} onchange="_compStageGenre(${attrJSON(g)})">
       <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-      <span>${g}</span>
+      <span>${escHTML(g)}</span>
     </label>`).join('');
 
   return `
@@ -1344,7 +1344,7 @@ function _compRenderPersonMenu() {
   else {
     const matches = all.filter(n => n.toLowerCase().includes(query)).slice(0, 50);
     menuEl.innerHTML = matches.length
-      ? matches.map(n => `<div class="td-dd-opt" onclick="event.stopPropagation();_compPickPerson('${n.replace(/'/g,"\\'")}')">${n}</div>`).join('')
+      ? matches.map(n => `<div class="td-dd-opt" onclick="event.stopPropagation();_compPickPerson(${attrJSON(n)})">${escHTML(n)}</div>`).join('')
       : `<div class="sf-empty">No matching names.</div>`;
   }
   dd.classList.add('open');
@@ -1544,7 +1544,7 @@ function renderMain() {
           <div class="fv-rank-num ${i < 3 ? 'top3' : ''}">${i + 1}</div>
           <div class="fv-rank-poster">${posterHTML(e)}</div>
           <div class="fv-rank-info">
-            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:2px;">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-title">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:2px;">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
             <div class="fv-rank-meta">${_compTypeBadgeInline(e)} ${_entryMetaBadge(e)}</div>
             ${completedDateStr ? `<div class="fv-rank-meta"><span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Completed On: ${completedDateStr}</span></div>` : ''}
             ${renderFavChips(e.ratings, e.cat)}
@@ -1567,7 +1567,7 @@ function renderMain() {
         <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
           <div class="fv-rank-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : ''}</div>
           <div class="fv-rank-info">
-            <div class="fv-rank-title">${e.title}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:2px;">${e.year}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-title">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:2px;">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
             <div class="fv-rank-meta">${_compTypeBadgeInline(e)} ${_entryMetaBadge(e)}</div>
             ${date ? `<div class="fv-rank-meta"><span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Completed On: ${date}</span></div>` : ''}
             ${renderFavChips(e.ratings, e.cat)}
@@ -1639,7 +1639,7 @@ function openExportThemePopup() {
     card.style.cssText = 'background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:1.75rem;max-width:340px;width:100%;display:flex;flex-direction:column;gap:12px;';
 
     const title = document.createElement('div');
-    title.style.cssText = 'font-family:var(--serif);font-size:24px;font-weight:300;color:var(--text);text-align:center;';
+    title.style.cssText = 'font-family:var(--serif);font-size:24px;font-weight:500;color:var(--text);text-align:center;';
     title.textContent = 'Export PDF';
     card.appendChild(title);
 
