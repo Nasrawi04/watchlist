@@ -1345,6 +1345,37 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 .sf-check-row span:last-child { font-family:'Manrope',var(--sans); font-size:13.5px; color:var(--text-2); transition:color .12s; }
 .sf-check-row input:checked ~ span:last-child { color:var(--olive-light); font-weight:700; }
 
+/* Single-choice box built from .sf-check-row — same checkbox look as the
+   Genre filter, used for either/or picks like Ranked / Unranked.
+   .sf-choice-box    = stacked rows with a title + hint (modals)
+   .sf-choice-inline = compact pills (inline on cards / headers) */
+.sf-choice-box {
+  display:flex; flex-direction:column; overflow:hidden;
+  border:0.5px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-3);
+}
+.sf-choice-box .sf-check-row { padding:11px 14px; gap:12px; transition:background .12s; }
+.sf-choice-box .sf-check-row + .sf-check-row { border-top:0.5px solid var(--border); }
+.sf-choice-box .sf-check-row:hover { background:var(--card); }
+.sf-choice-box .sf-check-row:has(input:checked) { background:var(--olive-faint); }
+.sf-choice-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.sf-choice-text b { font-family:var(--sans); font-size:13.5px; font-weight:600; color:var(--text); transition:color .12s; }
+.sf-choice-text small { font-family:var(--sans); font-size:11.5px; font-weight:400; color:var(--text-3); line-height:1.35; }
+.sf-check-row input:checked ~ .sf-choice-text b { color:var(--olive-light); font-weight:700; }
+
+.sf-choice-inline { display:inline-flex; gap:6px; flex-wrap:wrap; vertical-align:middle; flex-shrink:0; }
+.sf-choice-inline .sf-check-row {
+  padding:4px 11px 4px 6px; gap:7px; border-radius:999px;
+  border:0.5px solid var(--border); background:var(--bg-3); transition:background .12s, border-color .12s;
+}
+.sf-choice-inline .sf-check-row:hover { background:var(--card); border-color:var(--border-olive); }
+.sf-choice-inline .sf-check-mark { width:16px; height:16px; border-radius:5px; }
+.sf-choice-inline .sf-check-mark svg { width:10px; height:10px; }
+.sf-choice-inline .sf-check-row span:last-child { font-size:12px; font-weight:600; }
+@media(max-width:640px) {
+  .sf-choice-inline .sf-check-row { padding:3px 9px 3px 5px; }
+  .sf-choice-inline .sf-check-row span:last-child { font-size:11px; }
+}
+
 /* Range inputs (Score) */
 .sf-range-row { display:flex; align-items:center; gap:10px; }
 .sf-range-input {
