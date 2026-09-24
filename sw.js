@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'mss-v376';
+const CACHE_VERSION = 'mss-v554';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const IMAGE_CACHE   = `${CACHE_VERSION}-images`;
 
@@ -26,7 +26,6 @@ const STATIC_ASSETS = [
   'lists.html',
   'list-view.html',
   'notes.html',
-  'search.html',
   'detail.html',
   'title.html',
   'person.html',
@@ -39,22 +38,30 @@ const STATIC_ASSETS = [
   'js/db.js',
   'js/nav.js',
   'js/discover-categories.js',
-  'js/social-feed.js',
   'js/category.js',
   'js/rewatch.js',
   'js/create-card.js',
   'js/fav-lists-popup.js',
   'js/export.js',
+  'manifest.json',
+  'icons/logo-nav.png',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/icon-maskable-192.png',
+  'icons/icon-maskable-512.png',
 ];
 
 /* ── Install: pre-cache static assets ── */
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then(cache => {
-      return cache.addAll(STATIC_ASSETS).catch(err => {
-        console.warn('SW: Some assets failed to cache', err);
-      });
-    })
+    // Cached one-by-one (not cache.addAll) — addAll is all-or-nothing,
+    // so a single missing/renamed file would silently leave NOTHING
+    // precached, including offline.html.
+    caches.open(STATIC_CACHE).then(cache =>
+      Promise.allSettled(STATIC_ASSETS.map(asset =>
+        cache.add(asset).catch(err => console.warn('SW: failed to cache', asset, err))
+      ))
+    )
   );
   self.skipWaiting();
 });
@@ -137,8 +144,8 @@ self.addEventListener('fetch', event => {
   if (request.destination === 'document' ||
       request.destination === 'script'   ||
       request.destination === 'style'    ||
-      url.pathname.startsWith('/css/')   ||
-      url.pathname.startsWith('/js/')) {
+      url.pathname.includes('/css/')     ||
+      url.pathname.includes('/js/')) {
     event.respondWith(staleWhileRevalidate(request, STATIC_CACHE));
     return;
   }
