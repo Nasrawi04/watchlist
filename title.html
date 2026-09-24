@@ -58,7 +58,7 @@
   background:rgba(255,255,255,0.12); border:0.5px solid rgba(255,255,255,0.25); color:#fff;
   white-space:nowrap;
 }
-.td-title { font-family:var(--serif); font-size:clamp(26px, 5.5vw, 52px); font-weight:300; margin-bottom:.75rem; line-height:1.1; }
+.td-title { font-family:var(--serif); font-size:clamp(26px, 5.5vw, 52px); font-weight:500; margin-bottom:.75rem; line-height:1.1; }
 .td-tagline { font-style:italic; opacity:.65; font-size:clamp(12.5px, 2vw, 17px); margin-bottom:1.25rem; }
 .td-meta-row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; font-size:clamp(11.5px, 1.8vw, 15px); opacity:.85; }
 .td-meta-row span { display:flex; align-items:center; gap:5px; }
@@ -969,7 +969,7 @@ function _tdRenderNotes() {
           <button class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="_tdReactToNote('${n.entry_id}', false)">
             ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
           </button>
-          <button class="td-note-react-btn" onclick='openReplyPopup("note", ${JSON.stringify(n.entry_id)}, ${JSON.stringify(n.username || "")})'>
+          <button class="td-note-react-btn" onclick='openReplyPopup("note", ${attrJSON(n.entry_id)}, ${attrJSON(n.username || "")})'>
             ${icon('reply', 14)} Replies
           </button>
         </div>
