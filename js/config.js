@@ -267,9 +267,20 @@ function escHTML(s) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+// For passing a value into an inline handler, e.g. onclick="fn(${attrJSON(x)})".
+// JSON-encodes (valid JS string) then HTML-escapes (safe inside the attribute);
+// the browser decodes the entities back before the JS runs.
+function attrJSON(v) { return escHTML(JSON.stringify(v == null ? '' : v)); }
 // Only http(s) URLs are allowed into src/href — blocks javascript:/data: payloads
 function safeURL(u) {
   return (typeof u === 'string' && /^https?:\/\//i.test(u.trim())) ? escHTML(u.trim()) : '';
+}
+
+// For CSS background-image. Returns url('...') with quotes/parens/spaces
+// percent-encoded so the value can't break out of the url(), or 'none'.
+function cssURL(u) {
+  const s = (typeof u === 'string' && /^https?:\/\//i.test(u.trim())) ? u.trim() : '';
+  return s ? `url('${s.replace(/["'()\\\s<>]/g, c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}')` : 'none';
 }
 
 function posterHTML(entry, size) {
@@ -380,13 +391,7 @@ function closeModalIfBg(e) {
   if (e.target === document.getElementById('addModal')) closeModal();
 }
 
-/* ── Mark active nav link ── */
-function markActiveNav() {
-  const page = window.location.pathname.split('/').pop() || 'index.html';
-  document.querySelectorAll('.nav-link, .mobile-nav-link').forEach(el => {
-    el.classList.toggle('active', el.dataset.page === page);
-  });
-}
+/* markActiveNav() lives in nav.js — it runs right after the nav is rendered. */
 
 /* ── User menu toggles ── */
 function toggleUserMenu(e) {
@@ -446,7 +451,6 @@ document.addEventListener('keydown', e => {
   }
 });
 
-document.addEventListener('DOMContentLoaded', markActiveNav);
 
 /* ══════════════════════════════════════════
    CONFIRM DIALOG
