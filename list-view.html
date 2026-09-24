@@ -20,12 +20,12 @@
 .lv-title-inner { display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
 .lv-title-wrap { min-width:0; }
 .lv-title {
-  font-family:var(--serif); font-size:clamp(22px, 5vw, 42px); font-weight:300;
+  font-family:var(--serif); font-size:clamp(22px, 5vw, 42px); font-weight:500;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
 }
 .ranked-badge {
   display:inline-flex; align-items:center; gap:5px; vertical-align:middle; flex-shrink:0;
-  font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+  font-family:var(--sans); font-size:11px; font-weight:600; letter-spacing:.6px; text-transform:uppercase;
   padding:4px 12px; border-radius:4px;
 }
 .ranked-badge.ranked-yes {
@@ -146,7 +146,7 @@
    bigger": large serif numerals matching the same treatment
    completed.html gives its own rank/recent scores, in its own
    dedicated column rather than sharing a line with other text. */
-.lv-own-score { color:var(--olive-light); font-family:var(--serif); font-size:clamp(28px, 6vw, 36px); font-weight:300; white-space:nowrap; line-height:1; }
+.lv-own-score { color:var(--olive-light); font-family:var(--serif); font-size:clamp(28px, 6vw, 36px); font-weight:500; white-space:nowrap; line-height:1; }
 .lv-empty { text-align:center; padding:3rem 0; color:var(--text-3); font-size:14px; }
 
 @media(max-width:560px) {
@@ -269,7 +269,7 @@ function _lvTypeCls(e) {
 
 function _lvCardHTML(e, rank) {
   const posterInner = (e.poster_url && !e.poster_url.startsWith('PLACEHOLDER'))
-    ? `<img src="${e.poster_url}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+    ? `<img src="${safeURL(e.poster_url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
   const scoreStr = _lvOwnScoreHTML(e);
@@ -285,7 +285,7 @@ function _lvCardHTML(e, rank) {
 
 function _lvListRowHTML(e, rank) {
   const posterInner = (e.poster_url && !e.poster_url.startsWith('PLACEHOLDER'))
-    ? `<img src="${e.poster_url}" loading="lazy">`
+    ? `<img src="${safeURL(e.poster_url)}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
   const scoreStr = _lvOwnScoreHTML(e);
@@ -457,8 +457,8 @@ async function _lvLoad() {
     const username = list.profiles?.username || 'user';
     const avatarUrl = list.profiles?.avatar_url;
     document.getElementById('lvUsername').textContent = '@' + username;
-    document.getElementById('lvAvatar').innerHTML = avatarUrl
-      ? `<img src="${avatarUrl}" loading="lazy">`
+    document.getElementById('lvAvatar').innerHTML = safeURL(avatarUrl)
+      ? `<img src="${safeURL(avatarUrl)}" loading="lazy">`
       : (username[0] || '?').toUpperCase();
     document.getElementById('lvCount').textContent = `${entries.length} item${entries.length !== 1 ? 's' : ''}`;
 
