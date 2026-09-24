@@ -269,6 +269,7 @@ function _dlSfActive() {
 const _DL_STATE_KEY = 'dl_state_' + _dlCategory.key;
 const _dlIsBack = (performance.getEntriesByType('navigation')[0] || {}).type === 'back_forward';
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.MSS_OWN_SCROLL = true; // this page restores its own position (faster, cached rows)
 
 function _dlSaveState() {
   try {
