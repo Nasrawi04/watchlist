@@ -416,22 +416,6 @@ document.addEventListener('click', () => {
   document.getElementById('navLibGroup')?.classList.remove('menu-open');
 });
 
-function handleMobileSearch() {
-  const q = document.getElementById('mobileSearchInput')?.value?.trim();
-  if (q && q.length > 1) {
-    sessionStorage.setItem('searchQuery', q);
-    window.location.href = 'search.html';
-  }
-}
-
-function handleGlobalSearch() {
-  const q = document.getElementById('globalSearch')?.value?.trim();
-  if (q && q.length > 1) {
-    sessionStorage.setItem('searchQuery', q);
-    window.location.href = 'search.html';
-  }
-}
-
 function markActiveNav() {
   const page = window.location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('[data-page]').forEach(el => {
