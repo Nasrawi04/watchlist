@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   sort-filter.js — Shared Sort & Filter system (v562)
+   sort-filter.js — Shared Sort & Filter system (v563)
 
    One implementation of the Sort / Filter popups for every page.
    Each page registers a "scope" describing what's different about it
@@ -17,7 +17,13 @@
 
      // OPTIONAL — omit any of these to get the default
      sorts:   section => ['alpha','added','release','episode','ratings','length'],
+              // mixed movie+show pages can use 'runtime' / 'episodes' instead
+              // of 'length' (movies-only / shows-only, the rest go last)
      filters: section => ['genre','year','score','length','person'],
+     choiceFilters: section => [       // single-pick filters, e.g. Status
+       { key: 'status', label: 'Status', options: [['', 'All'], ['completed', 'Watched']],
+         test: (entry, value) => entry.status === value },   // test optional
+     ],
      defaultSort: 'newest',
      sortState: {},                         // pass the page's own object to share it
      lengthLabel: section => 'Runtime (minutes)',
@@ -29,6 +35,7 @@
      },
      addedDate: e => e.completed_date || e.created_at,
      postSort: (section, sortedList) => sortedList,   // e.g. paused-to-bottom
+     beforeSort: async (section, value) => {},        // e.g. fetch data a sort needs
      saveRatings: (entry, newRatings) => {},          // omit on read-only pages
    });
 
@@ -64,10 +71,12 @@ const SF = (() => {
     episode: { header: 'Episode',      opts: [['episodeNewest', 'Latest'], ['episodeOldest', 'Earliest']] },
     ratings: { header: 'Ratings',      opts: [['highest', 'Highest'], ['lowest', 'Lowest']] },
     length:  { header: 'Length',       opts: [['longest', 'Longest'], ['shortest', 'Shortest']] },
+    runtime: { header: 'Runtime',      opts: [['runtime_longest', 'Longest'], ['runtime_shortest', 'Shortest']] },
+    episodes:{ header: 'Episode Count',opts: [['eps_most', 'Most'], ['eps_least', 'Fewest']] },
   };
   const DEFAULT_SORTS   = ['alpha', 'added', 'release', 'ratings', 'length'];
   const DEFAULT_FILTERS = ['genre', 'year', 'score', 'length', 'person'];
-  const EMPTY_FILTER = () => ({ genres: [], yearMin: '', yearMax: '', scoreMin: '', scoreMax: '', lengthMin: '', lengthMax: '', person: '' });
+  const EMPTY_FILTER = () => ({ genres: [], yearMin: '', yearMax: '', scoreMin: '', scoreMax: '', lengthMin: '', lengthMax: '', person: '', choice: {} });
 
   // Session caches shared by every scope (keyed by TMDB id)
   const creditsCache = {};
@@ -88,6 +97,13 @@ const SF = (() => {
     if (isMovie(e)) return (Number(e.runtime_h) || 0) * 60 + (Number(e.runtime_m) || 0);
     return Number(e.total_eps) || 0;
   }
+  function releaseValue(e) {
+    if (typeof getReleaseDateValue === 'function') return getReleaseDateValue(e) || 0;
+    return Number(e.year) || 0;
+  }
+  function choicesFor(s, section) {
+    return s.cfg.choiceFilters ? (s.cfg.choiceFilters(section) || []) : [];
+  }
   function sortsFor(s, section) {
     const keys = (s.cfg.sorts ? s.cfg.sorts(section) : DEFAULT_SORTS).filter(Boolean);
     return keys.map(k => SORT_PRESETS[k]).filter(Boolean);
@@ -106,7 +122,7 @@ const SF = (() => {
     return S(scope).filter[section] || EMPTY_FILTER();
   }
   function filterCount(f) {
-    return (f.genres || []).length + (f.yearMin || f.yearMax ? 1 : 0) + (f.scoreMin || f.scoreMax ? 1 : 0)
+    return Object.values(f.choice || {}).filter(Boolean).length + (f.genres || []).length + (f.yearMin || f.yearMax ? 1 : 0) + (f.scoreMin || f.scoreMax ? 1 : 0)
          + (f.lengthMin || f.lengthMax ? 1 : 0) + (f.person ? 1 : 0);
   }
   function sortLabel(s, value) {
@@ -133,8 +149,22 @@ const SF = (() => {
       case 'zalpha':        out = a.sort((x, y) => (y.title || '').localeCompare(x.title || '')); break;
       case 'highest':       out = a.sort((x, y) => (sc(y) - sc(x)) || byCreated(x, y)); break;
       case 'lowest':        out = a.sort((x, y) => (sc(x) - sc(y)) || byCreated(x, y)); break;
-      case 'releaseNewest': out = a.sort((x, y) => (Number(y.year) || 0) - (Number(x.year) || 0)); break;
-      case 'releaseOldest': out = a.sort((x, y) => (Number(x.year) || 0) - (Number(y.year) || 0)); break;
+      case 'releaseNewest': out = a.sort((x, y) => releaseValue(y) - releaseValue(x)); break;
+      case 'releaseOldest': out = a.sort((x, y) => releaseValue(x) - releaseValue(y)); break;
+      // Mixed pages: movies sorted by runtime (shows after, newest first),
+      // or shows sorted by episode count (movies after).
+      case 'runtime_longest': case 'runtime_shortest': {
+        const dir = value === 'runtime_longest' ? -1 : 1;
+        const m = a.filter(isMovie).sort((x, y) => dir * (lengthOf(x) - lengthOf(y)));
+        out = m.concat(a.filter(e => !isMovie(e)).sort((x, y) => d(y) - d(x)));
+        break;
+      }
+      case 'eps_most': case 'eps_least': {
+        const dir = value === 'eps_most' ? -1 : 1;
+        const sh = a.filter(e => !isMovie(e)).sort((x, y) => dir * (lengthOf(x) - lengthOf(y)));
+        out = sh.concat(a.filter(isMovie).sort((x, y) => d(y) - d(x)));
+        break;
+      }
       case 'episodeNewest': out = a.sort((x, y) => new Date(y.ratings?._last_episode_date || 0) - new Date(x.ratings?._last_episode_date || 0)); break;
       case 'episodeOldest': out = a.sort((x, y) => new Date(x.ratings?._last_episode_date || 0) - new Date(y.ratings?._last_episode_date || 0)); break;
       case 'longest':       out = a.sort((x, y) => lengthOf(y) - lengthOf(x)); break;
@@ -153,8 +183,12 @@ const SF = (() => {
     return s.cfg.postSort ? s.cfg.postSort(section, out) : out;
   }
 
-  function applyFilter(base, f) {
+  function applyFilter(s, section, base, f) {
     let out = base;
+    choicesFor(s, section).forEach(c => {
+      const v = f.choice?.[c.key];
+      if (v) out = out.filter(e => c.test ? c.test(e, v) : e[c.key] === v);
+    });
     if (f.genres?.length) out = out.filter(e => (e.genres || []).some(g => f.genres.includes(g)));
     if (f.yearMin)   out = out.filter(e => e.year && Number(e.year) >= Number(f.yearMin));
     if (f.yearMax)   out = out.filter(e => e.year && Number(e.year) <= Number(f.yearMax));
@@ -168,7 +202,7 @@ const SF = (() => {
 
   function list(scope, section) {
     const s = S(scope);
-    const base = applyFilter(s.cfg.base(section) || [], getFilter(scope, section));
+    const base = applyFilter(s, section, s.cfg.base(section) || [], getFilter(scope, section));
     return sortEntries(s, section, base, getSort(scope, section));
   }
 
@@ -229,7 +263,7 @@ const SF = (() => {
     const value = getSort(scope, section);
     const isDefault = value === (s.cfg.defaultSort || 'newest');
     const count = filterCount(getFilter(scope, section));
-    const hasFilters = filtersFor(s, section).length > 0;
+    const hasFilters = filtersFor(s, section).length > 0 || choicesFor(s, section).length > 0;
     const sec = escHTML(section);
     return `<div class="sort-bar sf-trigger-row">
       <button class="sf-icon-btn${!isDefault ? ' active' : ''}" onclick="SF.openSort('${scope}','${sec}')" aria-label="Sort">
@@ -317,11 +351,16 @@ const SF = (() => {
     const { scope, section } = cur, value = stagedSort, s = S(scope);
     // Episode sort needs each show's latest-aired-episode date — fetched on
     // demand (and saved) the first time, so the sort works immediately.
-    if (value === 'episodeNewest' || value === 'episodeOldest') {
+    const needsEpisodes = value === 'episodeNewest' || value === 'episodeOldest';
+    if (needsEpisodes || s.cfg.beforeSort) {
       const btn = document.querySelector('#sfSortCard .sf-apply-btn');
       if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
-      await Promise.all((s.cfg.base(section) || []).map(e => fetchLastEpisodeDate(s, e)));
-      if (btn) { btn.textContent = 'Apply'; btn.disabled = false; }
+      try {
+        if (needsEpisodes) await Promise.all((s.cfg.base(section) || []).map(e => fetchLastEpisodeDate(s, e)));
+        if (s.cfg.beforeSort) await s.cfg.beforeSort(section, value);
+      } finally {
+        if (btn) { btn.textContent = 'Apply'; btn.disabled = false; }
+      }
     }
     setSort(scope, section, value);
     closeSort();
@@ -332,7 +371,7 @@ const SF = (() => {
     inject('sfFilterOverlay', 'sfFilterCard', 'Filter', 'sfFilterBody', 'Clear', 'SF._clearFilter()', 'SF._applyFilter()', 'SF.closeFilter()');
     cur = { scope, section };
     const f = getFilter(scope, section);
-    stagedFilter = { ...EMPTY_FILTER(), ...f, genres: [...(f.genres || [])] };
+    stagedFilter = { ...EMPTY_FILTER(), ...f, genres: [...(f.genres || [])], choice: { ...(f.choice || {}) } };
     delete stagedFilter._personMatchIds;
     document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
     document.getElementById('sfFilterOverlay').classList.add('open');
@@ -356,6 +395,16 @@ const SF = (() => {
     const s = S(cur.scope), section = cur.section, f = stagedFilter;
     const on = new Set(filtersFor(s, section));
     let html = '';
+    choicesFor(s, section).forEach(c => {
+      const curV = f.choice[c.key] || '';
+      html += `<div class="sf-section-label">${escHTML(c.label)}</div><div class="sf-check-list">` +
+        c.options.map(([v, l]) => `
+        <label class="sf-check-row">
+          <input type="checkbox" ${curV === v ? 'checked' : ''} onchange="SF._stageChoice(${attrJSON(c.key)}, ${attrJSON(v)})">
+          <span class="sf-check-mark">${CHECK_SVG}</span>
+          <span>${escHTML(l)}</span>
+        </label>`).join('') + `</div>`;
+    });
     if (on.has('genre')) {
       const menu = GENRES.map(g => `
         <label class="sf-check-row" onclick="event.stopPropagation();">
@@ -395,6 +444,10 @@ const SF = (() => {
     const trigger = document.querySelector('#sfGenreDD .sf-dd-trigger');
     trigger.querySelector('.td-dd-label').textContent = stagedFilter.genres.length ? stagedFilter.genres.join(', ') : 'Any Genre';
     trigger.classList.toggle('active', stagedFilter.genres.length > 0);
+  }
+  function _stageChoice(key, value) {
+    stagedFilter.choice[key] = value;
+    document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
   }
   function _stageRanges() {
     const v = id => document.getElementById(id)?.value ?? '';
@@ -525,9 +578,10 @@ const SF = (() => {
     register, list, refresh, bar, setSort, getSort, invalidate, clearFilters,
     openSort, closeSort, openFilter, closeFilter,
     filterCount: (scope, section) => filterCount(getFilter(scope, section)),
+    filterState: (scope, section) => getFilter(scope, section),
     isMovie, lengthOf, GENRES,
     // internal — used by the popup markup's inline handlers
-    _stageSort, _resetSort, _applySort, _stageGenre, _stageRanges, _clearFilter, _applyFilter,
+    _stageSort, _resetSort, _applySort, _stageGenre, _stageChoice, _stageRanges, _clearFilter, _applyFilter,
     _openPersonDD, _personInput, _pickPerson, _toggleDD,
   };
 })();
