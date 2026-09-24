@@ -16,7 +16,7 @@
 .dl-back:hover { color:var(--olive-light); }
 
 .dl-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin-bottom:2rem; flex-wrap:wrap; }
-.dl-title { font-family:var(--serif); font-size:clamp(28px, 5vw, 42px); font-weight:300; }
+.dl-title { font-family:var(--serif); font-size:clamp(28px, 5vw, 42px); font-weight:500; }
 
 /* ── Grid view ── */
 .dl-grid {
@@ -170,8 +170,8 @@ function _dlRankCls(rank) {
 }
 
 function _dlCardHTML(it, rank) {
-  const posterInner = it.poster_url
-    ? `<img src="${it.poster_url}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+  const posterInner = safeURL(it.poster_url)
+    ? `<img src="${safeURL(it.poster_url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankBadge = _dlIsRanked
     ? `<div class="cg-rank-badge ${_dlRankCls(rank)}">${rank}</div>`
@@ -194,8 +194,8 @@ function _dlCardHTML(it, rank) {
 }
 
 function _dlListRowHTML(it, rank) {
-  const posterInner = it.poster_url
-    ? `<img src="${it.poster_url}" loading="lazy">`
+  const posterInner = safeURL(it.poster_url)
+    ? `<img src="${safeURL(it.poster_url)}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankBadge = _dlIsRanked
     ? `<div class="cg-rank-badge ${_dlRankCls(rank)}">${rank}</div>`
