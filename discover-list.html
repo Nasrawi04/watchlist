@@ -95,6 +95,10 @@
 .dl-score-big { font-family:var(--bebas); font-weight:400; font-size:clamp(17px, 3.7vw, 19px); }
 
 .dl-sentinel { height:1px; }
+.dl-head-right { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.dl-sf-bar:empty { display:none; }
+.dl-sf-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.dl-sf-bar .sort-bar::before { content:none; }
 .dl-end-msg { text-align:center; padding:2.5rem 0; color:var(--text-3); font-size:13px; }
 </style>
   <!-- PWA -->
@@ -115,7 +119,10 @@
   </a>
   <div class="dl-head">
     <h1 class="dl-title" id="dlTitle">Loading…</h1>
-    <div class="view-toggle" id="dlViewToggle"></div>
+    <div class="dl-head-right">
+      <div id="dlSfBar" class="dl-sf-bar"></div>
+      <div class="view-toggle" id="dlViewToggle"></div>
+    </div>
   </div>
   <div class="dl-grid" id="dlGrid"></div>
   <div class="dl-sentinel" id="dlSentinel"></div>
@@ -126,6 +133,7 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/sort-filter.js"></script>
 <script src="js/discover-categories.js"></script>
 <script>
 function _dlEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -174,7 +182,7 @@ function _dlCardHTML(it, rank) {
     ? `<img src="${safeURL(it.poster_url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankBadge = _dlIsRanked
-    ? `<div class="cg-rank-badge ${_dlRankCls(rank)}">${rank}</div>`
+    ? `<div class="cg-rank-badge ${_dlRankCls(it._rank || rank)}">${it._rank || rank}</div>`
     : '';
   const scoreStr = _discFloorScore(it.score);
   const typeLabel = _dlTypeLabel(it);
@@ -198,7 +206,7 @@ function _dlListRowHTML(it, rank) {
     ? `<img src="${safeURL(it.poster_url)}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankBadge = _dlIsRanked
-    ? `<div class="cg-rank-badge ${_dlRankCls(rank)}">${rank}</div>`
+    ? `<div class="cg-rank-badge ${_dlRankCls(it._rank || rank)}">${it._rank || rank}</div>`
     : '';
   const scoreStr = _discFloorScore(it.score);
   const typeLabel = _dlTypeLabel(it);
@@ -236,12 +244,58 @@ function _dlSetView(v) {
   if (v === _dlView) return;
   _dlView = v;
   localStorage.setItem('disc_listView', v);
-  const grid = document.getElementById('dlGrid');
-  grid.className = v === 'list' ? 'dl-list' : 'dl-grid';
   // Items already fetched aren't re-fetched, just redrawn in the new view.
-  grid.innerHTML = _dlAllItems.map((it, i) => v === 'list' ? _dlListRowHTML(it, i + 1) : _dlCardHTML(it, i + 1)).join('');
+  _dlRenderAll();
   _dlRenderViewToggle();
+}
+
+/* ══ Sort & Filter (shared js/sort-filter.js) — the "top rated" lists only ══
+   Sorting/filtering a ranked list only makes sense over the WHOLE list, so
+   applying either first loads every remaining page (these lists are capped:
+   250, or 500 for MSS). Rank badges keep each title's original position. */
+const _DL_SF_KEYS = new Set(['top_rated_mss', 'top250_movies', 'top250_shows', 'top250_anime', 'top250_cartoons']);
+const _dlHasSF = _DL_SF_KEYS.has(_dlCategory.key);
+const _dlIsMss = _dlCategory.key === 'top_rated_mss';
+
+function _dlSfActive() {
+  return _dlHasSF && (SF.getSort('dl', 'all') !== 'rank' || SF.filterCount('dl', 'all') > 0);
+}
+
+async function _dlLoadAll() {
+  let guard = 0;
+  while (!_dlDone && guard++ < 40) {
+    if (_dlLoading) { await new Promise(res => setTimeout(res, 120)); continue; }
+    await _dlLoadMore();
+  }
+}
+
+function _dlRenderAll() {
+  const grid = document.getElementById('dlGrid');
+  const list = _dlSfActive() ? SF.list('dl', 'all') : _dlAllItems;
+  grid.className = _dlView === 'list' ? 'dl-list' : 'dl-grid';
+  grid.innerHTML = list.length
+    ? list.map((it, i) => _dlView === 'list' ? _dlListRowHTML(it, i + 1) : _dlCardHTML(it, i + 1)).join('')
+    : `<div class="dl-end-msg" style="grid-column:1/-1">Nothing here matches these filters.</div>`;
   _dlObserveNewCards();
+  if (_dlHasSF) document.getElementById('dlSfBar').innerHTML = SF.bar('dl', 'all');
+}
+
+if (_dlHasSF) {
+  SF.register('dl', {
+    base: () => _dlAllItems,
+    render: () => _dlRenderAll(),
+    defaultSort: 'rank',
+    sorts: () => ['rank', 'alpha', 'release', 'ratings'],
+    filters: () => ['genre', 'year', 'score'],
+    choiceFilters: () => _dlIsMss ? [{
+      key: 'cat', label: 'Type',
+      options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']],
+    }] : [],
+    scoreOf: it => it.score,
+    scoreLabel: _dlIsMss ? 'MyScreenScore' : 'TMDB Score',
+    beforeSort: () => _dlLoadAll(),
+    beforeFilter: () => _dlLoadAll(),
+  });
 }
 
 function _dlObserveNewCards() {
@@ -282,11 +336,16 @@ async function _dlLoadMore() {
       document.getElementById('dlEndMsg').style.display = '';
       return;
     }
+    const startRank = _dlAllItems.length + 1;
+    items.forEach((it, i) => { it._rank = startRank + i; });
     _dlAllItems = _dlAllItems.concat(items);
-    const grid = document.getElementById('dlGrid');
-    const startRank = _dlAllItems.length - items.length + 1;
-    grid.insertAdjacentHTML('beforeend', items.map((it, i) => _dlView === 'list' ? _dlListRowHTML(it, startRank + i) : _dlCardHTML(it, startRank + i)).join(''));
-    _dlObserveNewCards();
+    if (_dlSfActive()) {
+      _dlRenderAll();
+    } else {
+      const grid = document.getElementById('dlGrid');
+      grid.insertAdjacentHTML('beforeend', items.map((it, i) => _dlView === 'list' ? _dlListRowHTML(it, startRank + i) : _dlCardHTML(it, startRank + i)).join(''));
+      _dlObserveNewCards();
+    }
     _dlPage++;
     if (_dlCategory.cap && _dlAllItems.length >= _dlCategory.cap) {
       _dlDone = true;
@@ -317,6 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initPageGuest(async () => {
     await _dlLoadMore();
+    if (_dlHasSF) document.getElementById('dlSfBar').innerHTML = SF.bar('dl', 'all');
 
     const sentinel = document.getElementById('dlSentinel');
     const obs = new IntersectionObserver((entries) => {
