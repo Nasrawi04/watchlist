@@ -240,7 +240,7 @@ function _lvTypeCls(e) {
 }
 
 function _lvCardHTML(e, rank) {
-  const posterInner = (e.poster_url && !e.poster_url.startsWith('PLACEHOLDER'))
+  const posterInner = safeURL(e.poster_url)
     ? `<img src="${safeURL(e.poster_url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
@@ -256,7 +256,7 @@ function _lvCardHTML(e, rank) {
 }
 
 function _lvListRowHTML(e, rank) {
-  const posterInner = (e.poster_url && !e.poster_url.startsWith('PLACEHOLDER'))
+  const posterInner = safeURL(e.poster_url)
     ? `<img src="${safeURL(e.poster_url)}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
   const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
@@ -288,7 +288,7 @@ function _lvOwnScoreHTML(e) {
   if (isTmdbOnly) return '';
   const score = liveScore(e);
   if (score == null) return '';
-  return `<span class="home-tmdb-score">★ ${Number(score).toFixed(1)}</span>`;
+  return `<span class="home-tmdb-score">★ ${Number(score).toFixed(2)}</span>`;
 }
 
 function _lvRenderViewToggle() {
@@ -363,12 +363,48 @@ async function _lvSetRanked(value) {
     const { error } = await sb.from('favorite_lists').update({ ranked: value }).eq('id', _lvList.id).eq('user_id', _lvUser.id);
     if (error) throw error;
     _lvList.ranked = value;
-    document.getElementById('lvTitle').textContent = _lvList.title; document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML();
+    document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML();
     showToast(value ? 'Marked as ranked!' : 'Marked as unranked.');
   } catch (err) {
     console.error('Set ranked error:', err);
     showToast('Failed to update.', 'err');
   }
+}
+
+function _lvMarkImported() {
+  const btn = document.getElementById('lvImportBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="lv-import-btn-label">Added ✓</span>';
+}
+
+// The original list's items are the OWNER's personal entry ids. Copied
+// as-is, they'd point at someone else's entries, which the importer's
+// Lists page can't resolve (it only loads their own library) — the
+// imported list would show up empty or with gaps. So each item is
+// re-pointed: to the importer's own entry for the same title if they
+// have one, otherwise to a TMDB reference (tmdb:movie:123), and only
+// kept as the original id when the entry was never linked to TMDB.
+async function _lvItemsForImport() {
+  const byId = Object.fromEntries(_lvItems.map(e => [e.id, e]));
+  const { data: mine } = await sb.from('entries')
+    .select('id, tmdb_id, tmdb_type').eq('user_id', _lvUser.id).not('tmdb_id', 'is', null);
+  const myByTmdb = {};
+  (mine || []).forEach(e => { myByTmdb[`${e.tmdb_type}:${e.tmdb_id}`] = e.id; });
+  const out = [];
+  for (const id of (_lvList.items || [])) {
+    let next = id;
+    if (!(typeof id === 'string' && id.startsWith('tmdb:'))) {
+      const e = byId[id];
+      if (e && e.tmdb_id && e.tmdb_type) {
+        next = myByTmdb[`${e.tmdb_type}:${e.tmdb_id}`] || `tmdb:${e.tmdb_type}:${e.tmdb_id}`;
+      }
+    } else {
+      const [, type, tmdbId] = id.split(':');
+      next = myByTmdb[`${type}:${tmdbId}`] || id;
+    }
+    if (!out.includes(next)) out.push(next);
+  }
+  return out;
 }
 
 async function importList() {
@@ -377,19 +413,20 @@ async function importList() {
   const btn = document.getElementById('lvImportBtn');
   btn.disabled = true;
   try {
+    const items = await _lvItemsForImport();
     const { error } = await sb.from('favorite_lists').insert({
       user_id: _lvUser.id,
       cat: 'custom',
       genre: _lvList.genre || '',
       title: _lvList.title,
       description: _lvList.description || null,
-      items: _lvList.items || [],
+      items,
       ranked: _lvList.ranked ?? null,
       forked_from: _lvList.id,
     });
     if (error) throw error;
     showToast('Added to your lists!');
-    btn.textContent = 'Added ✓';
+    _lvMarkImported();
   } catch (err) {
     console.error('Import list error:', err);
     showToast('Failed to import list.', 'err');
@@ -438,6 +475,13 @@ async function _lvLoad() {
 
     const isOwn = _lvUser && list.user_id === _lvUser.id;
     document.getElementById('lvImportBtn').style.display = isOwn ? 'none' : '';
+    if (!isOwn && _lvUser) {
+      // Already imported this one before? Show that instead of letting
+      // the same list get copied into their lists twice.
+      const { data: existing } = await sb.from('favorite_lists')
+        .select('id').eq('user_id', _lvUser.id).eq('forked_from', list.id).limit(1);
+      if (existing && existing.length) _lvMarkImported();
+    }
 
     _lvRenderViewToggle();
     _lvRenderGrid();
