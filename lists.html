@@ -1064,7 +1064,7 @@ async function _llSearch(val) {
       drop.innerHTML = _llResults.map((r, i) => {
         if (r.type === 'user') {
           const initial = (r.username[0] || '?').toUpperCase();
-          const avatarHTML = r.avatar_url
+          const avatarHTML = safeURL(r.avatar_url)
             ? '<div class="ud-avatar"><img src="'+safeURL(r.avatar_url)+'" loading="lazy"></div>'
             : '<div class="ud-avatar">' + initial + '</div>';
           const highlighted = r.username.replace(reg, '<em>$1</em>');
@@ -1085,7 +1085,7 @@ async function _llSearch(val) {
             + '<span class="ud-type-tag">List</span></div>';
         }
         // item
-        const avatarHTML = r.poster_url
+        const avatarHTML = safeURL(r.poster_url)
           ? '<div class="ud-avatar"><img src="'+safeURL(r.poster_url)+'" loading="lazy"></div>'
           : '<div class="ud-avatar">' + ((r.title || '?')[0] || '?').toUpperCase() + '</div>';
         const highlighted = esc(r.title).replace(reg, '<em>$1</em>');
@@ -1806,7 +1806,7 @@ async function _favRunDiscoverSearch(q) {
       const rankCls = _favRankCls(slotNum);
       return `<div class="fav-picker-item ${isSel?'selected':''}" onmousedown="toggleFavListItem(this)" data-id="${m.pseudoId}">
         ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onmousedown="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
-        <div class="fav-picker-poster">${m.poster_url ? `<img src="${safeURL(m.poster_url)}" loading="lazy">` : esc((m.title[0]||'?').toUpperCase())}
+        <div class="fav-picker-poster">${safeURL(m.poster_url) ? `<img src="${safeURL(m.poster_url)}" loading="lazy">` : esc((m.title[0]||'?').toUpperCase())}
           ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
         </div>
         <div class="fav-picker-info"><div class="fav-picker-name">${esc(m.title)}</div><div class="fav-picker-sub">${m.tmdb_type==='movie'?'Movie':'TV'}${m.year?' · '+m.year:''}</div></div>
@@ -1849,7 +1849,7 @@ function _favRenderPickerList() {
     const rankCls = _favRankCls(slotNum);
     return `<div class="fav-picker-item ${isSel?'selected':''}" onmousedown="toggleFavListItem(this)" data-id="${e.id}">
       ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onmousedown="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
-      <div class="fav-picker-poster">${e.poster_url ? `<img src="${safeURL(e.poster_url)}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase())}
+      <div class="fav-picker-poster">${safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase())}
         ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
       </div>
       <div class="fav-picker-info"><div class="fav-picker-name">${esc(e.title)}</div><div class="fav-picker-sub">${(CAT_META[e.cat]?.label)||''}</div></div>
@@ -2230,7 +2230,7 @@ function openFavPopup(id) {
   _favPopupId = id;
   if (!document.getElementById('cgPopupOverlay')) _injectFavPopup();
   const pEl = document.getElementById('cgPopupPoster');
-  pEl.innerHTML = e.poster_url ? `<img src="${safeURL(e.poster_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);">` : esc((e.title||'?')[0].toUpperCase());
+  pEl.innerHTML = safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);">` : esc((e.title||'?')[0].toUpperCase());
   const _pyIsMovie = e.cat==='movies'||e.ratings?._media_type==='movie';
   const _pyStart = e.year || null;
   const _pyEnd = e.ratings?._completion_year || null;
