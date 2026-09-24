@@ -631,6 +631,14 @@ async function loadListsPage() {
   _listsEntries = entries || [];
   _listsAll = lists || [];
   _listsEntryMap = Object.fromEntries(_listsEntries.map(e => [e.id, e]));
+  // Lists imported before v560 can still hold another user's entry ids —
+  // load those too so the imported list isn't shown with missing items.
+  const foreignIds = [...new Set(_listsAll.flatMap(l => l.items || []))]
+    .filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')) && !_listsEntryMap[id]);
+  if (foreignIds.length) {
+    const { data: foreignRows } = await sb.from('entries').select('*').in('id', foreignIds);
+    (foreignRows || []).forEach(e => { _listsEntryMap[e.id] = e; });
+  }
   await _hydrateTmdbItems(_listsAll);
 
   await _ensureListSortOrder();
