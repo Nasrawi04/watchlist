@@ -1541,10 +1541,10 @@ var _libCatLabels = { '':'All Types', tv:'TV Shows', movies:'Movies', anime:'Ani
 var _libStagedCat = '';
 
 function _libInjectTypeFilterOverlay() {
-  if (document.getElementById('sfFilterOverlay')) return;
+  if (document.getElementById('sfTypeFilterOverlay')) return;
   var el = document.createElement('div');
-  el.id = 'sfFilterOverlay';
-  el.innerHTML = '<div id="sfFilterCard">'
+  el.id = 'sfTypeFilterOverlay';
+  el.innerHTML = '<div id="sfTypeFilterCard">'
     + '<div class="sf-header"><div class="sf-title">Filter</div>'
     + '<button class="sf-close" onclick="closeLibTypeFilterPopup()">' + (typeof icon === 'function' ? icon('x',18) : '\u2715') + '</button></div>'
     + '<div class="sf-body" id="libTypeFilterBody"></div>'
@@ -1558,12 +1558,12 @@ function openLibTypeFilterPopup() {
   _libInjectTypeFilterOverlay();
   _libStagedCat = _libCatFilter;
   document.getElementById('libTypeFilterBody').innerHTML = _libTypeFilterBodyHTML();
-  document.getElementById('sfFilterOverlay').classList.add('open');
+  document.getElementById('sfTypeFilterOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 function closeLibTypeFilterPopup() {
-  var ov = document.getElementById('sfFilterOverlay');
+  var ov = document.getElementById('sfTypeFilterOverlay');
   if (!ov) return;
   ov.classList.remove('open');
   document.body.style.overflow = '';
