@@ -1069,6 +1069,7 @@ function _trimNotes(text) {
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/sort-filter.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
 <script src="js/fav-lists-popup.js"></script>
@@ -1610,48 +1611,6 @@ function _ratingShortLabel(label){
   return label.length>14?label.slice(0,13)+'…':label;
 }
 
-function _libApplySort(arr,by){
-  var a=arr.slice();
-  var gd=function(e){return e.completed_date?new Date(e.completed_date):new Date(e.created_at);};
-  var isMovie=function(e){return e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');};
-  var runtimeMin=function(e){
-    if(isMovie(e)) return (Number(e.runtime_h)||0)*60+(Number(e.runtime_m)||0);
-    return Number(e.total_eps)||0;
-  };
-  if(by==='newest')return a.sort(function(x,y){return gd(y)-gd(x);});
-  if(by==='oldest')return a.sort(function(x,y){return gd(x)-gd(y);});
-  if(by==='highest')return a.sort(function(x,y){return (liveScore(y)||0)-(liveScore(x)||0);});
-  if(by==='lowest')return a.sort(function(x,y){return (liveScore(x)||0)-(liveScore(y)||0);});
-  if(by==='release')return a.sort(function(x,y){return getReleaseDateValue(y)-getReleaseDateValue(x);});
-  if(by==='release_asc')return a.sort(function(x,y){return getReleaseDateValue(x)-getReleaseDateValue(y);});
-  if(by==='runtime_longest'||by==='runtime_shortest'){
-    var movies=a.filter(isMovie), rest=a.filter(function(e){return !isMovie(e);});
-    movies.sort(function(x,y){return by==='runtime_longest'?runtimeMin(y)-runtimeMin(x):runtimeMin(x)-runtimeMin(y);});
-    rest.sort(function(x,y){return gd(y)-gd(x);});
-    return movies.concat(rest);
-  }
-  if(by==='eps_most'||by==='eps_least'){
-    var shows=a.filter(function(e){return !isMovie(e);}), moviesB=a.filter(isMovie);
-    shows.sort(function(x,y){return by==='eps_most'?(Number(y.total_eps)||0)-(Number(x.total_eps)||0):(Number(x.total_eps)||0)-(Number(y.total_eps)||0);});
-    moviesB.sort(function(x,y){return gd(y)-gd(x);});
-    return shows.concat(moviesB);
-  }
-  if(by&&by.indexOf('rating:')===0){
-    var key=by.slice(7);
-    return a.sort(function(x,y){
-      var ex=_ratingVal(x,key),ey=_ratingVal(y,key);
-      var xKey=ex!=null?ex:(liveScore(x)||0);
-      var yKey=ey!=null?ey:(liveScore(y)||0);
-      var d=yKey-xKey;
-      if(d)return d;
-      return (liveScore(y)||0)-(liveScore(x)||0);
-    });
-  }
-  if(by==='alpha')return a.sort(function(x,y){return (x.title||'').localeCompare(y.title||'');});
-  if(by==='zalpha')return a.sort(function(x,y){return (y.title||'').localeCompare(x.title||'');});
-  return a;
-}
-
 function _libCatFilterBar() {
   return '<div class="sf-trigger-row" style="margin-bottom:10px;justify-content:flex-start;">'
     + '<button class="sf-icon-btn' + (_libCatFilter ? ' active' : '') + '" id="libTypeTriggerBtn" onclick="openLibTypeFilterPopup()" aria-label="Filter">'
@@ -1708,331 +1667,46 @@ function _libClearStagedType() {
 
 function _libApplyTypeFilter() {
   _libCatFilter = _libStagedCat;
+  SF.invalidate(_sfScope()); // actor names depend on which types are shown
   closeLibTypeFilterPopup();
   renderLibrary();
 }
 
-function _libSortBar(sec){
-  var cur=_libSort[sec]||'newest';
-  var f=_libFilter[sec]||{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:''};
-  var filterCount=(f.genres||[]).length+(f.yearMin||f.yearMax?1:0)+(f.scoreMin||f.scoreMax?1:0)+(f.lengthMin||f.lengthMax?1:0)+(f.person?1:0)+(f.status?1:0);
-  return '<div class="sort-bar sf-trigger-row">'
-    + '<button class="sf-icon-btn'+(cur!=='newest'?' active':'')+'" onclick="openLibSortPopup(\''+sec+'\')" aria-label="Sort">'
-    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>'
-    + '<span class="sf-icon-btn-label">'+(cur!=='newest'?_libSortLabelFor(sec,cur):'Sort')+'</span></button>'
-    + '<button class="sf-icon-btn'+(filterCount?' active':'')+'" onclick="openLibFilterPopup(\''+sec+'\')" aria-label="Filter">'
-    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>'
-    + '<span class="sf-icon-btn-label">'+(filterCount?('Filter ('+filterCount+')'):'Filter')+'</span></button>'
-    + '</div>';
-}
-
-// Sort groups depend on the outer Type filter: Runtime only makes
-// sense once Movies are actually present, Episode Count only once TV
-// shows are — offering both together is the completed.html-style
-// mixed view; narrowing to one type hides whichever no longer applies.
-function _libSortGroups(){
-  var groups=[
-    {header:'Alphabetical',opts:[['alpha','A \u2192 Z'],['zalpha','Z \u2192 A']]},
-    {header:'Added',opts:[['newest','Latest'],['oldest','Earliest']]},
-    {header:'Release Date',opts:[['release','Latest'],['release_asc','Earliest']]},
-    {header:'Ratings',opts:[['highest','Highest'],['lowest','Lowest']]},
-  ];
-  if(_libCatFilter!=='tv') groups.push({header:'Runtime',opts:[['runtime_longest','Longest'],['runtime_shortest','Shortest']]});
-  if(_libCatFilter!=='movies') groups.push({header:'Episode Count',opts:[['eps_most','Longest'],['eps_least','Shortest']]});
-  return groups;
-}
-
-function _libSortLabelFor(sec,value){
-  if((value||'').indexOf('rating:')===0) return 'Rating: '+_ratingFilterLabelAll(value.slice(7));
-  var groups=_libSortGroups();
-  for(var i=0;i<groups.length;i++) for(var j=0;j<groups[i].opts.length;j++) if(groups[i].opts[j][0]===value) return groups[i].opts.length>1?(groups[i].header+': '+groups[i].opts[j][1]):groups[i].header;
-  return 'Sort';
-}
-
-var _libStagedSort='newest', _libSortSection=null;
-
-function _libInjectSortOverlay(){
-  if(document.getElementById('sfSortOverlay'))return;
-  var el=document.createElement('div');
-  el.id='sfSortOverlay';
-  el.innerHTML='<div id="sfSortCard"><div class="sf-header"><div class="sf-title">Sort</div>'
-    +'<button class="sf-close" onclick="closeLibSortPopup()">'+(typeof icon==='function'?icon('x',18):'\u2715')+'</button></div>'
-    +'<div class="sf-body" id="libSortBody"></div>'
-    +'<div class="sf-footer"><button class="sf-clear-btn" onclick="_libResetStagedSort()">Reset</button><button class="sf-apply-btn" onclick="_libApplySortPopup()">Apply</button></div></div>';
-  el.addEventListener('click',function(ev){if(ev.target===el)closeLibSortPopup();});
-  document.body.appendChild(el);
-}
-
-function openLibSortPopup(sec){
-  _libInjectSortOverlay();
-  _libSortSection=sec;
-  _libStagedSort=_libSort[sec]||'newest';
-  document.getElementById('libSortBody').innerHTML=_libSortBodyHTML();
-  document.getElementById('sfSortOverlay').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-function closeLibSortPopup(){
-  var ov=document.getElementById('sfSortOverlay');
-  if(!ov)return;
-  ov.classList.remove('open');
-  document.body.style.overflow='';
-}
-function _libSortBodyHTML(){
-  var staged=_libStagedSort;
-  var groups=_libSortGroups();
-  var showRating=_libSortSection==='completed';
-  var isRating=(staged||'').indexOf('rating:')===0;
-  var html='<div class="sf-dd-stack">';
-  groups.forEach(function(g,i){
-    var ddId='libSortDD-'+i;
-    var isActive=g.opts.some(function(o){return o[0]===staged;});
-    var label=isActive?(g.header+': '+g.opts.filter(function(o){return o[0]===staged;})[0][1]):g.header;
-    var menu=g.opts.map(function(o){return '<div class="td-dd-opt'+(staged===o[0]?' active':'')+'" onclick="event.stopPropagation();_libStageSort(\''+o[0]+'\')">'+o[1]+'</div>';}).join('');
-    html+='<div class="td-dd sf-dd sf-dd-wide" id="'+ddId+'"><button type="button" class="td-dd-trigger sf-dd-trigger'+(isActive?' active':'')+'" onclick="event.stopPropagation();_libToggleDD(\''+ddId+'\')">'
-      +'<span class="td-dd-label">'+label+'</span>'
-      +'<svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
-      +'<div class="td-dd-menu">'+menu+'</div></div>';
-  });
-  html+='</div>';
-  if(showRating){
-    var opts=_ratingFilterOptionsAll();
-    var lastGroup=null,ratingMenu='';
-    opts.forEach(function(o){
-      if(o.group!==lastGroup){ratingMenu+='<div class="sf-dd-subgroup-label">'+o.group+'</div>';lastGroup=o.group;}
-      ratingMenu+='<div class="td-dd-opt'+(isRating&&staged.slice(7)===o.key?' active':'')+'" onclick="event.stopPropagation();_libStageSort(\'rating:'+o.key+'\')">'+o.label+'</div>';
-    });
-    html+='<div class="td-dd sf-dd sf-dd-wide" id="libSortDD-rating" style="margin-top:8px;"><button type="button" class="td-dd-trigger sf-dd-trigger'+(isRating?' active':'')+'" onclick="event.stopPropagation();_libToggleDD(\'libSortDD-rating\')">'
-      +'<span class="td-dd-label">'+(isRating?('Rating: '+_ratingFilterLabelAll(staged.slice(7))):'Specific Rating')+'</span>'
-      +'<svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
-      +'<div class="td-dd-menu">'+ratingMenu+'</div></div>';
-  }
-  return html;
-}
-function _libStageSort(v){_libStagedSort=v;document.getElementById('libSortBody').innerHTML=_libSortBodyHTML();}
-function _libResetStagedSort(){_libStagedSort='newest';document.getElementById('libSortBody').innerHTML=_libSortBodyHTML();}
-function _libApplySortPopup(){setLibSort(_libSortSection,_libStagedSort);closeLibSortPopup();}
-
-function _libToggleDD(id){
-  var target=document.getElementById(id);
-  var wasOpen=target.classList.contains('open');
-  document.querySelectorAll('.sf-dd.open').forEach(function(el){el.classList.remove('open');var m=el.querySelector('.td-dd-menu');if(m)m.style.cssText='';});
-  if(wasOpen)return;
-  target.classList.add('open');
-  var trigger=target.querySelector('.sf-dd-trigger');
-  var menu=target.querySelector('.td-dd-menu');
-  var rect=trigger.getBoundingClientRect();
-  var margin=12;
-  var spaceBelow=window.innerHeight-rect.bottom-margin;
-  var spaceAbove=rect.top-margin;
-  var openUp=spaceBelow<140&&spaceAbove>spaceBelow;
-  var available=Math.max(110,Math.min(openUp?spaceAbove:spaceBelow,150));
-  menu.style.cssText='position:fixed; left:'+rect.left+'px; width:'+rect.width+'px; z-index:1400; display:block; max-height:'+available+'px; overflow-y:auto; '
-    +(openUp?('bottom:'+(window.innerHeight-rect.top)+'px; top:auto; border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-top:0.5px solid var(--olive-light); border-bottom:none;')
-             :('top:'+rect.bottom+'px; bottom:auto;'));
-}
-document.addEventListener('click',function(){document.querySelectorAll('.sf-dd.open').forEach(function(el){el.classList.remove('open');var m=el.querySelector('.td-dd-menu');if(m)m.style.cssText='';});});
-window.addEventListener('scroll',function(){document.querySelectorAll('.sf-dd.open').forEach(function(el){el.classList.remove('open');var m=el.querySelector('.td-dd-menu');if(m)m.style.cssText='';});});
-
-/* ── Filter popup (per section): Genre, Year, Score, Runtime/Episode, Actor ── */
-var _libFilter={watching:{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:'',status:''},
-                queue:{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:'',status:''},
-                completed:{genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:'',status:''}};
-var _libStagedFilter=null, _libFilterSection=null;
-var _libAllGenres=['Action','Adventure','Animation','Comedy','Crime','Documentary','Drama','Family','Fantasy','History','Horror','Music','Mystery','Romance','Science Fiction','Thriller','TV Movie','War','Western'];
-var _libCastCache={}, _libPersonNames={};
-
+/* ══ Sort & Filter — shared js/sort-filter.js module ══
+   Only what's specific to this page lives here; the popups, sorting and
+   filtering logic are the same code every page uses. */
 function _libBaseEntries(sec){
-  if(sec==='watching') return _libEntries.filter(function(e){return (e.status==='watching'||e.status==='paused')&&(!_libCatFilter||e.cat===_libCatFilter);});
-  if(sec==='queue') return _libEntries.filter(function(e){return e.status==='queue'&&(!_libCatFilter||e.cat===_libCatFilter);});
-  return _libEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&&(!_libCatFilter||e.cat===_libCatFilter);});
+  var inCat=function(e){return !_libCatFilter||e.cat===_libCatFilter;};
+  if(sec==='watching') return _libEntries.filter(function(e){return (e.status==='watching'||e.status==='paused')&&inCat(e);});
+  if(sec==='queue') return _libEntries.filter(function(e){return e.status==='queue'&&inCat(e);});
+  return _libEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&&inCat(e);});
 }
-
-async function _libFetchCredits(entry){
-  if(entry.ratings&&(entry.ratings._director!=null||entry.ratings._cast_names)) return {director:entry.ratings._director||'',cast:entry.ratings._cast_names||[]};
-  if(!entry.tmdb_id||!entry.tmdb_type) return null;
-  if(_libCastCache[entry.tmdb_id]) return _libCastCache[entry.tmdb_id];
-  try{
-    var res=await tmdbFetch(TMDB_BASE+'/'+entry.tmdb_type+'/'+entry.tmdb_id+'?api_key='+TMDB_KEY+'&language=en-US&append_to_response=credits');
-    if(!res.ok) return null;
-    var data=await res.json();
-    var director=(data.credits&&data.credits.crew||[]).filter(function(c){return c.job==='Director';})[0];
-    director=director?director.name:'';
-    var cast=(data.credits&&data.credits.cast||[]).slice(0,12).map(function(c){return c.name;});
-    var result={director:director,cast:cast};
-    _libCastCache[entry.tmdb_id]=result;
-    var newRatings=Object.assign({},entry.ratings||{},{_director:director,_cast_names:cast});
-    updateProgress(entry.id,_pUser.id,{ratings:newRatings}).catch(function(){});
-    entry.ratings=newRatings;
-    return result;
-  }catch(e){return null;}
-}
-
-function _libRuntimeMinutes(e){
-  var isMovie=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
-  if(isMovie) return (Number(e.runtime_h)||0)*60+(Number(e.runtime_m)||0);
-  return Number(e.total_eps)||0;
-}
-
-function _libInjectFilterOverlay(){
-  if(document.getElementById('sfFilterOverlay'))return;
-  var el=document.createElement('div');
-  el.id='sfFilterOverlay';
-  el.innerHTML='<div id="sfFilterCard"><div class="sf-header"><div class="sf-title">Filter</div>'
-    +'<button class="sf-close" onclick="closeLibFilterPopup()">'+(typeof icon==='function'?icon('x',18):'\u2715')+'</button></div>'
-    +'<div class="sf-body" id="libFilterBody"></div>'
-    +'<div class="sf-footer"><button class="sf-clear-btn" onclick="_libClearStagedFilter()">Clear</button><button class="sf-apply-btn" onclick="_libApplyFilterPopup()">Apply</button></div></div>';
-  el.addEventListener('click',function(ev){if(ev.target===el)closeLibFilterPopup();});
-  document.body.appendChild(el);
-}
-
-function openLibFilterPopup(sec){
-  _libInjectFilterOverlay();
-  _libFilterSection=sec;
-  var cur=_libFilter[sec];
-  _libStagedFilter={genres:cur.genres.slice(),yearMin:cur.yearMin,yearMax:cur.yearMax,scoreMin:cur.scoreMin,scoreMax:cur.scoreMax,lengthMin:cur.lengthMin,lengthMax:cur.lengthMax,person:cur.person,status:cur.status||''};
-  document.getElementById('libFilterBody').innerHTML=_libFilterBodyHTML();
-  document.getElementById('sfFilterOverlay').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-function closeLibFilterPopup(){
-  var ov=document.getElementById('sfFilterOverlay');
-  if(!ov)return;
-  ov.classList.remove('open');
-  document.body.style.overflow='';
-}
-function _libFilterBodyHTML(){
-  var f=_libStagedFilter;
-  var statusLabels={'':'All','completed':'Watched','ongoing':'To Be Continued'};
-  var statusRows=_libFilterSection==='completed' ? Object.entries(statusLabels).map(function(kv){
-    var v=kv[0],l=kv[1];
-    return '<label class="sf-check-row"><input type="checkbox" name="libStatusStaged" '+(f.status===v?'checked':'')+' onchange="_libStagedFilter.status=\''+v+'\';document.getElementById(\'libFilterBody\').innerHTML=_libFilterBodyHTML();">'
-      +'<span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span>'+l+'</span></label>';
-  }).join('') : '';
-  var statusSection=_libFilterSection==='completed' ? ('<div class="sf-section-label">Status</div><div class="sf-check-list">'+statusRows+'</div>') : '';
-  var genreLabel=f.genres.length?f.genres.join(', '):'Any Genre';
-  var genreMenu=_libAllGenres.map(function(g){
-    return '<label class="sf-check-row" onclick="event.stopPropagation();"><input type="checkbox" '+(f.genres.indexOf(g)>-1?'checked':'')+' onchange="_libStageGenre('+attrJSON(g)+')">'
-      +'<span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span>'+escHTML(g)+'</span></label>';
-  }).join('');
-  var lengthLabel=_libCatFilter==='movies'?'Runtime (minutes)':_libCatFilter==='tv'?'Episode Count':'Runtime / Episode Count';
-  return statusSection
-    +'<div class="sf-section-label">Genre</div>'
-    +'<div class="td-dd sf-dd sf-dd-wide" id="libGenreDD"><button type="button" class="td-dd-trigger sf-dd-trigger'+(f.genres.length?' active':'')+'" onclick="event.stopPropagation();_libToggleDD(\'libGenreDD\')">'
-    +'<span class="td-dd-label">'+genreLabel+'</span><svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
-    +'<div class="td-dd-menu sf-check-menu">'+genreMenu+'</div></div>'
-    +'<div class="sf-section-label">Release Year</div><div class="sf-range-row">'
-    +'<input type="number" class="sf-range-input" id="libYearMin" placeholder="From" value="'+f.yearMin+'" oninput="_libStageRanges()">'
-    +'<span class="sf-range-to">to</span><input type="number" class="sf-range-input" id="libYearMax" placeholder="To" value="'+f.yearMax+'" oninput="_libStageRanges()"></div>'
-    +'<div class="sf-section-label">MyScreenScore <span class="sf-section-hint">(rated items only)</span></div><div class="sf-range-row">'
-    +'<input type="number" step="0.1" min="0" max="10" class="sf-range-input" id="libScoreMin" placeholder="Min" value="'+f.scoreMin+'" oninput="_libStageRanges()">'
-    +'<span class="sf-range-to">to</span><input type="number" step="0.1" min="0" max="10" class="sf-range-input" id="libScoreMax" placeholder="Max" value="'+f.scoreMax+'" oninput="_libStageRanges()"></div>'
-    +'<div class="sf-section-label">'+lengthLabel+'</div><div class="sf-range-row">'
-    +'<input type="number" min="0" class="sf-range-input" id="libLengthMin" placeholder="Min" value="'+f.lengthMin+'" oninput="_libStageRanges()">'
-    +'<span class="sf-range-to">to</span><input type="number" min="0" class="sf-range-input" id="libLengthMax" placeholder="Max" value="'+f.lengthMax+'" oninput="_libStageRanges()"></div>'
-    +'<div class="sf-section-label">Actor / Director</div>'
-    +'<div class="td-dd sf-dd sf-dd-wide" id="libPersonDD"><input type="text" class="sf-range-input sf-text-input sf-dd-trigger" id="libPersonSearch" placeholder="Search by name\u2026" autocomplete="off" value="'+(f.person||'')+'" oninput="_libPersonInput(event.target.value)" onfocus="event.stopPropagation();_libOpenPersonDD()" onclick="event.stopPropagation();">'
-    +'<div class="td-dd-menu" id="libPersonMenu"></div></div>'
-    +'<div class="sf-section-hint sf-person-hint">Checked against each title\'s cast &amp; director \u2014 may take a moment the first time.</div>';
-}
-
-async function _libOpenPersonDD(){
-  var sec=_libFilterSection;
-  if(_libPersonNames[sec])return;
-  var base=_libBaseEntries(sec);
-  var names={};
-  await Promise.all(base.map(async function(e){
-    var credits=await _libFetchCredits(e);
-    if(!credits)return;
-    if(credits.director)names[credits.director]=1;
-    credits.cast.forEach(function(n){names[n]=1;});
-  }));
-  _libPersonNames[sec]=Object.keys(names).sort(function(a,b){return a.localeCompare(b);});
-  _libRenderPersonMenu();
-}
-function _libPersonInput(v){_libStagedFilter.person=v;_libRenderPersonMenu();}
-function _libRenderPersonMenu(){
-  var dd=document.getElementById('libPersonDD');
-  var menuEl=document.getElementById('libPersonMenu');
-  if(!dd||!menuEl)return;
-  var q=(_libStagedFilter.person||'').trim().toLowerCase();
-  if(q.length<2){dd.classList.remove('open');menuEl.style.cssText='';return;}
-  var all=_libPersonNames[_libFilterSection];
-  if(!all){menuEl.innerHTML='<div class="sf-empty">Loading actors &amp; directors\u2026</div>';}
-  else{
-    var matches=all.filter(function(n){return n.toLowerCase().indexOf(q)>-1;}).slice(0,50);
-    menuEl.innerHTML=matches.length?matches.map(function(n){return '<div class="td-dd-opt" onclick="event.stopPropagation();_libPickPerson('+attrJSON(n)+')">'+escHTML(n)+'</div>';}).join(''):'<div class="sf-empty">No matching names.</div>';
-  }
-  dd.classList.add('open');
-  var trigger=dd.querySelector('.sf-dd-trigger');
-  var menu=dd.querySelector('.td-dd-menu');
-  var rect=trigger.getBoundingClientRect();
-  var spaceBelow=window.innerHeight-rect.bottom-12;
-  menu.style.cssText='position:fixed; left:'+rect.left+'px; width:'+rect.width+'px; z-index:1400; display:block; max-height:'+Math.max(110,Math.min(spaceBelow,150))+'px; overflow-y:auto; top:'+rect.bottom+'px;';
-}
-function _libPickPerson(name){
-  _libStagedFilter.person=name;
-  document.getElementById('libPersonSearch').value=name;
-  document.getElementById('libPersonDD').classList.remove('open');
-  document.getElementById('libPersonMenu').style.cssText='';
-}
-function _libStageGenre(g){
-  var cur=_libStagedFilter.genres;
-  var idx=cur.indexOf(g);
-  _libStagedFilter.genres=idx>-1?cur.filter(function(x){return x!==g;}):cur.concat([g]);
-  var dd=document.getElementById('libGenreDD');
-  var trigger=dd.querySelector('.sf-dd-trigger');
-  var label=_libStagedFilter.genres.length?_libStagedFilter.genres.join(', '):'Any Genre';
-  trigger.querySelector('.td-dd-label').textContent=label;
-  trigger.classList.toggle('active',_libStagedFilter.genres.length>0);
-}
-function _libStageRanges(){
-  var val=function(id){var el=document.getElementById(id);return el?el.value:'';};
-  _libStagedFilter.yearMin=val('libYearMin');_libStagedFilter.yearMax=val('libYearMax');
-  _libStagedFilter.scoreMin=val('libScoreMin');_libStagedFilter.scoreMax=val('libScoreMax');
-  _libStagedFilter.lengthMin=val('libLengthMin');_libStagedFilter.lengthMax=val('libLengthMax');
-}
-function _libClearStagedFilter(){
-  _libStagedFilter={genres:[],yearMin:'',yearMax:'',scoreMin:'',scoreMax:'',lengthMin:'',lengthMax:'',person:'',status:''};
-  document.getElementById('libFilterBody').innerHTML=_libFilterBodyHTML();
-}
-async function _libApplyFilterPopup(){
-  var staged=Object.assign({},_libStagedFilter);
-  var applyBtn=document.querySelector('#sfFilterCard .sf-apply-btn');
-  if(staged.person&&staged.person.trim()){
-    var q=staged.person.trim().toLowerCase();
-    if(applyBtn){applyBtn.textContent='Searching\u2026';applyBtn.disabled=true;}
-    var base=_libBaseEntries(_libFilterSection);
-    var matches={};
-    await Promise.all(base.map(async function(e){
-      var credits=await _libFetchCredits(e);
-      if(!credits)return;
-      var hit=credits.director.toLowerCase().indexOf(q)>-1||credits.cast.some(function(n){return n.toLowerCase().indexOf(q)>-1;});
-      if(hit)matches[e.id]=1;
-    }));
-    staged._personMatchIds=Object.keys(matches);
-    if(applyBtn){applyBtn.textContent='Apply';applyBtn.disabled=false;}
-  } else { staged._personMatchIds=null; }
-  _libFilter[_libFilterSection]=staged;
-  closeLibFilterPopup();
-  renderLibrary();
-}
-
-function _libFilterEntries(sec,arr){
-  var f=_libFilter[sec];
-  var result=arr;
-  if(f.status) result=result.filter(function(e){return e.status===f.status;});
-  if(f.genres.length) result=result.filter(function(e){return (e.genres||[]).some(function(g){return f.genres.indexOf(g)>-1;});});
-  if(f.yearMin) result=result.filter(function(e){return e.year&&Number(e.year)>=Number(f.yearMin);});
-  if(f.yearMax) result=result.filter(function(e){return e.year&&Number(e.year)<=Number(f.yearMax);});
-  if(f.scoreMin) result=result.filter(function(e){return liveScore(e)!=null&&liveScore(e)>=Number(f.scoreMin);});
-  if(f.scoreMax) result=result.filter(function(e){return liveScore(e)!=null&&liveScore(e)<=Number(f.scoreMax);});
-  if(f.lengthMin) result=result.filter(function(e){return _libRuntimeMinutes(e)>=Number(f.lengthMin);});
-  if(f.lengthMax) result=result.filter(function(e){return _libRuntimeMinutes(e)<=Number(f.lengthMax);});
-  if(f._personMatchIds) result=result.filter(function(e){return f._personMatchIds.indexOf(e.id)>-1;});
-  return result;
-}
-function setLibSort(sec,val){_libSort[sec]=val;renderLibrary();}
-function setLibCat(c){_libCatFilter=c;renderLibrary();}
+SF.register('prof', {
+  base: _libBaseEntries,
+  render: function(){ renderLibrary(); },
+  sortState: _libSort,
+  // Runtime only once movies can be present, Episode Count only once shows can
+  sorts: function(){ return ['alpha','added','release','ratings', _libCatFilter!=='tv'&&'runtime', _libCatFilter!=='movies'&&'episodes']; },
+  lengthLabel: function(){ return _libCatFilter==='movies'?'Runtime (minutes)':_libCatFilter==='tv'?'Episode Count':'Runtime / Episode Count'; },
+  choiceFilters: function(sec){
+    return sec==='completed' ? [{ key:'status', label:'Status', options:[['','All'],['completed','Watched'],['ongoing','To Be Continued']] }] : [];
+  },
+  ratingSort: {
+    show: function(sec){ return sec==='completed'; },
+    options: _ratingFilterOptionsAll,
+    label: _ratingFilterLabelAll,
+    value: _ratingVal,
+  },
+  // Paused entries always sink to the bottom of Currently Watching
+  postSort: function(sec,list){
+    return sec==='watching' ? list.filter(function(e){return e.status!=='paused';}).concat(list.filter(function(e){return e.status==='paused';})) : list;
+  },
+  saveRatings: function(e,r){ return updateProgress(e.id,_pUser.id,{ratings:r}).catch(function(){}); },
+});
+function _sfScope(){ return 'prof'; }
+function _libSortBar(sec){ return SF.bar('prof', sec); }
+function setLibSort(sec,val){ SF.setSort('prof', sec, val); }
+function setLibCat(c){_libCatFilter=c;SF.invalidate(_sfScope());renderLibrary();}
 
 /* ── Rating filter popup (shared markup/CSS pattern with category.js) ── */
 var _ratingFilterSection=null;
@@ -2117,15 +1791,14 @@ function renderLibrary(){
   if(!el)return;
   _libEntries=_pEntries.slice();
   var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  var watching=_libApplySort(_libFilterEntries('watching',_libEntries.filter(function(e){return e.status==='watching'&&(!_libCatFilter||e.cat===_libCatFilter);})),_libSort.watching).concat(_libApplySort(_libFilterEntries('watching',_libEntries.filter(function(e){return e.status==='paused'&&(!_libCatFilter||e.cat===_libCatFilter);})),_libSort.watching));
-  var queue=_libApplySort(_libFilterEntries('queue',_libEntries.filter(function(e){return e.status==='queue'&&(!_libCatFilter||e.cat===_libCatFilter);})),_libSort.queue);
-  var compAll=_libFilterEntries('completed',_libEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&& (e.status==='paused' || !_libCatFilter || e.cat===_libCatFilter);}));
+  var watching=SF.list('prof','watching');
+  var queue=SF.list('prof','queue');
 
   // Dynamic stats based on current filter
   var _filteredAll = _pEntries.filter(function(e){return !_libCatFilter||e.cat===_libCatFilter;});
   var _fSt = computeStats(_filteredAll);
   var _fHours = Math.round((_fSt.movieMins||0)/60);
-  var completed=_libApplySort(compAll,_libSort.completed);
+  var completed=SF.list('prof','completed');
   var st=computeStats(_libEntries);
 
   // Stats bar
