@@ -284,7 +284,9 @@
 .lc-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .lc-poster span { font-size:18px !important; }
 .lc-poster-empty { grid-column:1/-1; aspect-ratio:auto; padding:18px 0; text-align:center; font-size:12px; color:var(--text-3); border:1px dashed var(--border-2); background:transparent; }
-.lc-card .social-list-reactions { margin-top:12px; }
+.lc-card .social-list-owner { margin-bottom:10px; }
+.lc-card .social-list-reactions { margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
+@media(max-width:640px) { #listsPageStats { display:grid; grid-template-columns:repeat(2, 1fr); } }
 
 /* ── List popup (Personal + Community) ── */
 .lp-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:1.1rem; }
@@ -302,34 +304,55 @@
 .lp-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .lp-more { display:flex; align-items:center; justify-content:center; font-family:var(--bebas); font-size:26px; color:var(--olive-light); background:var(--olive-faint); border:1px solid var(--border-olive); box-shadow:none; }
 .lp-choice { margin-bottom:1rem; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--text-3); }
-.lp-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-.lp-actions .lp-btn { flex:1 1 0; }
-.lp-footer { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding-top:12px; border-top:0.5px solid var(--border); }
-.lp-btn {
-  display:inline-flex; align-items:center; justify-content:center; gap:7px; min-width:0;
-  padding:10px 16px; border-radius:999px; cursor:pointer; white-space:nowrap;
-  font-family:var(--sans); font-size:13px; font-weight:600;
-  background:var(--card); border:1px solid var(--border-2); color:var(--text-2);
-  transition:background .15s, border-color .15s, color .15s, transform .1s;
-}
-.lp-btn:hover { border-color:var(--border-olive); color:var(--text); }
-.lp-btn:active { transform:scale(.97); }
-.lp-btn svg { width:15px; height:15px; flex-shrink:0; }
-.lp-btn-solid { background:var(--olive); border-color:var(--olive); color:#fff; }
-.lp-btn-solid:hover { background:var(--olive-2, var(--olive)); color:#fff; border-color:var(--olive); filter:brightness(1.08); }
-.lp-btn.active-like { background:var(--olive); border-color:var(--olive); color:#fff; }
-.lp-btn.active-dislike { background:#b4564a; border-color:#b4564a; color:#fff; }
-.lp-btn-danger:hover { border-color:#c0564a; color:#c0564a; }
-.lp-btn:disabled { opacity:.55; cursor:default; transform:none; }
-@media(max-width:520px) {
+.lp-actions, .lp-footer { display:flex; gap:8px; flex-wrap:wrap; }
+.lp-actions { margin-bottom:8px; }
+.lp-footer { padding-top:12px; border-top:0.5px solid var(--border); flex-wrap:nowrap; }
+/* Buttons use the category ratings popup's .popup-action-btn (solid olive,
+   red for delete — styled via the *PopupActions ids). Sizes tuned here. */
+#lpPopupActions .popup-action-btn, #lpNavPopupActions .popup-action-btn { padding:11px 14px; font-size:13px; gap:7px; }
+#lpPopupActions .popup-action-btn svg, #lpNavPopupActions .popup-action-btn svg { width:14px; height:14px; opacity:1; }
+.lp-view { flex:3 1 0 !important; }                        /* View List gets most of the width */
+.lp-replies { flex:1 1 0 !important; }
+.lp-actions-social { flex-wrap:nowrap; }
+.lp-react-pair { display:flex; gap:8px; flex:0 0 auto; }
+.lp-react-pair .popup-action-btn { flex:0 0 auto; min-width:72px; }
+.lp-add { flex:1 1 auto !important; }
+/* Like / dislike: outlined until you've reacted, then filled */
+#lpPopupActions .lp-react { background:transparent; color:var(--olive-light); border-color:var(--border-olive); }
+#lpPopupActions .lp-react:hover { background:var(--olive-faint); color:var(--olive-light); border-color:var(--olive-light); }
+#lpPopupActions .lp-react.is-on { background:var(--olive); color:#fff; border-color:var(--olive); }
+#lpPopupActions .lp-react-down.is-on { background:#b91c1c; border-color:#b91c1c; color:#fff; }
+#lpPopupActions .popup-action-btn:disabled { opacity:.6; cursor:default; }
+@media(max-width:600px) {
+  /* keep these rows side-by-side (the shared rule stacks *PopupActions) */
+  #lpPopupActions, #lpNavPopupActions { flex-direction:row !important; }
+  #lpPopupActions .popup-action-btn, #lpNavPopupActions .popup-action-btn { width:auto; flex:1 1 0; padding:10px 10px; font-size:12.5px; white-space:nowrap; }
+  .lp-actions-social { flex-wrap:wrap; }
+  .lp-actions-social .lp-add { flex:1 1 100% !important; order:-1; }
+  .lp-react-pair { flex:1 1 100%; }
+  .lp-react-pair .popup-action-btn { flex:1 1 0 !important; }
   .lp-posters { gap:7px; }
-  .lp-btn { padding:9px 12px; font-size:12.5px; }
+}
+/* the shared *PopupActions rule adds side padding on small screens — not wanted here */
+#lpPopupActions { padding:0 !important; }
+#lpNavPopupActions { padding:12px 0 0 !important; }
+@media(max-width:380px) {
+  #lpPopupActions .popup-action-btn, #lpNavPopupActions .popup-action-btn { font-size:12px; padding:10px 8px; gap:5px; }
+  #lpPopupActions .popup-action-btn:not(.lp-react) svg, #lpNavPopupActions .popup-action-btn svg { display:none; }
 }
 
-.lists-order-sort-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:1rem; }
-.lists-order-sort-bar .lists-order-label { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); }
-.lists-order-sort-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
-.lists-order-sort-bar .sort-bar::before { content:none; }
+/* ── Toolbar above the cards (same on both tabs) ── */
+.lists-toolbar {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin:0 0 1.1rem; padding-bottom:12px; border-bottom:0.5px solid var(--border);
+}
+.lists-toolbar-label { display:flex; align-items:baseline; gap:10px; min-width:0; }
+.lists-toolbar-title { font-family:var(--serif); font-size:13px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); white-space:nowrap; }
+.lists-toolbar-count { font-size:12px; color:var(--text-3); white-space:nowrap; }
+.lists-toolbar-count b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); letter-spacing:.3px; }
+.lists-toolbar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.lists-toolbar .sort-bar::before { content:none; }
+.lists-empty { padding:3rem 1rem; text-align:center; font-size:13px; color:var(--text-3); }
 </style>
 </head>
 <body>
@@ -355,8 +378,6 @@
   <!-- Stat boxes -->
   <div class="page-stats fade-up fade-up-1" id="listsPageStats"></div>
 
-  <!-- Sort lists by -->
-  <div class="lists-order-sort-bar fade-up fade-up-1" id="listsOrderSortBar" style="display:none;"></div>
 
   <!-- Social: search users, list names, item names -->
   <div class="lists-search-wrap fade-up fade-up-1" id="listsSearchWrap" style="display:none;">
@@ -374,12 +395,8 @@
   </div>
   <div id="llDropdown" class="username-dropdown"></div>
 
-  <!-- Social sort by -->
-  <div class="lists-order-sort-bar fade-up fade-up-1" id="listsSocialSortBar" style="display:none;">
-    <button class="sort-btn active" data-sort="popular" onclick="setSocialListsSort('popular')">Popular</button>
-    <button class="sort-btn" data-sort="least_popular" onclick="setSocialListsSort('least_popular')">Least Popular</button>
-    <button class="sort-btn" data-sort="latest" onclick="setSocialListsSort('latest')">Latest</button>
-  </div>
+  <!-- Toolbar: section label + Sort / Filter (both tabs) -->
+  <div class="lists-toolbar fade-up fade-up-1" id="listsToolbar" style="display:none;"></div>
 
   <!-- Main content -->
   <div id="listsPageContent" class="fade-up fade-up-2">
@@ -839,9 +856,7 @@ function renderListsPage() {
 
   document.getElementById('listsPageSub').textContent = 'Your personal collections, curated your way — from watchlists to favorites and beyond.';
 
-  const orderBar = document.getElementById('listsOrderSortBar');
-  orderBar.style.display = totalLists ? '' : 'none';
-  if (totalLists) orderBar.innerHTML = `<div class="lists-order-label">Your Lists</div>${SF.bar('listsOrder', 'all')}`;
+  _renderListsToolbar('Your Lists', totalLists ? SF.list('listsOrder', 'all').length : 0, totalLists ? SF.bar('listsOrder', 'all') : '');
 
   let html = '';
 
@@ -936,21 +951,57 @@ SF.register('listsOrder', {
   ],
 });
 
+// Section label + count on the left, Sort / Filter on the right
+function _renderListsToolbar(label, count, barHTML) {
+  const el = document.getElementById('listsToolbar');
+  if (!el) return;
+  if (!barHTML) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = `<div class="lists-toolbar-label">
+      <div class="lists-toolbar-title">${esc(label)}</div>
+      <div class="lists-toolbar-count"><b>${count}</b> ${count === 1 ? 'list' : 'lists'}</div>
+    </div>${barHTML}`;
+}
+
+/* Community Sort & Filter (shared js/sort-filter.js module) */
+const _socialScore = l => Number(l.like_count || 0) - Number(l.dislike_count || 0);
+SF.register('social', {
+  base: () => (_listsFilterMode ? _listsFilterMode.lists : _socialListsRaw) || [],
+  render: () => renderSocialLists(),
+  defaultSort: 'popular',
+  presets: {
+    popularity: { header: 'Popularity', opts: [['popular', 'Most Liked'], ['least_popular', 'Least Liked']] },
+    added:      { header: 'Posted',     opts: [['newest', 'Newest'], ['oldest', 'Oldest']] },
+  },
+  sorts: () => ['popularity', 'added', 'alpha'],
+  filters: () => [],
+  addedDate: l => l.created_at,
+  compare: {
+    popular: (a, b) => (_socialScore(b) - _socialScore(a)) || (new Date(b.created_at) - new Date(a.created_at)),
+    least_popular: (a, b) => (Number(b.dislike_count) - Number(a.dislike_count)) || (_socialScore(a) - _socialScore(b)),
+  },
+  choiceFilters: () => [
+    { key: 'ranked', label: 'Ranking',
+      options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked']],
+      test: (l, v) => v === 'yes' ? l.ranked === true : l.ranked === false },
+    { key: 'owner', label: 'Whose Lists',
+      options: [['', 'Everyone'], ['others', 'Other People'], ['mine', 'Mine']],
+      test: (l, v) => v === 'mine' ? l.user_id === _listsUser?.id : l.user_id !== _listsUser?.id },
+  ],
+});
+
 function setListsMode(mode) {
   _listsMode = mode;
   document.querySelectorAll('#listsModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
   document.getElementById('listsPageTitle').textContent = mode === 'personal' ? 'My Lists' : 'Community Lists';
-  document.getElementById('listsOrderSortBar').style.display = mode === 'personal' && _listsAll.filter(l => l.cat === 'custom').length ? '' : 'none';
   document.getElementById('listsSearchWrap').style.display = mode === 'social' ? '' : 'none';
   // "New List" stays available in both modes — you can start a new
   // personal list even while browsing the community feed.
   if (mode === 'social') {
     _listsFilterMode = null;
     document.getElementById('listsFilterBanner').style.display = 'none';
-    document.getElementById('listsSocialSortBar').style.display = '';
     loadSocialLists();
   } else {
-    document.getElementById('listsSocialSortBar').style.display = 'none';
     renderListsPage();
   }
 }
@@ -1135,7 +1186,6 @@ function _llSelectResult(i) {
     const lists = _socialListsRaw.filter(l => l.user_id === r.id);
     _listsFilterMode = { type: 'user', label: '@' + r.username, lists };
     _showListsFilterBanner(`Showing lists by @${esc(r.username)}`);
-    document.getElementById('listsSocialSortBar').style.display = 'none';
     renderSocialLists();
   } else if (r.type === 'list') {
     openSocialListPopup(r.id);
@@ -1143,7 +1193,6 @@ function _llSelectResult(i) {
     const lists = _socialListsRaw.filter(l => (l.items || []).includes(r.id));
     _listsFilterMode = { type: 'item', label: r.title, lists };
     _showListsFilterBanner(`Showing lists containing "${esc(r.title)}"`);
-    document.getElementById('listsSocialSortBar').style.display = 'none';
     renderSocialLists();
   }
 }
@@ -1158,15 +1207,10 @@ function _llClearFilter() {
   _listsFilterMode = null;
   document.getElementById('listsSearchInput').value = '';
   document.getElementById('listsFilterBanner').style.display = 'none';
-  document.getElementById('listsSocialSortBar').style.display = '';
   renderSocialLists();
 }
 
-function setSocialListsSort(val) {
-  _socialListsSort = val;
-  document.querySelectorAll('#listsSocialSortBar .sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === val));
-  renderSocialLists();
-}
+function setSocialListsSort(val) { SF.setSort('social', 'all', val === 'latest' ? 'newest' : val); }
 
 let _socialEntryMap = {}; // entry_id -> entry (across ALL social lists, not just the viewer's own)
 function _resolveSocialItem(id) {
@@ -1178,7 +1222,7 @@ let _listsFilterMode = null; // { type: 'user'|'item', label, ... }
 async function loadSocialLists() {
   const wrap = document.getElementById('listsPageContent');
   wrap.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
-  document.getElementById('listsPageStats').innerHTML = '';
+  document.getElementById('listsPageStats').innerHTML = '';  // filled once the lists load
   document.getElementById('listsPageSub').textContent = 'Explore collections from the community and discover what others are watching.';
   try {
     const { data, error } = await sb.rpc('get_social_lists', { p_limit: 100 });
@@ -1218,26 +1262,28 @@ async function loadSocialLists() {
 
 function renderSocialLists() {
   const wrap = document.getElementById('listsPageContent');
-  const source = _listsFilterMode ? _listsFilterMode.lists : _socialListsRaw;
-  if (!source.length) {
+  const all = _socialListsRaw || [];
+  const curators = new Set(all.map(l => l.user_id)).size;
+  const titles = all.reduce((n, l) => n + (l.items || []).length, 0);
+  const likes = all.reduce((n, l) => n + Number(l.like_count || 0), 0);
+  document.getElementById('listsPageStats').innerHTML = all.length ? `
+    <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Public Lists</div></div>
+    <div class="page-stat"><div class="page-stat-num">${curators}</div><div class="page-stat-label">Curators</div></div>
+    <div class="page-stat"><div class="page-stat-num">${titles}</div><div class="page-stat-label">Titles Listed</div></div>
+    <div class="page-stat"><div class="page-stat-num">${likes}</div><div class="page-stat-label">Total Likes</div></div>` : '';
+
+  const source = SF.list('social', 'all');
+  const baseCount = (_listsFilterMode ? _listsFilterMode.lists : all).length;
+  _renderListsToolbar(_listsFilterMode ? 'Search Results' : 'Community', source.length, baseCount ? SF.bar('social', 'all') : '');
+  if (!baseCount) {
     wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
       <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('layers', 44)}</div>
-      <div class="empty-text" style="color:var(--text-2);">No public lists yet.</div>
+      <div class="empty-text" style="color:var(--text-2);">${_listsFilterMode ? 'No lists match that search.' : 'No public lists yet.'}</div>
     </div>`;
     return;
   }
-  const sorted = [...source].sort((a, b) => {
-    if (_socialListsSort === 'latest') return new Date(b.created_at) - new Date(a.created_at);
-    if (_socialListsSort === 'least_popular') {
-      const dA = Number(a.dislike_count), dB = Number(b.dislike_count);
-      if (dB !== dA) return dB - dA;
-      return new Date(b.created_at) - new Date(a.created_at);
-    }
-    const scoreA = Number(a.like_count) - Number(a.dislike_count);
-    const scoreB = Number(b.like_count) - Number(b.dislike_count);
-    if (scoreB !== scoreA) return scoreB - scoreA;
-    return new Date(b.created_at) - new Date(a.created_at);
-  });
+  if (!source.length) { wrap.innerHTML = `<div class="lists-empty">No lists match these filters.</div>`; return; }
+  const sorted = source;
 
   wrap.innerHTML = `<div class="lc-grid">${sorted.map(l => {
     const items = l.items || [];
@@ -1331,23 +1377,25 @@ function _renderListPopup() {
 
   let actions;
   if (mine) {
-    actions = `<div class="lp-actions">
-      <button class="lp-btn" onclick="_lpThen(openFavListPicker)">${_LIST_ICONS.edit}Edit Titles</button>
-      <button class="lp-btn" onclick="_lpThen(openFavCustomListModal)">${_LIST_ICONS.rename}Rename</button>
-      <button class="lp-btn lp-btn-danger" style="flex:0 0 auto;" onclick="_lpThen(deleteFavListConfirm)" aria-label="Delete list">${_LIST_ICONS.del}</button>
+    actions = `<div id="lpPopupActions" class="lp-actions">
+      <button class="popup-action-btn" onclick="_lpThen(openFavListPicker)">${_LIST_ICONS.edit}Edit Titles</button>
+      <button class="popup-action-btn" onclick="_lpThen(openFavCustomListModal)">${_LIST_ICONS.rename}Rename</button>
+      <button class="popup-action-btn popup-action-danger" onclick="_lpThen(deleteFavListConfirm)">${_LIST_ICONS.del}Delete</button>
     </div>`;
   } else {
     const myReaction = _socialListsMyReactions[l.id];
     const alreadyForked = _listsAll.some(x => x.cat === 'custom' && (x.forked_from === l.id || x.title.toLowerCase().trim() === (l.title || '').toLowerCase().trim()));
     const rerender = `.then(() => _renderListPopup())`;
-    actions = `<div class="lp-actions">
-      <button class="lp-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialList(${id}, true)${rerender}">
-        ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 15)}<span>${l.like_count || 0}</span>
-      </button>
-      <button class="lp-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialList(${id}, false)${rerender}">
-        ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 15)}<span>${l.dislike_count || 0}</span>
-      </button>
-      ${!isOwn ? `<button class="lp-btn lp-btn-solid" style="flex:2 1 0;" ${alreadyForked ? 'disabled' : ''} onclick="forkSocialList(${id})">${alreadyForked ? 'Added ✓' : '+ Add to My Lists'}</button>` : ''}
+    actions = `<div id="lpPopupActions" class="lp-actions lp-actions-social">
+      <div class="lp-react-pair">
+        <button class="popup-action-btn lp-react ${myReaction === 'like' ? 'is-on' : ''}" onclick="reactToSocialList(${id}, true)${rerender}" aria-label="Like">
+          ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)}<span>${l.like_count || 0}</span>
+        </button>
+        <button class="popup-action-btn lp-react lp-react-down ${myReaction === 'dislike' ? 'is-on' : ''}" onclick="reactToSocialList(${id}, false)${rerender}" aria-label="Dislike">
+          ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)}<span>${l.dislike_count || 0}</span>
+        </button>
+      </div>
+      ${!isOwn ? `<button class="popup-action-btn lp-add" ${alreadyForked ? 'disabled' : ''} onclick="forkSocialList(${id})">${alreadyForked ? 'Added to My Lists ✓' : '+ Add to My Lists'}</button>` : ''}
     </div>`;
   }
 
@@ -1362,9 +1410,9 @@ function _renderListPopup() {
       ${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}
     </div>` : ''}
     ${actions}
-    <div class="lp-footer">
-      <button class="lp-btn lp-btn-solid" onclick="closeSocialListPopup(); location.href='list-view.html?list=${encodeURIComponent(l.id)}'">${icon('list', 15)} View List</button>
-      <button class="lp-btn" onclick='openReplyPopup("list", ${id}, ${attrJSON(l.title)})'>${icon('reply', 15)} View Replies</button>
+    <div id="lpNavPopupActions" class="lp-footer">
+      <button class="popup-action-btn lp-view" onclick="closeSocialListPopup(); location.href='list-view.html?list=${encodeURIComponent(l.id)}'">${icon('list', 14)} View List</button>
+      <button class="popup-action-btn lp-replies" onclick='openReplyPopup("list", ${id}, ${attrJSON(l.title)})'>${icon('reply', 14)} Replies</button>
     </div>
   `;
 }
