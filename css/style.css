@@ -1345,6 +1345,23 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 .sf-check-row span:last-child { font-family:'Manrope',var(--sans); font-size:13.5px; color:var(--text-2); transition:color .12s; }
 .sf-check-row input:checked ~ span:last-child { color:var(--olive-light); font-weight:700; }
 
+/* ── Ranked / Unranked badges (lists, list view) ──
+   Text-only pills in the brand palette:
+   Ranked   = the site's deep olive (primary, "this list has an order")
+   Unranked = the logo's warm sand (secondary, "just a collection")
+   Both are solid so they read at a glance, and both pass contrast. */
+.list-rank-badge {
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+  height:22px; padding:0 11px; border-radius:999px; box-sizing:border-box;
+  font-family:var(--sans); font-size:10.5px; font-weight:700; letter-spacing:.8px; text-transform:uppercase;
+  line-height:1; white-space:nowrap; vertical-align:middle;
+}
+.list-rank-badge.is-ranked   { background:#1E5C26; color:#FFFFFF; }
+.list-rank-badge.is-unranked { background:#D9CBB2; color:#4A3F2C; }
+[data-theme="dark"] .list-rank-badge.is-ranked   { background:#5B7D50; color:#FFFFFF; }
+[data-theme="dark"] .list-rank-badge.is-unranked { background:#C8B79A; color:#2E2618; }
+@media(max-width:640px) { .list-rank-badge { height:20px; font-size:9.5px; padding:0 9px; } }
+
 /* Single-choice box built from .sf-check-row — same checkbox look as the
    Genre filter, used for either/or picks like Ranked / Unranked.
    .sf-choice-box    = stacked rows with a title + hint (modals)
