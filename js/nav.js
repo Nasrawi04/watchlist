@@ -92,7 +92,7 @@ function _mssRestoreScroll() {
   const end = () => { stop = true; obs.disconnect(); clearTimeout(timer); };
   const apply = () => {
     if (stop) return;
-    window.scrollTo({ top: target, behavior: 'instant' }); // skip the site's smooth scrolling
+    mssJumpTo(target); // no smooth-scroll animation; Safari-safe
     const maxY = document.documentElement.scrollHeight - window.innerHeight;
     if (Math.abs(window.scrollY - target) < 4 && maxY >= target) end();
   };
