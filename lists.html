@@ -41,25 +41,6 @@
   font-family:var(--serif);font-size:clamp(17px, 3.4vw, 20px);font-weight:500;color:var(--text);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
 }
-.ranked-badge {
-  display:inline-flex; align-items:center; gap:5px; vertical-align:middle; flex-shrink:0;
-  font-family:var(--sans); font-size:10.5px; font-weight:600; letter-spacing:.6px; text-transform:uppercase;
-  padding:4px 11px; border-radius:4px;
-}
-.ranked-badge.ranked-yes {
-  background:var(--olive-faint); border:1px solid var(--olive-light); color:var(--olive-light);
-}
-.ranked-badge.ranked-no {
-  background:transparent; border:1px solid var(--border-2); color:var(--text-3);
-}
-.social-list-title .ranked-badge {
-  margin-left:10px;
-}
-@media(max-width:640px) {
-  .ranked-badge { font-size:9px; padding:3px 9px; letter-spacing:.4px; }
-  .social-list-title .ranked-badge { margin-left:7px; }
-}
-
 .fav-page-list-count {
   font-size:11px;color:var(--text-3);letter-spacing:.5px;margin-top:2px;
 }
@@ -154,10 +135,6 @@
 }
 
 /* ── Social list rows ── */
-.social-list-rows { display:grid; grid-template-columns:repeat(4, 1fr); gap:18px; }
-@media(max-width:1400px) { .social-list-rows { grid-template-columns:repeat(3, 1fr); } }
-@media(max-width:1024px) { .social-list-rows { grid-template-columns:repeat(2, 1fr); } }
-@media(max-width:640px)  { .social-list-rows { grid-template-columns:1fr; } }
 .social-list-row { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.1rem 1.25rem; transition:border-color .15s; cursor:pointer; }
 .social-list-row:hover { border-color:var(--border-olive); }
 .social-list-owner { display:flex; align-items:center; gap:8px; margin-bottom:.75rem; }
@@ -279,30 +256,80 @@
 .fav-page-list-desc {
   font-size:12.5px; color:var(--text-2); line-height:1.5; margin-top:4px;
 }
-.lists-drag-item {
-  position:relative; padding-left:30px;
-}
-.lists-drag-handle {
-  position:absolute; left:0; top:0; width:26px; height:38px;
-  display:flex; align-items:center; justify-content:center;
-  color:var(--text-3); cursor:grab; touch-action:none; user-select:none;
-  transition:color .12s;
-}
-.lists-drag-handle:hover { color:var(--olive-light); }
-.lists-drag-handle:active { cursor:grabbing; }
-.lists-drag-item.dragging {
-  background:var(--card-2); box-shadow:0 14px 32px rgba(0,0,0,0.35);
-  border-radius:var(--radius-lg); border:1px solid var(--border-olive);
-  opacity:0.94; transform-origin:center; cursor:grabbing;
-  position:relative; z-index:50;
-}
-.lists-drag-item:not(.dragging) { transition:transform .15s ease; }
-@media(max-width:520px){
-  .lists-drag-item { padding-left:26px; }
-  .lists-drag-handle { width:22px; height:34px; }
-}
 .list-item-sort-bar { display:flex; gap:6px; flex-wrap:wrap; }
-.lists-order-sort-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1.25rem; }
+/* ── List cards (Personal + Community share one design) ── */
+.lc-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:18px; }
+@media(max-width:1400px) { .lc-grid { grid-template-columns:repeat(3, 1fr); } }
+@media(max-width:1024px) { .lc-grid { grid-template-columns:repeat(2, 1fr); } }
+@media(max-width:640px)  { .lc-grid { grid-template-columns:1fr; gap:12px; } }
+.lc-card {
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+  padding:1.1rem 1.2rem 1.15rem; cursor:pointer; display:flex; flex-direction:column; min-width:0;
+  transition:border-color .15s, transform .15s, box-shadow .15s;
+}
+.lc-card:hover { border-color:var(--border-olive); transform:translateY(-2px); box-shadow:var(--shadow); }
+.lc-title-row { display:flex; align-items:center; gap:10px; min-width:0; margin-bottom:6px; }
+.lc-title {
+  font-family:var(--serif); font-size:19px; font-weight:500; line-height:1.25; color:var(--text);
+  flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.lc-meta { font-size:12px; color:var(--text-3); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.lc-meta b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); letter-spacing:.3px; }
+.lc-desc {
+  font-size:12.5px; color:var(--text-2); line-height:1.5; margin:-2px 0 12px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.lc-posters { display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-top:auto; }
+.lc-poster { aspect-ratio:2/3; border-radius:6px; overflow:hidden; background:var(--bg-3); position:relative; }
+.lc-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.lc-poster span { font-size:18px !important; }
+.lc-poster-empty { grid-column:1/-1; aspect-ratio:auto; padding:18px 0; text-align:center; font-size:12px; color:var(--text-3); border:1px dashed var(--border-2); background:transparent; }
+.lc-card .social-list-reactions { margin-top:12px; }
+
+/* ── List popup (Personal + Community) ── */
+.lp-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:1.1rem; }
+.lp-eyebrow { font-family:var(--serif); font-size:11.5px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); display:flex; align-items:center; gap:8px; }
+.lp-tag { font-family:var(--sans); letter-spacing:.6px; font-size:10px; padding:2px 8px; border-radius:999px; border:1px solid var(--border-2); color:var(--text-3); }
+.lp-close { background:none; border:none; color:var(--text-3); cursor:pointer; line-height:1; padding:4px; display:flex; }
+.lp-close:hover { color:var(--text); }
+.lp-title-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:.55rem; }
+.lp-title { font-family:var(--serif); font-size:clamp(22px, 5vw, 28px); font-weight:500; line-height:1.15; overflow-wrap:anywhere; }
+.lp-desc { font-size:13.5px; color:var(--text-2); line-height:1.6; margin-bottom:.9rem; white-space:pre-line; overflow-wrap:anywhere; }
+.lp-meta { font-size:12px; color:var(--text-3); margin-bottom:1rem; display:flex; align-items:center; gap:6px; }
+.lp-meta b { font-family:var(--bebas); font-weight:400; font-size:16px; color:var(--text-2); letter-spacing:.3px; }
+.lp-posters { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:1.35rem; }
+.lp-poster { aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-2); position:relative; box-shadow:0 2px 10px rgba(0,0,0,.18); }
+.lp-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.lp-more { display:flex; align-items:center; justify-content:center; font-family:var(--bebas); font-size:26px; color:var(--olive-light); background:var(--olive-faint); border:1px solid var(--border-olive); box-shadow:none; }
+.lp-choice { margin-bottom:1rem; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--text-3); }
+.lp-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.lp-actions .lp-btn { flex:1 1 0; }
+.lp-footer { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding-top:12px; border-top:0.5px solid var(--border); }
+.lp-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px; min-width:0;
+  padding:10px 16px; border-radius:999px; cursor:pointer; white-space:nowrap;
+  font-family:var(--sans); font-size:13px; font-weight:600;
+  background:var(--card); border:1px solid var(--border-2); color:var(--text-2);
+  transition:background .15s, border-color .15s, color .15s, transform .1s;
+}
+.lp-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.lp-btn:active { transform:scale(.97); }
+.lp-btn svg { width:15px; height:15px; flex-shrink:0; }
+.lp-btn-solid { background:var(--olive); border-color:var(--olive); color:#fff; }
+.lp-btn-solid:hover { background:var(--olive-2, var(--olive)); color:#fff; border-color:var(--olive); filter:brightness(1.08); }
+.lp-btn.active-like { background:var(--olive); border-color:var(--olive); color:#fff; }
+.lp-btn.active-dislike { background:#b4564a; border-color:#b4564a; color:#fff; }
+.lp-btn-danger:hover { border-color:#c0564a; color:#c0564a; }
+.lp-btn:disabled { opacity:.55; cursor:default; transform:none; }
+@media(max-width:520px) {
+  .lp-posters { gap:7px; }
+  .lp-btn { padding:9px 12px; font-size:12.5px; }
+}
+
+.lists-order-sort-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:1rem; }
+.lists-order-sort-bar .lists-order-label { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); }
+.lists-order-sort-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.lists-order-sort-bar .sort-bar::before { content:none; }
 </style>
 </head>
 <body>
@@ -329,11 +356,7 @@
   <div class="page-stats fade-up fade-up-1" id="listsPageStats"></div>
 
   <!-- Sort lists by -->
-  <div class="lists-order-sort-bar fade-up fade-up-1" id="listsOrderSortBar" style="display:none;">
-    <button class="sort-btn active" data-sort="default" onclick="setListsOrder('default')">Default</button>
-    <button class="sort-btn" data-sort="az" onclick="setListsOrder('az')">A → Z</button>
-    <button class="sort-btn" data-sort="za" onclick="setListsOrder('za')">Z → A</button>
-  </div>
+  <div class="lists-order-sort-bar fade-up fade-up-1" id="listsOrderSortBar" style="display:none;"></div>
 
   <!-- Social: search users, list names, item names -->
   <div class="lists-search-wrap fade-up fade-up-1" id="listsSearchWrap" style="display:none;">
@@ -436,6 +459,7 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/sort-filter.js"></script>
 <script>
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -538,7 +562,7 @@ let _listsUser = null;
 let _listsEntries = [];
 let _listsAll = [];
 let _listsOrderSort = 'default';
-let _listItemSort = {};
+
 let _listsEntryMap = {};
 let _tmdbItemCache = {}; // 'tmdb:movie:123' -> resolved {id, title, poster_url, tmdb_id, tmdb_type, year}
 
@@ -728,25 +752,23 @@ function favCard(e, rank) {
   </div>`;
 }
 
-function _rankedBadgeHTML(listId, ranked, isOwner) {
-  if (ranked === true) return `<span class="ranked-badge ranked-yes">Ranked</span>`;
-  if (ranked === false) return `<span class="ranked-badge ranked-no">Unranked</span>`;
-  if (isOwner && listId) {
-    return `<span class="sf-choice-inline" onclick="event.stopPropagation()">
-      <label class="sf-check-row" onclick="event.stopPropagation()">
-        <input type="checkbox" onchange="if(this.checked) setListRanked('${listId}', true)">
-        <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-        <span>Ranked</span>
-      </label>
-      <label class="sf-check-row" onclick="event.stopPropagation()">
-        <input type="checkbox" onchange="if(this.checked) setListRanked('${listId}', false)">
-        <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-        <span>Unranked</span>
-      </label>
-    </span>`;
-  }
+// Badge only — no badge at all for lists that haven't picked yet
+function _rankBadge(ranked) {
+  if (ranked === true)  return `<span class="list-rank-badge is-ranked">Ranked</span>`;
+  if (ranked === false) return `<span class="list-rank-badge is-unranked">Unranked</span>`;
   return '';
 }
+// Owner's pick for an undecided list (shown inside the popup)
+function _rankChoiceHTML(listId) {
+  const mark = '<span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>';
+  const id = attrJSON(listId);
+  return `<div class="lp-choice"><span>Is this list ranked?</span><span class="sf-choice-inline">
+    <label class="sf-check-row"><input type="checkbox" onchange="if(this.checked) setListRanked(${id}, true)">${mark}<span>Ranked</span></label>
+    <label class="sf-check-row"><input type="checkbox" onchange="if(this.checked) setListRanked(${id}, false)">${mark}<span>Unranked</span></label>
+  </span></div>`;
+}
+// Kept for any older caller
+function _rankedBadgeHTML(listId, ranked) { return _rankBadge(ranked); }
 
 async function setListRanked(listId, value) {
   try {
@@ -762,7 +784,7 @@ async function setListRanked(listId, value) {
     } else {
       renderListsPage();
     }
-    if (_slPopupListId === listId && socialList) _renderSocialListPopup(socialList);
+    if (_slPopupListId === listId) _renderListPopup();
     showToast(value ? 'Marked as ranked!' : 'Marked as unranked.');
   } catch (err) {
     console.error('Set ranked error:', err);
@@ -770,42 +792,27 @@ async function setListRanked(listId, value) {
   }
 }
 
-function hScrollSection(listId, title, subtitle, items, showEdit, onEdit, onDelete, onRename, description, itemSort, ranked) {
-  const cards = items.map((e, i) => favCard(e, ranked === true ? i : null)).join('');
-  const RENAME_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`;
-  const EDIT_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-  const DEL_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
-  const editBtn = showEdit
-    ? `<div class="fav-edit-btn-row">
-        ${listId ? `<button class="fav-edit-btn" title="View full list" onclick="location.href='list-view.html?list=${listId}'">${icon('list',13)}<span class="fav-edit-btn-label"> View List</span></button>` : ''}
-        <button class="fav-edit-btn" onclick="${onEdit}">${EDIT_SVG}<span class="fav-edit-btn-label"> Edit</span></button>
-        ${onRename ? `<button class="fav-edit-btn" title="Edit details" onclick="${onRename}">${RENAME_SVG}<span class="fav-edit-btn-label"> Rename</span></button>` : ''}
-        ${onDelete ? `<button class="fav-edit-btn" style="color:var(--text-3);border-color:var(--border);" onclick="${onDelete}">${DEL_SVG}</button>` : ''}
-       </div>`
-    : '';
-  const itemSortOpts = [['default','Default'],['highest','Highest'],['lowest','Lowest'],['az','A → Z'],['za','Z → A']];
-  const sortSelect = listId ? `<div class="list-item-sort-bar">${itemSortOpts.map(([v,l]) =>
-    `<button class="sort-btn${itemSort===v?' active':''}" onclick="setListItemSort('${listId}','${v}')">${l}</button>`
-  ).join('')}</div>` : '';
-  const gid = 'fsg-' + (listId || 'top');
-  const emptyMsg = `<div style="font-size:13px;color:var(--text-3);padding:8px 0;">Nothing added yet — click Edit to add items.</div>`;
-  const gridHtml = cards
-    ? `<div class="fav-grid-container"><div class="grid-nav-wrap"><button class="grid-nav-btn arr-left" onclick="event.stopPropagation();_favNavScroll(&quot;${gid}&quot;,-1)" aria-label="Scroll left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><button class="grid-nav-btn arr-right" onclick="event.stopPropagation();_favNavScroll(&quot;${gid}&quot;,1)" aria-label="Scroll right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button><div class="fav-watching-grid" id="${gid}">${cards}</div></div></div>`
-    : `<div>${emptyMsg}</div>`;
-  return `<div class="fav-page-section">
-    <div class="fav-page-list-header">
-      <div class="fav-page-list-title-row">
-        <div class="fav-page-list-title-inner">
-          <div class="fav-page-list-title">${esc(title)}</div>
-          ${listId ? _rankedBadgeHTML(listId, ranked, true) : ''}
-        </div>
-        ${editBtn}
-      </div>
-      ${subtitle ? `<div class="fav-page-list-count">${esc(subtitle)}</div>` : ''}
-      ${description ? `<div class="fav-page-list-desc">${esc(description)}</div>` : ''}
-    </div>
-    ${cards ? `<div style="padding:0 20px 10px;">${sortSelect}</div>` : ''}
-    ${gridHtml}
+const _LIST_ICONS = {
+  rename: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`,
+  edit:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>`,
+  del:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
+};
+
+function _lcPostersHTML(items, resolve) {
+  const posters = items.slice(0, 5).map(resolve).filter(Boolean);
+  if (!posters.length) return `<div class="lc-posters"><div class="lc-poster lc-poster-empty">No titles yet</div></div>`;
+  return `<div class="lc-posters">${posters.map(e => `<div class="lc-poster">${posterHTML(e, 'big')}</div>`).join('')}</div>`;
+}
+function _lcCountHTML(n) { return `<b>${n}</b> ${n === 1 ? 'title' : 'titles'}`; }
+
+// Personal list card — same design as the Community cards
+function myListCardHTML(list) {
+  const items = list.items || [];
+  return `<div class="lc-card" onclick="openMyListPopup(${attrJSON(list.id)})">
+    <div class="lc-title-row"><div class="lc-title">${esc(list.title)}</div>${_rankBadge(list.ranked)}</div>
+    <div class="lc-meta">${_lcCountHTML(items.length)}${list.forked_from ? ' · Imported' : ''}</div>
+    ${list.description ? `<div class="lc-desc">${esc(list.description)}</div>` : ''}
+    ${_lcPostersHTML(items, _resolveListItem)}
   </div>`;
 }
 
@@ -832,7 +839,9 @@ function renderListsPage() {
 
   document.getElementById('listsPageSub').textContent = 'Your personal collections, curated your way — from watchlists to favorites and beyond.';
 
-  document.getElementById('listsOrderSortBar').style.display = totalLists ? '' : 'none';
+  const orderBar = document.getElementById('listsOrderSortBar');
+  orderBar.style.display = totalLists ? '' : 'none';
+  if (totalLists) orderBar.innerHTML = `<div class="lists-order-label">Your Lists</div>${SF.bar('listsOrder', 'all')}`;
 
   let html = '';
 
@@ -843,46 +852,10 @@ function renderListsPage() {
       <div style="font-size:13px;color:var(--text-3);">Use "+ New List" to create a custom list — mix any movies, shows, anime, or cartoons together.</div>
     </div>`;
   } else {
-    let sorted;
-    if (_listsOrderSort === 'az') {
-      sorted = [...customLists].sort((a, b) => a.title.localeCompare(b.title));
-    } else if (_listsOrderSort === 'za') {
-      sorted = [...customLists].sort((a, b) => b.title.localeCompare(a.title));
-    } else {
-      sorted = [...customLists].sort((a, b) => {
-        const ao = a.sort_order, bo = b.sort_order;
-        if (ao != null && bo != null) return ao - bo;
-        if (ao != null) return -1;
-        if (bo != null) return 1;
-        return new Date(a.created_at) - new Date(b.created_at);
-      });
-    }
-    const dragEnabled = _listsOrderSort === 'default';
-    sorted.forEach(list => {
-      let listItems = (list.items || []).map(id => _resolveListItem(id)).filter(Boolean);
-      const itemSort = _listItemSort[list.id] || 'default';
-      if (itemSort === 'highest') {
-        listItems = [...listItems].sort((a, b) => (liveScore(b)||0) - (liveScore(a)||0));
-      } else if (itemSort === 'lowest') {
-        listItems = [...listItems].sort((a, b) => (liveScore(a)||0) - (liveScore(b)||0));
-      } else if (itemSort === 'az') {
-        listItems = [...listItems].sort((a, b) => (a.title||'').localeCompare(b.title||''));
-      } else if (itemSort === 'za') {
-        listItems = [...listItems].sort((a, b) => (b.title||'').localeCompare(a.title||''));
-      }
-      const sectionHtml = hScrollSection(list.id, list.title, `${listItems.length} items`, listItems, true,
-        `openFavListPicker(&quot;${list.id}&quot;)`,
-        `deleteFavListConfirm(&quot;${list.id}&quot;)`,
-        `openFavCustomListModal(&quot;${list.id}&quot;)`,
-        list.description,
-        itemSort,
-        list.ranked
-      );
-      html += `<div class="lists-drag-item" data-list-id="${list.id}">
-        ${dragEnabled ? `<div class="lists-drag-handle" title="Drag to reorder"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/></svg></div>` : ''}
-        ${sectionHtml}
-      </div>`;
-    });
+    const sorted = SF.list('listsOrder', 'all');
+    html = sorted.length
+      ? `<div class="lc-grid">${sorted.map(myListCardHTML).join('')}</div>`
+      : `<div style="padding:2rem 0;text-align:center;font-size:13px;color:var(--text-3);">No lists match these filters.</div>`;
   }
 
   document.getElementById('listsPageContent').innerHTML = html;
@@ -928,12 +901,40 @@ function _dtShowHeart(el) {
 }
 
 function setListsOrder(val) {
-  _listsOrderSort = val;
-  document.querySelectorAll('#listsOrderSortBar .sort-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.sort === val);
-  });
-  renderListsPage();
+  SF.setSort('listsOrder', 'all', { default: 'rank', az: 'alpha', za: 'zalpha' }[val] || val);
 }
+
+/* Sort & Filter for the lists themselves (the button above the containers) */
+function _listsDefaultOrder() {
+  return _listsAll.filter(l => l.cat === 'custom').sort((a, b) => {
+    const ao = a.sort_order, bo = b.sort_order;
+    if (ao != null && bo != null) return ao - bo;
+    if (ao != null) return -1;
+    if (bo != null) return 1;
+    return new Date(a.created_at) - new Date(b.created_at);
+  });
+}
+SF.register('listsOrder', {
+  // copies tagged with their position in the default order
+  base: () => _listsDefaultOrder().map((l, i) => Object.assign({}, l, { _rank: i + 1 })),
+  render: () => renderListsPage(),
+  defaultSort: 'rank',
+  presets: {
+    rank:  { header: 'Order',   opts: [['rank', 'Default'], ['rankRev', 'Reversed']] },
+    added: { header: 'Created', opts: [['newest', 'Newest'], ['oldest', 'Oldest']] },
+  },
+  sorts: () => ['rank', 'alpha', 'added'],
+  filters: () => [],
+  addedDate: l => l.created_at,
+  choiceFilters: () => [
+    { key: 'ranked', label: 'Ranking',
+      options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked'], ['unset', 'Not Set']],
+      test: (l, v) => v === 'yes' ? l.ranked === true : v === 'no' ? l.ranked === false : l.ranked == null },
+    { key: 'origin', label: 'Source',
+      options: [['', 'All Lists'], ['mine', 'Created by Me'], ['imported', 'Imported']],
+      test: (l, v) => v === 'imported' ? !!l.forked_from : !l.forked_from },
+  ],
+});
 
 function setListsMode(mode) {
   _listsMode = mode;
@@ -1238,24 +1239,24 @@ function renderSocialLists() {
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
-  wrap.innerHTML = `<div class="social-list-rows">${sorted.map(l => {
+  wrap.innerHTML = `<div class="lc-grid">${sorted.map(l => {
     const items = l.items || [];
-    const posters = items.slice(0, 5).map(id => _resolveSocialItem(id)).filter(Boolean);
     const initial = (l.username || '?')[0].toUpperCase();
     const myReaction = _socialListsMyReactions[l.id];
-    return `<div class="social-list-row" onclick="openSocialListPopup('${l.id}')" ontouchend="_dtHandleTouch(event, 'list-${l.id}', () => reactToSocialList('${l.id}', true), () => _socialListsMyReactions['${l.id}'] === 'like')">
+    const id = attrJSON(l.id);
+    return `<div class="lc-card" onclick="openSocialListPopup(${id})" ontouchend="_dtHandleTouch(event, 'list-${escHTML(l.id)}', () => reactToSocialList(${id}, true), () => _socialListsMyReactions[${id}] === 'like')">
       <div class="social-list-owner">
-        <div class="social-list-avatar">${l.avatar_url ? `<img src="${esc(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
+        <div class="social-list-avatar">${safeURL(l.avatar_url) ? `<img src="${safeURL(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
         <div class="social-list-username">@${esc(l.username || 'user')}</div>
       </div>
-      <div class="social-list-title">${esc(l.title)}${_rankedBadgeHTML(l.id, l.ranked, false)}</div>
-      <div class="social-list-count">${items.length} item${items.length !== 1 ? 's' : ''}</div>
-      ${posters.length ? `<div class="social-list-posters">${posters.map(e => `<div class="social-list-poster-thumb">${posterHTML(e,'big')}</div>`).join('')}</div>` : ''}
-      <div class="social-list-reactions" style="margin-top:10px;">
-        <button class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialList('${l.id}', true)">
+      <div class="lc-title-row"><div class="lc-title">${esc(l.title)}</div>${_rankBadge(l.ranked)}</div>
+      <div class="lc-meta">${_lcCountHTML(items.length)}</div>
+      ${_lcPostersHTML(items, _resolveSocialItem)}
+      <div class="social-list-reactions">
+        <button class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialList(${id}, true)">
           ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${l.like_count || 0}</span>
         </button>
-        <button class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="event.stopPropagation();reactToSocialList('${l.id}', false)">
+        <button class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="event.stopPropagation();reactToSocialList(${id}, false)">
           ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${l.dislike_count || 0}</span>
         </button>
       </div>
@@ -1269,67 +1270,106 @@ function _injectSocialListPopupOverlay() {
   const el = document.createElement('div');
   el.id = 'slPopupOverlay';
   el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
-  el.innerHTML = `<div id="slPopupCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:540px;width:100%;max-height:85vh;overflow-y:auto;padding:1.75rem;"></div>`;
+  el.innerHTML = `<div id="slPopupCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:560px;width:100%;max-height:88vh;overflow-y:auto;padding:clamp(1.1rem, 4vw, 1.6rem);box-shadow:0 24px 60px rgba(0,0,0,.35);"></div>`;
   el.addEventListener('click', e => { if (e.target === el) closeSocialListPopup(); });
   document.body.appendChild(el);
 }
 
 let _slPopupListId = null;
+let _slPopupKind = null;   // 'mine' (Personal) or 'social' (Community)
 
-function openSocialListPopup(listId) {
-  const l = _socialListsRaw.find(x => x.id === listId);
-  if (!l) return;
-  _injectSocialListPopupOverlay();
-  _slPopupListId = listId;
-  _renderSocialListPopup(l);
-  const ov = document.getElementById('slPopupOverlay');
-  ov.style.display = 'flex';
+function _showListPopup() {
+  _renderListPopup();
+  document.getElementById('slPopupOverlay').style.display = 'flex';
   document.body.style.overflow = 'hidden';
 }
-
+function openSocialListPopup(listId) {
+  if (!_socialListsRaw.find(x => x.id === listId)) return;
+  _injectSocialListPopupOverlay();
+  _slPopupListId = listId; _slPopupKind = 'social';
+  _showListPopup();
+}
+function openMyListPopup(listId) {
+  if (!_listsAll.find(x => x.id === listId)) return;
+  _injectSocialListPopupOverlay();
+  _slPopupListId = listId; _slPopupKind = 'mine';
+  _showListPopup();
+}
 function closeSocialListPopup() {
   const ov = document.getElementById('slPopupOverlay');
   if (ov) ov.style.display = 'none';
   document.body.style.overflow = '';
-  _slPopupListId = null;
+  _slPopupListId = null; _slPopupKind = null;
 }
+// Closes the popup, then runs an owner action (its own modal opens on top)
+function _lpThen(fn) { const id = _slPopupListId; closeSocialListPopup(); fn(id); }
 
-function _renderSocialListPopup(l) {
-  const myReaction = _socialListsMyReactions[l.id];
-  const initial = (l.username || '?')[0].toUpperCase();
+function _renderListPopup() {
+  const mine = _slPopupKind === 'mine';
+  const l = mine ? _listsAll.find(x => x.id === _slPopupListId) : _socialListsRaw.find(x => x.id === _slPopupListId);
+  const card = document.getElementById('slPopupCard');
+  if (!l || !card) return;
   const items = l.items || [];
-  const posters = items.slice(0, 5).map(id => _resolveSocialItem(id)).filter(Boolean);
-  const alreadyOwnedTitles = new Set(_listsAll.filter(x => x.cat === 'custom').map(x => x.title.toLowerCase().trim()));
-  const isOwn = l.user_id === _listsUser?.id;
-  const alreadyForked = alreadyOwnedTitles.has((l.title || '').toLowerCase().trim());
+  const resolve = mine ? _resolveListItem : _resolveSocialItem;
+  const shown = items.map(resolve).filter(Boolean);
+  const maxPosters = shown.length > 8 ? 7 : 8;               // last tile becomes "+N"
+  const posters = shown.slice(0, maxPosters);
+  const extra = shown.length - posters.length;
+  const isOwn = mine || l.user_id === _listsUser?.id;
+  const id = attrJSON(l.id);
 
-  document.getElementById('slPopupCard').innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <div class="social-list-owner" style="margin-bottom:0;">
-        <div class="social-list-avatar">${l.avatar_url ? `<img src="${esc(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
-        <div class="social-list-username">@${esc(l.username || 'user')}</div>
-      </div>
-      <button onclick="closeSocialListPopup()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;line-height:1;">&#x2715;</button>
-    </div>
-    <div style="font-family:var(--serif);font-size:26px;font-weight:400;margin-bottom:.6rem;">${esc(l.title)}${_rankedBadgeHTML(l.id, l.ranked, isOwn)}</div>
-    ${l.description ? `<div style="font-size:13.5px;color:var(--text-2);line-height:1.6;margin-bottom:1rem;">${esc(l.description)}</div>` : ''}
-    <div class="social-list-count" style="margin-bottom:${posters.length ? '1rem' : '1.5rem'};">${items.length} item${items.length !== 1 ? 's' : ''}</div>
-    ${posters.length ? `<div class="social-list-posters" style="margin-bottom:1.5rem;">${posters.map(e => `<div class="social-list-poster-thumb">${posterHTML(e,'big')}</div>`).join('')}</div>` : ''}
-    <div style="display:grid; grid-template-columns:repeat(${isOwn ? 3 : 4}, 1fr); gap:10px;">
-      <button class="snote-rect-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialList('${l.id}', true).then(() => _renderSocialListPopup(_socialListsRaw.find(x=>x.id==='${l.id}')))">
-        ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 15)} <span>${l.like_count || 0}</span>
+  let head;
+  if (mine) {
+    head = `<div class="lp-eyebrow">Your List${l.forked_from ? '<span class="lp-tag">Imported</span>' : ''}</div>`;
+  } else {
+    const initial = (l.username || '?')[0].toUpperCase();
+    head = `<div class="social-list-owner" style="margin-bottom:0;">
+      <div class="social-list-avatar">${safeURL(l.avatar_url) ? `<img src="${safeURL(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
+      <div class="social-list-username">@${esc(l.username || 'user')}</div>
+    </div>`;
+  }
+
+  let actions;
+  if (mine) {
+    actions = `<div class="lp-actions">
+      <button class="lp-btn" onclick="_lpThen(openFavListPicker)">${_LIST_ICONS.edit}Edit Titles</button>
+      <button class="lp-btn" onclick="_lpThen(openFavCustomListModal)">${_LIST_ICONS.rename}Rename</button>
+      <button class="lp-btn lp-btn-danger" style="flex:0 0 auto;" onclick="_lpThen(deleteFavListConfirm)" aria-label="Delete list">${_LIST_ICONS.del}</button>
+    </div>`;
+  } else {
+    const myReaction = _socialListsMyReactions[l.id];
+    const alreadyForked = _listsAll.some(x => x.cat === 'custom' && (x.forked_from === l.id || x.title.toLowerCase().trim() === (l.title || '').toLowerCase().trim()));
+    const rerender = `.then(() => _renderListPopup())`;
+    actions = `<div class="lp-actions">
+      <button class="lp-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="reactToSocialList(${id}, true)${rerender}">
+        ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 15)}<span>${l.like_count || 0}</span>
       </button>
-      <button class="snote-rect-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialList('${l.id}', false).then(() => _renderSocialListPopup(_socialListsRaw.find(x=>x.id==='${l.id}')))">
-        ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 15)} <span>${l.dislike_count || 0}</span>
+      <button class="lp-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="reactToSocialList(${id}, false)${rerender}">
+        ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 15)}<span>${l.dislike_count || 0}</span>
       </button>
-      ${!isOwn ? `<button class="snote-rect-btn" ${alreadyForked ? 'disabled style="opacity:.5;cursor:default;"' : ''} onclick="forkSocialList('${l.id}')">${alreadyForked ? 'Added ✓' : '+ Add to My Lists'}</button>` : ''}
-      <button class="snote-rect-btn" onclick="closeSocialListPopup(); location.href='list-view.html?list=${l.id}'">${icon('list', 15)} View List</button>
+      ${!isOwn ? `<button class="lp-btn lp-btn-solid" style="flex:2 1 0;" ${alreadyForked ? 'disabled' : ''} onclick="forkSocialList(${id})">${alreadyForked ? 'Added ✓' : '+ Add to My Lists'}</button>` : ''}
+    </div>`;
+  }
+
+  card.innerHTML = `
+    <div class="lp-head">${head}<button class="lp-close" onclick="closeSocialListPopup()" aria-label="Close">${icon('x', 18)}</button></div>
+    <div class="lp-title-row"><div class="lp-title">${esc(l.title)}</div>${_rankBadge(l.ranked)}</div>
+    ${l.description ? `<div class="lp-desc">${esc(l.description)}</div>` : ''}
+    <div class="lp-meta">${_lcCountHTML(items.length)}</div>
+    ${isOwn && l.ranked == null ? _rankChoiceHTML(l.id) : ''}
+    ${posters.length ? `<div class="lp-posters">
+      ${posters.map(e => `<div class="lp-poster">${posterHTML(e, 'big')}</div>`).join('')}
+      ${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}
+    </div>` : ''}
+    ${actions}
+    <div class="lp-footer">
+      <button class="lp-btn lp-btn-solid" onclick="closeSocialListPopup(); location.href='list-view.html?list=${encodeURIComponent(l.id)}'">${icon('list', 15)} View List</button>
+      <button class="lp-btn" onclick='openReplyPopup("list", ${id}, ${attrJSON(l.title)})'>${icon('reply', 15)} View Replies</button>
     </div>
-    <button class="snote-rect-btn" style="width:100%;margin-top:10px;" onclick='openReplyPopup("list", ${attrJSON(l.id)}, ${attrJSON(l.title)})'>
-      ${icon('reply', 15)} View Replies
-    </button>
   `;
 }
+// Older callers
+function _renderSocialListPopup() { _renderListPopup(); }
 
 /* ── Replies popup — shared for notes and lists via `kind` ── */
 const REPLY_CONFIG = {
@@ -1609,10 +1649,6 @@ async function forkSocialList(listId) {
   }
 }
 
-function setListItemSort(listId, val) {
-  _listItemSort[listId] = val;
-  renderListsPage();
-}
 
 // 50-word cap on description fields. _listsGuardWordLimit blocks further
 // typing once the limit is reached (deletions and replacing a selection
@@ -1942,132 +1978,6 @@ function _favDragEnd() {
 
   _favDrag = null;
   _favRenderPickerList();
-}
-
-/* ── Drag to reorder lists themselves (whole page order, persisted) ── */
-let _listsDrag = null;
-let _listsAutoScrollRAF = null;
-
-document.addEventListener('pointerdown', e => {
-  const handle = e.target.closest('.lists-drag-handle');
-  if (!handle) return;
-  const item = handle.closest('.lists-drag-item');
-  if (!item) return;
-  e.preventDefault();
-
-  const container = document.getElementById('listsPageContent');
-  const items = Array.from(container.querySelectorAll('.lists-drag-item'));
-  const startIndex = items.indexOf(item);
-  if (startIndex < 0) return;
-
-  _listsDrag = {
-    item, startIndex, currentIndex: startIndex,
-    startY: e.clientY,
-    startScrollY: window.scrollY,
-    lastClientY: e.clientY,
-    itemHeight: item.getBoundingClientRect().height,
-    items,
-  };
-
-  item.classList.add('dragging');
-  item.style.position = 'relative';
-  item.style.zIndex = '5';
-
-  document.addEventListener('pointermove', _listsDragMove);
-  document.addEventListener('pointerup', _listsDragEnd);
-  document.addEventListener('pointercancel', _listsDragEnd);
-  _listsAutoScrollTick();
-});
-
-function _listsDragMove(e) {
-  if (!_listsDrag) return;
-  _listsDrag.lastClientY = e.clientY;
-  _listsUpdateDragPosition();
-}
-
-function _listsUpdateDragPosition() {
-  const d = _listsDrag;
-  if (!d) return;
-  const scrollDelta = window.scrollY - d.startScrollY;
-  const rawDeltaY = (d.lastClientY - d.startY) + scrollDelta;
-
-  // Clamp the dragged item's visual position to the list's own bounds —
-  // it can never move further than swapping with the first or last item,
-  // so it can't visually float up past the list into the stat boxes.
-  const minDeltaY = -(d.startIndex * d.itemHeight);
-  const maxDeltaY = (d.items.length - 1 - d.startIndex) * d.itemHeight;
-  const deltaY = Math.min(Math.max(rawDeltaY, minDeltaY), maxDeltaY);
-
-  d.item.style.transform = `translateY(${deltaY}px) scale(0.98)`;
-
-  const shift = Math.round(deltaY / d.itemHeight);
-  const newIndex = Math.min(Math.max(d.startIndex + shift, 0), d.items.length - 1);
-
-  if (newIndex !== d.currentIndex) {
-    d.items.forEach((el, i) => {
-      if (el === d.item) return;
-      el.style.transition = 'transform .15s ease';
-      if (i > d.startIndex && i <= newIndex)      el.style.transform = `translateY(-${d.itemHeight}px)`;
-      else if (i < d.startIndex && i >= newIndex) el.style.transform = `translateY(${d.itemHeight}px)`;
-      else                                        el.style.transform = '';
-    });
-    d.currentIndex = newIndex;
-  }
-}
-
-function _listsAutoScrollTick() {
-  if (!_listsDrag) { _listsAutoScrollRAF = null; return; }
-  const EDGE = 90, MAX_SPEED = 14;
-  const vh = window.innerHeight;
-  const y = _listsDrag.lastClientY;
-  let speed = 0;
-  if (y < EDGE) speed = -MAX_SPEED * (1 - y / EDGE);
-  else if (y > vh - EDGE) speed = MAX_SPEED * (1 - (vh - y) / EDGE);
-  if (speed) {
-    window.scrollBy(0, speed);
-    _listsUpdateDragPosition();
-  }
-  _listsAutoScrollRAF = requestAnimationFrame(_listsAutoScrollTick);
-}
-
-async function _listsDragEnd() {
-  if (!_listsDrag) return;
-  const d = _listsDrag;
-  document.removeEventListener('pointermove', _listsDragMove);
-  document.removeEventListener('pointerup', _listsDragEnd);
-  document.removeEventListener('pointercancel', _listsDragEnd);
-  if (_listsAutoScrollRAF) { cancelAnimationFrame(_listsAutoScrollRAF); _listsAutoScrollRAF = null; }
-
-  const moved = d.currentIndex !== d.startIndex;
-
-  d.items.forEach(el => {
-    el.style.transform = '';
-    el.style.transition = '';
-    el.style.zIndex = '';
-    el.style.position = '';
-    el.classList.remove('dragging');
-  });
-
-  if (moved) {
-    const orderedIds = d.items.map(el => el.dataset.listId);
-    const [movedId] = orderedIds.splice(d.startIndex, 1);
-    orderedIds.splice(d.currentIndex, 0, movedId);
-
-    try {
-      await Promise.all(orderedIds.map((id, i) => {
-        const list = _listsAll.find(l => l.id === id);
-        if (list) list.sort_order = i;
-        return sb.from('favorite_lists').update({ sort_order: i }).eq('id', id).eq('user_id', _listsUser.id);
-      }));
-      renderListsPage();
-    } catch (err) {
-      console.error('reorder save error:', err);
-      showToast('Error saving list order.', 'err');
-      renderListsPage();
-    }
-  }
-
-  _listsDrag = null;
 }
 
 async function saveFavList() {
