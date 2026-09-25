@@ -14,34 +14,95 @@
   .mobile-search-bar { display:none !important; }
   .home-hero { padding-bottom: 0.5rem; }
 
-  /* ── Discover ticker — infinite scrolling marquee of category shortcuts ── */
-  .disc-marquee {
-    overflow: hidden;
-    width: 100%;
-    margin-bottom: 2.5rem;
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  /* ── Explore — highlighted Discover shortcuts ──
+     Cinematic cards: the category's top poster as a blurred backdrop under
+     a colored wash, a fanned stack of its top 3 posters, a bold title and
+     an Explore pill. Scrolls as a slow infinite marquee (pauses on hover,
+     static swipeable row for people who prefer reduced motion). */
+  .xp { margin:0 0 3rem; }
+  .xp-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:1.1rem; }
+  .xp-all { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--olive-light); text-decoration:none; white-space:nowrap; }
+  .xp-all svg { width:13px; height:13px; transition:transform .2s; }
+  .xp-all:hover svg { transform:translateX(3px); }
+  .xp-marquee {
+    overflow:hidden; margin:0 -4px; padding:10px 4px 18px;
+    -webkit-mask-image:linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
+    mask-image:linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
   }
-  .disc-marquee__inner {
-    display: flex;
-    width: max-content;
-    animation: discMarquee 55s linear infinite;
+  .xp-track { display:flex; width:max-content; animation:xpScroll 70s linear infinite; }
+  .xp-marquee:hover .xp-track, .xp-marquee:focus-within .xp-track { animation-play-state:paused; }
+  .xp-group { display:flex; gap:18px; padding-right:18px; flex-shrink:0; }
+  @keyframes xpScroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+
+  .xp-card {
+    --xp-a:#1E5C26; --xp-b:#0F2D14;
+    position:relative; flex-shrink:0; width:360px; height:200px; border-radius:18px; overflow:hidden;
+    display:flex; align-items:stretch; text-decoration:none; color:#fff; isolation:isolate;
+    background:linear-gradient(135deg, var(--xp-a), var(--xp-b));
+    box-shadow:0 10px 28px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.08);
+    transition:transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s;
   }
-  .disc-marquee:hover .disc-marquee__inner { animation-play-state: paused; }
-  .disc-marquee__group { display: flex; flex-shrink: 0; }
-  .disc-marquee-card {
-    flex-direction: column; align-items: center; text-align: center;
-    margin: 0 10px; width: 250px; flex-shrink: 0;
-    text-decoration: none;
+  .xp-card:hover { transform:translateY(-6px) scale(1.015); box-shadow:0 20px 44px rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.14); }
+  .xp-bg {
+    position:absolute; inset:-24px; z-index:-2; background-size:cover; background-position:center 30%;
+    filter:blur(18px) saturate(1.3); opacity:0; transform:scale(1.1); transition:opacity .6s ease;
   }
-  .disc-marquee-card .cat-card-arrow { align-self: center; }
-  @keyframes discMarquee {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+  .xp-bg.on { opacity:.55; }
+  .xp-shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(100deg, var(--xp-b) 0%, color-mix(in srgb, var(--xp-a) 78%, transparent) 55%, rgba(0,0,0,.15) 100%); }
+  .xp-num {
+    position:absolute; right:-8px; bottom:-22px; z-index:-1; font-family:var(--bebas); font-size:150px; line-height:1;
+    color:rgba(255,255,255,.07); letter-spacing:-2px; pointer-events:none;
   }
+  .xp-text { position:relative; flex:1; min-width:0; padding:20px 0 20px 22px; display:flex; flex-direction:column; }
+  .xp-badge {
+    align-self:flex-start; font-family:var(--sans); font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase;
+    padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.22);
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); margin-bottom:10px;
+  }
+  .xp-title { font-family:var(--serif); font-weight:600; font-size:24px; line-height:1.1; margin-bottom:6px; text-shadow:0 2px 14px rgba(0,0,0,.45); white-space:nowrap; }
+  .xp-text { z-index:1; padding-right:22px; }
+  .xp-sub, .xp-badge { max-width:calc(100% - 118px); }
+  .xp-sub { font-size:12.5px; color:rgba(255,255,255,.82); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .xp-cta {
+    margin-top:auto; align-self:flex-start; display:inline-flex; align-items:center; gap:7px;
+    padding:8px 14px; border-radius:999px; background:#fff; color:var(--xp-b);
+    font-family:var(--sans); font-size:12.5px; font-weight:700; transition:gap .2s, padding .2s;
+  }
+  .xp-cta svg { width:13px; height:13px; }
+  .xp-card:hover .xp-cta { gap:11px; padding-right:12px; }
+  /* Fanned stack of the category's top 3 posters */
+  .xp-fan { position:absolute; top:0; right:0; bottom:0; width:140px; z-index:0; pointer-events:none; }
+  .xp-p {
+    position:absolute; bottom:-14px; width:84px; aspect-ratio:2/3; border-radius:8px; overflow:hidden;
+    background:rgba(255,255,255,.12); box-shadow:0 10px 24px rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.18);
+    transition:transform .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .xp-p img { width:100%; height:100%; object-fit:cover; display:block; }
+  .xp-p:nth-child(1) { right:66px; transform:rotate(-11deg) translateY(10px); z-index:1; }
+  .xp-p:nth-child(2) { right:38px; transform:rotate(-3deg);  z-index:2; }
+  .xp-p:nth-child(3) { right:10px; transform:rotate(7deg) translateY(6px); z-index:3; }
+  .xp-card:hover .xp-p:nth-child(1) { transform:rotate(-15deg) translate(-8px, 2px); }
+  .xp-card:hover .xp-p:nth-child(2) { transform:rotate(-3deg) translateY(-10px); }
+  .xp-card:hover .xp-p:nth-child(3) { transform:rotate(11deg) translate(8px, 0); }
+
   @media(max-width:640px) {
-    .disc-marquee-card { width: 200px; margin: 0 8px; }
-    .disc-marquee__inner { animation-duration: 42s; }
+    .xp { margin-bottom:2.25rem; }
+    .xp-card { width:292px; height:172px; border-radius:16px; }
+    .xp-title { font-size:20px; }
+    .xp-sub { font-size:11.5px; }
+    .xp-text { padding:16px 0 16px 18px; }
+    .xp-fan { width:108px; }
+    .xp-sub, .xp-badge { max-width:calc(100% - 96px); }
+    .xp-p { width:68px; }
+    .xp-p:nth-child(1) { right:52px; } .xp-p:nth-child(2) { right:30px; } .xp-p:nth-child(3) { right:8px; }
+    .xp-num { font-size:120px; }
+    .xp-track { animation-duration:55s; }
+    .xp-group { gap:14px; padding-right:14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .xp-marquee { overflow-x:auto; -webkit-mask-image:none; mask-image:none; scrollbar-width:none; }
+    .xp-track { animation:none; }
+    .xp-group + .xp-group { display:none; }
   }
 
   /* TMDB-sourced home cards (Trending/Top Picks/Upcoming/Recently Viewed) —
@@ -91,99 +152,19 @@
     </button>
   </div>
 
-  <!-- DISCOVER TICKER -->
-  <div class="disc-marquee fade-up" aria-label="Explore Discover categories">
-    <div class="disc-marquee__inner">
-      <div class="disc-marquee__group">
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=popular&title=What%27s%20Popular">
-          <div class="cat-card-content">
-            <div class="cat-card-title">What's Popular</div>
-            <div class="cat-card-count">Trending across the board</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top_rated_mss&title=Top%20Rated%20on%20MSS">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top Rated on MSS</div>
-            <div class="cat-card-count">Highest rated by our community</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_movies&title=Top%20250%20Movies">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Movies</div>
-            <div class="cat-card-count">The best movies, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_shows&title=Top%20250%20Shows">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Shows</div>
-            <div class="cat-card-count">The best shows, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_anime&title=Top%20250%20Anime">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Anime</div>
-            <div class="cat-card-count">The best anime, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_cartoons&title=Top%20250%20Cartoons">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Cartoons</div>
-            <div class="cat-card-count">The best cartoons, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
+  <!-- EXPLORE — highlighted Discover shortcuts (cards built in JS) -->
+  <section class="xp fade-up" aria-label="Explore Discover">
+    <div class="xp-head">
+      <div>
+        <div class="section-eyebrow">Discover</div>
+        <div class="section-title" style="margin-bottom:0">Start Exploring</div>
       </div>
-      <div class="disc-marquee__group" aria-hidden="true">
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=popular&title=What%27s%20Popular">
-          <div class="cat-card-content">
-            <div class="cat-card-title">What's Popular</div>
-            <div class="cat-card-count">Trending across the board</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top_rated_mss&title=Top%20Rated%20on%20MSS">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top Rated on MSS</div>
-            <div class="cat-card-count">Highest rated by our community</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_movies&title=Top%20250%20Movies">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Movies</div>
-            <div class="cat-card-count">The best movies, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_shows&title=Top%20250%20Shows">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Shows</div>
-            <div class="cat-card-count">The best shows, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_anime&title=Top%20250%20Anime">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Anime</div>
-            <div class="cat-card-count">The best anime, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-        <a class="cat-card disc-marquee-card" href="discover-list.html?list=top250_cartoons&title=Top%20250%20Cartoons">
-          <div class="cat-card-content">
-            <div class="cat-card-title">Top 250 Cartoons</div>
-            <div class="cat-card-count">The best cartoons, ranked</div>
-          </div>
-          <div class="cat-card-arrow">→</div>
-        </a>
-      </div>
+      <a class="xp-all" href="discover.html">See all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
     </div>
-  </div>
+    <div class="xp-marquee">
+      <div class="xp-track" id="xpTrack"></div>
+    </div>
+  </section>
 
   <!-- CURRENTLY WATCHING -->
   <div id="homeWatching" style="margin-top:4rem"></div>
@@ -202,8 +183,81 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/discover-categories.js"></script>
 <script>
 let _homeUser = null;
+
+/* ── Explore cards ── */
+const _XP_ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+const HOME_EXPLORE = [
+  { key:'top_rated_mss',   title:'Top Rated on MSS', sub:'Highest rated by our community', badge:'Community Pick', num:'MSS', a:'#2E7D32', b:'#0E2F14' },
+  { key:'popular',         title:"What's Popular",    sub:'Trending across the board',     badge:'Trending',       num:'HOT', a:'#8A5A1C', b:'#2B1A08' },
+  { key:'top250_movies',   title:'Top 250 Movies',    sub:'The best movies ever, ranked',      badge:'Ranked',         num:'250', a:'#9C3D1C', b:'#2E1007' },
+  { key:'top250_shows',    title:'Top 250 Shows',     sub:'The best TV ever made, ranked',               badge:'Ranked',         num:'250', a:'#2F5F8A', b:'#0C1D2E' },
+  { key:'top250_anime',    title:'Top 250 Anime',     sub:'The best anime, ranked',    badge:'Ranked',         num:'250', a:'#7A3E78', b:'#240F24' },
+  { key:'top250_cartoons', title:'Top 250 Cartoons',  sub:'The best cartoons, ranked',     badge:'Ranked',         num:'250', a:'#3F7A6E', b:'#0D2520' },
+];
+
+function _xpCardHTML(c) {
+  const href = `discover-list.html?list=${encodeURIComponent(c.key)}&title=${encodeURIComponent(c.title)}`;
+  return `<a class="xp-card" data-xp="${c.key}" href="${href}" style="--xp-a:${c.a};--xp-b:${c.b};">
+    <div class="xp-bg"></div>
+    <div class="xp-shade"></div>
+    <div class="xp-num">${c.num}</div>
+    <div class="xp-text">
+      <span class="xp-badge">${_homeEsc(c.badge)}</span>
+      <div class="xp-title">${_homeEsc(c.title)}</div>
+      <div class="xp-sub">${_homeEsc(c.sub)}</div>
+      <span class="xp-cta">Explore ${_XP_ARROW}</span>
+    </div>
+    <div class="xp-fan"><div class="xp-p"></div><div class="xp-p"></div><div class="xp-p"></div></div>
+  </a>`;
+}
+
+function _xpRender() {
+  const track = document.getElementById('xpTrack');
+  if (!track) return;
+  const group = HOME_EXPLORE.map(_xpCardHTML).join('');
+  // Two identical groups make the loop seamless; the copy is hidden from screen readers
+  track.innerHTML = `<div class="xp-group">${group}</div><div class="xp-group" aria-hidden="true">${group.replace(/<a /g, '<a tabindex="-1" ')}</div>`;
+}
+
+function _xpFill(key, items) {
+  const posters = (items || []).map(it => it.poster_url).filter(u => safeURL(u)).slice(0, 3);
+  if (!posters.length) return;
+  document.querySelectorAll(`.xp-card[data-xp="${key}"]`).forEach(card => {
+    const bg = card.querySelector('.xp-bg');
+    bg.style.backgroundImage = cssURL(posters[0]);
+    bg.classList.add('on');
+    card.querySelectorAll('.xp-p').forEach((p, i) => {
+      const u = posters[i];
+      p.innerHTML = u ? `<img src="${safeURL(u)}" alt="" loading="lazy" onerror="mssImgError(this)">` : '';
+      p.style.display = u ? '' : 'none';
+    });
+  });
+}
+
+// Uses Discover's session cache when it's warm; otherwise fetches page 1
+// (staggered, and cached for Discover to reuse).
+function _xpLoad() {
+  HOME_EXPLORE.forEach((c, i) => {
+    let cached = null;
+    try {
+      const x = JSON.parse(sessionStorage.getItem('disc_cache_' + c.key) || 'null');
+      if (x && Date.now() - x.t < 15 * 60 * 1000) cached = x.items;
+    } catch {}
+    if (cached) { _xpFill(c.key, cached); return; }
+    const cat = typeof getDiscoverCategory === 'function' ? getDiscoverCategory(c.key) : null;
+    if (!cat) return;
+    setTimeout(async () => {
+      try {
+        const items = await cat.fetch(1);
+        try { sessionStorage.setItem('disc_cache_' + c.key, JSON.stringify({ t: Date.now(), items: items.slice(0, 12) })); } catch {}
+        _xpFill(c.key, items);
+      } catch (e) { /* card keeps its colored look without posters */ }
+    }, i * 250);
+  });
+}
 
 const _NAV_LEFT_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const _NAV_RIGHT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
@@ -280,6 +334,8 @@ window.addEventListener('pageshow', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  _xpRender();   // cards show instantly in their colors; posters fill in as they load
+  _xpLoad();
   initDiscoverSearch('heroSearch', { max: 20, connected: true, includePersons: true });
   initPageGuest(async (user) => {
     if (!user) { renderGuestLanding(); return; }
