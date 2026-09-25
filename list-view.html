@@ -37,19 +37,6 @@
   font-size:13.5px; color:var(--text-2); line-height:1.6; margin-bottom:14px;
   padding-left:12px; border-left:2px solid var(--border-olive); white-space:pre-line; overflow-wrap:anywhere;
 }
-.lv-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:1rem; flex-wrap:wrap; }
-.lv-block .lv-sec-left { cursor:default; gap:10px; min-width:0; }
-.lv-block .lv-sec-left > span { flex-shrink:0; display:inline-flex; }
-.lv-block .section-block-title.lv-title {
-  font-size:clamp(17px, 3.6vw, 22px); font-weight:600; display:block;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
-}
-.lv-block .sort-bar { margin-bottom:14px; }
-.lv-block .accordion-body.open { max-height:none; }
-@media(max-width:640px) {
-  .lv-block .section-block-header { padding:12px 14px; }
-  .lv-block .accordion-inner { padding:14px; }
-}
 .lv-import-btn {
   font-size:13px; font-weight:600; padding:9px 20px; border-radius:999px; flex-shrink:0;
   background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light);
@@ -130,6 +117,39 @@
   .lv-list-title { font-size:15px; }
   .lv-list-year { font-size:12px; }
 }
+/* ── v572: plain page layout (like Discover's See All) ── */
+.lv-owner-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:.9rem; }
+.lv-owner-row .lv-owner { margin-bottom:0; }
+.lv-title-row { display:flex; align-items:center; justify-content:flex-start; column-gap:16px; row-gap:8px; flex-wrap:wrap; margin-bottom:.85rem; }
+.lv-title {
+  font-family:var(--serif); font-size:clamp(26px, 6vw, 44px); font-weight:600; line-height:1.1;
+  margin:0; min-width:0; overflow-wrap:anywhere; white-space:normal;
+}
+.lv-badge-slot { display:inline-flex; flex-shrink:0; align-self:center; }
+.lv-badge-slot:empty { display:none; }
+.lv-title-row .list-rank-badge { height:24px; padding:0 12px; font-size:11px; }
+@media(max-width:640px) { .lv-title-row .list-rank-badge { height:21px; padding:0 10px; font-size:10px; } }
+.lv-desc {
+  font-size:clamp(13px, 3.4vw, 14.5px); color:var(--text-2); line-height:1.65; max-width:none; width:100%;
+  margin:0 0 1.4rem; white-space:pre-line; overflow-wrap:anywhere; padding:0; border:none;
+}
+.lv-import-row { display:flex; margin:0 0 1.25rem; padding:0 !important; }
+.lv-import-row .popup-action-btn { flex:0 0 auto; padding:11px 22px; font-size:13.5px; }
+.lv-import-row .popup-action-btn:disabled { opacity:.65; cursor:default; }
+.lv-controls {
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  margin:0 0 1.5rem; padding-bottom:12px; border-bottom:0.5px solid var(--border);
+}
+.lv-count { font-size:13px; color:var(--text-3); }
+.lv-count b { font-family:var(--bebas); font-weight:400; font-size:18px; color:var(--text-2); letter-spacing:.3px; }
+.lv-controls-right { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.lv-sf-bar:empty { display:none; }
+.lv-sf-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.lv-sf-bar .sort-bar::before { content:none; }
+@media(max-width:600px) {
+  .lv-import-row .popup-action-btn { width:100%; }
+  .lv-controls { gap:10px; }
+}
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -150,33 +170,32 @@
 
   <div id="lvLoading" class="page-loading"><div class="spinner"></div></div>
   <div id="lvContent" style="display:none">
-    <div class="lv-head">
+    <div class="lv-owner-row">
       <div class="lv-owner">
         <div class="lv-avatar" id="lvAvatar"></div>
         <span class="lv-username" id="lvUsername"></span>
       </div>
-      <button class="lv-import-btn" id="lvImportBtn" onclick="importList()"><span class="lv-import-btn-label">+ Import This List</span></button>
     </div>
 
-    <div class="section-block lv-block">
-      <div class="section-block-header">
-        <div class="sec-left lv-sec-left">
-          <div class="section-block-title lv-title" id="lvTitle"></div>
-          <span class="section-pill" id="lvCount"></span>
-          <span id="lvRankedBadgeSlot"></span>
-        </div>
-        <div class="sec-right">
-          <div class="view-toggle" id="lvViewToggle"></div>
-        </div>
-      </div>
-      <div class="accordion-body open">
-        <div class="accordion-inner">
-          <div class="lv-desc" id="lvDesc"></div>
-          <div id="lvSfBar"></div>
-          <div class="lv-grid" id="lvGrid"></div>
-        </div>
+    <div class="lv-title-row">
+      <h1 class="lv-title" id="lvTitle"></h1>
+      <span id="lvRankedBadgeSlot" class="lv-badge-slot"></span>
+    </div>
+    <div class="lv-desc" id="lvDesc"></div>
+
+    <div id="lvImportPopupActions" class="lv-import-row">
+      <button class="popup-action-btn" id="lvImportBtn" onclick="importList()"><span class="lv-import-btn-label">+ Import This List</span></button>
+    </div>
+
+    <div class="lv-controls">
+      <div class="lv-count"><b id="lvCount"></b> <span id="lvCountLabel">titles</span></div>
+      <div class="lv-controls-right">
+        <div id="lvSfBar" class="lv-sf-bar"></div>
+        <div class="view-toggle" id="lvViewToggle"></div>
       </div>
     </div>
+
+    <div class="lv-grid" id="lvGrid"></div>
   </div>
 </div>
 
@@ -407,7 +426,7 @@ async function _lvSetRanked(value) {
 function _lvMarkImported() {
   const btn = document.getElementById('lvImportBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="lv-import-btn-label">Added ✓</span>';
+  btn.innerHTML = '<span class="lv-import-btn-label">Added to My Lists ✓</span>';
 }
 
 // The original list's items are the OWNER's personal entry ids. Copied
@@ -505,9 +524,10 @@ async function _lvLoad() {
       ? `<img src="${safeURL(avatarUrl)}" loading="lazy">`
       : (username[0] || '?').toUpperCase();
     document.getElementById('lvCount').textContent = entries.length;
+    document.getElementById('lvCountLabel').textContent = entries.length === 1 ? 'title' : 'titles';
 
     const isOwn = _lvUser && list.user_id === _lvUser.id;
-    document.getElementById('lvImportBtn').style.display = isOwn ? 'none' : '';
+    document.getElementById('lvImportPopupActions').style.display = isOwn ? 'none' : '';
     if (!isOwn && _lvUser) {
       // Already imported this one before? Show that instead of letting
       // the same list get copied into their lists twice.
