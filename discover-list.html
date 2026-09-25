@@ -182,7 +182,7 @@ function _dlRankCls(rank) {
 
 function _dlCardHTML(it, rank) {
   const posterInner = safeURL(it.poster_url)
-    ? `<img src="${safeURL(it.poster_url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+    ? `<img src="${safeURL(it.poster_url)}" loading="lazy" data-letter="${escHTML((it.title||'?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankBadge = _dlIsRanked
     ? `<div class="cg-rank-badge ${_dlRankCls(it._rank || rank)}">${it._rank || rank}</div>`
@@ -206,7 +206,7 @@ function _dlCardHTML(it, rank) {
 
 function _dlListRowHTML(it, rank) {
   const posterInner = safeURL(it.poster_url)
-    ? `<img src="${safeURL(it.poster_url)}" loading="lazy">`
+    ? `<img src="${safeURL(it.poster_url)}" loading="lazy" data-letter="${escHTML((it.title||'?')[0])}" onerror="mssImgError(this)">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const rankBadge = _dlIsRanked
     ? `<div class="cg-rank-badge ${_dlRankCls(it._rank || rank)}">${it._rank || rank}</div>`
@@ -296,7 +296,7 @@ function _dlRestoreState() {
     // Rows render instantly, so the position can be restored right away.
     // Cards fade in via .dl-in-view — mark them visible so nothing shifts.
     document.querySelectorAll('#dlGrid .dl-card, #dlGrid .dl-list-row').forEach(el => el.classList.add('dl-in-view'));
-    window.scrollTo({ top: st.y || 0, behavior: 'instant' }); // no smooth-scroll animation on restore
+    mssJumpTo(st.y || 0); // no smooth-scroll animation; Safari-safe
     return true;
   } catch { return false; }
 }
