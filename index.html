@@ -237,25 +237,49 @@ function _xpFill(key, items) {
   });
 }
 
-// Uses Discover's session cache when it's warm; otherwise fetches page 1
-// (staggered, and cached for Discover to reuse).
+/* Poster picks are saved on the device (localStorage), so after the first
+   visit the cards show their posters instantly — even in a new session.
+   Saved picks older than 6 hours are still shown right away, then quietly
+   refreshed in the background (stale-while-revalidate). */
+const _XP_STORE = 'mss_explore_posters_v1';
+const _XP_FRESH_MS = 6 * 60 * 60 * 1000;
+function _xpStoreGet() { try { return JSON.parse(localStorage.getItem(_XP_STORE) || '{}'); } catch { return {}; } }
+function _xpStoreSet(key, posters) {
+  try {
+    const all = _xpStoreGet();
+    all[key] = { t: Date.now(), posters };
+    localStorage.setItem(_XP_STORE, JSON.stringify(all));
+  } catch {}
+}
+function _xpPostersOf(items) { return (items || []).map(it => it.poster_url).filter(u => safeURL(u)).slice(0, 3); }
+
 function _xpLoad() {
-  HOME_EXPLORE.forEach((c, i) => {
-    let cached = null;
+  const saved = _xpStoreGet();
+  let delay = 0;
+  HOME_EXPLORE.forEach(c => {
+    const s = saved[c.key];
+    if (s && s.posters && s.posters.length) _xpFill(c.key, s.posters.map(u => ({ poster_url: u })));   // instant
+    if (s && Date.now() - s.t < _XP_FRESH_MS) return;                                                // fresh enough
+
+    // Discover's session cache counts as fresh data too
     try {
       const x = JSON.parse(sessionStorage.getItem('disc_cache_' + c.key) || 'null');
-      if (x && Date.now() - x.t < 15 * 60 * 1000) cached = x.items;
+      if (x && Date.now() - x.t < 15 * 60 * 1000 && x.items?.length) {
+        _xpFill(c.key, x.items); _xpStoreSet(c.key, _xpPostersOf(x.items)); return;
+      }
     } catch {}
-    if (cached) { _xpFill(c.key, cached); return; }
+
     const cat = typeof getDiscoverCategory === 'function' ? getDiscoverCategory(c.key) : null;
     if (!cat) return;
     setTimeout(async () => {
       try {
         const items = await cat.fetch(1);
         try { sessionStorage.setItem('disc_cache_' + c.key, JSON.stringify({ t: Date.now(), items: items.slice(0, 12) })); } catch {}
-        _xpFill(c.key, items);
-      } catch (e) { /* card keeps its colored look without posters */ }
-    }, i * 250);
+        const posters = _xpPostersOf(items);
+        if (posters.length) { _xpStoreSet(c.key, posters); _xpFill(c.key, items); }
+      } catch (e) { /* keeps whatever was saved (or the plain colored card) */ }
+    }, delay);
+    delay += 250;
   });
 }
 
