@@ -23,20 +23,6 @@
   font-family:var(--serif); font-size:clamp(22px, 5vw, 42px); font-weight:500;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
 }
-.ranked-badge {
-  display:inline-flex; align-items:center; gap:5px; vertical-align:middle; flex-shrink:0;
-  font-family:var(--sans); font-size:11px; font-weight:600; letter-spacing:.6px; text-transform:uppercase;
-  padding:4px 12px; border-radius:4px;
-}
-.ranked-badge.ranked-yes {
-  background:var(--olive-faint); border:1px solid var(--olive-light); color:var(--olive-light);
-}
-.ranked-badge.ranked-no {
-  background:transparent; border:1px solid var(--border-2); color:var(--text-3);
-}
-@media(max-width:640px) {
-  .ranked-badge { font-size:9.5px; padding:3px 10px; letter-spacing:.4px; }
-}
 
 /* ── Ranked/Unranked choice checkboxes — adapted from Uiverse (vishnupprajapat) ── */
 .lv-owner { display:flex; align-items:center; gap:8px; margin-bottom:.6rem; }
@@ -47,7 +33,23 @@
 }
 .lv-avatar img { width:100%; height:100%; object-fit:cover; }
 .lv-username { font-size:13px; color:var(--text-3); }
-.lv-desc { font-size:13.5px; color:var(--text-2); line-height:1.6; margin-bottom:.5rem; }
+.lv-desc {
+  font-size:13.5px; color:var(--text-2); line-height:1.6; margin-bottom:14px;
+  padding-left:12px; border-left:2px solid var(--border-olive); white-space:pre-line; overflow-wrap:anywhere;
+}
+.lv-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:1rem; flex-wrap:wrap; }
+.lv-block .lv-sec-left { cursor:default; gap:10px; min-width:0; }
+.lv-block .lv-sec-left > span { flex-shrink:0; display:inline-flex; }
+.lv-block .section-block-title.lv-title {
+  font-size:clamp(17px, 3.6vw, 22px); font-weight:600; display:block;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+}
+.lv-block .sort-bar { margin-bottom:14px; }
+.lv-block .accordion-body.open { max-height:none; }
+@media(max-width:640px) {
+  .lv-block .section-block-header { padding:12px 14px; }
+  .lv-block .accordion-inner { padding:14px; }
+}
 .lv-import-btn {
   font-size:13px; font-weight:600; padding:9px 20px; border-radius:999px; flex-shrink:0;
   background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light);
@@ -153,22 +155,28 @@
         <div class="lv-avatar" id="lvAvatar"></div>
         <span class="lv-username" id="lvUsername"></span>
       </div>
-      <div class="lv-title-row">
-        <div class="lv-title-inner">
-          <div class="lv-title" id="lvTitle"></div>
+      <button class="lv-import-btn" id="lvImportBtn" onclick="importList()"><span class="lv-import-btn-label">+ Import This List</span></button>
+    </div>
+
+    <div class="section-block lv-block">
+      <div class="section-block-header">
+        <div class="sec-left lv-sec-left">
+          <div class="section-block-title lv-title" id="lvTitle"></div>
+          <span class="section-pill" id="lvCount"></span>
           <span id="lvRankedBadgeSlot"></span>
         </div>
-        <button class="lv-import-btn" id="lvImportBtn" onclick="importList()"><span class="lv-import-btn-label">+ Import This List</span></button>
+        <div class="sec-right">
+          <div class="view-toggle" id="lvViewToggle"></div>
+        </div>
       </div>
-      <div class="lv-desc" id="lvDesc"></div>
+      <div class="accordion-body open">
+        <div class="accordion-inner">
+          <div class="lv-desc" id="lvDesc"></div>
+          <div id="lvSfBar"></div>
+          <div class="lv-grid" id="lvGrid"></div>
+        </div>
+      </div>
     </div>
-
-    <div class="lv-controls">
-      <div class="lv-count" id="lvCount"></div>
-      <div class="view-toggle" id="lvViewToggle"></div>
-    </div>
-
-    <div class="lv-grid" id="lvGrid"></div>
   </div>
 </div>
 
@@ -176,6 +184,7 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/sort-filter.js"></script>
 <script>
 function _lvEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -329,18 +338,42 @@ function _lvRenderGrid() {
     grid.innerHTML = `<div class="lv-empty">This list is empty.</div>`;
     return;
   }
-  grid.innerHTML = _lvItems.map((e, i) => {
-    const rank = _lvList?.ranked === true ? i : null;
+  const shown = SF.list('lv', 'all');
+  document.getElementById('lvSfBar').innerHTML = SF.bar('lv', 'all');
+  if (!shown.length) {
+    grid.className = '';
+    grid.innerHTML = `<div class="lv-empty">Nothing in this list matches these filters.</div>`;
+    return;
+  }
+  // Rank badges keep each title's position in the list, whatever the sort
+  grid.innerHTML = shown.map(e => {
+    const rank = _lvList?.ranked === true ? e._rank - 1 : null;
     return _lvView === 'list' ? _lvListRowHTML(e, rank) : _lvCardHTML(e, rank);
   }).join('');
   _lvObserveCards();
 }
 
+/* Sort & Filter — shared js/sort-filter.js module */
+function _lvIsTmdbOnly(e) { return typeof e.id === 'string' && e.id.startsWith('tmdb:'); }
+SF.register('lv', {
+  base: () => _lvItems,
+  render: () => _lvRenderGrid(),
+  defaultSort: 'rank',
+  sorts: () => ['rank', 'alpha', 'release', 'ratings', 'runtime', 'episodes'],
+  filters: () => ['genre', 'year', 'score'],
+  choiceFilters: () => [{
+    key: 'cat', label: 'Type',
+    options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']],
+    test: (e, v) => (e.cat || (e.tmdb_type === 'movie' ? 'movies' : 'tv')) === v,
+  }],
+  scoreOf: e => _lvIsTmdbOnly(e) ? null : liveScore(e),
+});
+
 function _lvRankedBadgeHTML() {
   const ranked = _lvList?.ranked;
   const isOwner = _lvUser && _lvList && _lvList.user_id === _lvUser.id;
-  if (ranked === true) return `<span class="ranked-badge ranked-yes">Ranked</span>`;
-  if (ranked === false) return `<span class="ranked-badge ranked-no">Unranked</span>`;
+  if (ranked === true)  return `<span class="list-rank-badge is-ranked">Ranked</span>`;
+  if (ranked === false) return `<span class="list-rank-badge is-unranked">Unranked</span>`;
   if (isOwner) {
     return `<span class="sf-choice-inline" style="margin-left:12px;">
       <label class="sf-check-row">
@@ -459,7 +492,7 @@ async function _lvLoad() {
       await _hydrateTmdbItems(items);
       entries = items.map(id => (typeof id === 'string' && id.startsWith('tmdb:')) ? _tmdbItemCache[id] : map[id]).filter(Boolean);
     }
-    _lvItems = entries;
+    _lvItems = entries.map((e, i) => Object.assign({}, e, { _rank: i + 1 }));
 
     document.title = `${list.title} — MyScreenScore`;
     document.getElementById('lvTitle').textContent = list.title; document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML();
@@ -471,7 +504,7 @@ async function _lvLoad() {
     document.getElementById('lvAvatar').innerHTML = safeURL(avatarUrl)
       ? `<img src="${safeURL(avatarUrl)}" loading="lazy">`
       : (username[0] || '?').toUpperCase();
-    document.getElementById('lvCount').textContent = `${entries.length} item${entries.length !== 1 ? 's' : ''}`;
+    document.getElementById('lvCount').textContent = entries.length;
 
     const isOwn = _lvUser && list.user_id === _lvUser.id;
     document.getElementById('lvImportBtn').style.display = isOwn ? 'none' : '';
