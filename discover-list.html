@@ -15,8 +15,11 @@
 }
 .dl-back:hover { color:var(--olive-light); }
 
-.dl-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin-bottom:2rem; flex-wrap:wrap; }
-.dl-title { font-family:var(--serif); font-size:clamp(28px, 5vw, 42px); font-weight:500; }
+.dl-head {
+  display:flex; align-items:center; justify-content:space-between; column-gap:1rem; row-gap:12px; flex-wrap:wrap;
+  margin-bottom:1.5rem; padding-bottom:12px; border-bottom:0.5px solid var(--border);
+}
+.dl-title { font-family:var(--serif); font-size:clamp(26px, 6vw, 44px); font-weight:600; line-height:1.1; margin:0; min-width:0; overflow-wrap:anywhere; }
 
 /* ── Grid view ── */
 .dl-grid {
