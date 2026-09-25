@@ -397,12 +397,12 @@
   display:flex; align-items:center; justify-content:center; transition:background .15s;
 }
 .np-close:hover { background:rgba(0,0,0,.62); }
-.np-head { position:relative; display:flex; gap:16px; align-items:flex-end; padding:0 22px; margin-top:-70px; }
+.np-head { position:relative; display:flex; gap:18px; align-items:flex-end; padding:0 22px; margin-top:-96px; }
 .np-poster {
-  width:96px; aspect-ratio:2/3; flex-shrink:0; border-radius:10px; overflow:hidden;
+  width:122px; aspect-ratio:2/3; flex-shrink:0; border-radius:10px; overflow:hidden;
   background:var(--olive-faint); display:flex; align-items:center; justify-content:center;
-  font-family:var(--serif); font-size:30px; color:var(--olive-light);
-  border:3px solid var(--bg-2); box-shadow:0 10px 26px rgba(0,0,0,.35);
+  font-family:var(--serif); font-size:34px; color:var(--olive-light);
+  border:none; box-shadow:0 12px 30px rgba(0,0,0,.4);
 }
 .np-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .np-head-info { flex:1; min-width:0; padding-bottom:2px; }
@@ -411,9 +411,13 @@
 .np-eyebrow .np-user { font-family:var(--sans); letter-spacing:0; text-transform:none; font-size:12.5px; font-weight:600; color:var(--text-2); }
 .np-title { font-family:var(--serif); font-size:clamp(18px, 4.6vw, 23px); font-weight:500; line-height:1.2; color:var(--text); margin-bottom:6px; overflow-wrap:anywhere; }
 .np-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:11.5px; color:var(--text-3); }
-.np-title-row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:8px; }
-.np-title-row .np-title { margin-bottom:0; flex:1; }
-.np-title-row .nc-score { font-size:clamp(20px, 4.8vw, 24px); }
+/* Badges on the left, score on the right of the same row (below the header image) */
+.np-meta-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.np-meta-row .np-meta { flex:1; min-width:0; }
+.np-score-slot { flex-shrink:0; display:inline-flex; }
+.np-score-slot:empty { display:none; }
+.np-score-slot { min-height:27px; align-items:center; }   /* lines up with the first row of badges */
+.np-score-slot .nc-score { font-size:clamp(20px, 4.6vw, 25px); }
 .np-meta .type-label, .np-meta .w-ep-badge { font-size:12px; padding:5px 10px; }
 .np-stats { display:flex; align-items:center; gap:16px; padding:14px 22px 0; font-size:12.5px; color:var(--text-3); }
 .np-stats span { display:inline-flex; align-items:center; gap:5px; }
@@ -441,9 +445,9 @@
 .np-actions .popup-action-btn:disabled { opacity:.55; cursor:default; }
 @media(max-width:640px) {
   .np-hero { height:170px; }
-  .np-head { margin-top:-56px; padding:0 16px; gap:12px; }
+  .np-head { margin-top:-74px; padding:0 16px; gap:14px; }
   .np-meta .type-label, .np-meta .w-ep-badge { font-size:11px; padding:4px 8px; }
-  .np-poster { width:76px; font-size:24px; }
+  .np-poster { width:96px; font-size:26px; }
   .np-stats { padding:12px 16px 0; }
   .np-body { padding:14px 16px 16px; }
   .np-quote { font-size:14px; }
@@ -451,7 +455,7 @@
   .np-actions .popup-action-btn { padding:10px 10px; font-size:13px; }
 }
 @media(max-width:380px) {
-  .np-poster { width:64px; }
+  .np-poster { width:82px; }
   .np-actions .np-react { min-width:58px; }
 }
 </style>
@@ -533,8 +537,8 @@
       <div class="np-poster" id="notePopup2Poster"></div>
       <div class="np-head-info">
         <div class="np-eyebrow">Your Note</div>
-        <div class="np-title-row"><div class="np-title" id="notePopup2Title"></div><span id="notePopup2Score"></span></div>
-        <div class="np-meta" id="notePopup2Tags"></div>
+        <div class="np-title" id="notePopup2Title"></div>
+        <div class="np-meta-row"><div class="np-meta" id="notePopup2Tags"></div><span id="notePopup2Score" class="np-score-slot"></span></div>
       </div>
     </div>
     <div class="np-stats" id="notePopup2Reactions" style="display:none;"></div>
@@ -1259,8 +1263,8 @@ function _renderSocialNotePopup(n) {
           <div class="snote-avatar">${safeURL(n.avatar_url) ? `<img src="${safeURL(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
           <span class="np-user">@${esc(n.username || 'user')}</span>
         </div>
-        <div class="np-title-row"><div class="np-title">${esc(n.title)}</div>${_notesScorePill(n.final_score)}</div>
-        <div class="np-meta">${_noteBadges(n, { dateLabel: 'Posted', date: _noteDate(n.created_at, true) })}</div>
+        <div class="np-title">${esc(n.title)}</div>
+        <div class="np-meta-row"><div class="np-meta">${_noteBadges(n, { dateLabel: 'Posted', date: _noteDate(n.created_at, true) })}</div><span class="np-score-slot">${_notesScorePill(n.final_score)}</span></div>
       </div>
     </div>
     <div class="np-stats"><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span></div>
