@@ -19,10 +19,6 @@
 .lv-title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:nowrap; margin-bottom:.5rem; }
 .lv-title-inner { display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
 .lv-title-wrap { min-width:0; }
-.lv-title {
-  font-family:var(--serif); font-size:clamp(22px, 5vw, 42px); font-weight:500;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
-}
 
 /* ── Ranked/Unranked choice checkboxes — adapted from Uiverse (vishnupprajapat) ── */
 .lv-owner { display:flex; align-items:center; gap:8px; margin-bottom:.6rem; }
@@ -120,10 +116,11 @@
 /* ── v572: plain page layout (like Discover's See All) ── */
 .lv-owner-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:.9rem; }
 .lv-owner-row .lv-owner { margin-bottom:0; }
-.lv-title-row { display:flex; align-items:center; justify-content:flex-start; column-gap:16px; row-gap:8px; flex-wrap:wrap; margin-bottom:.85rem; }
+.lv-title-row { display:flex; align-items:center; justify-content:flex-start; column-gap:16px; row-gap:8px; flex-wrap:wrap; margin-bottom:1.1rem; }
 .lv-title {
-  font-family:var(--serif); font-size:clamp(26px, 6vw, 44px); font-weight:600; line-height:1.1;
+  font-family:var(--serif); font-size:clamp(26px, 6vw, 44px); font-weight:600; line-height:1.25;
   margin:0; min-width:0; overflow-wrap:anywhere; white-space:normal;
+  overflow:visible; text-overflow:clip; padding-bottom:2px;   /* keep descenders (g, y, p) from clipping */
 }
 .lv-badge-slot { display:inline-flex; flex-shrink:0; align-self:center; }
 .lv-badge-slot:empty { display:none; }
