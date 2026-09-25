@@ -1362,6 +1362,12 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 [data-theme="dark"] .list-rank-badge.is-unranked { background:#C8B79A; color:#2E2618; }
 @media(max-width:640px) { .list-rank-badge { height:20px; font-size:9.5px; padding:0 9px; } }
 
+/* Letter shown when a poster image fails to load (see mssImgError) */
+.img-fallback {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:var(--bg-3); color:var(--olive-light); font-family:var(--serif); font-size:clamp(22px, 5vw, 34px);
+}
+
 /* Single-choice box built from .sf-check-row — same checkbox look as the
    Genre filter, used for either/or picks like Ranked / Unranked.
    .sf-choice-box    = stacked rows with a title + hint (modals)
