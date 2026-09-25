@@ -283,11 +283,48 @@ function cssURL(u) {
   return s ? `url('${s.replace(/["'()\\\s<>]/g, c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}')` : 'none';
 }
 
+/* ── Jump to a scroll position instantly ──
+   The site CSS uses smooth scrolling, and older Safari throws on
+   scrollTo({behavior:'instant'}) — so smooth scrolling is switched off
+   for the jump itself, then put back. Works in every browser. */
+function mssJumpTo(y) {
+  const root = document.documentElement;
+  const prev = root.style.scrollBehavior;
+  root.style.scrollBehavior = 'auto';
+  window.scrollTo(0, y);
+  root.style.scrollBehavior = prev;
+}
+
+/* ── Poster images that fail to load ──
+   TMDB's image server occasionally drops requests when a page asks for
+   dozens of posters at once (Safari especially), leaving a broken-image
+   icon even though the poster exists. Add onerror="mssImgError(this)":
+   it retries once, then tries smaller sizes, and finally shows the
+   title's first letter instead of a broken icon. */
+function mssImgError(img) {
+  const n = Number(img.dataset.retry || 0);
+  img.dataset.retry = n + 1;
+  const src = (img.getAttribute('src') || '').replace(/[?&]r=\d+$/, '');
+  if (n === 0) {
+    setTimeout(() => { img.src = src + (src.includes('?') ? '&' : '?') + 'r=' + Date.now(); }, 700 + Math.random() * 600);
+    return;
+  }
+  const m = src.match(/^(https:\/\/image\.tmdb\.org\/t\/p\/)(w\d+|original)(\/[^?]+)/);
+  const next = ['w342', 'w185'][n - 1];
+  if (m && next && next !== m[2]) { img.src = m[1] + next + m[3]; return; }
+  img.style.display = 'none';
+  const holder = img.parentElement;
+  if (holder && !holder.querySelector('.img-fallback')) {
+    if (getComputedStyle(holder).position === 'static') holder.style.position = 'relative';
+    holder.insertAdjacentHTML('beforeend', `<span class="img-fallback">${escHTML(((img.dataset.letter || img.alt || '?')[0] || '?').toUpperCase())}</span>`);
+  }
+}
+
 function posterHTML(entry, size) {
   const letter = escHTML((entry.title || '?')[0].toUpperCase());
   const url = safeURL(entry.poster_url);
   if (url) {
-    return `<img src="${url}" alt="" loading="lazy">`;
+    return `<img src="${url}" alt="" loading="lazy" data-letter="${letter}" onerror="mssImgError(this)">`;
   }
   const sz = size === 'big' ? '52px' : size === 'sm' ? '22px' : '36px';
   return `<span style="font-size:${sz};display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--olive-light);font-family:var(--serif)">${letter}</span>`;
