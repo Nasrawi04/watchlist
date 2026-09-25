@@ -39,6 +39,8 @@
      beforeFilter: async (section, filter) => {},     // same, before a filter applies
      scoreOf: e => number|null,     // what "Ratings" / Score use (default: liveScore)
      scoreLabel: 'TMDB Score',      // Score filter heading (default: MyScreenScore)
+     presets: { rank: { header: 'Order', opts: [['rank', 'Your Order'], ['rankRev', 'Reversed']] } },
+                                    // rename a sort's labels for this page
      saveRatings: (entry, newRatings) => {},          // omit on read-only pages
    });
 
@@ -111,7 +113,7 @@ const SF = (() => {
   }
   function sortsFor(s, section) {
     const keys = (s.cfg.sorts ? s.cfg.sorts(section) : DEFAULT_SORTS).filter(Boolean);
-    return keys.map(k => SORT_PRESETS[k]).filter(Boolean);
+    return keys.map(k => (s.cfg.presets && s.cfg.presets[k]) || SORT_PRESETS[k]).filter(Boolean);
   }
   function filtersFor(s, section) {
     return (s.cfg.filters ? s.cfg.filters(section) : DEFAULT_FILTERS).filter(Boolean);
@@ -135,7 +137,8 @@ const SF = (() => {
       const l = s.cfg.ratingSort.label(value.slice(7));
       return l.length > 14 ? l.slice(0, 13) + '…' : l;
     }
-    for (const g of Object.values(SORT_PRESETS)) for (const [v, l] of g.opts) if (v === value) return g.opts.length > 1 ? g.header : l;
+    const groups = [...Object.values(s.cfg.presets || {}), ...Object.values(SORT_PRESETS)];
+    for (const g of groups) for (const [v, l] of g.opts) if (v === value) return g.opts.length > 1 ? g.header : l;
     return 'Sort';
   }
 
