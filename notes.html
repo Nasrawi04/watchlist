@@ -622,6 +622,9 @@ async function loadNotesPage() {
   renderNotesPage();
 }
 
+// Date the title was watched (finished), falling back to when it was added
+// for things still in progress — used by the Date sort and the date badges.
+function _watchedDate(e) { return e.completed_date || e.created_at; }
 function _wordCount(t) { return (t || '').trim().split(/\s+/).filter(Boolean).length; }
 function _noteDate(d, withDay) {
   if (!d) return '';
@@ -697,8 +700,9 @@ SF.register('notesMine', {
   base: () => _notesEntries.filter(e => e.notes && e.notes.trim()),
   render: () => renderNotesPage(),
   defaultSort: 'newest',
+  addedDate: _watchedDate,
   presets: {
-    added: { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Earliest']] },
+    added: { header: 'Date Watched', opts: [['newest', 'Latest'], ['oldest', 'Earliest']] },
     ..._NOTE_LEN_PRESET,
     likes: { header: 'Likes', opts: [['likes_most', 'Most Liked'], ['likes_least', 'Least Liked']] },
   },
@@ -723,16 +727,16 @@ SF.register('notesSocial', {
   defaultSort: 'popular',
   presets: {
     popularity: { header: 'Popularity', opts: [['popular', 'Most Liked'], ['least_popular', 'Least Liked']] },
-    added:      { header: 'Posted',     opts: [['newest', 'Newest'], ['oldest', 'Oldest']] },
+    added:      { header: 'Date Watched', opts: [['newest', 'Latest'], ['oldest', 'Earliest']] },
     ..._NOTE_LEN_PRESET,
   },
   sorts: () => ['popularity', 'added', 'alpha', 'length', 'ratings'],
   filters: () => ['score'],
   scoreOf: n => n.final_score != null ? Number(n.final_score) : null,
-  addedDate: n => n.created_at,
+  addedDate: _watchedDate,
   compare: {
     ..._noteLenCompare,
-    popular: (a, b) => (_snScore(b) - _snScore(a)) || (new Date(b.created_at) - new Date(a.created_at)),
+    popular: (a, b) => (_snScore(b) - _snScore(a)) || (new Date(_watchedDate(b)) - new Date(_watchedDate(a))),
     least_popular: (a, b) => (Number(b.dislike_count) - Number(a.dislike_count)) || (_snScore(a) - _snScore(b)),
   },
   choiceFilters: () => [{
@@ -781,7 +785,7 @@ function renderNotesPage() {
   if (!sorted.length) { document.getElementById('notesPageContent').innerHTML = `<div class="notes-empty">No notes match these filters.</div>`; return; }
   document.getElementById('notesPageContent').innerHTML = `<div class="nc-grid">${sorted.map(e => {
     const counts = _notesReactionCounts[e.id] || { like: 0, dislike: 0 };
-    const date = _noteDate(e.completed_date || e.created_at, true);
+    const date = _noteDate(_watchedDate(e), true);
     const words = _wordCount(e.notes);
     return `<article class="nc-card" onclick="openNotePopup2(${attrJSON(e.id)})">
       ${_notesPoster(e.poster_url, e.title, 'nc-poster')}
@@ -1047,7 +1051,7 @@ async function _nuLoadTitleNotes(title) {
 
   try {
     const { data: entries, error } = await sb.from('entries')
-      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, user_id')
+      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, completed_date, user_id')
       .ilike('title', title)
       .not('notes', 'is', null)
       .order('created_at', { ascending: false });
@@ -1066,7 +1070,7 @@ async function _nuLoadTitleNotes(title) {
       return {
         entry_id: e.id, user_id: e.user_id, username: p.username || 'user', avatar_url: p.avatar_url || null,
         title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
-        notes: e.notes, final_score: e.final_score, created_at: e.created_at,
+        notes: e.notes, final_score: e.final_score, created_at: e.created_at, completed_date: e.completed_date,
         like_count: 0, dislike_count: 0,
       };
     });
@@ -1110,7 +1114,7 @@ async function _nuLoadUserNotes() {
 
   try {
     const { data: entries, error } = await sb.from('entries')
-      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, user_id')
+      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, completed_date, user_id')
       .eq('user_id', _nuFilterUser.id)
       .not('notes', 'is', null)
       .order('created_at', { ascending: false });
@@ -1120,7 +1124,7 @@ async function _nuLoadUserNotes() {
     _socialNotesRaw = withNotes.map(e => ({
       entry_id: e.id, user_id: e.user_id, username: _nuFilterUser.username, avatar_url: _nuFilterUser.avatar_url,
       title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
-      notes: e.notes, final_score: e.final_score, created_at: e.created_at,
+      notes: e.notes, final_score: e.final_score, created_at: e.created_at, completed_date: e.completed_date,
       like_count: 0, dislike_count: 0,
     }));
 
@@ -1194,7 +1198,7 @@ function renderSocialNotes() {
           </div>
         </div>
         <div class="nc-top"><div class="nc-title">${esc(n.title)}</div>${_notesScorePill(n.final_score)}</div>
-        <div class="nc-tags">${_noteBadges(n, { date: _noteDate(n.created_at, true) })}</div>
+        <div class="nc-tags">${_noteBadges(n, { date: _noteDate(_watchedDate(n), true) })}</div>
         <blockquote class="nc-quote">&ldquo;${esc(_trimNotes(n.notes))}&rdquo;</blockquote>
         <div class="nc-foot">
           <div class="nc-reacts">
@@ -1264,7 +1268,7 @@ function _renderSocialNotePopup(n) {
           <span class="np-user">@${esc(n.username || 'user')}</span>
         </div>
         <div class="np-title">${esc(n.title)}</div>
-        <div class="np-meta-row"><div class="np-meta">${_noteBadges(n, { dateLabel: 'Posted', date: _noteDate(n.created_at, true) })}</div><span class="np-score-slot">${_notesScorePill(n.final_score)}</span></div>
+        <div class="np-meta-row"><div class="np-meta">${_noteBadges(n, { dateLabel: n.completed_date ? 'Watched On:' : 'Added On:', date: _noteDate(_watchedDate(n), true) })}</div><span class="np-score-slot">${_notesScorePill(n.final_score)}</span></div>
       </div>
     </div>
     <div class="np-stats"><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span></div>
@@ -1661,13 +1665,13 @@ function openNotePopup2(id) {
   _notesActiveId = null;
   window._notesCurrentEntryId = id;
 
-  const date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+  const date = _noteDate(_watchedDate(e), true);
   const hasPoster = !!safeURL(e.poster_url);
   _npLoadHero(document.getElementById('notePopup2Blur'), e);
   document.getElementById('notePopup2Poster').innerHTML = hasPoster ? `<img src="${safeURL(e.poster_url)}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase());
   document.getElementById('notePopup2Title').textContent = e.title;
   document.getElementById('notePopup2Score').innerHTML = _notesScorePill(liveScore(e));
-  document.getElementById('notePopup2Tags').innerHTML = _noteBadges(e, { genres: 3, dateLabel: 'Completed On:', date });
+  document.getElementById('notePopup2Tags').innerHTML = _noteBadges(e, { genres: 3, dateLabel: e.completed_date ? 'Completed On:' : 'Added On:', date });
 
   const counts = _notesReactionCounts[id] || { like: 0, dislike: 0 };
   const words = _wordCount(e.notes);
