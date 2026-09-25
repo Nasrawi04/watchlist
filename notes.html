@@ -630,7 +630,7 @@ function _noteDate(d, withDay) {
 }
 function _notesPoster(url, title, cls) {
   const u = safeURL(url);
-  return `<div class="${cls}">${u ? `<img src="${u}" loading="lazy" alt="">` : esc((title || '?')[0].toUpperCase())}</div>`;
+  return `<div class="${cls}">${u ? `<img src="${u}" loading="lazy" alt="" data-letter="${esc((title || '?')[0])}" onerror="mssImgError(this)">` : esc((title || '?')[0].toUpperCase())}</div>`;
 }
 // Score exactly like the category list view: plain Bebas, olive, no pill
 function _notesScorePill(v) { return v != null ? `<span class="nc-score">★ ${Number(v).toFixed(2)}</span>` : ''; }
