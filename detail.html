@@ -872,7 +872,7 @@
           <div class="field-group" id="dNotesSection" style="margin-bottom:0;">
             <div class="field-label">Personal Notes</div>
             <textarea class="field-input" id="dNotes" placeholder="Your thoughts…" oninput="_notesUpdateWordCount()"></textarea>
-            <div class="list-desc-count" id="dNotesCount">0 / 150 words</div>
+            <div class="list-desc-count" id="dNotesCount">0 / 500 words</div>
           </div>
 
           <div class="field-group" id="favSection" style="margin-bottom:0;">
@@ -2761,7 +2761,7 @@ function _closeDetDiscoverPicker() {
 </script>
 
 <script>
-/* Personal Notes — 150-word cap, matching the length _trimNotes() already
+/* Personal Notes — NOTE_WORD_LIMIT (500) word cap (was 150), matching the length _trimNotes() already
    truncates the display preview to elsewhere in the app (Notes tab list
    view). Previously the writing field had no limit at all, so a note
    could be written longer than what would ever actually be shown when
@@ -2776,15 +2776,15 @@ function _notesUpdateWordCount() {
   const countEl = document.getElementById('dNotesCount');
   if (!el || !countEl) return;
   const words = el.value.trim().split(/\s+/).filter(Boolean);
-  if (words.length > 150) {
-    el.value = words.slice(0, 150).join(' ');
-    countEl.textContent = 'Reached max word limit (150/150 words)';
+  if (words.length > NOTE_WORD_LIMIT) {
+    el.value = clampWords(el.value, NOTE_WORD_LIMIT);
+    countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`;
     countEl.classList.add('over');
     return;
   }
   const count = words.length;
-  countEl.textContent = `${count} / 150 words`;
-  countEl.classList.toggle('over', count >= 150);
+  countEl.textContent = `${count} / ${NOTE_WORD_LIMIT} words`;
+  countEl.classList.toggle('over', count >= NOTE_WORD_LIMIT);
 }
 function _notesGuardWordLimit() {
   const el = document.getElementById('dNotes');
@@ -2794,10 +2794,10 @@ function _notesGuardWordLimit() {
     if (e.inputType && e.inputType.startsWith('delete')) return;
     if (el.selectionStart !== el.selectionEnd) return;
     const count = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
-    if (count >= 150) {
+    if (count >= NOTE_WORD_LIMIT) {
       e.preventDefault();
       const countEl = document.getElementById('dNotesCount');
-      if (countEl) { countEl.textContent = 'Reached max word limit (150/150 words)'; countEl.classList.add('over'); }
+      if (countEl) { countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`; countEl.classList.add('over'); }
     }
   });
 }
