@@ -320,6 +320,17 @@ function mssImgError(img) {
   }
 }
 
+/* ── Personal notes word limit (Notes page + title detail page) ── */
+const NOTE_WORD_LIMIT = 500;
+// Cuts text to `max` words while keeping the writer's own spacing and
+// line breaks (the old version re-joined words with single spaces, which
+// flattened paragraphs whenever a long paste got trimmed).
+function clampWords(text, max) {
+  const re = /\S+/g; let m, n = 0, end = text.length;
+  while ((m = re.exec(text))) { if (++n === max) { end = m.index + m[0].length; break; } }
+  return n >= max ? text.slice(0, end) : text;
+}
+
 function posterHTML(entry, size) {
   const letter = escHTML((entry.title || '?')[0].toUpperCase());
   const url = safeURL(entry.poster_url);
