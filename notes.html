@@ -425,7 +425,7 @@
 .np-body { padding:16px 22px 18px; overflow-y:auto; overscroll-behavior-y:contain; display:flex; flex-direction:column; gap:8px; }
 .np-quote { margin:0; padding:4px 0 4px 14px; border-left:3px solid var(--olive-light); font-size:15px; line-height:1.75; color:var(--text); font-style:italic; white-space:pre-line; overflow-wrap:anywhere; }
 .np-textarea {
-  width:100%; box-sizing:border-box; min-height:170px; resize:vertical; padding:14px;
+  width:100%; box-sizing:border-box; min-height:240px; max-height:55dvh; resize:vertical; padding:14px;
   border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-3); color:var(--text);
   font-family:var(--sans); font-size:16px; line-height:1.6; outline:none; transition:border-color .15s, box-shadow .15s;
 }
@@ -557,7 +557,7 @@
     <!-- Edit mode -->
     <div class="np-body" id="notePopup2EditBody" style="display:none">
       <textarea class="np-textarea" id="notePopup2Textarea" placeholder="What did you think? Favorite moments, hot takes, anything…" oninput="_notePopup2UpdateWordCount()"></textarea>
-      <div class="note-popup2-count np-count" id="notePopup2Count">0 / 150 words</div>
+      <div class="note-popup2-count np-count" id="notePopup2Count">0 / 500 words</div>
     </div>
     <div class="np-footer" id="notePopup2EditFooter" style="display:none">
       <div class="np-actions" id="npEditPopupActions">
@@ -1753,7 +1753,7 @@ async function saveNotePopup2() {
   }
 }
 
-/* 150-word cap, matching detail.html's Personal Notes field — blocks
+/* NOTE_WORD_LIMIT (500) cap, matching detail.html's Personal Notes field — blocks
    further typing at the limit instead of silently trimming after the
    fact, with a clear message when you hit it. */
 function _notePopup2UpdateWordCount() {
@@ -1761,15 +1761,15 @@ function _notePopup2UpdateWordCount() {
   const countEl = document.getElementById('notePopup2Count');
   if (!el || !countEl) return;
   const words = el.value.trim().split(/\s+/).filter(Boolean);
-  if (words.length > 150) {
-    el.value = words.slice(0, 150).join(' ');
-    countEl.textContent = 'Reached max word limit (150/150 words)';
+  if (words.length > NOTE_WORD_LIMIT) {
+    el.value = clampWords(el.value, NOTE_WORD_LIMIT);
+    countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`;
     countEl.classList.add('over');
     return;
   }
   const count = words.length;
-  countEl.textContent = `${count} / 150 words`;
-  countEl.classList.toggle('over', count >= 150);
+  countEl.textContent = `${count} / ${NOTE_WORD_LIMIT} words`;
+  countEl.classList.toggle('over', count >= NOTE_WORD_LIMIT);
 }
 function _notePopup2GuardWordLimit() {
   const el = document.getElementById('notePopup2Textarea');
@@ -1779,10 +1779,10 @@ function _notePopup2GuardWordLimit() {
     if (e.inputType && e.inputType.startsWith('delete')) return;
     if (el.selectionStart !== el.selectionEnd) return;
     const count = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
-    if (count >= 150) {
+    if (count >= NOTE_WORD_LIMIT) {
       e.preventDefault();
       const countEl = document.getElementById('notePopup2Count');
-      if (countEl) { countEl.textContent = 'Reached max word limit (150/150 words)'; countEl.classList.add('over'); }
+      if (countEl) { countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`; countEl.classList.add('over'); }
     }
   });
 }
