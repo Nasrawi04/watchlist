@@ -116,7 +116,7 @@ const _SEE_ALL_SVG   = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 
 function _discCardHTML(it) {
   const posterInner = safeURL(it.poster_url)
-    ? `<img src="${safeURL(it.poster_url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+    ? `<img src="${safeURL(it.poster_url)}" loading="lazy" data-letter="${escHTML((it.title||'?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_discEsc((it.title||'?')[0].toUpperCase())}</div>`;
   const scoreStr = _discFloorScore(it.score);
   return `<div class="q-card" ${_discClickAttr(it)}>
@@ -182,7 +182,7 @@ function _discCacheSet(key, items) {
 // the person starts scrolling themselves.
 function _discRestoreScroll() {
   if (!_discTargetY || _discUserScrolled) return;
-  window.scrollTo({ top: _discTargetY, behavior: 'instant' }); // site CSS uses smooth scrolling — skip the animation here
+  mssJumpTo(_discTargetY); // no smooth-scroll animation; Safari-safe
   if (Math.abs(window.scrollY - _discTargetY) < 4) _discTargetY = 0;
 }
 
