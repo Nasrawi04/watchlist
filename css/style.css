@@ -1357,7 +1357,7 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
   line-height:1; white-space:nowrap; vertical-align:middle;
 }
 .list-rank-badge.is-ranked   { background:#1E5C26; color:#FFFFFF; }
-.list-rank-badge.is-unranked { background:#D9CBB2; color:#4A3F2C; }
+.list-rank-badge.is-unranked { background:#D9CBB2; color:#4A3F2C; box-shadow:inset 0 0 0 1px rgba(74,63,44,.28); }
 [data-theme="dark"] .list-rank-badge.is-ranked   { background:#5B7D50; color:#FFFFFF; }
 [data-theme="dark"] .list-rank-badge.is-unranked { background:#C8B79A; color:#2E2618; }
 @media(max-width:640px) { .list-rank-badge { height:20px; font-size:9.5px; padding:0 9px; } }
