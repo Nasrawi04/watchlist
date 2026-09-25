@@ -40,6 +40,7 @@
      scoreOf: e => number|null,     // what "Ratings" / Score use (default: liveScore)
      scoreLabel: 'TMDB Score',      // Score filter heading (default: MyScreenScore)
      presets: { rank: { header: 'Order', opts: [['rank', 'Your Order'], ['rankRev', 'Reversed']] } },
+     compare: { popular: (a, b) => b.likes - a.likes },   // page-specific sort values
                                     // rename a sort's labels for this page
      saveRatings: (entry, newRatings) => {},          // omit on read-only pages
    });
@@ -181,7 +182,9 @@ const SF = (() => {
       case 'rankRev':       out = a.sort((x, y) => (y._rank ?? -1) - (x._rank ?? -1)); break;
       case 'shortest':      out = a.sort((x, y) => lengthOf(x) - lengthOf(y)); break;
       default:
-        if (value && value.startsWith('rating:') && s.cfg.ratingSort?.value) {
+        if (s.cfg.compare && s.cfg.compare[value]) {
+          out = a.sort(s.cfg.compare[value]);
+        } else if (value && value.startsWith('rating:') && s.cfg.ratingSort?.value) {
           // Specific rating, falling back to overall score for entries
           // that don't have that rating filled in.
           const key = value.slice(7), rv = s.cfg.ratingSort.value;
