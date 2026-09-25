@@ -341,6 +341,48 @@
   #lpPopupActions .popup-action-btn:not(.lp-react) svg, #lpNavPopupActions .popup-action-btn svg { display:none; }
 }
 
+/* ── Reorder mode ── */
+.lr-hint {
+  display:flex; align-items:center; gap:8px; margin:-2px 0 14px; padding:10px 14px;
+  font-size:12.5px; color:var(--text-2); background:var(--olive-faint); border:1px dashed var(--border-olive); border-radius:var(--radius-sm);
+}
+.lr-hint svg { color:var(--olive-light); flex-shrink:0; }
+.lc-card.lc-reorder { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
+.lc-card.lc-reorder:hover { transform:none; }
+.lc-card.lc-reorder:active { cursor:grabbing; }
+.lc-grid-reorder .lc-card { box-shadow:0 0 0 1px var(--border-olive); }
+.lc-grid-reorder .lc-card .lc-posters { opacity:.75; }
+.lr-bar {
+  display:flex; align-items:center; gap:8px; margin:-4px -4px 10px; padding:4px 4px 10px;
+  border-bottom:0.5px dashed var(--border-olive);
+}
+.lr-grip { width:20px; height:20px; color:var(--olive-light); display:inline-flex; }
+.lr-grip svg { width:100%; height:100%; }
+.lr-pos {
+  font-family:var(--bebas); font-size:16px; line-height:1; color:#fff; background:var(--olive);
+  min-width:24px; height:24px; padding:0 6px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center;
+}
+.lr-move { margin-left:auto; display:flex; gap:6px; }
+.lr-arrow {
+  width:32px; height:32px; border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--bg-3); border:1px solid var(--border-2); color:var(--text-2); transition:background .15s, color .15s, border-color .15s;
+}
+.lr-arrow svg { width:15px; height:15px; }
+.lr-arrow:hover:not(:disabled) { background:var(--olive); border-color:var(--olive); color:#fff; }
+.lr-arrow:disabled { opacity:.35; cursor:default; }
+/* The slot the card will drop into */
+.lc-card.lr-dragging { opacity:.35; border:1.5px dashed var(--olive-light) !important; box-shadow:none !important; background:var(--olive-faint); }
+.lc-card.lr-dragging > * { visibility:hidden; }
+/* The card following the pointer */
+.lr-ghost {
+  position:fixed !important; top:0; left:0; z-index:2000; pointer-events:none; margin:0 !important;
+  box-shadow:0 24px 50px rgba(0,0,0,.28), 0 0 0 2px var(--olive-light) !important; opacity:.97;
+  transition:none; will-change:transform;
+}
+body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing; }
+.lr-ghost .lr-pos, .lr-ghost .lr-move { visibility:hidden; }
+.lr-toggle.active { background:var(--olive) !important; color:#fff !important; border-color:var(--olive) !important; }
+
 /* ── Toolbar above the cards (same on both tabs) ── */
 .lists-toolbar {
   display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -820,12 +862,189 @@ function _lcPostersHTML(items, resolve) {
   if (!posters.length) return `<div class="lc-posters"><div class="lc-poster lc-poster-empty">No titles yet</div></div>`;
   return `<div class="lc-posters">${posters.map(e => `<div class="lc-poster">${posterHTML(e, 'big')}</div>`).join('')}</div>`;
 }
+/* ══ Reorder lists (drag, or arrows) ══
+   Tap "Reorder" → cards get a grip bar; drag any card (mouse or finger)
+   and the others slide out of the way (FLIP animation). Arrows do the
+   same one step at a time (and work with the keyboard). Every change
+   saves on its own. Only available on the Default order with no filters,
+   since that's the order being edited. */
+let _listsReorder = false;
+let _lr = null;       // active drag state
+
+function toggleListsReorder() {
+  if (!_listsReorder) {
+    const ok = SF.getSort('listsOrder', 'all') === 'rank' && SF.filterCount('listsOrder', 'all') === 0;
+    if (!ok) {
+      SF.restoreState('listsOrder', 'all', { sort: 'rank', filter: { genres: [], choice: {} } });
+      showToast('Switched to Default order so you can rearrange it.');
+    }
+  }
+  _listsReorder = !_listsReorder;
+  renderListsPage();
+}
+
+function _lrCurrentOrder() {
+  return [...document.querySelectorAll('#lcGridMine > .lc-card')].map(c => c.dataset.listId);
+}
+
+let _lrSaveTimer = null;
+function _lrSave(order) {
+  // Update locally right away, then persist (debounced so fast moves = one save)
+  order.forEach((id, i) => { const l = _listsAll.find(x => x.id === id); if (l) l.sort_order = i; });
+  clearTimeout(_lrSaveTimer);
+  _lrSaveTimer = setTimeout(async () => {
+    try {
+      const results = await Promise.all(order.map((id, i) =>
+        sb.from('favorite_lists').update({ sort_order: i }).eq('id', id).eq('user_id', _listsUser.id)));
+      const err = results.find(x => x.error);
+      if (err) throw err.error;
+      showToast('Order saved');
+    } catch (e) {
+      console.error('Reorder save error:', e);
+      showToast('Could not save the new order — try again.', 'err');
+    }
+  }, 450);
+}
+
+// Moves the card elements and animates everyone else sliding (FLIP)
+function _lrAnimate(grid, mutate) {
+  const cards = [...grid.querySelectorAll('.lc-card')];
+  const before = new Map(cards.map(c => [c, c.getBoundingClientRect()]));
+  mutate();
+  cards.forEach(c => {
+    if (c.classList.contains('lr-dragging')) return;
+    const a = before.get(c), b = c.getBoundingClientRect();
+    const dx = a.left - b.left, dy = a.top - b.top;
+    if (!dx && !dy) return;
+    c.style.transition = 'none';
+    c.style.transform = `translate(${dx}px, ${dy}px)`;
+    requestAnimationFrame(() => {
+      c.style.transition = 'transform .28s cubic-bezier(.2,.8,.2,1)';
+      c.style.transform = '';
+    });
+  });
+}
+
+function _lrRefreshPositions() {
+  const cards = [...document.querySelectorAll('#lcGridMine > .lc-card')];
+  cards.forEach((c, i) => {
+    const pos = c.querySelector('.lr-pos'); if (pos) pos.textContent = i + 1;
+    const [prev, next] = c.querySelectorAll('.lr-arrow');
+    if (prev) prev.disabled = i === 0;
+    if (next) next.disabled = i === cards.length - 1;
+  });
+}
+
+function _lrMove(id, dir) {
+  const grid = document.getElementById('lcGridMine');
+  const card = grid && grid.querySelector(`.lc-card[data-list-id="${CSS.escape(id)}"]`);
+  if (!card) return;
+  const sib = dir < 0 ? card.previousElementSibling : card.nextElementSibling;
+  if (!sib) return;
+  _lrAnimate(grid, () => dir < 0 ? grid.insertBefore(card, sib) : grid.insertBefore(sib, card));
+  _lrRefreshPositions();
+  _lrSave(_lrCurrentOrder());
+  card.querySelector(dir < 0 ? '.lr-arrow' : '.lr-arrow:last-child')?.focus();
+}
+
+function _lrPointerDown(ev, card) {
+  if (ev.button !== undefined && ev.button !== 0) return;
+  const grid = document.getElementById('lcGridMine');
+  const rect = card.getBoundingClientRect();
+  _lr = { card, grid, startX: ev.clientX, startY: ev.clientY, offX: ev.clientX - rect.left, offY: ev.clientY - rect.top,
+          w: rect.width, h: rect.height, started: false, pointerId: ev.pointerId, order0: _lrCurrentOrder().join('|') };
+  // Listen on window, not the card: the card moves around in the DOM while
+  // dragging, and moving an element drops any pointer capture it had.
+  window.addEventListener('pointermove', _lrPointerMove, { passive: false });
+  window.addEventListener('pointerup', _lrPointerUp);
+  window.addEventListener('pointercancel', _lrPointerUp);
+}
+
+function _lrStart() {
+  const { card, w, h } = _lr;
+  // Ghost follows the pointer; the real card stays in the grid as a placeholder
+  const ghost = card.cloneNode(true);
+  ghost.classList.add('lr-ghost');
+  ghost.style.width = w + 'px'; ghost.style.height = h + 'px';
+  document.body.appendChild(ghost);
+  _lr.ghost = ghost;
+  card.classList.add('lr-dragging');
+  document.body.classList.add('lr-no-select');
+  _lr.started = true;
+  if (navigator.vibrate) { try { navigator.vibrate(8); } catch {} }
+}
+
+function _lrPointerMove(ev) {
+  if (!_lr || (_lr.pointerId != null && ev.pointerId !== _lr.pointerId)) return;
+  const dx = ev.clientX - _lr.startX, dy = ev.clientY - _lr.startY;
+  if (!_lr.started) {
+    if (Math.hypot(dx, dy) < 6) return;     // small wiggle = not a drag yet
+    _lrStart();
+  }
+  ev.preventDefault();
+  const { ghost, offX, offY, card, grid } = _lr;
+  ghost.style.transform = `translate(${ev.clientX - offX}px, ${ev.clientY - offY}px) rotate(1.5deg) scale(1.03)`;
+
+  // Auto-scroll near the top/bottom edge
+  const edge = 80;
+  _lr.scrollDir = ev.clientY < edge ? -1 : ev.clientY > window.innerHeight - edge ? 1 : 0;
+  if (_lr.scrollDir && !_lr.scrollRAF) _lrAutoScroll();
+
+  // Which card is under the pointer?
+  ghost.style.display = 'none';
+  const under = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('#lcGridMine .lc-card');
+  ghost.style.display = '';
+  if (!under || under === card) return;
+  // Moving forward → drop after the hovered card; moving back → before it
+  const cards = [...grid.querySelectorAll('.lc-card')];
+  const ref = cards.indexOf(under) > cards.indexOf(card) ? under.nextElementSibling : under;
+  _lrAnimate(grid, () => grid.insertBefore(card, ref));
+  _lrRefreshPositions();
+}
+
+function _lrAutoScroll() {
+  if (!_lr || !_lr.scrollDir) { if (_lr) _lr.scrollRAF = null; return; }
+  window.scrollBy(0, _lr.scrollDir * 12);
+  _lr.scrollRAF = requestAnimationFrame(_lrAutoScroll);
+}
+
+function _lrPointerUp() {
+  if (!_lr) return;
+  const { card, ghost, started, order0 } = _lr;
+  window.removeEventListener('pointermove', _lrPointerMove);
+  window.removeEventListener('pointerup', _lrPointerUp);
+  window.removeEventListener('pointercancel', _lrPointerUp);
+  if (_lr.scrollRAF) cancelAnimationFrame(_lr.scrollRAF);
+  if (started) {
+    // Ghost glides into the card's new slot, then disappears
+    const r = card.getBoundingClientRect();
+    ghost.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1)';
+    ghost.style.transform = `translate(${r.left}px, ${r.top}px)`;
+    setTimeout(() => { ghost.remove(); card.classList.remove('lr-dragging'); }, 220);
+    document.body.classList.remove('lr-no-select');
+    const order = _lrCurrentOrder();
+    if (order.join('|') !== order0) _lrSave(order);
+  }
+  _lr = null;
+}
+
 function _lcCountHTML(n) { return `<b>${n}</b> ${n === 1 ? 'title' : 'titles'}`; }
 
 // Personal list card — same design as the Community cards
-function myListCardHTML(list) {
+function myListCardHTML(list, idx, total) {
   const items = list.items || [];
-  return `<div class="lc-card" onclick="openMyListPopup(${attrJSON(list.id)})">
+  const id = attrJSON(list.id);
+  const reorder = _listsReorder;
+  return `<div class="lc-card${reorder ? ' lc-reorder' : ''}" data-list-id="${escHTML(list.id)}"
+      ${reorder ? `onpointerdown="_lrPointerDown(event, this)"` : `onclick="openMyListPopup(${id})"`}>
+    ${reorder ? `<div class="lr-bar">
+      <span class="lr-grip" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+      <span class="lr-pos">${idx + 1}</span>
+      <span class="lr-move">
+        <button type="button" class="lr-arrow" aria-label="Move earlier" ${idx === 0 ? 'disabled' : ''} onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();_lrMove(${id}, -1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <button type="button" class="lr-arrow" aria-label="Move later" ${idx === total - 1 ? 'disabled' : ''} onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();_lrMove(${id}, 1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </span>
+    </div>` : ''}
     <div class="lc-title-row"><div class="lc-title">${esc(list.title)}</div>${_rankBadge(list.ranked)}</div>
     <div class="lc-meta">${_lcCountHTML(items.length)}${list.forked_from ? ' · Imported' : ''}</div>
     ${list.description ? `<div class="lc-desc">${esc(list.description)}</div>` : ''}
@@ -856,7 +1075,15 @@ function renderListsPage() {
 
   document.getElementById('listsPageSub').textContent = 'Your personal collections, curated your way — from watchlists to favorites and beyond.';
 
-  _renderListsToolbar('Your Lists', totalLists ? SF.list('listsOrder', 'all').length : 0, totalLists ? SF.bar('listsOrder', 'all') : '');
+  const canReorder = totalLists > 1 && SF.getSort('listsOrder', 'all') === 'rank' && SF.filterCount('listsOrder', 'all') === 0;
+  if (_listsReorder && !canReorder) _listsReorder = false;
+  const reorderBtn = totalLists > 1
+    ? `<button class="sf-icon-btn lr-toggle${_listsReorder ? ' active' : ''}" onclick="toggleListsReorder()" ${!canReorder && !_listsReorder ? `title="Set Sort to Default and clear filters to reorder"` : ''}>
+        ${_listsReorder ? icon('check', 15) : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>'}
+        <span class="sf-icon-btn-label">${_listsReorder ? 'Done' : 'Reorder'}</span></button>`
+    : '';
+  _renderListsToolbar('Your Lists', totalLists ? SF.list('listsOrder', 'all').length : 0,
+    totalLists ? (_listsReorder ? `<div class="sort-bar sf-trigger-row">${reorderBtn}</div>` : SF.bar('listsOrder', 'all').replace('<div class="sort-bar sf-trigger-row">', '<div class="sort-bar sf-trigger-row">' + reorderBtn)) : '');
 
   let html = '';
 
@@ -869,7 +1096,7 @@ function renderListsPage() {
   } else {
     const sorted = SF.list('listsOrder', 'all');
     html = sorted.length
-      ? `<div class="lc-grid">${sorted.map(myListCardHTML).join('')}</div>`
+      ? `${_listsReorder ? `<div class="lr-hint">${icon('info', 14)} Drag a card — or use the arrows — to change the order. Changes save automatically.</div>` : ''}<div class="lc-grid${_listsReorder ? ' lc-grid-reorder' : ''}" id="lcGridMine">${sorted.map((l, i, a) => myListCardHTML(l, i, a.length)).join('')}</div>`
       : `<div style="padding:2rem 0;text-align:center;font-size:13px;color:var(--text-3);">No lists match these filters.</div>`;
   }
 
