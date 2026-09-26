@@ -452,6 +452,7 @@
 .np-textarea:focus { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
 .np-count { font-size:11px; color:var(--text-3); text-align:right; }
 .np-footer { padding:14px 22px 18px; border-top:0.5px solid var(--border); flex-shrink:0; }
+.np-spoiler-wrap .spoiler-toggle { margin:0 0 12px; }   /* always visible above Save / Cancel */
 .np-actions { display:flex; gap:8px; padding:0 !important; flex-direction:row !important; }
 .np-actions .popup-action-btn { padding:11px 14px; font-size:13.5px; gap:7px; flex:1 1 0; width:auto !important; white-space:nowrap; }
 .np-actions .popup-action-btn svg { opacity:1; }
@@ -580,6 +581,7 @@
       <div class="note-popup2-count np-count" id="notePopup2Count">0 / 500 words</div>
     </div>
     <div class="np-footer" id="notePopup2EditFooter" style="display:none">
+      <div id="notePopup2SpoilerWrap" class="np-spoiler-wrap"></div>
       <div class="np-actions" id="npEditPopupActions">
         <button class="popup-action-btn np-grow" id="notePopup2SaveBtn" onclick="saveNotePopup2()">Save Note</button>
         <button class="popup-action-btn np-ghost" onclick="_notePopup2ExitEditMode()">Cancel</button>
@@ -833,7 +835,7 @@ function renderNotesPage() {
       ${_notesPoster(e.poster_url, e.title, 'nc-poster')}
       <div class="nc-main">
         <div class="nc-top"><div class="nc-title">${esc(e.title)}</div>${_notesScorePill(liveScore(e))}</div>
-        <div class="nc-tags">${_noteBadges(e, { genres: 2, date })}</div>
+        <div class="nc-tags">${_noteBadges(e, { genres: 2, date })}${mssIsSpoiler(e) ? mssSpoilerTag() : ''}</div>
         <blockquote class="nc-quote">&ldquo;${esc(_trimNotes(e.notes))}&rdquo;</blockquote>
         <div class="nc-foot">
           <div class="nc-reacts">
@@ -1103,7 +1105,7 @@ async function _nuLoadTitleNotes(title) {
 
   try {
     const { data: entries, error } = await sb.from('entries')
-      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, completed_date, user_id')
+      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, completed_date, user_id, ratings')
       .ilike('title', title)
       .not('notes', 'is', null)
       .order('created_at', { ascending: false });
@@ -1122,7 +1124,7 @@ async function _nuLoadTitleNotes(title) {
       return {
         entry_id: e.id, user_id: e.user_id, username: p.username || 'user', avatar_url: p.avatar_url || null,
         title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
-        notes: e.notes, final_score: e.final_score, created_at: e.created_at, completed_date: e.completed_date,
+        notes: e.notes, final_score: e.final_score, created_at: e.created_at, completed_date: e.completed_date, spoiler: mssIsSpoiler(e),
         like_count: 0, dislike_count: 0,
       };
     });
@@ -1166,7 +1168,7 @@ async function _nuLoadUserNotes() {
 
   try {
     const { data: entries, error } = await sb.from('entries')
-      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, completed_date, user_id')
+      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, completed_date, user_id, ratings')
       .eq('user_id', _nuFilterUser.id)
       .not('notes', 'is', null)
       .order('created_at', { ascending: false });
@@ -1176,7 +1178,7 @@ async function _nuLoadUserNotes() {
     _socialNotesRaw = withNotes.map(e => ({
       entry_id: e.id, user_id: e.user_id, username: _nuFilterUser.username, avatar_url: _nuFilterUser.avatar_url,
       title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
-      notes: e.notes, final_score: e.final_score, created_at: e.created_at, completed_date: e.completed_date,
+      notes: e.notes, final_score: e.final_score, created_at: e.created_at, completed_date: e.completed_date, spoiler: mssIsSpoiler(e),
       like_count: 0, dislike_count: 0,
     }));
 
@@ -1251,7 +1253,9 @@ function renderSocialNotes() {
         </div>
         <div class="nc-top"><div class="nc-title">${esc(n.title)}</div>${_notesScorePill(n.final_score)}</div>
         <div class="nc-tags">${_noteBadges(n, { date: _noteDate(_watchedDate(n), true) })}</div>
-        <blockquote class="nc-quote">&ldquo;${esc(_trimNotes(n.notes))}&rdquo;</blockquote>
+        ${mssIsSpoiler(n) && n.user_id !== _notesUser?.id
+          ? mssSpoilerHTML(`<blockquote class="nc-quote">&ldquo;${esc(_trimNotes(n.notes))}&rdquo;</blockquote>`, { compact: true })
+          : `<blockquote class="nc-quote">&ldquo;${esc(_trimNotes(n.notes))}&rdquo;</blockquote>`}
         <div class="nc-foot">
           <div class="nc-reacts">
             <button class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialNote(${id}, true)">
@@ -1324,7 +1328,9 @@ function _renderSocialNotePopup(n) {
       </div>
     </div>
     <div class="np-stats"><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>${words > 60 ? `<span><b>${_readTime(words)}</b> min read</span>` : ''}</div>
-    <div class="np-body"><blockquote class="np-quote">&ldquo;${esc(n.notes)}&rdquo;</blockquote></div>
+    <div class="np-body">${mssIsSpoiler(n) && n.user_id !== _notesUser?.id
+      ? mssSpoilerHTML(`<blockquote class="np-quote">&ldquo;${esc(n.notes)}&rdquo;</blockquote>`)
+      : `<blockquote class="np-quote">&ldquo;${esc(n.notes)}&rdquo;</blockquote>`}</div>
     <div class="np-footer">
       <div class="np-actions" id="snPopupActions">
         <button class="popup-action-btn np-react ${myReaction === 'like' ? 'is-on' : ''}" onclick="reactToSocialNote(${id}, true)${rerender}" aria-label="Like">
@@ -1729,7 +1735,7 @@ function openNotePopup2(id) {
   const counts = _notesReactionCounts[id] || { like: 0, dislike: 0 };
   const words = _wordCount(e.notes);
   const stats = document.getElementById('notePopup2Reactions');
-  stats.innerHTML = `<span>${icon('thumbsUp', 14)} <b>${counts.like}</b></span><span>${icon('thumbsDown', 14)} <b>${counts.dislike}</b></span><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>${words > 60 ? `<span><b>${_readTime(words)}</b> min read</span>` : ''}`;
+  stats.innerHTML = `<span>${icon('thumbsUp', 14)} <b>${counts.like}</b></span><span>${icon('thumbsDown', 14)} <b>${counts.dislike}</b></span><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>${words > 60 ? `<span><b>${_readTime(words)}</b> min read</span>` : ''}${mssIsSpoiler(e) ? mssSpoilerTag() : ''}`;
   stats.style.display = (e.notes && e.notes.trim()) ? 'flex' : 'none';
 
   document.getElementById('notePopup2').classList.add('open');
@@ -1760,6 +1766,9 @@ function _notePopup2ShowEdit() {
   const e = _notesEntries.find(en => en.id === window._notesCurrentEntryId);
   const textarea = document.getElementById('notePopup2Textarea');
   textarea.value = e?.notes || '';
+  const spw = document.getElementById('notePopup2SpoilerWrap');
+  if (!spw.firstChild) spw.innerHTML = mssSpoilerToggleHTML('notePopup2Spoiler');
+  document.getElementById('notePopup2Spoiler').checked = mssIsSpoiler(e);
   _notePopup2UpdateWordCount();
   _notePopup2GuardWordLimit();
 
@@ -1797,10 +1806,12 @@ async function saveNotePopup2() {
   btn.disabled = true;
   btn.textContent = 'Saving…';
   try {
-    const { error } = await sb.from('entries').update({ notes }).eq('id', id).eq('user_id', _notesUser.id);
-    if (error) throw error;
     const entry = _notesEntries.find(en => en.id === id);
-    if (entry) entry.notes = notes;
+    const spoiler = !!document.getElementById('notePopup2Spoiler')?.checked;
+    const ratings = { ...(entry?.ratings || {}), _notes_spoiler: spoiler && !!notes };
+    const { error } = await sb.from('entries').update({ notes, ratings }).eq('id', id).eq('user_id', _notesUser.id);
+    if (error) throw error;
+    if (entry) { entry.notes = notes; entry.ratings = ratings; }
     closeNotePopup2();
     renderNotesPage();
     showToast('Note saved!');
