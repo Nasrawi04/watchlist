@@ -526,6 +526,10 @@ async function _lvLoad() {
     const isOwn = _lvUser && list.user_id === _lvUser.id;
     document.getElementById('lvImportPopupActions').style.display = isOwn ? 'none' : '';
     if (!isOwn && _lvUser) {
+      // Collaborators already have this list in their Lists — no Import
+      const { data: collab } = await sb.from('list_collaborators')
+        .select('status').eq('list_id', list.id).eq('user_id', _lvUser.id).eq('status', 'accepted').limit(1);
+      if (collab && collab.length) document.getElementById('lvImportPopupActions').style.display = 'none';
       // Already imported this one before? Show that instead of letting
       // the same list get copied into their lists twice.
       const { data: existing } = await sb.from('favorite_lists')
