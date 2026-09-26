@@ -341,6 +341,67 @@
   #lpPopupActions .popup-action-btn:not(.lp-react) svg, #lpNavPopupActions .popup-action-btn svg { display:none; }
 }
 
+/* Owner popup has 4 actions — 2×2 on phones so labels fit */
+@media(max-width:600px) {
+  #lpPopupActions:has(> .popup-action-btn:nth-child(4)) { flex-wrap:wrap !important; }
+  #lpPopupActions:has(> .popup-action-btn:nth-child(4)) .popup-action-btn { flex:1 1 calc(50% - 4px) !important; }
+}
+/* ── Collaboration ── */
+.cl-tag { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; padding:2px 8px; border-radius:999px; background:var(--olive); color:#fff; vertical-align:1px; }
+.cl-line { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-3); margin:-4px 0 10px; min-width:0; }
+.cl-line span:last-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cl-line b { color:var(--text-2); font-weight:600; }
+.cl-stack { display:inline-flex; flex-shrink:0; }
+.cl-stack .cl-av + .cl-av { margin-left:-7px; }
+.cl-av {
+  width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--olive); color:#fff; font-size:10px; font-weight:700; border:2px solid var(--card);
+}
+.cl-av img { width:100%; height:100%; object-fit:cover; }
+.lp-meta + .cl-line { margin:-6px 0 14px; }
+#collabOverlay {
+  position:fixed; inset:0; z-index:1250; background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity .2s;
+}
+#collabOverlay.open { opacity:1; pointer-events:auto; }
+#collabCard {
+  width:100%; max-width:460px; max-height:min(80dvh, 640px); display:flex; flex-direction:column;
+  background:var(--bg-2); border:1.5px solid var(--olive-light); border-radius:var(--radius-lg); box-shadow:4px 4px 0 var(--olive);
+  transform:translateY(10px); transition:transform .2s;
+}
+#collabOverlay.open #collabCard { transform:none; }
+.cp-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:18px 20px 12px; }
+.cp-eyebrow { font-family:var(--serif); font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; }
+.cp-title { font-family:var(--serif); font-size:19px; font-weight:600; line-height:1.25; overflow-wrap:anywhere; }
+.cp-close { background:none; border:none; color:var(--text-3); cursor:pointer; display:flex; padding:4px; }
+.cp-search { position:relative; margin:0 20px 10px; }
+.cp-search span { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--text-3); display:flex; }
+.cp-search input {
+  width:100%; box-sizing:border-box; padding:11px 14px 11px 38px; border-radius:var(--radius-sm);
+  border:1px solid var(--border); background:var(--bg-3); color:var(--text); font-family:var(--sans); font-size:16px; outline:none;
+}
+.cp-search input:focus { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.cp-list { flex:1; overflow-y:auto; overscroll-behavior:contain; padding:4px 12px; min-height:120px; }
+.cp-row { display:flex; align-items:center; gap:12px; padding:9px 8px; border-radius:var(--radius-sm); }
+.cp-row:hover { background:var(--card); }
+.cp-av { width:40px; height:40px; border-radius:50%; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; font-family:var(--serif); font-weight:600; }
+.cp-av img { width:100%; height:100%; object-fit:cover; }
+.cp-who { flex:1; min-width:0; }
+.cp-name { font-size:14px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cp-user { font-size:12px; color:var(--text-3); }
+.cp-btn { flex-shrink:0; padding:7px 16px; border-radius:var(--radius-sm); font-family:'Manrope',var(--sans); font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid transparent; }
+.cp-invite { background:var(--olive); border-color:var(--olive); color:#fff; }
+.cp-invite:hover:not(:disabled) { background:var(--olive-light); border-color:var(--olive-light); }
+.cp-sent { background:transparent; border-color:var(--border-2); color:var(--text-3); cursor:default; }
+.cp-joined { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+.cp-joined:hover { border-color:#c0564a; color:#c0564a; background:transparent; }
+.cp-btn:disabled { opacity:.7; }
+.cp-empty { padding:28px 12px; text-align:center; color:var(--text-3); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.cp-empty svg { opacity:.5; }
+.cp-empty a { color:var(--olive-light); font-weight:600; text-decoration:none; }
+.cp-foot { padding:12px 20px 18px !important; border-top:0.5px solid var(--border); display:flex; flex-direction:row !important; }
+.cp-foot .popup-action-btn { flex:1; }
+
 /* ── Reorder mode ── */
 .lr-hint {
   display:flex; align-items:center; gap:8px; margin:-2px 0 14px; padding:10px 14px;
@@ -477,6 +538,16 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
         <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
         <span class="sf-choice-text"><b>Unranked</b><small>Just a collection, no particular order</small></span>
       </label>
+    </div>
+    <div id="favCollabOptWrap">
+      <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;">Collaborate</div>
+      <div class="sf-choice-box" style="margin-bottom:18px;">
+        <label class="sf-check-row">
+          <input type="checkbox" id="favListCollabOpt">
+          <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="sf-choice-text"><b>Invite friends to this list</b><small>They can add and remove titles with you — only you can rename or delete it</small></span>
+        </label>
+      </div>
     </div>
     <div style="display:flex;gap:10px;">
       <button onclick="closeFavCustomListModal()" style="flex:1;padding:10px;border-radius:var(--radius-sm);background:var(--bg-3);color:var(--text-2);border:0.5px solid var(--border);font-family:var(--sans);font-size:14px;cursor:pointer;">Cancel</button>
@@ -713,6 +784,7 @@ async function loadListsPage() {
   ]);
   _listsEntries = entries || [];
   _listsAll = lists || [];
+  await _loadCollabData();
   _listsEntryMap = Object.fromEntries(_listsEntries.map(e => [e.id, e]));
   // Lists imported before v560 can still hold another user's entry ids —
   // load those too so the imported list isn't shown with missing items.
@@ -870,6 +942,161 @@ function _lcPostersHTML(items, resolve) {
    since that's the order being edited. */
 let _listsReorder = false;
 let _lr = null;       // active drag state
+
+/* ══ Collaborative lists ══
+   _listsCollab[listId] = [{ user_id, status, profile }] for lists I own.
+   Lists other people shared with me (accepted) are added to _listsAll
+   with _collab = true and _owner = their profile. */
+let _listsCollab = {};
+let _listsFriends = null;
+
+async function _loadCollabData() {
+  _listsCollab = {};
+  try {
+    const myIds = _listsAll.filter(l => l.cat === 'custom').map(l => l.id);
+    const [mineRes, sharedRes] = await Promise.all([
+      myIds.length ? sb.from('list_collaborators').select('list_id, user_id, status').in('list_id', myIds).neq('status', 'declined') : { data: [] },
+      sb.from('list_collaborators').select('list_id').eq('user_id', _listsUser.id).eq('status', 'accepted'),
+    ]);
+    const sharedIds = (sharedRes.data || []).map(r => r.list_id);
+    const sharedLists = sharedIds.length ? (await sb.from('favorite_lists').select('*').in('id', sharedIds)).data || [] : [];
+    const peopleIds = [...new Set([...(mineRes.data || []).map(r => r.user_id), ...sharedLists.map(l => l.user_id)])];
+    const people = peopleIds.length ? (await sb.from('profiles').select('id, username, display_name, avatar_url').in('id', peopleIds)).data || [] : [];
+    const P = Object.fromEntries(people.map(p => [p.id, p]));
+    (mineRes.data || []).forEach(r => { (_listsCollab[r.list_id] ||= []).push({ ...r, profile: P[r.user_id] || null }); });
+    sharedLists.forEach(l => { l._collab = true; l._owner = P[l.user_id] || null; });
+    _listsAll = _listsAll.filter(l => !l._collab).concat(sharedLists);
+  } catch (e) { console.warn('Collab data load failed (run 021 SQL?):', e); }
+}
+
+function _collabAvatar(p, cls = 'cl-av') {
+  const u = p && safeURL(p.avatar_url);
+  return `<span class="${cls}">${u ? `<img src="${u}" alt="">` : esc(((p && p.username) || '?')[0].toUpperCase())}</span>`;
+}
+// "With @maya, @omar" line for a list's popup / card
+function _collabLineHTML(list) {
+  if (list._collab) {
+    return `<div class="cl-line">${_collabAvatar(list._owner)}<span>Shared by <b>@${esc(list._owner?.username || 'user')}</b></span></div>`;
+  }
+  const people = (_listsCollab[list.id] || []);
+  const joined = people.filter(p => p.status === 'accepted');
+  const pending = people.filter(p => p.status === 'pending').length;
+  if (!joined.length && !pending) return '';
+  const names = joined.slice(0, 3).map(p => '@' + esc(p.profile?.username || 'user')).join(', ');
+  return `<div class="cl-line"><span class="cl-stack">${joined.slice(0, 3).map(p => _collabAvatar(p.profile)).join('')}</span>
+    <span>${joined.length ? `With <b>${names}</b>${joined.length > 3 ? ` +${joined.length - 3}` : ''}` : ''}${joined.length && pending ? ' · ' : ''}${pending ? `${pending} invite${pending === 1 ? '' : 's'} pending` : ''}</span></div>`;
+}
+
+/* ── Friends picker (with search) for inviting ── */
+let _collabPickerList = null, _collabPickerThen = null;
+function _injectCollabPicker() {
+  if (document.getElementById('collabOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'collabOverlay';
+  el.innerHTML = `<div id="collabCard">
+      <div class="cp-head">
+        <div><div class="cp-eyebrow">Collaborate</div><div class="cp-title" id="collabTitle">Invite friends</div></div>
+        <button class="cp-close" onclick="closeCollabPicker()" aria-label="Close">${icon('x', 18)}</button>
+      </div>
+      <div class="cp-search"><span>${icon('search', 15)}</span><input type="text" id="collabSearch" placeholder="Search your friends…" autocomplete="off" oninput="_renderCollabPicker()"></div>
+      <div class="cp-list" id="collabList"></div>
+      <div class="cp-foot" id="collabPopupActions"><button class="popup-action-btn" onclick="closeCollabPicker()">Done</button></div>
+    </div>`;
+  el.addEventListener('click', e => { if (e.target === el) closeCollabPicker(); });
+  document.body.appendChild(el);
+}
+async function openCollabPicker(listId, then) {
+  const list = _listsAll.find(l => l.id === listId && !l._collab);
+  if (!list) return;
+  _injectCollabPicker();
+  _collabPickerList = list; _collabPickerThen = then || null;
+  document.getElementById('collabTitle').textContent = `Invite friends to “${list.title}”`;
+  document.getElementById('collabSearch').value = '';
+  document.getElementById('collabList').innerHTML = '<div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>';
+  document.getElementById('collabOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  if (!_listsFriends) {
+    try {
+      const all = await getFriendships(_listsUser.id);
+      _listsFriends = all.filter(f => f.status === 'accepted' && f.friendProfile).map(f => f.friendProfile);
+    } catch { _listsFriends = []; }
+  }
+  _renderCollabPicker();
+  if (!window.matchMedia('(max-width:640px)').matches) document.getElementById('collabSearch').focus();
+}
+function closeCollabPicker() {
+  const ov = document.getElementById('collabOverlay');
+  if (!ov || !ov.classList.contains('open')) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+  renderListsPage();
+  const then = _collabPickerThen; _collabPickerThen = null; _collabPickerList = null;
+  if (then) setTimeout(then, 250);
+}
+function _renderCollabPicker() {
+  const wrap = document.getElementById('collabList');
+  if (!wrap || !_collabPickerList) return;
+  const q = document.getElementById('collabSearch').value.trim().toLowerCase();
+  const friends = (_listsFriends || []).filter(p => !q || (p.username || '').toLowerCase().includes(q) || (p.display_name || '').toLowerCase().includes(q));
+  if (!(_listsFriends || []).length) {
+    wrap.innerHTML = `<div class="cp-empty">${icon('users', 28)}<div>You don't have any friends to invite yet.</div><a href="friends.html">Find friends →</a></div>`;
+    return;
+  }
+  if (!friends.length) { wrap.innerHTML = `<div class="cp-empty">No friends match “${esc(q)}”.</div>`; return; }
+  const status = Object.fromEntries((_listsCollab[_collabPickerList.id] || []).map(c => [c.user_id, c.status]));
+  wrap.innerHTML = friends.map(p => {
+    const st = status[p.id];
+    const btn = st === 'accepted'
+      ? `<button class="cp-btn cp-joined" onclick="_collabRemove(${attrJSON(p.id)}, ${attrJSON(p.username)})" title="Remove from list">Joined ✓</button>`
+      : st === 'pending'
+      ? `<button class="cp-btn cp-sent" disabled>Invited</button>`
+      : `<button class="cp-btn cp-invite" onclick="_collabInvite(this, ${attrJSON(p.id)})">Invite</button>`;
+    return `<div class="cp-row">
+      ${_collabAvatar(p, 'cp-av')}
+      <div class="cp-who"><div class="cp-name">${esc(p.display_name || p.username)}</div><div class="cp-user">@${esc(p.username)}</div></div>
+      ${btn}
+    </div>`;
+  }).join('');
+}
+async function _collabInvite(btn, userId) {
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const { data, error } = await sb.rpc('invite_to_list', { p_list_id: _collabPickerList.id, p_user_id: userId });
+    if (error) throw error;
+    (_listsCollab[_collabPickerList.id] ||= []).push({ list_id: _collabPickerList.id, user_id: userId, status: data === 'accepted' ? 'accepted' : 'pending',
+      profile: (_listsFriends || []).find(p => p.id === userId) || null });
+    showToast('Invite sent!');
+    _renderCollabPicker();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Invite';
+    showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Could not send the invite — try again.', 'err');
+    console.error(e);
+  }
+}
+async function _collabRemove(userId, username) {
+  const ok = await showConfirm({ title: 'Remove collaborator?', message: `@${username} won't be able to add titles to this list anymore.`, confirmText: 'Remove', iconName: 'x' });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('remove_list_collaborator', { p_list_id: _collabPickerList.id, p_user_id: userId });
+    if (error) throw error;
+    _listsCollab[_collabPickerList.id] = (_listsCollab[_collabPickerList.id] || []).filter(c => c.user_id !== userId);
+    showToast(`Removed @${username}.`);
+    _renderCollabPicker();
+  } catch (e) { showToast('Could not remove — try again.', 'err'); console.error(e); }
+}
+async function leaveSharedList(listId) {
+  const list = _listsAll.find(l => l.id === listId);
+  const ok = await showConfirm({ title: 'Leave this list?', message: `You'll stop collaborating on “${list?.title || 'this list'}”. The owner can invite you again.`, confirmText: 'Leave', iconName: 'x' });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('leave_list', { p_list_id: listId });
+    if (error) throw error;
+    _listsAll = _listsAll.filter(l => l.id !== listId);
+    closeSocialListPopup();
+    renderListsPage();
+    showToast('You left the list.');
+  } catch (e) { showToast('Could not leave — try again.', 'err'); console.error(e); }
+}
 
 function toggleListsReorder() {
   if (!_listsReorder) {
@@ -1046,7 +1273,8 @@ function myListCardHTML(list, idx, total) {
       </span>
     </div>` : ''}
     <div class="lc-title-row"><div class="lc-title">${esc(list.title)}</div>${_rankBadge(list.ranked)}</div>
-    <div class="lc-meta">${_lcCountHTML(items.length)}${list.forked_from ? ' · Imported' : ''}</div>
+    <div class="lc-meta">${_lcCountHTML(items.length)}${list.forked_from ? ' · Imported' : ''}${list._collab ? ' · <span class="cl-tag">Shared</span>' : (_listsCollab[list.id] || []).some(c => c.status === 'accepted') ? ' · <span class="cl-tag">Collab</span>' : ''}</div>
+    ${_collabLineHTML(list)}
     ${list.description ? `<div class="lc-desc">${esc(list.description)}</div>` : ''}
     ${_lcPostersHTML(items, _resolveListItem)}
   </div>`;
@@ -1588,12 +1816,12 @@ function _renderListPopup() {
   const maxPosters = shown.length > 8 ? 7 : 8;               // last tile becomes "+N"
   const posters = shown.slice(0, maxPosters);
   const extra = shown.length - posters.length;
-  const isOwn = mine || l.user_id === _listsUser?.id;
+  const isOwn = (mine && !l._collab) || l.user_id === _listsUser?.id;
   const id = attrJSON(l.id);
 
   let head;
   if (mine) {
-    head = `<div class="lp-eyebrow">Your List${l.forked_from ? '<span class="lp-tag">Imported</span>' : ''}</div>`;
+    head = `<div class="lp-eyebrow">${l._collab ? 'Shared List' : 'Your List'}${l.forked_from ? '<span class="lp-tag">Imported</span>' : ''}</div>`;
   } else {
     const initial = (l.username || '?')[0].toUpperCase();
     head = `<div class="social-list-owner" style="margin-bottom:0;">
@@ -1603,11 +1831,18 @@ function _renderListPopup() {
   }
 
   let actions;
-  if (mine) {
+  if (mine && l._collab) {
+    // Collaborator: can add/remove titles and leave — never rename/delete
+    actions = `<div id="lpPopupActions" class="lp-actions">
+      <button class="popup-action-btn" style="flex:2 1 0;" onclick="_lpThen(openFavListPicker)">${_LIST_ICONS.edit}Edit Titles</button>
+      <button class="popup-action-btn popup-action-danger" onclick="leaveSharedList(${id})">Leave</button>
+    </div>`;
+  } else if (mine) {
     actions = `<div id="lpPopupActions" class="lp-actions">
       <button class="popup-action-btn" onclick="_lpThen(openFavListPicker)">${_LIST_ICONS.edit}Edit Titles</button>
       <button class="popup-action-btn" onclick="_lpThen(openFavCustomListModal)">${_LIST_ICONS.rename}Rename</button>
-      <button class="popup-action-btn popup-action-danger" onclick="_lpThen(deleteFavListConfirm)">${_LIST_ICONS.del}Delete</button>
+      <button class="popup-action-btn" onclick="_lpThen(openCollabPicker)">${icon('users', 14)}Collaborate</button>
+      <button class="popup-action-btn popup-action-danger" onclick="_lpThen(deleteFavListConfirm)" aria-label="Delete list">${_LIST_ICONS.del}</button>
     </div>`;
   } else {
     const myReaction = _socialListsMyReactions[l.id];
@@ -1631,6 +1866,7 @@ function _renderListPopup() {
     <div class="lp-title-row"><div class="lp-title">${esc(l.title)}</div>${_rankBadge(l.ranked)}</div>
     ${l.description ? `<div class="lp-desc">${esc(l.description)}</div>` : ''}
     <div class="lp-meta">${_lcCountHTML(items.length)}</div>
+    ${mine ? _collabLineHTML(l) : ''}
     ${isOwn && l.ranked == null ? _rankChoiceHTML(l.id) : ''}
     ${posters.length ? `<div class="lp-posters">
       ${posters.map(e => `<div class="lp-poster">${posterHTML(e, 'big')}</div>`).join('')}
@@ -2268,7 +2504,12 @@ async function saveFavList() {
       _reorderListItems(list, list.sort_mode);
     }
 
-    await saveFavoriteList(list);
+    if (list._collab) {
+      const { error } = await sb.rpc('update_list_items', { p_list_id: list.id, p_items: list.items });
+      if (error) throw error;
+    } else {
+      await saveFavoriteList(list);
+    }
     closeFavListPicker();
     renderListsPage();
     showToast('Saved!');
@@ -2496,6 +2737,8 @@ function openFavCustomListModal(editId) {
   _listsUpdateWordCount('favCustomListDescInput','favCustomListDescCount');
   _listsGuardWordLimit('favCustomListDescInput','favCustomListDescCount');
   document.getElementById('favCustomListCreate').disabled = !inp.value.trim();
+  document.getElementById('favListCollabOpt').checked = false;
+  document.getElementById('favCollabOptWrap').style.display = editId ? 'none' : '';   // new lists only; existing ones use Collaborate in the popup
   document.getElementById('favCustomListModalTitle').textContent = editId ? 'Edit List' : 'New List';
   document.getElementById('favCustomListCreate').textContent = editId ? 'Save' : 'Create List';
   document.getElementById('favCustomListModal').classList.add('open');
@@ -2525,12 +2768,16 @@ async function createFavCustomList() {
         showToast('List updated!');
       }
     } else {
+      const wantsCollab = document.getElementById('favListCollabOpt').checked;
       const newList = await saveFavoriteList({ cat: 'custom', genre: '', title, description, items: [], ranked });
       _listsAll.push(newList);
       closeFavCustomListModal();
       renderListsPage();
       showToast(`"${title}" created!`);
-      setTimeout(() => openFavListPicker(newList.id), 300);
+      // Collaborate first (if picked), then add titles
+      setTimeout(() => wantsCollab
+        ? openCollabPicker(newList.id, () => openFavListPicker(newList.id))
+        : openFavListPicker(newList.id), 300);
     }
   } catch(e) { showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Error saving list.', 'err'); console.error(e); }
 }
