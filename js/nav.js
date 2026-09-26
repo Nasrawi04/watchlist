@@ -9,6 +9,7 @@ async function _fillNavUser(user) {
     countPendingRequests(user.id).catch(() => 0),
   ]);
   window._navUserProfile = profile;  // store globally for create-card etc.
+  _notifInit(user);
   window._navUser = user;
   const username = profile?.username || user.email?.split('@')[0] || 'You';
   const initial  = username[0].toUpperCase();
@@ -169,10 +170,14 @@ function injectChrome() {
 <button class="nav-icon-btn" onclick="toggleMobileSearch()" aria-label="Search">
           ${icon('search', 15)}
         </button>
+        <button class="notif-btn notif-btn-mobile nav-auth-only" onclick="toggleNotifPanel(event)" aria-label="Notifications">
+          ${icon('bell', 16)}<span class="notif-badge" data-notif-badge></span>
+        </button>
         <div class="nav-top-user" id="navTopUser" onclick="toggleMobileUser(event)">
           <div class="nav-user-avatar" id="navUserInitialMobile">?</div>
           <div class="nav-user-dropdown" id="userMenuDropdownMobile">
             <a href="profile.html">${icon('user', 15)} Profile</a>
+            <a href="notifications.html">${icon('bell', 15)} Notifications</a>
             <a href="settings.html">${icon('settings', 15)} Settings</a>
             <a href="#" class="nav-auth-only" onclick="handleLogout();return false">${icon('logout', 15)} Sign Out</a>
           </div>
@@ -208,12 +213,16 @@ function injectChrome() {
         <button class="btn-add" onclick="openAddModal()">
           ${icon('plus', 14)} Add
         </button>
+        <button class="notif-btn notif-btn-desktop nav-auth-only" onclick="toggleNotifPanel(event)" aria-label="Notifications">
+          ${icon('bell', 17)}<span class="notif-badge" data-notif-badge></span>
+        </button>
         <div class="nav-user-wrap" onclick="toggleUserMenu(event)">
           <div class="nav-user-avatar" id="navUserInitial">?</div>
           <span class="nav-user-name" id="navUserName">…</span>
           <span class="nav-chevron">${icon('chevdown', 12)}</span>
           <div class="nav-user-dropdown" id="userMenuDropdown">
             <a href="profile.html">${icon('user', 15)} Profile</a>
+            <a href="notifications.html">${icon('bell', 15)} Notifications</a>
             <a href="settings.html">${icon('settings', 15)} Settings</a>
             <a href="#" class="nav-auth-only" onclick="handleLogout();return false">${icon('logout', 15)} Sign Out</a>
           </div>
@@ -1713,4 +1722,259 @@ function fitTitleYear(root) {
       row.classList.add('year-overflow');
     }
   });
+}
+
+/* ══════════════════════════════════════════
+   Notifications — bell panel + notifications.html
+   Sections:
+     activity  — friend_started, friend_queued
+     lists     — list_invite, list_invite_accepted
+     requests  — friend_request
+   Rows are created by the database (021/022 SQL); here we list them,
+   act on them, mark them read and delete them.
+══════════════════════════════════════════ */
+let _notifUser = null;
+let _notifItems = [];
+let _notifTab = 'all';
+const NOTIF_SECTIONS = [
+  ['all', 'All'], ['activity', 'Friend Activity'], ['lists', 'Lists'], ['requests', 'Friend Requests'],
+];
+function _notifSection(n) {
+  if (n.type === 'friend_request') return 'requests';
+  if (n.type === 'list_invite' || n.type === 'list_invite_accepted') return 'lists';
+  return 'activity';
+}
+
+function _notifInit(user) {
+  if (!user || _notifUser) return;
+  _notifUser = user;
+  _notifLoad();
+  setInterval(() => _notifLoad(), 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) _notifLoad(); });
+}
+
+let _notifLimit = 60;
+async function _notifLoad(limit) {
+  if (limit) _notifLimit = limit;   // the full page asks for more; polling keeps that
+  if (!_notifUser) return;
+  try {
+    const { data: rows, error } = await sb.from('notifications')
+      .select('id, type, actor_id, list_id, friendship_id, entry_id, meta, read_at, created_at')
+      .eq('user_id', _notifUser.id).order('created_at', { ascending: false }).limit(_notifLimit);
+    if (error) throw error;
+    const list = rows || [];
+    const actorIds  = [...new Set(list.map(n => n.actor_id).filter(Boolean))];
+    const listIds   = [...new Set(list.map(n => n.list_id).filter(Boolean))];
+    const friendIds = [...new Set(list.map(n => n.friendship_id).filter(Boolean))];
+    const [profiles, lists, friendships, invites] = await Promise.all([
+      actorIds.length  ? sb.from('profiles').select('id, username, display_name, avatar_url').in('id', actorIds) : { data: [] },
+      listIds.length   ? sb.from('favorite_lists').select('id, title').in('id', listIds) : { data: [] },
+      friendIds.length ? sb.from('friendships').select('id, status').in('id', friendIds) : { data: [] },
+      listIds.length   ? sb.from('list_collaborators').select('list_id, status').eq('user_id', _notifUser.id).in('list_id', listIds) : { data: [] },
+    ]);
+    const P = Object.fromEntries((profiles.data || []).map(p => [p.id, p]));
+    const L = Object.fromEntries((lists.data || []).map(l => [l.id, l]));
+    const F = Object.fromEntries((friendships.data || []).map(f => [f.id, f.status]));
+    const I = Object.fromEntries((invites.data || []).map(c => [c.list_id, c.status]));
+    _notifItems = list.map(n => ({ ...n, actor: P[n.actor_id] || null, list: L[n.list_id] || null,
+      friendStatus: n.friendship_id ? (F[n.friendship_id] || 'gone') : null,
+      inviteStatus: n.type === 'list_invite' ? (I[n.list_id] || 'gone') : null }));
+    _notifRenderBadge();
+    if (document.getElementById('notifPanel')?.classList.contains('open')) _notifRenderPanel();
+    if (typeof renderNotificationsPage === 'function') renderNotificationsPage();
+  } catch (e) { console.warn('Notifications load failed:', e); }
+}
+
+function _notifRenderBadge() {
+  const unread = _notifItems.filter(n => !n.read_at).length;
+  document.querySelectorAll('[data-notif-badge]').forEach(b => {
+    b.textContent = unread > 9 ? '9+' : unread;
+    b.classList.toggle('show', unread > 0);
+  });
+}
+
+function _notifTimeAgo(d) {
+  const s = Math.max(1, Math.round((Date.now() - new Date(d)) / 1000));
+  if (s < 60) return 'just now';
+  const m = Math.round(s / 60); if (m < 60) return m + 'm ago';
+  const h = Math.round(m / 60); if (h < 24) return h + 'h ago';
+  const dd = Math.round(h / 24); if (dd < 7) return dd + 'd ago';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// "a new show" / "a new movie" / … for friend activity
+function _notifKind(meta) {
+  const m = meta || {};
+  const isMovie = m.cat === 'movies' || m.media_type === 'movie' || m.tmdb_type === 'movie';
+  if (m.cat === 'anime')    return isMovie ? 'an anime movie' : 'a new anime';
+  if (m.cat === 'cartoons') return isMovie ? 'an animated movie' : 'a new cartoon';
+  return isMovie ? 'a new movie' : 'a new show';
+}
+function _notifTypeLabel(meta) {
+  const m = meta || {};
+  const isMovie = m.cat === 'movies' || m.media_type === 'movie' || m.tmdb_type === 'movie';
+  const label = (m.cat && CAT_META[m.cat]?.label) || (isMovie ? 'Movie' : 'TV Show');
+  return `<span class="${isMovie ? 'type-label' : 'type-label type-label-tv'}">${escHTML(label)}</span>`;
+}
+// Title card shown under friend-activity notifications
+function _notifTitleCard(meta) {
+  const m = meta || {};
+  const poster = safeURL(m.poster_url);
+  return `<div class="notif-card">
+    <div class="notif-card-poster">${poster ? `<img src="${poster}" alt="" loading="lazy" onerror="mssImgError(this)" data-letter="${escHTML((m.title || '?')[0])}">` : escHTML((m.title || '?')[0].toUpperCase())}</div>
+    <div class="notif-card-info">
+      <div class="notif-card-title">${escHTML(m.title || 'Untitled')}</div>
+      <div class="notif-card-meta">${_notifTypeLabel(m)}${m.year ? `<span class="notif-card-year">${escHTML(String(m.year).slice(0, 4))}</span>` : ''}</div>
+    </div>
+  </div>`;
+}
+
+function _notifItemHTML(n, opts = {}) {
+  const name = n.actor ? escHTML(n.actor.display_name || n.actor.username) : 'Someone';
+  const who = `<b>${name}</b>`;
+  const title = n.list ? `<b>&ldquo;${escHTML(n.list.title)}&rdquo;</b>` : 'a list';
+  const av = n.actor && safeURL(n.actor.avatar_url)
+    ? `<img src="${safeURL(n.actor.avatar_url)}" alt="">`
+    : escHTML(((n.actor && n.actor.username) || '?')[0].toUpperCase());
+  let text = '', actions = '', extra = '', href = '', icon2 = '';
+  const idA = attrJSON(n.id);
+  if (n.type === 'friend_request') {
+    text = `${who} sent you a friend request`; icon2 = 'users';
+    if (n.friendStatus === 'pending') {
+      actions = `<button class="notif-act notif-act-yes" onclick="_notifFriend(event, ${attrJSON(n.friendship_id)}, true)">Accept</button>
+                 <button class="notif-act" onclick="_notifFriend(event, ${attrJSON(n.friendship_id)}, false)">Decline</button>`;
+    } else if (n.friendStatus === 'accepted') actions = `<span class="notif-state">You're now friends</span>`;
+    href = 'friends.html';
+  } else if (n.type === 'list_invite') {
+    text = `${who} invited you to collaborate on ${title}`; icon2 = 'layers';
+    if (n.inviteStatus === 'pending') {
+      actions = `<button class="notif-act notif-act-yes" onclick="_notifInvite(event, ${attrJSON(n.list_id)}, true)">Accept</button>
+                 <button class="notif-act" onclick="_notifInvite(event, ${attrJSON(n.list_id)}, false)">Decline</button>`;
+    } else if (n.inviteStatus === 'accepted') actions = `<span class="notif-state">Joined</span>`;
+    else if (n.inviteStatus === 'declined') actions = `<span class="notif-state">Declined</span>`;
+    href = n.list ? `list-view.html?list=${encodeURIComponent(n.list_id)}` : '';
+  } else if (n.type === 'list_invite_accepted') {
+    text = `${who} joined your list ${title}`; icon2 = 'layers';
+    href = n.list ? `list-view.html?list=${encodeURIComponent(n.list_id)}` : '';
+  } else if (n.type === 'friend_started') {
+    text = `${who} started watching ${_notifKind(n.meta)}`; icon2 = 'play';
+    extra = _notifTitleCard(n.meta);
+    href = n.meta?.tmdb_id && n.meta?.tmdb_type ? `title.html?type=${n.meta.tmdb_type}&id=${n.meta.tmdb_id}` : (n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : '');
+  } else if (n.type === 'friend_queued') {
+    text = `${who} added something from your library to their watchlist`; icon2 = 'plus';
+    extra = _notifTitleCard(n.meta);
+    href = n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : '';
+  }
+  return `<div class="notif-item${n.read_at ? '' : ' unread'}" ${href ? `onclick="location.href='${href}'"` : ''}>
+    <div class="notif-av">${av}${icon2 && ICONS[icon2] ? `<span class="notif-av-type">${icon(icon2, 10)}</span>` : ''}</div>
+    <div class="notif-body">
+      <div class="notif-text">${text}</div>
+      <div class="notif-time">${_notifTimeAgo(n.created_at)}</div>
+      ${extra}
+      ${actions ? `<div class="notif-actions">${actions}</div>` : ''}
+    </div>
+    ${opts.page ? `<button class="notif-del" onclick="_notifDelete(event, ${idA})" aria-label="Delete notification">${icon('x', 14)}</button>` : ''}
+  </div>`;
+}
+
+function _notifTabsHTML(active, onclick) {
+  return `<div class="notif-tabs">${NOTIF_SECTIONS.map(([k, l]) => {
+    const unread = _notifItems.filter(n => !n.read_at && (k === 'all' || _notifSection(n) === k)).length;
+    return `<button class="notif-tab${active === k ? ' active' : ''}" onclick="${onclick}('${k}')">${l}${unread ? `<span class="notif-tab-dot">${unread}</span>` : ''}</button>`;
+  }).join('')}</div>`;
+}
+function _notifFiltered(tab) { return _notifItems.filter(n => tab === 'all' || _notifSection(n) === tab); }
+function _notifEmptyHTML(tab) {
+  const msg = { all: "You're all caught up", activity: 'No friend activity yet — turn on notifications from a friend\'s profile', lists: 'No list invites yet', requests: 'No friend requests' }[tab];
+  return `<div class="notif-empty">${icon('bell', 26)}<div>${msg}</div></div>`;
+}
+
+function _notifEnsurePanel() {
+  let el = document.getElementById('notifPanel');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'notifPanel';
+  el.innerHTML = `<div class="notif-head"><div class="notif-title">Notifications</div>
+      <button class="notif-close" onclick="closeNotifPanel()" aria-label="Close">${icon('x', 16)}</button></div>
+    <div id="notifTabsWrap"></div>
+    <div class="notif-list" id="notifList"></div>
+    <a class="notif-foot" href="notifications.html">See all notifications</a>`;
+  el.addEventListener('click', e => e.stopPropagation());
+  document.body.appendChild(el);
+  document.addEventListener('click', () => closeNotifPanel());
+  return el;
+}
+function _notifSetTab(t) { _notifTab = t; _notifRenderPanel(); }
+function _notifRenderPanel() {
+  const listEl = document.getElementById('notifList');
+  if (!listEl) return;
+  document.getElementById('notifTabsWrap').innerHTML = _notifTabsHTML(_notifTab, '_notifSetTab');
+  const items = _notifFiltered(_notifTab).slice(0, 25);
+  listEl.innerHTML = items.length ? items.map(n => _notifItemHTML(n)).join('') : _notifEmptyHTML(_notifTab);
+}
+
+async function _notifMarkRead(ids) {
+  if (!ids.length) return;
+  const now = new Date().toISOString();
+  _notifItems.forEach(n => { if (ids.includes(n.id)) n.read_at = now; });
+  _notifRenderBadge();
+  try { await sb.from('notifications').update({ read_at: now }).in('id', ids); } catch {}
+}
+
+async function toggleNotifPanel(ev) {
+  ev?.stopPropagation();
+  if (location.pathname.endsWith('notifications.html')) return;   // already on the full page
+  const el = _notifEnsurePanel();
+  if (el.classList.contains('open')) { closeNotifPanel(); return; }
+  const btn = ev?.currentTarget || document.querySelector('.notif-btn');
+  const r = btn.getBoundingClientRect();
+  el.style.top = (r.bottom + 10) + 'px';
+  const w = Math.min(400, window.innerWidth - 20);
+  el.style.right = Math.max(10, Math.min(window.innerWidth - r.right - 8, window.innerWidth - w - 10)) + 'px';
+  _notifRenderPanel();
+  el.classList.add('open');
+  // Opening the panel = seen (the highlight stays until it's closed)
+  _notifMarkRead(_notifItems.filter(n => !n.read_at).map(n => n.id));
+}
+function closeNotifPanel() {
+  const el = document.getElementById('notifPanel');
+  if (!el || !el.classList.contains('open')) return;
+  el.classList.remove('open');
+  el.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
+}
+
+async function _notifDelete(ev, id) {
+  ev.stopPropagation();
+  _notifItems = _notifItems.filter(n => n.id !== id);
+  _notifRenderBadge();
+  if (typeof renderNotificationsPage === 'function') renderNotificationsPage();
+  try { await sb.from('notifications').delete().eq('id', id); } catch {}
+}
+
+async function _notifFriend(ev, friendshipId, accept) {
+  ev.stopPropagation();
+  const btns = ev.currentTarget.parentElement.querySelectorAll('button');
+  btns.forEach(b => b.disabled = true);
+  try {
+    await respondFriendRequest(friendshipId, accept);
+    showToast(accept ? 'Friend request accepted!' : 'Friend request declined.');
+    await _notifLoad();
+    if (_notifUser) {
+      const pending = await countPendingRequests(_notifUser.id).catch(() => 0);
+      document.querySelectorAll('[data-page="friends.html"] .nav-badge').forEach(b => { b.textContent = pending; b.style.display = pending ? '' : 'none'; });
+    }
+  } catch (e) { btns.forEach(b => b.disabled = false); showToast('Something went wrong — try again.', 'err'); }
+}
+
+async function _notifInvite(ev, listId, accept) {
+  ev.stopPropagation();
+  const btns = ev.currentTarget.parentElement.querySelectorAll('button');
+  btns.forEach(b => b.disabled = true);
+  try {
+    const { error } = await sb.rpc('respond_list_invite', { p_list_id: listId, p_accept: accept });
+    if (error) throw error;
+    showToast(accept ? 'You joined the list! Find it in Lists.' : 'Invite declined.');
+    await _notifLoad();
+    if (accept && typeof loadListsPage === 'function' && location.pathname.endsWith('lists.html')) loadListsPage();
+  } catch (e) { btns.forEach(b => b.disabled = false); showToast('Something went wrong — try again.', 'err'); }
 }
