@@ -1923,26 +1923,55 @@ function _notifEnsurePanel() {
   el.id = 'notifPanel';
   el.setAttribute('aria-label', 'Notifications');
   el.innerHTML = `<div class="notif-head">
-      <div class="notif-title">Notifications</div>
-      <div class="notif-head-actions">
-        <a class="notif-head-link" href="notifications.html">See all</a>
-        <button class="notif-close" onclick="closeNotifPanel()" aria-label="Close">${icon('x', 18)}</button>
+      <div>
+        <div class="notif-title">Notifications</div>
+        <div class="notif-sub" id="notifSub"></div>
       </div>
+      <button class="notif-close" onclick="closeNotifPanel()" aria-label="Close">${icon('x', 18)}</button>
     </div>
     <div id="notifTabsWrap"></div>
-    <div class="notif-list" id="notifList"></div>`;
+    <div class="notif-list" id="notifList"></div>
+    <div class="notif-sheet-foot">
+      <button class="notif-foot-btn" id="notifReadAll" onclick="_notifSheetReadAll()">${icon('check', 14)} Mark all read</button>
+      <a class="notif-foot-btn primary" href="notifications.html">See all notifications ${icon('arrowRight', 14)}</a>
+    </div>`;
   document.body.appendChild(scrim);
   document.body.appendChild(el);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNotifPanel(); });
   return el;
 }
 function _notifSetTab(t) { _notifTab = t; _notifRenderPanel(); }
+let _notifSheetNew = new Set();   // ids that were unread when the sheet opened
 function _notifRenderPanel() {
   const listEl = document.getElementById('notifList');
   if (!listEl) return;
   document.getElementById('notifTabsWrap').innerHTML = _notifTabsHTML(_notifTab, '_notifSetTab');
-  const items = _notifFiltered(_notifTab).slice(0, 25);
-  listEl.innerHTML = items.length ? items.map(n => _notifItemHTML(n)).join('') : _notifEmptyHTML(_notifTab);
+  const items = _notifFiltered(_notifTab).slice(0, 30);
+  const fresh = items.filter(n => _notifSheetNew.has(n.id) || !n.read_at);
+  const older = items.filter(n => !fresh.includes(n));
+  const sub = document.getElementById('notifSub');
+  if (sub) sub.textContent = fresh.length ? `${fresh.length} new` : "You're all caught up";
+  const rb = document.getElementById('notifReadAll');
+  if (rb) rb.disabled = !_notifItems.some(n => !n.read_at || _notifSheetNew.has(n.id));
+  listEl.innerHTML = !items.length ? _notifEmptyHTML(_notifTab)
+    : (fresh.length ? `<div class="notif-group">New</div>${fresh.map(n => _notifItemHTML(n)).join('')}` : '')
+    + (older.length ? `<div class="notif-group">Earlier</div>${older.map(n => _notifItemHTML(n)).join('')}` : '');
+}
+function _notifSheetReadAll() {
+  _notifMarkRead(_notifItems.filter(n => !n.read_at).map(n => n.id));
+  _notifSheetNew.clear();
+  document.querySelectorAll('#notifList .notif-item.unread').forEach(i => i.classList.remove('unread'));
+  _notifRenderPanel();
+}
+// The sheet sits below the top bar — even when the bar is scrolled away
+function _notifSheetTop() {
+  // #mainNav holds both the phone bar and the desktop bar; offsetHeight is its
+  // full height even if it's been slid out of view
+  const nav = document.getElementById('mainNav');
+  const h = nav ? nav.offsetHeight : 0;
+  if (h) return h;
+  const pt = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-pt'));
+  return isNaN(pt) ? 64 : pt;
 }
 
 async function _notifMarkRead(ids) {
@@ -1959,6 +1988,10 @@ async function toggleNotifPanel(ev) {
   _notifPeekHide();
   const el = _notifEnsurePanel();
   if (el.classList.contains('open')) { closeNotifPanel(); return; }
+  _notifSheetNew = new Set(_notifItems.filter(n => !n.read_at).map(n => n.id));
+  const top = _notifSheetTop() + 'px';
+  el.style.setProperty('--notif-top', top);
+  document.getElementById('notifScrim').style.setProperty('--notif-top', top);
   _notifRenderPanel();
   el.classList.add('open');
   document.getElementById('notifScrim').classList.add('open');
@@ -1973,6 +2006,7 @@ function closeNotifPanel() {
   document.getElementById('notifScrim')?.classList.remove('open');
   document.body.classList.remove('notif-sheet-open');
   el.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
+  _notifSheetNew.clear();
 }
 
 async function _notifDelete(ev, id) {
@@ -2016,7 +2050,7 @@ async function _notifInvite(ev, listId, accept) {
    New-notification alerts (in-app)
    Settings → Notifications → "New notification alerts" (ON by default).
    When something new arrives while you're using the site, the bell rings
-   and a slim strip slides out of it, right there in the top bar:
+   and a slim strip drops down just under the top bar, pointing at the bell:
      1 new  → avatar + what happened      2+ new → "3 new notifications"
    Tapping the strip opens the notifications sheet; it tucks back into
    the bell after a few seconds. OFF = just the count on the bell.
@@ -2087,19 +2121,20 @@ function _notifPeek(fresh) {
     ? (a && safeURL(a.avatar_url) ? `<img src="${safeURL(a.avatar_url)}" alt="">` : escHTML(((a && a.username) || '?')[0].toUpperCase()))
     : `<b>${fresh.length > 99 ? '99+' : fresh.length}</b>`;
   const text = fresh.length === 1 ? _notifShortText(n) : `<b>${fresh.length} new notifications</b>`;
-  el.innerHTML = `<span class="np-lead">${lead}</span><span class="np-text">${text}</span>`;
-  // Anchor: vertically centred on the bell, its right edge tucked under the bell
+  el.innerHTML = `<span class="np-lead">${lead}</span><span class="np-text">${text}</span><span class="np-go">${icon('arrowRight', 13)}</span>`;
+  // Just below the top bar (even if the bar has scrolled away), lined up
+  // under the bell with a small pointer at it
   const r = bell.getBoundingClientRect();
-  el.style.top = (r.top + r.height / 2) + 'px';
-  el.style.right = Math.max(8, window.innerWidth - r.left - r.width / 2) + 'px';
-  el.style.setProperty('--peek-max', Math.max(180, Math.min(360, r.left - 12)) + 'px');
+  const right = Math.max(10, window.innerWidth - r.right);
+  el.style.top = (_notifSheetTop() + 10) + 'px';
+  el.style.right = right + 'px';
+  el.style.setProperty('--peek-max', Math.min(380, window.innerWidth - 20) + 'px');
+  el.style.setProperty('--peek-caret', Math.max(14, r.width / 2 - 6) + 'px');
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-  bell.classList.add('peeking');
   _notifPeekLater(5500);
 }
 function _notifPeekLater(ms) { clearTimeout(_notifPeekTimer); _notifPeekTimer = setTimeout(_notifPeekHide, ms); }
 function _notifPeekHide() {
   clearTimeout(_notifPeekTimer);
   document.getElementById('notifPeek')?.classList.remove('show');
-  document.querySelectorAll('.notif-btn.peeking').forEach(b => b.classList.remove('peeking'));
 }
