@@ -1398,19 +1398,31 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 }
 .notif-badge.show { display:block; animation:notifPop .3s cubic-bezier(.2,.8,.2,1); }
 @keyframes notifPop { from { transform:scale(.4); } to { transform:scale(1); } }
-#notifPanel {
-  position:fixed; z-index:1600; width:min(380px, calc(100vw - 20px)); max-height:min(70dvh, 560px);
-  display:flex; flex-direction:column; overflow:hidden;
-  background:var(--bg-2); border:1.5px solid var(--olive-light); border-radius:var(--radius-lg);
-  box-shadow:4px 4px 0 var(--olive), 0 20px 50px rgba(0,0,0,.25);
-  opacity:0; transform:translateY(-6px) scale(.98); pointer-events:none; transition:opacity .18s, transform .18s;
+/* Notifications sheet — slides in from the right edge (full width on phones) */
+#notifScrim {
+  position:fixed; inset:0; z-index:1590; background:rgba(0,0,0,.28);
+  opacity:0; pointer-events:none; transition:opacity .25s;
 }
-#notifPanel.open { opacity:1; transform:none; pointer-events:auto; }
-.notif-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 10px; border-bottom:0.5px solid var(--border); }
-.notif-title { font-family:var(--serif); font-size:17px; font-weight:600; }
+#notifScrim.open { opacity:1; pointer-events:auto; }
+#notifPanel {
+  position:fixed; z-index:1600; top:0; right:0; bottom:0; width:min(420px, 100vw);
+  display:flex; flex-direction:column; overflow:hidden;
+  background:var(--bg); border-left:0.5px solid var(--border);
+  box-shadow:-18px 0 40px rgba(0,0,0,.14);
+  padding-top:env(safe-area-inset-top, 0px); padding-bottom:env(safe-area-inset-bottom, 0px);
+  transform:translateX(102%); visibility:hidden;
+  transition:transform .34s cubic-bezier(.2,.8,.2,1), visibility 0s linear .34s;
+}
+#notifPanel.open { transform:none; visibility:visible; transition:transform .34s cubic-bezier(.2,.8,.2,1), visibility 0s; }
+body.notif-sheet-open { overflow:hidden; }
+.notif-head-actions { display:flex; align-items:center; gap:6px; }
+.notif-head-link { font-size:12.5px; font-weight:600; color:var(--olive-light); text-decoration:none; padding:6px 8px; border-radius:var(--radius-sm); }
+.notif-head-link:hover { background:var(--card); }
+.notif-head { display:flex; align-items:center; justify-content:space-between; padding:18px 18px 12px; }
+.notif-title { font-family:var(--serif); font-size:22px; font-weight:600; }
 .notif-close { background:none; border:none; color:var(--text-3); cursor:pointer; display:flex; padding:4px; }
 .notif-close:hover { color:var(--text); }
-.notif-list { overflow-y:auto; overscroll-behavior:contain; padding:6px; }
+.notif-list { flex:1; overflow-y:auto; overscroll-behavior:contain; padding:6px 10px 16px; }
 .notif-item { display:flex; gap:11px; padding:10px; border-radius:var(--radius-sm); cursor:pointer; transition:background .15s; position:relative; }
 .notif-item:hover { background:var(--card); }
 .notif-item.unread { background:var(--olive-faint); }
@@ -1437,7 +1449,7 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 .notif-state { font-size:11.5px; font-weight:600; color:var(--olive-light); }
 .notif-empty { padding:32px 16px; text-align:center; color:var(--text-3); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
 .notif-empty svg { opacity:.5; }
-.notif-tabs { display:flex; gap:6px; padding:10px 12px 4px; overflow-x:auto; scrollbar-width:none; }
+.notif-tabs { display:flex; gap:6px; padding:0 18px 12px; overflow-x:auto; scrollbar-width:none; border-bottom:0.5px solid var(--border); }
 .notif-tabs::-webkit-scrollbar { display:none; }
 .notif-tab {
   flex-shrink:0; display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; cursor:pointer;
@@ -1469,8 +1481,6 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 .notif-card-meta { display:flex; align-items:center; gap:6px; }
 .notif-card-meta .type-label { font-size:10.5px; padding:2px 7px; }
 .notif-card-year { font-family:var(--bebas); font-size:14px; color:var(--text-3); letter-spacing:.3px; }
-.notif-foot { display:block; text-align:center; padding:11px; border-top:0.5px solid var(--border); font-size:12.5px; font-weight:600; color:var(--olive-light); text-decoration:none; }
-.notif-foot:hover { background:var(--card); }
 .notif-del {
   flex-shrink:0; align-self:flex-start; width:28px; height:28px; border-radius:50%; cursor:pointer;
   background:transparent; border:none; color:var(--text-3); display:flex; align-items:center; justify-content:center; opacity:.7;
@@ -1484,44 +1494,33 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
   15% { transform:rotate(16deg); } 30% { transform:rotate(-14deg); } 45% { transform:rotate(10deg); }
   60% { transform:rotate(-7deg); } 75% { transform:rotate(3deg); }
 }
-#notifSnack {
-  position:fixed; z-index:1200; left:50%; bottom:calc(24px + env(safe-area-inset-bottom, 0px));
-  display:flex; align-items:center; gap:10px; width:max-content; max-width:min(460px, calc(100vw - 24px));
-  padding:8px 8px 8px 10px; border-radius:14px;
-  background:var(--text); color:var(--bg);
-  box-shadow:0 14px 40px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.18);
-  transform:translate(-50%, 140%); opacity:0; pointer-events:none;
-  transition:transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s;
+/* New-notification strip that slides out of the bell (top bar) */
+.notif-btn.peeking { z-index:1210; }
+#notifPeek {
+  position:fixed; z-index:1205; display:flex; align-items:center; gap:9px;
+  max-width:var(--peek-max, 320px); height:38px; padding:0 34px 0 5px; border-radius:999px; cursor:pointer;
+  background:var(--card); border:0.5px solid var(--border-olive); color:var(--text-2);
+  box-shadow:0 8px 24px rgba(0,0,0,.14); font-family:var(--sans); text-align:left;
+  transform:translateY(-50%) scaleX(.2); transform-origin:right center; opacity:0; pointer-events:none;
+  clip-path:inset(0 0 0 100% round 999px);
+  transition:transform .42s cubic-bezier(.2,.8,.2,1), opacity .2s, clip-path .42s cubic-bezier(.2,.8,.2,1);
 }
-#notifSnack.show { transform:translate(-50%, 0); opacity:1; pointer-events:auto; }
-.ns-lead {
-  width:30px; height:30px; border-radius:50%; flex-shrink:0; overflow:hidden;
+#notifPeek.show { transform:translateY(-50%); opacity:1; pointer-events:auto; clip-path:inset(0 0 0 0 round 999px); }
+#notifPeek:hover { border-color:var(--olive-light); }
+.np-lead {
+  width:28px; height:28px; border-radius:50%; flex-shrink:0; overflow:hidden;
   display:flex; align-items:center; justify-content:center;
-  background:var(--olive-light); color:#fff; font-family:var(--serif); font-weight:600; font-size:13px;
+  background:var(--olive); color:#fff; font-family:var(--serif); font-weight:600; font-size:12.5px;
 }
-.ns-lead img { width:100%; height:100%; object-fit:cover; }
-.ns-text { font-family:var(--sans); font-size:13.5px; line-height:1.3; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:.92; }
-.ns-text b { font-weight:700; opacity:1; }
-.ns-view {
-  flex-shrink:0; margin-left:4px; padding:7px 12px; border-radius:9px; border:none; cursor:pointer;
-  background:transparent; color:var(--olive-light); font-family:var(--sans); font-size:13px; font-weight:700; letter-spacing:.2px;
-}
-[data-theme="light"] .ns-view { color:#9fd18c; }
-.ns-view:hover { background:rgba(127,127,127,.18); }
-.ns-close {
-  flex-shrink:0; width:28px; height:28px; border-radius:50%; border:none; cursor:pointer;
-  background:transparent; color:inherit; opacity:.6; display:flex; align-items:center; justify-content:center;
-}
-.ns-close:hover { opacity:1; background:rgba(127,127,127,.18); }
-@media(max-width:640px) {
-  /* sit above the round + button and theme switch in the bottom corners */
-  #notifSnack { bottom:calc(86px + env(safe-area-inset-bottom, 0px)); }
-  .ns-text { font-size:13px; }
-}
+.np-lead img { width:100%; height:100%; object-fit:cover; }
+.np-lead b { font-family:var(--bebas); font-weight:400; font-size:15px; letter-spacing:.3px; }
+.np-text { font-size:13px; line-height:1.2; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.np-text b { color:var(--text); font-weight:700; }
 @media (prefers-reduced-motion: reduce) {
   .notif-btn.ringing svg { animation:none; }
-  #notifSnack { transition:opacity .2s; transform:translate(-50%, 0); }
+  #notifPeek, #notifPanel { transition:opacity .2s; }
 }
+
 
 /* Letter shown when a poster image fails to load (see mssImgError) */
 .img-fallback {
