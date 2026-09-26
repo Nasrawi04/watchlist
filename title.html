@@ -961,7 +961,7 @@ function _tdRenderNotes() {
           <span class="td-note-username">@${esc(n.username || 'user')}</span>
           <span class="td-note-date">${dateStr}</span>
         </div>
-        <div class="td-note-text">${esc(n.notes)}</div>
+        ${mssIsSpoiler(n) && n.user_id !== _tdUser?.id ? mssSpoilerHTML(`<div class="td-note-text">${esc(n.notes)}</div>`, { compact: true }) : `<div class="td-note-text">${esc(n.notes)}</div>`}
         <div class="td-note-actions">
           <button class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="_tdReactToNote('${n.entry_id}', true)">
             ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
