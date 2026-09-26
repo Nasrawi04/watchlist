@@ -143,7 +143,7 @@ function _finishCatInfoPopup(e) {
 }
 
 async function _catInfoDeleteEntry(e) {
-  if (!confirm(`Delete "${e.title}" from your library? This can't be undone.`)) return;
+  if (!(await showConfirm({ title: 'Delete entry?', message: `"${e.title}" will be permanently removed.`, confirmText: 'Delete', iconName: 'x' }))) return;
   try {
     await deleteEntry(e.id, _catUser.id);
     _catAllRaw = _catAllRaw.filter(x => x.id !== e.id);
@@ -160,7 +160,7 @@ async function _catInfoDeleteEntry(e) {
 async function _cgPopupDeleteEntry() {
   const e = _catAll.find(en => en.id === _cgPopupEntryId);
   if (!e) return;
-  if (!confirm(`Delete "${e.title}" from your library? This can't be undone.`)) return;
+  if (!(await showConfirm({ title: 'Delete entry?', message: `"${e.title}" will be permanently removed.`, confirmText: 'Delete', iconName: 'x' }))) return;
   try {
     await deleteEntry(e.id, _catUser.id);
     _catAllRaw = _catAllRaw.filter(x => x.id !== e.id);
@@ -1524,7 +1524,7 @@ async function popPostReply(commentId, entryId) {
 }
 
 async function deleteCommentFromPopup(commentId, entryId) {
-  if (!confirm('Delete this comment?')) return;
+  if (!(await showConfirm({ title: 'Delete comment?', message: 'This comment will be permanently removed.', confirmText: 'Delete', iconName: 'x' }))) return;
   try {
     await deleteComment(commentId);
     await loadCommentsPopupComments(entryId);
