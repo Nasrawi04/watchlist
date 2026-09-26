@@ -440,10 +440,11 @@ function _cgSetupNarrowObserver_cp() {
   apply();
 }
 
-function _cpPopupDeleteEntry() {
+async function _cpPopupDeleteEntry() {
   const id = _cpPopupEntryId;
   if (!id) return;
-  if (!confirm('Delete this entry? This cannot be undone.')) return;
+  const e = _allCompleted.find(x => x.id === id);
+  if (!(await showConfirm({ title: 'Delete entry?', message: `"${(e && e.title) || 'This entry'}" will be permanently removed.`, confirmText: 'Delete', iconName: 'x' }))) return;
   deleteEntry(id, _compUser.id).then(() => {
     _allCompleted = _allCompleted.filter(e => e.id !== id);
     cpClosePopup();
@@ -771,7 +772,7 @@ async function cpPostReply(commentId, entryId) {
 }
 
 async function deleteCommentFromPopupCompleted(commentId, entryId) {
-  if (!confirm('Delete this comment?')) return;
+  if (!(await showConfirm({ title: 'Delete comment?', message: 'This comment will be permanently removed.', confirmText: 'Delete', iconName: 'x' }))) return;
   try {
     await deleteComment(commentId);
     await loadCommentsPopupCommentsCompleted(entryId);
