@@ -390,8 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadFriends() {
-  _friendships = await getFriendships(_fUser.id);
-  _fProfile = await getProfile(_fUser.id);
+  [_friendships, _fProfile] = await Promise.all([getFriendships(_fUser.id), getProfile(_fUser.id)]);
 
   const accepted = _friendships.filter(f => f.status === 'accepted');
   const incoming = _friendships.filter(f => f.status === 'pending' && !f.iRequested);
