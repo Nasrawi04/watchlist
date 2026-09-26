@@ -884,6 +884,10 @@ SF.register('comp', {
   lengthLabel: () => _catFilter === 'movies' ? 'Runtime (minutes)' : _catFilter === 'tv' ? 'Episode Count' : 'Runtime / Episode Count',
   choiceFilters: () => [
     { key: 'cat',    label: 'Type',   options: Object.entries(_compCatLabels) },
+    // Anime & Cartoons mix series and films — pick one under Type to get this
+    { key: 'format', label: 'Format', options: [['', 'All Formats'], ['show', 'Shows'], ['movie', 'Movies']],
+      when: ch => ch.cat === 'anime' || ch.cat === 'cartoons',
+      test: (e, v) => (v === 'movie') === SF.isMovie(e) },
     { key: 'status', label: 'Status', options: Object.entries(_compStatusLabels) },
   ],
   ratingSort: {
