@@ -374,6 +374,17 @@
 .cp-eyebrow { font-family:var(--serif); font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; }
 .cp-title { font-family:var(--serif); font-size:19px; font-weight:600; line-height:1.25; overflow-wrap:anywhere; }
 .cp-close { background:none; border:none; color:var(--text-3); cursor:pointer; display:flex; padding:4px; }
+.cp-link { margin:0 20px 12px; padding:12px; border-radius:var(--radius-sm); background:var(--olive-faint); border:1px solid var(--border-olive); }
+.cp-link-head { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+.cp-link-ic { width:30px; height:30px; border-radius:50%; flex-shrink:0; background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center; }
+.cp-link-title { font-size:13.5px; font-weight:600; color:var(--text); }
+.cp-link-sub { font-size:11.5px; color:var(--text-3); line-height:1.35; }
+.cp-link-row { display:flex; gap:8px; }
+.cp-link-input { flex:1; min-width:0; padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-2); color:var(--text-2); font-size:12.5px; font-family:var(--sans); outline:none; text-overflow:ellipsis; }
+.cp-link-reset { margin-top:8px; background:none; border:none; padding:0; color:var(--text-3); font-size:11.5px; font-weight:600; cursor:pointer; text-decoration:underline; }
+.cp-link-reset:hover { color:#c0564a; }
+.cp-divider { display:flex; align-items:center; gap:10px; margin:2px 20px 10px; font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); }
+.cp-divider::before, .cp-divider::after { content:''; flex:1; height:0.5px; background:var(--border); }
 .cp-search { position:relative; margin:0 20px 10px; }
 .cp-search span { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--text-3); display:flex; }
 .cp-search input {
@@ -807,7 +818,7 @@ async function loadListsPage() {
 // order so future reorders have real values to work from everywhere,
 // including profile.html/profile-view.html which just read this column.
 async function _ensureListSortOrder() {
-  const custom = _listsAll.filter(l => l.cat === 'custom');
+  const custom = _listsAll.filter(l => l.cat === 'custom' && !l._collab);
   custom.sort((a, b) => {
     const ao = a.sort_order, bo = b.sort_order;
     if (ao != null && bo != null) return ao - bo;
@@ -956,7 +967,7 @@ async function _loadCollabData() {
     const myIds = _listsAll.filter(l => l.cat === 'custom').map(l => l.id);
     const [mineRes, sharedRes] = await Promise.all([
       myIds.length ? sb.from('list_collaborators').select('list_id, user_id, status').in('list_id', myIds).neq('status', 'declined') : { data: [] },
-      sb.from('list_collaborators').select('list_id').eq('user_id', _listsUser.id).eq('status', 'accepted'),
+      sb.from('list_collaborators').select('list_id, sort_order').eq('user_id', _listsUser.id).eq('status', 'accepted'),
     ]);
     const sharedIds = (sharedRes.data || []).map(r => r.list_id);
     const sharedLists = sharedIds.length ? (await sb.from('favorite_lists').select('*').in('id', sharedIds)).data || [] : [];
@@ -964,7 +975,10 @@ async function _loadCollabData() {
     const people = peopleIds.length ? (await sb.from('profiles').select('id, username, display_name, avatar_url').in('id', peopleIds)).data || [] : [];
     const P = Object.fromEntries(people.map(p => [p.id, p]));
     (mineRes.data || []).forEach(r => { (_listsCollab[r.list_id] ||= []).push({ ...r, profile: P[r.user_id] || null }); });
-    sharedLists.forEach(l => { l._collab = true; l._owner = P[l.user_id] || null; });
+    // A shared list sits where *I* put it (my own sort_order on the collaborator
+    // row) — new ones default to the top. The owner's order never applies here.
+    const myPos = Object.fromEntries((sharedRes.data || []).map(r => [r.list_id, r.sort_order]));
+    sharedLists.forEach(l => { l._collab = true; l._owner = P[l.user_id] || null; l.sort_order = myPos[l.id] ?? -1; });
     _listsAll = _listsAll.filter(l => !l._collab).concat(sharedLists);
   } catch (e) { console.warn('Collab data load failed (run 021 SQL?):', e); }
 }
@@ -998,6 +1012,16 @@ function _injectCollabPicker() {
         <div><div class="cp-eyebrow">Collaborate</div><div class="cp-title" id="collabTitle">Invite friends</div></div>
         <button class="cp-close" onclick="closeCollabPicker()" aria-label="Close">${icon('x', 18)}</button>
       </div>
+      <div class="cp-link" id="collabLinkBox">
+        <div class="cp-link-head"><span class="cp-link-ic">${icon('link', 15)}</span>
+          <div><div class="cp-link-title">Invite link</div><div class="cp-link-sub">Anyone with the link can ask to join and add titles</div></div></div>
+        <div class="cp-link-row">
+          <input class="cp-link-input" id="collabLinkInput" readonly value="Creating link…" onclick="this.select()" aria-label="Invite link">
+          <button class="cp-btn cp-invite" id="collabLinkCopy" onclick="_collabCopyLink()" disabled>Copy</button>
+        </div>
+        <button class="cp-link-reset" onclick="_collabResetLink()">Reset link</button>
+      </div>
+      <div class="cp-divider"><span>or invite friends</span></div>
       <div class="cp-search"><span>${icon('search', 15)}</span><input type="text" id="collabSearch" placeholder="Search your friends…" autocomplete="off" oninput="_renderCollabPicker()"></div>
       <div class="cp-list" id="collabList"></div>
       <div class="cp-foot" id="collabPopupActions"><button class="popup-action-btn" onclick="closeCollabPicker()">Done</button></div>
@@ -1022,7 +1046,40 @@ async function openCollabPicker(listId, then) {
     } catch { _listsFriends = []; }
   }
   _renderCollabPicker();
-  if (!window.matchMedia('(max-width:640px)').matches) document.getElementById('collabSearch').focus();
+  _collabLoadLink();
+}
+
+/* ── Invite link (owner only) ── */
+function _collabLinkURL(token) {
+  const base = location.href.replace(/[^/]*$/, '');
+  return `${base}list-view.html?list=${encodeURIComponent(_collabPickerList.id)}&join=${encodeURIComponent(token)}`;
+}
+async function _collabLoadLink(reset) {
+  const input = document.getElementById('collabLinkInput'), btn = document.getElementById('collabLinkCopy');
+  if (!input || !_collabPickerList) return;
+  input.value = reset ? 'Making a new link…' : 'Creating link…'; btn.disabled = true;
+  try {
+    const { data, error } = await sb.rpc(reset ? 'reset_list_join_token' : 'get_list_join_token', { p_list_id: _collabPickerList.id });
+    if (error) throw error;
+    input.value = _collabLinkURL(data); btn.disabled = false;
+    if (reset) showToast('New link created — the old one no longer works.');
+  } catch (e) { console.error(e); input.value = 'Could not create a link (run 024 SQL?)'; }
+}
+async function _collabCopyLink() {
+  const url = document.getElementById('collabLinkInput').value;
+  const title = _collabPickerList?.title || 'my list';
+  // Phones: native share sheet (Messages, WhatsApp…); otherwise copy
+  if (navigator.share && window.matchMedia('(pointer:coarse)').matches) {
+    try { await navigator.share({ title: `Join “${title}” on MyScreenScore`, url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); }
+  catch { const i = document.getElementById('collabLinkInput'); i.select(); document.execCommand('copy'); }
+  const btn = document.getElementById('collabLinkCopy');
+  btn.textContent = 'Copied ✓'; setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+}
+async function _collabResetLink() {
+  const ok = await showConfirm({ title: 'Reset invite link?', message: 'The current link will stop working. People who already joined stay on the list.', confirmText: 'Reset', iconName: 'refresh' });
+  if (ok) _collabLoadLink(true);
 }
 function closeCollabPicker() {
   const ov = document.getElementById('collabOverlay');
@@ -1121,10 +1178,9 @@ function _lrSave(order) {
   clearTimeout(_lrSaveTimer);
   _lrSaveTimer = setTimeout(async () => {
     try {
-      const results = await Promise.all(order.map((id, i) =>
-        sb.from('favorite_lists').update({ sort_order: i }).eq('id', id).eq('user_id', _listsUser.id)));
-      const err = results.find(x => x.error);
-      if (err) throw err.error;
+      // One call saves my own lists AND my personal position for shared ones
+      const { error } = await sb.rpc('set_my_list_order', { p_ids: order });
+      if (error) throw error;
       showToast('Order saved');
     } catch (e) {
       console.error('Reorder save error:', e);
