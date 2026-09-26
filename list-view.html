@@ -147,6 +147,38 @@
   .lv-import-row .popup-action-btn { width:100%; }
   .lv-controls { gap:10px; }
 }
+/* ── Invite-link popup ── */
+#lvJoinOverlay {
+  position:fixed; inset:0; z-index:1300; display:flex; align-items:center; justify-content:center; padding:16px;
+  background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  opacity:0; transition:opacity .2s;
+}
+#lvJoinOverlay.open { opacity:1; }
+.lvj-card {
+  width:100%; max-width:420px; text-align:center; padding:28px 24px 22px;
+  background:var(--bg-2); border:1.5px solid var(--olive-light); border-radius:var(--radius-lg); box-shadow:4px 4px 0 var(--olive);
+  transform:translateY(12px) scale(.98); transition:transform .25s cubic-bezier(.2,.8,.2,1);
+}
+#lvJoinOverlay.open .lvj-card { transform:none; }
+.lvj-av {
+  position:relative; width:64px; height:64px; margin:0 auto 14px; border-radius:50%; overflow:visible;
+  background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-weight:600; font-size:26px;
+}
+.lvj-av img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.lvj-av-ic { position:absolute; right:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%; background:var(--olive-light); color:#fff; border:2px solid var(--bg-2); display:flex; align-items:center; justify-content:center; }
+.lvj-eyebrow { font-family:var(--serif); font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
+.lvj-title { font-size:14px; color:var(--text-2); line-height:1.5; }
+.lvj-title b { color:var(--text); }
+.lvj-list { font-family:var(--serif); font-size:clamp(21px, 5.5vw, 26px); font-weight:600; line-height:1.2; margin:4px 0 6px; overflow-wrap:anywhere; }
+.lvj-meta { font-size:12.5px; color:var(--text-3); margin-bottom:14px; }
+.lvj-note { font-size:12.5px; color:var(--text-3); line-height:1.5; padding:10px 12px; border-radius:var(--radius-sm); background:var(--olive-faint); margin-bottom:18px; }
+.lvj-actions { display:flex !important; flex-direction:row !important; gap:8px; padding:0 !important; }
+.lvj-actions .popup-action-btn { flex:1; width:auto !important; justify-content:center; padding:11px 14px; font-size:14px; }
+.lvj-actions .popup-action-btn:first-child { flex:2; }
+.lvj-actions .lvj-ghost { background:transparent !important; color:var(--text-2) !important; border-color:var(--border-2) !important; }
+.lvj-actions .lvj-ghost:hover { color:var(--text) !important; border-color:var(--border-olive) !important; background:var(--olive-faint) !important; }
+.lvj-actions .popup-action-btn:disabled { opacity:.6; }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -548,10 +580,90 @@ async function _lvLoad() {
   }
 }
 
+/* ══ Invite link: list-view.html?list=…&join=<token> ══
+   Opening an owner's invite link asks whether you want to collaborate.
+   Accept → you're added (list lands at the top of your Lists).
+   Decline / invalid → the link part is dropped and it's a normal list page. */
+const _lvJoinToken = new URLSearchParams(location.search).get('join');
+
+function _lvDropJoinParam() {
+  const url = new URL(location.href); url.searchParams.delete('join'); history.replaceState(null, '', url);
+}
+
+async function _lvHandleJoinLink() {
+  if (!_lvJoinToken || !_lvList) return;
+  let state = 'invalid';
+  try {
+    const { data, error } = await sb.rpc('check_list_join_token', { p_list_id: _lvList.id, p_token: _lvJoinToken });
+    if (error) throw error;
+    state = data;
+  } catch (e) { console.warn('Join link check failed:', e); }
+  if (state === 'owner')  { _lvDropJoinParam(); return; }
+  if (state === 'member') { _lvDropJoinParam(); showToast("You're already collaborating on this list."); return; }
+  if (state === 'invalid') { _lvDropJoinParam(); showToast('This invite link has expired or was reset.', 'err'); return; }
+  _lvShowJoinPopup();
+}
+
+function _lvShowJoinPopup() {
+  const l = _lvList, owner = l.profiles || {};
+  const initial = escHTML((owner.username || '?')[0].toUpperCase());
+  const av = safeURL(owner.avatar_url) ? `<img src="${safeURL(owner.avatar_url)}" alt="">` : initial;
+  const count = (l.items || []).length;
+  const el = document.createElement('div');
+  el.id = 'lvJoinOverlay';
+  el.innerHTML = `<div class="lvj-card" role="dialog" aria-modal="true" aria-labelledby="lvjTitle">
+      <div class="lvj-av">${av}<span class="lvj-av-ic">${icon('users', 12)}</span></div>
+      <div class="lvj-eyebrow">List invite</div>
+      <div class="lvj-title" id="lvjTitle"><b>@${escHTML(owner.username || 'user')}</b> invited you to collaborate on</div>
+      <div class="lvj-list">&ldquo;${escHTML(l.title)}&rdquo;</div>
+      <div class="lvj-meta">${count} ${count === 1 ? 'title' : 'titles'}</div>
+      <div class="lvj-note">As a collaborator you can add and remove titles. Only the owner can rename or delete the list.</div>
+      <div class="lvj-actions" id="lvjPopupActions">
+        ${_lvUser
+          ? `<button class="popup-action-btn" id="lvjAccept" onclick="_lvJoinRespond(true)">Accept</button>
+             <button class="popup-action-btn lvj-ghost" onclick="_lvJoinRespond(false)">Decline</button>`
+          : `<a class="popup-action-btn" href="login.html" style="text-decoration:none;">Sign in to join</a>
+             <button class="popup-action-btn lvj-ghost" onclick="_lvJoinRespond(false)">Not now</button>`}
+      </div>
+    </div>`;
+  el.addEventListener('click', e => { if (e.target === el) _lvJoinRespond(false); });
+  document.body.appendChild(el);
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => el.classList.add('open'));
+}
+
+function _lvCloseJoinPopup() {
+  const el = document.getElementById('lvJoinOverlay');
+  if (!el) return;
+  el.classList.remove('open');
+  document.body.style.overflow = '';
+  setTimeout(() => el.remove(), 220);
+}
+
+async function _lvJoinRespond(accept) {
+  if (!accept) { _lvDropJoinParam(); _lvCloseJoinPopup(); return; }
+  const btn = document.getElementById('lvjAccept');
+  if (btn) { btn.disabled = true; btn.textContent = 'Joining…'; }
+  try {
+    const { data, error } = await sb.rpc('join_list_with_token', { p_list_id: _lvList.id, p_token: _lvJoinToken });
+    if (error) throw error;
+    _lvDropJoinParam(); _lvCloseJoinPopup();
+    if (data === 'invalid') { showToast('This invite link has expired or was reset.', 'err'); return; }
+    showToast(data === 'member' ? "You're already collaborating on this list." : "You joined! It's at the top of your Lists.");
+    const imp = document.getElementById('lvImportPopupActions');
+    if (imp) imp.style.display = 'none';
+  } catch (e) {
+    console.error(e);
+    if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+    showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Could not join — try again.', 'err');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initPageGuest(async (user) => {
     _lvUser = user;
-    _lvLoad();
+    await _lvLoad();
+    _lvHandleJoinLink();
   });
 });
 </script>
