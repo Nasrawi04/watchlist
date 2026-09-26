@@ -207,10 +207,10 @@
           <div class="field-row" style="margin-bottom:0">
             <div class="push-row">
               <div class="push-text">
-                <div class="push-name" id="notifPopupsLabel">Notification pop-ups</div>
-                <div class="push-sub" id="pushStatus">Show a pop-up when something new arrives while you're using MyScreenScore. When off, you'll only see the count on the bell.</div>
+                <div class="push-name" id="notifPopupsLabel">New notification alerts</div>
+                <div class="push-sub" id="pushStatus">Ring the bell and show a short alert at the bottom of the screen when something new arrives. When off, you'll only see the count on the bell.</div>
               </div>
-              <button type="button" class="push-switch" id="pushSwitch" role="switch" aria-checked="true" aria-labelledby="notifPopupsLabel" aria-describedby="pushStatus" title="Notification pop-ups" onclick="toggleNotifPopupsSetting()"><span aria-hidden="true"></span></button>
+              <button type="button" class="push-switch" id="pushSwitch" role="switch" aria-checked="true" aria-labelledby="notifPopupsLabel" aria-describedby="pushStatus" title="New notification alerts" onclick="toggleNotifPopupsSetting()"><span aria-hidden="true"></span></button>
             </div>
             <a href="notifications.html" class="push-link">Open notifications →</a>
           </div>
@@ -597,7 +597,7 @@ function toggleNotifPopupsSetting() {
   const on = !mssNotifPopupsOn();
   mssSetNotifPopups(on);
   refreshNotifPopupsSetting();
-  showToast(on ? 'Notification pop-ups on.' : 'Pop-ups off — new notifications will just show on the bell.');
+  showToast(on ? 'Notification alerts on.' : 'Alerts off — new notifications will just show on the bell.');
 }
 document.addEventListener('DOMContentLoaded', refreshNotifPopupsSetting);
 </script>
