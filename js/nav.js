@@ -1772,6 +1772,8 @@ function _notifLive(user) {
 }
 
 let _notifLimit = 60;
+const _notifKnown = new Set();
+let _notifLoadedOnce = false;
 async function _notifLoad(limit) {
   if (limit) _notifLimit = limit;   // the full page asks for more; polling keeps that
   if (!_notifUser) return;
@@ -1801,6 +1803,11 @@ async function _notifLoad(limit) {
     if (document.getElementById('notifPanel')?.classList.contains('open')) _notifRenderPanel();
     if (typeof renderNotificationsPage === 'function') renderNotificationsPage();
     _notifMaybePopup();
+    // Let pages react to what just arrived (e.g. Lists refreshes when a friend joins)
+    const arrived = _notifItems.filter(n => !_notifKnown.has(n.id));
+    _notifItems.forEach(n => _notifKnown.add(n.id));
+    if (arrived.length && _notifLoadedOnce) document.dispatchEvent(new CustomEvent('mss:notifications', { detail: { arrived } }));
+    _notifLoadedOnce = true;
   } catch (e) { console.warn('Notifications load failed:', e); }
 }
 
