@@ -24,25 +24,29 @@
   .xp-all { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--olive-light); text-decoration:none; white-space:nowrap; }
   .xp-all svg { width:13px; height:13px; transition:transform .2s; }
   .xp-all:hover svg { transform:translateX(3px); }
+  /* Scrollable row that also drifts on its own (JS in _xpAutoScroll):
+     swipe / drag / trackpad to move it faster either way — it picks the
+     drift back up a moment after you let go. */
   .xp-marquee {
-    overflow:hidden; margin:0 -4px; padding:10px 4px 18px;
-    -webkit-mask-image:linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
-    mask-image:linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
+    overflow-x:auto; overflow-y:hidden; margin:0 -4px; padding:10px 4px 12px;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;
+    cursor:grab; user-select:none; -webkit-user-select:none;
   }
-  .xp-track { display:flex; width:max-content; animation:xpScroll 70s linear infinite; }
-  .xp-marquee:hover .xp-track, .xp-marquee:focus-within .xp-track { animation-play-state:paused; }
+  .xp-marquee::-webkit-scrollbar { display:none; }
+  .xp-marquee.dragging { cursor:grabbing; }
+  .xp-marquee.dragging .xp-card { pointer-events:none; }
+  .xp-track { display:flex; width:max-content; }
   .xp-group { display:flex; gap:18px; padding-right:18px; flex-shrink:0; }
-  @keyframes xpScroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
 
   .xp-card {
     --xp-a:#1E5C26; --xp-b:#0F2D14;
     position:relative; flex-shrink:0; width:360px; height:200px; border-radius:18px; overflow:hidden;
     display:flex; align-items:stretch; text-decoration:none; color:#fff; isolation:isolate;
     background:linear-gradient(135deg, var(--xp-a), var(--xp-b));
-    box-shadow:0 10px 28px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.08);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
     transition:transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s;
   }
-  .xp-card:hover { transform:translateY(-6px) scale(1.015); box-shadow:0 20px 44px rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.14); }
+  .xp-card:hover { transform:translateY(-4px); box-shadow:inset 0 0 0 1px rgba(255,255,255,.16); }
   .xp-bg {
     position:absolute; inset:-24px; z-index:-2; background-size:cover; background-position:center 30%;
     filter:blur(18px) saturate(1.3); opacity:0; transform:scale(1.1); transition:opacity .6s ease;
@@ -96,13 +100,10 @@
     .xp-p { width:68px; }
     .xp-p:nth-child(1) { right:52px; } .xp-p:nth-child(2) { right:30px; } .xp-p:nth-child(3) { right:8px; }
     .xp-num { font-size:120px; }
-    .xp-track { animation-duration:55s; }
     .xp-group { gap:14px; padding-right:14px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .xp-marquee { overflow-x:auto; -webkit-mask-image:none; mask-image:none; scrollbar-width:none; }
-    .xp-track { animation:none; }
-    .xp-group + .xp-group { display:none; }
+    .xp-group + .xp-group { display:none; }   /* no drift → no need for the loop copy */
   }
 
   /* TMDB-sourced home cards (Trending/Top Picks/Upcoming/Recently Viewed) —
@@ -220,6 +221,77 @@ function _xpRender() {
   const group = HOME_EXPLORE.map(_xpCardHTML).join('');
   // Two identical groups make the loop seamless; the copy is hidden from screen readers
   track.innerHTML = `<div class="xp-group">${group}</div><div class="xp-group" aria-hidden="true">${group.replace(/<a /g, '<a tabindex="-1" ')}</div>`;
+}
+
+/* ── Drift + manual scroll ──
+   The row drifts left by itself. Any swipe, drag, wheel/trackpad move or
+   hover pauses the drift and lets you scroll freely either way; ~1.2s after
+   you stop it carries on from wherever you left it. Two copies of the cards
+   make it loop seamlessly in both directions. */
+function _xpAutoScroll() {
+  const m = document.querySelector('.xp-marquee');
+  const track = document.getElementById('xpTrack');
+  if (!m || !track) return;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SPEED = 32;                         // px per second
+  let pos = 0, lastSet = 0, last = performance.now();
+  let userBusy = false, hovering = false, resumeT = null;
+
+  const groupW = () => track.firstElementChild ? track.firstElementChild.offsetWidth : 0;
+  const wrap = x => { const g = groupW(); if (!g) return x; while (x >= g) x -= g; while (x < 0) x += g; return x; };
+  const set = x => { pos = wrap(x); m.scrollLeft = pos; lastSet = m.scrollLeft; };
+  const busy = () => { userBusy = true; clearTimeout(resumeT); };
+  const idle = (ms = 1200) => { clearTimeout(resumeT); resumeT = setTimeout(() => { userBusy = false; pos = m.scrollLeft; last = performance.now(); }, ms); };
+
+  // Scrolls that didn't come from the drift = the user (touch, trackpad, momentum)
+  m.addEventListener('scroll', () => {
+    if (Math.abs(m.scrollLeft - lastSet) > 1) {
+      busy();
+      const g = groupW();
+      if (g && (m.scrollLeft >= g || m.scrollLeft <= 0)) set(m.scrollLeft);   // keep the loop seamless
+      else { pos = m.scrollLeft; lastSet = m.scrollLeft; }
+      idle();
+    }
+  }, { passive: true });
+  m.addEventListener('wheel', () => { busy(); idle(); }, { passive: true });
+  m.addEventListener('touchstart', busy, { passive: true });
+  m.addEventListener('touchend', () => idle(), { passive: true });
+  m.addEventListener('mouseenter', () => { hovering = true; });
+  m.addEventListener('mouseleave', () => { hovering = false; last = performance.now(); });
+
+  // Mouse drag to scroll (touch uses native swiping)
+  let drag = null;
+  m.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    drag = { x: e.clientX, start: m.scrollLeft, moved: false };
+    busy();
+  });
+  window.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 5) { drag.moved = true; m.classList.add('dragging'); }
+    if (drag.moved) set(drag.start - dx);
+  });
+  window.addEventListener('pointerup', () => {
+    if (!drag) return;
+    const moved = drag.moved;
+    drag = null;
+    m.classList.remove('dragging');
+    if (moved) {   // a drag isn't a click on the card underneath
+      const stop = ev => { ev.preventDefault(); ev.stopPropagation(); };
+      m.addEventListener('click', stop, { capture: true, once: true });
+      setTimeout(() => m.removeEventListener('click', stop, { capture: true }), 50);
+    }
+    idle();
+  });
+
+  if (reduced) return;                      // no drift; still freely scrollable
+  const step = t => {
+    const dt = Math.min(64, t - last); last = t;
+    if (!userBusy && !hovering && !document.hidden) set(pos + SPEED * dt / 1000);
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 function _xpFill(key, items) {
@@ -359,6 +431,7 @@ window.addEventListener('pageshow', (event) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   _xpRender();   // cards show instantly in their colors; posters fill in as they load
+  _xpAutoScroll();
   _xpLoad();
   initDiscoverSearch('heroSearch', { max: 20, connected: true, includePersons: true });
   initPageGuest(async (user) => {
