@@ -1268,10 +1268,11 @@ function _profPopupNarrowObserver() {
   apply();
 }
 
-function _profPopupDeleteEntry() {
+async function _profPopupDeleteEntry() {
   var id = _profPopupEntryId;
   if (!id) return;
-  if (!confirm('Delete this entry? This cannot be undone.')) return;
+  var _e = (typeof _pEntries !== 'undefined' && _pEntries.find(function(x){ return x.id === id; })) || null;
+  if (!(await showConfirm({ title: 'Delete entry?', message: '"' + ((_e && _e.title) || 'This entry') + '" will be permanently removed.', confirmText: 'Delete', iconName: 'x' }))) return;
   deleteEntry(id, _pUser.id).then(function(){
     _pEntries = _pEntries.filter(function(e){ return e.id !== id; });
     profClosePopup();
@@ -3025,7 +3026,7 @@ function openProfInfoPopup(id) {
 }
 
 async function _profInfoDeleteEntry(e) {
-  if (!confirm('Delete "'+e.title+'" from your library? This can\'t be undone.')) return;
+  if (!(await showConfirm({ title: 'Delete entry?', message: '"' + e.title + '" will be permanently removed.', confirmText: 'Delete', iconName: 'x' }))) return;
   try {
     await deleteEntry(e.id, _pUser.id);
     _pEntries = _pEntries.filter(function(en){ return en.id !== e.id; });
