@@ -439,6 +439,10 @@
 .pv-friend-btn.accept:hover { background:var(--olive-2); }
 .pv-friend-btn.decline { background:transparent; color:#f87171; border:0.5px solid #f87171; }
 .pv-friend-btn.decline:hover { background:#f87171; color:#fff; }
+.pv-friend-btn.pv-notify { display:inline-flex; align-items:center; gap:6px; background:transparent; color:var(--text-2); border:0.5px solid var(--border-2); margin-left:6px; }
+.pv-friend-btn.pv-notify:hover { border-color:var(--border-olive); color:var(--olive-light); background:var(--olive-faint); }
+.pv-friend-btn.pv-notify.on { background:var(--olive); color:#fff; border-color:var(--olive); }
+.pv-friend-btn.pv-notify.on:hover { background:var(--olive-2); }
 
 
 /* ══════════════════════════════════════════
@@ -794,6 +798,7 @@ let _pvMe = null, _pvMeProfile = null;
 let _pvUserId = null, _pvUsername = null, _pvProfile = null;
 let _pvEntries = [];
 let _pvFriendship = null;
+let _pvNotifyOn = false;   // am I subscribed to this friend's activity? (off by default)
 
 // Returning via browser back/forward can restore this page from the
 // bfcache with stale data (e.g. an entry just added/edited elsewhere
@@ -853,6 +858,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (_pvMe) {
     const friendships = await getFriendships(_pvMe.id);
     _pvFriendship = friendships.find(function(f){ return f.friendId === _pvUserId; }) || null;
+    if (_pvFriendship && _pvFriendship.status === 'accepted') {
+      try {
+        const { data: sub } = await sb.from('activity_subscriptions').select('target_id')
+          .eq('subscriber_id', _pvMe.id).eq('target_id', _pvUserId).limit(1);
+        _pvNotifyOn = !!(sub && sub.length);
+      } catch (e) { _pvNotifyOn = false; }
+    }
   }
 
   // Load entries (RLS may restrict to friends only)
@@ -878,7 +890,8 @@ function _friendBtnHTML() {
     return '<button class="pv-friend-btn add" onclick="pvSendRequest()">+ Follow</button>';
   }
   if (f.status === 'accepted') {
-    return '<button class="pv-friend-btn friends" onclick="pvUnfriend()" title="Click to unfriend">✓ Friends</button>';
+    return '<button class="pv-friend-btn friends" onclick="pvUnfriend()" title="Click to unfriend">✓ Friends</button>'
+      + _pvNotifyBtnHTML();
   }
   if (f.status === 'pending' && f.iRequested) {
     return '<button class="pv-friend-btn pending" onclick="pvCancelRequest()">Requested ✕</button>';
@@ -891,6 +904,25 @@ function _friendBtnHTML() {
 }
 
 
+
+/* Friend-activity notifications toggle — OFF by default. When on, you get
+   a notification each time this friend starts watching something. */
+function _pvNotifyBtnHTML() {
+  return _pvNotifyOn
+    ? '<button class="pv-friend-btn pv-notify on" onclick="pvToggleNotify()" title="Turn off notifications for this friend"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications On</button>'
+    : '<button class="pv-friend-btn pv-notify" onclick="pvToggleNotify()" title="Get notified when they start watching something"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.9 17.9 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Notify Me</button>';
+}
+async function pvToggleNotify() {
+  const next = !_pvNotifyOn;
+  try {
+    const { error } = await sb.rpc('set_activity_subscription', { p_target: _pvUserId, p_on: next });
+    if (error) throw error;
+    _pvNotifyOn = next;
+    document.getElementById('pvBtns').innerHTML = _friendBtnHTML();
+    const name = (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || 'them';
+    showToast(next ? `You'll be notified when ${name} starts something new.` : `Notifications off for ${name}.`);
+  } catch (e) { console.error(e); showToast('Could not update notifications — try again.', 'err'); }
+}
 
 function _pvInjectPopup() {
   if (document.getElementById('pvPopupOverlay')) return;
@@ -1198,6 +1230,7 @@ function pvAddToQueue() {
   if (!e) return;
   var catPage = (CAT_META[e.cat]&&CAT_META[e.cat].page)||'index.html';
   pvClosePopup();
+  try { sessionStorage.setItem('mssQueuedFrom', JSON.stringify({ owner: _pvUserId, entry: e.id, title: e.title, t: Date.now() })); } catch(_) {}
   sessionStorage.setItem('addModalTitle', e.title);
   sessionStorage.setItem('addModalCat', e.cat);
   window.location.href = catPage;
@@ -2476,6 +2509,7 @@ function infoAddToQueue() {
   var e = _pvEntries.find(function(en){ return en.id===_pvInfoId; });
   if (!e) return;
   closeInfoPopup();
+  try { sessionStorage.setItem('mssQueuedFrom', JSON.stringify({ owner: _pvUserId, entry: e.id, title: e.title, t: Date.now() })); } catch(_) {}
   sessionStorage.setItem('addModalTitle', e.title);
   sessionStorage.setItem('addModalCat', e.cat);
   window.location.href = (CAT_META[e.cat]&&CAT_META[e.cat].page)||'index.html';
