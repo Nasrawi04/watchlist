@@ -22,7 +22,8 @@
      filters: section => ['genre','year','score','length','person'],
      choiceFilters: section => [       // single-pick filters, e.g. Status
        { key: 'status', label: 'Status', options: [['', 'All'], ['completed', 'Watched']],
-         test: (entry, value) => entry.status === value },   // test optional
+         test: (entry, value) => entry.status === value,     // test optional
+         when: choice => choice.cat === 'anime' },           // optional: only shown/applied when true
      ],
      defaultSort: 'newest',
      sortState: {},                         // pass the page's own object to share it
@@ -200,6 +201,7 @@ const SF = (() => {
   function applyFilter(s, section, base, f) {
     let out = base;
     choicesFor(s, section).forEach(c => {
+      if (c.when && !c.when(f.choice || {})) return;          // dependent choice not active
       const v = f.choice?.[c.key];
       if (v) out = out.filter(e => c.test ? c.test(e, v) : e[c.key] === v);
     });
@@ -411,6 +413,7 @@ const SF = (() => {
     const on = new Set(filtersFor(s, section));
     let html = '';
     choicesFor(s, section).forEach(c => {
+      if (c.when && !c.when(f.choice)) { f.choice[c.key] = ''; return; }   // e.g. Format only for Anime/Cartoons
       const curV = f.choice[c.key] || '';
       html += `<div class="sf-section-label">${escHTML(c.label)}</div><div class="sf-check-list">` +
         c.options.map(([v, l]) => `
