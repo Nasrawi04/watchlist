@@ -1034,12 +1034,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     _pUser = user;
     _pProfile = profile;
-    _pEntries = await getEntries(user.id);
-    // Load custom favorite lists
-    try {
-      var flResp = await sb.from('favorite_lists').select('*').eq('user_id',user.id).order('created_at',{ascending:true});
-      _profFavLists = flResp.data || [];
-    } catch(e2) { _profFavLists = []; }
+    // Entries and custom lists load together (was one after the other)
+    var both = await Promise.all([
+      getEntries(user.id),
+      sb.from('favorite_lists').select('*').eq('user_id',user.id).order('created_at',{ascending:true}).then(function(r){ return r.data || []; }, function(){ return []; })
+    ]);
+    _pEntries = both[0];
+    _profFavLists = both[1];
     _profEntryMap = Object.fromEntries(_pEntries.map(function(e){return [e.id,e];}));
 
     var _libSt = computeStats(_pEntries);
@@ -1493,12 +1494,17 @@ function _libCatFilterBar() {
   return '<div class="sf-trigger-row" style="margin-bottom:10px;justify-content:flex-start;">'
     + '<button class="sf-icon-btn' + (_libCatFilter ? ' active' : '') + '" id="libTypeTriggerBtn" onclick="openLibTypeFilterPopup()" aria-label="Filter">'
     + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>'
-    + '<span class="sf-icon-btn-label">' + (_libCatFilter ? _libCatLabels[_libCatFilter] : 'Filter') + '</span>'
+    + '<span class="sf-icon-btn-label">' + (_libCatFilter ? _libCatLabels[_libCatFilter] + (_libFormat ? ' · ' + _libFormatLabels[_libFormat] : '') : 'Filter') + '</span>'
     + '</button></div>';
 }
 
 var _libCatLabels = { '':'All Types', tv:'TV Shows', movies:'Movies', anime:'Anime', cartoons:'Cartoons' };
 var _libStagedCat = '';
+// Anime & Cartoons mix series and films — a second "Format" choice
+// (Shows / Movies) appears under Type when one of them is picked.
+var _libFormat = '', _libStagedFormat = '';
+var _libFormatLabels = { '':'All Formats', show:'Shows', movie:'Movies' };
+function _libHasFormats(cat) { return cat === 'anime' || cat === 'cartoons'; }
 
 function _libInjectTypeFilterOverlay() {
   if (document.getElementById('sfTypeFilterOverlay')) return;
@@ -1517,6 +1523,7 @@ function _libInjectTypeFilterOverlay() {
 function openLibTypeFilterPopup() {
   _libInjectTypeFilterOverlay();
   _libStagedCat = _libCatFilter;
+  _libStagedFormat = _libFormat;
   document.getElementById('libTypeFilterBody').innerHTML = _libTypeFilterBodyHTML();
   document.getElementById('sfTypeFilterOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -1529,22 +1536,37 @@ function closeLibTypeFilterPopup() {
   document.body.style.overflow = '';
 }
 
+function _libStageCat(v) {
+  _libStagedCat = v;
+  if (!_libHasFormats(v)) _libStagedFormat = '';
+  document.getElementById('libTypeFilterBody').innerHTML = _libTypeFilterBodyHTML();
+}
+function _libStageFormat(v) {
+  _libStagedFormat = v;
+  document.getElementById('libTypeFilterBody').innerHTML = _libTypeFilterBodyHTML();
+}
 function _libTypeFilterBodyHTML() {
-  var rows = Object.keys(_libCatLabels).map(function(v) {
-    return '<label class="sf-check-row"><input type="checkbox" name="libCatStaged" ' + (_libStagedCat===v?'checked':'') + ' onchange="_libStagedCat=\'' + v + '\';document.getElementById(\'libTypeFilterBody\').innerHTML=_libTypeFilterBodyHTML();">'
-      + '<span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>'
-      + '<span>' + _libCatLabels[v] + '</span></label>';
-  }).join('');
-  return '<div class="sf-section-label">Type</div><div class="sf-check-list">' + rows + '</div>';
+  var row = function(checked, fn, v, label) {
+    return '<label class="sf-check-row"><input type="checkbox" ' + (checked?'checked':'') + ' onchange="' + fn + '(\'' + v + '\')">'
+      + '<span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>' + '<span>' + label + '</span></label>';
+  };
+  var html = '<div class="sf-section-label">Type</div><div class="sf-check-list">'
+    + Object.keys(_libCatLabels).map(function(v){ return row(_libStagedCat===v, '_libStageCat', v, _libCatLabels[v]); }).join('') + '</div>';
+  if (_libHasFormats(_libStagedCat)) {
+    html += '<div class="sf-section-label">Format <span class="sf-section-hint">(' + _libCatLabels[_libStagedCat] + ' has both)</span></div><div class="sf-check-list">'
+      + Object.keys(_libFormatLabels).map(function(v){ return row(_libStagedFormat===v, '_libStageFormat', v, _libFormatLabels[v]); }).join('') + '</div>';
+  }
+  return html;
 }
 
 function _libClearStagedType() {
-  _libStagedCat = '';
+  _libStagedCat = ''; _libStagedFormat = '';
   document.getElementById('libTypeFilterBody').innerHTML = _libTypeFilterBodyHTML();
 }
 
 function _libApplyTypeFilter() {
   _libCatFilter = _libStagedCat;
+  _libFormat = _libHasFormats(_libStagedCat) ? _libStagedFormat : '';
   SF.invalidate(_sfScope()); // actor names depend on which types are shown
   closeLibTypeFilterPopup();
   renderLibrary();
@@ -1554,7 +1576,11 @@ function _libApplyTypeFilter() {
    Only what's specific to this page lives here; the popups, sorting and
    filtering logic are the same code every page uses. */
 function _libBaseEntries(sec){
-  var inCat=function(e){return !_libCatFilter||e.cat===_libCatFilter;};
+  var inCat=function(e){
+    if(_libCatFilter && e.cat!==_libCatFilter) return false;
+    if(_libFormat && (_libFormat==='movie') !== SF.isMovie(e)) return false;   // Anime/Cartoons: Shows vs Movies
+    return true;
+  };
   if(sec==='watching') return _libEntries.filter(function(e){return (e.status==='watching'||e.status==='paused')&&inCat(e);});
   if(sec==='queue') return _libEntries.filter(function(e){return e.status==='queue'&&inCat(e);});
   return _libEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&&inCat(e);});
@@ -1564,7 +1590,7 @@ SF.register('lib', {
   render: function(){ renderLibrary(); },
   sortState: _libSort,
   // Runtime only once movies can be present, Episode Count only once shows can
-  sorts: function(){ return ['alpha','added','release','ratings', _libCatFilter!=='tv'&&'runtime', _libCatFilter!=='movies'&&'episodes']; },
+  sorts: function(){ return ['alpha','added','release','ratings', _libCatFilter!=='tv'&&_libFormat!=='show'&&'runtime', _libCatFilter!=='movies'&&_libFormat!=='movie'&&'episodes']; },
   lengthLabel: function(){ return _libCatFilter==='movies'?'Runtime (minutes)':_libCatFilter==='tv'?'Episode Count':'Runtime / Episode Count'; },
   choiceFilters: function(sec){
     return sec==='completed' ? [{ key:'status', label:'Status', options:[['','All'],['completed','Watched'],['ongoing','To Be Continued']] }] : [];
@@ -1584,7 +1610,7 @@ SF.register('lib', {
 function _sfScope(){ return 'lib'; }
 function _libSortBar(sec){ return SF.bar('lib', sec); }
 function setLibSort(sec,val){ SF.setSort('lib', sec, val); }
-function setLibCat(c){_libCatFilter=c;SF.invalidate(_sfScope());renderLibrary();}
+function setLibCat(c){_libCatFilter=c;_libFormat='';SF.invalidate(_sfScope());renderLibrary();}
 
 /* ── Rating filter popup (shared markup/CSS pattern with category.js) ── */
 var _ratingFilterSection=null;
