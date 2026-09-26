@@ -330,6 +330,11 @@ if (_dlHasSF) {
     choiceFilters: () => _dlIsMss ? [{
       key: 'cat', label: 'Type',
       options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']],
+    }, {
+      key: 'format', label: 'Format',
+      options: [['', 'All Formats'], ['show', 'Shows'], ['movie', 'Movies']],
+      when: ch => ch.cat === 'anime' || ch.cat === 'cartoons',
+      test: (it, v) => (v === 'movie') === (it.media_type === 'movie'),
     }] : [],
     scoreOf: it => it.score,
     scoreLabel: _dlIsMss ? 'MyScreenScore' : 'TMDB Score',
