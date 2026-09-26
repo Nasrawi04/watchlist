@@ -1982,13 +1982,15 @@ async function _notifInvite(ev, listId, accept) {
 
 
 /* ══════════════════════════════════════════
-   In-app notification pop-ups
-   Settings → Notifications → "Notification pop-ups" (ON by default).
+   New-notification alerts (in-app)
+   Settings → Notifications → "New notification alerts" (ON by default).
    When something new arrives while you're using the site:
-     • 1 new  → a small pop-up with that notification (and its buttons)
-     • 2+ new → "You have X new notifications" with a View button
-   When the setting is OFF you only see the count on the bell.
-   Each notification pops up at most once (remembered on this device).
+     • the bell gives a short ring and its badge pops
+     • a slim one-line bar slides up at the bottom of the screen
+       (1 new → what it is · 2+ new → "3 new notifications"),
+       with a View action — then it quietly goes away.
+   When OFF you only see the count on the bell.
+   Each notification alerts at most once (remembered on this device).
 ══════════════════════════════════════════ */
 const _NOTIF_POPUP_KEY = 'mss_notif_popups';          // '0' = off, anything else = on
 const _NOTIF_SEEN_KEY  = 'mss_notif_popped';
@@ -2000,64 +2002,82 @@ function _notifSeenAdd(ids) {
   try { localStorage.setItem(_NOTIF_SEEN_KEY, JSON.stringify(seen.slice(-300))); } catch {}
 }
 
-let _notifPopupTimer = null;
+let _notifSnackTimer = null;
 function _notifMaybePopup() {
   const seen = _notifSeenGet();
   const fresh = _notifItems.filter(n => !n.read_at && !seen.has(n.id));
   if (!fresh.length) return;
-  _notifSeenAdd(fresh.map(n => n.id));                 // never pop the same one twice
+  _notifSeenAdd(fresh.map(n => n.id));                 // never alert the same one twice
   if (!mssNotifPopupsOn()) return;                      // setting off → bell count only
+  _notifRingBell();
   if (location.pathname.endsWith('notifications.html')) return;   // already looking at them
   if (document.getElementById('notifPanel')?.classList.contains('open')) return;
-  _notifShowPopup(fresh);
+  _notifShowSnack(fresh);
 }
 
-function _notifShowPopup(fresh) {
-  let el = document.getElementById('notifToast');
+function _notifRingBell() {
+  document.querySelectorAll('.notif-btn').forEach(b => {
+    b.classList.remove('ringing'); void b.offsetWidth; b.classList.add('ringing');
+    setTimeout(() => b.classList.remove('ringing'), 1200);
+  });
+}
+
+// One short line describing a notification
+function _notifShortText(n) {
+  const who = `<b>${escHTML(n.actor ? (n.actor.display_name || n.actor.username) : 'Someone')}</b>`;
+  const t = n.meta?.title ? `<b>${escHTML(n.meta.title)}</b>` : 'something';
+  const list = n.list ? `“${escHTML(n.list.title)}”` : 'a list';
+  switch (n.type) {
+    case 'friend_request':       return `${who} sent you a friend request`;
+    case 'list_invite':          return `${who} invited you to ${list}`;
+    case 'list_invite_accepted': return `${who} joined ${list}`;
+    case 'friend_started':       return `${who} started watching ${t}`;
+    case 'friend_queued':        return `${who} added ${t} from your library`;
+  }
+  return 'New notification';
+}
+
+function _notifShowSnack(fresh) {
+  let el = document.getElementById('notifSnack');
   if (!el) {
     el = document.createElement('div');
-    el.id = 'notifToast';
+    el.id = 'notifSnack';
     el.setAttribute('role', 'status');
-    el.addEventListener('mouseenter', () => clearTimeout(_notifPopupTimer));
-    el.addEventListener('mouseleave', () => _notifPopupAutoHide(4000));
+    el.setAttribute('aria-live', 'polite');
+    el.addEventListener('mouseenter', () => clearTimeout(_notifSnackTimer));
+    el.addEventListener('mouseleave', () => _notifSnackAutoHide(3500));
     el.addEventListener('click', e => e.stopPropagation());
     document.body.appendChild(el);
   }
-  const close = `<button class="nt-close" onclick="closeNotifPopup()" aria-label="Dismiss">${icon('x', 14)}</button>`;
+  const n = fresh[0];
+  let lead, text;
   if (fresh.length === 1) {
-    el.innerHTML = `<div class="nt-label">New notification</div>${close}${_notifItemHTML(fresh[0])}`;
-    // clicking the body of the single notification also marks it read
-    el.querySelector('.notif-item')?.addEventListener('click', () => _notifMarkRead([fresh[0].id]), true);
+    const a = n.actor;
+    lead = a && safeURL(a.avatar_url) ? `<img src="${safeURL(a.avatar_url)}" alt="">` : escHTML(((a && a.username) || '?')[0].toUpperCase());
+    text = _notifShortText(n);
   } else {
-    el.innerHTML = `${close}<div class="nt-multi">
-        <div class="nt-bell">${icon('bell', 18)}<span>${fresh.length > 99 ? '99+' : fresh.length}</span></div>
-        <div class="nt-multi-text"><b>You have ${fresh.length} new notifications</b>
-          <div>${_notifSummary(fresh)}</div></div>
-      </div>
-      <div class="nt-actions"><button class="notif-act notif-act-yes" onclick="_notifPopupView(event)">View</button>
-        <button class="notif-act" onclick="closeNotifPopup()">Later</button></div>`;
+    lead = icon('bell', 15);
+    text = `<b>${fresh.length > 99 ? '99+' : fresh.length} new notifications</b>`;
   }
-  requestAnimationFrame(() => el.classList.add('show'));
-  _notifPopupAutoHide(fresh.length === 1 && fresh[0].type !== 'friend_started' && fresh[0].type !== 'friend_queued' ? 9000 : 7000);
+  el.innerHTML = `
+    <span class="ns-lead">${lead}</span>
+    <span class="ns-text">${text}</span>
+    <button class="ns-view" onclick="_notifSnackView()">View</button>
+    <button class="ns-close" onclick="closeNotifSnack()" aria-label="Dismiss">${icon('x', 13)}</button>`;
+  el.classList.remove('show'); void el.offsetWidth;
+  el.classList.add('show');
+  _notifSnackAutoHide(6000);
 }
-// "2 friend activity · 1 list invite"
-function _notifSummary(items) {
-  const c = { activity: 0, lists: 0, requests: 0 };
-  items.forEach(n => c[_notifSection(n)]++);
-  const parts = [];
-  if (c.activity) parts.push(`${c.activity} friend activit${c.activity === 1 ? 'y' : 'ies'}`);
-  if (c.lists)    parts.push(`${c.lists} list update${c.lists === 1 ? '' : 's'}`);
-  if (c.requests) parts.push(`${c.requests} friend request${c.requests === 1 ? '' : 's'}`);
-  return parts.join(' · ');
+function _notifSnackAutoHide(ms) { clearTimeout(_notifSnackTimer); _notifSnackTimer = setTimeout(closeNotifSnack, ms); }
+function closeNotifSnack() {
+  clearTimeout(_notifSnackTimer);
+  document.getElementById('notifSnack')?.classList.remove('show');
 }
-function _notifPopupAutoHide(ms) { clearTimeout(_notifPopupTimer); _notifPopupTimer = setTimeout(closeNotifPopup, ms); }
-function closeNotifPopup() {
-  clearTimeout(_notifPopupTimer);
-  document.getElementById('notifToast')?.classList.remove('show');
-}
-function _notifPopupView(ev) {
-  closeNotifPopup();
+function _notifSnackView() {
+  closeNotifSnack();
   const bell = [...document.querySelectorAll('.notif-btn')].find(b => b.offsetParent !== null);
   if (bell) toggleNotifPanel({ stopPropagation() {}, currentTarget: bell });
   else location.href = 'notifications.html';
 }
+// Kept so older calls don't break
+function closeNotifPopup() { closeNotifSnack(); }
