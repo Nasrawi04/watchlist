@@ -1782,6 +1782,7 @@ async function _notifLoad(limit) {
     _notifRenderBadge();
     if (document.getElementById('notifPanel')?.classList.contains('open')) _notifRenderPanel();
     if (typeof renderNotificationsPage === 'function') renderNotificationsPage();
+    _notifMaybePopup();
   } catch (e) { console.warn('Notifications load failed:', e); }
 }
 
@@ -1977,4 +1978,86 @@ async function _notifInvite(ev, listId, accept) {
     await _notifLoad();
     if (accept && typeof loadListsPage === 'function' && location.pathname.endsWith('lists.html')) loadListsPage();
   } catch (e) { btns.forEach(b => b.disabled = false); showToast('Something went wrong — try again.', 'err'); }
+}
+
+
+/* ══════════════════════════════════════════
+   In-app notification pop-ups
+   Settings → Notifications → "Notification pop-ups" (ON by default).
+   When something new arrives while you're using the site:
+     • 1 new  → a small pop-up with that notification (and its buttons)
+     • 2+ new → "You have X new notifications" with a View button
+   When the setting is OFF you only see the count on the bell.
+   Each notification pops up at most once (remembered on this device).
+══════════════════════════════════════════ */
+const _NOTIF_POPUP_KEY = 'mss_notif_popups';          // '0' = off, anything else = on
+const _NOTIF_SEEN_KEY  = 'mss_notif_popped';
+function mssNotifPopupsOn() { try { return localStorage.getItem(_NOTIF_POPUP_KEY) !== '0'; } catch { return true; } }
+function mssSetNotifPopups(on) { try { localStorage.setItem(_NOTIF_POPUP_KEY, on ? '1' : '0'); } catch {} }
+function _notifSeenGet() { try { return new Set(JSON.parse(localStorage.getItem(_NOTIF_SEEN_KEY) || '[]')); } catch { return new Set(); } }
+function _notifSeenAdd(ids) {
+  const seen = [..._notifSeenGet(), ...ids];
+  try { localStorage.setItem(_NOTIF_SEEN_KEY, JSON.stringify(seen.slice(-300))); } catch {}
+}
+
+let _notifPopupTimer = null;
+function _notifMaybePopup() {
+  const seen = _notifSeenGet();
+  const fresh = _notifItems.filter(n => !n.read_at && !seen.has(n.id));
+  if (!fresh.length) return;
+  _notifSeenAdd(fresh.map(n => n.id));                 // never pop the same one twice
+  if (!mssNotifPopupsOn()) return;                      // setting off → bell count only
+  if (location.pathname.endsWith('notifications.html')) return;   // already looking at them
+  if (document.getElementById('notifPanel')?.classList.contains('open')) return;
+  _notifShowPopup(fresh);
+}
+
+function _notifShowPopup(fresh) {
+  let el = document.getElementById('notifToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'notifToast';
+    el.setAttribute('role', 'status');
+    el.addEventListener('mouseenter', () => clearTimeout(_notifPopupTimer));
+    el.addEventListener('mouseleave', () => _notifPopupAutoHide(4000));
+    el.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(el);
+  }
+  const close = `<button class="nt-close" onclick="closeNotifPopup()" aria-label="Dismiss">${icon('x', 14)}</button>`;
+  if (fresh.length === 1) {
+    el.innerHTML = `<div class="nt-label">New notification</div>${close}${_notifItemHTML(fresh[0])}`;
+    // clicking the body of the single notification also marks it read
+    el.querySelector('.notif-item')?.addEventListener('click', () => _notifMarkRead([fresh[0].id]), true);
+  } else {
+    el.innerHTML = `${close}<div class="nt-multi">
+        <div class="nt-bell">${icon('bell', 18)}<span>${fresh.length > 99 ? '99+' : fresh.length}</span></div>
+        <div class="nt-multi-text"><b>You have ${fresh.length} new notifications</b>
+          <div>${_notifSummary(fresh)}</div></div>
+      </div>
+      <div class="nt-actions"><button class="notif-act notif-act-yes" onclick="_notifPopupView(event)">View</button>
+        <button class="notif-act" onclick="closeNotifPopup()">Later</button></div>`;
+  }
+  requestAnimationFrame(() => el.classList.add('show'));
+  _notifPopupAutoHide(fresh.length === 1 && fresh[0].type !== 'friend_started' && fresh[0].type !== 'friend_queued' ? 9000 : 7000);
+}
+// "2 friend activity · 1 list invite"
+function _notifSummary(items) {
+  const c = { activity: 0, lists: 0, requests: 0 };
+  items.forEach(n => c[_notifSection(n)]++);
+  const parts = [];
+  if (c.activity) parts.push(`${c.activity} friend activit${c.activity === 1 ? 'y' : 'ies'}`);
+  if (c.lists)    parts.push(`${c.lists} list update${c.lists === 1 ? '' : 's'}`);
+  if (c.requests) parts.push(`${c.requests} friend request${c.requests === 1 ? '' : 's'}`);
+  return parts.join(' · ');
+}
+function _notifPopupAutoHide(ms) { clearTimeout(_notifPopupTimer); _notifPopupTimer = setTimeout(closeNotifPopup, ms); }
+function closeNotifPopup() {
+  clearTimeout(_notifPopupTimer);
+  document.getElementById('notifToast')?.classList.remove('show');
+}
+function _notifPopupView(ev) {
+  closeNotifPopup();
+  const bell = [...document.querySelectorAll('.notif-btn')].find(b => b.offsetParent !== null);
+  if (bell) toggleNotifPanel({ stopPropagation() {}, currentTarget: bell });
+  else location.href = 'notifications.html';
 }
