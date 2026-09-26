@@ -71,6 +71,7 @@ const ICONS = {
   crown:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 20h14"/></svg>`,
   edit:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`,
   link:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
+  eyeOff:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
   refresh:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>`,
   'refresh-cw': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>`,
   reply:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>`,
@@ -321,6 +322,37 @@ function mssImgError(img) {
     if (getComputedStyle(holder).position === 'static') holder.style.position = 'relative';
     holder.insertAdjacentHTML('beforeend', `<span class="img-fallback">${escHTML(((img.dataset.letter || img.alt || '?')[0] || '?').toUpperCase())}</span>`);
   }
+}
+
+/* ── Spoiler notes ──
+   A note marked as a spoiler (entry.ratings._notes_spoiler) is shown
+   blurred to everyone else, with a "Reveal spoiler" button. The writer
+   always sees their own note normally (with a small Spoiler tag).
+   innerHTML must already be escaped. */
+function mssIsSpoiler(e) { return !!(e && (e.spoiler === true || (e.ratings && e.ratings._notes_spoiler === true))); }
+function mssSpoilerHTML(innerHTML, opts = {}) {
+  return `<div class="spoiler${opts.compact ? ' spoiler-compact' : ''}">
+    <div class="spoiler-text" aria-hidden="true">${innerHTML}</div>
+    <button type="button" class="spoiler-reveal" onclick="mssRevealSpoiler(event, this)">
+      <span class="spoiler-ic">${icon('eyeOff', 15)}</span>
+      <span><b>Spoiler</b><small>Tap to reveal</small></span>
+    </button>
+  </div>`;
+}
+function mssRevealSpoiler(ev, btn) {
+  ev.stopPropagation(); ev.preventDefault();
+  const wrap = btn.closest('.spoiler');
+  wrap.classList.add('revealed');
+  wrap.querySelector('.spoiler-text')?.removeAttribute('aria-hidden');
+}
+function mssSpoilerTag() { return `<span class="spoiler-tag">${icon('eyeOff', 11)} Spoiler</span>`; }
+// The "Mark as spoiler" switch shown under note editors
+function mssSpoilerToggleHTML(id) {
+  return `<label class="spoiler-toggle" for="${id}">
+    <input type="checkbox" id="${id}">
+    <span class="spoiler-toggle-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+    <span class="spoiler-toggle-text"><b>Mark as spoiler</b><small>Others will see it blurred until they choose to reveal it</small></span>
+  </label>`;
 }
 
 /* ── Personal notes word limit (Notes page + title detail page) ── */
