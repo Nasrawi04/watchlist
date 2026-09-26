@@ -22,6 +22,37 @@ function _discFloorScore(score) {
   return (Math.floor(Number(score) * 10) / 10).toFixed(1);
 }
 
+/* ── Official TMDB poster for a title ──
+   Top Rated on MSS is built from users' own entries, so its poster was
+   whatever that entry had (sometimes a custom upload or an odd crop).
+   This looks up the title's official TMDB poster instead, keeping the
+   answer on the device for 30 days so it's only fetched once. */
+const _DISC_POSTER_STORE = 'mss_tmdb_posters_v1';
+const _DISC_POSTER_TTL = 30 * 24 * 60 * 60 * 1000;
+let _discPosterMem = null;
+function _discPosterCache() {
+  if (!_discPosterMem) { try { _discPosterMem = JSON.parse(localStorage.getItem(_DISC_POSTER_STORE) || '{}'); } catch { _discPosterMem = {}; } }
+  return _discPosterMem;
+}
+let _discPosterSaveTimer = null;
+function _discPosterSave() {
+  clearTimeout(_discPosterSaveTimer);
+  _discPosterSaveTimer = setTimeout(() => { try { localStorage.setItem(_DISC_POSTER_STORE, JSON.stringify(_discPosterMem)); } catch {} }, 300);
+}
+async function _discOfficialPoster(type, id) {
+  if (!type || !id) return null;
+  const key = `${type}:${id}`, cache = _discPosterCache(), hit = cache[key];
+  if (hit && Date.now() - hit.t < _DISC_POSTER_TTL) return hit.p ? TMDB_FULL + hit.p : null;
+  try {
+    const res = await tmdbFetch(`${TMDB_BASE}/${type}/${id}?api_key=${TMDB_KEY}&language=en-US`);
+    if (!res.ok) return null;
+    const path = (await res.json()).poster_path || null;
+    cache[key] = { p: path, t: Date.now() };
+    _discPosterSave();
+    return path ? TMDB_FULL + path : null;
+  } catch { return null; }
+}
+
 // TMDB genre ids → the site's genre names (same list the Genre filter
 // uses). TV's combined genres map onto both halves.
 const _DISC_GENRE_NAMES = {
@@ -343,7 +374,11 @@ const DISCOVER_CATEGORIES = [
       const limit = Math.min(pageSize, 500 - offset);
       const { data, error } = await sb.rpc('get_top_rated_myscreenscore', { p_limit: limit, p_offset: offset });
       if (error) { console.error('Top Rated (MyScreenScore) fetch error:', error); return []; }
-      return (data || []).map(r => ({
+      // Linked titles use their official TMDB poster (cached); the entry's
+      // own poster is only a fallback (unlinked titles, or TMDB has none).
+      const official = await Promise.all((data || []).map(r =>
+        r.tmdb_id ? _discOfficialPoster(r.tmdb_type || r.derived_type, r.tmdb_id) : null));
+      return (data || []).map((r, i) => ({
         id: r.tmdb_id,
         // Falls back to derived_type (computed server-side from the
         // entry's own category — movies vs. everything else) whenever
@@ -353,7 +388,7 @@ const DISCOVER_CATEGORIES = [
         // entries) rendered with a missing/wrong type tag instead.
         media_type: r.tmdb_type || r.derived_type,
         title: r.title,
-        poster_url: r.poster_url || null,
+        poster_url: official[i] || r.poster_url || null,
         year: r.year || '',
         score: r.avg_score != null ? Number(r.avg_score) : null,
         // cat/genres come from 018_top_rated_mss_details.sql — used by the
