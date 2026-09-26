@@ -163,7 +163,21 @@ async function quickCreate(payload, userId) {
   };
   const { data, error } = await sb.from('entries').insert(record).select().single();
   if (error) throw error;
+  _notifyQueuedFrom(data);
   return data;
+}
+
+// If this title was added via "Add to Queue" on a friend's profile, tell
+// that friend (see notify_friend_queued in 022 SQL). Fire-and-forget.
+function _notifyQueuedFrom(entry) {
+  try {
+    const src = JSON.parse(sessionStorage.getItem('mssQueuedFrom') || 'null');
+    if (!src || !entry) return;
+    sessionStorage.removeItem('mssQueuedFrom');
+    const fresh = Date.now() - src.t < 30 * 60 * 1000;
+    const same = (src.title || '').trim().toLowerCase() === (entry.title || '').trim().toLowerCase();
+    if (fresh && same) sb.rpc('notify_friend_queued', { p_owner: src.owner, p_entry: src.entry }).then(() => {}, () => {});
+  } catch (_) {}
 }
 
 /* ── Poster upload to Supabase Storage ── */
