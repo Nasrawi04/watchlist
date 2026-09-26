@@ -1153,15 +1153,23 @@ nav {
      columns, season chips, highlights, and actions. */
   #cgPopupHeader { flex-wrap:wrap; padding:16px 16px 0; gap:12px; }
   #cgPopupPoster { width:90px; height:135px; }
-  #cgPopupTitle { font-size:19px; margin-bottom:8px; padding-right:30px; }
-  #cgPopupTags, #cgPopupDateRow, #cgPopupMetaRow { gap:5px; }
+  /* Same mobile pass for every copy of the ratings popup — Library/Profile
+     (prof*), friend profiles (pv*), Watched (cp*) — not just Category. */
+  #cgPopupTitle, #profPopupTitle, #pvPopupTitle, #cpPopupTitle { font-size:19px; margin-bottom:8px; padding-right:30px; }
+  #cgPopupTags, #cgPopupDateRow, #cgPopupMetaRow,
+  #profPopupTags, #profPopupDateRow, #profPopupMetaRow,
+  #pvPopupTags, #pvPopupDateRow, #pvPopupMetaRow,
+  #cpPopupTags, #cpPopupDateRow, #cpPopupMetaRow { gap:5px; }
   #cgPopupTags .w-ep-badge, #cgPopupTags .type-label,
-  #cgPopupDateRow .w-ep-badge, #cgPopupMetaRow .w-ep-badge { font-size:12px; padding:5px 10px; }
+  #cgPopupDateRow .w-ep-badge, #cgPopupMetaRow .w-ep-badge,
+  #profPopupTags .w-ep-badge, #profPopupTags .type-label, #profPopupDateRow .w-ep-badge, #profPopupMetaRow .w-ep-badge,
+  #pvPopupTags .w-ep-badge, #pvPopupTags .type-label, #pvPopupDateRow .w-ep-badge, #pvPopupMetaRow .w-ep-badge,
+  #cpPopupTags .w-ep-badge, #cpPopupTags .type-label, #cpPopupDateRow .w-ep-badge, #cpPopupMetaRow .w-ep-badge { font-size:12px; padding:5px 10px; }
   .cg-close-btn { top:20px; right:16px; }
   /* Order swaps here vs desktop — description sits above the score box
      once everything wraps, instead of the score box appearing first. */
-  #cgPopupDesc { font-size:13px; margin:12px 0 0; }
-  #cgPopupBody { padding:14px 16px 4px; }
+  #cgPopupDesc, #profPopupDesc, #pvPopupDesc, #cpPopupDesc { font-size:13px; margin:12px 0 0; }
+  #cgPopupBody, #profPopupBody, #pvPopupBody, #cpPopupBody { padding:14px 16px 4px; }
   .fd-description { font-size:13px; }
   .fd-cols { flex-direction:column; gap:4px; }
   .fd-col { min-width:0; }
@@ -1185,10 +1193,12 @@ nav {
    earlier media-query/container-query attempt at this exact swap. */
 .cg-desc-block { flex-basis:100%; order:4; }
 .cg-score-box { order:3; width:190px; margin-right:32px; }
-#cgPopupCard.cg-narrow .cg-desc-block { order:3; }
-#cgPopupCard.cg-narrow .cg-score-box { order:4; width:100%; flex-basis:100%; margin-right:0; min-height:110px; padding:32px 14px; margin-top:8px; }
-#cgPopupCard.cg-narrow #cgPopupScoreVal { font-size:36px; gap:8px !important; }
-#cgPopupCard.cg-narrow #cgPopupScoreLbl { font-size:12px; }
+.cg-narrow .cg-desc-block { order:3; }
+.cg-narrow .cg-score-box { order:4; width:100%; flex-basis:100%; margin-right:0; min-height:110px; padding:32px 14px; margin-top:8px; }
+.cg-narrow .cg-score-box [id$="PopupScoreVal"] { font-size:36px !important; gap:8px !important; }
+.cg-narrow .cg-score-box > div > div:first-child { font-size:12px !important; }
+/* Long date badges ("Completed On: …") wrap instead of running off the card */
+[id$="PopupDateRow"] .w-ep-badge, [id$="PopupMetaRow"] .w-ep-badge { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
 
 /* ── Rating filter picker — lets the person sort/filter a section by any
    specific rating (core or bonus) instead of just overall score. A full
