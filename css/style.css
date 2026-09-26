@@ -2484,7 +2484,7 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
    CONFIRM DIALOG
 ════════════════════════════════════════════ */
 .confirm-overlay {
-  position:fixed; inset:0; z-index:950;
+  position:fixed; inset:0; z-index:2100;   /* above every popup, so it always shows on top */
   background:rgba(0,0,0,0.78); backdrop-filter:blur(10px);
   display:none; align-items:center; justify-content:center; padding:20px;
 }
