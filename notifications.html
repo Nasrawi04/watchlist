@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notifications — MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.np-page-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+.np-page-title { font-family:var(--serif); font-size:clamp(28px, 6vw, 44px); font-weight:600; line-height:1.15; margin:0; }
+.np-page-sub { font-size:13.5px; color:var(--text-2); margin-top:4px; }
+.np-page-actions { display:flex; gap:8px; }
+.np-page-btn {
+  display:inline-flex; align-items:center; gap:7px; padding:9px 16px; border-radius:var(--radius-sm); cursor:pointer;
+  font-family:'Manrope',var(--sans); font-size:13px; font-weight:600;
+  background:var(--card); border:1px solid var(--border-2); color:var(--text-2); transition:all .15s;
+}
+.np-page-btn:hover:not(:disabled) { border-color:var(--border-olive); color:var(--text); }
+.np-page-btn.primary { background:var(--olive); border-color:var(--olive); color:#fff; }
+.np-page-btn.primary:hover:not(:disabled) { background:var(--olive-light); border-color:var(--olive-light); }
+.np-page-btn:disabled { opacity:.5; cursor:default; }
+.np-page-tabs .notif-tabs { padding:0 0 12px; margin-bottom:1rem; border-bottom:0.5px solid var(--border); }
+.np-page-tabs .notif-tab { padding:8px 16px; font-size:13px; }
+.np-group-label { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin:1.25rem 0 .5rem; }
+.np-page-list { display:flex; flex-direction:column; gap:8px; }
+.np-page-list .notif-item { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:14px; }
+.np-page-list .notif-item.unread { background:var(--olive-faint); border-color:var(--border-olive); }
+.np-page-list .notif-item.unread::after { top:20px; right:48px; }
+.np-page-list .notif-av { width:44px; height:44px; font-size:17px; }
+.np-page-list .notif-text { font-size:14px; }
+.np-page-list .notif-card { max-width:420px; }
+.np-page-list .notif-card-poster { width:44px; height:66px; }
+.np-page-list .notif-empty { padding:4rem 1rem; }
+@media(max-width:640px) {
+  .np-page-actions { width:100%; }
+  .np-page-btn { flex:1; justify-content:center; padding:9px 10px; font-size:12.5px; }
+  .np-page-list .notif-item { padding:12px; }
+  .np-page-list .notif-av { width:38px; height:38px; font-size:15px; }
+  .np-page-list .notif-text { font-size:13px; }
+}
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+  <div class="np-page-head fade-up">
+    <div>
+      <h1 class="np-page-title">Notifications</h1>
+      <div class="np-page-sub" id="npSub">Friend activity, list invites and friend requests — all in one place.</div>
+    </div>
+    <div class="np-page-actions">
+      <button class="np-page-btn primary" id="npReadAll" onclick="npMarkAllRead()">Mark all read</button>
+      <button class="np-page-btn" id="npClear" onclick="npClearAll()">Clear all</button>
+    </div>
+  </div>
+  <div class="np-page-tabs fade-up fade-up-1" id="npTabs"></div>
+  <div class="np-page-list fade-up fade-up-2" id="npList"><div class="page-loading"><div class="spinner"></div></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script>
+let _npTab = new URLSearchParams(location.search).get('tab') || 'all';
+let _npLoaded = false;
+
+function npSetTab(t) {
+  _npTab = t;
+  const url = new URL(location.href); url.searchParams.set('tab', t); history.replaceState(null, '', url);
+  renderNotificationsPage();
+}
+
+// Groups: New (unread) · Earlier
+function renderNotificationsPage() {
+  if (!_npLoaded) return;
+  document.getElementById('npTabs').innerHTML = _notifTabsHTML(_npTab, 'npSetTab');
+  const items = _notifFiltered(_npTab);
+  const unread = items.filter(n => !n.read_at);
+  const read = items.filter(n => n.read_at);
+  document.getElementById('npReadAll').disabled = !unread.length;
+  document.getElementById('npClear').disabled = !items.length;
+  const list = document.getElementById('npList');
+  if (!items.length) { list.innerHTML = _notifEmptyHTML(_npTab); return; }
+  list.innerHTML =
+    (unread.length ? `<div class="np-group-label">New</div>${unread.map(n => _notifItemHTML(n, { page: true })).join('')}` : '') +
+    (read.length ? `<div class="np-group-label">Earlier</div>${read.map(n => _notifItemHTML(n, { page: true })).join('')}` : '');
+}
+
+async function npMarkAllRead() {
+  await _notifMarkRead(_notifFiltered(_npTab).filter(n => !n.read_at).map(n => n.id));
+  renderNotificationsPage();
+  showToast('All caught up!');
+}
+
+async function npClearAll() {
+  const items = _notifFiltered(_npTab);
+  if (!items.length) return;
+  const label = NOTIF_SECTIONS.find(([k]) => k === _npTab)[1];
+  const ok = await showConfirm({ title: 'Clear notifications?', message: _npTab === 'all' ? 'Delete all of your notifications?' : `Delete all ${label} notifications?`, confirmText: 'Clear', iconName: 'trash' });
+  if (!ok) return;
+  const ids = items.map(n => n.id);
+  _notifItems = _notifItems.filter(n => !ids.includes(n.id));
+  _notifRenderBadge();
+  renderNotificationsPage();
+  try { await sb.from('notifications').delete().in('id', ids); } catch {}
+  showToast('Notifications cleared.');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async () => {
+    await _notifLoad(200);
+    _npLoaded = true;
+    renderNotificationsPage();
+  });
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>
