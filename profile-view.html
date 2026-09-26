@@ -1041,7 +1041,8 @@ function _pvBuildExpansion(e) {
   if (favChips || lowChips) html += '<div class="fd-section-hd" style="margin-top:16px;">Highlights</div>';
   if (favChips) html += '<div class="fav-chips" style="margin-top:6px;">'+favChips+'</div>';
   if (lowChips) html += '<div class="fav-chips" style="margin-top:6px;">'+lowChips+'</div>';
-  if (e.notes) html += '<div class="fd-section-hd" style="margin-top:16px;">Notes</div><div class="fd-notes" style="margin-top:0;padding-top:0;border-top:none;">"'+esc(_trimNotes(e.notes))+'"</div>';
+  if (e.notes) { var _nt = '<div class="fd-notes" style="margin-top:0;padding-top:0;border-top:none;">"'+esc(e.notes.trim())+'"</div>';
+    html += '<div class="fd-section-hd" style="margin-top:16px;">Notes</div>' + (mssIsSpoiler(e) ? mssSpoilerHTML(_nt, { compact: true }) : _nt); }
   return html;
 }
 
@@ -1652,7 +1653,7 @@ function renderPvNotes() {
       + posterEl
       + '<div class="note-body"><div class="note-title">'+esc(e.title)+'</div>'
       + '<div class="note-tags">'+genreHTML(e.genres, 3)+(date?' <span style="font-size:10px;color:var(--text-3)">'+date+'</span>':'')+'</div>'
-      + '<div class="note-text">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div></div>'
+      + (mssIsSpoiler(e) ? mssSpoilerHTML('<div class="note-text">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>', { compact: true }) : '<div class="note-text">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>') + '</div>'
       + (score ? '<div class="note-score" style="color:var(--olive-light)">'+score+'</div>' : '')
       + '</div>';
   }).join('');
@@ -1844,7 +1845,7 @@ function renderPvLibrary() {
         +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):'')+'</div>'
         +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==="function"&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
         +'<div class="fv-rank-meta">'+getTypeBadge(e,'friend')+'</div>'
-        +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
+        +(e.notes?(mssIsSpoiler(e)?'<div style="margin-top:8px;">'+mssSpoilerTag()+'</div>':'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>'):'')
         +renderFavChips(e.ratings,e.cat)
         +'</div><div class="fv-rank-score">'+(sc!=null?'★ '+sc:'—')+'</div></div>'
         +_libCcBtn('pv',e.id)
@@ -1875,7 +1876,7 @@ function pvOpenNote(id) {
     + '<div class="note-popup-meta">'+(CAT_META[e.cat]?.label||'')+(date?' · '+date:'')+(score?'<span class="note-popup-score">'+score+' / 10</span>':'')+'</div>'
     + '<hr class="note-popup-divider">'
     + '<div class="note-popup-label">Personal Note</div>'
-    + '<div class="note-popup-text">&ldquo;'+_trimNotes(e.notes)+'&rdquo;</div>'
+    + (mssIsSpoiler(e) ? mssSpoilerHTML('<div class="note-popup-text">&ldquo;'+esc(e.notes.trim())+'&rdquo;</div>') : '<div class="note-popup-text">&ldquo;'+esc(e.notes.trim())+'&rdquo;</div>')
     + '</div>';
   document.getElementById('pvNotePopup').classList.add('open');
 }
@@ -2301,7 +2302,8 @@ function openNotePopup2(id) {
   document.getElementById('notePopup2Title').textContent = e.title;
   document.getElementById('notePopup2Tags').innerHTML = genreHTML(e.genres||[]) + (date?'<span class="note-date">'+date+'</span>':'');
   document.getElementById('notePopup2Date').innerHTML = '';
-  document.getElementById('notePopup2Text').innerHTML = '&ldquo;' + esc(_trimNotes(e.notes||'')) + '&rdquo;';
+  var _q = '&ldquo;' + esc((e.notes||'').trim()) + '&rdquo;';
+  document.getElementById('notePopup2Text').innerHTML = mssIsSpoiler(e) ? mssSpoilerHTML(_q) : _q;
   document.getElementById('notePopup2Edit').style.display = 'none';
   document.getElementById('notePopup2').classList.add('open');
   document.body.style.overflow = 'hidden';
