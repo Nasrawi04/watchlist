@@ -1749,8 +1749,26 @@ function _notifInit(user) {
   if (!user || _notifUser) return;
   _notifUser = user;
   _notifLoad();
+  _notifLive(user);
+  // Safety net if the live connection drops (and when coming back to the tab)
   setInterval(() => _notifLoad(), 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) _notifLoad(); });
+}
+
+/* Live updates: Supabase Realtime pushes each new notification row the
+   moment it's created (needs 026_notifications_realtime.sql), so the bell,
+   sheet and alert update without refreshing. RLS still applies — you only
+   ever receive your own rows. */
+let _notifLiveTimer = null;
+function _notifLive(user) {
+  if (!sb || typeof sb.channel !== 'function') return;
+  const reload = () => { clearTimeout(_notifLiveTimer); _notifLiveTimer = setTimeout(() => _notifLoad(), 300); };
+  try {
+    sb.channel('mss-notif-' + user.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, reload)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, reload)
+      .subscribe();
+  } catch (e) { console.warn('Live notifications unavailable:', e); }
 }
 
 let _notifLimit = 60;
