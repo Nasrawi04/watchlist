@@ -706,6 +706,17 @@ let _listsOrderSort = 'default';
 
 let _listsEntryMap = {};
 let _tmdbItemCache = {}; // 'tmdb:movie:123' -> resolved {id, title, poster_url, tmdb_id, tmdb_type, year}
+// Kept on the device for 14 days so lists with Discover titles show
+// their posters instantly on the next visit instead of re-asking TMDB.
+const _TMDB_ITEM_STORE = 'mss_tmdb_items_v1';
+try {
+  const saved = JSON.parse(localStorage.getItem(_TMDB_ITEM_STORE) || '{}');
+  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  Object.entries(saved).forEach(([k, v]) => { if (v && v._t > cutoff) _tmdbItemCache[k] = v; });
+} catch {}
+function _saveTmdbItemCache() {
+  try { localStorage.setItem(_TMDB_ITEM_STORE, JSON.stringify(_tmdbItemCache)); } catch {}
+}
 
 // List items can be either a personal entry's UUID (existing behavior)
 // or a bare "tmdb:movie:123" / "tmdb:tv:456" reference for something
@@ -724,6 +735,7 @@ async function _hydrateTmdbItems(allLists) {
   (allLists || []).forEach(l => (l.items || []).forEach(id => {
     if (typeof id === 'string' && id.startsWith('tmdb:') && !_tmdbItemCache[id]) toFetch.add(id);
   }));
+  if (!toFetch.size) return false;
   await Promise.all([...toFetch].map(async pseudoId => {
     const [, type, tmdbId] = pseudoId.split(':');
     try {
@@ -739,9 +751,12 @@ async function _hydrateTmdbItems(allLists) {
         year: (dateStr || '').split('-')[0],
         genres: (d.genres || []).map(g => g.name),
         cat: type === 'movie' ? 'movies' : 'tv',
+        _t: Date.now(),
       };
     } catch (e) { console.error('Hydrate TMDB item error:', pseudoId, e); }
   }));
+  _saveTmdbItemCache();
+  return true;
 }
 let _listsMode = 'personal';
 let _socialListsSort = 'popular';
@@ -788,6 +803,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+/* Personal loads first and shows as soon as YOUR lists + entries arrive.
+   Shared lists, other people's entries and titles added from Discover
+   (TMDB lookups — cached on the device) fill in right after, each with a
+   quick re-render. Community data is fetched quietly in the background so
+   switching tabs is instant. */
 async function loadListsPage() {
   const [entries, lists] = await Promise.all([
     getEntries(_listsUser.id),
@@ -795,21 +815,26 @@ async function loadListsPage() {
   ]);
   _listsEntries = entries || [];
   _listsAll = lists || [];
-  await _loadCollabData();
   _listsEntryMap = Object.fromEntries(_listsEntries.map(e => [e.id, e]));
-  // Lists imported before v560 can still hold another user's entry ids —
-  // load those too so the imported list isn't shown with missing items.
+  if (_listsMode === 'personal') renderListsPage();            // ← first paint
+
+  _ensureListSortOrder().catch(() => {});                       // one-off backfill, no need to wait
+  await _loadCollabData();
+  // Items that aren't in my library: shared lists' entries, older imports
   const foreignIds = [...new Set(_listsAll.flatMap(l => l.items || []))]
     .filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')) && !_listsEntryMap[id]);
   if (foreignIds.length) {
     const { data: foreignRows } = await sb.from('entries').select('*').in('id', foreignIds);
     (foreignRows || []).forEach(e => { _listsEntryMap[e.id] = e; });
   }
-  await _hydrateTmdbItems(_listsAll);
+  if (_listsMode === 'personal') renderListsPage();
+  if (await _hydrateTmdbItems(_listsAll) && _listsMode === 'personal') renderListsPage();
 
-  await _ensureListSortOrder();
-  renderListsPage();
+  _mssIdle(() => _fetchSocialLists());                         // warm up Community
 }
+
+// Runs a task once the browser is idle (or after a short delay)
+function _mssIdle(fn) { ('requestIdleCallback' in window) ? requestIdleCallback(fn, { timeout: 2500 }) : setTimeout(fn, 1200); }
 
 // Custom lists (cat='custom') are already fetched ordered by created_at, so
 // that's a stable baseline. Lists with a real sort_order move to that
@@ -1154,6 +1179,18 @@ async function leaveSharedList(listId) {
     showToast('You left the list.');
   } catch (e) { showToast('Could not leave — try again.', 'err'); console.error(e); }
 }
+
+/* Live: when someone accepts or declines one of my invites (their
+   notification arrives in real time), refresh collaborators without a
+   reload — the card, popup and invite picker all update. */
+document.addEventListener('mss:notifications', async ev => {
+  const relevant = (ev.detail.arrived || []).some(n => n.type === 'list_invite_accepted' || n.type === 'list_invite_declined');
+  if (!relevant || !_listsUser) return;
+  await _loadCollabData();
+  renderListsPage();
+  if (document.getElementById('collabOverlay')?.classList.contains('open')) _renderCollabPicker();
+  if (_slPopupListId && document.getElementById('slPopupOverlay')?.style.display === 'flex') _renderListPopup();
+});
 
 function toggleListsReorder() {
   if (!_listsReorder) {
@@ -1730,41 +1767,42 @@ function _resolveSocialItem(id) {
 }
 let _listsFilterMode = null; // { type: 'user'|'item', label, ... }
 
-async function loadSocialLists() {
-  const wrap = document.getElementById('listsPageContent');
-  wrap.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
-  document.getElementById('listsPageStats').innerHTML = '';  // filled once the lists load
-  document.getElementById('listsPageSub').textContent = 'Explore collections from the community and discover what others are watching.';
-  try {
+// Fetches Community data once (also used to prefetch in the background);
+// TMDB posters for Discover-added titles fill in afterwards.
+let _socialListsPromise = null, _socialListsCache = null;
+function _fetchSocialLists(force) {
+  if (_socialListsPromise && !force) return _socialListsPromise;
+  _socialListsPromise = (async () => {
     const { data, error } = await sb.rpc('get_social_lists', { p_limit: 100 });
     if (error) throw error;
-    _socialListsRaw = data || [];
+    const lists = data || [];
+    // Other users' entries for the poster previews (Discover items are hydrated separately)
+    const entryItemIds = [...new Set(lists.flatMap(l => l.items || []))].filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')));
+    const [entryRes, reactRes] = await Promise.all([
+      entryItemIds.length ? sb.from('entries').select('*').in('id', entryItemIds) : { data: [] },
+      (_listsUser && lists.length) ? sb.from('list_reactions').select('list_id, is_like').eq('user_id', _listsUser.id).in('list_id', lists.map(l => l.id)) : { data: [] },
+    ]);
+    _socialEntryMap = {};
+    (entryRes.data || []).forEach(e => { _socialEntryMap[e.id] = e; });
+    _socialListsMyReactions = {};
+    (reactRes.data || []).forEach(r => { _socialListsMyReactions[r.list_id] = r.is_like ? 'like' : 'dislike'; });
+    _socialListsCache = lists;
+    _hydrateTmdbItems(lists).then(changed => { if (changed && _listsMode === 'social') renderSocialLists(); });
+    return lists;
+  })().catch(err => { _socialListsPromise = null; throw err; });
+  return _socialListsPromise;
+}
 
-    // Every list's item ids might belong to a DIFFERENT user than the
-    // viewer — build a shared entry map covering all of them, not just
-    // the viewer's own entries, or poster previews for other users'
-    // lists would silently come up empty. Items added straight from
-    // Discover (tmdb:movie:123 style, no personal entry at all) aren't
-    // valid UUIDs, so they're excluded here and hydrated separately.
-    const allItemIds = [...new Set(_socialListsRaw.flatMap(l => l.items || []))];
-    const entryItemIds = allItemIds.filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')));
-    if (entryItemIds.length) {
-      const { data: entryRows } = await sb.from('entries').select('*').in('id', entryItemIds);
-      _socialEntryMap = {};
-      (entryRows || []).forEach(e => { _socialEntryMap[e.id] = e; });
-    }
-    await _hydrateTmdbItems(_socialListsRaw);
-
-    if (_listsUser && _socialListsRaw.length) {
-      const listIds = _socialListsRaw.map(l => l.id);
-      const { data: myReactions } = await sb.from('list_reactions')
-        .select('list_id, is_like')
-        .eq('user_id', _listsUser.id)
-        .in('list_id', listIds);
-      _socialListsMyReactions = {};
-      (myReactions || []).forEach(r => { _socialListsMyReactions[r.list_id] = r.is_like ? 'like' : 'dislike'; });
-    }
-    renderSocialLists();
+async function loadSocialLists() {
+  const wrap = document.getElementById('listsPageContent');
+  document.getElementById('listsPageSub').textContent = 'Explore collections from the community and discover what others are watching.';
+  if (!_socialListsCache) {                                  // not prefetched yet
+    wrap.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
+    document.getElementById('listsPageStats').innerHTML = '';
+  }
+  try {
+    _socialListsRaw = await _fetchSocialLists();
+    if (_listsMode === 'social') renderSocialLists();
   } catch (err) {
     console.error('Load social lists error:', err);
     wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load social lists right now.</div>`;
