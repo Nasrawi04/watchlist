@@ -873,6 +873,7 @@
             <div class="field-label">Personal Notes</div>
             <textarea class="field-input" id="dNotes" placeholder="Your thoughts…" oninput="_notesUpdateWordCount()"></textarea>
             <div class="list-desc-count" id="dNotesCount">0 / 500 words</div>
+            <div id="dNotesSpoilerWrap"></div>
           </div>
 
           <div class="field-group" id="favSection" style="margin-bottom:0;">
@@ -2064,6 +2065,8 @@ document.addEventListener('DOMContentLoaded', () => {
       updateRuntimeDisplay();
     }
     document.getElementById('dNotes').value            = e?.notes         || '';
+    document.getElementById('dNotesSpoilerWrap').innerHTML = mssSpoilerToggleHTML('dNotesSpoiler');
+    document.getElementById('dNotesSpoiler').checked = mssIsSpoiler(e);
     _notesUpdateWordCount();
     _notesGuardWordLimit();
     // Rewatch count
@@ -2386,6 +2389,8 @@ async function doSave() {
   ratingsWithType._animEnabled = _animEnabled;
 
   // Store favorites
+  // Note marked as a spoiler → shown blurred to other people
+  ratingsWithType._notes_spoiler = !!document.getElementById('dNotesSpoiler')?.checked && !!document.getElementById('dNotes').value.trim();
   ratingsWithType._favorites = {
     character: document.getElementById('favCharacter')?.value?.trim() || '',
     episode:   document.getElementById('favEpisode')?.value?.trim()   || '',
