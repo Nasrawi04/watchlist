@@ -1741,7 +1741,7 @@ const NOTIF_SECTIONS = [
 ];
 function _notifSection(n) {
   if (n.type === 'friend_request') return 'requests';
-  if (n.type === 'list_invite' || n.type === 'list_invite_accepted') return 'lists';
+  if (n.type === 'list_invite' || n.type === 'list_invite_accepted' || n.type === 'list_invite_declined') return 'lists';
   return 'activity';
 }
 
@@ -1857,6 +1857,9 @@ function _notifItemHTML(n, opts = {}) {
   } else if (n.type === 'list_invite_accepted') {
     text = `${who} joined your list ${title}`; icon2 = 'layers';
     href = n.list ? `list-view.html?list=${encodeURIComponent(n.list_id)}` : '';
+  } else if (n.type === 'list_invite_declined') {
+    text = `${who} declined your invite to ${title}`; icon2 = 'layers';
+    href = n.list ? `list-view.html?list=${encodeURIComponent(n.list_id)}` : '';
   } else if (n.type === 'friend_started') {
     text = `${who} started watching ${_notifKind(n.meta)}`; icon2 = 'play';
     extra = _notifTitleCard(n.meta);
@@ -1890,19 +1893,29 @@ function _notifEmptyHTML(tab) {
   return `<div class="notif-empty">${icon('bell', 26)}<div>${msg}</div></div>`;
 }
 
+// The bell opens a sheet that slides in from the right edge (full height,
+// full width on phones) — part of the page chrome, not a floating pop-up.
 function _notifEnsurePanel() {
   let el = document.getElementById('notifPanel');
   if (el) return el;
-  el = document.createElement('div');
+  const scrim = document.createElement('div');
+  scrim.id = 'notifScrim';
+  scrim.addEventListener('click', () => closeNotifPanel());
+  el = document.createElement('aside');
   el.id = 'notifPanel';
-  el.innerHTML = `<div class="notif-head"><div class="notif-title">Notifications</div>
-      <button class="notif-close" onclick="closeNotifPanel()" aria-label="Close">${icon('x', 16)}</button></div>
+  el.setAttribute('aria-label', 'Notifications');
+  el.innerHTML = `<div class="notif-head">
+      <div class="notif-title">Notifications</div>
+      <div class="notif-head-actions">
+        <a class="notif-head-link" href="notifications.html">See all</a>
+        <button class="notif-close" onclick="closeNotifPanel()" aria-label="Close">${icon('x', 18)}</button>
+      </div>
+    </div>
     <div id="notifTabsWrap"></div>
-    <div class="notif-list" id="notifList"></div>
-    <a class="notif-foot" href="notifications.html">See all notifications</a>`;
-  el.addEventListener('click', e => e.stopPropagation());
+    <div class="notif-list" id="notifList"></div>`;
+  document.body.appendChild(scrim);
   document.body.appendChild(el);
-  document.addEventListener('click', () => closeNotifPanel());
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNotifPanel(); });
   return el;
 }
 function _notifSetTab(t) { _notifTab = t; _notifRenderPanel(); }
@@ -1925,22 +1938,22 @@ async function _notifMarkRead(ids) {
 async function toggleNotifPanel(ev) {
   ev?.stopPropagation();
   if (location.pathname.endsWith('notifications.html')) return;   // already on the full page
+  _notifPeekHide();
   const el = _notifEnsurePanel();
   if (el.classList.contains('open')) { closeNotifPanel(); return; }
-  const btn = ev?.currentTarget || document.querySelector('.notif-btn');
-  const r = btn.getBoundingClientRect();
-  el.style.top = (r.bottom + 10) + 'px';
-  const w = Math.min(400, window.innerWidth - 20);
-  el.style.right = Math.max(10, Math.min(window.innerWidth - r.right - 8, window.innerWidth - w - 10)) + 'px';
   _notifRenderPanel();
   el.classList.add('open');
-  // Opening the panel = seen (the highlight stays until it's closed)
+  document.getElementById('notifScrim').classList.add('open');
+  document.body.classList.add('notif-sheet-open');
+  // Opening the sheet = seen (the highlight stays until it's closed)
   _notifMarkRead(_notifItems.filter(n => !n.read_at).map(n => n.id));
 }
 function closeNotifPanel() {
   const el = document.getElementById('notifPanel');
   if (!el || !el.classList.contains('open')) return;
   el.classList.remove('open');
+  document.getElementById('notifScrim')?.classList.remove('open');
+  document.body.classList.remove('notif-sheet-open');
   el.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
 }
 
@@ -1984,12 +1997,11 @@ async function _notifInvite(ev, listId, accept) {
 /* ══════════════════════════════════════════
    New-notification alerts (in-app)
    Settings → Notifications → "New notification alerts" (ON by default).
-   When something new arrives while you're using the site:
-     • the bell gives a short ring and its badge pops
-     • a slim one-line bar slides up at the bottom of the screen
-       (1 new → what it is · 2+ new → "3 new notifications"),
-       with a View action — then it quietly goes away.
-   When OFF you only see the count on the bell.
+   When something new arrives while you're using the site, the bell rings
+   and a slim strip slides out of it, right there in the top bar:
+     1 new  → avatar + what happened      2+ new → "3 new notifications"
+   Tapping the strip opens the notifications sheet; it tucks back into
+   the bell after a few seconds. OFF = just the count on the bell.
    Each notification alerts at most once (remembered on this device).
 ══════════════════════════════════════════ */
 const _NOTIF_POPUP_KEY = 'mss_notif_popups';          // '0' = off, anything else = on
@@ -2002,7 +2014,6 @@ function _notifSeenAdd(ids) {
   try { localStorage.setItem(_NOTIF_SEEN_KEY, JSON.stringify(seen.slice(-300))); } catch {}
 }
 
-let _notifSnackTimer = null;
 function _notifMaybePopup() {
   const seen = _notifSeenGet();
   const fresh = _notifItems.filter(n => !n.read_at && !seen.has(n.id));
@@ -2010,9 +2021,9 @@ function _notifMaybePopup() {
   _notifSeenAdd(fresh.map(n => n.id));                 // never alert the same one twice
   if (!mssNotifPopupsOn()) return;                      // setting off → bell count only
   _notifRingBell();
-  if (location.pathname.endsWith('notifications.html')) return;   // already looking at them
+  if (location.pathname.endsWith('notifications.html')) return;
   if (document.getElementById('notifPanel')?.classList.contains('open')) return;
-  _notifShowSnack(fresh);
+  _notifPeek(fresh);
 }
 
 function _notifRingBell() {
@@ -2031,53 +2042,46 @@ function _notifShortText(n) {
     case 'friend_request':       return `${who} sent you a friend request`;
     case 'list_invite':          return `${who} invited you to ${list}`;
     case 'list_invite_accepted': return `${who} joined ${list}`;
+    case 'list_invite_declined': return `${who} declined your invite to ${list}`;
     case 'friend_started':       return `${who} started watching ${t}`;
     case 'friend_queued':        return `${who} added ${t} from your library`;
   }
   return 'New notification';
 }
 
-function _notifShowSnack(fresh) {
-  let el = document.getElementById('notifSnack');
+let _notifPeekTimer = null;
+function _notifPeek(fresh) {
+  const bell = [...document.querySelectorAll('.notif-btn')].find(b => b.offsetParent !== null);
+  if (!bell) return;
+  let el = document.getElementById('notifPeek');
   if (!el) {
-    el = document.createElement('div');
-    el.id = 'notifSnack';
-    el.setAttribute('role', 'status');
+    el = document.createElement('button');
+    el.id = 'notifPeek';
+    el.type = 'button';
     el.setAttribute('aria-live', 'polite');
-    el.addEventListener('mouseenter', () => clearTimeout(_notifSnackTimer));
-    el.addEventListener('mouseleave', () => _notifSnackAutoHide(3500));
-    el.addEventListener('click', e => e.stopPropagation());
+    el.addEventListener('click', e => { e.stopPropagation(); toggleNotifPanel(); });
+    el.addEventListener('mouseenter', () => clearTimeout(_notifPeekTimer));
+    el.addEventListener('mouseleave', () => _notifPeekLater(3000));
     document.body.appendChild(el);
   }
-  const n = fresh[0];
-  let lead, text;
-  if (fresh.length === 1) {
-    const a = n.actor;
-    lead = a && safeURL(a.avatar_url) ? `<img src="${safeURL(a.avatar_url)}" alt="">` : escHTML(((a && a.username) || '?')[0].toUpperCase());
-    text = _notifShortText(n);
-  } else {
-    lead = icon('bell', 15);
-    text = `<b>${fresh.length > 99 ? '99+' : fresh.length} new notifications</b>`;
-  }
-  el.innerHTML = `
-    <span class="ns-lead">${lead}</span>
-    <span class="ns-text">${text}</span>
-    <button class="ns-view" onclick="_notifSnackView()">View</button>
-    <button class="ns-close" onclick="closeNotifSnack()" aria-label="Dismiss">${icon('x', 13)}</button>`;
-  el.classList.remove('show'); void el.offsetWidth;
-  el.classList.add('show');
-  _notifSnackAutoHide(6000);
+  const n = fresh[0], a = n.actor;
+  const lead = fresh.length === 1
+    ? (a && safeURL(a.avatar_url) ? `<img src="${safeURL(a.avatar_url)}" alt="">` : escHTML(((a && a.username) || '?')[0].toUpperCase()))
+    : `<b>${fresh.length > 99 ? '99+' : fresh.length}</b>`;
+  const text = fresh.length === 1 ? _notifShortText(n) : `<b>${fresh.length} new notifications</b>`;
+  el.innerHTML = `<span class="np-lead">${lead}</span><span class="np-text">${text}</span>`;
+  // Anchor: vertically centred on the bell, its right edge tucked under the bell
+  const r = bell.getBoundingClientRect();
+  el.style.top = (r.top + r.height / 2) + 'px';
+  el.style.right = Math.max(8, window.innerWidth - r.left - r.width / 2) + 'px';
+  el.style.setProperty('--peek-max', Math.max(180, Math.min(360, r.left - 12)) + 'px');
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  bell.classList.add('peeking');
+  _notifPeekLater(5500);
 }
-function _notifSnackAutoHide(ms) { clearTimeout(_notifSnackTimer); _notifSnackTimer = setTimeout(closeNotifSnack, ms); }
-function closeNotifSnack() {
-  clearTimeout(_notifSnackTimer);
-  document.getElementById('notifSnack')?.classList.remove('show');
+function _notifPeekLater(ms) { clearTimeout(_notifPeekTimer); _notifPeekTimer = setTimeout(_notifPeekHide, ms); }
+function _notifPeekHide() {
+  clearTimeout(_notifPeekTimer);
+  document.getElementById('notifPeek')?.classList.remove('show');
+  document.querySelectorAll('.notif-btn.peeking').forEach(b => b.classList.remove('peeking'));
 }
-function _notifSnackView() {
-  closeNotifSnack();
-  const bell = [...document.querySelectorAll('.notif-btn')].find(b => b.offsetParent !== null);
-  if (bell) toggleNotifPanel({ stopPropagation() {}, currentTarget: bell });
-  else location.href = 'notifications.html';
-}
-// Kept so older calls don't break
-function closeNotifPopup() { closeNotifSnack(); }
