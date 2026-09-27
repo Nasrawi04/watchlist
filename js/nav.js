@@ -2145,3 +2145,16 @@ function _notifPeekHide() {
   clearTimeout(_notifPeekTimer);
   document.getElementById('notifPeek')?.classList.remove('show');
 }
+
+/* ── Always show the newest version after a deploy ──
+   When a new service worker takes over (every sw.js bump), reload once so
+   the page you're on comes from the new version instead of the old cache.
+   Skipped on a first-ever visit (no previous worker) to avoid a pointless reload. */
+if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  let _mssSwReloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_mssSwReloaded) return;
+    _mssSwReloaded = true;
+    location.reload();
+  });
+}
