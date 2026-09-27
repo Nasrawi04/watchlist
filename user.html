@@ -226,7 +226,7 @@ function renderProfile(profile, entries) {
   // 'ongoing' = finished what's out, still airing — counts as watched
   const done     = entries.filter(e => e.status === 'completed' || e.status === 'ongoing');
   const watching = entries.filter(e => e.status === 'watching' || e.status === 'paused').length;
-  const queued   = entries.filter(e => e.status === 'queue').length;
+  const queued   = entries.filter(e => e.status === 'queue' || e.status === 'up_next').length;
   const rated    = done.filter(e => _pubScore(e) != null);
   const avg      = rated.length ? (rated.reduce((s, e) => s + _pubScore(e), 0) / rated.length).toFixed(2) : '—';
 
@@ -255,7 +255,7 @@ function renderProfile(profile, entries) {
         <div class="pub-stats-row">
           <div class="pub-stat"><div class="pub-stat-num">${done.length}</div><div class="pub-stat-label">Watched</div></div>
           <div class="pub-stat"><div class="pub-stat-num">${watching}</div><div class="pub-stat-label">Watching</div></div>
-          <div class="pub-stat"><div class="pub-stat-num">${queued}</div><div class="pub-stat-label">Queue</div></div>
+          <div class="pub-stat"><div class="pub-stat-num">${queued}</div><div class="pub-stat-label">Watchlist</div></div>
           <div class="pub-stat"><div class="pub-stat-num">${avg}</div><div class="pub-stat-label">Avg Score</div></div>
         </div>
       </div>
