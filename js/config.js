@@ -351,7 +351,7 @@ function mssSpoilerToggleHTML(id) {
   return `<label class="spoiler-toggle" for="${id}">
     <input type="checkbox" id="${id}">
     <span class="spoiler-toggle-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-    <span class="spoiler-toggle-text"><b>Mark as spoiler</b><small>Others will see it blurred until they choose to reveal it</small></span>
+    <span class="spoiler-toggle-text"><b>Mark as spoiler</b></span>
   </label>`;
 }
 
