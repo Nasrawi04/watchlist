@@ -493,7 +493,10 @@ function cpOpenPopup(id) {
     ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Completed On: ${completedDateStr}</span>`
     : '';
 
-  document.getElementById('cpPopupMetaRow').innerHTML = _entryMetaBadge(e);
+  // Runtime / episode count already appear in the popup's own sections —
+  // only the "left off" position for To Be Continued titles gets a tag.
+  document.getElementById('cpPopupMetaRow').innerHTML = (e.status === 'ongoing' && e.season != null && e.episode != null && !(e.cat === 'movies' || e.ratings?._media_type === 'movie'))
+    ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Left off: S${e.season} · E${e.episode}</span>` : '';
 
   const descEl = document.getElementById('cpPopupDesc');
   if (descEl) {
