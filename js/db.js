@@ -423,7 +423,7 @@ async function getTmdbLibraryStats(tmdbId, tmdbType) {
   const count = s => rows.filter(r => r.status === s).length;
   return {
     total:     rows.length,
-    queue:     count('queue'),
+    queue:     count('queue') + count('up_next'),
     watching:  count('watching') + count('paused'),
     completed: count('completed') + count('ongoing'),
   };
@@ -516,7 +516,7 @@ async function setPinnedFriend(userId, friendId) {
 function computeStats(entries) {
   const completed = entries.filter(e => e.status === 'completed' || e.status === 'ongoing');
   const watching  = entries.filter(e => e.status === 'watching');
-  const queue     = entries.filter(e => e.status === 'queue');
+  const queue     = entries.filter(e => e.status === 'queue' || e.status === 'up_next');   // Up Next = planned, part of the watchlist
   const rated     = completed.filter(e => liveScore(e) != null);
   const avgScore  = rated.length
     ? (rated.reduce((s, e) => s + Number(liveScore(e)), 0) / rated.length).toFixed(2)
