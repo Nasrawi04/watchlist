@@ -1377,22 +1377,19 @@ function renderListsPage() {
   const customLists = _listsAll.filter(l => l.cat === 'custom');
   const totalLists = customLists.length;
 
+  // Stats: lists, distinct titles across them, how many are ranked, and
+  // how many you collaborate on (shared with friends or shared with you)
   const uniqueItemIds = new Set();
-  let largest = 0;
-  let imported = 0;
-  customLists.forEach(list => {
-    const items = list.items || [];
-    items.forEach(id => uniqueItemIds.add(id));
-    if (items.length > largest) largest = items.length;
-    if (list.forked_from) imported++;
-  });
+  customLists.forEach(list => (list.items || []).forEach(id => uniqueItemIds.add(id)));
+  const rankedCount = customLists.filter(l => l.ranked === true).length;
+  const collabCount = customLists.filter(l => l._collab || (_listsCollab[l.id] || []).some(c => c.status === 'accepted')).length;
 
   const statsEl = document.getElementById('listsPageStats');
   statsEl.innerHTML = `
-    <div class="page-stat"><div class="page-stat-num">${totalLists}</div><div class="page-stat-label">Total Lists</div></div>
-    <div class="page-stat"><div class="page-stat-num">${uniqueItemIds.size}</div><div class="page-stat-label">Items Organized</div></div>
-    <div class="page-stat"><div class="page-stat-num">${largest}</div><div class="page-stat-label">Largest List</div></div>
-    <div class="page-stat"><div class="page-stat-num">${imported}</div><div class="page-stat-label">Imported</div></div>`;
+    <div class="page-stat"><div class="page-stat-num">${totalLists}</div><div class="page-stat-label">Lists</div></div>
+    <div class="page-stat"><div class="page-stat-num">${uniqueItemIds.size}</div><div class="page-stat-label">Titles Saved</div></div>
+    <div class="page-stat"><div class="page-stat-num">${rankedCount}</div><div class="page-stat-label">Ranked Lists</div></div>
+    <div class="page-stat"><div class="page-stat-num">${collabCount}</div><div class="page-stat-label">Collaborative</div></div>`;
 
   document.getElementById('listsPageSub').textContent = 'Your personal collections, curated your way — from watchlists to favorites and beyond.';
 
@@ -1813,13 +1810,14 @@ function renderSocialLists() {
   const wrap = document.getElementById('listsPageContent');
   const all = _socialListsRaw || [];
   const curators = new Set(all.map(l => l.user_id)).size;
-  const titles = all.reduce((n, l) => n + (l.items || []).length, 0);
-  const likes = all.reduce((n, l) => n + Number(l.like_count || 0), 0);
+  const titles = new Set(all.flatMap(l => l.items || [])).size;
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const thisWeek = all.filter(l => new Date(l.created_at).getTime() >= weekAgo).length;
   document.getElementById('listsPageStats').innerHTML = all.length ? `
-    <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Public Lists</div></div>
+    <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Lists</div></div>
     <div class="page-stat"><div class="page-stat-num">${curators}</div><div class="page-stat-label">Curators</div></div>
-    <div class="page-stat"><div class="page-stat-num">${titles}</div><div class="page-stat-label">Titles Listed</div></div>
-    <div class="page-stat"><div class="page-stat-num">${likes}</div><div class="page-stat-label">Total Likes</div></div>` : '';
+    <div class="page-stat"><div class="page-stat-num">${titles}</div><div class="page-stat-label">Titles Featured</div></div>
+    <div class="page-stat"><div class="page-stat-num">${thisWeek}</div><div class="page-stat-label">New This Week</div></div>` : '';
 
   const source = SF.list('social', 'all');
   const baseCount = (_listsFilterMode ? _listsFilterMode.lists : all).length;
