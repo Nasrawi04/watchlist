@@ -205,9 +205,17 @@ function _discAttrJSON(value) {
   return JSON.stringify(value).replace(/'/g, '&#39;');
 }
 
+// Tapping a Discover title opens the shared info popup (info-popup.js)
+// instead of jumping straight to title.html. Items are kept in a small map
+// so the popup gets the full item without stuffing it into the markup.
+window._discItemMap = window._discItemMap || {};
 function _discClickAttr(it) {
   if (it.id != null && it.media_type) {
-    return `onclick="goToTitle('${it.media_type}', ${it.id})"`;
+    const key = `${it.media_type}:${it.id}`;
+    window._discItemMap[key] = it;
+    return typeof MSSInfo !== 'undefined'
+      ? `onclick="MSSInfo.fromDiscover(window._discItemMap['${key}'])"`
+      : `onclick="goToTitle('${it.media_type}', ${it.id})"`;
   }
   return `onclick='_discOpenLinkPopup(${_discAttrJSON(it.title || '')}, ${_discAttrJSON(it.derived_type || 'tv')})'`;
 }
