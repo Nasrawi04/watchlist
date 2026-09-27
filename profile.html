@@ -573,7 +573,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       <span class="prof-tab-label">Library</span>
     </div>
-    <div class="prof-tab" id="tab4" onclick="switchTab(4)" style="display:none">
+    <div class="prof-tab" id="tab4" onclick="switchTab(4)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <span class="prof-tab-label">Exports</span>
     </div>
@@ -665,7 +665,7 @@ document.addEventListener('DOMContentLoaded', function() {
     _pEntries = both[0];
     _profFavLists = both[1];
     _profEntryMap = Object.fromEntries(_pEntries.map(function(e){return [e.id,e];}));
-    document.getElementById('tab4').style.display = '';
+    _pEntriesLoaded();
     populateHeader();
     renderTab0();
     if (_activeTab === 1) renderLibrary();
@@ -1390,6 +1390,10 @@ function closeProfAddListModal(){
 /* ── Tab 3: Notes ── */
 
 /* ── Tab 4: Exports ── */
+// Exports is static, so its tab shows straight away; an export started
+// before your library has loaded simply waits for it.
+var _pEntriesLoaded; var _pEntriesReady = new Promise(function(res){ _pEntriesLoaded = res; });
+
 function renderExports(){
   var el=document.getElementById('exportsContent');
   if(el.innerHTML.trim())return;
@@ -1419,6 +1423,7 @@ async function runExport(){
   if(!_pendingExport)return;
   var btn=document.getElementById('exportPopupBtn');
   btn.disabled=true;btn.textContent='Generating…';
+  await _pEntriesReady;
   try{
     var sorted;
     if(_pendingExport==='ranked'){sorted=_pEntries.filter(function(e){return e.status==='completed'||e.status==='ongoing';}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);});await buildAndExportPDF({subtitle:'Ranked List',entries:sorted,useRanked:true,filename:'ranked-list.pdf'});}
