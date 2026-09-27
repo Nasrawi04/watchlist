@@ -47,8 +47,6 @@
 .fv-entry-block{display:flex;flex-direction:column;}
 .fv-rank-row{display:flex;align-items:center;gap:20px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;min-height:160px;overflow:hidden;box-sizing:border-box;cursor:pointer;transition:border-color var(--trans) var(--ease),background var(--trans) var(--ease);}
 .fv-rank-row:hover{border-color:var(--border-olive);background:var(--card-2);}
-.fv-rank-num{font-family:var(--bebas);font-size:28px;font-weight:400;color:var(--text-2);text-align:center;min-width:44px;flex-shrink:0}
-.fv-rank-num.top3{color:var(--olive-light)}
 .fv-rank-poster{width:96px;height:136px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
 .fv-rank-poster img{width:100%;height:100%;object-fit:cover}
 .fv-rank-info{flex:1;min-width:0}
@@ -98,7 +96,6 @@
   .fv-rank-row { padding:10px 12px; gap:10px; min-height:unset; }
   .fv-rank-poster { width:56px; height:78px; }
   .fv-rank-title { font-size:13px; }
-  .fv-rank-num { font-size:20px; min-width:32px; }
 }
 @media(max-width:400px) {
   .fv-rank-row { padding:8px 10px; gap:8px; }
@@ -1112,8 +1109,7 @@ function renderMain() {
         : null;
       return `<div class="fv-entry-block">
         <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
-          <div class="fv-rank-num ${i < 3 ? 'top3' : ''}">${i + 1}</div>
-          <div class="fv-rank-poster">${posterHTML(e)}</div>
+          <div class="fv-rank-poster" style="position:relative;">${posterHTML(e)}${_cgBadgeHTML(i + 1)}</div>
           <div class="fv-rank-info">
             <div class="fv-rank-title">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:2px;">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
             <div class="fv-rank-meta">${_compTypeBadgeInline(e)} ${_entryMetaBadge(e)}</div>
