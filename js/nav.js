@@ -199,7 +199,6 @@ function injectChrome() {
         ${navLink('index.html',     page, 'home',     'Home')}
         ${navLink('discover.html',  page, 'compass',  'Discover')}
         ${navLibraryDropdown(page)}
-        ${navLink('favorites.html',  page, 'heart',    'Favorites')}
         ${navLink('lists.html',      page, 'layers',   'Lists')}
         ${navLink('notes.html',      page, 'notebook',     'Notes')}
         ${navLink('friends.html',   page, 'users',    'Friends')}
@@ -238,7 +237,6 @@ function injectChrome() {
     ${mobileNavLink('index.html',     page, 'home',     'Home')}
     ${mobileNavLink('discover.html',  page, 'compass',  'Discover')}
     ${mobileLibraryGroup(page)}
-    ${mobileNavLink('favorites.html', page, 'heart',    'Favorites')}
     ${mobileNavLink('lists.html',     page, 'layers',   'Lists')}
     ${mobileNavLink('notes.html',     page, 'notebook',     'Notes')}
     ${mobileNavLink('friends.html',   page, 'users',    'Friends')}
@@ -298,6 +296,7 @@ function injectChrome() {
       <div class="modal-row"><div class="modal-label">Status</div>
         <div id="mStatusWrap">${_selDDHTML('mStatus', [
           { value:'queue', label:'Watchlist' },
+          { value:'up_next', label:'Up Next' },
           { value:'watching', label:'Currently Watching' },
           { value:'paused', label:'Taking a Break' },
           { value:'completed', label:'Watched' },
@@ -516,6 +515,7 @@ function _updateModalStatus() {
   const keep = isMovie && (current === 'paused' || current === 'ongoing') ? 'watching' : current;
   const options = [
     { value:'queue', label:'Watchlist' },
+    { value:'up_next', label:'Up Next' },
     { value:'watching', label:'Currently Watching' },
     ...(!isMovie ? [{ value:'paused', label:'Taking a Break' }] : []),
     { value:'completed', label:'Watched' },
@@ -538,6 +538,7 @@ function _resetAddModalDropdowns() {
   if (wrap) {
     wrap.innerHTML = _selDDHTML('mStatus', [
       { value:'queue', label:'Watchlist' },
+      { value:'up_next', label:'Up Next' },
       { value:'watching', label:'Currently Watching' },
       { value:'paused', label:'Taking a Break' },
       { value:'completed', label:'Watched' },
