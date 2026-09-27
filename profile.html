@@ -1312,21 +1312,10 @@ function profOpenPopup(id) {
   document.getElementById('profPopupDateRow').innerHTML = completedDateStr
     ? '<span class="w-ep-badge" style="font-family:\'Manrope\',var(--sans);font-weight:500;">Completed On: '+completedDateStr+'</span>' : '';
 
-  var metaBadge = '';
-  if (_pyIsMovie) {
-    var rtH=Number(e.runtime_h)||0, rtM=Number(e.runtime_m)||0;
-    if (rtH||rtM) metaBadge = '<span class="w-ep-badge">'+(rtH?rtH+'h '+rtM+'m':rtM+'m')+'</span>';
-  } else if (e.status==='ongoing' && e.season!=null && e.episode!=null) {
-    metaBadge = '<span class="w-ep-badge">S'+e.season+' \u00b7 E'+e.episode+'</span>';
-  } else {
-    var bd = Array.isArray(e.ratings&&e.ratings._season_breakdown)?e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number):[];
-    var bdTot = bd.reduce(function(a,b){return a+b;},0);
-    var scope = bd.length ? ('S'+bd.length+' \u00b7 E'+bdTot)
-      : (e.total_seasons&&e.total_eps ? ('S'+e.total_seasons+' \u00b7 E'+e.total_eps)
-      : e.total_seasons ? ('S'+e.total_seasons)
-      : e.total_eps ? (e.total_eps+' eps') : '');
-    if (scope) metaBadge = '<span class="w-ep-badge">'+scope+'</span>';
-  }
+  // Runtime / episode count are shown in the Runtime / Season Breakdown
+  // sections below — only To Be Continued titles get a tag, for where you left off.
+  var metaBadge = (e.status==='ongoing' && e.season!=null && e.episode!=null && !_pyIsMovie)
+    ? '<span class="w-ep-badge" style="font-family:\'Manrope\',var(--sans);font-weight:500;">Left off: S'+e.season+' \u00b7 E'+e.episode+'</span>' : '';
   document.getElementById('profPopupMetaRow').innerHTML = metaBadge;
   var _prInfoEl = document.getElementById('profPopupInfo');
   if (_prInfoEl) _prInfoEl.innerHTML = '';
