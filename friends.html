@@ -8,12 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
-/* ── Add friend box ── */
-.add-friend-box{
-  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);
-  padding:1.75rem;margin-bottom:2.5rem;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;
-}
-.add-friend-box .field-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
 .add-friend-input-wrap{flex:1;min-width:200px}
 .fused-search-wrap {
   display:flex; align-items:stretch;
@@ -36,144 +30,13 @@
 .btn-send-req:hover{opacity:.9}
 .btn-send-req:disabled{opacity:.5;cursor:not-allowed}
 
-/* ── Section headers ── */
-.friends-section-title{
-  font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--olive-light);
-  margin:2.5rem 0 1.25rem;display:flex;align-items:center;gap:12px;
-}
-.friends-section-title::after{content:'';flex:1;height:0.5px;background:var(--border)}
-.friends-count{
-  background:var(--olive-faint);border:0.5px solid var(--border-olive);
-  color:var(--olive-light);font-size:10px;padding:2px 8px;border-radius:20px;
-  letter-spacing:.5px;
-}
-.friends-sort-bar{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1rem; }
-
-/* ── Avatar helper — shared by pending + friend cards ── */
-.f-avatar-inner {
-  width:100%; height:100%;
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--serif); color:inherit;
-  border-radius:50%; overflow:hidden;
-}
-.f-avatar-inner img {
-  width:100%; height:100%; object-fit:cover; border-radius:50%;
-  display:block;
-}
-
-/* ── Pending request card ── */
-.pending-card{
-  display:flex;align-items:center;gap:14px;
-  background:rgba(92,107,58,0.06);border:0.5px solid var(--border-olive);
-  border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;
-}
-.pending-avatar{
-  width:44px;height:44px;border-radius:50%;flex-shrink:0;
-  background:var(--olive-faint);border:1.5px solid var(--border-olive);
-  font-family:var(--serif);font-size:20px;color:var(--olive-light);
-  display:flex;align-items:center;justify-content:center;overflow:hidden;
-}
-.pending-info{flex:1;min-width:0}
-.pending-username{font-size:15px;font-weight:500}
-.pending-label{font-size:12px;color:var(--text-3);margin-top:2px}
-.pending-actions{display:flex;gap:8px;flex-shrink:0}
-.btn-accept{
-  background:var(--olive);border:none;border-radius:var(--radius-sm);
-  color:#fff;font-size:12px;font-weight:500;padding:7px 16px;cursor:pointer;
-  transition:all .2s;
-}
-.btn-accept:hover{background:var(--olive-2)}
-.btn-decline{
-  background:transparent;border:0.5px solid var(--border-2);border-radius:var(--radius-sm);
-  color:var(--text-3);font-size:12px;padding:7px 14px;cursor:pointer;transition:all .2s;
-}
-.btn-decline:hover{border-color:rgba(220,50,50,0.4);color:#ff6b6b}
-
-/* ── Friend card ── */
-.friend-card{
-  display:flex;flex-direction:column;
-  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);
-  padding:16px 18px;margin-bottom:12px;cursor:pointer;transition:all .25s;
-}
-.friend-card:hover{border-color:var(--border-olive);background:var(--card-2)}
-.friend-card-top{display:flex;align-items:center;gap:14px;}
-.friend-avatar{
-  width:48px;height:48px;border-radius:50%;flex-shrink:0;
-  background:var(--bg-3);border:1.5px solid var(--border-2);
-  font-family:var(--serif);font-size:22px;color:var(--text-2);
-  display:flex;align-items:center;justify-content:center;overflow:hidden;
-  transition:border-color .25s;
-}
-.friend-card:hover .friend-avatar{border-color:var(--border-olive);color:var(--olive-light)}
-.friend-info{flex:1;min-width:0}
-.friend-display-name{font-size:16px;font-weight:600;margin-bottom:2px}
-.friend-username-sub{font-size:13px;color:var(--text-3)}
-.friend-card-divider{height:0.5px;background:var(--border);margin:14px 0 12px;}
-.friend-stats{display:flex;gap:16px;flex-wrap:wrap}
-.friend-stat{font-size:12px;color:var(--text-3)}
-.friend-stat strong{color:var(--olive-light);font-family:var(--serif);font-size:15px;margin-right:4px}
-.friend-actions{display:flex;gap:8px;flex-shrink:0;align-items:center}
-.btn-view-lists{
-  background:transparent;border:0.5px solid var(--border-olive);
-  border-radius:var(--radius-sm);color:var(--olive-light);font-size:12px;
-  padding:7px 14px;cursor:pointer;transition:all .2s;white-space:nowrap;
-}
-.btn-view-lists:hover{background:var(--olive-faint)}
-.btn-unfriend{
-  background:transparent;border:0.5px solid transparent;border-radius:var(--radius-sm);
-  color:var(--text-3);font-size:12px;padding:7px 10px;cursor:pointer;transition:all .2s;
-}
-.btn-unfriend:hover{border-color:rgba(220,50,50,0.3);color:#ff6b6b}
-.btn-pin{
-  background:transparent;border:0.5px solid transparent;border-radius:var(--radius-sm);
-  color:var(--text-3);font-size:14px;padding:6px 9px;cursor:pointer;transition:all .2s;
-  display:flex;align-items:center;justify-content:center;
-}
-.btn-pin:hover{border-color:var(--border-olive);color:var(--olive-light)}
-.btn-pin.pinned{color:var(--olive-light)}
-.friend-card.is-pinned{border-color:var(--border-olive);background:rgba(92,107,58,0.06)}
-.friend-pinned-badge{
-  display:inline-flex;align-items:center;gap:3px;
-  background:var(--olive-faint);border:0.5px solid var(--border-olive);
-  color:var(--olive-light);font-size:9px;letter-spacing:.5px;text-transform:uppercase;
-  padding:2px 7px;border-radius:20px;margin-left:8px;vertical-align:middle;
-}
-
-/* ── Sent request ── */
-.sent-card{
-  display:flex;align-items:center;gap:14px;
-  background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);
-  padding:12px 16px;margin-bottom:8px;opacity:.7;
-}
-.sent-badge{font-size:10px;padding:3px 10px;border-radius:20px;background:var(--bg-3);border:0.5px solid var(--border-2);color:var(--text-3);letter-spacing:.5px;white-space:nowrap}
-
-.empty-friends{text-align:center;padding:3rem 1rem}
-.empty-friends-icon{font-size:2.5rem;margin-bottom:.75rem}
-.empty-friends-text{font-size:14px;color:var(--text-3)}
-
 @media(max-width:600px){
-  .add-friend-box{padding:1.25rem;gap:8px;margin-bottom:1.75rem}
   .add-friend-input{font-size:16px;padding:10px 14px}
   .btn-send-req{font-size:12px;padding:10px 16px}
-  .friend-card{padding:11px 13px;gap:10px;margin-bottom:8px}
-  .friend-avatar{width:40px;height:40px;font-size:18px}
-  .friend-username{font-size:14px;margin-bottom:3px}
-  .friend-stats{gap:8px}
-  .friend-stat{font-size:10px}
-  .friend-stat strong{font-size:13px}
-  .btn-view-lists{font-size:11px;padding:6px 10px}
 }
 @media(max-width:400px){
-  .add-friend-box{padding:1rem;gap:6px}
   .add-friend-input{font-size:16px;padding:9px 12px}
   .btn-send-req{font-size:11px;padding:9px 13px}
-  .friend-card{padding:9px 11px;gap:8px}
-  .friend-avatar{width:34px;height:34px;font-size:15px}
-  .friend-username{font-size:13px}
-  .friend-stats{gap:6px}
-  .friend-stat{font-size:9px}
-  .friend-stat strong{font-size:12px}
-  .btn-view-lists{font-size:10px;padding:5px 8px}
 }
 
 /* ── Username search dropdown ── */
@@ -206,75 +69,303 @@
 .ud-username em { color:var(--olive-light); font-style:normal; font-weight:600; }
 .ud-display { font-size:11px; color:var(--text-3); margin-top:2px; }
 .ud-loading, .ud-empty { padding:14px; font-size:13px; color:var(--text-3); text-align:center; }
+/* ══════════════════════════════════════════════════════════
+   Friends — v620 redesign
+══════════════════════════════════════════════════════════ */
+.fr-page { --fr-gap: 16px; }
+/* Header */
+.fr-hero { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:1.5rem; }
+.fr-hero-text { min-width:0; }
+.fr-eyebrow { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:3px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
+.fr-find { flex:1 1 380px; max-width:520px; }
+.fr-find .fused-search-wrap { display:flex; align-items:stretch; border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-3); transition:border-color .15s, box-shadow .15s; }
+.fr-find .fused-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.fr-find .add-friend-input { flex:1; min-width:0; background:transparent; border:none; color:var(--text); font-size:16px; padding:14px 16px; outline:none; }
+.fr-find .btn-send-req { border:none; border-radius:0; padding:0 18px; white-space:nowrap; background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff; font-weight:600; font-size:13px; cursor:pointer; }
+@media(max-width:700px) { .fr-find { flex-basis:100%; max-width:none; } }
 
-/* ── Mini Profile Overlay ── */
-#miniProfileOverlay {
-  position:fixed;inset:0;z-index:1100;
-  background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);
-  display:flex;align-items:center;justify-content:center;padding:16px;
-  opacity:0;pointer-events:none;transition:opacity .22s;
+/* Tabs — underline style with icons + counts */
+.fr-tabs { display:flex; gap:4px; border-bottom:0.5px solid var(--border); margin-bottom:1.25rem; overflow-x:auto; scrollbar-width:none; }
+.fr-tabs::-webkit-scrollbar { display:none; }
+.fr-tab {
+  position:relative; flex-shrink:0; display:inline-flex; align-items:center; gap:8px; padding:12px 16px 14px;
+  background:none; border:none; cursor:pointer; color:var(--text-3); font-family:var(--sans); font-size:14px; font-weight:600; transition:color .15s;
 }
-#miniProfileOverlay.open { opacity:1;pointer-events:auto; }
-#miniProfileCard {
-  width:100%;max-width:560px;
-  background:var(--bg-2);
-  border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);
-  border-radius:var(--radius-lg);
-  overflow:hidden;
-  transform:scale(.96);
-  transition:transform .25s cubic-bezier(0.4,0,0.2,1);
-  max-height:85vh;overflow-y:auto;
+.fr-tab svg { width:15px; height:15px; opacity:.85; }
+.fr-tab:hover { color:var(--text); }
+.fr-tab.active { color:var(--text); }
+.fr-tab.active::after { content:''; position:absolute; left:10px; right:10px; bottom:-0.5px; height:2.5px; border-radius:2px; background:var(--olive-light); }
+.fr-tab-count { font-family:var(--bebas); font-size:14px; font-weight:400; color:var(--text-3); letter-spacing:.3px; }
+.fr-tab-dot { min-width:18px; height:18px; padding:0 5px; box-sizing:border-box; border-radius:999px; background:#c0392b; color:#fff; font-size:10px; font-weight:700; line-height:18px; text-align:center; }
+/* Phones: five equal tabs, icon over label, all visible without scrolling */
+@media(max-width:600px) {
+  .fr-tabs { display:grid; grid-template-columns:repeat(5, 1fr); gap:0; overflow:visible; }
+  .fr-tab { flex-direction:column; gap:4px; padding:10px 2px 12px; font-size:11px; }
+  .fr-tab svg { width:17px; height:17px; }
+  .fr-tab-count { display:none; }
+  .fr-tab-dot { position:absolute; top:5px; left:calc(50% + 6px); min-width:16px; height:16px; line-height:16px; font-size:9px; }
+  .fr-tab.active::after { left:18%; right:18%; }
 }
-#miniProfileOverlay.open #miniProfileCard { transform:scale(1); }
-.mp-header {
-  display:flex;flex-direction:column;align-items:center;
-  padding:2rem 1.5rem 1.5rem;text-align:center;
-  border-bottom:0.5px solid var(--border);
-  position:relative;
-}
-.mp-close {
-  position:absolute;top:14px;right:14px;
-  background:none;border:none;color:var(--text-3);
-  font-size:20px;cursor:pointer;line-height:1;
-  transition:color .15s;
-}
-.mp-close:hover { color:var(--text); }
-.mp-avatar {
-  width:72px;height:72px;border-radius:50%;
-  background:var(--olive-faint);border:2px solid var(--olive-light);
-  font-family:var(--serif);font-size:28px;color:var(--olive-light);
-  display:flex;align-items:center;justify-content:center;overflow:hidden;
-  margin-bottom:.75rem;
-}
-.mp-avatar img { width:100%;height:100%;object-fit:cover;border-radius:50%; }
-.mp-username { font-family:var(--serif);font-size:20px;font-weight:500;margin-bottom:3px; }
-.mp-bio { font-size:12px;color:var(--text-2);line-height:1.5;max-width:340px;margin-bottom:.75rem; }
-.mp-quote { font-family:var(--serif);font-style:italic;font-size:13px;color:var(--text-3);border-left:2px solid var(--olive-light);padding-left:10px;text-align:left;max-width:340px;margin-bottom:.75rem; }
-.mp-stats { display:flex;gap:1.5rem;justify-content:center;margin-bottom:1rem; }
-.mp-stat { text-align:center; }
-.mp-stat-num { font-family:var(--serif);font-size:20px;color:var(--olive-light); }
-.mp-stat-label { font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-top:2px; }
-.mp-btns { display:flex;gap:8px;flex-wrap:wrap;justify-content:center; }
-.mp-btn-add { padding:8px 22px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s; }
-.mp-btn-add:hover { background:var(--olive-2); }
-.mp-btn-pending { padding:8px 22px;border-radius:var(--radius-sm);background:transparent;color:var(--text-2);border:0.5px solid var(--border-2);font-size:13px;cursor:pointer;transition:all .15s; }
-.mp-btn-pending:hover { border-color:var(--border-olive);color:var(--text); }
-.mp-btn-friends { padding:8px 22px;border-radius:var(--radius-sm);background:var(--olive-faint);color:var(--olive-light);border:0.5px solid var(--border-olive);font-size:13px;cursor:pointer;transition:all .15s; }
-.mp-btn-friends:hover { background:rgba(220,50,50,0.08);color:#ff6b6b;border-color:rgba(220,50,50,0.3); }
-.mp-btn-view { padding:8px 18px;border-radius:var(--radius-sm);background:transparent;color:var(--olive-light);border:0.5px solid var(--border-olive);font-size:12px;cursor:pointer;transition:background .15s; }
-.mp-btn-view:hover { background:var(--olive-faint); }
-.mp-accept { padding:8px 18px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer; }
-.mp-decline { padding:8px 14px;border-radius:var(--radius-sm);background:transparent;color:var(--text-3);border:0.5px solid var(--border-2);font-size:13px;cursor:pointer; }
-.mp-top-picks { padding:1.25rem 1.5rem; }
-.mp-picks-label { font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:.75rem; }
-.mp-picks-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:8px; }
-@media(max-width:480px) { .mp-picks-grid { grid-template-columns:repeat(4,1fr); } }
-.mp-pick-card { aspect-ratio:2/3;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);position:relative; }
-.mp-pick-card img { width:100%;height:100%;object-fit:cover; }
-.mp-pick-letter { width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:18px;color:var(--olive-light); }
-.mp-pick-overlay { position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 50%); }
-.mp-pick-title { position:absolute;bottom:0;left:0;right:0;padding:4px;font-size:8px;color:#fff;font-weight:500;line-height:1.2; }
+
+/* Toolbar */
+.fr-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 1rem; }
+.fr-toolbar-label { display:flex; align-items:baseline; gap:10px; min-width:0; }
+.fr-toolbar-title { font-family:var(--serif); font-size:13px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); white-space:nowrap; }
+.fr-toolbar-count { font-size:12px; color:var(--text-3); white-space:nowrap; }
+.fr-toolbar-count b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); }
+.fr-toolbar .sort-bar, #cmpToolbar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.fr-toolbar .sort-bar::before { content:none; }
+
+/* Shared bits */
+.fr-av { border-radius:50%; overflow:hidden; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; font-family:var(--serif); font-weight:600; }
+.fr-av img { width:100%; height:100%; object-fit:cover; display:block; }
+.fr-poster, .fa-poster, .cp-row-poster, .cp-hero-poster, .fm-cover-img, .fm-now-poster, .fl-stack-img { position:relative; overflow:hidden; background:var(--bg-3); }
+.fr-poster img, .fa-poster img, .cp-row-poster img, .cp-hero-poster img, .fm-cover-img img, .fm-now-poster img, .fl-stack-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.fr-poster-letter { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--serif); color:var(--olive-light); font-size:18px; }
+.fr-empty { text-align:center; padding:3.5rem 1.25rem; }
+.fr-empty-ic { width:60px; height:60px; margin:0 auto 14px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--olive-faint); color:var(--olive-light); }
+.fr-empty-title { font-family:var(--serif); font-size:19px; font-weight:600; margin-bottom:6px; }
+.fr-empty-text { font-size:13.5px; color:var(--text-3); max-width:420px; margin:0 auto; line-height:1.55; }
+.fr-more { display:block; margin:18px auto 0; padding:11px 26px; border-radius:var(--radius-sm); border:1px solid var(--border-2); background:transparent; color:var(--text-2); font-family:var(--sans); font-weight:600; font-size:13px; cursor:pointer; }
+.fr-more:hover { border-color:var(--border-olive); color:var(--text); }
+.fm-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-2); background:transparent; color:var(--text-2); font-family:var(--sans); font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; transition:all .15s; }
+.fm-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.fm-btn svg { width:13px; height:13px; }
+.fm-btn-primary { background:var(--olive); border-color:var(--olive); color:#fff; }
+.fm-btn-primary:hover { background:var(--olive-light); border-color:var(--olive-light); color:#fff; }
+
+/* Requests */
+.fr-req { background:var(--card); border:1px solid var(--border-olive); border-radius:var(--radius-lg); padding:6px 16px 8px; margin-bottom:14px; box-shadow:inset 3px 0 0 var(--olive-light); }
+.fr-req-head { display:flex; align-items:center; gap:10px; padding:10px 0 6px; }
+.fr-req-title { display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:13.5px; color:var(--text); }
+.fr-req-title svg { width:14px; height:14px; color:var(--olive-light); }
+.fr-req-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:0.5px solid var(--border); }
+.fr-req-who { display:flex; align-items:center; gap:12px; min-width:0; background:none; border:none; padding:0; cursor:pointer; text-align:left; color:var(--text); }
+.fr-req-who span { display:flex; flex-direction:column; min-width:0; }
+.fr-req-who b { font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fr-req-who small { font-size:12px; color:var(--text-3); }
+.fr-req-actions { display:flex; gap:8px; flex-shrink:0; }
+.fr-sent { margin-bottom:16px; }
+.fr-sent-toggle { display:inline-flex; align-items:center; gap:6px; background:none; border:none; padding:4px 0; cursor:pointer; color:var(--text-3); font-size:12.5px; font-weight:600; }
+.fr-sent-toggle b { color:var(--text-2); }
+.fr-sent-toggle svg { width:12px; height:12px; transition:transform .2s; }
+.fr-sent.open .fr-sent-toggle svg { transform:rotate(90deg); }
+.fr-sent .fr-req-row { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:10px 12px; margin-top:8px; }
+
+/* Friend (member) cards */
+.fm-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:var(--fr-gap); }
+@media(max-width:560px) { .fm-grid { grid-template-columns:1fr; } }
+.fm-card { position:relative; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; cursor:pointer; display:flex; flex-direction:column; transition:transform .2s, box-shadow .2s, border-color .2s; }
+.fm-card:hover { transform:translateY(-3px); box-shadow:var(--shadow); border-color:var(--border-olive); }
+.fm-card.is-pinned { border-color:var(--border-olive); }
+.fm-cover { position:relative; height:96px; display:grid; grid-template-columns:repeat(4, 1fr); background:linear-gradient(135deg, var(--olive) 0%, var(--olive-2, #0f2d14) 100%); }
+.fm-cover-tile { position:relative; overflow:hidden; }
+.fm-cover-img { position:absolute; inset:0; }
+.fm-cover-img img { filter:saturate(1.1); }
+.fm-cover-empty { grid-column:1/-1; }
+.fm-cover-shade { position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,.05), rgba(0,0,0,.45)); pointer-events:none; }
+.fm-body { padding:0 16px 16px; display:flex; flex-direction:column; align-items:center; text-align:center; flex:1; }
+.fm-av { margin-top:-34px; margin-bottom:8px; border-radius:50%; border:3px solid var(--card); box-shadow:0 4px 12px rgba(0,0,0,.18); position:relative; z-index:1; }
+.fm-name { font-family:var(--serif); font-size:18px; font-weight:600; color:var(--text); line-height:1.2; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fm-user { font-size:12.5px; color:var(--text-3); margin-top:2px; }
+.fm-stats { display:grid; grid-template-columns:repeat(3, 1fr); width:100%; margin:14px 0 12px; padding:10px 0; border-top:0.5px solid var(--border); border-bottom:0.5px solid var(--border); }
+.fm-stats div { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.fm-stats div + div { border-left:0.5px solid var(--border); }
+.fm-stats b { font-family:var(--bebas); font-weight:400; font-size:22px; color:var(--olive-light); line-height:1; }
+.fm-stats span { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); font-weight:600; }
+.fm-now { display:flex; align-items:center; gap:10px; width:100%; padding:8px; border-radius:var(--radius-sm); background:var(--bg-3); border:none; cursor:pointer; text-align:left; color:var(--text); margin-bottom:12px; transition:background .15s; }
+.fm-now:hover { background:var(--olive-faint); }
+.fm-now-poster { width:30px; height:45px; border-radius:4px; flex-shrink:0; }
+.fm-now span { display:flex; flex-direction:column; min-width:0; font-size:13px; font-weight:600; }
+.fm-now span > * , .fm-now span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fm-now small { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--olive-light); font-weight:700; }
+.fm-now-idle { cursor:default; color:var(--text-3); font-weight:500; }
+.fm-now-idle:hover { background:var(--bg-3); }
+.fm-actions { display:flex; gap:6px; width:100%; margin-top:auto; }
+.fm-actions .fm-btn { flex:1; }
+.fm-icon-btn { width:36px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); border:1px solid var(--border-2); background:transparent; color:var(--text-3); cursor:pointer; transition:all .15s; }
+.fm-icon-btn svg { width:13px; height:13px; }
+.fm-icon-btn:hover { color:var(--text); border-color:var(--border-olive); }
+.fm-icon-btn.on { color:var(--olive-light); border-color:var(--border-olive); background:var(--olive-faint); }
+.fm-icon-btn.fm-danger:hover { color:#c0392b; border-color:#c0392b; }
+
+/* Activity feed */
+.fa-feed { display:flex; flex-direction:column; gap:10px; max-width:860px; }
+.fa-day { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin:14px 0 2px; }
+.fa-day:first-child { margin-top:0; }
+.fa-item { display:flex; align-items:center; gap:14px; padding:12px 14px; cursor:pointer; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); transition:border-color .15s, transform .15s; }
+.fa-item:hover { border-color:var(--border-olive); transform:translateX(2px); }
+.fa-who { position:relative; flex-shrink:0; align-self:flex-start; }
+.fa-ic { position:absolute; right:-3px; bottom:-3px; width:19px; height:19px; border-radius:50%; border:2px solid var(--card); display:flex; align-items:center; justify-content:center; color:#fff; }
+.fa-ic svg { width:9px; height:9px; }
+.fa-body { flex:1; min-width:0; }
+.fa-text { font-size:13px; color:var(--text-3); }
+.fa-text b { color:var(--text-2); font-weight:700; }
+.fa-title { font-family:var(--serif); font-size:17px; font-weight:500; color:var(--text); line-height:1.25; margin:1px 0 5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fa-title span, .cp-row-title span, .cp-hero-title span { font-family:var(--bebas); font-weight:400; color:var(--text-3); font-size:.85em; letter-spacing:.3px; }
+.fa-meta { display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:11.5px; color:var(--text-3); }
+.fa-meta .type-label { font-size:10.5px; padding:2px 7px; }
+.fa-note { margin-top:8px; padding-left:10px; border-left:2px solid var(--border-olive); font-size:13px; font-style:italic; color:var(--text-2); line-height:1.55; }
+.fa-score { font-family:var(--bebas); font-size:22px; color:var(--olive-light); flex-shrink:0; letter-spacing:.3px; }
+.fa-poster { width:54px; height:81px; border-radius:7px; flex-shrink:0; box-shadow:0 3px 10px rgba(0,0,0,.14); }
+@media(max-width:560px) { .fa-item { gap:11px; padding:11px 12px; } .fa-poster { width:44px; height:66px; } .fa-title { font-size:15.5px; } .fa-score { font-size:18px; } }
+
+/* Lists */
+.fl-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:var(--fr-gap); }
+@media(max-width:560px) { .fl-grid { grid-template-columns:1fr; } }
+.fl-card { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; cursor:pointer; transition:transform .2s, box-shadow .2s, border-color .2s; display:flex; flex-direction:column; }
+.fl-card:hover { transform:translateY(-3px); box-shadow:var(--shadow); border-color:var(--border-olive); }
+/* Fanned poster stack, Letterboxd-style */
+.fl-stack { position:relative; height:150px; padding:16px 16px 0; background:linear-gradient(180deg, var(--olive-faint), transparent); }
+.fl-stack-item { position:absolute; top:16px; left:calc(16px + var(--i) * 17%); width:28%; aspect-ratio:2/3; z-index:calc(10 - var(--i)); border-radius:6px; overflow:hidden; box-shadow:4px 0 14px rgba(0,0,0,.25); }
+.fl-stack-img { width:100%; height:100%; }
+.fl-stack-empty { height:100%; display:flex; align-items:center; justify-content:center; color:var(--text-3); font-size:12.5px; border:1px dashed var(--border-2); border-radius:8px; margin-bottom:12px; }
+.fl-body { padding:14px 16px 16px; display:flex; flex-direction:column; gap:6px; flex:1; }
+.fl-title-row { display:flex; align-items:center; gap:10px; min-width:0; }
+.fl-title { font-family:var(--serif); font-size:18px; font-weight:500; color:var(--text); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fl-desc { font-size:12.5px; color:var(--text-2); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.fl-foot { display:flex; align-items:center; gap:7px; margin-top:auto; padding-top:6px; font-size:12px; color:var(--text-3); }
+.fl-foot b { font-family:var(--bebas); font-weight:400; font-size:14px; color:var(--text-2); }
+.fl-dot { opacity:.5; }
+
+/* Notes */
+.fn-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:var(--fr-gap); }
+@media(max-width:560px) { .fn-grid { grid-template-columns:1fr; } }
+.fn-card { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0; }
+.fn-by { display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--text-2); }
+.fn-text { margin:0; padding:2px 0 2px 14px; border-left:3px solid var(--olive-light); font-size:14px; line-height:1.7; color:var(--text); font-style:italic; white-space:pre-line; overflow-wrap:anywhere; }
+.fn-text.clamp { display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* v621: pin icon on the cover */
+.fm-pin { position:absolute; top:10px; right:10px; z-index:2; width:34px; height:34px; border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.45); color:#fff; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); opacity:0; transition:opacity .15s, background .15s; }
+.fm-pin svg { width:15px; height:15px; }
+.fm-card:hover .fm-pin, .fm-pin:focus-visible { opacity:1; }
+.fm-pin.on { opacity:1; background:var(--olive); border-color:var(--olive-light); }
+@media (hover:none) { .fm-pin { opacity:1; } }
+/* v621: bigger, like the rest of the site */
+.fr-toolbar-title { font-size:14px; }
+.fr-toolbar-count { font-size:13px; } .fr-toolbar-count b { font-size:17px; }
+.fm-grid { grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:20px; }
+.fm-cover { height:110px; }
+.fm-name { font-size:20px; }
+.fm-user { font-size:13px; }
+.fm-stats b { font-size:26px; }
+.fm-stats span { font-size:11px; }
+.fm-now { padding:10px; gap:12px; }
+.fm-now-poster { width:36px; height:54px; }
+.fm-now span { font-size:14px; }
+.fm-btn { padding:10px 16px; font-size:13.5px; }
+.fm-icon-btn { width:42px; }
+/* Activity uses the full width: two columns on wide screens */
+.fa-feed { max-width:none; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; }
+.fa-day { grid-column:1 / -1; font-size:13px; margin:18px 0 0; }
+.fa-item { padding:14px 16px; gap:16px; align-items:flex-start; }
+.fa-item .fa-score { align-self:center; }
+.fa-text { font-size:14px; }
+.fa-title { font-size:20px; margin:2px 0 7px; }
+.fa-meta { font-size:12.5px; }
+.fa-meta .type-label { font-size:11.5px; padding:3px 8px; }
+.fa-score { font-size:26px; }
+.fa-poster { width:72px; height:108px; border-radius:8px; }
+.fa-note { font-size:14px; }
+@media(max-width:900px) { .fa-feed { grid-template-columns:1fr; } }
+@media(max-width:560px) { .fa-poster { width:56px; height:84px; } .fa-title { font-size:17px; } .fa-score { font-size:20px; } }
+.fl-grid { grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:20px; }
+.fl-stack { height:190px; }
+.fl-title { font-size:20px; }
+.fl-desc { font-size:13.5px; }
+.fl-foot { font-size:13px; }
+.cp-row { padding:12px 16px 12px 12px; }
+.cp-row-poster { width:52px; height:78px; }
+.cp-row-title { font-size:18px; }
+.cp-cell { min-width:70px; padding:8px 10px; } .cp-cell b { font-size:22px; }
+.cp-match-name { font-size:20px; }
+.cp-ring { width:96px; height:96px; } .cp-ring > div { width:78px; height:78px; } .cp-ring b { font-size:30px; }
+.fr-tab { font-size:15px; } .fr-tab svg { width:16px; height:16px; }
+
+/* Compare */
+.cp-pick { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:14px 16px 12px; margin-bottom:14px; }
+.cp-pick-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; }
+.cp-pick-hint { font-size:12px; color:var(--text-3); }
+.cp-pick-row { display:flex; gap:14px; overflow-x:auto; scrollbar-width:none; padding:4px 2px 2px; }
+.cp-pick-row::-webkit-scrollbar { display:none; }
+.cp-person { position:relative; flex-shrink:0; width:72px; display:flex; flex-direction:column; align-items:center; gap:6px; background:none; border:none; padding:0; cursor:pointer; color:var(--text-2); font-size:12px; font-weight:600; }
+.cp-person .fr-av { outline:2.5px solid transparent; outline-offset:2px; transition:outline-color .15s, transform .15s; }
+.cp-person:hover .fr-av { transform:scale(1.04); }
+.cp-person.on .fr-av { outline-color:var(--olive-light); }
+.cp-person.on { color:var(--text); }
+.cp-person span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cp-person i { position:absolute; top:34px; right:6px; width:20px; height:20px; border-radius:50%; background:var(--olive-light); color:#fff; border:2px solid var(--card); display:flex; align-items:center; justify-content:center; }
+.cp-person i svg { width:10px; height:10px; }
+.cp-matches { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:var(--fr-gap); margin-bottom:1.25rem; }
+@media(max-width:560px) { .cp-matches { grid-template-columns:1fr; } }
+.cp-match { display:flex; align-items:center; gap:16px; padding:16px; background:linear-gradient(135deg, var(--card), var(--olive-faint)); border:0.5px solid var(--border-olive); border-radius:var(--radius-lg); }
+.cp-ring { --p:0; width:86px; height:86px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:conic-gradient(var(--olive-light) calc(var(--p) * 1%), var(--bg-3) 0); }
+.cp-ring > div { width:70px; height:70px; border-radius:50%; background:var(--bg-2); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.cp-ring b { font-family:var(--bebas); font-weight:400; font-size:26px; color:var(--olive-light); line-height:1; }
+.cp-ring span { font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-3); font-weight:700; }
+.cp-match-info { min-width:0; display:flex; flex-direction:column; gap:5px; }
+.cp-match-name { font-family:var(--serif); font-size:18px; font-weight:600; color:var(--text); }
+.cp-match-stats { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; color:var(--text-3); }
+.cp-match-stats b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); }
+.cp-match-line { font-size:12.5px; color:var(--text-2); line-height:1.45; }
+.cp-match-line svg { width:12px; height:12px; color:var(--olive-light); vertical-align:-1px; margin-right:5px; }
+.cp-match-line b { color:var(--text); }
+.cp-search { display:flex; align-items:stretch; border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-3); margin-bottom:12px; }
+.cp-search:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.cp-search .add-friend-input { flex:1; min-width:0; background:transparent; border:none; color:var(--text); font-size:16px; padding:12px 16px; outline:none; }
+.cp-search .fused-search-btn { flex-shrink:0; display:flex; align-items:center; padding:0 18px; border:none; cursor:pointer; background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff; }
+.cp-search .fused-search-btn svg { width:16px; height:16px; }
+.cp-list { display:flex; flex-direction:column; gap:8px; }
+.cp-row { display:flex; align-items:center; gap:14px; width:100%; padding:10px 14px 10px 10px; cursor:pointer; text-align:left; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); color:var(--text); transition:border-color .15s, transform .15s; }
+.cp-row:hover { border-color:var(--border-olive); transform:translateX(2px); }
+.cp-row-poster { width:42px; height:63px; border-radius:6px; flex-shrink:0; }
+.cp-row-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+.cp-row-title { font-family:var(--serif); font-size:16px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cp-cells { display:flex; gap:6px; flex-shrink:0; }
+.cp-cell { min-width:58px; padding:6px 8px; border-radius:var(--radius-sm); background:var(--bg-3); display:flex; flex-direction:column; align-items:center; gap:1px; }
+.cp-cell.me { background:var(--olive-faint); }
+.cp-cell span { font-size:9.5px; letter-spacing:.8px; text-transform:uppercase; color:var(--text-3); font-weight:700; max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cp-cell b { font-family:var(--bebas); font-weight:400; font-size:19px; color:var(--olive-light); line-height:1; }
+.cp-delta { font-size:11.5px; font-weight:700; }
+.cp-delta.up { color:#2f8a3a; } .cp-delta.down { color:#c0392b; } .cp-delta.same { color:var(--olive-light); } .cp-delta.none { color:var(--text-3); font-weight:600; }
+@media(max-width:600px) { .cp-row { flex-wrap:wrap; } .cp-cells { width:100%; padding-left:56px; } .cp-cell { flex:1; min-width:0; } }
+.cp-back { display:inline-flex; align-items:center; gap:6px; margin:4px 0 12px; background:none; border:none; color:var(--olive-light); font-weight:700; font-size:13px; cursor:pointer; padding:0; }
+.cp-back svg { width:13px; height:13px; transform:rotate(180deg); }
+.cp-hero { position:relative; display:flex; gap:20px; align-items:center; padding:20px; border-radius:var(--radius-lg); overflow:hidden; margin-bottom:14px; border:0.5px solid var(--border); isolation:isolate; }
+.cp-hero-bg { position:absolute; inset:-30px; z-index:-2; background-size:cover; background-position:center 30%; filter:blur(24px) saturate(1.2) brightness(.55); transform:scale(1.1); }
+.cp-hero::after { content:''; position:absolute; inset:0; z-index:-1; background:linear-gradient(100deg, rgba(10,18,12,.8), rgba(10,18,12,.35)); }
+.cp-hero-poster { width:100px; aspect-ratio:2/3; border-radius:9px; flex-shrink:0; box-shadow:0 10px 26px rgba(0,0,0,.4); }
+.cp-hero-info { min-width:0; color:#fff; }
+.cp-hero-title { font-family:var(--serif); font-size:clamp(21px, 4.8vw, 30px); font-weight:600; line-height:1.15; margin-bottom:8px; color:#fff; }
+.cp-hero-title span { color:rgba(255,255,255,.65); }
+.cp-hero-stats { display:flex; gap:24px; margin-top:14px; flex-wrap:wrap; }
+.cp-hero-stats div { display:flex; flex-direction:column; }
+.cp-hero-stats b { font-family:var(--bebas); font-weight:400; font-size:28px; line-height:1; color:#fff; }
+.cp-hero-stats span { font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,.7); margin-top:3px; font-weight:600; }
+.cp-pcards { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; margin-bottom:6px; }
+.cp-pcard { padding:16px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); display:flex; flex-direction:column; gap:6px; min-width:0; }
+.cp-pcard.me { border-color:var(--border-olive); background:var(--olive-faint); }
+.cp-pcard-head { display:flex; align-items:center; gap:9px; font-size:14px; color:var(--text); }
+.cp-pcard-score { font-family:var(--bebas); font-size:40px; color:var(--olive-light); line-height:1; margin-top:6px; }
+.cp-pcard-status { font-size:12px; color:var(--text-2); }
+.cp-tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+.cp-tag { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:700; background:var(--bg-3); color:var(--text-2); border:1px solid var(--border-2); }
+.cp-tag svg { width:10px; height:10px; }
+.cp-tag.fav { background:linear-gradient(135deg, #f3d27a, #c9982e); color:#2a1d00; border-color:transparent; }
+.cp-tag-none { font-size:11px; color:var(--text-3); }
+.cp-sec { margin:1.5rem 0 .7rem; }
+.cp-table-wrap { overflow-x:auto; border:0.5px solid var(--border); border-radius:var(--radius-lg); background:var(--card); }
+.cp-table { width:100%; border-collapse:collapse; font-size:13px; }
+.cp-table th, .cp-table td { padding:11px 16px; text-align:center; border-bottom:0.5px solid var(--border); white-space:nowrap; }
+.cp-table th { font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-3); font-weight:700; }
+.cp-table th:first-child, .cp-table td:first-child { text-align:left; position:sticky; left:0; background:var(--card); color:var(--text-2); font-family:var(--sans); font-size:13px; }
+.cp-table td { font-family:var(--bebas); font-size:18px; color:var(--text-2); }
+.cp-table td.best { color:var(--olive-light); }
+.cp-table tr:last-child td { border-bottom:none; }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -287,56 +378,34 @@
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 </head>
 <body>
-<div class="page-wrap">
+<div class="page-wrap fr-page">
 
-  <div class="cat-page-header fade-up">
-    <div>
+  <!-- Header: title + find people -->
+  <header class="fr-hero fade-up">
+    <div class="fr-hero-text">
+      <div class="fr-eyebrow">Your circle</div>
       <h1 class="cat-page-title">Friends</h1>
-      <div class="cat-page-sub" id="friendsPageSub">0 Friends · 0 requests</div>
+      <div class="cat-page-sub" id="friendsPageSub">&nbsp;</div>
     </div>
-  </div>
-
-  <!-- Find People -->
-  <div class="add-friend-box fade-up">
-    <div class="add-friend-input-wrap" style="flex:1;position:relative">
-      <div class="field-label">Find People</div>
+    <div class="fr-find">
       <div class="fused-search-wrap" id="addFriendWrap">
-        <input class="add-friend-input" id="addFriendInput" placeholder="Search by username…"
-               autocomplete="off" spellcheck="false"
+        <input class="add-friend-input" id="addFriendInput" placeholder="Find people by username…"
+               autocomplete="off" spellcheck="false" aria-label="Find people by username"
                oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();_udSearch(this.value);_udSelectedId=null;_udSelectedUsername=null;"
                onkeydown="_udKeydown(event)">
         <button id="udViewProfileBtn" class="btn-send-req" onclick="_udViewProfile()">View Profile →</button>
       </div>
     </div>
-  </div>
+  </header>
 
-  <!-- Pending incoming -->
-  <div id="pendingSection" style="display:none">
-    <div class="friends-section-title">
-      Pending Requests
-      <span class="friends-count" id="pendingCount">0</span>
-    </div>
-    <div id="pendingList"></div>
-  </div>
+  <!-- Sections -->
+  <div class="fr-tabs fade-up fade-up-1" id="frTabs" role="tablist" aria-label="Friends sections"></div>
 
-  <!-- Friends list -->
-  <div class="friends-section-title fade-up">
-    My Friends
-    <span class="friends-count" id="friendsCount">0</span>
-  </div>
-  <div class="friends-sort-bar fade-up" id="friendsSortBar">
-    <button class="sort-btn active" data-sort="latest" onclick="setFriendsSort('latest')">Latest</button>
-    <button class="sort-btn" data-sort="earliest" onclick="setFriendsSort('earliest')">Earliest</button>
-  </div>
-  <div id="friendsList">
-    <div class="page-loading"><div class="spinner"></div></div>
-  </div>
+  <!-- Section toolbar: label + count + Sort / Filter -->
+  <div class="fr-toolbar" id="frToolbar"></div>
 
-  <!-- Sent (pending outgoing) -->
-  <div id="sentSection" style="display:none">
-    <div class="friends-section-title" style="margin-top:2rem">Sent Requests</div>
-    <div id="sentList"></div>
-  </div>
+  <!-- Section content -->
+  <div id="frContent" class="fade-up fade-up-2"><div class="page-loading"><div class="spinner"></div></div></div>
 
 </div>
 
@@ -344,196 +413,618 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/friend-popups.js"></script>
+<script src="js/sort-filter.js"></script>
 <script>
 let _fUser = null;
 let _fProfile = null;
-let _friendsSortOrder = 'latest'; // 'latest' | 'earliest'
-let _friendStatsMap = {};
 let _friendships = [];
 
 /* ── Avatar HTML helper — handles both photo and initial fallback ── */
-function avatarHtml(profile, size = 44, fontSize = 20) {
-  const initial = (profile?.username?.[0] || '?').toUpperCase();
-  if (safeURL(profile?.avatar_url)) {
-    return `<img src="${safeURL(profile.avatar_url)}"
-                 style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;display:block;"
-                 onerror="this.parentNode.innerHTML='${initial}'"
-                 alt="${initial}">`;
-  }
-  return `<span style="font-family:var(--serif);font-size:${fontSize}px;color:inherit">${initial}</span>`;
-}
 
-document.addEventListener('DOMContentLoaded', () => {
-  attachClearButton('addFriendInput');
-  initPage(async (user) => {
-    _fUser = user; // null for guests — search/view-profile below works either way
-    if (!user) {
-      document.getElementById('friendsPageSub').textContent = 'Search for someone below to view their profile.';
-      document.getElementById('pendingSection').style.display = 'none';
-      document.getElementById('sentSection').style.display = 'none';
-      document.getElementById('friendsSortBar').style.display = 'none';
-      document.getElementById('friendsCount').textContent = '0';
-      document.getElementById('friendsList').innerHTML = `
-        <div class="guest-page-state fade-up" style="padding:3rem 1rem;">
-          <div class="guest-page-icon">${icon('users', 32)}</div>
-          <h2 class="guest-page-title" style="font-size:19px;">See your friends here</h2>
-          <p class="guest-page-sub">Sign in to add friends and see what they're watching.</p>
-          <div class="guest-cta">
-            <a href="login.html" class="guest-btn-primary">Sign In</a>
-            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
-          </div>
-        </div>`;
-      return;
-    }
-    await loadFriends();
-  });
-});
-
-async function loadFriends() {
-  [_friendships, _fProfile] = await Promise.all([getFriendships(_fUser.id), getProfile(_fUser.id)]);
-
-  const accepted = _friendships.filter(f => f.status === 'accepted');
-  const incoming = _friendships.filter(f => f.status === 'pending' && !f.iRequested);
-  const outgoing = _friendships.filter(f => f.status === 'pending' && f.iRequested);
-
-  const subEl = document.getElementById('friendsPageSub');
-  if (subEl) {
-    subEl.textContent = `${accepted.length} Friend${accepted.length !== 1 ? 's' : ''} · ${incoming.length} request${incoming.length !== 1 ? 's' : ''}`;
-  }
-
-  /* ── Pending incoming ── */
-  if (incoming.length) {
-    document.getElementById('pendingSection').style.display = '';
-    document.getElementById('pendingCount').textContent = incoming.length;
-    document.getElementById('pendingList').innerHTML = incoming.map(f => {
-      const un = f.friendProfile?.username || 'unknown';
-      return `
-      <div class="pending-card" id="pc-${f.id}">
-        <div class="pending-avatar">
-          ${avatarHtml(f.friendProfile, 44, 20)}
-        </div>
-        <div class="pending-info">
-          <div class="pending-username">@${un}</div>
-          <div class="pending-label">sent you a friend request</div>
-        </div>
-        <div class="pending-actions">
-          <button class="btn-accept"  onclick="doAccept('${f.id}')">Accept</button>
-          <button class="btn-decline" onclick="doDecline('${f.id}')">Decline</button>
-        </div>
-      </div>`;
-    }).join('');
-  } else {
-    document.getElementById('pendingSection').style.display = 'none';
-  }
-
-  /* ── Accepted friends ── */
-  document.getElementById('friendsCount').textContent = accepted.length;
-  document.getElementById('friendsSortBar').style.display = accepted.length ? '' : 'none';
-  if (accepted.length) {
-    // Load entry counts for each friend in parallel, once — sort/pin
-    // toggles afterward just re-render from this cache, no refetch.
-    _friendStatsMap = {};
-    await Promise.all(accepted.map(async f => {
-      const entries = await getFriendEntries(f.friendId);
-      _friendStatsMap[f.friendId] = computeStats(entries);
-    }));
-    renderAcceptedFriends();
-  } else {
-    document.getElementById('friendsList').innerHTML = `
-      <div class="empty-friends">
-        <div class="empty-friends-icon" style="opacity:.4"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <div class="empty-friends-text">No friends yet. Add someone by username above!</div>
-      </div>`;
-  }
-
-  /* ── Sent / outgoing ── */
-  if (outgoing.length) {
-    document.getElementById('sentSection').style.display = '';
-    document.getElementById('sentList').innerHTML = outgoing.map(f => {
-      const un = f.friendProfile?.username || 'unknown';
-      return `
-      <div class="sent-card" id="sc-${f.id}">
-        <div class="friend-avatar" style="width:36px;height:36px;font-size:16px;">
-          ${avatarHtml(f.friendProfile, 36, 16)}
-        </div>
-        <div class="friend-info">
-          <div class="friend-username" style="font-size:14px">@${un}</div>
-        </div>
-        <span class="sent-badge">Pending</span>
-        <button class="btn-unfriend" style="margin-left:auto" title="Cancel request" onclick="doCancelRequest('${f.id}')">✕</button>
-      </div>`;
-    }).join('');
-  } else {
-    document.getElementById('sentSection').style.display = 'none';
-  }
-}
-
+/* ══════════════════════════════════════════════════════════════
+   Friends — v620 redesign
+   Sections: Friends · Activity · Lists · Notes · Compare
+   Each section has the site's Sort / Filter buttons (sort-filter.js).
+   Everything comes from 2 queries (all friends' entries + lists), made
+   once when the page opens; Compare adds your own library on first use.
+══════════════════════════════════════════════════════════════ */
 const _PIN_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>`;
 const _PIN_SVG_FILLED = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>`;
+let _frTab = 'friends';
+let _frAccepted = [], _frIncoming = [], _frOutgoing = [];
+let _frEntries = [], _frLists = [], _frProfiles = {}, _frStats = {}, _frLoaded = false;
+let _frSentOpen = false;
+let _frAuthKnown = false;          // until sign-in is checked, show a spinner (never the signed-out view)
+window._frEntryMap = {};
 
-function _friendCardHTML(f) {
-  const st = _friendStatsMap[f.friendId] || {};
-  const un = f.friendProfile?.username || 'unknown';
-  const displayName = f.friendProfile?.display_name;
-  const showDisplayName = displayName && displayName.toLowerCase() !== un.toLowerCase();
-  const somePinned = !!(_fProfile && _fProfile.pinned_friend_id);
-  const isPinned = somePinned && _fProfile.pinned_friend_id === f.friendId;
-  const pinnedBadge = isPinned ? `<span class="friend-pinned-badge">${_PIN_SVG_FILLED}Pinned</span>` : '';
-  // Only show a pin button if nothing's pinned yet, or on the currently
-  // pinned friend's own card (so it can be clicked to unpin). Other cards
-  // hide theirs until that happens, since only one friend can be pinned.
-  const pinBtn = (!somePinned || isPinned)
-    ? `<button class="btn-pin${isPinned ? ' pinned' : ''}" title="${isPinned ? 'Unpin friend' : 'Pin friend'}" onclick="togglePinFriend('${f.friendId}')">${isPinned ? _PIN_SVG_FILLED : _PIN_SVG}</button>`
-    : '';
-  return `
-  <div class="friend-card${isPinned ? ' is-pinned' : ''}" id="fc-${f.id}" onclick="viewFriend('${f.friendId}','${un}')">
-    <div class="friend-card-top">
-      <div class="friend-avatar">
-        ${avatarHtml(f.friendProfile, 48, 22)}
-      </div>
-      <div class="friend-info">
-        ${showDisplayName
-          ? `<div class="friend-display-name">${displayName}${pinnedBadge}</div><div class="friend-username-sub">@${un}</div>`
-          : `<div class="friend-display-name">@${un}${pinnedBadge}</div>`}
-      </div>
-      <div class="friend-actions" onclick="event.stopPropagation()">
-        ${pinBtn}
-        <button class="btn-unfriend" title="Remove friend" onclick="doUnfriend('${f.id}','${un}')">✕</button>
-      </div>
-    </div>
-    <div class="friend-card-divider"></div>
-    <div class="friend-stats">
-      <span class="friend-stat"><strong>${st.watching||0}</strong>watching</span>
-      <span class="friend-stat"><strong>${st.completed||0}</strong>completed</span>
-      <span class="friend-stat"><strong>${st.queue||0}</strong>on watchlist</span>
-      ${st.avgScore ? `<span class="friend-stat"><strong>${st.avgScore}</strong>avg score</span>` : ''}
-    </div>
+const _FR_TABS = [
+  { key: 'friends',  label: 'Friends',  icon: 'users' },
+  { key: 'activity', label: 'Activity', icon: 'play' },
+  { key: 'lists',    label: 'Lists',    icon: 'layers' },
+  { key: 'notes',    label: 'Notes',    icon: 'edit' },
+  { key: 'compare',  label: 'Compare',  icon: 'sparkles' },
+];
+
+/* ── Small helpers ── */
+const _frName = uid => { const p = _frProfiles[uid] || {}; return p.display_name || p.username || 'Friend'; };
+function _frAvHTML(p, size = 36) {
+  const u = safeURL(p?.avatar_url);
+  return `<span class="fr-av" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .42)}px">${u ? `<img src="${u}" alt="" loading="lazy">` : escHTML((p?.username || '?')[0].toUpperCase())}</span>`;
+}
+function _frPosterHTML(e, cls = 'fr-poster') {
+  const u = safeURL(e?.poster_url);
+  return `<div class="${cls}">${u ? `<img src="${u}" alt="" loading="lazy" onerror="mssImgError(this)" data-letter="${escHTML((e.title || '?')[0])}">` : `<span class="fr-poster-letter">${escHTML((e?.title || '?')[0].toUpperCase())}</span>`}</div>`;
+}
+function _frTypeBadge(e) {
+  const movie = e.cat === 'movies' || e.ratings?._media_type === 'movie' || e.tmdb_type === 'movie';
+  const label = CAT_META[e.cat]?.singular || (movie ? 'Movie' : 'TV Show');
+  return `<span class="${movie ? 'type-label' : 'type-label type-label-tv'}">${escHTML(label)}</span>`;
+}
+const _frScore = e => liveScore(e) != null ? Number(liveScore(e)) : null;
+const _frDate = x => x ? new Date(String(x).length <= 10 ? x + 'T12:00:00' : x) : null;
+// Activity items open what fits: a note → the note popup, something they
+// watched → their ratings popup, watchlist / started / up next → info popup
+function _frOpenEvent(id, type) {
+  const e = window._frEntryMap[id]; if (!e) return;
+  const p = _frProfiles[e.user_id] || {};
+  if (type === 'note' && e.notes && e.notes.trim()) return MSSFriendPop.note(e, p);
+  if (type === 'finished' || type === 'caught_up' || e.status === 'completed' || e.status === 'ongoing') return MSSFriendPop.rating(e, p);
+  MSSInfo.fromEntry(e);
+}
+function _frFriendOptions() { return [['', 'Everyone'], ..._frAccepted.map(f => [f.friendId, _frName(f.friendId)])]; }
+const _FR_CAT_OPTS = [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
+
+/* ── Loading ── */
+async function loadFriends() {
+  [_friendships, _fProfile] = await Promise.all([getFriendships(_fUser.id), getProfile(_fUser.id)]);
+  _frAccepted = _friendships.filter(f => f.status === 'accepted');
+  _frIncoming = _friendships.filter(f => f.status === 'pending' && !f.iRequested);
+  _frOutgoing = _friendships.filter(f => f.status === 'pending' && f.iRequested);
+  _frProfiles = Object.fromEntries(_frAccepted.map(f => [f.friendId, f.friendProfile || {}]));
+  const ids = _frAccepted.map(f => f.friendId);
+  if (ids.length) {
+    const [ents, lists] = await Promise.all([
+      sb.from('entries').select('*').in('user_id', ids).order('updated_at', { ascending: false }).limit(3000).then(r => r.data || [], () => []),
+      sb.from('favorite_lists').select('*').in('user_id', ids).eq('cat', 'custom').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+    ]);
+    _frEntries = ents; _frLists = lists;
+  } else { _frEntries = []; _frLists = []; }
+  _frEntries.forEach(e => { window._frEntryMap[e.id] = e; });
+  _frStats = {};
+  _frAccepted.forEach(f => {
+    const mine = _frEntries.filter(e => e.user_id === f.friendId);
+    _frStats[f.friendId] = { ...computeStats(mine), recent: mine[0]?.updated_at || null,
+      watchingNow: mine.find(e => e.status === 'watching') || null,
+      posters: mine.filter(e => safeURL(e.poster_url) && (e.status === 'completed' || e.status === 'watching' || e.status === 'ongoing')).slice(0, 4),
+      latest: null };
+  });
+  // Each friend's most recent activity (shown when they aren't watching anything)
+  // (what they watched counts first; a note only if that's all they've done)
+  const events = _frEvents().sort((a, b) => (a._ev === 'note') - (b._ev === 'note') || b._at - a._at);
+  events.forEach(x => { const st = _frStats[x.user_id]; if (st && !st.latest) st.latest = { e: window._frEntryMap[x.id.split(':')[0]], type: x._ev }; });
+  _frLoaded = true;
+  const sub = document.getElementById('friendsPageSub');
+  if (sub) sub.textContent = `${_frAccepted.length} friend${_frAccepted.length === 1 ? '' : 's'}${_frIncoming.length ? ` · ${_frIncoming.length} request${_frIncoming.length === 1 ? '' : 's'}` : ''}`;
+  ['frFriends', 'frActivity', 'frLists', 'frNotes', 'frShared'].forEach(k => SF.invalidate && SF.invalidate(k));
+  _frRender();
+}
+
+/* ── Tabs ── */
+function _frTabsHTML() {
+  const count = { friends: _frAccepted.length, activity: null, lists: _frLists.length, notes: _frEntries.filter(e => e.notes && e.notes.trim()).length, compare: null };
+  return _FR_TABS.map(t => `<button class="fr-tab${_frTab === t.key ? ' active' : ''}" role="tab" aria-selected="${_frTab === t.key}" onclick="setFriendsTab('${t.key}')">
+      ${icon(t.icon, 15)}<span>${t.label}</span>${t.key === 'friends' && _frIncoming.length ? `<span class="fr-tab-dot">${_frIncoming.length}</span>` : (count[t.key] ? `<span class="fr-tab-count">${count[t.key]}</span>` : '')}
+    </button>`).join('');
+}
+function setFriendsTab(tab) {
+  _frTab = tab;
+  try { sessionStorage.setItem('friends_tab', tab); } catch {}
+  _frRender();
+}
+
+function _frToolbar(label, count, scope, noun = 'items') {
+  const el = document.getElementById('frToolbar');
+  el.innerHTML = `<div class="fr-toolbar-label"><div class="fr-toolbar-title">${escHTML(label)}</div>${count != null ? `<div class="fr-toolbar-count"><b>${count}</b> ${noun}</div>` : ''}</div>${scope ? SF.bar(scope, 'all') : ''}`;
+  el.style.display = '';
+}
+
+function _frRender() {
+  document.getElementById('frTabs').innerHTML = _frTabsHTML();
+  const c = document.getElementById('frContent'), tb = document.getElementById('frToolbar');
+  if (!_frAuthKnown) { tb.style.display = 'none'; c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; return; }
+  if (!_fUser) { tb.style.display = 'none'; c.innerHTML = _frGuestHTML(); return; }
+  if (!_frLoaded) { tb.style.display = 'none'; c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; return; }
+  if (_frTab !== 'friends' && !_frAccepted.length) {
+    tb.style.display = 'none';
+    c.innerHTML = _frEmptyHTML('users', 'Your feed starts with friends', 'Find people by username above — once they accept, their activity, lists and notes show up here.');
+    return;
+  }
+  if (_frTab === 'friends') return _frRenderFriends();
+  if (_frTab === 'activity') return _frRenderActivity();
+  if (_frTab === 'lists') return _frRenderLists();
+  if (_frTab === 'notes') return _frRenderNotes();
+  if (_frTab === 'compare') return _frRenderCompare();
+}
+function _frEmptyHTML(ic, title, text) {
+  return `<div class="fr-empty"><div class="fr-empty-ic">${icon(ic, 26)}</div><div class="fr-empty-title">${escHTML(title)}</div><div class="fr-empty-text">${escHTML(text)}</div></div>`;
+}
+function _frGuestHTML() {
+  return `<div class="guest-page-state" style="padding:3rem 1rem;">
+    <div class="guest-page-icon">${icon('users', 32)}</div>
+    <h2 class="guest-page-title" style="font-size:19px;">See what your friends are watching</h2>
+    <p class="guest-page-sub">Sign in to add friends, follow their activity, and compare your taste.</p>
+    <div class="guest-cta"><a href="login.html" class="guest-btn-primary">Sign In</a><a href="login.html#signup" class="guest-btn-secondary">Create Account</a></div>
   </div>`;
 }
 
-function renderAcceptedFriends() {
-  const accepted = _friendships.filter(f => f.status === 'accepted');
-  const pinnedId = _fProfile && _fProfile.pinned_friend_id;
+/* ══ FRIENDS ══ */
+SF.register('frFriends', {
+  base: () => _frAccepted.map(f => ({ ...f, id: f.friendId, title: _frName(f.friendId), created_at: f.created_at })),
+  render: () => _frRender(),
+  defaultSort: 'active',
+  presets: {
+    activity: { header: 'Activity', opts: [['active', 'Recently Active'], ['watched_most', 'Most Watched']] },
+    added:    { header: 'Friends Since', opts: [['newest', 'Newest'], ['oldest', 'Oldest']] },
+  },
+  sorts: () => ['activity', 'added', 'alpha'],
+  filters: () => [],
+  addedDate: f => f.created_at,
+  compare: {
+    active: (a, b) => new Date(_frStats[b.friendId]?.recent || 0) - new Date(_frStats[a.friendId]?.recent || 0),
+    watched_most: (a, b) => (_frStats[b.friendId]?.completed || 0) - (_frStats[a.friendId]?.completed || 0),
+  },
+  // Your pinned friend always comes first
+  postSort: (sec, list) => { const pin = _fProfile?.pinned_friend_id; return pin ? [...list.filter(f => f.friendId === pin), ...list.filter(f => f.friendId !== pin)] : list; },
+});
 
-  const pinned = pinnedId ? accepted.find(f => f.friendId === pinnedId) : null;
-  const rest = accepted.filter(f => f !== pinned);
-
-  rest.sort((a, b) => {
-    const diff = new Date(b.created_at) - new Date(a.created_at); // latest first
-    return _friendsSortOrder === 'earliest' ? -diff : diff;
-  });
-
-  const ordered = pinned ? [pinned, ...rest] : rest;
-  document.getElementById('friendsList').innerHTML = ordered.map(_friendCardHTML).join('');
+function _frMemberCard(f) {
+  const st = _frStats[f.friendId] || {};
+  const p = f.friendProfile || {};
+  const un = p.username || 'unknown';
+  const name = p.display_name && p.display_name.toLowerCase() !== un.toLowerCase() ? p.display_name : null;
+  const somePinned = !!_fProfile?.pinned_friend_id, isPinned = _fProfile?.pinned_friend_id === f.friendId;
+  const cover = (st.posters || []);
+  const now = st.watchingNow;
+  return `<article class="fm-card${isPinned ? ' is-pinned' : ''}" id="fc-${f.id}" onclick="viewFriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">
+    <div class="fm-cover">
+      ${cover.length ? cover.map(e => `<div class="fm-cover-tile">${_frPosterHTML(e, 'fm-cover-img')}</div>`).join('') : '<div class="fm-cover-empty"></div>'}
+      <div class="fm-cover-shade"></div>
+      ${(!somePinned || isPinned) ? `<button type="button" class="fm-pin${isPinned ? ' on' : ''}" title="${isPinned ? 'Unpin' : 'Pin to top'}" aria-label="${isPinned ? 'Unpin' : 'Pin to top'}" onclick="event.stopPropagation();togglePinFriend(${attrJSON(f.friendId)})">${isPinned ? _PIN_SVG_FILLED : _PIN_SVG}</button>` : ''}
+    </div>
+    <div class="fm-body">
+      <div class="fm-av">${_frAvHTML(p, 64)}</div>
+      <div class="fm-name">${escHTML(name || '@' + un)}</div>
+      ${name ? `<div class="fm-user">@${escHTML(un)}</div>` : ''}
+      <div class="fm-stats">
+        <div><b>${st.completed || 0}</b><span>Watched</span></div>
+        <div><b>${st.avgScore || '—'}</b><span>Avg Score</span></div>
+        <div><b>${st.queue || 0}</b><span>Watchlist</span></div>
+      </div>
+      ${now ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(now.id)}, 'started')">${_frPosterHTML(now, 'fm-now-poster')}<span><small>Watching now</small>${escHTML(now.title)}</span></button>`
+        : st.latest ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(st.latest.e.id)}, ${attrJSON(st.latest.type)})">${_frPosterHTML(st.latest.e, 'fm-now-poster')}<span><small>Latest · ${escHTML(_FR_ACT[st.latest.type].label)}</small>${escHTML(st.latest.e.title)}</span></button>`
+        : `<div class="fm-now fm-now-idle"><span><small>Latest</small>No activity yet</span></div>`}
+      <div class="fm-actions" onclick="event.stopPropagation()">
+        <button class="fm-btn fm-btn-primary" onclick="_frCompareWith(${attrJSON(f.friendId)})">${icon('sparkles', 13)} Compare</button>
+        <button class="fm-btn" onclick="viewFriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">Profile</button>
+        <button class="fm-icon-btn fm-danger" title="Remove friend" aria-label="Remove friend" onclick="doUnfriend(${attrJSON(f.id)}, ${attrJSON(un)})">${icon('x', 13)}</button>
+      </div>
+    </div>
+  </article>`;
 }
 
-function setFriendsSort(order) {
-  _friendsSortOrder = order;
-  document.querySelectorAll('#friendsSortBar .sort-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.sort === order);
-  });
-  renderAcceptedFriends();
+function _frRequestsHTML() {
+  if (!_frIncoming.length && !_frOutgoing.length) return '';
+  const inc = _frIncoming.length ? `<section class="fr-req">
+      <div class="fr-req-head"><span class="fr-req-title">${icon('bell', 14)} Friend requests</span><span class="fr-tab-dot">${_frIncoming.length}</span></div>
+      ${_frIncoming.map(f => { const p = f.friendProfile || {}; const un = p.username || 'unknown';
+        return `<div class="fr-req-row" id="pc-${f.id}">
+          <button type="button" class="fr-req-who" onclick="viewFriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">${_frAvHTML(p, 42)}<span><b>${escHTML(p.display_name || '@' + un)}</b>${p.display_name ? `<small>@${escHTML(un)}</small>` : '<small>wants to be friends</small>'}</span></button>
+          <div class="fr-req-actions"><button class="fm-btn fm-btn-primary" onclick="doAccept(${attrJSON(f.id)})">Accept</button><button class="fm-btn" onclick="doDecline(${attrJSON(f.id)})">Decline</button></div>
+        </div>`; }).join('')}
+    </section>` : '';
+  const out = _frOutgoing.length ? `<section class="fr-sent${_frSentOpen ? ' open' : ''}">
+      <button type="button" class="fr-sent-toggle" onclick="_frSentOpen=!_frSentOpen;_frRender()">Sent requests <b>${_frOutgoing.length}</b> ${icon('arrowRight', 12)}</button>
+      ${_frSentOpen ? _frOutgoing.map(f => { const p = f.friendProfile || {}; const un = p.username || 'unknown';
+        return `<div class="fr-req-row" id="pc-${f.id}"><div class="fr-req-who">${_frAvHTML(p, 34)}<span><b>@${escHTML(un)}</b><small>Pending</small></span></div>
+          <button class="fm-btn" onclick="doCancelRequest(${attrJSON(f.id)})">Cancel</button></div>`; }).join('') : ''}
+    </section>` : '';
+  return inc + out;
 }
+
+function _frRenderFriends() {
+  const list = SF.list('frFriends', 'all');
+  _frToolbar('Your Friends', _frAccepted.length, _frAccepted.length > 1 ? 'frFriends' : null, _frAccepted.length === 1 ? 'friend' : 'friends');
+  document.getElementById('frContent').innerHTML = _frRequestsHTML() + (_frAccepted.length
+    ? `<div class="fm-grid">${list.map(_frMemberCard).join('')}</div>`
+    : _frEmptyHTML('users', 'No friends yet', 'Search for someone by username above and send a request.'));
+}
+
+/* ══ ACTIVITY ══ */
+const _FR_ACT = {
+  finished:  { verb: 'finished',                 color: '#1e5c26', ic: 'check',   label: 'Finished' },
+  caught_up: { verb: 'is caught up on',          color: '#8a5a1c', ic: 'refresh', label: 'Caught Up' },
+  started:   { verb: 'started watching',         color: '#2f7a3a', ic: 'play',    label: 'Started' },
+  up_next:   { verb: 'lined up',                 color: '#264e78', ic: 'play',    label: 'Up Next' },
+  watchlist: { verb: 'added to their watchlist', color: '#6b6b6b', ic: 'plus',    label: 'Watchlist' },
+  note:      { verb: 'wrote a note on',          color: '#7a3e78', ic: 'edit',    label: 'Note' },
+};
+function _frEvents() {
+  const ev = [];
+  _frEntries.forEach(e => {
+    const push = (type, at) => { const d = _frDate(at); if (d && !isNaN(d)) ev.push({ ...e, _ev: type, _at: d, id: e.id + ':' + type }); };
+    if (e.status === 'completed' && e.completed_date) push('finished', e.completed_date);
+    else if (e.status === 'ongoing') push('caught_up', e.updated_at);
+    else if (e.status === 'watching') push('started', e.updated_at);
+    else if (e.status === 'up_next') push('up_next', e.updated_at);
+    else if (e.status === 'queue') push('watchlist', e.created_at);
+    if (e.notes && e.notes.trim()) push('note', e.updated_at);
+  });
+  return ev;
+}
+SF.register('frActivity', {
+  base: () => _frEvents(),
+  render: () => _frRender(),
+  defaultSort: 'newest',
+  presets: { added: { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Oldest']] } },
+  sorts: () => ['added', 'ratings', 'alpha'],
+  filters: () => ['score'],
+  addedDate: x => x._at,
+  choiceFilters: () => [
+    { key: 'who',  label: 'Friend',   options: _frFriendOptions(), test: (x, v) => x.user_id === v },
+    { key: 'ev',   label: 'Activity', options: [['', 'Everything'], ...Object.entries(_FR_ACT).map(([k, a]) => [k, a.label])], test: (x, v) => x._ev === v },
+    { key: 'cat',  label: 'Type',     options: _FR_CAT_OPTS },
+  ],
+});
+function _frDayLabel(dt) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d0 = new Date(dt); d0.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - d0) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff > 0 && diff < 7) return d0.toLocaleDateString('en-US', { weekday: 'long' });
+  return d0.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: d0.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+}
+let _frActShown = 40;
+function _frRenderActivity() {
+  const list = SF.list('frActivity', 'all');
+  _frToolbar('Activity', list.length, 'frActivity', list.length === 1 ? 'update' : 'updates');
+  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('play', 'Nothing here yet', 'Try another friend or clear the filter.'); return; }
+  const byDate = (SF.getSort('frActivity', 'all') || 'newest') === 'newest' || SF.getSort('frActivity', 'all') === 'oldest';
+  let html = '<div class="fa-feed">', lastDay = '';
+  list.slice(0, _frActShown).forEach(x => {
+    const a = _FR_ACT[x._ev], sc = _frScore(x);
+    const day = _frDayLabel(x._at);
+    if (byDate && day !== lastDay) { html += `<div class="fa-day">${day}</div>`; lastDay = day; }
+    html += `<article class="fa-item" onclick="_frOpenEvent(${attrJSON(x.id.split(':')[0])}, '${x._ev}')">
+      <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
+      <div class="fa-body">
+        <div class="fa-text"><b>${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
+        <div class="fa-title">${escHTML(x.title)}${x.year ? ` <span>${escHTML(String(x.year).slice(0, 4))}</span>` : ''}</div>
+        <div class="fa-meta">${_frTypeBadge(x)}<span>${x._ev === 'finished' ? x._at.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+        ${x._ev === 'note' ? `<div class="fa-note">${mssIsSpoiler(x) ? mssSpoilerTag() : `&ldquo;${escHTML(x.notes.trim().split(/\s+/).slice(0, 30).join(' '))}${x.notes.trim().split(/\s+/).length > 30 ? '…' : ''}&rdquo;`}</div>` : ''}
+      </div>
+      ${(x._ev === 'finished' || x._ev === 'caught_up') && sc != null ? `<div class="fa-score">★ ${sc.toFixed(2)}</div>` : ''}
+      ${_frPosterHTML(x, 'fa-poster')}
+    </article>`;
+  });
+  html += '</div>';
+  if (list.length > _frActShown) html += `<button class="fr-more" onclick="_frActShown+=40;_frRender()">Show more</button>`;
+  document.getElementById('frContent').innerHTML = html;
+}
+
+/* ══ LISTS ══ */
+SF.register('frLists', {
+  base: () => _frLists,
+  render: () => _frRender(),
+  defaultSort: 'newest',
+  presets: {
+    added: { header: 'Created', opts: [['newest', 'Newest'], ['oldest', 'Oldest']] },
+    size:  { header: 'Size', opts: [['size_big', 'Most Titles'], ['size_small', 'Fewest Titles']] },
+  },
+  sorts: () => ['added', 'size', 'alpha'],
+  filters: () => [],
+  addedDate: l => l.created_at,
+  compare: {
+    size_big: (a, b) => (b.items || []).length - (a.items || []).length,
+    size_small: (a, b) => (a.items || []).length - (b.items || []).length,
+  },
+  choiceFilters: () => [
+    { key: 'who', label: 'Friend', options: _frFriendOptions(), test: (l, v) => l.user_id === v },
+    { key: 'rank', label: 'Ranking', options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked']], test: (l, v) => v === 'yes' ? l.ranked === true : l.ranked === false },
+  ],
+});
+/* Lists can hold titles added straight from Discover ("tmdb:movie:123").
+   Look up their posters from TMDB (kept on the device for 14 days —
+   shared with the Lists page's cache) and redraw once they arrive. */
+let _frTmdbItems = {}, _frTmdbLoading = false;
+try {
+  const saved = JSON.parse(localStorage.getItem('mss_tmdb_items_v1') || '{}');
+  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  Object.entries(saved).forEach(([k, v]) => { if (v && v._t > cutoff) _frTmdbItems[k] = v; });
+} catch {}
+async function _frHydrateTmdb(lists) {
+  if (_frTmdbLoading) return;
+  const need = [...new Set(lists.flatMap(l => (l.items || []).slice(0, 5)))].filter(id => typeof id === 'string' && id.startsWith('tmdb:') && !_frTmdbItems[id]);
+  if (!need.length) return;
+  _frTmdbLoading = true;
+  await Promise.all(need.slice(0, 60).map(async pid => {
+    const [, type, tid] = pid.split(':');
+    try {
+      const res = await tmdbFetch(`${TMDB_BASE}/${type}/${tid}?api_key=${TMDB_KEY}&language=en-US`);
+      if (!res.ok) return;
+      const d = await res.json();
+      _frTmdbItems[pid] = { id: pid, title: d.title || d.name || '', poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null, tmdb_id: Number(tid), tmdb_type: type,
+        year: (d.release_date || d.first_air_date || '').slice(0, 4), cat: type === 'movie' ? 'movies' : 'tv', _t: Date.now() };
+    } catch {}
+  }));
+  try {
+    const all = JSON.parse(localStorage.getItem('mss_tmdb_items_v1') || '{}');
+    localStorage.setItem('mss_tmdb_items_v1', JSON.stringify({ ...all, ..._frTmdbItems }));
+  } catch {}
+  _frTmdbLoading = false;
+  if (_frTab === 'lists') _frRender();
+}
+
+function _frRenderLists() {
+  const list = SF.list('frLists', 'all');
+  _frHydrateTmdb(list);
+  _frToolbar("Friends' Lists", list.length, 'frLists', list.length === 1 ? 'list' : 'lists');
+  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('layers', 'No lists yet', 'When your friends make lists, they show up here.'); return; }
+  document.getElementById('frContent').innerHTML = `<div class="fl-grid">${list.map(l => {
+    const items = l.items || [];
+    const posters = items.map(id => window._frEntryMap[id] || _frTmdbItems[id]).filter(Boolean).slice(0, 5);
+    const p = _frProfiles[l.user_id] || {};
+    return `<article class="fl-card" onclick="location.href='list-view.html?list=${encodeURIComponent(l.id)}'">
+      <div class="fl-stack">${posters.length ? posters.map((e, i) => `<div class="fl-stack-item" style="--i:${i}">${_frPosterHTML(e, 'fl-stack-img')}</div>`).join('') : '<div class="fl-stack-empty">No titles yet</div>'}</div>
+      <div class="fl-body">
+        <div class="fl-title-row"><div class="fl-title">${escHTML(l.title)}</div>${l.ranked === true ? '<span class="list-rank-badge is-ranked">Ranked</span>' : l.ranked === false ? '<span class="list-rank-badge is-unranked">Unranked</span>' : ''}</div>
+        ${l.description ? `<div class="fl-desc">${escHTML(l.description)}</div>` : ''}
+        <div class="fl-foot">${_frAvHTML(p, 22)}<span>${escHTML(_frName(l.user_id))}</span><span class="fl-dot">·</span><span><b>${items.length}</b> ${items.length === 1 ? 'title' : 'titles'}</span></div>
+      </div>
+    </article>`;
+  }).join('')}</div>`;
+}
+
+/* ══ NOTES ══ */
+const _frWords = t => (t || '').trim().split(/\s+/).filter(Boolean).length;
+SF.register('frNotes', {
+  base: () => _frEntries.filter(e => e.notes && e.notes.trim()),
+  render: () => _frRender(),
+  defaultSort: 'newest',
+  presets: {
+    added:  { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Oldest']] },
+    length: { header: 'Note Length', opts: [['note_long', 'Longest'], ['note_short', 'Shortest']] },
+  },
+  sorts: () => ['added', 'length', 'ratings', 'alpha'],
+  filters: () => ['genre', 'score'],
+  addedDate: e => e.completed_date || e.updated_at,
+  compare: {
+    note_long: (a, b) => _frWords(b.notes) - _frWords(a.notes),
+    note_short: (a, b) => _frWords(a.notes) - _frWords(b.notes),
+  },
+  choiceFilters: () => [
+    { key: 'who', label: 'Friend', options: _frFriendOptions(), test: (e, v) => e.user_id === v },
+    { key: 'cat', label: 'Type', options: _FR_CAT_OPTS },
+  ],
+});
+function _frRenderNotes() {
+  const list = SF.list('frNotes', 'all');
+  _frToolbar("Friends' Notes", list.length, 'frNotes', list.length === 1 ? 'note' : 'notes');
+  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('edit', 'No notes yet', 'Notes your friends write about what they watch will appear here.'); return; }
+  // Same cards and popup as the Notes page (friend-popups.js + style.css)
+  document.getElementById('frContent').innerHTML = `<div class="nc-grid">${list.map(e =>
+    MSSFriendPop.noteCardHTML(e, _frProfiles[e.user_id], `MSSFriendPop.note(window._frEntryMap['${escHTML(e.id)}'], _frProfiles['${escHTML(e.user_id)}'])`)).join('')}</div>`;
+}
+
+/* ══ COMPARE ══
+   1) choose who to compare with   2) see your taste match + shared titles
+   (sortable / filterable)   3) open a title for the full side-by-side. */
+let _cmpMine = null, _cmpMyLists = [], _cmpProfiles = {}, _cmpWith = [], _cmpKey = null, _cmpQuery = '';
+const _cmpKeyOf = e => e.tmdb_id && e.tmdb_type ? `t:${e.tmdb_type}:${e.tmdb_id}` : `n:${e.cat}:${(e.title || '').trim().toLowerCase()}`;
+
+function _frCompareWith(uid) { _cmpWith = [uid]; _cmpKey = null; setFriendsTab('compare'); }
+
+async function _cmpLoad() {
+  if (_cmpMine) return;
+  const [mine, myLists, profs] = await Promise.all([
+    getEntries(_fUser.id).catch(() => []),
+    sb.from('favorite_lists').select('id, title, items').eq('user_id', _fUser.id).eq('cat', 'custom').then(r => r.data || [], () => []),
+    sb.from('profiles').select('id, username, display_name, avatar_url, top_picks, recommended, fav_tv, fav_movies, fav_anime, fav_cartoons')
+      .in('id', [_fUser.id, ..._frAccepted.map(f => f.friendId)]).then(r => r.data || [], () => []),
+  ]);
+  _cmpMine = mine || []; _cmpMyLists = myLists;
+  _cmpProfiles = Object.fromEntries(profs.map(p => [p.id, p]));
+}
+// Titles you share with the selected friend(s) — one group per title
+function _cmpGroups() {
+  const me = _fUser.id, pick = new Set(_cmpWith);
+  const idx = {};
+  const add = e => { const k = _cmpKeyOf(e); (idx[k] ||= { id: k, key: k, title: e.title, year: e.year, cat: e.cat, poster_url: e.poster_url, ratings: e.ratings, byUser: {} }); if (!idx[k].byUser[e.user_id]) idx[k].byUser[e.user_id] = e; if (!idx[k].poster_url) idx[k].poster_url = e.poster_url; };
+  _cmpMine.forEach(add);
+  _frEntries.filter(e => pick.has(e.user_id)).forEach(add);
+  return Object.values(idx).filter(g => g.byUser[me] && _cmpWith.some(u => g.byUser[u])).map(g => {
+    const mine = _frScore(g.byUser[me]);
+    const theirs = _cmpWith.map(u => g.byUser[u]).filter(Boolean).map(_frScore).filter(v => v != null);
+    const avgTheirs = theirs.length ? theirs.reduce((a, b) => a + b, 0) / theirs.length : null;
+    return { ...g, _mine: mine, _theirs: avgTheirs, _diff: mine != null && avgTheirs != null ? avgTheirs - mine : null };
+  });
+}
+SF.register('frShared', {
+  base: () => _cmpMine ? _cmpGroups().filter(g => !_cmpQuery || (g.title || '').toLowerCase().includes(_cmpQuery.toLowerCase())) : [],
+  render: () => _frRender(),
+  defaultSort: 'agree',
+  presets: {
+    agreement: { header: 'Agreement', opts: [['agree', 'Most In Sync'], ['disagree', 'Biggest Difference']] },
+    scores:    { header: 'Scores', opts: [['yours', 'Your Top Rated'], ['theirs', 'Their Top Rated']] },
+  },
+  sorts: () => ['agreement', 'scores', 'alpha'],
+  filters: () => [],
+  compare: {
+    agree: (a, b) => (a._diff == null) - (b._diff == null) || Math.abs(a._diff ?? 99) - Math.abs(b._diff ?? 99),
+    disagree: (a, b) => (a._diff == null) - (b._diff == null) || Math.abs(b._diff ?? -1) - Math.abs(a._diff ?? -1),
+    yours: (a, b) => (b._mine ?? -1) - (a._mine ?? -1),
+    theirs: (a, b) => (b._theirs ?? -1) - (a._theirs ?? -1),
+  },
+  choiceFilters: () => [
+    { key: 'cat', label: 'Type', options: _FR_CAT_OPTS },
+    { key: 'rated', label: 'Scores', options: [['', 'All Shared'], ['both', 'Rated by both']], test: (g, v) => g._diff != null },
+  ],
+});
+
+// Taste match with one friend: how closely your scores line up
+function _cmpMatch(uid) {
+  const me = _fUser.id, mineIdx = {};
+  _cmpMine.forEach(e => { mineIdx[_cmpKeyOf(e)] = e; });
+  const pairs = [];
+  _frEntries.filter(e => e.user_id === uid).forEach(e => {
+    const m = mineIdx[_cmpKeyOf(e)]; if (!m) return;
+    pairs.push({ m, t: e, a: _frScore(m), b: _frScore(e) });
+  });
+  const rated = pairs.filter(p => p.a != null && p.b != null);
+  const avgDiff = rated.length ? rated.reduce((s, p) => s + Math.abs(p.a - p.b), 0) / rated.length : null;
+  const pct = avgDiff != null ? Math.max(0, Math.round(100 - avgDiff * 12)) : null;
+  const loved = rated.slice().sort((x, y) => (y.a + y.b) - (x.a + x.b))[0];
+  const split = rated.slice().sort((x, y) => Math.abs(y.a - y.b) - Math.abs(x.a - x.b))[0];
+  return { shared: pairs.length, rated: rated.length, pct, avgDiff, loved, split: split && Math.abs(split.a - split.b) >= 1 ? split : null };
+}
+
+async function _frRenderCompare() {
+  const c = document.getElementById('frContent');
+  if (!_cmpMine) { document.getElementById('frToolbar').style.display = 'none'; c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; await _cmpLoad(); if (_frTab !== 'compare') return; }
+  _cmpWith = _cmpWith.filter(u => _frProfiles[u]);
+  // 1) Who
+  const picker = `<section class="cp-pick">
+      <div class="cp-pick-head"><div class="fr-toolbar-title">Compare with</div><div class="cp-pick-hint">${_cmpWith.length ? `${_cmpWith.length} selected · tap to change` : 'Pick one or more friends'}</div></div>
+      <div class="cp-pick-row">${_frAccepted.map(f => { const on = _cmpWith.includes(f.friendId);
+        return `<button type="button" class="cp-person${on ? ' on' : ''}" aria-pressed="${on}" onclick="_cmpToggle(${attrJSON(f.friendId)})">${_frAvHTML(f.friendProfile, 52)}<span>${escHTML(_frName(f.friendId))}</span>${on ? `<i>${icon('check', 11)}</i>` : ''}</button>`; }).join('')}</div>
+    </section>`;
+  if (!_cmpWith.length) {
+    document.getElementById('frToolbar').style.display = 'none';
+    c.innerHTML = picker + _frEmptyHTML('sparkles', 'Who do you want to compare with?', 'Choose a friend above to see how your taste lines up — shared titles, score differences, favorites and notes.');
+    return;
+  }
+  if (_cmpKey) return _cmpShowTitle(picker);
+  // 2) Taste match cards
+  const matches = `<div class="cp-matches">${_cmpWith.map(uid => { const m = _cmpMatch(uid);
+    const ring = m.pct != null ? m.pct : 0;
+    return `<div class="cp-match">
+      <div class="cp-ring" style="--p:${ring}"><div><b>${m.pct != null ? m.pct + '%' : '—'}</b><span>match</span></div></div>
+      <div class="cp-match-info">
+        <div class="cp-match-name">You & ${escHTML(_frName(uid))}</div>
+        <div class="cp-match-stats"><span><b>${m.shared}</b> shared</span><span><b>${m.rated}</b> rated by both</span>${m.avgDiff != null ? `<span><b>±${m.avgDiff.toFixed(1)}</b> avg difference</span>` : ''}</div>
+        ${m.loved ? `<div class="cp-match-line">${icon('heart', 12)} You both love <b>${escHTML(m.loved.m.title)}</b></div>` : ''}
+        ${m.split ? `<div class="cp-match-line">${icon('zap', 12)} Split on <b>${escHTML(m.split.m.title)}</b> — you ${m.split.a.toFixed(1)}, them ${m.split.b.toFixed(1)}</div>` : ''}
+      </div>
+    </div>`; }).join('')}</div>`;
+  // 3) Shared titles
+  const list = SF.list('frShared', 'all');
+  document.getElementById('frToolbar').style.display = 'none';
+  // Shared-titles toolbar sits between the match cards and the list
+  c.innerHTML = picker + matches + `
+    <div class="fr-toolbar" id="cmpToolbar"><div class="fr-toolbar-label"><div class="fr-toolbar-title">Shared Titles</div><div class="fr-toolbar-count"><b>${list.length}</b> ${list.length === 1 ? 'title' : 'titles'}</div></div>${SF.bar('frShared', 'all')}</div>
+    <div class="cp-search fused-search-wrap"><input id="cmpInput" class="add-friend-input" placeholder="Search shared titles…" autocomplete="off" spellcheck="false" value="${escHTML(_cmpQuery)}" oninput="_cmpQuery=this.value;SF.invalidate&&SF.invalidate('frShared');_cmpRenderList()"><button type="button" class="fused-search-btn" tabindex="-1" onclick="document.getElementById('cmpInput').focus()">${icon('search', 16)}</button></div>
+    <div id="cmpList"></div>`;
+  _cmpRenderList();
+}
+function _cmpRenderList() {
+  const el = document.getElementById('cmpList'); if (!el) return;
+  const list = SF.list('frShared', 'all');
+  const cnt = document.querySelector('#cmpToolbar .fr-toolbar-count b'); if (cnt) cnt.textContent = list.length;
+  el.innerHTML = list.length ? `<div class="cp-list">${list.slice(0, 120).map(g => {
+    const cols = [_fUser.id, ..._cmpWith].map(u => { const e = g.byUser[u]; const sc = e ? _frScore(e) : null;
+      return `<div class="cp-cell${u === _fUser.id ? ' me' : ''}"><span>${u === _fUser.id ? 'You' : escHTML(_frName(u))}</span><b>${e ? (sc != null ? sc.toFixed(1) : '—') : '·'}</b></div>`; }).join('');
+    const d = g._diff;
+    return `<button type="button" class="cp-row" onclick="_cmpOpen(${attrJSON(g.key)})">
+      ${_frPosterHTML(g, 'cp-row-poster')}
+      <div class="cp-row-info"><div class="cp-row-title">${escHTML(g.title)}${g.year ? ` <span>${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div><div class="fa-meta">${_frTypeBadge(g)}${d != null ? `<span class="cp-delta ${Math.abs(d) < .5 ? 'same' : d > 0 ? 'up' : 'down'}">${Math.abs(d) < .5 ? 'In sync' : (d > 0 ? '+' : '') + d.toFixed(1) + ' vs you'}</span>` : ''}</div></div>
+      <div class="cp-cells">${cols}</div>
+    </button>`;
+  }).join('')}</div>` : _frEmptyHTML('search', _cmpQuery ? 'No shared titles match' : 'Nothing shared yet', _cmpQuery ? 'Try a different search.' : 'Once you both log the same title, it shows up here.');
+}
+function _cmpToggle(uid) {
+  _cmpWith = _cmpWith.includes(uid) ? _cmpWith.filter(u => u !== uid) : [..._cmpWith, uid];
+  _cmpKey = null; SF.invalidate && SF.invalidate('frShared'); _frRender();
+}
+function _cmpOpen(key) { _cmpKey = key; _frRender(); document.getElementById('frContent').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function _cmpBack() { _cmpKey = null; _frRender(); }
+
+const _CMP_STATUS = { completed: 'Watched', ongoing: 'To Be Continued', watching: 'Watching', paused: 'Taking a Break', up_next: 'Up Next', queue: 'Watchlist' };
+function _cmpFavTags(uid, e) {
+  const p = _cmpProfiles[uid] || {}, tags = [], pos = arr => Array.isArray(arr) ? arr.indexOf(e.id) : -1;
+  let i = pos(p.top_picks); if (i >= 0) tags.push(`Top Favorite #${i + 1}`);
+  i = pos(p.recommended); if (i >= 0) tags.push('Would Recommend');
+  const k = { tv: 'fav_tv', movies: 'fav_movies', anime: 'fav_anime', cartoons: 'fav_cartoons' }[e.cat];
+  i = pos(p[k]); if (i >= 0) tags.push(`Top 5 ${CAT_META[e.cat]?.label || ''} #${i + 1}`);
+  return tags;
+}
+function _cmpListsFor(uid, e) {
+  const lists = uid === _fUser.id ? _cmpMyLists : _frLists.filter(l => l.user_id === uid);
+  return lists.filter(l => (l.items || []).includes(e.id)).map(l => l.title);
+}
+function _cmpShowTitle(picker) {
+  const g = _cmpGroups().find(x => x.key === _cmpKey);
+  const c = document.getElementById('frContent');
+  document.getElementById('frToolbar').style.display = 'none';
+  if (!g) { _cmpKey = null; return _frRender(); }
+  const me = _fUser.id;
+  const people = [me, ..._cmpWith].filter(u => g.byUser[u]);
+  const name = u => u === me ? 'You' : _frName(u);
+  const prof = u => u === me ? (_cmpProfiles[me] || _fProfile) : (_cmpProfiles[u] || _frProfiles[u]);
+  const myScore = _frScore(g.byUser[me]);
+  const scored = people.map(u => _frScore(g.byUser[u])).filter(v => v != null);
+  const avg = scored.length ? scored.reduce((a, b) => a + b, 0) / scored.length : null;
+  const { core, bonus } = getRatings(g.cat);
+  const rows = [...core, ...bonus].filter(r => people.some(u => typeof g.byUser[u].ratings?.[r.key] === 'number'));
+  const card = u => {
+    const e = g.byUser[u], sc = _frScore(e);
+    const diff = u !== me && sc != null && myScore != null ? sc - myScore : null;
+    const fav = _cmpFavTags(u, e), lists = _cmpListsFor(u, e);
+    return `<div class="cp-pcard${u === me ? ' me' : ''}">
+      <div class="cp-pcard-head">${_frAvHTML(prof(u), 34)}<b>${escHTML(name(u))}</b></div>
+      <div class="cp-pcard-score">${sc != null ? sc.toFixed(2) : '—'}</div>
+      <div class="cp-delta ${diff == null ? 'none' : Math.abs(diff) < .5 ? 'same' : diff > 0 ? 'up' : 'down'}">${diff == null ? (u === me ? 'Your score' : '&nbsp;') : Math.abs(diff) < .5 ? 'In sync with you' : (diff > 0 ? '+' : '') + diff.toFixed(2) + ' vs you'}</div>
+      <div class="cp-pcard-status">${escHTML(_CMP_STATUS[e.status] || e.status)}${e.completed_date ? ` · ${_frDate(e.completed_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</div>
+      <div class="cp-tags">${fav.map(t => `<span class="cp-tag fav">${escHTML(t)}</span>`).join('')}${lists.map(t => `<span class="cp-tag">${icon('layers', 10)} ${escHTML(t)}</span>`).join('')}${!fav.length && !lists.length ? '<span class="cp-tag-none">Not in favorites or lists</span>' : ''}</div>
+    </div>`;
+  };
+  c.innerHTML = picker + `
+    <button class="cp-back" onclick="_cmpBack()">${icon('arrowRight', 13)} Shared titles</button>
+    <div class="cp-hero">
+      <div class="cp-hero-bg" style="background-image:${cssURL(g.poster_url)}"></div>
+      ${_frPosterHTML(g, 'cp-hero-poster')}
+      <div class="cp-hero-info">
+        <div class="cp-hero-title">${escHTML(g.title)}${g.year ? ` <span>${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
+        <div class="fa-meta">${_frTypeBadge(g)}</div>
+        <div class="cp-hero-stats"><div><b>${avg != null ? avg.toFixed(2) : '—'}</b><span>Group avg</span></div><div><b>${myScore != null ? myScore.toFixed(2) : '—'}</b><span>Your score</span></div><div><b>${people.length}</b><span>Logged it</span></div></div>
+      </div>
+    </div>
+    <div class="cp-pcards">${people.map(card).join('')}</div>
+    ${rows.length ? `<div class="fr-toolbar-title cp-sec">Ratings breakdown</div>
+    <div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Category</th>${people.map(u => `<th>${escHTML(name(u))}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r => { const vals = people.map(u => g.byUser[u].ratings?.[r.key]); const nums = vals.filter(v => typeof v === 'number'); const top = nums.length > 1 ? Math.max(...nums) : null;
+        return `<tr><td>${escHTML(r.label)}</td>${vals.map(v => `<td class="${typeof v === 'number' && v === top ? 'best' : ''}">${typeof v === 'number' ? Number(v).toFixed(1) : '—'}</td>`).join('')}</tr>`; }).join('')}</tbody></table></div>` : ''}
+    ${people.some(u => g.byUser[u].notes && g.byUser[u].notes.trim()) ? `<div class="fr-toolbar-title cp-sec">Notes</div>
+    <div class="fn-grid">${people.filter(u => g.byUser[u].notes && g.byUser[u].notes.trim()).map(u => { const e = g.byUser[u];
+      const text = `<blockquote class="fn-text">${escHTML(e.notes.trim())}</blockquote>`;
+      return `<article class="fn-card"><div class="fn-by">${_frAvHTML(prof(u), 22)}<span>${escHTML(name(u))}</span></div>${mssIsSpoiler(e) && u !== me ? mssSpoilerHTML(text, { compact: true }) : text}</article>`; }).join('')}</div>` : ''}`;
+}
+
+/* ── Start ── */
+document.addEventListener('DOMContentLoaded', () => {
+  attachClearButton('addFriendInput');
+  let t = null; try { t = sessionStorage.getItem('friends_tab'); } catch {}
+  if (t && _FR_TABS.some(x => x.key === t)) _frTab = t;
+  _frRender();
+  initPage(async (user) => {
+    _fUser = user;
+    _frAuthKnown = true;
+    if (user) _frRender();         // signed in: tabs + spinner while friends load
+    if (!user) { document.getElementById('friendsPageSub').textContent = 'Search for someone above to view their profile.'; _frRender(); return; }
+    await loadFriends();
+  });
+});
 
 async function togglePinFriend(friendId) {
   const wasPinned = _fProfile && _fProfile.pinned_friend_id === friendId;
@@ -541,34 +1032,15 @@ async function togglePinFriend(friendId) {
 
   const prevPinnedId = _fProfile ? _fProfile.pinned_friend_id : null;
   if (_fProfile) _fProfile.pinned_friend_id = newPinnedId;
-  renderAcceptedFriends();
+  _frRender();
 
   try {
     await setPinnedFriend(_fUser.id, newPinnedId);
     showToast(wasPinned ? 'Unpinned.' : 'Friend pinned!');
   } catch (e) {
     if (_fProfile) _fProfile.pinned_friend_id = prevPinnedId;
-    renderAcceptedFriends();
+    _frRender();
     showToast('Error updating pin.', 'err');
-  }
-}
-
-async function doSendRequest() {
-  const username = document.getElementById('addFriendInput').value.trim().toLowerCase();
-  if (!username) { showToast('Enter a username.', 'err'); return; }
-
-  const btn = document.getElementById('btnSendReq');
-  btn.disabled = true; btn.textContent = 'Sending…';
-
-  try {
-    await sendFriendRequest(_fUser.id, username);
-    showToast(`Friend request sent to @${username}!`);
-    document.getElementById('addFriendInput').value = '';
-    await loadFriends();
-  } catch(e) {
-    showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : (e.message || 'Could not send request.'), 'err');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Send Request';
   }
 }
 
@@ -629,7 +1101,6 @@ async function doCancelRequest(friendshipId) {
     await loadFriends();
   }
 }
-
 
 /* ── Live username search dropdown ── */
 let _udTimer = null;
@@ -725,11 +1196,6 @@ function _udSelect(username, userId) {
   _udResults = []; _udActive = -1;
 }
 
-function _udClearSelected() {
-  _udSelectedId = null;
-  _udSelectedUsername = null;
-}
-
 async function _udViewProfile() {
   const input = document.getElementById('addFriendInput').value.trim();
   if (!input) { showToast('Enter or select a username first.', 'err'); return; }
@@ -803,161 +1269,6 @@ function viewFriend(userId, username) {
 }
 
 /* ── Mini Profile ── */
-let _mpUserId = null, _mpFriendship = null, _mpProfile = null;
-
-async function openMiniProfile(userId, username) {
-  _mpUserId = userId;
-  document.getElementById('miniProfileOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-
-  // Reset state
-  document.getElementById('mpAvatar').innerHTML = '?';
-  document.getElementById('mpUsername').textContent = '@' + username;
-  document.getElementById('mpBio').style.display = 'none';
-  document.getElementById('mpQuote').style.display = 'none';
-  document.getElementById('mpStats').innerHTML = '<div style="font-size:12px;color:var(--text-3)">Loading…</div>';
-  document.getElementById('mpBtns').innerHTML = '';
-  document.getElementById('mpTopPicks').style.display = 'none';
-
-  try {
-    // Load profile + entries + friendship in parallel
-    const [profile, entries, friendships] = await Promise.all([
-      getProfile(userId),
-      getPublicEntries(userId),
-      _fUser ? getFriendships(_fUser.id) : Promise.resolve([]),
-    ]);
-
-    _mpProfile = profile;
-    _mpFriendship = friendships.find(f => f.friendId === userId) || null;
-
-    // Avatar
-    const av = document.getElementById('mpAvatar');
-    const un = profile?.username || username;
-    if (safeURL(profile?.avatar_url)) {
-      av.innerHTML = '<img src="'+safeURL(profile.avatar_url)+'" alt="">';
-    } else {
-      av.textContent = (un[0]||'?').toUpperCase();
-    }
-    document.getElementById('mpUsername').textContent = '@' + un;
-
-    if (profile?.bio) {
-      const bio = document.getElementById('mpBio');
-      bio.textContent = profile.bio; bio.style.display = '';
-    }
-    if (profile?.quote) {
-      const q = document.getElementById('mpQuote');
-      q.textContent = profile.quote; q.style.display = '';
-    }
-
-    // Stats
-    const st = computeStats(entries);
-    document.getElementById('mpStats').innerHTML =
-      '<div class="mp-stat"><div class="mp-stat-num">'+st.total+'</div><div class="mp-stat-label">Items</div></div>'
-      +'<div class="mp-stat"><div class="mp-stat-num">'+st.completed+'</div><div class="mp-stat-label">Watched</div></div>'
-      +'<div class="mp-stat"><div class="mp-stat-num">'+(st.avgScore||'—')+'</div><div class="mp-stat-label">Avg Score</div></div>';
-
-    // Friend button
-    _mpRenderBtn();
-
-    // Top picks grid
-    const top5 = [...entries].filter(e=>e.status==='completed'||e.status==='ongoing')
-      .sort((a,b)=>(liveScore(b)||0)-(liveScore(a)||0)).slice(0,5);
-    if (top5.length) {
-      document.getElementById('mpPicksGrid').innerHTML = top5.map(e =>
-        '<div class="mp-pick-card">'
-        + (safeURL(e.poster_url) ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : '<div class="mp-pick-letter">'+(e.title[0]||'?')+'</div>')
-        + '<div class="mp-pick-overlay"></div>'
-        + '<div class="mp-pick-title">'+escHTML(e.title)+'</div>'
-        + '</div>'
-      ).join('');
-      document.getElementById('mpTopPicks').style.display = '';
-    }
-  } catch(err) {
-    console.error('Mini profile error:', err);
-    document.getElementById('mpStats').innerHTML = '<div style="font-size:12px;color:var(--text-3)">Error loading profile</div>';
-  }
-}
-
-function _mpRenderBtn() {
-  const f = _mpFriendship;
-  const isMe = _fUser && _mpUserId === _fUser.id;
-  let html = '';
-  if (isMe) {
-    html = '<a href="profile.html" class="mp-btn-view">View My Profile</a>';
-  } else if (!_fUser) {
-    html = '<a href="login.html" class="mp-btn-add">Sign in to Follow</a>';
-  } else if (!f) {
-    html = '<button class="mp-btn-add" onclick="mpSendRequest()">+ Follow</button>';
-  } else if (f.status === 'accepted') {
-    html = '<button class="mp-btn-friends" onclick="mpUnfriend()" title="Click to unfriend">✓ Friends</button>';
-  } else if (f.status === 'pending' && f.iRequested) {
-    html = '<button class="mp-btn-pending" onclick="mpCancelRequest()">Requested ✕</button>';
-  } else if (f.status === 'pending' && !f.iRequested) {
-    html = '<button class="mp-accept" onclick="mpAccept()">Accept</button><button class="mp-decline" onclick="mpDecline()">Decline</button>';
-  }
-  html += '<button class="mp-btn-view" onclick="mpViewFullProfile()">View Profile →</button>';
-  document.getElementById('mpBtns').innerHTML = html;
-}
-
-async function mpSendRequest() {
-  if (!_mpProfile?.username) return;
-  try {
-    await sendFriendRequest(_fUser.id, _mpProfile.username);
-    showToast('Friend request sent!');
-    const f = await getFriendships(_fUser.id);
-    _mpFriendship = f.find(x => x.friendId === _mpUserId) || null;
-    _mpRenderBtn();
-    _loadFriendships();
-  } catch(e) { showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : (e.message||'Error'), 'err'); }
-}
-
-async function mpCancelRequest() {
-  if (!_mpFriendship) return;
-  await removeFriendship(_mpFriendship.id);
-  _mpFriendship = null; _mpRenderBtn();
-  showToast('Request cancelled');
-  _loadFriendships();
-}
-
-async function mpUnfriend() {
-  if (!_mpFriendship) return;
-  const ok = await showConfirm({title:'Remove friend?',message:'Remove from your friends?',confirmText:'Unfriend',iconName:'users'});
-  if (!ok) return;
-  await removeFriendship(_mpFriendship.id);
-  _mpFriendship = null; _mpRenderBtn();
-  showToast('Removed from friends');
-  _loadFriendships();
-}
-
-async function mpAccept() {
-  if (!_mpFriendship) return;
-  await respondFriendRequest(_mpFriendship.id, true);
-  const f = await getFriendships(_fUser.id);
-  _mpFriendship = f.find(x => x.friendId === _mpUserId) || null;
-  _mpRenderBtn();
-  showToast('Now friends!');
-  _loadFriendships();
-}
-
-async function mpDecline() {
-  if (!_mpFriendship) return;
-  await respondFriendRequest(_mpFriendship.id, false);
-  _mpFriendship = null; _mpRenderBtn();
-  _loadFriendships();
-}
-
-function mpViewFullProfile() {
-  sessionStorage.setItem('viewProfileId', _mpUserId);
-  sessionStorage.setItem('viewProfileUsername', _mpProfile?.username||'');
-  window.location.href = 'profile-view.html';
-}
-
-function closeMiniProfile() {
-  document.getElementById('miniProfileOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-document.addEventListener('keydown', e => { if(e.key==='Escape' && document.getElementById('miniProfileOverlay')?.classList.contains('open')) closeMiniProfile(); });
 
 </script>
 <script>
@@ -970,23 +1281,6 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<div id="miniProfileOverlay" onclick="if(event.target===this)closeMiniProfile()">
-  <div id="miniProfileCard">
-    <div class="mp-header">
-      <button class="mp-close" onclick="closeMiniProfile()">✕</button>
-      <div class="mp-avatar" id="mpAvatar">?</div>
-      <div class="mp-username" id="mpUsername"></div>
-      <div class="mp-bio" id="mpBio" style="display:none"></div>
-      <div class="mp-quote" id="mpQuote" style="display:none"></div>
-      <div class="mp-stats" id="mpStats"></div>
-      <div class="mp-btns" id="mpBtns"></div>
-    </div>
-    <div class="mp-top-picks" id="mpTopPicks" style="display:none">
-      <div class="mp-picks-label">Top Rated</div>
-      <div class="mp-picks-grid" id="mpPicksGrid"></div>
-    </div>
-  </div>
-</div>
 <div id="udDropdown" class="username-dropdown"></div>
 </body>
 </html>
