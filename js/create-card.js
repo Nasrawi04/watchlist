@@ -798,12 +798,17 @@ async function _fetchDiscoverData(e) {
         .filter(c => ['Writer', 'Screenplay', 'Story'].includes(c.job))
         .map(c => c.name)
     )].slice(0, 3).join(', ');
-    const castSource = e.tmdb_type === 'movie' ? (data.credits?.cast || []) : (data.aggregate_credits?.cast || data.credits?.cast || []);
-    const cast = castSource.map(c => ({
-      name: c.name,
-      photo: c.profile_path ? `${TMDB_IMG}${c.profile_path}` : null,
-      character: c.character || c.roles?.[0]?.character || ''
-    })).filter(c => c.name).slice(0, 6);
+    // Character-first cast (shared with the info popup, nav.js). Animated
+    // titles get character artwork from AniList when it has the show.
+    const animated = (data.genres || []).some(g => g.id === 16) || e.cat === 'anime' || e.cat === 'cartoons';
+    const cast = (await mssFetchCast({
+      tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, title: e.title || data.title || data.name,
+      year: e.year || (data.release_date || data.first_air_date || '').slice(0, 4), animated,
+      origin_country: data.origin_country, original_language: data.original_language,
+    }).catch(() => []))
+      // The card draws `name` bold and `character` muted underneath — so the
+      // character goes on top and the actor / voice actor underneath.
+      .map(c => ({ name: c.character || c.actor, character: c.character ? c.actor : '', photo: c.photo, isCharacterImage: c.isCharacterImage }));
     const production = (data.production_companies || []).map(c => c.name).slice(0, 3).filter(Boolean);
     const overview = (data.overview || '').trim();
     const releaseDate = e.tmdb_type === 'movie' ? (data.release_date || '') : (data.first_air_date || '');
