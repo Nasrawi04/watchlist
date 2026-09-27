@@ -367,8 +367,7 @@
 .nc-reacts { display:flex; gap:14px; }
 .nc-words { font-size:11.5px; color:var(--text-3); white-space:nowrap; }
 .nc-words b { font-family:var(--bebas); font-weight:400; font-size:14px; color:var(--text-2); letter-spacing:.3px; }
-.nc-more { font-family:var(--sans); font-size:11.5px; font-weight:700; color:var(--olive-light); margin-right:10px; }
-.nc-card:hover .nc-more { text-decoration:underline; }
+
 @media(max-width:640px) {
   .nc-card { padding:12px; gap:12px; border-radius:var(--radius); }
   .nc-poster { width:66px; font-size:20px; }
@@ -729,7 +728,7 @@ SF.register('notesMine', {
   defaultSort: 'newest',
   addedDate: _watchedDate,
   presets: {
-    added: { header: 'Date Watched', opts: [['newest', 'Latest'], ['oldest', 'Earliest']] },
+    added: { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Earliest']] },
     ..._NOTE_LEN_PRESET,
     likes: { header: 'Likes', opts: [['likes_most', 'Most Liked'], ['likes_least', 'Least Liked']] },
   },
@@ -759,7 +758,7 @@ SF.register('notesSocial', {
   defaultSort: 'popular',
   presets: {
     popularity: { header: 'Popularity', opts: [['popular', 'Most Liked'], ['least_popular', 'Least Liked']] },
-    added:      { header: 'Date Watched', opts: [['newest', 'Latest'], ['oldest', 'Earliest']] },
+    added:      { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Earliest']] },
     ..._NOTE_LEN_PRESET,
   },
   sorts: () => ['popularity', 'added', 'alpha', 'length', 'ratings'],
@@ -799,17 +798,16 @@ function _npFitLong(card, words) {
 function renderNotesPage() {
   const withNotes = _notesEntries.filter(e => e.notes && e.notes.trim());
 
-  // Stats
-  let totalWords = 0, longest = 0;
-  withNotes.forEach(e => {
-    const words = e.notes.trim().split(/\s+/).filter(Boolean).length;
-    totalWords += words;
-    if (words > longest) longest = words;
-  });
+  // Stats: how much you've written, how long your notes run, and how
+  // they've landed with others (likes on your notes from the community)
+  const totalWords = withNotes.reduce((t, e) => t + _wordCount(e.notes), 0);
+  const avgWords = withNotes.length ? Math.round(totalWords / withNotes.length) : 0;
+  const likesReceived = withNotes.reduce((t, e) => t + (_notesReactionCounts[e.id]?.like || 0), 0);
   document.getElementById('notesPageStats').innerHTML = `
-    <div class="page-stat"><div class="page-stat-num">${withNotes.length}</div><div class="page-stat-label">Total Notes</div></div>
-    <div class="page-stat"><div class="page-stat-num">${totalWords}</div><div class="page-stat-label">Total Words</div></div>
-    <div class="page-stat"><div class="page-stat-num">${longest}</div><div class="page-stat-label">Longest Note</div></div>`;
+    <div class="page-stat"><div class="page-stat-num">${withNotes.length}</div><div class="page-stat-label">Notes</div></div>
+    <div class="page-stat"><div class="page-stat-num">${totalWords.toLocaleString()}</div><div class="page-stat-label">Words Written</div></div>
+    <div class="page-stat"><div class="page-stat-num">${avgWords}</div><div class="page-stat-label">Avg. Words / Note</div></div>
+    <div class="page-stat"><div class="page-stat-num">${likesReceived}</div><div class="page-stat-label">Likes Received</div></div>`;
 
   document.getElementById('notesPageSub').textContent = 'Your personal thoughts, reactions, and memories from everything you watch.';
 
@@ -842,7 +840,7 @@ function renderNotesPage() {
             <span class="snote-react-btn" style="cursor:default;">${icon('thumbsUp', 13)} <span>${counts.like}</span></span>
             <span class="snote-react-btn" style="cursor:default;">${icon('thumbsDown', 13)} <span>${counts.dislike}</span></span>
           </div>
-          <span class="nc-words">${words > 45 ? '<span class="nc-more">Read more</span>' : ''}<b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>
+          <span class="nc-words"><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>
         </div>
       </div>
     </article>`;
@@ -1218,13 +1216,14 @@ function renderSocialNotes() {
   const searching = document.getElementById('notesUserFilterBanner').style.display === 'flex';
   if (!searching) {
     const writers = new Set(all.map(n => n.user_id)).size;
-    const words = all.reduce((t, n) => t + _wordCount(n.notes), 0);
-    const likes = all.reduce((t, n) => t + Number(n.like_count || 0), 0);
+    const titles = new Set(all.map(n => n.tmdb_id ? `${n.tmdb_type}:${n.tmdb_id}` : (n.title || '').trim().toLowerCase())).size;
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const thisWeek = all.filter(n => new Date(n.created_at).getTime() >= weekAgo).length;
     document.getElementById('notesPageStats').innerHTML = all.length ? `
-      <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Public Notes</div></div>
+      <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Notes</div></div>
       <div class="page-stat"><div class="page-stat-num">${writers}</div><div class="page-stat-label">Writers</div></div>
-      <div class="page-stat"><div class="page-stat-num">${words}</div><div class="page-stat-label">Words Written</div></div>
-      <div class="page-stat"><div class="page-stat-num">${likes}</div><div class="page-stat-label">Total Likes</div></div>` : '';
+      <div class="page-stat"><div class="page-stat-num">${titles}</div><div class="page-stat-label">Titles Discussed</div></div>
+      <div class="page-stat"><div class="page-stat-num">${thisWeek}</div><div class="page-stat-label">New This Week</div></div>` : '';
   }
   const list = SF.list('notesSocial', 'all');
   _renderNotesToolbar(searching ? 'Search Results' : 'Community', list.length, all.length ? SF.bar('notesSocial', 'all') : '');
@@ -1265,7 +1264,7 @@ function renderSocialNotes() {
               ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
             </button>
           </div>
-          <span class="nc-words">${words > 45 ? '<span class="nc-more">Read more</span>' : ''}<b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>
+          <span class="nc-words"><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>
         </div>
       </div>
     </article>`;
