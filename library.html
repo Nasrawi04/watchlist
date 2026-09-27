@@ -998,7 +998,6 @@ function _trimNotes(text) {
 <script src="js/sort-filter.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
-<script src="js/fav-lists-popup.js"></script>
 <script src="js/export.js"></script>
 <script>
 /* ── State ── */
@@ -1177,7 +1176,6 @@ function _injectProfPopup() {
     '<div id="profPopupBody" style="padding:20px 24px 6px;"></div>'+
     '<div id="profPopupActions" style="display:flex;gap:8px;padding:4px 24px 24px;flex-wrap:wrap;">'+
       '<button class="popup-action-btn" id="profPopupEditBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>'+
-      '<button class="popup-action-btn" onclick="openFavListsPopup(_profPopupEntryId)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Add to Favorites</button>'+
       '<button class="popup-action-btn" onclick="rewatchEntry(_profPopupEntryId)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg> Rewatch</button>'+
       '<button class="popup-action-btn" onclick="createShareCard(_profPopupEntryId)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Create Card</button>'+
       '<button class="popup-action-btn popup-action-danger" onclick="_profPopupDeleteEntry()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete</button>'+
@@ -1282,7 +1280,6 @@ document.addEventListener('keydown',function(e){
     else if(document.getElementById('catDiscoverOverlay')?.classList.contains('open')) _closeDiscoverPicker();
     else if(document.getElementById('profInfoOverlay')?.classList.contains('open')) closeProfInfoPopup();
     else if(document.getElementById('createCardOverlay')?.classList.contains('open')) closeCreateCard();
-    else if(document.getElementById('favListsOverlay')?.classList.contains('open')) closeFavListsPopup();
     else if(document.getElementById('favSecOverlay')?.classList.contains('open')) closeFavSec();
     else if(document.getElementById('profPopupOverlay')?.style.opacity==='1') profClosePopup();
   }
@@ -1358,7 +1355,7 @@ function renderTab0() {
   var picks = Array.isArray(_pProfile&&_pProfile.top_picks)&&_pProfile.top_picks.length
     ? _pProfile.top_picks.map(function(id){return _profEntryMap[id];}).filter(Boolean) : null;
   var topFavs = picks || [];
-  var watching = _pEntries.filter(function(e){return e.status==='watching'||e.status==='paused';}).slice(0,5);
+  var watching = _pEntries.filter(function(e){return e.status==='watching'||e.status==='up_next'||e.status==='paused';}).slice(0,5);
 
   function card(e, rank) {
     var score = liveScore(e)!=null ? Number(liveScore(e)).toFixed(2) : null;
@@ -1570,7 +1567,7 @@ function _libBaseEntries(sec){
     if(_libFormat && (_libFormat==='movie') !== SF.isMovie(e)) return false;   // Anime/Cartoons: Shows vs Movies
     return true;
   };
-  if(sec==='watching') return _libEntries.filter(function(e){return (e.status==='watching'||e.status==='paused')&&inCat(e);});
+  if(sec==='watching') return _libEntries.filter(function(e){return (e.status==='watching'||e.status==='up_next'||e.status==='paused')&&inCat(e);});
   if(sec==='queue') return _libEntries.filter(function(e){return e.status==='queue'&&inCat(e);});
   return _libEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&&inCat(e);});
 }
@@ -1592,7 +1589,7 @@ SF.register('lib', {
   },
   // Paused entries always sink to the bottom of Currently Watching
   postSort: function(sec,list){
-    return sec==='watching' ? list.filter(function(e){return e.status!=='paused';}).concat(list.filter(function(e){return e.status==='paused';})) : list;
+    return sec==='watching' ? list.filter(function(e){return e.status==='watching';}).concat(list.filter(function(e){return e.status==='up_next';}), list.filter(function(e){return e.status==='paused';})) : list;
   },
   saveRatings: function(e,r){ return updateProgress(e.id,_pUser.id,{ratings:r}).catch(function(){}); },
 });
@@ -1710,7 +1707,7 @@ function renderLibrary(){
   else if(_libWatchView==='grid'){
     var wg='libwg';
     var wcs=watching.map(function(e){
-      var ip=e.status==='paused';
+      var ipUN=e.status==='up_next', ip=e.status==='paused'||ipUN;
       var pct=e.total_eps?Math.round(((e.watched||0)/e.total_eps)*100):0;
       var isM=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
@@ -1718,7 +1715,7 @@ function renderLibrary(){
       var ep=isM?rt:(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
       var _typeCls=(isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
-        +(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">Taking<br>a Break</span></div>':'')
+        +(ip?'<div style="position:absolute;inset:0;background:'+(ipUN?'rgba(38,78,120,0.62)':'rgba(74,103,65,0.58)')+';display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">'+(ipUN?'Up<br>Next':'Taking<br>a Break')+'</span></div>':'')
         +'<span class="'+_typeCls+'">'+(isM?'Movie':'TV Show')+'</span>'
         +'</div><div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
         +(ep?'<div class="wg-genre"><span class="w-ep-badge">'+ep+'</span></div>':'')
@@ -1730,7 +1727,7 @@ function renderLibrary(){
     wc=_libGridWrap(wg,'<div class="watching-grid" id="'+wg+'">'+wcs+'</div>');
   } else {
     wc='<div class="fv-watch-list">'+watching.map(function(e){
-      var ip=e.status==='paused';
+      var ipUN=e.status==='up_next', ip=e.status==='paused'||ipUN;
       var isM=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var pct=e.total_eps?Math.round(((e.watched||0)/e.total_eps)*100):0;
       var ep=isM?'':(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
@@ -1739,7 +1736,7 @@ function renderLibrary(){
       var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
       var cs=ip?'background:var(--olive-faint);border-color:var(--border-olive);':'';
       return '<div class="fv-w-card" style="cursor:pointer;'+cs+'" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'">'
-        +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.55);display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">Taking<br>a Break</span></div>':'')+'</div>'
+        +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:'+(ipUN?'rgba(38,78,120,0.62)':'rgba(74,103,65,0.55)')+';display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">'+(ipUN?'Up<br>Next':'Taking<br>a Break')+'</span></div>':'')+'</div>'
         +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);flex-shrink:0;">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+'</div>'
         +(ep?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+ep+'</span></div>':'')
         +(rt?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')
