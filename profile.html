@@ -26,145 +26,20 @@
   .prof-header-actions { gap:6px; }
 }
 
-/* Friend request button states */
-
-
-
-
-
-
-
-
-
-
-
-.pv-library-btn {
-  padding:8px 20px; border-radius:var(--radius-sm);
-  border:0.5px solid var(--border-olive); background:transparent;
-  color:var(--olive-light); font-size:12px; font-weight:500; cursor:pointer;
-  transition:background .15s;
-}
-
-.pv-library-btn:hover { background:var(--olive-faint); }
-
-/* Tab bar — same as profile.html */
-.pv-tabs {
-  display:flex; border-bottom:0.5px solid var(--border);
-  position:sticky; top:120px; z-index:200;
-  background:var(--bg);
-  margin-left:calc(-50vw + 50%);
-  width:100vw;
-}
-
 /* pv-tabs gap handled by background */
 
 @media(max-width:640px) {
           }
 
-.pv-tab {
-  flex:1; display:flex; align-items:center; justify-content:center;
-  padding:12px 0; cursor:pointer; border-bottom:2px solid transparent;
-  color:var(--text-3); transition:all .15s; gap:5px;
-}
-
-.pv-tab svg { width:18px; height:18px; flex-shrink:0; }
-
-.pv-tab.active { color:var(--olive-light); border-bottom-color:var(--olive-light); }
-
-.pv-tab:hover { color:var(--text); }
-
-.pv-tab-label { display:none; }
-
 @media(min-width:640px){.prof-tab-label{display:inline;font-size:11px;letter-spacing:.3px;}}
 
-.pv-panel { display:none; padding-top:2rem; }
-
-.pv-panel.active { display:block; }
-
-/* Grid cards */
-.pv-grid {
-  display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:2rem;
-}
-
-@media(max-width:900px) { .pv-grid { grid-template-columns:repeat(4,1fr); } }
-
-.pv-card {
-  position:relative; border-radius:var(--radius); overflow:hidden;
-  background:var(--card); border:0.5px solid var(--border);
-  cursor:pointer; transition:transform .15s; aspect-ratio:2/3;
-}
-
-.pv-card:hover { transform:scale(1.02); }
-
-.pv-card-poster { width:100%; height:100%; object-fit:cover; display:block; }
-
-.pv-card-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,.85) 0%,transparent 50%); }
-
-.pv-card-info { position:absolute; bottom:0; left:0; right:0; padding:8px; }
-
-.pv-card-title { font-size:10px; font-weight:600; color:#fff; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-.pv-card-score { font-family:var(--serif); font-size:12px; color:var(--olive-light); }
-
-.pv-card-rank { position:absolute; top:6px; left:6px; background:var(--bg-2); color:var(--olive-light); font-family:var(--serif); font-size:11px; padding:1px 5px; border-radius:var(--radius-xs); }
-
-.pv-card-letter { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:32px; color:var(--olive-light); background:var(--olive-faint); }
-
 .pv-section { margin-bottom:2.5rem; }
-
-
 
 .pv-eyebrow { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; }
 
 .pv-title { font-family:var(--serif); font-size:22px; font-weight:500; margin-bottom:1rem; }
 
 .pv-empty { text-align:center; padding:2rem; color:var(--text-3); font-size:13px; }
-
-/* Notes tab */
-.note-row{display:flex;gap:20px;align-items:flex-start;padding:20px 24px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;cursor:pointer;transition:all var(--trans) var(--ease);}
-.note-row:hover{border-color:var(--border-olive);background:var(--card-2);}
-
-.note-poster{width:84px;height:120px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:24px;color:var(--olive-light);overflow:hidden;}
-
-.note-poster img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);}
-
-.note-body{flex:1;min-width:0;}
-
-.note-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.note-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:4px;}
-.note-date{font-size:11px;color:var(--text-3);white-space:nowrap;}
-
-.note-text{font-size:13px;color:var(--text-2);font-style:italic;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:6px;}
-
-.note-score{font-family:var(--bebas);font-size:27px;font-weight:400;color:var(--olive-light);flex-shrink:0;line-height:1;}
-
-.note-popup-overlay{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
-
-.note-popup-overlay.open{opacity:1;pointer-events:auto;}
-
-.note-popup{width:100%;max-width:480px;background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);overflow:hidden;transform:scale(.96);transition:transform .22s cubic-bezier(0.4,0,0.2,1);max-height:85vh;overflow-y:auto;overscroll-behavior-y:contain;position:relative;}
-
-.note-popup-overlay.open .note-popup{transform:scale(1);}
-
-.note-popup-poster{width:100%;height:200px;object-fit:cover;display:block;}
-
-.note-popup-poster-ph{width:100%;height:160px;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:56px;color:var(--olive-light);}
-
-.note-popup-body{padding:1.25rem 1.5rem 1.5rem;}
-
-.note-popup-title{font-family:var(--serif);font-size:22px;font-weight:500;margin-bottom:4px;}
-
-.note-popup-meta{font-size:11px;color:var(--text-3);margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-
-.note-popup-score{font-family:var(--serif);font-size:18px;color:var(--olive-light);}
-
-.note-popup-divider{border:none;border-top:0.5px solid var(--border);margin:12px 0;}
-
-.note-popup-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px;}
-
-.note-popup-text{font-size:13px;color:var(--text-2);font-style:italic;line-height:1.65;}
-
-.note-popup-close{position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.5);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:2;}
 
 /* ── Mobile tab select ── */
 .prof-tab-select {
@@ -203,8 +78,6 @@
 
 .fv-w-title{font-family:'Oswald',var(--sans);font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
 
-.fv-w-genre{font-size:12px;color:var(--text-3);margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap}
-
 .fv-w-ep{margin-bottom:7px;display:flex;align-items:center;gap:10px}
 
 .fv-w-ep-badge{padding:clamp(2px, 0.5vw, 3px) clamp(6px, 1.6vw, 9px);border-radius:3px;background:var(--olive);border:0.5px solid var(--olive);color:#fff;font-family:var(--sans);font-size:clamp(8.5px, 2vw, 10.5px);font-weight:600;letter-spacing:0.3px}
@@ -218,8 +91,6 @@
 
 .fv-w-prog-label{font-size:10px;color:var(--text-3);margin-top:4px}
 
-.fv-w-score{font-family:var(--bebas);color:var(--olive-light);font-size:clamp(17px, 3.8vw, 19px);font-weight:400;white-space:nowrap;flex-shrink:0}
-
 .fv-ranked-list{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none;}
 
 .fv-ranked-list::-webkit-scrollbar{display:none;}
@@ -227,10 +98,6 @@
 .fv-rank-row{display:flex;align-items:center;gap:20px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;min-height:160px;overflow:hidden;box-sizing:border-box;cursor:pointer;transition:border-color var(--trans) var(--ease),background var(--trans) var(--ease);}
 
 .fv-rank-row:hover{border-color:var(--border-olive);background:var(--card-2);}
-
-.fv-rank-num{font-family:var(--bebas);font-size:28px;font-weight:400;color:var(--text-2);text-align:center;min-width:44px;flex-shrink:0}
-
-.fv-rank-num.top3{color:var(--olive-light)}
 
 .fv-rank-poster{width:96px;height:136px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
 
@@ -246,14 +113,8 @@
 
 .fv-entry-block{display:flex;flex-direction:column;}
 
-.fv-queue-no-hover{pointer-events:none;cursor:default;}
-
-.lib-section{margin-bottom:2.5rem;}
-
-.lib-section-hd{display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);}
-
 /* ── Profile entry popup (matches completed page) ── */
-#profPopupOverlay, #pvPopupOverlay {
+#profPopupOverlay{
   position:fixed;inset:0;z-index:1100;
   background:rgba(0,0,0,0.72);
   display:flex;align-items:center;justify-content:center;
@@ -262,7 +123,7 @@
   pointer-events:none;
 }
 
-#profPopupCard, #pvPopupCard {
+#profPopupCard{
   background:var(--bg-2);border:1.5px solid var(--olive-light);
   box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
   width:100%;max-width:min(97vw, 760px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
@@ -271,181 +132,12 @@
 }
 
 @media(max-width:600px) {
-  #profPopupCard, #pvPopupCard { max-height:88dvh; }
+  #profPopupCard{ max-height:88dvh; }
 }
-
-/* ── Favorites slots ── */
-.fav-slots{display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem;}
-
-.fav-slot{display:flex;align-items:center;gap:16px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;min-height:90px;}
-
-.fav-slot-num{font-family:var(--serif);font-size:28px;font-weight:500;color:var(--text-3);min-width:32px;text-align:center;flex-shrink:0;}
-
-.fav-slot.filled .fav-slot-num{color:var(--olive-light);}
-
-.fav-slot-poster{width:48px;height:68px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:20px;color:var(--text-3);}
-
-.fav-slot-poster img{width:100%;height:100%;object-fit:cover;}
-
-.fav-slot-info{flex:1;min-width:0;}
-
-.fav-slot-title{font-size:15px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-
-.fav-slot-meta{font-size:11px;color:var(--text-3);margin-top:3px;}
-
-.fav-slot-empty{font-size:13px;color:var(--text-3);font-style:italic;}
-
-.fav-slot-score{font-family:var(--serif);font-size:20px;color:var(--olive-light);flex-shrink:0;}
 
 .fav-edit-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);border:0.5px solid var(--border-olive);background:transparent;color:var(--olive-light);font-size:12px;cursor:pointer;transition:background .15s;}
 
 .fav-edit-btn:hover{background:var(--olive-faint);}
-
-/* ── Fav Picker ── */
-#favPickerOverlay{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.65);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;pointer-events:none;transition:opacity .22s;}
-
-#favPickerOverlay.open{opacity:1;pointer-events:auto;}
-
-#favPickerSheet{width:100%;max-width:540px;background:var(--bg-2);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);box-shadow:4px 4px 0 var(--olive);transform:translateY(16px);transition:transform .26s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;max-height:85dvh;}
-
-#favPickerOverlay.open #favPickerSheet{transform:translateY(0);}
-
-.fav-picker-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border);flex-shrink:0;}
-
-.fav-picker-title{font-family:var(--serif);font-size:18px;font-weight:500;}
-
-.fav-picker-count{font-size:11px;color:var(--text-3);margin-left:8px;}
-
-.fav-picker-close{background:none;border:none;color:var(--text-3);font-size:20px;cursor:pointer;}
-
-.fav-picker-list{overflow-y:auto;overscroll-behavior-y:contain;flex:1;padding:8px 0;}
-
-.fav-picker-item{display:flex;align-items:center;gap:16px;padding:14px 20px;cursor:pointer;transition:background .12s;border-bottom:0.5px solid var(--border);}
-
-.fav-picker-item:hover{background:var(--olive-faint);}
-
-.fav-picker-item.selected{background:var(--olive-faint);}
-
-.fav-picker-poster{width:52px;height:72px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;font-family:var(--sans) !important;font-size:20px;color:var(--text-3);position:relative;}
-
-.fav-picker-poster img{width:100%;height:100%;object-fit:cover;}
-
-.fav-picker-info{flex:1;min-width:0;}
-
-.fav-picker-name{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-
-.fav-picker-sub{font-size:12px;color:var(--text-3);margin-top:3px;}
-
-.fav-picker-score{font-family:var(--serif);font-size:20px;color:var(--olive-light);flex-shrink:0;}
-
-.fav-picker-check{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;}
-
-.fav-picker-item.selected .fav-picker-check{background:var(--olive-light);border-color:var(--olive-light);color:#fff;}
-
-
-
-.fav-picker-footer{padding:12px 20px;border-top:0.5px solid var(--border);display:flex;gap:10px;flex-shrink:0;}
-
-.fav-picker-save{flex:1;padding:11px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:14px;font-weight:500;cursor:pointer;}
-
-.fav-picker-cancel{padding:11px 20px;border-radius:var(--radius-sm);background:transparent;color:var(--text-2);border:0.5px solid var(--border-2);font-size:14px;cursor:pointer;}
-
-
-/* ── Recommended slots (same as fav-slot) ── */
-.rec-section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
-.rec-slot-item{cursor:pointer;transition:border-color .15s;}
-.rec-slot-item:hover{border-color:var(--border-olive);}
-
-/* ── Favorite Sections popup ── */
-#favSecOverlay, #pvFavSecOverlay {
-  position:fixed;inset:0;z-index:910;
-  background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);
-  display:flex;align-items:center;justify-content:center;
-  padding:16px;box-sizing:border-box;
-  opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;
-}
-#favSecOverlay.open, #pvFavSecOverlay.open { opacity:1;pointer-events:auto; }
-#favSecCard, #pvFavSecCard {
-  background:var(--bg-2);border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-  width:97%;max-width:900px;max-height:88dvh;overflow-y:auto;overscroll-behavior-y:contain;
-  box-sizing:border-box;
-  transform:translateY(18px);transition:transform 260ms var(--ease);
-}
-#favSecOverlay.open #favSecCard,
-#pvFavSecOverlay.open #pvFavSecCard { transform:translateY(0); }
-.favsec-hd {
-  display:flex;align-items:center;justify-content:space-between;
-  padding:22px 28px;border-bottom:0.5px solid var(--border);
-  position:sticky;top:0;background:var(--bg-2);z-index:2;
-}
-.favsec-title {
-  font-family:var(--serif);font-size:26px;font-weight:500;color:var(--text);
-}
-.favsec-close {
-  background:none;border:none;color:var(--text-3);cursor:pointer;
-  font-size:26px;line-height:1;padding:0 0 2px 12px;
-  transition:color .15s;flex-shrink:0;
-}
-.favsec-close:hover { color:var(--text); }
-.favsec-grid {
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:16px;padding:22px 28px 28px;
-}
-.favsec-grid .q-card { min-width:0; }
-.favsec-grid .q-info { padding:8px 10px 28px; }
-.favsec-grid .q-title { font-size:13px;line-height:1.35; }
-.favsec-grid .q-genre { font-size:10px; }
-@media(max-width:700px) {
-  .favsec-grid { grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 18px 20px; }
-  .favsec-hd { padding:18px 20px; }
-  .favsec-title { font-size:22px; }
-}
-@media(max-width:400px) {
-  .favsec-grid { grid-template-columns:repeat(2,1fr);gap:10px; }
-  .favsec-title { font-size:19px; }
-}
-
-/* ── Favorite Sections row in overview ── */
-.favsec-row {
-  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
-  margin-top:1rem;
-}
-.favsec-row-card {
-  display:flex;flex-direction:column;align-items:center;gap:6px;
-  cursor:pointer;border-radius:var(--radius-sm);
-  padding:10px 8px;border:0.5px solid var(--border);
-  background:var(--card);transition:border-color .15s;
-  text-align:center;
-}
-.favsec-row-card:hover { border-color:var(--border-olive); }
-.favsec-row-poster {
-  width:100%;aspect-ratio:0.67;border-radius:var(--radius-xs);
-  overflow:hidden;background:var(--bg-3);
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--serif);font-size:22px;color:var(--text-3);
-}
-.favsec-row-poster img { width:100%;height:100%;object-fit:cover; }
-.favsec-row-cat {
-  font-size:9px;text-transform:uppercase;letter-spacing:1px;
-  color:var(--olive-light);font-weight:600;
-}
-.favsec-row-title {
-  font-size:11px;color:var(--text);line-height:1.3;
-  overflow:hidden;display:-webkit-box;
-  -webkit-line-clamp:2;-webkit-box-orient:vertical;
-}
-@media(max-width:640px) {
-  .favsec-row { gap:7px; }
-  .favsec-row-title { font-size:10px; }
-  .favsec-row-cat { font-size:8px; }
-  .favsec-row-card { padding:8px 6px; }
-}
-@media(max-width:400px) {
-  .favsec-row-title { font-size:9px; }
-  .favsec-row-card { padding:6px 5px; }
-}
 /* ── Export cards ── */
 .export-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
 
@@ -503,7 +195,6 @@
   background:var(--bg); margin-left:calc(-50vw + 50%); width:100vw;
 }
 
-
 .prof-tab{flex:1;display:flex;align-items:center;justify-content:center;padding:12px 0;cursor:pointer;border-bottom:2px solid transparent;color:var(--text-3);transition:all .15s;gap:5px;}
 
 .prof-tab svg{width:18px;height:18px;flex-shrink:0;}
@@ -518,38 +209,7 @@
 
 .prof-panel.active{display:block;}
 
-.fv-w-card-no-hover{cursor:default;}
-
-/* ── Comments popup (same as category page) ── */
-#libCommentsOverlay {
-  position:fixed;inset:0;z-index:1200;
-  background:rgba(0,0,0,0.72);
-  display:flex;align-items:center;justify-content:center;
-  padding:16px;box-sizing:border-box;
-  opacity:0;transition:opacity 220ms var(--ease);
-  pointer-events:none;
-}
-
-#libCommentsCard {
-  background:var(--bg-2);border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-  width:100%;max-width:640px;max-height:90dvh;
-  position:relative;box-sizing:border-box;
-  display:flex;flex-direction:column;
-  transform:translateY(18px);transition:transform 260ms var(--ease);
-}
-
 /* pv-friend-btn styling */
-
-
-
-
-
-
-
-
-
-
 
 @media(max-width:640px) {
   
@@ -558,7 +218,6 @@
   
   
 }
-
 
 /* ══ Profile Header — Instagram style ══ */
 .prof-header {
@@ -675,22 +334,6 @@
 .prof-share-copy { flex:1; padding:10px; background:var(--olive); border:none; color:#fff; border-radius:var(--radius-sm); font-size:13px; font-weight:500; cursor:pointer; }
 .prof-share-copy:hover { background:var(--olive-2); }
 .prof-share-close { padding:10px 16px; background:transparent; border:0.5px solid var(--border-2); color:var(--text-2); border-radius:var(--radius-sm); font-size:13px; cursor:pointer; }
-/* Friend buttons */
-.pv-friend-btn {
-  padding:7px 18px; border-radius:var(--radius-sm); font-size:12px; font-weight:500;
-  cursor:pointer; transition:all .15s; white-space:nowrap;
-}
-.pv-friend-btn.add { background:var(--olive); color:#fff; border:none; }
-.pv-friend-btn.add:hover { background:var(--olive-2); }
-.pv-friend-btn.friends { background:var(--olive-faint); color:var(--olive-light); border:0.5px solid var(--border-olive); }
-.pv-friend-btn.friends:hover { background:#f87171; color:#fff; border-color:#f87171; }
-.pv-friend-btn.pending { background:transparent; color:var(--text-3); border:0.5px solid var(--border-2); }
-.pv-friend-btn.pending:hover { background:var(--bg-3); }
-.pv-friend-btn.accept { background:var(--olive); color:#fff; border:none; }
-.pv-friend-btn.accept:hover { background:var(--olive-2); }
-.pv-friend-btn.decline { background:transparent; color:#f87171; border:0.5px solid #f87171; }
-.pv-friend-btn.decline:hover { background:#f87171; color:#fff; }
-
 
 /* ══════════════════════════════════════════
    RESPONSIVE — full scaling for all screens
@@ -741,7 +384,6 @@
   .fv-rank-row { padding:10px 12px; gap:10px; min-height:unset; }
   .fv-rank-poster { width:56px; height:78px; }
   .fv-rank-title { font-size:13px; }
-  .fv-rank-num { font-size:20px; min-width:32px; }
   .fv-w-card { padding:10px 12px; gap:10px; min-height:unset; }
   .fv-w-poster { width:56px; height:78px; }
   .fv-w-title { font-size:14px; }
@@ -832,9 +474,6 @@
   .export-card-desc { font-size:11px; }
 }
 
-.cat-filter { display:flex; gap:4px; flex-wrap:wrap; }
-
-
 .prof-ov-grid {
   display:grid; grid-template-columns:repeat(5,1fr); gap:12px;
 }
@@ -845,37 +484,6 @@
 
 /* ── Profile tab sticky positions ── */
 @media(max-width:1380px) { .pv-tabs, .prof-tabs { top:64px; } }
-
-#pvNotesContent{max-height:65vh;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:none;padding-right:4px;}
-#pvNotesContent::-webkit-scrollbar{display:none;}
-#notesContent{max-height:65vh;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:none;padding-right:4px;}
-#notesContent::-webkit-scrollbar{display:none;}
-/* ── Note popup ── */
-.note-popup-overlay2{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
-.note-popup-overlay2.open{opacity:1;pointer-events:auto;}
-.note-popup2{width:100%;max-width:520px;background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);overflow:hidden;transform:scale(.96);transition:transform .22s cubic-bezier(0.4,0,0.2,1);position:relative;}
-.note-popup-overlay2.open .note-popup2{transform:scale(1);}
-.note-popup2-header{display:flex;align-items:flex-start;gap:14px;padding:18px 20px 14px;border-bottom:0.5px solid var(--border);}
-.note-popup2-poster{width:60px;height:84px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:20px;color:var(--olive-light);}
-.note-popup2-poster img{width:100%;height:100%;object-fit:cover;}
-.note-popup2-info{flex:1;min-width:0;}
-.note-popup2-title{font-family:var(--serif);font-size:20px;font-weight:500;color:var(--text);margin-bottom:5px;line-height:1.2;}
-.note-popup2-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:5px;}
-.note-popup2-date{font-size:11px;color:var(--text-3);}
-.note-popup2-close{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;line-height:1;padding:0;flex-shrink:0;transition:color .15s;}
-.note-popup2-close:hover{color:var(--text);}
-.note-popup2-body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px;}
-.note-popup2-text{font-size:14px;color:var(--text-2);font-style:italic;line-height:1.7;}
-.note-popup2-edit{align-self:flex-end;background:transparent;border:0.5px solid var(--border-olive);border-radius:var(--radius-xs);color:var(--olive-light);font-size:11px;padding:5px 12px;cursor:pointer;transition:all .15s;font-family:var(--sans);flex-shrink:0;}
-.note-popup2-edit:hover{background:var(--olive-faint);}
-@media(max-width:640px){
-  .note-popup2-header{padding:14px 16px 12px;gap:12px;}
-  .note-popup2-poster{width:50px;height:70px;font-size:17px;}
-  .note-popup2-title{font-size:17px;}
-  .note-popup2-body{padding:14px 16px 18px;}
-  .note-popup2-text{font-size:13px;}
-}
-
 
 /* ── Info Popup (watching/queue) — same as profile-view ── */
 #profInfoOverlay {
@@ -904,7 +512,6 @@
 .pvi-meta-wrap { flex:1;min-width:0;padding-top:2px; }
 .pvi-title { font-family:var(--serif);font-size:clamp(16px,4.5vw,22px);font-weight:500;line-height:1.2;margin-bottom:6px;color:var(--text); }
 .pvi-tags { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:0; }
-.pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px; }
 .pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s; }
 .pvi-close:hover { color:var(--text); }
 .pvi-body { padding:16px 20px 20px; }
@@ -929,18 +536,6 @@
   .pvi-runtime-val { font-size:20px; }
   #profInfoCard { width:97%; }
 }
-.fav-page-list-desc {
-  font-size:12.5px; color:var(--text-2); line-height:1.5; margin-top:4px; max-width:520px;
-}
-.list-desc-field {
-  width:100%;box-sizing:border-box;padding:10px 14px;border-radius:var(--radius-sm);
-  border:1px solid var(--border);background:var(--bg-3);color:var(--text);
-  font-family:var(--sans);font-size:14px;outline:none;resize:vertical;min-height:56px;
-  transition:border-color .15s;
-}
-.list-desc-field:focus{border-color:var(--olive-light);}
-.list-desc-count { font-size:10.5px; color:var(--text-3); text-align:right; margin-top:4px; }
-.list-desc-count.over { color:#c0564a; }
 </style>
 </head>
 <body>
@@ -966,8 +561,6 @@
   <select class="prof-tab-select" id="profTabsSelect" aria-label="Profile tab" onchange="switchTab(+this.value)">
     <option value="0">Overview</option>
     <option value="1">Library</option>
-    <option value="5">Lists</option>
-    <option value="3">Notes</option>
     <option value="4">Exports</option>
   </select>
 
@@ -980,14 +573,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       <span class="prof-tab-label">Library</span>
     </div>
-    <div class="prof-tab" id="tab5" onclick="switchTab(5)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-      <span class="prof-tab-label">Lists</span>
-    </div>
-    <div class="prof-tab" id="tab3" onclick="switchTab(3)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span class="prof-tab-label">Notes</span>
-    </div>
     <div class="prof-tab" id="tab4" onclick="switchTab(4)" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <span class="prof-tab-label">Exports</span>
@@ -996,31 +581,8 @@
 
   <div class="prof-panel active" id="panel0"><div id="overviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>
-  <div class="prof-panel" id="panel5">
-    <div class="page-stats" id="profListsStats" style="margin-bottom:1.5rem;"></div>
-    <div id="listsContent"></div>
-  </div>
-  <div class="prof-panel" id="panel3">
-    <div class="page-stats" id="profNotesStats" style="margin-bottom:1.5rem;"></div>
-    <div id="notesContent"></div>
-  </div>
   <div class="prof-panel" id="panel4"><div id="exportsContent"></div></div>
 
-</div>
-
-<!-- Fav Picker -->
-<div id="favPickerOverlay" onclick="if(event.target===this)closeFavPicker()">
-  <div id="favPickerSheet">
-    <div class="fav-picker-hd">
-      <div><span class="fav-picker-title" id="favPickerTitle">Top Favorites</span><span class="fav-picker-count" id="favPickerCount">0 / 5</span></div>
-      <button class="fav-picker-close" onclick="closeFavPicker()">&#x2715;</button>
-    </div>
-    <div class="fav-picker-list" id="favPickerList"></div>
-    <div class="fav-picker-footer">
-      <button class="fav-picker-cancel" onclick="closeFavPicker()">Cancel</button>
-      <button class="fav-picker-save" id="favPickerSaveBtn">Save</button>
-    </div>
-  </div>
 </div>
 
 <!-- Export overlay -->
@@ -1067,8 +629,6 @@ function _trimNotes(text) {
 /* ── State ── */
 var _pUser = null, _pProfile = null, _pEntries = [], _activeTab = 0;
 var _profEntryMap = {};
-var _favSelected = [];
-var _recSelected = [];
 var _profFavLists = [];
 var _libSort = {watching:'newest',queue:'newest',completed:'newest'};
 var _libCollapsed = {watching:false,queue:false,completed:false};
@@ -1109,11 +669,8 @@ document.addEventListener('DOMContentLoaded', function() {
     populateHeader();
     renderTab0();
     if (_activeTab === 1) renderLibrary();
-    if (_activeTab === 3) renderNotes();
-    if (_activeTab === 5) renderProfLists();
   });
 });
-
 
 /* ── Profile stats (5 boxes) ── */
 function computeProfileStats(entries) {
@@ -1199,9 +756,7 @@ function switchTab(n) {
     if(p) p.classList.toggle('active', i===n);
   });
   if (n===1) renderLibrary();
-  if (n===3) renderNotes();
   if (n===4) renderExports();
-  if (n===5) renderProfLists();
   if (n===0 && _pEntries.length) renderTab0();
 }
 
@@ -1344,68 +899,9 @@ document.addEventListener('keydown',function(e){
     else if(document.getElementById('profCustomListModal')?.style.display==='flex') closeProfCustomListModal();
     else if(document.getElementById('profAddListModal')?.style.display==='flex') closeProfAddListModal();
     else if(document.getElementById('exportOverlay')?.classList.contains('open')) closeExportPopup();
-    else if(document.getElementById('favPickerOverlay')?.classList.contains('open')) closeFavPicker();
-    else if(document.getElementById('favSecOverlay')?.classList.contains('open')) closeFavSec();
     else if(document.getElementById('profPopupOverlay')?.style.opacity==='1') profClosePopup();
   }
 });
-
-function _libBreakdownHTML(e) {
-  var isMovie = e.cat==='movies' || (e.ratings&&e.ratings._media_type==='movie');
-  if (!isMovie) {
-    var bd = Array.isArray(e.ratings&&e.ratings._season_breakdown)
-      ? e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number) : [];
-    var totalS = bd.length || Number(e.total_seasons) || 0;
-    if (totalS > 0) {
-      var chips = '';
-      for (var i=0; i<totalS; i++) {
-        var eps = bd[i] || null;
-        chips += '<span class="popup-info-season-chip">'
-          +'<span class="popup-info-season-num">S'+(i+1)+'</span>'
-          +'<span class="popup-info-season-eps">'+(eps?eps+' ep':'S'+(i+1))+'</span>'
-          +'</span>';
-      }
-      return '<div class="popup-info-block"><div class="popup-info-label">TV Show Breakdown</div><div style="display:flex;flex-wrap:wrap;">'+chips+'</div></div>';
-    } else if (e.total_eps) {
-      return '<div class="popup-info-block"><span style="font-size:11px;color:var(--text-3);">'+e.total_eps+' episodes</span></div>';
-    }
-    return '';
-  } else {
-    var rtH=Number(e.runtime_h)||0, rtM=Number(e.runtime_m)||0;
-    if (rtH||rtM) {
-      var rtStr = rtH ? rtH+'h '+rtM+'m' : rtM+'m';
-      return '<div class="popup-info-block"><span class="popup-info-runtime">'
-        +'<span class="popup-info-runtime-val">'+rtStr+'</span>'
-        +'<span class="popup-info-runtime-lbl">Movie Runtime</span>'
-        +'</span></div>';
-    }
-    return '';
-  }
-}
-
-function buildExpansion(e) {
-  var sc = liveScore(e)!=null?Number(liveScore(e)).toFixed(2):'—';
-  var isM = e.cat==='movies';
-  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  var rd = typeof getRatings==='function' ? getRatings(e.cat) : {core:[],bonus:[]};
-  var isAnimated = e.cat === 'anime' || e.cat === 'cartoons';
-  var cR = (rd.core||[]).map(function(r){var v=e.ratings&&e.ratings[r.key];if(v==null||v==='')return '';return '<div class="fd-rating-row"><span class="fd-rating-label">'+r.label+'</span><span class="fd-rating-val">'+Number(v).toFixed(2)+'</span></div>';}).filter(Boolean).join('');
-  var animRow = (!isAnimated && e.ratings && e.ratings.animation != null && e.ratings.animation !== '')
-    ? '<div class="fd-rating-row"><span class="fd-rating-label">Animation Quality</span><span class="fd-rating-val">'+Number(e.ratings.animation).toFixed(2)+'</span></div>' : '';
-  var bR = (rd.bonus||[]).map(function(r){var v=e.ratings&&e.ratings[r.key];if(v==null||v==='')return '';return '<div class="fd-rating-row"><span class="fd-rating-label">'+r.label+'</span><span class="fd-rating-val">'+Number(v).toFixed(2)+'</span></div>';}).filter(Boolean).join('');
-  var fv = (e.ratings&&e.ratings._favorites)||{};
-  var lw = (e.ratings&&e.ratings._lowlights)||{};
-  var fc = [fv.character?'<span class="fav-chip"><span class="fav-chip-label">Fav Character</span>'+esc(fv.character)+'</span>':'',(!isM&&fv.episode)?'<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span>'+esc(fv.episode)+'</span>':'',(!isM&&fv.season)?'<span class="fav-chip"><span class="fav-chip-label">Fav Season</span>'+esc(fv.season)+'</span>':''].filter(Boolean).join('');
-  var lc = [lw.character?'<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav</span>'+esc(lw.character)+'</span>':''].filter(Boolean).join('');
-  var h=(e.description?'<div class="fd-description">'+esc(e.description)+'</div>':'')+_libBreakdownHTML(e)+'<div class="fd-cols">';
-  if(cR||animRow)h+='<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>'+cR+animRow+'</div>';
-  if(bR)h+='<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>'+bR+'</div>';
-  h+='</div><div class="fd-final"><span>Final Score</span><strong>'+sc+'</strong></div>';
-  if(fc)h+='<div class="fav-chips" style="margin-top:8px;">'+fc+'</div>';
-  if(lc)h+='<div class="fav-chips" style="margin-top:6px;">'+lc+'</div>';
-  if(e.notes)h+='<div class="fd-notes">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>';
-  return h;
-}
 
 /* ── Tab 0: Overview ── */
 function _statsBoxHTML(entries, profile, favLists) {
@@ -1485,19 +981,9 @@ function _libQueueScope(e) {
   if (e.total_eps) return e.total_eps+' eps';
   return '';
 }
-function _libEnjoymentVal(e){
-  var v=e.ratings&&e.ratings.enjoyment;
-  return (v!==undefined&&v!==null&&v!=='')?Number(v):null;
-}
 function _ratingVal(e,key){
   var v=e.ratings&&e.ratings[key];
   return (v!==undefined&&v!==null&&v!=='')?Number(v):null;
-}
-function _libEnjoymentBadge(e){
-  var val=_libEnjoymentVal(e);
-  if(val==null)return '<div class="cg-score-badge cg-score-none">-</div>';
-  var cls=val>=10?'cg-score-10':val>=9?'cg-score-9':val>=8?'cg-score-8':val>=7?'cg-score-7':val>=6?'cg-score-6':val>=3?'cg-score-3-5':'cg-score-0-2';
-  return '<div class="cg-score-badge '+cls+'">★ '+val.toFixed(2)+'</div>';
 }
 function _libRatingBadge(e,key){
   var val=_ratingVal(e,key);
@@ -1526,9 +1012,6 @@ function _ratingFilterOptionsAll(){
 function _ratingFilterLabelAll(key){
   var opt=_ratingFilterOptionsAll().filter(function(o){return o.key===key;})[0];
   return opt?opt.label:key;
-}
-function _ratingShortLabel(label){
-  return label.length>14?label.slice(0,13)+'…':label;
 }
 
 function _libCatFilterBar() {
@@ -1650,51 +1133,13 @@ SF.register('prof', {
 });
 function _sfScope(){ return 'prof'; }
 function _libSortBar(sec){ return SF.bar('prof', sec); }
-function setLibSort(sec,val){ SF.setSort('prof', sec, val); }
-function setLibCat(c){_libCatFilter=c;_libFormat='';SF.invalidate(_sfScope());renderLibrary();}
 
 /* ── Rating filter popup (shared markup/CSS pattern with category.js) ── */
-var _ratingFilterSection=null;
-function _injectRatingFilterOverlay(){
-  if(document.getElementById('ratingFilterOverlay'))return;
-  var el=document.createElement('div');
-  el.id='ratingFilterOverlay';
-  el.innerHTML='<div id="ratingFilterCard">'
-    + '<div class="rf-header"><div class="rf-title">Sort by Rating</div>'
-    + '<button class="rf-close" onclick="closeRatingFilter()">'+icon('x',18)+'</button></div>'
-    + '<div class="rf-list" id="ratingFilterList"></div></div>';
-  el.addEventListener('click',function(ev){if(ev.target===el)closeRatingFilter();});
-  document.body.appendChild(el);
-}
-function openRatingFilter(sec){
-  _injectRatingFilterOverlay();
-  _ratingFilterSection=sec;
-  var cur=_libSort[sec]||'newest';
-  var curKey=cur.indexOf('rating:')===0?cur.slice(7):null;
-  var opts=_ratingFilterOptionsAll();
-  var html='<div class="rf-item'+(!curKey?' active':'')+'" onclick="_pickRatingFilter(null)">'
-    + '<span>Overall Score (default)</span><span class="rf-item-check">'+icon('check',15)+'</span></div>';
-  var lastGroup=null;
-  opts.forEach(function(o){
-    if(o.group!==lastGroup){html+='<div class="rf-group-label">'+o.group+'</div>';lastGroup=o.group;}
-    html+='<div class="rf-item'+(curKey===o.key?' active':'')+'" onclick="_pickRatingFilter(\''+o.key+'\')">'
-      + '<span>'+o.label+'</span><span class="rf-item-check">'+icon('check',15)+'</span></div>';
-  });
-  document.getElementById('ratingFilterList').innerHTML=html;
-  document.getElementById('ratingFilterOverlay').classList.add('open');
-  document.body.style.overflow='hidden';
-}
 function closeRatingFilter(){
   var ov=document.getElementById('ratingFilterOverlay');
   if(!ov)return;
   ov.classList.remove('open');
   document.body.style.overflow='';
-}
-function _pickRatingFilter(key){
-  var sec=_ratingFilterSection;
-  closeRatingFilter();
-  if(!sec)return;
-  setLibSort(sec, key?'rating:'+key:'highest');
 }
 function _libToggleSec(key){
   _libCollapsed[key]=!_libCollapsed[key];
@@ -1858,8 +1303,7 @@ function renderLibrary(){
       var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
       return '<div class="fv-entry-block">'
         +'<div class="fv-rank-row" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
-        +(isRanked?'<div class="fv-rank-num '+(i<3?'top3':'')+'">'+(i+1)+'</div>':'')
-        +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):'')+'</div>'
+        +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+(i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other')+'">'+(i+1)+'</div>':''))+'</div>'
         +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
         +'<div class="fv-rank-meta">'+getTypeBadge(e,'friend')+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
@@ -1879,201 +1323,11 @@ function renderLibrary(){
 }
 
 /* ── Tab 2: Favorites ── */
-function renderFavorites(){
-  _favSelected=Array.isArray(_pProfile&&_pProfile.top_picks)?_pProfile.top_picks.slice():[];
-  _recSelected=Array.isArray(_pProfile&&_pProfile.recommended)?_pProfile.recommended.slice():[];
-  _renderFavSlots();
-}
-function _favCardProf(e, rank) {
-  var esc2=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  var sc = liveScore(e)!=null ? Number(liveScore(e)).toFixed(2) : null;
-  var rankCls = rank===0?'cg-rank-1':rank===1?'cg-rank-2':rank===2?'cg-rank-3':'cg-rank-other';
-  var badge = rank!=null ? '<div class="cg-rank-badge '+rankCls+'">'+(rank+1)+'</div>' : '';
-  var scoreHTML = sc ? '<div style="font-family:var(--serif);font-size:15px;font-weight:500;color:var(--olive-light);margin-top:4px;text-align:right">'+sc+'</div>' : '';
-  return '<div class="q-card" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="cursor:pointer;">'
-    +'<div class="q-poster" style="position:relative">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div>'+badge+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'</div>'
-    +'<div class="q-info"><div class="q-title">'+esc2(e.title)+'</div>'
-    +'<div class="q-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div>'
-    +scoreHTML+'</div></div>';
-}
-
-function _favHScrollProf(listId, title, items, editFn, delFn, renameFn, description) {
-  var esc2=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  var gid='prof-fhg-'+(listId||'top');
-  var renameBtn = renameFn ? '<button class="fav-edit-btn" style="padding:6px 10px;" title="Edit details" onclick="'+renameFn+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>' : '';
-  var editBtn = editFn ? '<button class="fav-edit-btn" onclick="'+editFn+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>' : '';
-  var delBtn = delFn ? '<button class="fav-edit-btn" style="color:var(--text-3);border-color:var(--border);" onclick="'+delFn+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>' : '';
-  var cards = items.map(function(e,i){return _favCardProf(e,i);}).join('');
-  var gridHtml = cards
-    ? '<div class="fav-grid-container">'+'<div class="grid-nav-wrap">'+'<button class="grid-nav-btn arr-left" onclick="event.stopPropagation();_profFavNavScroll(&quot;'+gid+'&quot;,-1)" aria-label="Scroll left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>'+'<button class="grid-nav-btn arr-right" onclick="event.stopPropagation();_profFavNavScroll(&quot;'+gid+'&quot;,1)" aria-label="Scroll right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>'+'<div class="fav-watching-grid" id="'+gid+'">'+cards+'</div>'+'</div></div>'
-    : '<div style="font-size:13px;color:var(--text-3);padding:8px 0;">Nothing here yet.</div>';
-  var descHtml = description ? '<div class="fav-page-list-desc">'+esc2(description)+'</div>' : '';
-  return '<div style="margin-bottom:2rem;">'    +'<div class="fav-page-list-header"><div><div class="fav-page-list-title">'+esc2(title)+'</div>'+descHtml+'</div>'    +'<div style="display:flex;gap:6px;">'+renameBtn+editBtn+delBtn+'</div></div>'    +gridHtml    +'</div>';
-}
-
-function _profFavNavScroll(id,dir){
-  var el=document.getElementById(id);
-  if(!el)return;
-  el.scrollBy({left:dir*220,behavior:'smooth'});
-}
-
-
-function _renderFavSlots(){
-  var el=document.getElementById('favoritesContent');
-  if(!el)return;
-  var topItems = _favSelected.map(function(id){return _profEntryMap[id];}).filter(Boolean);
-  var secHd = function(label){ return '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin:1.5rem 0 1rem;display:flex;align-items:center;gap:12px;">'+label+'<span style="flex:1;height:0.5px;background:var(--border);"></span></div>'; };
-
-  var catKeys = {tv:'fav_tv',movies:'fav_movies',anime:'fav_anime',cartoons:'fav_cartoons'};
-  var cats = ['tv','movies','anime','cartoons'];
-  var catLabels = {tv:'Favorite TV Shows',movies:'Favorite Movies',anime:'Favorite Anime',cartoons:'Favorite Cartoons'};
-
-  var catCounts = {};
-  cats.forEach(function(cat){
-    var key = catKeys[cat];
-    catCounts[cat] = Array.isArray(_pProfile&&_pProfile[key]) ? _pProfile[key].length : 0;
-  });
-  var recCount = Array.isArray(_pProfile&&_pProfile.recommended) ? _pProfile.recommended.length : 0;
-
-  var statsEl = document.getElementById('profFavStats');
-  if (statsEl) {
-    statsEl.innerHTML =
-      '<div class="page-stat"><div class="page-stat-num">'+topItems.length+'</div><div class="page-stat-label">Top Picks</div></div>' +
-      '<div class="page-stat"><div class="page-stat-num">'+recCount+'</div><div class="page-stat-label">Recommend</div></div>' +
-      '<div class="page-stat"><div class="page-stat-num">'+catCounts.tv+'</div><div class="page-stat-label">TV</div></div>' +
-      '<div class="page-stat"><div class="page-stat-num">'+catCounts.movies+'</div><div class="page-stat-label">Movies</div></div>' +
-      '<div class="page-stat"><div class="page-stat-num">'+catCounts.anime+'</div><div class="page-stat-label">Anime</div></div>' +
-      '<div class="page-stat"><div class="page-stat-num">'+catCounts.cartoons+'</div><div class="page-stat-label">Cartoons</div></div>';
-  }
-
-  var html = '';
-  if (topItems.length) {
-    html += secHd('Handpicked');
-    html += _favHScrollProf(null,'Top Favorites',topItems,null,null);
-  }
-
-  cats.forEach(function(cat){
-    var key = catKeys[cat];
-    var label = catLabels[cat];
-    var defaultItems = Array.isArray(_pProfile&&_pProfile[key])&&_pProfile[key].length
-      ? _pProfile[key].map(function(id){return _profEntryMap[id];}).filter(Boolean) : [];
-
-    var genreLists = _profFavLists.filter(function(l){return l.cat===cat;});
-    var genreListsWithItems = genreLists.filter(function(l){return (l.items||[]).length;});
-
-    if (!defaultItems.length && !genreListsWithItems.length) return;
-
-    html += secHd(label);
-    if (defaultItems.length) html += _favHScrollProf('default-'+cat, label, defaultItems, null, null);
-
-    genreListsWithItems.forEach(function(list){
-      var items = (list.items||[]).map(function(id){return _profEntryMap[id];}).filter(Boolean);
-      html += _favHScrollProf(list.id, list.title, items, null, null, null, list.description);
-    });
-  });
-
-  if (!html) html = '<div style="text-align:center;padding:3rem 1rem;color:var(--text-3);font-size:13px;">No favorites yet.</div>';
-  el.innerHTML = html;
-}
 
 /* ── Tab 5: Lists (favorite_lists table — cat='custom' rows only; genre+cat lists live on the Favorites tab) ── */
-function renderProfLists() {
-  var el = document.getElementById('listsContent');
-  if (!el) return;
-
-  var customLists = _profFavLists.filter(function(l){return l.cat==='custom';});
-  customLists.sort(function(a, b){
-    var ao = a.sort_order, bo = b.sort_order;
-    if (ao != null && bo != null) return ao - bo;
-    if (ao != null) return -1;
-    if (bo != null) return 1;
-    return new Date(a.created_at) - new Date(b.created_at);
-  });
-
-  var statsEl = document.getElementById('profListsStats');
-  if (statsEl) {
-    var uniqueItemIds = {};
-    var uniqueCount = 0;
-    var largest = 0;
-    var withDesc = 0;
-    customLists.forEach(function(list){
-      var items = list.items || [];
-      items.forEach(function(id){ if (!uniqueItemIds[id]) { uniqueItemIds[id] = true; uniqueCount++; } });
-      if (items.length > largest) largest = items.length;
-      if (list.description && list.description.trim()) withDesc++;
-    });
-    statsEl.innerHTML =
-      '<div class="page-stat"><div class="page-stat-num">' + customLists.length + '</div><div class="page-stat-label">Total Lists</div></div>' +
-      '<div class="page-stat"><div class="page-stat-num">' + uniqueCount + '</div><div class="page-stat-label">Items Organized</div></div>' +
-      '<div class="page-stat"><div class="page-stat-num">' + largest + '</div><div class="page-stat-label">Largest List</div></div>' +
-      '<div class="page-stat"><div class="page-stat-num">' + withDesc + '</div><div class="page-stat-label">With Description</div></div>';
-  }
-
-  if (!customLists.length) {
-    el.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:var(--text-3);font-size:13px;">No lists yet. Use "+ New List" to create one — mix any movies, shows, anime, or cartoons together.</div>';
-    return;
-  }
-
-  var html = '';
-  customLists.forEach(function(list){
-    var items = (list.items||[]).map(function(id){return _profEntryMap[id];}).filter(Boolean);
-    html += _favHScrollProf(list.id, list.title, items, null, null, null, list.description);
-  });
-
-  el.innerHTML = html;
-}
 
 /* ── Custom List Modal (title + description, works for any list type on edit) ── */
 var _profCustomListEditId = null;
-function openProfCustomListModal(editId) {
-  _profCustomListEditId = editId || null;
-  var existingList = editId ? _profFavLists.find(function(l){return l.id===editId;}) : null;
-  var existing = document.getElementById('profCustomListModal');
-  if (existing) {
-    existing.style.display='flex';
-    document.body.style.overflow='hidden';
-    var inp = document.getElementById('profCustomListInput');
-    var descInp = document.getElementById('profCustomListDescInput');
-    inp.value = existingList?.title || '';
-    descInp.value = existingList?.description || '';
-    _listsUpdateWordCount('profCustomListDescInput','profCustomListDescCount');
-    _listsGuardWordLimit('profCustomListDescInput','profCustomListDescCount');
-    document.getElementById('profCustomListCreateBtn').disabled = !inp.value.trim();
-    document.getElementById('profCustomListModalTitle').textContent = editId ? 'Edit List' : 'New List';
-    document.getElementById('profCustomListCreateBtn').textContent = editId ? 'Save' : 'Create List';
-    setTimeout(function(){inp.focus();}, 100);
-    return;
-  }
-  var el = document.createElement('div');
-  el.id='profCustomListModal';
-  el.style.cssText='position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
-  el.innerHTML='<div style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:97%;max-width:420px;padding:24px 24px 20px;box-sizing:border-box;">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">'
-    +'<div style="font-family:var(--serif);font-size:20px;font-weight:500;color:var(--text);" id="profCustomListModalTitle">'+(editId?'Edit List':'New List')+'</div>'
-    +'<button onclick="closeProfCustomListModal()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;line-height:1;">✕</button>'
-    +'</div>'
-    +'<div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:8px;">List Title</div>'
-    +'<input id="profCustomListInput" type="text" maxlength="60" placeholder="e.g. Comfort Shows, Movies to Watch…" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-3);color:var(--text);font-family:var(--sans);font-size:16px;outline:none;margin-bottom:18px;" oninput="document.getElementById(&quot;profCustomListCreateBtn&quot;).disabled=!this.value.trim()" onkeydown="if(event.key===&quot;Enter&quot;&&event.target===this)document.getElementById(&quot;profCustomListCreateBtn&quot;).click()">'
-    +'<div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:8px;">Description <span style="color:var(--text-3);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;">(optional, max 50 words)</span></div>'
-    +'<textarea id="profCustomListDescInput" class="list-desc-field" maxlength="500" placeholder="What\'s this list about?" oninput="_listsUpdateWordCount(&quot;profCustomListDescInput&quot;,&quot;profCustomListDescCount&quot;)" style="margin-bottom:4px;"></textarea>'
-    +'<div class="list-desc-count" id="profCustomListDescCount" style="margin-bottom:14px;">0 / 50 words</div>'
-    +'<div style="display:flex;gap:10px;">'
-    +'<button onclick="closeProfCustomListModal()" style="flex:1;padding:10px;border-radius:var(--radius-sm);background:var(--bg-3);color:var(--text-2);border:0.5px solid var(--border);font-family:var(--sans);font-size:14px;cursor:pointer;">Cancel</button>'
-    +'<button id="profCustomListCreateBtn" onclick="createProfCustomList()" disabled style="flex:2;padding:10px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;">Create List</button>'
-    +'</div></div>';
-  document.body.appendChild(el);
-  document.body.style.overflow='hidden';
-  el.addEventListener('click', function(ev){if(ev.target===el)closeProfCustomListModal();});
-  _listsGuardWordLimit('profCustomListDescInput','profCustomListDescCount');
-  if (existingList) {
-    document.getElementById('profCustomListInput').value = existingList.title || '';
-    document.getElementById('profCustomListDescInput').value = existingList.description || '';
-    _listsUpdateWordCount('profCustomListDescInput','profCustomListDescCount');
-    document.getElementById('profCustomListCreateBtn').disabled = !existingList.title;
-    document.getElementById('profCustomListCreateBtn').textContent = 'Save';
-  }
-  setTimeout(function(){document.getElementById('profCustomListInput').focus();}, 100);
-}
 function closeProfCustomListModal(){
   var el=document.getElementById('profCustomListModal');
   if(el)el.style.display='none';
@@ -2087,9 +1341,6 @@ function closeProfCustomListModal(){
 // for input paths that bypass beforeinput (e.g. some IME flows). Shared
 // by both the Add List and Custom List modals, and by the Lists tab's
 // edit-details flow.
-function _listsCountWords(s) {
-  return s.trim() ? s.trim().split(/\s+/).length : 0;
-}
 function _listsUpdateWordCount(inputId, countId) {
   var el = document.getElementById(inputId);
   var words = el.value.trim().split(/\s+/).filter(Boolean);
@@ -2120,479 +1371,23 @@ function _listsGuardWordLimit(inputId, countId) {
     }
   });
 }
-async function createProfCustomList(){
-  var title = document.getElementById('profCustomListInput').value.trim();
-  var description = document.getElementById('profCustomListDescInput').value.trim();
-  if (!title) return;
-  try {
-    if (_profCustomListEditId) {
-      var list = _profFavLists.find(function(l){return l.id===_profCustomListEditId;});
-      if (list) {
-        list.title = title;
-        list.description = description;
-        var { error } = await sb.from('favorite_lists').update({title:title, description:description}).eq('id',list.id).eq('user_id',_pUser.id);
-        if (error) throw error;
-        closeProfCustomListModal();
-        if (_activeTab===5) renderProfLists(); else _renderFavSlots();
-        showToast('List updated!');
-      }
-    } else {
-      var ins = await sb.from('favorite_lists').insert({user_id:_pUser.id,cat:'custom',genre:'',title:title,description:description,items:[]}).select().single();
-      if (ins.error) throw ins.error;
-      _profFavLists.push(ins.data);
-      closeProfCustomListModal();
-      renderProfLists();
-      showToast('"'+title+'" created!');
-      setTimeout(function(){openProfListPicker(ins.data.id);}, 300);
-    }
-  } catch(e) { showToast('Error saving list.', 'err'); console.error(e); }
-}
 
 /* ── Unified picker for favorites and recommended ── */
-var _pickerMode = 'fav';
-
-function openFavPicker(){
-  _pickerMode='fav';
-  document.getElementById('favPickerSaveBtn').onclick = saveFavorites;
-  _openPicker(_favSelected,'Top Favorites',saveFavorites);
-}
-function openRecPicker(){
-  _pickerMode='rec';
-  document.getElementById('favPickerSaveBtn').onclick = saveRecommended;
-  _openPicker(_recSelected,'Would Recommend',saveRecommended);
-}
-
-function _openPicker(selected,title,saveFn){
-  var sel=new Set(selected);
-  var all=_pEntries.filter(function(e){return e.status==='completed'||e.status==='ongoing';});
-  // Already selected items first, in current rank order, then rest sorted by score
-  var inSel=selected.map(function(id){return _profEntryMap[id];}).filter(Boolean);
-  var rest=all.filter(function(e){return !sel.has(e.id);}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);});
-  var sorted=inSel.concat(rest);
-  // Re-use slotNum from current selected array for correct badge numbers
-  var selectedArr=selected;
-  var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  document.getElementById('favPickerTitle').textContent=title;
-  document.getElementById('favPickerSaveBtn').onclick=saveFn;
-  document.getElementById('favPickerList').innerHTML=sorted.map(function(e){
-    var liveArr=_pickerMode==='fav'?_favSelected:_recSelected;
-    var isSel=liveArr.indexOf(e.id)>=0,slotNum=liveArr.indexOf(e.id),sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
-    return '<div class="fav-picker-item'+(isSel?' selected':'')+'" onclick="togglePickerItem(this)" data-id="'+e.id+'">'
-      +'<div class="fav-picker-poster">'+(safeURL(e.poster_url)?'<img src="'+safeURL(e.poster_url)+'" loading="lazy">':esc((e.title[0]||'?').toUpperCase()))+(isSel?'<div class="cg-rank-badge '+_profRankCls(slotNum)+'">'+(slotNum+1)+'</div>':'')+('</div>')
-      +'<div class="fav-picker-info"><div class="fav-picker-name">'+esc(e.title)+'</div><div class="fav-picker-sub">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)||'')+'</div></div>'
-      +(sc?'<div class="fav-picker-score">'+sc+'</div>':'')
-      +'<div class="fav-picker-check">'+(isSel?'&#x2713;':'')+'</div></div>';
-  }).join('');
-  document.getElementById('favPickerCount').textContent=selected.length+' / 5';
-  document.getElementById('favPickerOverlay').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-function togglePickerItem(el){
-  var id=el.dataset.id;
-  var arr=_pickerMode==='fav'?_favSelected:_recSelected;
-  var idx=arr.indexOf(id);
-  if(idx>=0){arr.splice(idx,1);el.classList.remove('selected');el.querySelector('.fav-picker-check').innerHTML='';var b=el.querySelector('.cg-rank-badge');if(b)b.remove();}
-  else{if(arr.length>=5){showToast('Max 5 items.','err');return;}arr.push(id);el.classList.add('selected');el.querySelector('.fav-picker-check').innerHTML='&#x2713;';var pp=el.querySelector('.fav-picker-poster'),bd=document.createElement('div');bd.className='cg-rank-badge cg-rank-other';bd.textContent=arr.length;pp.appendChild(bd);}
-  arr.forEach(function(sid,i){var r=document.querySelector('.fav-picker-item[data-id="'+sid+'"]');if(r){var b=r.querySelector('.cg-rank-badge');if(b){b.textContent=i+1;b.className='cg-rank-badge '+(i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other');}}});
-  document.getElementById('favPickerCount').textContent=arr.length+' / 5';
-}
-function toggleFavItem(el){togglePickerItem(el);}
-
-function _profRankCls(i){
-  return i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other';
-}
 
 /* ── Profile custom list picker ── */
-var _profListPickerId = null;
-var _profListPickerSelected = [];
-
-function openProfCatPicker(cat, profileKey) {
-  var currentItems = Array.isArray(_pProfile&&_pProfile[profileKey]) ? _pProfile[profileKey].slice() : [];
-  _profListPickerId = '__cat__'+cat+'__'+profileKey;
-
-  var pool = _pEntries.filter(function(e){return e.status==='completed'||e.status==='ongoing';});
-  if(cat==='movies') pool=pool.filter(function(e){return e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');});
-  else if(cat==='tv') pool=pool.filter(function(e){return e.cat==='tv';});
-  else pool=pool.filter(function(e){return e.cat===cat;});
-
-  _profListPickerSelected = currentItems.slice();
-  var selSet=new Set(currentItems);
-  var inSel=currentItems.map(function(id){return _profEntryMap[id];}).filter(Boolean);
-  var rest=pool.filter(function(e){return !selSet.has(e.id);}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);});
-  var sorted=inSel.concat(rest);
-
-  var catLabel={tv:'TV Shows',movies:'Movies',anime:'Anime',cartoons:'Cartoons'}[cat];
-  var esc2=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  document.getElementById('favPickerTitle').textContent='Favorite '+catLabel;
-  document.getElementById('favPickerCount').textContent=currentItems.length+' / ∞';
-  document.getElementById('favPickerSaveBtn').onclick=saveProfCatList;
-  document.getElementById('favPickerList').innerHTML=sorted.map(function(e){
-    var isSel=_profListPickerSelected.includes(e.id),slotNum=_profListPickerSelected.indexOf(e.id),sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
-    return '<div class="fav-picker-item'+(isSel?' selected':'')+'" onclick="toggleProfListItem(this)" data-id="'+e.id+'">'
-      +'<div class="fav-picker-poster">'+(safeURL(e.poster_url)?'<img src="'+safeURL(e.poster_url)+'" loading="lazy">':esc2((e.title[0]||'?').toUpperCase()))
-      +(isSel?'<div class="cg-rank-badge '+_profRankCls(slotNum)+'">'+(slotNum+1)+'</div>':'')
-      +'</div>'
-      +'<div class="fav-picker-info"><div class="fav-picker-name">'+esc2(e.title)+'</div><div class="fav-picker-sub">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)||'')+'</div></div>'
-      +(sc?'<div class="fav-picker-score">'+sc+'</div>':'')
-      +'<div class="fav-picker-check">'+(isSel?'&#x2713;':'')+'</div></div>';
-  }).join('');
-  document.getElementById('favPickerOverlay').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-
-async function saveProfCatList() {
-  var parts = _profListPickerId.split('__');
-  var profileKey = parts[3];
-  try {
-    var upd = {}; upd[profileKey] = _profListPickerSelected.slice();
-    var {error} = await sb.from('profiles').update(upd).eq('id',_pUser.id);
-    if(error) throw error;
-    if(_pProfile) _pProfile[profileKey] = _profListPickerSelected.slice();
-    closeFavPicker();
-    _renderFavSlots();
-    showToast('Saved!');
-  } catch(e){showToast('Error saving.','err');console.error(e);}
-}
-
-function openProfListPicker(listId) {
-  _profListPickerId = listId;
-  var list = _profFavLists.find(function(l){return l.id===listId;});
-  if (!list) return;
-  var currentItems = (list.items||[]).slice();
-  _profListPickerSelected = currentItems.slice();
-
-  // Filter pool by cat and genre (custom = all entries)
-  var pool = _pEntries.filter(function(e){return e.status==='completed'||e.status==='ongoing';});
-  var cat = list.cat;
-  if (cat && cat !== 'custom') {
-    if (cat==='movies') pool = pool.filter(function(e){return e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');});
-    else if (cat==='tv') pool = pool.filter(function(e){return e.cat==='tv';});
-    else pool = pool.filter(function(e){return e.cat===cat;});
-    if (list.genre) pool = pool.filter(function(e){return (e.genres||[]).includes(list.genre);});
-  }
-
-  // Sort: selected first by rank, then rest by score
-  var selSet = new Set(currentItems);
-  var inSel = currentItems.map(function(id){return _profEntryMap[id];}).filter(Boolean);
-  var rest = pool.filter(function(e){return !selSet.has(e.id);}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);});
-  var sorted = inSel.concat(rest);
-
-  var esc2=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  document.getElementById('favPickerTitle').textContent = list.title;
-  document.getElementById('favPickerCount').textContent = currentItems.length+' / ∞';
-  document.getElementById('favPickerSaveBtn').onclick = saveProfList;
-  document.getElementById('favPickerList').innerHTML = sorted.map(function(e){
-    var isSel=_profListPickerSelected.includes(e.id), slotNum=_profListPickerSelected.indexOf(e.id), sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
-    return '<div class="fav-picker-item'+(isSel?' selected':'')+'" onclick="toggleProfListItem(this)" data-id="'+e.id+'">'
-      +'<div class="fav-picker-poster">'+(safeURL(e.poster_url)?'<img src="'+safeURL(e.poster_url)+'" loading="lazy">':esc2((e.title[0]||'?').toUpperCase()))
-      +(isSel?'<div class="cg-rank-badge '+_profRankCls(slotNum)+'">'+(slotNum+1)+'</div>':'')
-      +'</div>'
-      +'<div class="fav-picker-info"><div class="fav-picker-name">'+esc2(e.title)+'</div><div class="fav-picker-sub">'+((CAT_META[e.cat]&&CAT_META[e.cat].label)||'')+'</div></div>'
-      +(sc?'<div class="fav-picker-score">'+sc+'</div>':'')
-      +'<div class="fav-picker-check">'+(isSel?'&#x2713;':'')+'</div></div>';
-  }).join('');
-  document.getElementById('favPickerOverlay').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-
-function _profRenumber() {
-  _profListPickerSelected.forEach(function(sid, i) {
-    var row = document.querySelector('.fav-picker-item[data-id="'+sid+'"]');
-    if (!row) return;
-    var b = row.querySelector('.cg-rank-badge');
-    if (!b) { b = document.createElement('div'); row.querySelector('.fav-picker-poster').appendChild(b); }
-    b.className = 'cg-rank-badge ' + _profRankCls(i);
-    b.textContent = i + 1;
-  });
-  document.querySelectorAll('.fav-picker-item:not(.selected) .cg-rank-badge').forEach(function(b){ b.remove(); });
-}
-
-function toggleProfListItem(el) {
-  var id=el.dataset.id;
-  var idx=_profListPickerSelected.indexOf(id);
-  if(idx>=0){
-    _profListPickerSelected.splice(idx,1);
-    el.classList.remove('selected');
-    el.querySelector('.fav-picker-check').innerHTML='';
-  } else {
-    _profListPickerSelected.push(id);
-    el.classList.add('selected');
-    el.querySelector('.fav-picker-check').innerHTML='&#x2713;';
-  }
-  _profRenumber();
-  _profListPickerSelected.forEach(function(sid,i){
-    var r=document.querySelector('.fav-picker-item[data-id="'+sid+'"]');
-    if(r){var b=r.querySelector('.cg-rank-badge');if(b){b.textContent=i+1;b.className='cg-rank-badge '+(i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other');}}
-  });
-  document.getElementById('favPickerCount').textContent=_profListPickerSelected.length+' / ∞';
-}
-
-async function saveProfList() {
-  if (_profListPickerId===null) { saveFavorites(); return; }
-  var list = _profFavLists.find(function(l){return l.id===_profListPickerId;});
-  if (!list) return;
-  try {
-    list.items = _profListPickerSelected.slice();
-    var { error } = await sb.from('favorite_lists').update({items:list.items}).eq('id',list.id).eq('user_id',_pUser.id);
-    if (error) throw error;
-    closeFavPicker();
-    if (list.cat === 'custom') renderProfLists(); else _renderFavSlots();
-    showToast('Saved!');
-  } catch(e) { showToast('Error saving.','err'); console.error(e); }
-}
-
-async function deleteProfList(id) {
-  var list = _profFavLists.find(function(l){return l.id===id;});
-  var ok = await showConfirm({ title: 'Delete List?', message: '"'+(list?.title||'this list')+'" will be permanently deleted.', confirmText: 'Delete', iconName: 'x' });
-  if (!ok) return;
-  var wasCustom = list && list.cat === 'custom';
-  try {
-    var { error } = await sb.from('favorite_lists').delete().eq('id',id).eq('user_id',_pUser.id);
-    if (error) throw error;
-    _profFavLists = _profFavLists.filter(function(l){return l.id!==id;});
-    if (wasCustom) renderProfLists(); else _renderFavSlots();
-    showToast('List deleted.');
-  } catch(e) { showToast('Error deleting.','err'); }
-}
 
 /* ── Add new list modal (in profile) ── */
 var _profNewCat=null, _profNewGenre=null;
-var PROF_GENRES=['Action','Adventure','Animation','Biography','Comedy','Crime','Documentary','Drama','Family','Fantasy','Heist','Historical','Horror','Medical','Musical','Mystery','Political','Psychological','Romance','Sci-Fi','Slice of Life','Space','Sports','Superhero','Supernatural','Thriller','War','Western'];
 
-function openProfAddListModal() {
-  _profNewCat=null; _profNewGenre=null;
-  // Reuse favPickerOverlay but with an "add list" mode — instead use a simple inline modal
-  var existing = document.getElementById('profAddListModal');
-  if (existing) {
-    existing.style.display='flex'; document.body.style.overflow='hidden';
-    document.getElementById('profAddDescInput').value = '';
-    _listsUpdateWordCount('profAddDescInput','profAddDescCount');
-    _listsGuardWordLimit('profAddDescInput','profAddDescCount');
-    return;
-  }
-  var el = document.createElement('div');
-  el.id='profAddListModal';
-  el.style.cssText='position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
-  el.innerHTML='<div style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:97%;max-width:480px;max-height:85dvh;overflow-y:auto;overscroll-behavior-y:contain;box-sizing:border-box;">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:0.5px solid var(--border);">'
-    +'<div style="font-family:var(--serif);font-size:20px;font-weight:500;">New List</div>'
-    +'<button onclick="closeProfAddListModal()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;">✕</button>'
-    +'</div>'
-    +'<div style="padding:20px;">'
-    +'<div id="profAddPreview" style="font-size:13px;color:var(--olive-light);font-style:italic;min-height:18px;margin-bottom:16px;">Choose a category and genre</div>'
-    +'<div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;">Category</div>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;" id="profCatBtns">'
-    +'<button class="fav-cat-btn" data-cat="tv" onclick="profSelectCat(this)">TV Shows</button>'
-    +'<button class="fav-cat-btn" data-cat="movies" onclick="profSelectCat(this)">Movies</button>'
-    +'<button class="fav-cat-btn" data-cat="anime" onclick="profSelectCat(this)">Anime</button>'
-    +'<button class="fav-cat-btn" data-cat="cartoons" onclick="profSelectCat(this)">Cartoons</button>'
-    +'</div>'
-    +'<div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;">Genre</div>'
-    +'<div id="profGenreGrid" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>'
-    +'<div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;">Description <span style="color:var(--text-3);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;">(optional, max 50 words)</span></div>'
-    +'<textarea id="profAddDescInput" class="list-desc-field" maxlength="500" placeholder="What\'s this list about?" oninput="_listsUpdateWordCount(&quot;profAddDescInput&quot;,&quot;profAddDescCount&quot;)"></textarea>'
-    +'<div class="list-desc-count" id="profAddDescCount">0 / 50 words</div>'
-    +'</div>'
-    +'<div style="padding:16px 20px;border-top:0.5px solid var(--border);">'
-    +'<button id="profAddCreateBtn" class="btn-save" style="width:100%;" onclick="profCreateList()" disabled>Create List</button>'
-    +'</div></div>';
-  el.addEventListener('click', function(ev){if(ev.target===el)closeProfAddListModal();});
-  document.body.appendChild(el);
-  document.body.style.overflow='hidden';
-  _listsGuardWordLimit('profAddDescInput','profAddDescCount');
-}
 function closeProfAddListModal(){
   var el=document.getElementById('profAddListModal');
   if(el)el.style.display='none';
   document.body.style.overflow='';
 }
-function profSelectCat(btn){
-  document.querySelectorAll('#profCatBtns .fav-cat-btn').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');
-  _profNewCat=btn.dataset.cat; _profNewGenre=null;
-  document.getElementById('profAddCreateBtn').disabled=true;
-  document.getElementById('profAddPreview').textContent='Choose a genre';
-  document.getElementById('profGenreGrid').innerHTML=PROF_GENRES.map(function(g){
-    return '<span style="font-size:11px;padding:4px 12px;border-radius:20px;background:var(--card);border:0.5px solid var(--border);color:var(--text-2);cursor:pointer;transition:all .15s;" onclick="profSelectGenre(this,&quot;'+g+'&quot;)" >'+g+'</span>';
-  }).join('');
-}
-function profSelectGenre(el,genre){
-  document.querySelectorAll('#profGenreGrid span').forEach(function(s){s.style.background='var(--card)';s.style.borderColor='var(--border)';s.style.color='var(--text-2)';});
-  el.style.background='var(--olive-faint)';el.style.borderColor='var(--border-olive)';el.style.color='var(--olive-light)';
-  _profNewGenre=genre;
-  document.getElementById('profAddCreateBtn').disabled=false;
-  var catLabel=(CAT_META[_profNewCat]&&CAT_META[_profNewCat].singular)||'';
-  document.getElementById('profAddPreview').textContent='"Favorite '+genre+' '+catLabel+'s"';
-}
-async function profCreateList(){
-  if(!_profNewCat||!_profNewGenre)return;
-  var catLabel=(CAT_META[_profNewCat]&&CAT_META[_profNewCat].singular)||'';
-  var title='Favorite '+_profNewGenre+' '+catLabel+'s';
-  var description = document.getElementById('profAddDescInput').value.trim();
-  try{
-    var ins=await sb.from('favorite_lists').insert({user_id:_pUser.id,cat:_profNewCat,genre:_profNewGenre,title:title,description:description,items:[]}).select().single();
-    if(ins.error)throw ins.error;
-    _profFavLists.push(ins.data);
-    closeProfAddListModal();
-    _renderFavSlots();
-    showToast('"'+title+'" created!');
-    setTimeout(function(){openProfListPicker(ins.data.id);},300);
-  }catch(e){showToast('Error creating list.','err');console.error(e);}
-}
 
 /* ── Favorite Sections ── */
-function _getFavSecItems(cat) {
-  // Get items from the first custom list for this cat, fallback to top_picks filtered by cat
-  var catList = _profFavLists.find(function(l){ return l.cat===cat; });
-  if (catList && catList.items && catList.items.length) {
-    return catList.items.map(function(id){return _profEntryMap[id];}).filter(Boolean);
-  }
-  // Fallback: top_picks filtered by category
-  var picks = Array.isArray(_pProfile&&_pProfile.top_picks) ? _pProfile.top_picks : [];
-  return picks.map(function(id){return _profEntryMap[id];}).filter(function(e){
-    return e && (
-      cat==='movies' ? (e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie'))
-      : cat==='tv'   ? (e.cat==='tv')
-      : e.cat===cat
-    );
-  });
-}
-
-function buildFavSections() {
-  var esc2=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  var catKeys={tv:'fav_tv',movies:'fav_movies',anime:'fav_anime',cartoons:'fav_cartoons'};
-
-  function secCard(e, onclick, label) {
-    var emptyCard = '<div class="favsec-pick-card favsec-pick-empty" onclick="'+onclick+'">'
-      +'<div class="favsec-pick-poster"></div>'
-      +'<div class="favsec-pick-label">'+label+'</div>'
-      +'</div>';
-    if (!e) return emptyCard;
-    return '<div class="favsec-pick-card" onclick="'+onclick+'">'
-      +'<div class="favsec-pick-poster">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div></div>'
-      +'<div class="favsec-pick-label">'+label+'</div>'
-      +'</div>';
-  }
-
-  var topItems = Array.isArray(_pProfile&&_pProfile.top_picks)&&_pProfile.top_picks.length
-    ? _pProfile.top_picks.map(function(id){return _profEntryMap[id];}).filter(Boolean)
-    : [];
-  var cards = [];
-  if (topItems.length) cards.push(secCard(topItems[0], 'openFavSec(&quot;top&quot;)', 'Top Favorites'));
-
-  var cats=[{cat:'tv'},{cat:'movies'},{cat:'anime'},{cat:'cartoons'}];
-  cats.forEach(function(m){
-    var key=catKeys[m.cat];
-    var items=Array.isArray(_pProfile&&_pProfile[key])&&_pProfile[key].length
-      ? _pProfile[key].map(function(id){return _profEntryMap[id];}).filter(Boolean)
-      : [];
-    if (items.length) {
-      var catLabel2={tv:'TV Shows',movies:'Movies',anime:'Anime',cartoons:'Cartoons'}[m.cat];
-      cards.push(secCard(items[0], 'openFavSec(&quot;'+m.cat+'&quot;)', catLabel2));
-    }
-  });
-
-  if (!cards.length) return '';
-  return '<div class="favsec-picks-row">'+cards.join('')+'</div>';
-}
-
-function openFavSec(cat) {
-  var catLabels = {top:'Top Favorites',tv:'Favorite TV Shows',movies:'Favorite Movies',anime:'Favorite Anime',cartoons:'Favorite Cartoons'};
-  var catKeys={tv:'fav_tv',movies:'fav_movies',anime:'fav_anime',cartoons:'fav_cartoons'};
-  var items;
-  if (cat==='top') {
-    items = Array.isArray(_pProfile&&_pProfile.top_picks)&&_pProfile.top_picks.length
-      ? _pProfile.top_picks.map(function(id){return _profEntryMap[id];}).filter(Boolean)
-      : [];
-  } else {
-    var key=catKeys[cat];
-    items = Array.isArray(_pProfile&&_pProfile[key])&&_pProfile[key].length
-      ? _pProfile[key].map(function(id){return _profEntryMap[id];}).filter(Boolean)
-      : [];
-  }
-  var esc2 = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  document.getElementById('favSecTitle').textContent = catLabels[cat]||cat;
-  items = items.slice(0,5);
-  document.getElementById('favSecGrid').innerHTML = items.map(function(e){
-    var sc = liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
-    var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
-    return '<div class="q-card" style="cursor:pointer;" onclick="profClosePopup();profOpenPopup(&quot;'+e.id+'&quot;)">'
-      +'<div class="q-poster">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div></div>'
-      +'<div class="q-info"><div class="q-title">'+esc2(e.title)+'</div>'
-      +'<div class="q-genre">'+genreHTML(e.genres, 3)+'</div>'
-      +(sc?'<div class="fav-card-score">'+sc+'</div>':'')
-      +'</div></div>';
-  }).join('');
-  var ov = document.getElementById('favSecOverlay');
-  ov.classList.add('open');
-  document.getElementById('favSecCard').style.transform = 'translateY(0)';
-  document.body.style.overflow = 'hidden';
-}
-
-function closeFavSec() {
-  var ov = document.getElementById('favSecOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.getElementById('favSecCard').style.transform = 'translateY(18px)';
-  document.body.style.overflow = '';
-}
-function _profFavScroll(id,dir){var el=document.getElementById(id);if(el)el.scrollBy({left:dir*300,behavior:"smooth"});}
-
-async function saveFavorites(){
-  try{
-    await updateProfile(_pUser.id,{top_picks:_favSelected});
-    if(_pProfile)_pProfile.top_picks=_favSelected.slice();
-    closeFavPicker();
-    try{_renderFavSlots();}catch(e2){console.warn('renderFavSlots:',e2);}
-    try{renderOverview();}catch(e3){console.warn('renderOverview:',e3);}
-    showToast('Favorites saved!');
-  }catch(err){showToast('Error saving.','err');console.error(err);}
-}
-async function saveRecommended(){
-  try{
-    await updateProfile(_pUser.id,{recommended:_recSelected});
-    if(_pProfile)_pProfile.recommended=_recSelected.slice();
-    closeFavPicker();
-    try{_renderFavSlots();}catch(e2){console.warn('renderFavSlots:',e2);}
-    try{renderOverview();}catch(e3){console.warn('renderOverview:',e3);}
-    showToast('Recommendations saved!');
-  }catch(err){showToast('Error saving.','err');console.error(err);}
-}
-function closeFavPicker(){document.getElementById('favPickerOverlay').classList.remove('open');document.body.style.overflow='';}
 
 /* ── Tab 3: Notes ── */
-function renderNotes(){
-  var el=document.getElementById('notesContent');
-  var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  var items=_pEntries.filter(function(e){return e.notes&&e.notes.trim();}).sort(function(a,b){return new Date(b.completed_date||b.created_at||0)-new Date(a.completed_date||a.created_at||0);});
-
-  var statsEl = document.getElementById('profNotesStats');
-  if (statsEl) {
-    var totalWords = 0, longest = 0;
-    items.forEach(function(e){
-      var words = e.notes.trim().split(/\s+/).filter(Boolean).length;
-      totalWords += words;
-      if (words > longest) longest = words;
-    });
-    statsEl.innerHTML =
-      '<div class="page-stat"><div class="page-stat-num">'+items.length+'</div><div class="page-stat-label">Total Notes</div></div>' +
-      '<div class="page-stat"><div class="page-stat-num">'+totalWords+'</div><div class="page-stat-label">Total Words</div></div>' +
-      '<div class="page-stat"><div class="page-stat-num">'+longest+'</div><div class="page-stat-label">Longest Note</div></div>';
-  }
-
-  if(!items.length){el.innerHTML='<div class="pv-empty">No personal notes yet.</div>';return;}
-  el.innerHTML=items.map(function(e){
-    var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
-    var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
-    return '<div class="note-row" onclick="openNotePopup2(this.dataset.id)" data-id="'+e.id+'">'
-      +'<div class="note-poster">'+(safeURL(e.poster_url)?'<img src="'+safeURL(e.poster_url)+'" loading="lazy">':esc((e.title[0]||'?').toUpperCase()))+'</div>'
-      +'<div class="note-body"><div class="note-title">'+esc(e.title)+'</div>'
-      +'<div class="note-tags">'+genreHTML(e.genres, 3)+(date?'<span class="note-date">'+date+'</span>':'')+'</div>'
-      +'<div class="note-text">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div></div>'
-      +(sc?'<div class="note-score">'+sc+'</div>':'')
-      +'</div>';
-  }).join('');
-}
 
 /* ── Tab 4: Exports ── */
 function renderExports(){
@@ -2647,7 +1442,6 @@ function _injectLibCommentsPopup(prefix) {
   el.addEventListener('click', function(e){if(e.target===el)closeLibComments(prefix);});
   document.body.appendChild(el);
 }
-
 
 function _libCcBtn(prefix, entryId) {
   var emap = prefix==='prof' ? '_profEntryMap' : '_pvEntryMapPv';
@@ -2788,7 +1582,6 @@ async function postLibReply(prefix, entryId, commentId) {
   } catch(err) { showToast('Could not post reply.','err'); if(input) input.disabled=false; }
 }
 
-
 /* ── Share Profile ── */
 function openShareProfile() {
   var un = (_pProfile && _pProfile.username) || (_pUser && _pUser.email && _pUser.email.split('@')[0]) || '';
@@ -2835,48 +1628,7 @@ function profCopyLink() {
   navigator.clipboard && navigator.clipboard.writeText(url).then(function(){ showToast('Link copied!'); });
 }
 
-
-function openNotePopup2(id) {
-  var e = _pEntries.find(function(en){return en.id===id;});
-  if (!e) return;
-  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  var date = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
-  document.getElementById('notePopup2Poster').innerHTML = safeURL(e.poster_url) ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : esc((e.title[0]||'?').toUpperCase());
-  document.getElementById('notePopup2Title').textContent = e.title;
-  document.getElementById('notePopup2Tags').innerHTML = genreHTML(e.genres||[]) + (date?'<span class="note-date">'+date+'</span>':'');
-  document.getElementById('notePopup2Date').innerHTML = '';
-  document.getElementById('notePopup2Text').innerHTML = '&ldquo;' + esc(_trimNotes(e.notes||'')) + '&rdquo;';
-  var editBtn = document.getElementById('notePopup2Edit');
-  editBtn.style.display = 'inline-block';
-  editBtn.onclick = function(){
-    closeNotePopup2();
-    sessionStorage.setItem('detailId', id);
-    sessionStorage.setItem('detailFrom', 'profile.html');
-    sessionStorage.setItem('detailScrollTo', 'notes');
-    window.location.href = 'detail.html';
-  };
-  document.getElementById('notePopup2').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function closeNotePopup2() {
-  document.getElementById('notePopup2').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-
-
 /* ══ Info Popup for library watching/queue ══ */
-function _tdYearSpanHTML(e, escFn) {
-  var isMovie = e.cat==='movies' || (e.ratings && e.ratings._media_type==='movie');
-  var start = e.year || null;
-  var end = (e.ratings && e.ratings._completion_year) || null;
-  var title = escFn(e.title);
-  if (!start) return title;
-  var yr;
-  if (isMovie || String(end) === String(start)) yr = start;
-  else yr = start + '\u2013' + (end || 'Present');
-  return title + ' <span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);vertical-align:middle;">' + yr + '</span>';
-}
 
 function _injectProfInfoPopup() {
   if (document.getElementById('profInfoOverlay')) return;
@@ -3047,85 +1799,6 @@ function _libBuildRatingsDetail(e) {
     + (e.notes ? '<div class="fd-section-hd" style="margin-top:16px;">Notes</div><div class="fd-notes" style="margin-top:0;padding-top:0;border-top:none;">"'+esc(e.notes)+'"</div>' : '');
 }
 
-async function _profGoDiscover(e, btn) {
-  if (e.tmdb_id && e.tmdb_type) {
-    goToTitle(e.tmdb_type, e.tmdb_id);
-    return;
-  }
-  if (typeof _tmdbSearch !== 'function') {
-    showToast('Discover is unavailable right now.', 'err');
-    return;
-  }
-  var origLabel = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = 'Searching…';
-  try {
-    var isMovie = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-    var results = await _tmdbSearch(e.title);
-    var wantType = isMovie ? 'movie' : 'tv';
-    var sorted = results.slice().sort(function(a, b) {
-      return (a.media_type === wantType ? 0 : 1) - (b.media_type === wantType ? 0 : 1);
-    });
-    closeProfInfoPopup();
-    _openDiscoverPicker(sorted, e.title);
-  } catch (err) {
-    showToast('Error searching TMDB.', 'err');
-    console.error(err);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = origLabel;
-  }
-}
-
-function _injectDiscoverPicker() {
-  if (document.getElementById('catDiscoverOverlay')) return;
-  var el = document.createElement('div');
-  el.id = 'catDiscoverOverlay';
-  el.innerHTML = '<div id="catDiscoverCard">'
-    + '<button class="cat-disc-close" onclick="_closeDiscoverPicker()">✕</button>'
-    + '<div class="cat-disc-title">Which one is it?</div>'
-    + '<div class="cat-disc-sub" id="catDiscoverSub"></div>'
-    + '<div id="catDiscoverList"></div>'
-    + '</div>';
-  el.addEventListener('click', function(ev){ if (ev.target === el) _closeDiscoverPicker(); });
-  document.body.appendChild(el);
-}
-
-function _openDiscoverPicker(results, entryTitle) {
-  _injectDiscoverPicker();
-  var esc3 = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  document.getElementById('catDiscoverSub').textContent = 'Matches for "'+entryTitle+'" — pick the right one';
-
-  var listEl = document.getElementById('catDiscoverList');
-  if (!results.length) {
-    listEl.innerHTML = '<div class="cat-disc-none">No matches found on TMDB.</div>';
-  } else {
-    listEl.innerHTML = results.map(function(r, i) {
-      var isMovie = r.media_type === 'movie';
-      var rTitle  = isMovie ? r.title : r.name;
-      var year    = ((isMovie ? r.release_date : r.first_air_date) || '').split('-')[0];
-      var thumb   = r.poster_path ? TMDB_IMG + r.poster_path : null;
-      return '<div class="cat-disc-item" data-i="'+i+'">'
-        + '<div class="cat-disc-thumb">'+(thumb ? '<img src="'+thumb+'" loading="lazy">' : '')+'</div>'
-        + '<div class="cat-disc-info">'
-        + '<div class="cat-disc-name">'+esc3(rTitle || '—')+'</div>'
-        + '<div class="cat-disc-meta">'+(isMovie ? 'Movie' : 'TV Show')+(year ? ' · '+year : '')+'</div>'
-        + '</div></div>';
-    }).join('');
-    listEl.querySelectorAll('.cat-disc-item').forEach(function(elm, i) {
-      elm.addEventListener('click', function() {
-        var r = results[i];
-        _closeDiscoverPicker();
-        goToTitle(r.media_type === 'movie' ? 'movie' : 'tv', r.id);
-      });
-    });
-  }
-
-  var ov = document.getElementById('catDiscoverOverlay');
-  ov.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
 function _closeDiscoverPicker() {
   var ov = document.getElementById('catDiscoverOverlay');
   if (!ov) return;
@@ -3137,33 +1810,6 @@ function _closeDiscoverPicker() {
 /* rewatchEntry defined in rewatch.js */
 /* createShareCard defined in create-card.js */
 </script>
-<div class="note-popup-overlay2" id="notePopup2" onclick="if(event.target===this)closeNotePopup2()">
-  <div class="note-popup2">
-    <div class="note-popup2-header">
-      <div class="note-popup2-poster" id="notePopup2Poster"></div>
-      <div class="note-popup2-info">
-        <div class="note-popup2-title" id="notePopup2Title"></div>
-        <div class="note-popup2-tags" id="notePopup2Tags"></div>
-        <div class="note-popup2-date" id="notePopup2Date"></div>
-      </div>
-      <button class="note-popup2-close" onclick="closeNotePopup2()">&#x2715;</button>
-    </div>
-    <div class="note-popup2-body">
-      <div class="note-popup2-text" id="notePopup2Text"></div>
-      <button class="note-popup2-edit" id="notePopup2Edit" style="display:none">Edit Note &#x2192;</button>
-    </div>
-  </div>
-</div>
-<!-- Favorite Sections Popup -->
-<div id="favSecOverlay" onclick="if(event.target===this)closeFavSec()">
-  <div id="favSecCard">
-    <div class="favsec-hd">
-      <div class="favsec-title" id="favSecTitle"></div>
-      <button onclick="closeFavSec()" class="favsec-close">&#x2715;</button>
-    </div>
-    <div class="favsec-grid" id="favSecGrid"></div>
-  </div>
-</div>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
