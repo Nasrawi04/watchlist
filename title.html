@@ -638,7 +638,7 @@ function _tdAddControlsHTML(ownEntry) {
   }
   if (ownEntry) {
     const statusLabel = {
-      queue:'On your Watchlist', watching:'Currently Watching', paused:'Taking a Break',
+      queue:'On your Watchlist', up_next:'Up Next', watching:'Currently Watching', paused:'Taking a Break',
       completed:'Watched', ongoing:'To Be Continued'
     }[ownEntry.status] || ownEntry.status;
     return `<div class="td-in-library">
@@ -659,6 +659,7 @@ function _tdAddControlsHTML(ownEntry) {
   ];
   const statusOptions = [
     { value:'queue', label:'Watchlist' },
+    { value:'up_next', label:'Up Next' },
     { value:'watching', label:'Currently Watching' },
     ...(!isMovie ? [{ value:'paused', label:'Taking a Break' }] : []),
     { value:'completed', label:'Watched' },
