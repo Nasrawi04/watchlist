@@ -344,6 +344,7 @@ function mssRevealSpoiler(ev, btn) {
   const wrap = btn.closest('.spoiler');
   wrap.classList.add('revealed');
   wrap.querySelector('.spoiler-text')?.removeAttribute('aria-hidden');
+  btn.blur();   // the button disappears — don't leave keyboard focus stranded on it
 }
 function mssSpoilerTag() { return `<span class="spoiler-tag">${icon('eyeOff', 11)} Spoiler</span>`; }
 // The "Mark as spoiler" switch shown under note editors
