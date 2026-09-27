@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'mss-v562';
+const CACHE_VERSION = 'mss-v606';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -36,6 +36,7 @@ const STATIC_ASSETS = [
   'lists.html',
   'list-view.html',
   'notes.html',
+  'notifications.html',
   'detail.html',
   'title.html',
   'person.html',
