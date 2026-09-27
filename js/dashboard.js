@@ -32,18 +32,22 @@ const MSSDash = (() => {
   const byId = id => opts.entries.find(e => e.id === id);
   const idsOf = key => (Array.isArray(opts.profile?.[key]) ? opts.profile[key] : []).filter(id => byId(id)).slice(0, DASH_MAX);
 
+  // Same card as the rest of the site: poster, then title + year, score underneath
   function cardHTML(e, sec, i) {
     const score = liveScore(e) != null ? Number(liveScore(e)) : null;
     const edit = editing === sec.key;
+    const rankCls = i === 0 ? 'cg-rank-1' : i === 1 ? 'cg-rank-2' : i === 2 ? 'cg-rank-3' : 'cg-rank-other';
     return `<div class="q-card dash-card${edit ? ' dash-editing' : ''}" data-key="${sec.key}" data-idx="${i}" data-id="${esc(e.id)}"
         ${edit ? `onpointerdown="MSSDash._down(event, this)"` : ''}
         onclick="MSSDash._tap(event, ${attrJSON(sec.key)}, ${i})">
       <div class="q-poster" style="position:relative">${posterHTML(e, 'big')}<div class="q-poster-overlay"></div>
-        <span class="dash-rank">${i + 1}</span>
-        ${score != null && !edit ? `<div class="cg-score-badge">★ ${score.toFixed(2)}</div>` : ''}
+        <div class="cg-rank-badge ${rankCls}">${i + 1}</div>
         ${edit ? `<button class="dash-remove" onclick="event.stopPropagation();MSSDash._remove(${attrJSON(sec.key)}, ${i})" onpointerdown="event.stopPropagation()" aria-label="Remove">${icon('x', 13)}</button>` : ''}
       </div>
-      <div class="q-info"><div class="q-title">${esc(e.title)}</div><div class="q-genre">${getTypeBadge(e, 'friend')}${genreHTML(e.genres, 2)}</div></div>
+      <div class="q-info dash-info">
+        <div class="title-year-row"><div class="q-title">${esc(e.title)}</div>${e.year ? `<span class="title-year-inline">${esc(String(e.year).slice(0, 4))}</span>` : ''}</div>
+        ${score != null ? `<div class="dash-score">★ ${score.toFixed(2)}</div>` : ''}
+      </div>
     </div>`;
   }
   function emptyHTML(sec, i) {
@@ -89,7 +93,10 @@ const MSSDash = (() => {
     ov.innerHTML = `<div id="dashPickCard" role="dialog" aria-modal="true">
         <div class="dp-head"><div><div class="dp-eyebrow" id="dpEyebrow"></div><div class="dp-title" id="dpTitle"></div></div>
           <button class="dp-close" onclick="MSSDash._closePick()" aria-label="Close">${icon('x', 18)}</button></div>
-        <div class="dp-search"><span>${icon('search', 15)}</span><input id="dpSearch" type="text" placeholder="Search your library…" autocomplete="off" oninput="MSSDash._renderPick()"></div>
+        <div class="dp-search fused-search-wrap">
+          <input id="dpSearch" type="text" class="add-friend-input" placeholder="Search your titles…" autocomplete="off" spellcheck="false" oninput="MSSDash._renderPick()">
+          <button type="button" class="fused-search-btn" tabindex="-1" onclick="document.getElementById('dpSearch').focus()">${icon('search', 16)}<span>Search</span></button>
+        </div>
         <div class="dp-grid" id="dpGrid"></div>
       </div>`;
     ov.addEventListener('click', e => { if (e.target === ov) closePick(); });
@@ -119,10 +126,13 @@ const MSSDash = (() => {
     const { sec } = pickState;
     const q = document.getElementById('dpSearch').value.trim().toLowerCase();
     const taken = new Set(idsOf(sec.key));
-    // Watched titles first (best-rated first), then everything else
-    const rank = e => (e.status === 'completed' || e.status === 'ongoing') ? 0 : 1;
+    // Only titles you've actually watched: Watched, To Be Continued, or
+    // Currently Watching (incl. Taking a Break) — never Watchlist / Up Next.
+    // Watched first, best-rated first.
+    const PICKABLE = { completed: 0, ongoing: 0, watching: 1, paused: 1 };
+    const rank = e => PICKABLE[e.status];
     const list = opts.entries
-      .filter(e => (!sec.cat || e.cat === sec.cat) && !taken.has(e.id) && (!q || (e.title || '').toLowerCase().includes(q)))
+      .filter(e => e.status in PICKABLE && (!sec.cat || e.cat === sec.cat) && !taken.has(e.id) && (!q || (e.title || '').toLowerCase().includes(q)))
       .sort((a, b) => rank(a) - rank(b) || (liveScore(b) || 0) - (liveScore(a) || 0));
     const grid = document.getElementById('dpGrid');
     grid.innerHTML = list.length ? list.slice(0, 120).map(e => `
@@ -131,7 +141,7 @@ const MSSDash = (() => {
         <span class="dp-name">${esc(e.title)}</span>
         ${liveScore(e) != null ? `<span class="dp-score">★ ${Number(liveScore(e)).toFixed(2)}</span>` : ''}
       </button>`).join('')
-      : `<div class="dp-empty">${q ? `No titles match “${esc(q)}”.` : `No ${sec.cat ? esc(sec.title) : 'titles'} in your library yet.`}</div>`;
+      : `<div class="dp-empty">${q ? `No titles match “${esc(q)}”.` : `No watched ${sec.cat ? esc(sec.title) : 'titles'} yet.`}</div>`;
   }
   function choose(id) {
     if (!pickState) return;
