@@ -362,7 +362,7 @@ function _ratingShortLabel(label) {
    specific to the category pages.
    ══════════════════════════════════════════════════════════════════ */
 function _sfBaseEntries(section) {
-  if (section === 'watching') return _catAll.filter(e => e.status === 'watching' || e.status === 'paused');
+  if (section === 'watching') return _catAll.filter(e => e.status === 'watching' || e.status === 'up_next' || e.status === 'paused');
   if (section === 'queue')    return _catAll.filter(e => e.status === 'queue');
   if (section === 'ongoing')  return _catAll.filter(e => e.status === 'ongoing');
   return _catAll.filter(e => e.status === 'completed');
@@ -392,9 +392,9 @@ SF.register('cat', {
     label: key => _ratingFilterLabel(window.PAGE_CAT, key),
     value: _ratingVal,
   },
-  // Paused entries always sink to the bottom of Currently Watching
+  // Currently Watching order: watching → Up Next → Taking a Break
   postSort: (section, list) => section === 'watching'
-    ? [...list.filter(e => e.status !== 'paused'), ...list.filter(e => e.status === 'paused')]
+    ? [...list.filter(e => e.status === 'watching'), ...list.filter(e => e.status === 'up_next'), ...list.filter(e => e.status === 'paused')]
     : list,
   saveRatings: (entry, ratings) => updateProgress(entry.id, _catUser.id, { ratings }).catch(() => {}),
 });
@@ -635,7 +635,7 @@ async function renderPage() {
 
 function _catRenderStatsAndSections() {
 
-  const watching  = _catAll.filter(e => e.status === 'watching' || e.status === 'paused');
+  const watching  = _catAll.filter(e => e.status === 'watching' || e.status === 'up_next' || e.status === 'paused');
   const queue     = _catAll.filter(e => e.status === 'queue');
   const completed = _catAll.filter(e => e.status === 'completed');
   const ongoing   = _catAll.filter(e => e.status === 'ongoing');
@@ -668,7 +668,7 @@ function _catRenderStatsAndSections() {
     const isTv = window.PAGE_CAT === 'tv';
     const isAnimated = window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
     const totalEpsWatched = _catAll
-      .filter(e => e.status === 'watching' || e.status === 'paused' || e.status === 'completed' || e.status === 'ongoing')
+      .filter(e => e.status === 'watching' || e.status === 'up_next' || e.status === 'paused' || e.status === 'completed' || e.status === 'ongoing')
       .reduce((sum, e) => {
         const mtype = e.ratings?._media_type || 'show';
         if (mtype === 'movie') return sum;
@@ -710,7 +710,7 @@ function _catRenderStatsAndSections() {
 
 /* Sync re-render from cached data — no network call */
 function renderSections(
-  watching  = _catAll.filter(e => e.status === 'watching' || e.status === 'paused'),
+  watching  = _catAll.filter(e => e.status === 'watching' || e.status === 'up_next' || e.status === 'paused'),
   queue     = _catAll.filter(e => e.status === 'queue'),
   completed = _catAll.filter(e => e.status === 'completed'),
   ongoing   = _catAll.filter(e => e.status === 'ongoing'),
@@ -806,7 +806,7 @@ function buildWatchingContent(items) {
 
   if (isMovies) {
     const activeItems = items.filter(e => e.status === 'watching');
-    const pausedItems = items.filter(e => e.status === 'paused');
+    const pausedItems = items.filter(e => e.status === 'up_next' || e.status === 'paused');
     if (!activeItems.length && !pausedItems.length) return emptyWatching();
     return buildMoviesWatching(activeItems, pausedItems);
   }
@@ -824,12 +824,12 @@ function buildWatchingContent(items) {
       </div>
       <div>
         <div style="font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;padding:0 20px;margin-bottom:12px">Movies</div>
-        ${buildMoviesWatching(movieItems.filter(e => e.status === 'watching'), movieItems.filter(e => e.status === 'paused'))}
+        ${buildMoviesWatching(movieItems.filter(e => e.status === 'watching'), movieItems.filter(e => e.status === 'up_next' || e.status === 'paused'))}
       </div>`;
   }
 
   if (movieItems.length) {
-    return buildMoviesWatching(movieItems.filter(e => e.status === 'watching'), movieItems.filter(e => e.status === 'paused'));
+    return buildMoviesWatching(movieItems.filter(e => e.status === 'watching'), movieItems.filter(e => e.status === 'up_next' || e.status === 'paused'));
   }
 
   return buildWatching(showItems);
@@ -840,10 +840,19 @@ function buildWatching(items) {
   return getView('watching') === 'grid' ? renderWatchingGrid(items) : renderWatchingList(items);
 }
 
+/* Up Next / Taking a Break share one look on the poster (a tinted cover
+   with a label). Up Next is blue so the two read apart at a glance. */
+function _catHold(e) {
+  if (e.status === 'up_next') return { label: 'Up<br>Next', bg: 'rgba(38,78,120,0.62)', btn: 'Start', title: 'Start watching', fn: 'startWatching' };
+  if (e.status === 'paused')  return { label: 'Taking<br>a Break', bg: 'rgba(74,103,65,0.58)', btn: 'Resume', title: 'Resume', fn: 'resumeEntry' };
+  return null;
+}
+
 /* Movies-style watching: Done button in both grid and list */
 function renderMoviesWatchingList(items) {
   return `<div class="watch-list">${items.map(e => {
-    const isPaused = e.status === 'paused';
+    const hold = _catHold(e);
+    const isPaused = !!hold;
     const cardStyle = isPaused ? 'background:var(--olive-faint);border-color:var(--border-olive);opacity:0.85' : '';
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
@@ -852,8 +861,8 @@ function renderMoviesWatchingList(items) {
     return `<div class="w-card" style="${cardStyle}" onclick="openCatInfoPopup('${e.id}')">
       <div class="w-poster" style="position:relative">
         ${posterHTML(e)}
-        ${isPaused ? `<div style="position:absolute;inset:0;background:rgba(74,103,65,0.55);display:flex;align-items:center;justify-content:center;border-radius:10px">
-          <span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:2px 4px;line-height:1.3">Taking<br>a Break</span>
+        ${isPaused ? `<div style="position:absolute;inset:0;background:${hold.bg};display:flex;align-items:center;justify-content:center;border-radius:10px">
+          <span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:2px 4px;line-height:1.3">${hold.label}</span>
         </div>` : ''}
       </div>
       <div class="w-body">
@@ -862,7 +871,7 @@ function renderMoviesWatchingList(items) {
       </div>
       <div class="w-ep-controls" onclick="event.stopPropagation()">
         ${isPaused
-          ? `<button class="w-list-action-btn" onclick="resumeEntry('${e.id}')" title="Resume">${icon('play',14)}</button>`
+          ? `<button class="w-list-action-btn" onclick="${hold.fn}('${e.id}')" title="${hold.title}">${icon('play',14)}</button>`
           : `<button class="w-list-action-btn w-list-done-btn" onclick="markMovieComplete(event, '${e.id}')" title="Mark as Done">${icon('check',15)}</button>`}
       </div>
     </div>`;
@@ -879,7 +888,8 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
 
   const gid = 'wg-movies-watching';
   const cards = allItems.map(e => {
-    const isPaused = e.status === 'paused';
+    const hold = _catHold(e);
+    const isPaused = !!hold;
     const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
     const rt  = (rtH||rtM) ? (rtH?`${rtH}h ${rtM}m`:`${rtM}m`) : '';
     const typeClsPcg = 'type-label type-label-overlay-bottom';
@@ -887,8 +897,8 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
       <div class="wg-poster" style="position:relative;">
         ${posterHTML(e, 'big')}
         ${isPaused
-          ? `<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1">
-               <span style="font-size:clamp(9px,2.4vw,12px);font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">Taking<br>a Break</span>
+          ? `<div style="position:absolute;inset:0;background:${hold.bg};display:flex;align-items:center;justify-content:center;z-index:1">
+               <span style="font-size:clamp(9px,2.4vw,12px);font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">${hold.label}</span>
              </div>`
           : ''}
         ${SHOW_TYPE_TAG() ? `<span class="${typeClsPcg}">Movie</span>` : ''}
@@ -902,7 +912,7 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
         ${rt ? `<div class="wg-genre" style="font-size:11px;"><span class="w-ep-badge">${rt}</span></div>` : ''}
         <div class="wg-controls" onclick="event.stopPropagation()" style="margin-top:auto;">
           ${isPaused
-            ? `<button class="ep-btn ep-btn-resume" onclick="resumeEntry('${e.id}')">Resume</button>`
+            ? `<button class="ep-btn ep-btn-resume" onclick="${hold.fn}('${e.id}')">${hold.btn}</button>`
             : `<button class="continue-btn" onclick="markMovieComplete(event, '${e.id}')">Done</button>`}
         </div>
       </div>
@@ -913,32 +923,34 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
 
 function renderWatchingList(items) {
   return `<div class="watch-list">${items.map(e => {
-    const isPaused = e.status === 'paused';
+    const hold = _catHold(e);
+    const isPaused = !!hold;
     const pct      = e.total_eps ? Math.round(((e.watched??0) / e.total_eps) * 100) : 0;
     const isDone   = !isPaused && (pct >= 100 || (!e.total_eps && (e.episode??0) > 0));
-    const epStr    = e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : 'Ep 1');
+    const upNext   = e.status === 'up_next';   // not started yet — no episode / progress shown
+    const epStr    = upNext ? '' : e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : 'Ep 1');
     const cardStyle = isPaused ? 'background:var(--olive-faint);border-color:var(--border-olive);opacity:0.85' : '';
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
     return `<div class="w-card" style="${cardStyle}" onclick="openCatInfoPopup('${e.id}')">
       <div class="w-poster" style="position:relative">
         ${posterHTML(e)}
-        ${isPaused ? `<div style="position:absolute;inset:0;background:rgba(74,103,65,0.55);display:flex;align-items:center;justify-content:center;border-radius:10px">
-          <span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:2px 4px;line-height:1.3">Taking<br>a Break</span>
+        ${isPaused ? `<div style="position:absolute;inset:0;background:${hold.bg};display:flex;align-items:center;justify-content:center;border-radius:10px">
+          <span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:2px 4px;line-height:1.3">${hold.label}</span>
         </div>` : ''}
       </div>
       <div class="w-body">
         <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
         <div class="w-ep-row">
           ${_badge}
-          <span class="w-ep-badge">${epStr}</span>
+          ${upNext ? `<span class="up-next-tag">Up Next</span>` : `<span class="w-ep-badge">${epStr}</span>`}
         </div>
-        <div class="w-prog-track"><div class="w-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
-        <div class="w-prog-label">${e.total_eps ? `${e.watched??0} / ${e.total_eps} eps · ${pct}%` : (e.episode ? `Ep ${e.episode}` : '')}</div>
+        ${upNext ? '' : `<div class="w-prog-track"><div class="w-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
+        <div class="w-prog-label">${e.total_eps ? `${e.watched??0} / ${e.total_eps} eps · ${pct}%` : (e.episode ? `Ep ${e.episode}` : '')}</div>`}
       </div>
       <div class="w-ep-controls${isDone?' w-ep-controls--done':''}" onclick="event.stopPropagation()">
         ${isPaused
-          ? `<button class="w-list-action-btn" onclick="resumeEntry('${e.id}')" title="Resume">${icon('play',14)}</button>`
+          ? `<button class="w-list-action-btn" onclick="${hold.fn}('${e.id}')" title="${hold.title}">${icon('play',14)}</button>`
           : isDone
             ? `<button class="ep-btn ep-btn-minus" onclick="adjustEp('${e.id}', -1)" title="−1">−</button>
                <button class="w-list-action-btn w-list-done-btn" onclick="doneWatching('${e.id}')" title="Mark as Done">${icon('check',15)}</button>`
@@ -979,18 +991,20 @@ function _navScroll(id, dir) {
 function renderWatchingGrid(items) {
   const gid = 'wg-watching';
   const cards = items.map(e => {
-    const isPaused = e.status === 'paused';
+    const hold = _catHold(e);
+    const isPaused = !!hold;
     const pct      = e.total_eps ? Math.round(((e.watched??0) / e.total_eps) * 100) : 0;
     const isDone   = !isPaused && (pct >= 100 || (!e.total_eps && (e.episode??0) > 0));
-    const epStr    = e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '');
+    const upNext   = e.status === 'up_next';
+    const epStr    = upNext ? '' : e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : '');
     const isMovieG = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
     const typeCls = (isMovieG ? 'type-label' : 'type-label type-label-tv') + ' type-label-overlay-bottom';
     return `<div class="wg-card" onclick="openCatInfoPopup('${e.id}')">
       <div class="wg-poster" style="position:relative;">
         ${posterHTML(e, 'big')}
         ${isPaused
-          ? `<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1">
-               <span style="font-size:clamp(9px,2.4vw,12px);font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">Taking<br>a Break</span>
+          ? `<div style="position:absolute;inset:0;background:${hold.bg};display:flex;align-items:center;justify-content:center;z-index:1">
+               <span style="font-size:clamp(9px,2.4vw,12px);font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">${hold.label}</span>
              </div>`
           : ''}
         ${SHOW_TYPE_TAG() ? `<span class="${typeCls}">${isMovieG ? 'Movie' : 'TV Show'}</span>` : ''}
@@ -1004,11 +1018,12 @@ function renderWatchingGrid(items) {
           </div>
         </div>
         ${epStr ? `<div class="wg-genre"><span class="w-ep-badge">${epStr}</span></div>` : ''}
-        ${e.total_eps ? `<div class="wg-prog-track" style="margin-bottom:3px;"><div class="wg-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
+        ${upNext ? `<div class="wg-genre"><span class="up-next-tag">Up Next</span></div>` : ''}
+        ${!upNext && e.total_eps ? `<div class="wg-prog-track" style="margin-bottom:3px;"><div class="wg-prog-fill" style="width:${pct}%${isPaused?';background:var(--text-3)':''}"></div></div>
         <div style="font-size:10px;color:var(--text-3);margin-bottom:4px;">${e.watched??0} / ${e.total_eps} eps · ${pct}%</div>` : ''}
         <div class="wg-controls${isDone?' wg-controls--done':''}" onclick="event.stopPropagation()">
           ${isPaused
-            ? `<button class="ep-btn ep-btn-resume" onclick="resumeEntry('${e.id}')">Resume</button>`
+            ? `<button class="ep-btn ep-btn-resume" onclick="${hold.fn}('${e.id}')">${hold.btn}</button>`
             : isDone
               ? `<button class="ep-btn ep-btn-minus" onclick="adjustEp('${e.id}', -1)" title="−1 episode">−</button>
                  <button class="continue-btn wg-done-continue" onclick="doneWatching('${e.id}')">Done</button>`
@@ -1045,6 +1060,7 @@ function renderQueueGrid(items) {
       </div>
       <div class="start-watching-wrap" onclick="event.stopPropagation()">
         <button onclick="startWatching('${e.id}')" class="continue-btn">Start</button>
+        <button onclick="markUpNext('${e.id}')" class="ep-btn up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="14" y2="6"/><line x1="3" y1="12" x2="11" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="16 14 20 18 16 22"/><line x1="14" y1="18" x2="20" y2="18"/></svg></button>
       </div>
     </div>`;
   }).join('');
@@ -1162,10 +1178,6 @@ function _injectGridPopup() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           Edit
         </button>
-        <button class="popup-action-btn" onclick="openFavListsPopup(_cgPopupEntryId)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          Add to Favorites
-        </button>
         <button class="popup-action-btn" onclick="rewatchEntry(_cgPopupEntryId)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
           Rewatch
@@ -1282,9 +1294,9 @@ function openGridPopup(id) {
   // Context-aware action buttons
   const actionsEl = document.getElementById('cgPopupActions');
   if (actionsEl) {
-    const alreadyWatching = e.status === 'watching' || e.status === 'paused';
+    const alreadyWatching = e.status === 'watching' || e.status === 'up_next' || e.status === 'paused';
     const btns = actionsEl.querySelectorAll('.popup-action-btn');
-    if (btns[2]) btns[2].style.display = alreadyWatching ? 'none' : '';
+    if (btns[1]) btns[1].style.display = alreadyWatching ? 'none' : '';   // Rewatch (after Edit)
     const discBtn = document.getElementById('cgPopupDiscoverBtn');
     if (discBtn) discBtn.style.display = (e.status !== 'completed' && e.status !== 'ongoing') ? '' : 'none';
   }
@@ -1531,8 +1543,6 @@ document.addEventListener('keydown', e => {
       closeCatInfoPopup();
     } else if (document.getElementById('createCardOverlay')?.classList.contains('open')) {
       closeCreateCard();
-    } else if (document.getElementById('favListsOverlay')?.classList.contains('open')) {
-      closeFavListsPopup();
     } else if (document.getElementById('commentsPopupOverlay')?.style.opacity === '1') {
       closeCommentsPopup();
     } else if (document.getElementById('cgPopupOverlay')?.style.opacity === '1') {
@@ -1867,11 +1877,12 @@ function renderPausedList(items) {
 
 async function resumeEntry(id) {
   try {
-    await updateProgress(id, _catUser.id, { status: 'watching' });
     const entry = _catAll.find(e => e.id === id);
+    const wasUpNext = entry?.status === 'up_next';
+    await updateProgress(id, _catUser.id, { status: 'watching' });
     if (entry) entry.status = 'watching';
     renderSections();
-    showToast('Resumed!');
+    showToast(wasUpNext ? 'Started watching!' : 'Resumed!');
     if (entry) _refreshTmdbSeasonData(entry, _catUser.id, renderSections);
   } catch(e) { showToast('Error resuming.', 'err'); }
 }
@@ -1923,6 +1934,7 @@ function renderQueueList(items) {
         <div class="w-ep-row">${_badge}${scope ? `<span class="w-ep-badge">${scope}</span>` : ''}</div>
       </div>
       <div style="display:flex;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">
+        <button onclick="markUpNext('${e.id}')" class="w-list-action-btn up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="14" y2="6"/><line x1="3" y1="12" x2="11" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="16 14 20 18 16 22"/><line x1="14" y1="18" x2="20" y2="18"/></svg></button>
         <button onclick="startWatching('${e.id}')" class="w-list-action-btn w-list-play-btn" title="Start Watching">${icon('play',14)}</button>
       </div>
     </div>`;
@@ -1971,6 +1983,17 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
 }
 
 /* ── Continue Watching (from Ongoing) ── */
+// Watchlist → Up Next (shows in Currently Watching, after what you're watching)
+async function markUpNext(id) {
+  try {
+    await updateProgress(id, _catUser.id, { status: 'up_next' });
+    const entry = _catAll.find(e => e.id === id);
+    if (entry) entry.status = 'up_next';
+    showToast('Added to Up Next!');
+    renderSections();
+  } catch (e) { showToast('Error updating. Please try again.', 'err'); console.error(e); }
+}
+
 async function startWatching(id) {
   try {
     const entry = _catAll.find(e => e.id === id);
@@ -2359,7 +2382,7 @@ function _renderQPCardContent(e) {
         </div>
         <div>
           <div style="font-size:11px;color:var(--text-3);margin-bottom:3px;">Status</div>
-          <div style="font-size:12px;color:var(--olive-light);font-weight:500;padding:3px 8px;background:var(--olive-faint);border:0.5px solid var(--border-olive);border-radius:var(--radius-xs);">In Your Queue</div>
+          <div style="font-size:12px;color:var(--olive-light);font-weight:500;padding:3px 8px;background:var(--olive-faint);border:0.5px solid var(--border-olive);border-radius:var(--radius-xs);">On Your Watchlist</div>
         </div>
       </div>
     </div>
