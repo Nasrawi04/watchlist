@@ -705,6 +705,7 @@
 
           <select id="dStatus" onchange="onStatusChange()" style="display:none">
             <option value="queue">Watchlist</option>
+            <option value="up_next">Up Next</option>
             <option value="watching">Currently Watching</option>
             <option value="paused">Taking a Break</option>
             <option value="completed">Watched</option>
@@ -981,10 +982,6 @@
       <div class="det-actions-bar">
         <button class="btn-save" id="btnSave" onclick="doSave()">Save Entry</button>
         <button class="btn-delete" id="dDeleteBtn" style="display:none" onclick="doDelete()">Delete</button>
-        <button class="popup-action-btn" id="dFavBtn" style="display:none;" onclick="openFavListsPopup(_detId)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          Add to Favorites
-        </button>
         <button class="popup-action-btn" id="dDiscoverBtn" style="display:none;" onclick="_detGoToDiscover(this)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           Discover
@@ -1051,7 +1048,6 @@
 <script src="js/db.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
-<script src="js/fav-lists-popup.js"></script>
 <script src="js/nav.js"></script>
 
 <script>
@@ -2146,10 +2142,6 @@ document.addEventListener('DOMContentLoaded', () => {
     _favSetLabel('low', 'Season', lows.season);
 
     document.getElementById('dDeleteBtn').style.display = _detId ? 'block' : 'none';
-    var _dFavBtn = document.getElementById('dFavBtn');
-    if (_dFavBtn) _dFavBtn.style.display = (_detId && _detEntry) ? 'flex' : 'none';
-    var _dFavBtn = document.getElementById('dFavBtn');
-    if (_dFavBtn) _dFavBtn.style.display = (_detId && _detEntry) ? 'flex' : 'none';
     renderRatingGrids();
     updateTypeSelector(); // sets type group visibility + calls updateStatusUI
 
