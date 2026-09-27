@@ -3275,8 +3275,11 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .fav-picker-poster .cg-rank-badge { min-width:20px; height:20px; font-size:12px; padding:0 5px; border-radius:0 0 7px 0; }
 .fav-picker-poster .cg-rank-badge::after { display:none; }
 /* Small posters (list rows) get a compact tab */
-.dl-list-poster .cg-rank-badge, .lv-list-poster .cg-rank-badge { min-width:24px; height:24px; font-size:14px; padding:0 6px 0 5px; border-radius:0 0 8px 0; }
-.dl-list-poster .cg-rank-badge::after, .lv-list-poster .cg-rank-badge::after { display:none; }
+.dl-list-poster .cg-rank-badge, .lv-list-poster .cg-rank-badge, .fv-rank-poster .cg-rank-badge, .comp-poster .cg-rank-badge {
+  min-width:24px; height:24px; font-size:14px; padding:0 6px 0 5px; border-radius:0 0 8px 0;
+}
+.dl-list-poster .cg-rank-badge::after, .lv-list-poster .cg-rank-badge::after,
+.fv-rank-poster .cg-rank-badge::after, .comp-poster .cg-rank-badge::after { display:none; }
 
 /* Score badge — same positioning as ranking badge. "New" MSS-rating
    refresh: bigger, bolder, star-prefixed (added in the JS builder),
