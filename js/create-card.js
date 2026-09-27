@@ -619,17 +619,42 @@ async function _drawCardPage1(myToken) {
     }
 
     // ── Personal note ──
+    // Shows the whole note (up to the 500-word limit). Short notes keep the
+    // original single-column look; longer ones switch to two columns with
+    // slightly smaller text so the card grows gently instead of turning
+    // into a long strip. Paragraph breaks from the note are kept.
     const note = (e.notes || '').trim();
     if (note) {
-      const boxPadTop = 30, boxPadBottom = 26, boxPadX = 30;
-      const noteWords = note.split(/\s+/);
-      const noteExcerpt = noteWords.length > 150 ? noteWords.slice(0, 150).join(' ') + '…' : note;
+      const boxPadTop = 34, boxPadBottom = 26, boxPadX = 30, colGap = 34;
+      const wordCount = note.split(/\s+/).filter(Boolean).length;
+      const twoCol = wordCount > 170;
+      const FS = wordCount > 350 ? 13.5 : twoCol ? 14 : 15;
+      const LINE_H = Math.round(FS * 1.62);
+      const NOTE_FONT = `italic 400 ${FS}px "Manrope", Georgia, serif`;
+      const innerW = W - PAD * 2 - boxPadX * 2;
+      const colW = twoCol ? (innerW - colGap) / 2 : innerW;
+
+      // Wrap each paragraph; '' marks the small gap between paragraphs
       ctx.save();
-      ctx.font = 'italic 300 15px "Manrope", Georgia, serif';
-      const nlines = _wrap(ctx, noteExcerpt, W - PAD * 2 - boxPadX * 2);
+      ctx.font = NOTE_FONT;
+      const lines = [];
+      note.split(/\n+/).map(p => p.trim()).filter(Boolean).forEach((para, i) => {
+        if (i) lines.push('');
+        lines.push(..._wrap(ctx, para.replace(/\s+/g, ' '), colW));
+      });
       ctx.restore();
-      const LINE_H = 25;
-      const boxH = boxPadTop + nlines.length * LINE_H + boxPadBottom;
+
+      // Split into two balanced columns (never starting a column on a gap)
+      let cols = [lines];
+      if (twoCol) {
+        let cut = Math.ceil(lines.length / 2);
+        while (cut < lines.length && lines[cut] === '') cut++;
+        cols = [lines.slice(0, cut), lines.slice(cut)];
+        if (cols[1][0] === '') cols[1].shift();
+      }
+      const colH = c => c.reduce((h, ln) => h + (ln === '' ? LINE_H * 0.5 : LINE_H), 0);
+      const textH = Math.max(...cols.map(colH));
+      const boxH = boxPadTop + textH + boxPadBottom;
       const boxY = y;
       if (draw) {
         ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
@@ -640,13 +665,27 @@ async function _drawCardPage1(myToken) {
         ctx.font = '700 12.5px "Oswald", Arial, sans-serif';
         ctx.fillStyle = TEXT;
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.fillText('PERSONAL NOTE', PAD + boxPadX, boxY + 8);
+        ctx.fillText('PERSONAL NOTE', PAD + boxPadX, boxY + 10);
         ctx.restore();
+        if (twoCol) {   // hairline between the two columns
+          ctx.save();
+          ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+          const lx = PAD + boxPadX + colW + colGap / 2;
+          ctx.beginPath(); ctx.moveTo(lx, boxY + boxPadTop); ctx.lineTo(lx, boxY + boxPadTop + textH); ctx.stroke();
+          ctx.restore();
+        }
         ctx.save();
-        ctx.font = 'italic 400 15px "Manrope", Georgia, serif';
+        ctx.font = NOTE_FONT;
         ctx.fillStyle = TEXT;
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        nlines.forEach((ln, i) => ctx.fillText(ln, PAD + boxPadX, boxY + boxPadTop + i * LINE_H));
+        cols.forEach((col, ci) => {
+          const x = PAD + boxPadX + ci * (colW + colGap);
+          let ty = boxY + boxPadTop;
+          col.forEach(ln => {
+            if (ln === '') { ty += LINE_H * 0.5; return; }
+            ctx.fillText(ln, x, ty); ty += LINE_H;
+          });
+        });
         ctx.restore();
       }
       y = boxY + boxH + 24;
