@@ -783,7 +783,6 @@ function _trimNotes(text) {
   const words = text.trim().split(/\s+/);
   return words.length > 60 ? words.slice(0, 60).join(' ') + '…' : text;
 }
-function _readTime(words) { return Math.max(1, Math.round(words / 220)); }
 // Long notes: shorter header, upright (non-italic) text for easier reading,
 // and a soft fade at the bottom of the text while there's more to scroll.
 function _npFitLong(card, words) {
@@ -1326,7 +1325,7 @@ function _renderSocialNotePopup(n) {
         <div class="np-meta-row"><div class="np-meta">${_noteBadges(n, { dateLabel: n.completed_date ? 'Watched On:' : 'Added On:', date: _noteDate(_watchedDate(n), true) })}</div><span class="np-score-slot">${_notesScorePill(n.final_score)}</span></div>
       </div>
     </div>
-    <div class="np-stats"><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>${words > 60 ? `<span><b>${_readTime(words)}</b> min read</span>` : ''}</div>
+    <div class="np-stats"><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span></div>
     <div class="np-body">${mssIsSpoiler(n) && n.user_id !== _notesUser?.id
       ? mssSpoilerHTML(`<blockquote class="np-quote">&ldquo;${esc(n.notes)}&rdquo;</blockquote>`)
       : `<blockquote class="np-quote">&ldquo;${esc(n.notes)}&rdquo;</blockquote>`}</div>
@@ -1734,7 +1733,7 @@ function openNotePopup2(id) {
   const counts = _notesReactionCounts[id] || { like: 0, dislike: 0 };
   const words = _wordCount(e.notes);
   const stats = document.getElementById('notePopup2Reactions');
-  stats.innerHTML = `<span>${icon('thumbsUp', 14)} <b>${counts.like}</b></span><span>${icon('thumbsDown', 14)} <b>${counts.dislike}</b></span><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>${words > 60 ? `<span><b>${_readTime(words)}</b> min read</span>` : ''}${mssIsSpoiler(e) ? mssSpoilerTag() : ''}`;
+  stats.innerHTML = `<span>${icon('thumbsUp', 14)} <b>${counts.like}</b></span><span>${icon('thumbsDown', 14)} <b>${counts.dislike}</b></span><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>${mssIsSpoiler(e) ? mssSpoilerTag() : ''}`;
   stats.style.display = (e.notes && e.notes.trim()) ? 'flex' : 'none';
 
   document.getElementById('notePopup2').classList.add('open');
@@ -1859,6 +1858,9 @@ function _notePopup2GuardWordLimit() {
 
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  if (document.getElementById('confirmOverlay')?.classList.contains('open')) return;   // the confirm handles its own Esc
+  // Community note popup (it had no Esc at all)
+  if (document.getElementById('snPopupOverlay')?.style.display === 'flex') { closeSocialNotePopup(); return; }
   if (document.getElementById('notePopup2')?.classList.contains('open')) { closeNotePopup2(); return; }
   if (document.getElementById('notesSearchOverlay')?.classList.contains('open')) { closeNotesSearchPopup(); return; }
 });
