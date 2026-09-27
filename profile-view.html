@@ -352,8 +352,6 @@
   grid-column:span 2; min-width:0; overflow:hidden;
 }
 /* Episodes and Runtime — each takes half the full width (3 of 6 cols) */
-.prof-stat-box:nth-child(4),
-.prof-stat-box:nth-child(5) { grid-column:span 3; }
 .prof-stat-box:hover { border-color:var(--border-olive); }
 .prof-stat-box-num { font-family:var(--serif); font-size:22px; font-weight:500; color:var(--olive-light); line-height:1.15; text-align:center; }
 .prof-stat-box-label { font-size:8px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; margin-top:3px; white-space:nowrap; text-align:center; }
@@ -791,6 +789,7 @@ function _trimNotes(text) {
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/dashboard.js"></script>
 <script src="js/sort-filter.js"></script>
 <script src="js/rewatch.js"></script>
 <script>
@@ -951,7 +950,7 @@ function _pvInjectPopup() {
     '</div>',
     '<div id="pvPopupBody" style="padding:20px 24px 6px;"></div>',
     '<div id="pvPopupActions" style="display:flex;gap:8px;padding:4px 24px 24px;flex-wrap:wrap;">',
-      '<button onclick="pvAddToQueue()" class="popup-action-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Add to Queue</button>',
+      '<button onclick="pvAddToQueue()" class="popup-action-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Add to Watchlist</button>',
       '<button id="pvDiscoverBtn" class="popup-action-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Discover</button>',
     '</div>'
   ].join('');
@@ -1303,6 +1302,7 @@ function _profStatBox(num, label) {
     +_profStatBox(pst.avgScore,'Avg Score')
     +_profStatBox(pst.tvCount,'TV Shows')
     +_profStatBox(pst.movieCount,'Movies')
+    +_profStatBox(_pvEntries.filter(function(e){return e.status==='queue'||e.status==='up_next';}).length||'0','Watchlist')
     +_profStatBox(pst.totalEps||'0','Episodes')
     +_profStatBox(pst.runtime,'Runtime')
     +'</div>'
@@ -1312,7 +1312,6 @@ function _profStatBox(num, label) {
   var tabBar = '<div class="pv-tabs">'
     +'<div class="pv-tab active" onclick="pvTab(0,this)" id="pvTab0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="pv-tab-label">Overview</span></div>'
     +'<div class="pv-tab" onclick="pvTab(1,this)" id="pvTab1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="pv-tab-label">Library</span></div>'
-    +'<div class="pv-tab" onclick="pvTab(2,this)" id="pvTab2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span class="pv-tab-label">Favorites</span></div>'
     +'<div class="pv-tab" onclick="pvTab(4,this)" id="pvTab4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><span class="pv-tab-label">Lists</span></div>'
     +'<div class="pv-tab" onclick="pvTab(3,this)" id="pvTab3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="pv-tab-label">Notes</span></div>'
     +'</div>';
@@ -1320,18 +1319,16 @@ function _profStatBox(num, label) {
   var mobileSelect = '<select class="prof-tab-select" id="pvTabsSelect" onchange="pvTabSwitch(parseInt(this.value))">'
     +'<option value="0">Overview</option>'
     +'<option value="1">Library</option>'
-    +'<option value="2">Favorites</option>'
     +'<option value="4">Lists</option>'
     +'<option value="3">Notes</option>'
     +'</select>';
 
   var panel0 = '<div class="pv-panel active" id="pvPanel0"><div id="pvOverviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>';
   var panel1 = '<div class="pv-panel" id="pvPanel1"><div id="pvLibraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="pvLibraryContent" style="display:none"></div></div>';
-  var panel2 = '<div class="pv-panel" id="pvPanel2"><div class="page-stats" id="pvFavStats" style="margin-bottom:1.5rem;"></div><div id="pvFavoritesContent"></div></div>';
   var panel4 = '<div class="pv-panel" id="pvPanel4"><div class="page-stats" id="pvListsStats" style="margin-bottom:1.5rem;"></div><div id="pvListsContent"><div class="page-loading"><div class="spinner"></div></div></div></div>';
   var panel3 = '<div class="pv-panel" id="pvPanel3"><div class="page-stats" id="pvNotesStats" style="margin-bottom:1.5rem;"></div><div id="pvNotesContent"><div class="page-loading"><div class="spinner"></div></div></div></div>';
 
-  document.getElementById('pvContent').innerHTML = header + mobileSelect + tabBar + panel0 + panel1 + panel2 + panel4 + panel3;
+  document.getElementById('pvContent').innerHTML = header + mobileSelect + tabBar + panel0 + panel1 + panel4 + panel3;
 
   window.pvTab = function(n, el) {
     document.querySelectorAll('.pv-tab').forEach(function(t){t.classList.remove('active');});
@@ -1341,7 +1338,6 @@ function _profStatBox(num, label) {
     var sel = document.getElementById('pvTabsSelect');
     if (sel && parseInt(sel.value) !== n) sel.value = n;
     if (n === 1) { renderPvLibrary(); }
-    if (n === 2) { renderPvFavorites(); }
     if (n === 3) { renderPvNotes(); }
     if (n === 4) { renderPvLists(); }
   };
@@ -1356,7 +1352,7 @@ function _pvStatsBoxHTML() {
   var watched = function(e){ return e.status==='completed'||e.status==='ongoing'; };
   var byCat = function(c){ return entries.filter(function(e){return e.cat===c;}); };
   var tv = byCat('tv'), movies = byCat('movies'), anime = byCat('anime'), cartoons = byCat('cartoons');
-  var watchlist = entries.filter(function(e){return e.status==='queue';});
+  var watchlist = entries.filter(function(e){return e.status==='queue'||e.status==='up_next';});
   var reviews = entries.filter(function(e){return e.notes && e.notes.trim();});
 
   var favIds = {};
@@ -1379,7 +1375,6 @@ function _pvStatsBoxHTML() {
     { label:'Cartoons',         value:cartoons.length },
     { label:'Cartoons Watched', value:cartoons.filter(watched).length },
     { label:'Watchlist',        value:watchlist.length },
-    { label:'Favorites',        value:favoritesCount },
     { label:'Lists',            value:listsCount },
     { label:'Reviews',          value:reviews.length },
   ];
@@ -1404,68 +1399,14 @@ function renderPvOverview() {
     el.innerHTML = '<div class="pv-empty" style="text-align:center;padding:3rem 1rem;color:var(--text-3);font-size:14px;">Nothing added yet.</div>';
     return;
   }
-  var esc = function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-
-  var _savedPicksPv = Array.isArray(_pvProfile?.top_picks) && _pvProfile.top_picks.length
-    ? _pvProfile.top_picks.map(function(id){ return _pvEntryMapPv[id]||_pvEntries.find(function(e){return e.id===id;}); }).filter(Boolean)
-    : null;
-  var topFavs = _savedPicksPv || [];
-  var watching = _pvEntries.filter(function(e){return e.status==='watching'||e.status==='paused';}).slice(0,5);
-
-  function pvCard(e, rank) {
-    var score = liveScore(e) != null ? Number(liveScore(e)) : null;
-    var scoreCls = score==null?'':(score>=10?'cg-score-10':score>=9?'cg-score-9':score>=8?'cg-score-8':score>=7?'cg-score-7':score>=6?'cg-score-6':score>=3?'cg-score-3-5':'cg-score-0-2');
-    var scoreBadge = score!=null ? ('<div class="cg-score-badge '+scoreCls+'">★ '+score.toFixed(2)+'</div>') : '';
-    return '<div class="q-card" onclick="pvOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="cursor:pointer">'
-      +'<div class="q-poster" style="position:relative">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div>'+scoreBadge+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'</div>'
-      +'<div class="q-info"><div class="q-title">'+esc(e.title)+'</div><div class="q-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div></div></div>';
-  }
-
-  function sec(eyebrow, title, items, ranked) {
-    if (!items.length) return '';
-    return '<div class="pv-section">'
-      +'<div class="pv-eyebrow">'+eyebrow+'</div>'
-      +'<div class="pv-title">'+title+'</div>'
-      +'<div class="prof-ov-grid">'+items.slice(0,5).map(function(e,i){return pvCard(e, ranked?i:null);}).join('')+'</div>'
-      +'</div>';
-  }
-
-
-
-  // Recommended section
-  var _savedRec = Array.isArray(_pvProfile&&_pvProfile.recommended) && _pvProfile.recommended.length
-    ? _pvProfile.recommended.map(function(id){return _pvEntryMapPv[id]||_pvEntries.find(function(e){return e.id===id;});}).filter(Boolean)
-    : null;
-
   var _statsHTML = _pvStatsBoxHTML();
-  var html = sec('Handpicked','Top Favorites', topFavs, true);
-
-  // Favorite Sections
-  var _pvFavSecHtml = buildPvFavSections();
-  if (_pvFavSecHtml) {
-    html += '<div class="pv-section">'
-      +'<div class="pv-eyebrow">Collections</div>'
-      +'<div class="pv-title">Favorite Picks</div>'
-      +_pvFavSecHtml+'</div>';
-  }
-
-  if (_savedRec && _savedRec.length) {
-    html += sec('Would Recommend','Top Picks', _savedRec, true);
-  }
-
-  [
-    {cat:'tv', label:'TV Shows'},
-    {cat:'movies', label:'Movies'},
-    {cat:'anime', label:'Anime'},
-    {cat:'cartoons', label:'Cartoons'},
-  ].forEach(function(m) {
-    var items = [..._pvEntries].filter(function(e){return e.cat===m.cat&&(e.status==='completed'||e.status==='ongoing');}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);}).slice(0,5);
-    html += sec('Top Rated', m.label, items, true);
+  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+'</div><div class="overview-main" id="pvDashMain"></div></div>';
+  // Their picks: Top Favorites, Would Recommend, Top 5 per type (read-only)
+  MSSDash.render(document.getElementById('pvDashMain'), {
+    entries: _pvEntries, profile: _pvProfile || {}, editable: false,
+    openEntry: function(id){ pvOpenPopup(id); },
+    save: function(){ return Promise.resolve(); }
   });
-
-  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+'</div><div class="overview-main">'
-    + (html || '<div class="pv-empty">Nothing to show yet.</div>')
-    + '</div></div>';
 }
 
 
@@ -1721,7 +1662,7 @@ function renderPvLibrary() {
   } else if (_libWatchViewPv === 'grid') {
     var wg = 'pvwg';
     var wcs = watching.map(function(e){
-      var ip = e.status==='paused';
+      var ipUN = e.status==='up_next', ip = e.status==='paused'||ipUN;
       var pct = e.total_eps?Math.round(((e.watched||0)/e.total_eps)*100):0;
       var isM = e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
@@ -1729,7 +1670,7 @@ function renderPvLibrary() {
       var ep = isM?rt:(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
       var typeCls = (isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card" style="cursor:pointer;" onclick="openInfoPopup(\''+e.id+'\')">'+'<div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')
-        +(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">Taking<br>a Break</span></div>':'')
+        +(ip?'<div style="position:absolute;inset:0;background:'+(ipUN?'rgba(38,78,120,0.62)':'rgba(74,103,65,0.58)')+';display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">'+(ipUN?'Up<br>Next':'Taking<br>a Break')+'</span></div>':'')
         +'<span class="'+typeCls+'">'+(isM?'Movie':'TV Show')+'</span>'
         +(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
         +'</div><div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
@@ -1739,7 +1680,7 @@ function renderPvLibrary() {
     wc = pvGridWrap(wg, '<div class="watching-grid" id="'+wg+'">'+wcs+'</div>');
   } else {
     wc = '<div class="fv-watch-list">'+watching.map(function(e){
-      var ip=e.status==='paused';
+      var ipUN=e.status==='up_next', ip=e.status==='paused'||ipUN;
       var isM=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var pct=e.total_eps?Math.round(((e.watched||0)/e.total_eps)*100):0;
       var ep=isM?'':(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
@@ -1748,7 +1689,7 @@ function renderPvLibrary() {
       var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
       var cs=ip?'background:var(--olive-faint);border-color:var(--border-olive);':''
       return '<div class="fv-w-card fv-w-card-no-hover clickable" style="'+cs+'" onclick="openInfoPopup(\''+e.id+'\')">' 
-        +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.55);display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">Taking<br>a Break</span></div>':'')+'</div>'
+        +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:'+(ipUN?'rgba(38,78,120,0.62)':'rgba(74,103,65,0.55)')+';display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">'+(ipUN?'Up<br>Next':'Taking<br>a Break')+'</span></div>':'')+'</div>'
         +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);flex-shrink:0;">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+'</div>'
         +(ep?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+ep+'</span></div>':'')+
         (rt?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')+
@@ -2051,7 +1992,7 @@ function _libBaseEntries(sec){
     if(_libFormat && (_libFormat==='movie') !== SF.isMovie(e)) return false;   // Anime/Cartoons: Shows vs Movies
     return true;
   };
-  if(sec==='watching') return _pvEntries.filter(function(e){return (e.status==='watching'||e.status==='paused')&&inCat(e);});
+  if(sec==='watching') return _pvEntries.filter(function(e){return (e.status==='watching'||e.status==='up_next'||e.status==='paused')&&inCat(e);});
   if(sec==='queue') return _pvEntries.filter(function(e){return e.status==='queue'&&inCat(e);});
   return _pvEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&&inCat(e);});
 }
@@ -2073,7 +2014,7 @@ SF.register('pv', {
   },
   // Paused entries always sink to the bottom of Currently Watching
   postSort: function(sec,list){
-    return sec==='watching' ? list.filter(function(e){return e.status!=='paused';}).concat(list.filter(function(e){return e.status==='paused';})) : list;
+    return sec==='watching' ? list.filter(function(e){return e.status==='watching';}).concat(list.filter(function(e){return e.status==='up_next';}), list.filter(function(e){return e.status==='paused';})) : list;
   },
   // No saveRatings — this is a friend's library, never write to it.
 });
@@ -2401,7 +2342,7 @@ function openInfoPopup(id) {
     '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
     +'<button onclick="infoAddToQueue()" class="popup-action-btn">'
     +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'
-    +'Add to Queue</button>'
+    +'Add to Watchlist</button>'
     +'<button id="pvDiscoverBtn" class="popup-action-btn">'
     +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'
     +'Discover</button>'
