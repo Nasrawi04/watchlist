@@ -1188,19 +1188,11 @@ function pvOpenPopup(id) {
   document.getElementById('pvPopupDateRow').innerHTML = completedDateStr
     ? '<span class="w-ep-badge" style="font-family:\'Manrope\',var(--sans);font-weight:500;">Completed On: '+completedDateStr+'</span>' : '';
 
-  let metaBadge = '';
-  if (_pyIsMovie) {
-    const rtH=Number(e.runtime_h)||0, rtM=Number(e.runtime_m)||0;
-    if (rtH||rtM) metaBadge = '<span class="w-ep-badge">'+(rtH?rtH+'h '+rtM+'m':rtM+'m')+'</span>';
-  } else {
-    const bd = Array.isArray(e.ratings&&e.ratings._season_breakdown)?e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number):[];
-    const bdTot = bd.reduce(function(a,b){return a+b;},0);
-    const scope = bd.length ? ('S'+bd.length+' \u00b7 E'+bdTot)
-      : (e.total_seasons&&e.total_eps ? ('S'+e.total_seasons+' \u00b7 E'+e.total_eps)
-      : e.total_seasons ? ('S'+e.total_seasons)
-      : e.total_eps ? (e.total_eps+' eps') : '');
-    if (scope) metaBadge = '<span class="w-ep-badge">'+scope+'</span>';
-  }
+  // Runtime / episode count are in the popup's own sections — only To Be
+  // Continued titles get a tag, for where they left off.
+  const _pvIsMov = e.cat === 'movies' || e.ratings?._media_type === 'movie';
+  let metaBadge = (e.status === 'ongoing' && e.season != null && e.episode != null && !_pvIsMov)
+    ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Left off: S${e.season} · E${e.episode}</span>` : '';
   document.getElementById('pvPopupMetaRow').innerHTML = metaBadge;
   var _pvInfoEl = document.getElementById('pvPopupInfo');
   if (_pvInfoEl) _pvInfoEl.innerHTML = '';
@@ -2395,19 +2387,8 @@ function openInfoPopup(id) {
     (e.genres||[]).map(function(g){ return '<span class="w-ep-badge" style="font-family:\'Manrope\',var(--sans);font-weight:500;">'+esc2(String(g))+'</span>'; }).join('') +
     (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
 
+  // No runtime / episode-count tag — the details below already show it
   var metaBadge = '';
-  if (isMovie) {
-    var rtH=Number(e.runtime_h)||0, rtM=Number(e.runtime_m)||0;
-    if (rtH||rtM) metaBadge = '<span class="w-ep-badge">'+(rtH?rtH+'h '+rtM+'m':rtM+'m')+'</span>';
-  } else {
-    var bd = Array.isArray(e.ratings&&e.ratings._season_breakdown) ? e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number) : [];
-    var bdTot = bd.reduce(function(a,b){return a+b;},0);
-    var scope = bd.length ? ('S'+bd.length+' \u00b7 E'+bdTot)
-      : (e.total_seasons && e.total_eps) ? ('S'+e.total_seasons+' \u00b7 E'+e.total_eps)
-      : e.total_seasons ? ('S'+e.total_seasons)
-      : e.total_eps ? (e.total_eps+' eps') : '';
-    if (scope) metaBadge = '<span class="w-ep-badge">'+scope+'</span>';
-  }
   document.getElementById('pviMetaRow').innerHTML = metaBadge;
   document.getElementById('pviDetails').innerHTML = '';
 
