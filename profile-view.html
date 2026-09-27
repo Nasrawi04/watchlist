@@ -1154,6 +1154,9 @@ document.addEventListener('keydown', function(e) {
   if (document.getElementById('pvFavSecOverlay')?.classList.contains('open')) { closePvFavSec(); return; }
   if (document.getElementById('pvInfoOverlay')?.classList.contains('open')) { closeInfoPopup(); return; }
   if (document.getElementById('pvPopupOverlay')?.classList.contains('open')) { pvClosePopup(); return; }
+  // Notes tab popups (these didn't close on Esc)
+  if (document.getElementById('pvNotePopup')?.classList.contains('open')) { document.getElementById('pvNotePopup').classList.remove('open'); document.body.style.overflow = ''; return; }
+  if (document.getElementById('notePopup2')?.classList.contains('open')) { closeNotePopup2(); return; }
 });
 function pvOpenPopup(id) {
   const e = _pvEntryMapPv[id] || _pvEntries.find(function(en) { return en.id === id; });
