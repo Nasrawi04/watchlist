@@ -1960,8 +1960,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
     return `<div class="cc-block">
       <div class="comp-row" style="cursor:pointer;" onclick="openGridPopup('${e.id}')">
-        ${isRanked ? `<div style="font-family:var(--bebas);font-size:28px;font-weight:400;color:${i<3?'var(--olive-light)':'var(--text-2)'};text-align:center;min-width:44px;flex-shrink:0;">${i+1}</div>` : ''}
-        <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : ''}</div>
+        <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(i+1) : '')}</div>
         <div class="comp-info">
           <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
           <div class="comp-meta">${_badge}</div>
