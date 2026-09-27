@@ -1585,16 +1585,15 @@ body.notif-sheet-open { overflow:hidden; }
   background:var(--bg-3); color:var(--text-2); border:1px solid var(--border-2);
 }
 .spoiler-tag svg { width:11px; height:11px; }
-.spoiler-toggle { display:flex; align-items:flex-start; gap:10px; margin-top:10px; padding:10px 12px; border-radius:var(--radius-sm); cursor:pointer; border:1px solid var(--border); background:var(--bg-3); transition:border-color .15s, background .15s; }
+.spoiler-toggle { display:flex; align-items:center; gap:10px; margin-top:10px; padding:10px 12px; border-radius:var(--radius-sm); cursor:pointer; border:1px solid var(--border); background:var(--bg-3); transition:border-color .15s, background .15s; }
 .spoiler-toggle:hover { border-color:var(--border-olive); }
 .spoiler-toggle input { position:absolute; opacity:0; pointer-events:none; }
-.spoiler-toggle-box { width:20px; height:20px; flex-shrink:0; margin-top:1px; border-radius:6px; border:1.5px solid var(--border-2); background:var(--bg-2); display:flex; align-items:center; justify-content:center; color:transparent; transition:all .15s; }
+.spoiler-toggle-box { width:20px; height:20px; flex-shrink:0; border-radius:6px; border:1.5px solid var(--border-2); background:var(--bg-2); display:flex; align-items:center; justify-content:center; color:transparent; transition:all .15s; }
 .spoiler-toggle-box svg { width:12px; height:12px; }
 .spoiler-toggle input:checked + .spoiler-toggle-box { background:var(--olive); border-color:var(--olive); color:#fff; }
 .spoiler-toggle input:focus-visible + .spoiler-toggle-box { box-shadow:0 0 0 3px var(--olive-faint); }
 .spoiler-toggle:has(input:checked) { border-color:var(--border-olive); background:var(--olive-faint); }
 .spoiler-toggle-text b { display:block; font-family:var(--sans); font-size:13px; font-weight:600; color:var(--text); }
-.spoiler-toggle-text small { display:block; font-size:11.5px; color:var(--text-3); line-height:1.4; margin-top:1px; }
 
 /* Letter shown when a poster image fails to load (see mssImgError) */
 .img-fallback {
