@@ -232,6 +232,7 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
 <script src="js/sort-filter.js"></script>
 <script>
 function _lvEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -296,11 +297,17 @@ function _lvTypeCls(e) {
   return isMovie ? 'type-label' : 'type-label type-label-tv';
 }
 
+// Tapping a title opens the shared info popup (info-popup.js)
+function _lvOpenInfo(id) {
+  const e = _lvItems.find(x => x.id === id);
+  if (e) MSSInfo.fromEntry(e);
+}
+
 function _lvCardHTML(e, rank) {
   const posterInner = safeURL(e.poster_url)
     ? `<img src="${safeURL(e.poster_url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
     : `<div class="home-tmdb-poster-fallback">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
-  const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
+  const clickAttr = `onclick="_lvOpenInfo(${attrJSON(e.id)})"`;
   const scoreStr = _lvOwnScoreHTML(e);
   const typeLabel = _lvTypeLabel(e);
   return `<div class="q-card lv-card" ${clickAttr}>
@@ -316,7 +323,7 @@ function _lvListRowHTML(e, rank) {
   const posterInner = safeURL(e.poster_url)
     ? `<img src="${safeURL(e.poster_url)}" loading="lazy">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
-  const clickAttr = (e.tmdb_id && e.tmdb_type) ? `onclick="goToTitle('${e.tmdb_type}', ${e.tmdb_id})"` : '';
+  const clickAttr = `onclick="_lvOpenInfo(${attrJSON(e.id)})"`;
   const scoreStr = _lvOwnScoreHTML(e);
   const typeLabel = _lvTypeLabel(e);
   return `<div class="lv-list-row" ${clickAttr}>
