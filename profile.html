@@ -624,8 +624,6 @@
   transition:border-color var(--trans) var(--ease);
   grid-column:span 2; min-width:0; overflow:hidden;
 }
-.prof-stat-box:nth-child(4),
-.prof-stat-box:nth-child(5) { grid-column:span 3; }
 .prof-stat-box:hover { border-color:var(--border-olive); }
 .prof-stat-box-num { font-family:var(--serif); font-size:22px; font-weight:500; color:var(--olive-light); line-height:1.15; text-align:center; }
 .prof-stat-box-label { font-size:8px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; margin-top:3px; white-space:nowrap; text-align:center; }
@@ -968,7 +966,6 @@
   <select class="prof-tab-select" id="profTabsSelect" aria-label="Profile tab" onchange="switchTab(+this.value)">
     <option value="0">Overview</option>
     <option value="1">Library</option>
-    <option value="2">Favorites</option>
     <option value="5">Lists</option>
     <option value="3">Notes</option>
     <option value="4">Exports</option>
@@ -982,10 +979,6 @@
     <div class="prof-tab" id="tab1" onclick="switchTab(1)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       <span class="prof-tab-label">Library</span>
-    </div>
-    <div class="prof-tab" id="tab2" onclick="switchTab(2)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-      <span class="prof-tab-label">Favorites</span>
     </div>
     <div class="prof-tab" id="tab5" onclick="switchTab(5)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
@@ -1003,10 +996,6 @@
 
   <div class="prof-panel active" id="panel0"><div id="overviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>
-  <div class="prof-panel" id="panel2">
-    <div class="page-stats" id="profFavStats" style="margin-bottom:1.5rem;"></div>
-    <div id="favoritesContent"></div>
-  </div>
   <div class="prof-panel" id="panel5">
     <div class="page-stats" id="profListsStats" style="margin-bottom:1.5rem;"></div>
     <div id="listsContent"></div>
@@ -1069,10 +1058,10 @@ function _trimNotes(text) {
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/dashboard.js"></script>
 <script src="js/sort-filter.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
-<script src="js/fav-lists-popup.js"></script>
 <script src="js/export.js"></script>
 <script>
 /* ── State ── */
@@ -1120,7 +1109,6 @@ document.addEventListener('DOMContentLoaded', function() {
     populateHeader();
     renderTab0();
     if (_activeTab === 1) renderLibrary();
-    if (_activeTab === 2) renderFavorites();
     if (_activeTab === 3) renderNotes();
     if (_activeTab === 5) renderProfLists();
   });
@@ -1193,6 +1181,7 @@ function populateHeader() {
     _profStatBox(pst.avgScore,'Avg Score')+
     _profStatBox(pst.tvCount,'TV Shows')+
     _profStatBox(pst.movieCount,'Movies')+
+    _profStatBox(_pEntries.filter(function(e){return e.status==='queue'||e.status==='up_next';}).length||'0','Watchlist')+
     _profStatBox(pst.totalEps||'0','Episodes')+
     _profStatBox(pst.runtime,'Runtime');
   document.getElementById('profEditBtn').style.display = '';
@@ -1210,7 +1199,6 @@ function switchTab(n) {
     if(p) p.classList.toggle('active', i===n);
   });
   if (n===1) renderLibrary();
-  if (n===2) renderFavorites();
   if (n===3) renderNotes();
   if (n===4) renderExports();
   if (n===5) renderProfLists();
@@ -1249,7 +1237,6 @@ function _injectProfPopup() {
     '<div id="profPopupBody" style="padding:20px 24px 6px;"></div>'+
     '<div id="profPopupActions" style="display:flex;gap:8px;padding:4px 24px 24px;flex-wrap:wrap;">'+
       '<button class="popup-action-btn" id="profPopupEditBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>'+
-      '<button class="popup-action-btn" onclick="openFavListsPopup(_profPopupEntryId)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Add to Favorites</button>'+
       '<button class="popup-action-btn" onclick="rewatchEntry(_profPopupEntryId)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg> Rewatch</button>'+
       '<button class="popup-action-btn" onclick="createShareCard(_profPopupEntryId)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Create Card</button>'+
       '<button class="popup-action-btn popup-action-danger" onclick="_profPopupDeleteEntry()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete</button>'+
@@ -1358,7 +1345,6 @@ document.addEventListener('keydown',function(e){
     else if(document.getElementById('profAddListModal')?.style.display==='flex') closeProfAddListModal();
     else if(document.getElementById('exportOverlay')?.classList.contains('open')) closeExportPopup();
     else if(document.getElementById('favPickerOverlay')?.classList.contains('open')) closeFavPicker();
-    else if(document.getElementById('favListsOverlay')?.classList.contains('open')) closeFavListsPopup();
     else if(document.getElementById('favSecOverlay')?.classList.contains('open')) closeFavSec();
     else if(document.getElementById('profPopupOverlay')?.style.opacity==='1') profClosePopup();
   }
@@ -1427,7 +1413,7 @@ function _statsBoxHTML(entries, profile, favLists) {
   var watched = function(e){ return e.status==='completed'||e.status==='ongoing'; };
   var byCat = function(c){ return entries.filter(function(e){return e.cat===c;}); };
   var tv = byCat('tv'), movies = byCat('movies'), anime = byCat('anime'), cartoons = byCat('cartoons');
-  var watchlist = entries.filter(function(e){return e.status==='queue';});
+  var watchlist = entries.filter(function(e){return e.status==='queue'||e.status==='up_next';});
   var reviews = entries.filter(function(e){return e.notes && e.notes.trim();});
 
   var favIds = {};
@@ -1452,8 +1438,6 @@ function _statsBoxHTML(entries, profile, favLists) {
     { label:'Cartoons',         value:cartoons.length },
     { label:'Cartoons Watched', value:cartoons.filter(watched).length },
     { label:'Watchlist',        value:watchlist.length },
-    { label:'Favorites',        value:favoritesCount },
-    { label:'Favorite Lists',   value:favoriteListsCount },
     { label:'Lists',            value:listsCount },
     { label:'Reviews',          value:reviews.length },
   ];
@@ -1475,70 +1459,15 @@ function renderTab0() {
   var el = document.getElementById('overviewContent');
   if (!el) return;
   if (!_pEntries || !_pEntries.length) return;
-  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  // Ensure pickers are initialized so openRecPicker works from overview
-  _favSelected = Array.isArray(_pProfile&&_pProfile.top_picks) ? _pProfile.top_picks.slice() : [];
-  _recSelected = Array.isArray(_pProfile&&_pProfile.recommended) ? _pProfile.recommended.slice() : [];
-
-  var picks = Array.isArray(_pProfile&&_pProfile.top_picks)&&_pProfile.top_picks.length
-    ? _pProfile.top_picks.map(function(id){return _profEntryMap[id];}).filter(Boolean) : null;
-  var topFavs = picks || [];
-  var watching = _pEntries.filter(function(e){return e.status==='watching'||e.status==='paused';}).slice(0,5);
-
-  function card(e, rank) {
-    var score = liveScore(e)!=null ? Number(liveScore(e)) : null;
-    var scoreCls = score==null?'':(score>=10?'cg-score-10':score>=9?'cg-score-9':score>=8?'cg-score-8':score>=7?'cg-score-7':score>=6?'cg-score-6':score>=3?'cg-score-3-5':'cg-score-0-2');
-    var scoreBadge = score!=null ? ('<div class="cg-score-badge '+scoreCls+'">★ '+score.toFixed(2)+'</div>') : '';
-    return '<div class="q-card" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="cursor:pointer">'
-      +'<div class="q-poster" style="position:relative">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div>'+scoreBadge+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'</div>'
-      +'<div class="q-info"><div class="q-title">'+esc(e.title)+'</div><div class="q-genre">'+getTypeBadge(e,'friend')+genreHTML(e.genres, 3)+'</div></div></div>';
-  }
-
-
-
-  function sec(eyebrow, title, items, ranked) {
-    if (!items.length) return '';
-    return '<div class="pv-section">'
-      +'<div class="pv-eyebrow">'+eyebrow+'</div>'
-      +'<div class="pv-title">'+title+'</div>'
-      +'<div class="prof-ov-grid">'+items.slice(0,5).map(function(e,i){return card(e,ranked?i:null);}).join('')+'</div>'
-      +'</div>';
-  }
-
-  var recPicks = Array.isArray(_pProfile&&_pProfile.recommended)
-    ? _pProfile.recommended.map(function(id){return _profEntryMap[id];}).filter(Boolean) : [];
-
-  function secWithEdit(eyebrow, title, items, ranked, editFn) {
-    return '<div class="pv-section">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">'
-      +'<div><div class="pv-eyebrow">'+eyebrow+'</div><div class="pv-title">'+title+'</div></div>'
-      +(editFn?'<button class="fav-edit-btn" onclick="'+editFn+'">'+icon('edit',13)+' Edit</button>':'')
-      +'</div>'
-      +(items.length
-        ? '<div class="prof-ov-grid">'+items.slice(0,5).map(function(e,i){return card(e,ranked?i:null);}).join('')+'</div>'
-        : '<div style="font-size:13px;color:var(--text-3);padding:.5rem 0 1rem;">Nothing here yet.</div>')
-      +'</div>';
-  }
-
   var _statsHTML = _statsBoxHTML(_pEntries, _pProfile, _profFavLists);
-  var html = sec('Handpicked','Top Favorites', topFavs, true);
-
-  // Favorite Sections — one top item per category
-  var _favSecHtml = buildFavSections();
-  if (_favSecHtml) {
-    html += '<div class="pv-section">'      +'<div class="pv-eyebrow">Collections</div>'      +'<div class="pv-title">Favorite Picks</div>'      +_favSecHtml+'</div>';
-  }
-
-  html += secWithEdit('Would Recommend','Top Picks', recPicks, false, null);
-
-  [{cat:'tv',label:'TV Shows'},{cat:'movies',label:'Movies'},{cat:'anime',label:'Anime'},{cat:'cartoons',label:'Cartoons'}].forEach(function(m){
-    var items = _pEntries.filter(function(e){return e.cat===m.cat&&(e.status==='completed'||e.status==='ongoing');}).sort(function(a,b){return (liveScore(b)||0)-(liveScore(a)||0);}).slice(0,5);
-    html += sec('Top Rated', m.label, items, true);
+  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+'</div><div class="overview-main" id="profDashMain"></div></div>';
+  // Dashboard: Top Favorites, Would Recommend, Top 5 per type — editable here
+  if (!_pProfile) _pProfile = {};
+  MSSDash.render(document.getElementById('profDashMain'), {
+    entries: _pEntries, profile: _pProfile, editable: true,
+    openEntry: function(id){ profOpenPopup(id); },
+    save: function(key, ids){ var u = {}; u[key] = ids; return updateProfile(_pUser.id, u); }
   });
-
-  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+'</div><div class="overview-main">'
-    + (html || '<div class="pv-empty">Nothing to show yet.</div>')
-    + '</div></div>';
 }
 
 /* ── Tab 1: Library ── */
@@ -1693,7 +1622,7 @@ function _libBaseEntries(sec){
     if(_libFormat && (_libFormat==='movie') !== SF.isMovie(e)) return false;   // Anime/Cartoons: Shows vs Movies
     return true;
   };
-  if(sec==='watching') return _libEntries.filter(function(e){return (e.status==='watching'||e.status==='paused')&&inCat(e);});
+  if(sec==='watching') return _libEntries.filter(function(e){return (e.status==='watching'||e.status==='up_next'||e.status==='paused')&&inCat(e);});
   if(sec==='queue') return _libEntries.filter(function(e){return e.status==='queue'&&inCat(e);});
   return _libEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&&inCat(e);});
 }
@@ -1715,7 +1644,7 @@ SF.register('prof', {
   },
   // Paused entries always sink to the bottom of Currently Watching
   postSort: function(sec,list){
-    return sec==='watching' ? list.filter(function(e){return e.status!=='paused';}).concat(list.filter(function(e){return e.status==='paused';})) : list;
+    return sec==='watching' ? list.filter(function(e){return e.status==='watching';}).concat(list.filter(function(e){return e.status==='up_next';}), list.filter(function(e){return e.status==='paused';})) : list;
   },
   saveRatings: function(e,r){ return updateProgress(e.id,_pUser.id,{ratings:r}).catch(function(){}); },
 });
@@ -1833,7 +1762,7 @@ function renderLibrary(){
   else if(_libWatchView==='grid'){
     var wg='libwg';
     var wcs=watching.map(function(e){
-      var ip=e.status==='paused';
+      var ipUN=e.status==='up_next', ip=e.status==='paused'||ipUN;
       var pct=e.total_eps?Math.round(((e.watched||0)/e.total_eps)*100):0;
       var isM=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
@@ -1841,7 +1770,7 @@ function renderLibrary(){
       var ep=isM?rt:(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
       var _typeCls=(isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
-        +(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.58);display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">Taking<br>a Break</span></div>':'')
+        +(ip?'<div style="position:absolute;inset:0;background:'+(ipUN?'rgba(38,78,120,0.62)':'rgba(74,103,65,0.58)')+';display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">'+(ipUN?'Up<br>Next':'Taking<br>a Break')+'</span></div>':'')
         +'<span class="'+_typeCls+'">'+(isM?'Movie':'TV Show')+'</span>'
         +'</div><div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
         +(ep?'<div class="wg-genre"><span class="w-ep-badge">'+ep+'</span></div>':'')
@@ -1853,7 +1782,7 @@ function renderLibrary(){
     wc=_libGridWrap(wg,'<div class="watching-grid" id="'+wg+'">'+wcs+'</div>');
   } else {
     wc='<div class="fv-watch-list">'+watching.map(function(e){
-      var ip=e.status==='paused';
+      var ipUN=e.status==='up_next', ip=e.status==='paused'||ipUN;
       var isM=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var pct=e.total_eps?Math.round(((e.watched||0)/e.total_eps)*100):0;
       var ep=isM?'':(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
@@ -1862,7 +1791,7 @@ function renderLibrary(){
       var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
       var cs=ip?'background:var(--olive-faint);border-color:var(--border-olive);':'';
       return '<div class="fv-w-card" style="cursor:pointer;'+cs+'" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'">'
-        +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:rgba(74,103,65,0.55);display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">Taking<br>a Break</span></div>':'')+'</div>'
+        +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:'+(ipUN?'rgba(38,78,120,0.62)':'rgba(74,103,65,0.55)')+';display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">'+(ipUN?'Up<br>Next':'Taking<br>a Break')+'</span></div>':'')+'</div>'
         +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);flex-shrink:0;">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+'</div>'
         +(ep?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+ep+'</span></div>':'')
         +(rt?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')
