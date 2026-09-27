@@ -442,7 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window._homeEntries = entries;
 
     /* Currently watching */
-    const watching = entries.filter(e => e.status === 'watching');
+    // In progress first, then Up Next (what you've lined up to watch next)
+    const watching = [...entries.filter(e => e.status === 'watching'), ...entries.filter(e => e.status === 'up_next')];
     if (watching.length) {
       document.getElementById('homeWatching').innerHTML = `
         <div class="section-eyebrow">In Progress</div>
@@ -455,13 +456,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
             const rtStr = isM && (rtH||rtM) ? (rtH ? `${rtH}h ${rtM}m` : `${rtM}m`) : '';
             const typeBadge = `<span class="${isM ? 'type-label' : 'type-label type-label-tv'}">${isM ? 'Movie' : 'TV Show'}</span>`;
-            return `<div class="w-card" onclick="goToDetail('${e.id}','index.html')">
+            const upNext = e.status === 'up_next';
+            return `<div class="w-card${upNext ? ' is-up-next' : ''}" onclick="goToDetail('${e.id}','index.html')">
               <div class="w-poster">${posterHTML(e)}</div>
               <div class="w-body">
                 <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
                 ${epStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${epStr}</span></div>` : ''}
                 ${rtStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${rtStr}</span></div>` : ''}
                 ${!epStr && !rtStr ? `<div class="w-ep-row">${typeBadge}</div>` : ''}
+                ${upNext ? `<div class="w-ep-row"><span class="up-next-tag">Up Next</span></div>` : ''}
                 ${(!isM && e.total_eps) ? `<div class="w-prog-track" style="margin-top:6px;"><div class="w-prog-fill" style="width:${pct}%"></div></div><div class="w-prog-label">${e.watched||0} / ${e.total_eps} eps · ${pct}%</div>` : (!isM && e.watched ? `<div class="w-prog-label">${e.watched} watched</div>` : '')}
               </div>
             </div>`;
