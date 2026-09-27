@@ -296,24 +296,6 @@ function _entryMeta(e) {
 // (which adds its own margin-bottom, meant for stacking it above other
 // card content) — used where the badge needs to sit inline alongside
 // other badges/tags instead of as its own standalone row.
-function _entryMetaBadgeOnly(e) {
-  const isMovie = e.cat === 'movies' || (e.ratings?._media_type === 'movie');
-  if (isMovie) {
-    const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
-    if (!rtH && !rtM) return '';
-    const label = rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
-    return `<span class="w-ep-badge">${label}</span>`;
-  }
-  const bd = Array.isArray(e.ratings?._season_breakdown)
-    ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
-  const _bdTot = bd.reduce((a,b)=>a+b,0);
-  const scope = bd.length ? `S${bd.length} · E${_bdTot}`
-    : (e.total_seasons && e.total_eps) ? `S${e.total_seasons} · E${e.total_eps}`
-    : e.total_seasons ? `S${e.total_seasons}`
-    : e.total_eps ? `${e.total_eps} eps` : '';
-  return scope ? `<span class="w-ep-badge">${scope}</span>` : '';
-}
-
 /* ── Ongoing badge: shows last watched position (S3 E10) ── */
 function _ongoingMeta(e) {
   const isMovie = e.ratings?._media_type === 'movie';
@@ -1265,9 +1247,12 @@ function openGridPopup(id) {
     ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Completed On: ${completedDateStr}</span>`
     : '';
 
-  // Ep/runtime badge sits under the date-completed badge.
+  // No runtime / episode-count tag here — the Runtime and Season Breakdown
+  // sections further down already show it. Only "To Be Continued" titles
+  // get a tag, for where you left off (that isn't shown anywhere else).
   const metaRowEl = document.getElementById('cgPopupMetaRow');
-  metaRowEl.innerHTML = _entryMetaBadgeOnly(e);
+  metaRowEl.innerHTML = (e.status === 'ongoing' && e.season != null && e.episode != null && !(e.cat === 'movies' || e.ratings?._media_type === 'movie'))
+    ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Left off: S${e.season} · E${e.episode}</span>` : '';
 
   // Description now sits in the header's info column, right under the
   // tags/meta rows and next to the poster — not spanning the full
