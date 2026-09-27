@@ -5,7 +5,7 @@
    View List page — instead of jumping straight to title.html. Same look
    as the existing info popups (poster, title, type + genre tags,
    description, runtime / season breakdown), with:
-     • Add to Queue   — adds it to your Watchlist in one tap
+     • Add to Watchlist   — adds it to your Watchlist in one tap
                         (or "In Your Library · View" if you already have it)
      • Discover       — opens the full title page
 
@@ -25,7 +25,7 @@
 const INFO_POPUP_CONFIG = {
   // Buttons, left → right. Remove / reorder / add here.
   actions: ['queue', 'discover'],
-  // Status used by "Add to Queue"
+  // Status used by "Add to Watchlist"
   addStatus: 'queue',
   // Show the TMDB community rating in the tags row
   showTmdbScore: true,
@@ -159,9 +159,9 @@ const MSSInfo = (() => {
       queue: () => {
         if (!it.tmdb_id) return '';
         if (!user) return `<a class="pvi-action-btn" href="login.html" style="text-decoration:none;">${icon('plus', 14)} Sign in to add</a>`;
-        if (own === undefined) return `<button class="pvi-action-btn" disabled>${icon('plus', 14)} Add to Queue</button>`;
+        if (own === undefined) return `<button class="pvi-action-btn" disabled>${icon('plus', 14)} Add to Watchlist</button>`;
         if (own) return `<button class="pvi-action-btn" onclick="goToDetail(${attrJSON(own.id)}, location.pathname.split('/').pop() || 'index.html')">${icon('check', 14)} In Your Library · View</button>`;
-        return `<button class="pvi-action-btn" id="mssInfoQueueBtn" onclick="MSSInfo.addToQueue()">${icon('plus', 14)} Add to Queue</button>`;
+        return `<button class="pvi-action-btn" id="mssInfoQueueBtn" onclick="MSSInfo.addToQueue()">${icon('plus', 14)} Add to Watchlist</button>`;
       },
       discover: () => it.tmdb_id
         ? `<button class="pvi-action-btn pvi-action-primary" onclick="MSSInfo.close();goToTitle(${attrJSON(it.media_type)}, ${Number(it.tmdb_id)})">${icon('search', 14)} Discover</button>` : '',
@@ -266,7 +266,7 @@ const MSSInfo = (() => {
       } else {
         console.error(err);
         showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Could not add — try again.', 'err');
-        if (btn) { btn.disabled = false; btn.innerHTML = `${icon('plus', 14)} Add to Queue`; }
+        if (btn) { btn.disabled = false; btn.innerHTML = `${icon('plus', 14)} Add to Watchlist`; }
       }
     }
   }
