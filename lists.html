@@ -137,31 +137,6 @@
 /* ── Social list rows ── */
 .social-list-row { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.1rem 1.25rem; transition:border-color .15s; cursor:pointer; }
 .social-list-row:hover { border-color:var(--border-olive); }
-.social-list-owner { display:flex; align-items:center; gap:8px; margin-bottom:.75rem; }
-.social-list-avatar {
-  width:26px; height:26px; border-radius:50%; overflow:hidden; flex-shrink:0;
-  background:var(--olive-faint); color:var(--olive-light); font-family:var(--serif); font-size:12px;
-  display:flex; align-items:center; justify-content:center;
-}
-.social-list-avatar img { width:100%; height:100%; object-fit:cover; }
-.social-list-username { font-size:12.5px; color:var(--text-3); }
-.social-list-title { font-family:var(--serif); font-size:19px; font-weight:400; margin-bottom:4px; }
-.social-list-desc { font-size:12.5px; color:var(--text-2); line-height:1.5; margin-bottom:.75rem; }
-.social-list-count { font-size:11.5px; color:var(--text-3); margin-bottom:.9rem; }
-.social-list-posters { display:flex; gap:6px; margin-bottom:1rem; }
-.social-list-poster-thumb { width:44px; height:64px; border-radius:5px; overflow:hidden; background:var(--bg-3); flex-shrink:0; position:relative; }
-.social-list-poster-thumb img { width:100%; height:100%; object-fit:cover; }
-.social-list-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.social-list-reactions { display:flex; gap:12px; }
-.social-list-react-btn {
-  display:inline-flex; align-items:center; gap:5px; background:none; border:none; cursor:pointer;
-  color:var(--text-3); font-size:12px; font-weight:500; transition:color .15s;
-}
-.social-list-react-btn:hover { color:var(--text); }
-.social-list-react-btn.active-like { color:var(--olive-light); }
-.social-list-react-btn.active-dislike { color:#c0685a; }
-.social-list-react-btn svg, .snote-rect-btn svg { transition:transform .3s, fill .3s; }
-.social-list-react-btn:hover svg, .snote-rect-btn:hover svg { transform:scale(1.15) rotate(-8deg); }
 .snote-rect-btn {
   display:flex; align-items:center; justify-content:center; gap:8px;
   padding:11px 8px; border-radius:var(--radius-sm); font-size:13px; font-weight:600;
@@ -257,90 +232,6 @@
   font-size:12.5px; color:var(--text-2); line-height:1.5; margin-top:4px;
 }
 .list-item-sort-bar { display:flex; gap:6px; flex-wrap:wrap; }
-/* ── List cards (Personal + Community share one design) ── */
-.lc-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:18px; }
-@media(max-width:1400px) { .lc-grid { grid-template-columns:repeat(3, 1fr); } }
-@media(max-width:1024px) { .lc-grid { grid-template-columns:repeat(2, 1fr); } }
-@media(max-width:640px)  { .lc-grid { grid-template-columns:1fr; gap:12px; } }
-.lc-card {
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:1.1rem 1.2rem 1.15rem; cursor:pointer; display:flex; flex-direction:column; min-width:0;
-  transition:border-color .15s, transform .15s, box-shadow .15s;
-}
-.lc-card:hover { border-color:var(--border-olive); transform:translateY(-2px); box-shadow:var(--shadow); }
-.lc-title-row { display:flex; align-items:center; gap:10px; min-width:0; margin-bottom:6px; }
-.lc-title {
-  font-family:var(--serif); font-size:19px; font-weight:500; line-height:1.25; color:var(--text);
-  flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
-.lc-meta { font-size:12px; color:var(--text-3); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
-.lc-meta b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); letter-spacing:.3px; }
-.lc-desc {
-  font-size:12.5px; color:var(--text-2); line-height:1.5; margin:-2px 0 12px;
-  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
-}
-.lc-posters { display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-top:auto; }
-.lc-poster { aspect-ratio:2/3; border-radius:6px; overflow:hidden; background:var(--bg-3); position:relative; }
-.lc-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.lc-poster span { font-size:18px !important; }
-.lc-poster-empty { grid-column:1/-1; aspect-ratio:auto; padding:18px 0; text-align:center; font-size:12px; color:var(--text-3); border:1px dashed var(--border-2); background:transparent; }
-.lc-card .social-list-owner { margin-bottom:10px; }
-.lc-card .social-list-reactions { margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
-@media(max-width:640px) { #listsPageStats { display:grid; grid-template-columns:repeat(2, 1fr); } }
-
-/* ── List popup (Personal + Community) ── */
-.lp-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:1.1rem; }
-.lp-eyebrow { font-family:var(--serif); font-size:11.5px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); display:flex; align-items:center; gap:8px; }
-.lp-tag { font-family:var(--sans); letter-spacing:.6px; font-size:10px; padding:2px 8px; border-radius:999px; border:1px solid var(--border-2); color:var(--text-3); }
-.lp-close { background:none; border:none; color:var(--text-3); cursor:pointer; line-height:1; padding:4px; display:flex; }
-.lp-close:hover { color:var(--text); }
-.lp-title-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:.55rem; }
-.lp-title { font-family:var(--serif); font-size:clamp(22px, 5vw, 28px); font-weight:500; line-height:1.15; overflow-wrap:anywhere; }
-.lp-desc { font-size:13.5px; color:var(--text-2); line-height:1.6; margin-bottom:.9rem; white-space:pre-line; overflow-wrap:anywhere; }
-.lp-meta { font-size:12px; color:var(--text-3); margin-bottom:1rem; display:flex; align-items:center; gap:6px; }
-.lp-meta b { font-family:var(--bebas); font-weight:400; font-size:16px; color:var(--text-2); letter-spacing:.3px; }
-.lp-posters { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:1.35rem; }
-.lp-poster { aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-2); position:relative; box-shadow:0 2px 10px rgba(0,0,0,.18); }
-.lp-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.lp-more { display:flex; align-items:center; justify-content:center; font-family:var(--bebas); font-size:26px; color:var(--olive-light); background:var(--olive-faint); border:1px solid var(--border-olive); box-shadow:none; }
-.lp-choice { margin-bottom:1rem; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--text-3); }
-.lp-actions, .lp-footer { display:flex; gap:8px; flex-wrap:wrap; }
-.lp-actions { margin-bottom:8px; }
-.lp-footer { padding-top:12px; border-top:0.5px solid var(--border); flex-wrap:nowrap; }
-/* Buttons use the category ratings popup's .popup-action-btn (solid olive,
-   red for delete — styled via the *PopupActions ids). Sizes tuned here. */
-#lpPopupActions .popup-action-btn, #lpNavPopupActions .popup-action-btn { padding:11px 14px; font-size:13px; gap:7px; }
-#lpPopupActions .popup-action-btn svg, #lpNavPopupActions .popup-action-btn svg { width:14px; height:14px; opacity:1; }
-.lp-view { flex:3 1 0 !important; }                        /* View List gets most of the width */
-.lp-replies { flex:1 1 0 !important; }
-.lp-actions-social { flex-wrap:nowrap; }
-.lp-react-pair { display:flex; gap:8px; flex:0 0 auto; }
-.lp-react-pair .popup-action-btn { flex:0 0 auto; min-width:72px; }
-.lp-add { flex:1 1 auto !important; }
-/* Like / dislike: outlined until you've reacted, then filled */
-#lpPopupActions .lp-react { background:transparent; color:var(--olive-light); border-color:var(--border-olive); }
-#lpPopupActions .lp-react:hover { background:var(--olive-faint); color:var(--olive-light); border-color:var(--olive-light); }
-#lpPopupActions .lp-react.is-on { background:var(--olive); color:#fff; border-color:var(--olive); }
-#lpPopupActions .lp-react-down.is-on { background:#b91c1c; border-color:#b91c1c; color:#fff; }
-#lpPopupActions .popup-action-btn:disabled { opacity:.6; cursor:default; }
-@media(max-width:600px) {
-  /* keep these rows side-by-side (the shared rule stacks *PopupActions) */
-  #lpPopupActions, #lpNavPopupActions { flex-direction:row !important; }
-  #lpPopupActions .popup-action-btn, #lpNavPopupActions .popup-action-btn { width:auto; flex:1 1 0; padding:10px 10px; font-size:12.5px; white-space:nowrap; }
-  .lp-actions-social { flex-wrap:wrap; }
-  .lp-actions-social .lp-add { flex:1 1 100% !important; order:-1; }
-  .lp-react-pair { flex:1 1 100%; }
-  .lp-react-pair .popup-action-btn { flex:1 1 0 !important; }
-  .lp-posters { gap:7px; }
-}
-/* the shared *PopupActions rule adds side padding on small screens — not wanted here */
-#lpPopupActions { padding:0 !important; }
-#lpNavPopupActions { padding:12px 0 0 !important; }
-@media(max-width:380px) {
-  #lpPopupActions .popup-action-btn, #lpNavPopupActions .popup-action-btn { font-size:12px; padding:10px 8px; gap:5px; }
-  #lpPopupActions .popup-action-btn:not(.lp-react) svg, #lpNavPopupActions .popup-action-btn svg { display:none; }
-}
-
 /* Owner popup has 4 actions — 2×2 on phones so labels fit */
 @media(max-width:600px) {
   #lpPopupActions:has(> .popup-action-btn:nth-child(4)) { flex-wrap:wrap !important; }
