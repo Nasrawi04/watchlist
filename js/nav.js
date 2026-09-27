@@ -2158,3 +2158,113 @@ if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
     location.reload();
   });
 }
+
+/* ══════════════════════════════════════════
+   Top cast — shared by the info popup and the Create Card
+   mssFetchCast({ tmdb_id, tmdb_type, title, year, animated, origin_country, original_language })
+   → [{ character, actor, photo, isCharacterImage }]  (top 5)
+
+   Always leads with the CHARACTER name, actor/voice actor underneath.
+   For animated titles it also asks AniList (which has character artwork
+   for anime and some western animation) and, when it finds the show,
+   uses the character's picture instead of the voice actor's photo.
+   TMDB itself only has photos of the people, never of characters, so
+   titles AniList doesn't list keep the voice actor's photo.
+   Results are kept on the device for 7 days.
+══════════════════════════════════════════ */
+const _MSS_CAST_STORE = 'mss_cast_v1';
+const _MSS_CAST_TTL = 7 * 24 * 60 * 60 * 1000;
+function _mssCastCache() { try { return JSON.parse(localStorage.getItem(_MSS_CAST_STORE) || '{}'); } catch { return {}; } }
+function _mssCastSave(key, cast) {
+  try {
+    const all = _mssCastCache();
+    all[key] = { t: Date.now(), cast };
+    const keys = Object.keys(all);
+    if (keys.length > 150) keys.sort((a, b) => all[a].t - all[b].t).slice(0, keys.length - 150).forEach(k => delete all[k]);
+    localStorage.setItem(_MSS_CAST_STORE, JSON.stringify(all));
+  } catch {}
+}
+const _mssNorm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+
+async function _mssAniListCharacters(title, year) {
+  try {
+    const res = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ query: `
+        query ($search: String) {
+          Page(page: 1, perPage: 5) {
+            media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
+              title { english romaji } synonyms startDate { year }
+              characters(sort: [ROLE, RELEVANCE, ID], perPage: 10) {
+                edges {
+                  role
+                  node { name { full } image { large } }
+                  ja: voiceActors(language: JAPANESE) { name { full } }
+                  en: voiceActors(language: ENGLISH) { name { full } }
+                }
+              }
+            }
+          }
+        }`, variables: { search: title } }),
+    });
+    const list = (await res.json())?.data?.Page?.media || [];
+    const want = _mssNorm(title);
+    // Only trust an AniList match whose title really is this show (± a year)
+    return list.find(m => {
+      const names = [m.title?.english, m.title?.romaji, ...(m.synonyms || [])].map(_mssNorm).filter(Boolean);
+      const yearOk = !year || !m.startDate?.year || Math.abs(Number(m.startDate.year) - Number(year)) <= 1;
+      return yearOk && names.includes(want);
+    }) || null;
+  } catch { return null; }
+}
+
+async function mssFetchCast(it) {
+  if (!it?.tmdb_id || !it?.tmdb_type) return [];
+  const key = `${it.tmdb_type}:${it.tmdb_id}`;
+  const hit = _mssCastCache()[key];
+  if (hit && Date.now() - hit.t < _MSS_CAST_TTL) return hit.cast;
+
+  // 1) TMDB cast (TV uses aggregate credits so long-running roles rank right)
+  let tmdb = [];
+  try {
+    const path = it.tmdb_type === 'movie' ? 'credits' : 'aggregate_credits';
+    const res = await tmdbFetch(`${TMDB_BASE}/${it.tmdb_type}/${it.tmdb_id}/${path}?api_key=${TMDB_KEY}&language=en-US`);
+    if (res.ok) {
+      tmdb = ((await res.json()).cast || []).map(c => ({
+        character: (c.character || c.roles?.[0]?.character || '').replace(/\s*\(voice\)\s*/i, '').trim(),
+        actor: c.name || '',
+        photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : null,
+        isCharacterImage: false,
+      })).filter(c => c.actor);
+    }
+  } catch {}
+
+  // 2) Animated → try character artwork from AniList
+  let cast = tmdb.slice(0, 5);
+  if (it.animated && it.title) {
+    const media = await _mssAniListCharacters(it.title, it.year);
+    const edges = media?.characters?.edges || [];
+    if (edges.length) {
+      const tmdbActors = new Set(tmdb.map(c => _mssNorm(c.actor)));
+      const jp = (it.origin_country || []).includes('JP') || it.original_language === 'ja';
+      cast = edges.slice(0, 5).map(ed => {
+        const vas = [...(ed.ja || []), ...(ed.en || [])].map(v => v.name?.full).filter(Boolean);
+        // Prefer the voice actor TMDB also lists (same dub), else JP for anime, EN otherwise
+        const actor = vas.find(n => tmdbActors.has(_mssNorm(n)))
+          || (jp ? ed.ja?.[0]?.name?.full : ed.en?.[0]?.name?.full)
+          || vas[0] || '';
+        return { character: ed.node?.name?.full || '', actor, photo: ed.node?.image?.large || null, isCharacterImage: true };
+      }).filter(c => c.character);
+      // Fill up to 5 with TMDB cast AniList didn't cover (actor photo)
+      const have = new Set(cast.map(c => _mssNorm(c.character)));
+      for (const c of tmdb) {
+        if (cast.length >= 5) break;
+        const k = _mssNorm(c.character);
+        if (k && ![...have].some(h => h === k || h.split(' ')[0] === k.split(' ')[0])) { cast.push(c); have.add(k); }
+      }
+    }
+  }
+  _mssCastSave(key, cast);
+  return cast;
+}
