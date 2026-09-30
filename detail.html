@@ -81,6 +81,13 @@
 .genre-picker.locked .genre-opt { pointer-events:none; opacity:0.7; }
 #dSeasonList.locked input { pointer-events:none; }
 #dSeasonList.locked button { display:none !important; }
+/* Font system: Oswald = titles & section headings, Bebas Neue = numbers,
+   Manrope = everything else. Number fields show their digits in Bebas. */
+.page-wrap input[type="number"], #dSeason, #dEpisode, #dRuntimeH, #dRuntimeM, #dTotalSeasons, #dTotalEps {
+  font-family:var(--bebas); font-size:18px; letter-spacing:.4px;
+}
+.page-wrap input[type="number"]::placeholder { font-family:var(--sans); font-size:14px; letter-spacing:0; }
+.ratings-section-label { font-family:var(--serif); font-weight:500; font-size:11px; }
 </style>
 <style>
 /* ── Final Score ── */
@@ -101,7 +108,7 @@
 .score-breakdown-row label{color:var(--text-3);width:80px;flex-shrink:0}
 .score-mini-bar{flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
 .score-mini-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .5s ease}
-.score-mini-val{color:var(--olive-light);font-family:var(--serif);font-size:13px;min-width:28px;text-align:right}
+.score-mini-val{color:var(--olive-light);font-family:var(--bebas);font-weight:400;font-size:16px;letter-spacing:.3px;min-width:28px;text-align:right}
 
 /* ── Rating dropdown ── */
 .ratings-section-label{
@@ -296,7 +303,7 @@
   display:flex;align-items:center;gap:10px;flex-shrink:0;
 }
 .rating-stepper-val{
-  font-family:var(--serif);font-size:20px;font-weight:500;
+  font-family:var(--bebas);font-size:23px;font-weight:400;letter-spacing:.3px;
   color:var(--text-3);width:56px;text-align:center;
   background:transparent;border:none;border-bottom:1px solid var(--border-2);
   outline:none;-moz-appearance:textfield;appearance:textfield;
@@ -522,7 +529,7 @@
   background:var(--olive-faint); border:1.5px solid var(--border-olive);
 }
 .det-final-score-label { font-size:11px; color:var(--olive-light); letter-spacing:2.5px; text-transform:uppercase; margin-bottom:.6rem; }
-.det-final-score-num { font-family:var(--serif); font-weight:500; font-size:clamp(48px, 10vw, 76px); color:var(--olive-light); line-height:1; }
+.det-final-score-num { font-family:var(--bebas); font-weight:400; letter-spacing:.5px; font-size:clamp(52px, 11vw, 84px); color:var(--olive-light); line-height:1; }
 .det-final-score-outof { font-size:10px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; margin-top:.5rem; }
 
 @media(max-width:760px) {
@@ -584,7 +591,7 @@
   padding:clamp(1.25rem, 3vw, 1.75rem);
 }
 .det-card-title {
-  font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light);
+  font-family:var(--serif); font-weight:500; font-size:12px; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light);
   margin-bottom:1.25rem; display:flex; align-items:center; gap:10px;
 }
 .det-card-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
@@ -595,7 +602,7 @@
 /* Core / Bonus ratings side by side */
 .det-ratings-cols { display:grid; grid-template-columns:1fr 1fr; gap:clamp(1rem, 3vw, 2rem); align-items:start; }
 .det-ratings-col-title {
-  font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light);
+  font-family:var(--serif); font-weight:500; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light);
   margin-bottom:.85rem; display:flex; align-items:center; gap:8px;
 }
 @media(max-width:760px) {
@@ -856,9 +863,7 @@
 
         <div style="margin-top:1.25rem;">
           <div class="field-group" id="dRewatchSection" style="display:none;margin-bottom:0;">
-            <div class="field-label">Times Watched
-              <span style="font-size:10px;font-weight:400;color:var(--text-3);letter-spacing:0;text-transform:none;margin-left:6px;">First = 1</span>
-            </div>
+            <label class="field-label" for="dRewatchCount" style="display:block;">Times Watched</label>
             <input type="number" class="field-input" id="dRewatchCount" min="1" max="999"
               placeholder="1" style="padding:8px 12px;max-width:120px;"
               onchange="if(this.value<1)this.value=1">
