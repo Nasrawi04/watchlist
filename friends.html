@@ -447,16 +447,16 @@ const _frDate = x => x ? new Date(String(x).length <= 10 ? x + 'T12:00:00' : x) 
 // A friend's title: Info, Ratings and Note in one popup (MSSViews, info-popup.js).
 // Activity opens on Info (a "wrote a note" item opens on their note);
 // the Notes tab opens on the note.
-function _frViews(e, order, start) {
+function _frViews(e, start) {
   const p = _frProfiles[e.user_id] || {};
-  MSSViews.open(e, { order, start, profile: p, note: { open: x => MSSFriendPop.note(x, p), close: MSSFriendPop.closeNote } });
+  MSSViews.open(e, { start, profile: p, note: { open: x => MSSFriendPop.note(x, p), close: MSSFriendPop.closeNote } });
 }
 function _frOpenEvent(id, type) {
   const e = window._frEntryMap[id]; if (!e) return;
-  _frViews(e, ['info', 'rate', 'note'], type === 'note' ? 'note' : 'info');
+  _frViews(e, type === 'note' ? 'note' : 'info');
 }
 function _frOpenNote(id) {
-  const e = window._frEntryMap[id]; if (e) _frViews(e, ['note', 'rate', 'info']);
+  const e = window._frEntryMap[id]; if (e) _frViews(e, 'note');
 }
 function _frFriendOptions() { return [['', 'Everyone'], ..._frAccepted.map(f => [f.friendId, _frName(f.friendId)])]; }
 const _FR_CAT_OPTS = [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
