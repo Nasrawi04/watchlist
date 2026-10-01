@@ -142,6 +142,7 @@ SF.register('cat', {
     if (typeof fitTitleYear === 'function') fitTitleYear(inner);
   },
   sortState: _sort,
+  watched: section => section === 'completed' || section === 'ongoing',   // Year Watched filter
   sorts: section => ['alpha', 'added', 'release', !IS_MOVIE_CAT() && 'episode', section !== 'queue' && 'ratings', 'length'],
   lengthLabel: () => IS_MOVIE_CAT() ? 'Runtime (minutes)' : 'Episode Count',
   ratingSort: {
