@@ -566,6 +566,7 @@ function _trimNotes(text) {
 <script src="js/create-card.js"></script>
 <script src="js/info-popup.js"></script>
 <script src="js/rating-popup.js"></script>
+<script src="js/entry-views.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/list-popup.js"></script>
 <script src="js/profile-tabs.js"></script>
@@ -621,7 +622,7 @@ document.addEventListener('DOMContentLoaded', function() {
    (profile-tabs.js). They wait for your library, which their cards use. ── */
 function _renderPersonalTab(n) {
   _pEntriesReady.then(function() {
-    if (n === 2) MSSTabs.notes(document.getElementById('notesTabContent'), { entries: _pEntries, owner: true });
+    if (n === 2) MSSTabs.notes(document.getElementById('notesTabContent'), { entries: _pEntries, owner: true, onDelete: _profRemoveEntry });
     else MSSTabs.lists(document.getElementById('listsTabContent'), { userId: _pUser.id, entries: _pEntries, owner: true });
   });
 }
@@ -720,8 +721,7 @@ function switchTab(n) {
 
 function profOpenPopup(id) {
   var e = _profEntryMap[id] || _pEntries.find(function(x){ return x.id===id; });
-  if (!e) return;
-  MSSRate.forOwnEntry(e, { from: 'profile.html', onChange: function(){ renderLibrary(); }, onDelete: _profRemoveEntry });
+  if (e) _profViews(e);
 }
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
@@ -938,6 +938,7 @@ function _libBaseEntries(sec){
   return _libEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&&inCat(e);});
 }
 SF.register('prof', {
+  watched: function(sec){ return sec==='completed'; },   // Year Watched filter
   base: _libBaseEntries,
   render: function(){ renderLibrary(); },
   sortState: _libSort,
@@ -1394,9 +1395,6 @@ function profCopyLink() {
   navigator.clipboard && navigator.clipboard.writeText(url).then(function(){ showToast('Link copied!'); });
 }
 
-/* ══ Info popup: the shared MSSInfo popup (info-popup.js) with your own
-   entry's actions — Start Watching / Up Next / Edit / Discover /
-   Discover Card / Delete. ══ */
 // After a delete from either popup: drop it from this page and re-render
 function _profRemoveEntry(x) {
   _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
@@ -1406,11 +1404,16 @@ function _profRemoveEntry(x) {
 
 function openProfInfoPopup(id) {
   var e = _profEntryMap[id] || _pEntries.find(function(en){ return en.id===id; });
-  if (!e) return;
-  MSSInfo.forOwnEntry(e, {
-    from: 'profile.html',
-    onChange: function(){ renderLibrary(); },
-    onDelete: _profRemoveEntry
+  if (e) _profViews(e);
+}
+
+// Your title: Ratings → Note → Info in one popup (entry-views.js). Opens on
+// Ratings once it's rated/watched, otherwise on Info.
+function _profViews(e) {
+  var rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
+  MSSViews.open(e, {
+    order: ['rate', 'note', 'info'], start: rated ? 'rate' : 'info', own: true, from: 'profile.html',
+    onChange: function(){ renderLibrary(); }, onNoteSaved: function(){ renderLibrary(); }, onDelete: _profRemoveEntry
   });
 }
 
