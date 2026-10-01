@@ -87,27 +87,38 @@
 .share-copy-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
 .share-copy-btn.copied { border-color:var(--olive-light); color:var(--olive-light); }
 
-/* ── Danger zone ── */
-.danger-zone {
-  background:rgba(220,50,50,0.05);
-  border:0.5px solid rgba(220,50,50,0.2);
-  border-radius:var(--radius-lg);
-  padding:1.5rem; margin-top:1.25rem;
+/* ── Sessions + Delete Account — same card as every other section ── */
+.settings-desc { font-size:13.5px; color:var(--text-2); line-height:1.6; margin:0 0 1.1rem; }
+.settings-desc b { color:var(--text); font-weight:600; }
+.settings-desc a { color:var(--olive-light); font-weight:600; text-decoration:none; }
+.settings-desc a:hover { text-decoration:underline; }
+.set-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  padding:11px 16px; border-radius:var(--radius-sm); cursor:pointer;
+  font-family:var(--sans); font-size:13.5px; font-weight:600;
+  background:transparent; border:1px solid var(--border-2); color:var(--text-2);
+  transition:border-color .15s, color .15s, background .15s;
 }
-.danger-title {
-  font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#ff6b6b;
-  margin-bottom:1rem; padding-bottom:.75rem; border-bottom:0.5px solid rgba(220,50,50,0.2);
-}
-.btn-danger {
-  background:rgba(220,50,50,0.1); border:0.5px solid rgba(220,50,50,0.3); color:#ff6b6b;
-  border-radius:var(--radius-sm); padding:10px 20px; font-size:13px; cursor:pointer; transition:all .2s;
-}
-.btn-danger:hover { background:rgba(220,50,50,0.2); }
+.set-btn svg { width:15px; height:15px; flex-shrink:0; }
+.set-btn:hover { border-color:var(--border-olive); color:var(--text); background:var(--olive-faint); }
+.set-btn-delete { color:#dc2626; }
+.set-btn-delete:hover { border-color:#dc2626; color:#dc2626; background:rgba(220,38,38,0.06); }
+[data-theme="dark"] .set-btn-delete, [data-theme="dark"] .set-btn-delete:hover { color:#f87171; }
+.set-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.del-list { margin:0 0 1.1rem; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+.del-list li { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-2); }
+.del-list li::before { content:''; width:5px; height:5px; border-radius:50%; background:var(--text-3); flex-shrink:0; }
 
-[data-theme="light"] .danger-zone { background:rgba(180,20,20,0.07); border-color:rgba(180,20,20,0.35); }
-[data-theme="light"] .danger-title { color:#991b1b; }
-[data-theme="light"] .btn-danger { background:rgba(180,20,20,0.1); border-color:rgba(180,20,20,0.45); color:#991b1b; }
-[data-theme="light"] .btn-danger:hover { background:rgba(180,20,20,0.18); }
+/* Delete-account dialog (built on the shared confirm dialog styles) */
+#delAccOverlay .confirm-card { max-width:420px; text-align:left; align-items:stretch; }
+#delAccOverlay .confirm-title, #delAccOverlay .confirm-msg { text-align:left; max-width:none; }
+#delAccOverlay .field-row { margin:4px 0 0; }
+#delAccOverlay .field-label { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); margin-bottom:6px; display:block; }
+#delAccOverlay .field-label b { color:var(--text); text-transform:none; letter-spacing:0; }
+.del-acc-error { font-size:12.5px; color:#dc2626; min-height:0; }
+[data-theme="dark"] .del-acc-error { color:#f87171; }
+.del-acc-error:empty { display:none; }
+#delAccConfirm:disabled { opacity:.45; cursor:default; }
 
 /* ── Mobile ── */
 @media(max-width:900px) {
@@ -283,12 +294,48 @@
           <button class="btn-save" style="width:100%;margin-top:.25rem" onclick="changePassword()">Update Password</button>
         </div>
 
-        <div class="danger-zone fade-up fade-up-2">
-          <div class="danger-title">Danger Zone</div>
-          <button class="btn-danger" onclick="doSignOutEverywhere()">Sign Out Everywhere</button>
+        <div class="settings-section fade-up fade-up-2">
+          <div class="settings-title">Sessions</div>
+          <p class="settings-desc">Signed in on a shared or lost device? Sign out of MyScreenScore everywhere, including this browser.</p>
+          <button type="button" class="set-btn" onclick="doSignOutEverywhere()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign Out of All Devices
+          </button>
+        </div>
+
+        <div class="settings-section fade-up fade-up-2">
+          <div class="settings-title">Delete Account</div>
+          <p class="settings-desc">Permanently delete your MyScreenScore account. This removes:</p>
+          <ul class="del-list">
+            <li>Your library, ratings and notes</li>
+            <li>Your lists, comments, replies and reactions</li>
+            <li>Your friends, notifications and profile</li>
+          </ul>
+          <p class="settings-desc">This can't be undone. Want a copy first? <a href="profile.html">Export your library</a> from your profile.</p>
+          <button type="button" class="set-btn set-btn-delete" onclick="openDeleteAccount()">Delete Account…</button>
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="delAccOverlay" onclick="if(event.target===this)closeDeleteAccount()">
+  <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="delAccTitle" aria-describedby="delAccMsg">
+    <div class="confirm-title" id="delAccTitle">Delete your account?</div>
+    <div class="confirm-msg" id="delAccMsg">Your account and everything in it will be permanently deleted. This can't be undone.</div>
+    <div class="field-row">
+      <label class="field-label" for="delAccUsername">Type <b id="delAccHandle"></b> to confirm</label>
+      <input class="field-input" id="delAccUsername" autocomplete="off" spellcheck="false" autocapitalize="none" oninput="updateDeleteAccountBtn()">
+    </div>
+    <div class="field-row">
+      <label class="field-label" for="delAccPassword">Password</label>
+      <input class="field-input" id="delAccPassword" type="password" autocomplete="current-password" oninput="updateDeleteAccountBtn()">
+    </div>
+    <div class="del-acc-error" id="delAccError" role="alert"></div>
+    <div class="confirm-actions">
+      <button type="button" class="confirm-cancel" onclick="closeDeleteAccount()">Cancel</button>
+      <button type="button" class="confirm-ok" id="delAccConfirm" onclick="confirmDeleteAccount()" disabled>Delete Account</button>
     </div>
   </div>
 </div>
@@ -586,9 +633,57 @@ async function doSignOutEverywhere() {
     danger: false
   });
   if (!ok) return;
-  await sb.auth.signOut();
+  await sb.auth.signOut({ scope: 'global' });
   window.location.href = 'login.html';
 }
+
+/* ── Delete account ──
+   Asks for your username + password, removes your profile photo, then
+   delete_my_account() (029 SQL) deletes the account — everything you own
+   goes with it through the database's ON DELETE CASCADE links. */
+function openDeleteAccount() {
+  if (!_sUser || !_sProfile) return;
+  document.getElementById('delAccHandle').textContent = _sProfile.username;
+  ['delAccUsername', 'delAccPassword'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('delAccError').textContent = '';
+  updateDeleteAccountBtn();
+  document.getElementById('delAccOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('delAccUsername').focus(), 60);
+}
+function closeDeleteAccount() {
+  document.getElementById('delAccOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function updateDeleteAccountBtn() {
+  const typed = document.getElementById('delAccUsername').value.trim().replace(/^@/, '').toLowerCase();
+  const pw = document.getElementById('delAccPassword').value;
+  document.getElementById('delAccConfirm').disabled = !(typed === (_sProfile?.username || '').toLowerCase() && pw);
+}
+async function confirmDeleteAccount() {
+  const btn = document.getElementById('delAccConfirm');
+  const err = document.getElementById('delAccError');
+  if (btn.disabled) return;
+  btn.disabled = true; btn.textContent = 'Deleting…'; err.textContent = '';
+  try {
+    // Re-check the password before anything is deleted
+    const { error: pwErr } = await sb.auth.signInWithPassword({ email: _sUser.email, password: document.getElementById('delAccPassword').value });
+    if (pwErr) throw new Error('bad_password');
+    await sb.storage.from('avatars').remove([`${_sUser.id}/avatar.jpg`]).catch(() => {});
+    const { error } = await sb.rpc('delete_my_account');
+    if (error) throw error;
+    try { await sb.auth.signOut(); } catch {}
+    window.location.replace('login.html');
+  } catch (e) {
+    console.error(e);
+    err.textContent = e.message === 'bad_password' ? 'That password is incorrect.' : 'Something went wrong — your account was not deleted. Please try again.';
+    btn.textContent = 'Delete Account';
+    updateDeleteAccountBtn();
+  }
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('delAccOverlay')?.classList.contains('open')) closeDeleteAccount();
+});
 
 /* ── In-app notification pop-ups (ON by default) ── */
 function refreshNotifPopupsSetting() {
