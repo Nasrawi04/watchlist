@@ -29,15 +29,6 @@
 /* Friend request button states */
 
 
-
-
-
-
-
-
-
-
-
 .pv-library-btn {
   padding:8px 20px; border-radius:var(--radius-sm);
   border:0.5px solid var(--border-olive); background:transparent;
@@ -111,7 +102,6 @@
 .pv-card-letter { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:32px; color:var(--olive-light); background:var(--olive-faint); }
 
 .pv-section { margin-bottom:2.5rem; }
-
 
 
 .pv-eyebrow { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; }
@@ -227,7 +217,6 @@
 .fv-rank-row:hover{border-color:var(--border-olive);background:var(--card-2);}
 
 
-
 .fv-rank-poster{width:84px;height:120px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
 
 .fv-rank-poster img{width:100%;height:100%;object-fit:cover}
@@ -248,27 +237,6 @@
 
 .lib-section-hd{display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);}
 
-/* ── Profile entry popup (matches completed page) ── */
-#profPopupOverlay, #pvPopupOverlay {
-  position:fixed;inset:0;z-index:1100;
-  background:rgba(0,0,0,0.72);
-  display:flex;align-items:center;justify-content:center;
-  padding:16px;box-sizing:border-box;
-  opacity:0;transition:opacity 220ms var(--ease);
-  pointer-events:none;
-}
-
-#profPopupCard, #pvPopupCard {
-  background:var(--bg-2);border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-  width:100%;max-width:min(97vw, 760px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
-  box-sizing:border-box;
-  transform:translateY(18px);transition:transform 260ms var(--ease);
-}
-
-@media(max-width:600px) {
-  #profPopupCard, #pvPopupCard { max-height:88dvh; }
-}
 
 /* ── Favorites slots ── */
 .fav-slots{display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem;}
@@ -337,7 +305,6 @@
 .fav-picker-check{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;}
 
 .fav-picker-item.selected .fav-picker-check{background:var(--olive-light);border-color:var(--olive-light);color:#fff;}
-
 
 
 .fav-picker-footer{padding:12px 20px;border-top:0.5px solid var(--border);display:flex;gap:10px;flex-shrink:0;}
@@ -536,15 +503,6 @@
 }
 
 /* pv-friend-btn styling */
-
-
-
-
-
-
-
-
-
 
 
 @media(max-width:640px) {
@@ -944,6 +902,7 @@ function _trimNotes(text) {
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
 <script src="js/info-popup.js"></script>
+<script src="js/rating-popup.js"></script>
 <script src="js/export.js"></script>
 <script>
 /* ── State ── */
@@ -1091,200 +1050,21 @@ function switchTab(n) {
 }
 
 /* ── Popup ── */
-var _profPopupEntryId = null;
-function _injectProfPopup() {
-  if (document.getElementById('profPopupOverlay')) return;
-  var ov = document.createElement('div');
-  ov.id = 'profPopupOverlay';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;';
-  var card = document.createElement('div');
-  card.id = 'profPopupCard';
-  card.style.cssText = 'background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:100%;max-width:min(97vw, 920px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;position:relative;box-sizing:border-box;transform:translateY(18px);transition:transform 260ms var(--ease);';
-  card.innerHTML =
-    '<div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;padding:24px 24px 0;">'+
-      '<div id="profPopupPoster" style="width:150px;height:225px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);"></div>'+
-      '<div style="flex:1;min-width:0;padding-top:4px;">'+
-        '<div id="profPopupTitle" class="cg-popup-title" style="font-family:\'Oswald\',var(--sans);font-weight:600;line-height:1.15;color:var(--text);"></div>'+
-        '<div id="profPopupTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>'+
-        '<div id="profPopupDateRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>'+
-        '<div id="profPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;"></div>'+
-        '<div id="profPopupInfo" style="margin-top:4px;"></div>'+
-      '</div>'+
-      '<div id="profPopupDesc" class="fd-description cg-desc-block" style="margin:16px 0 0;"></div>'+
-      '<div id="profPopupScoreBox" class="cg-score-box" style="flex-shrink:0;flex-grow:0;text-align:center;align-self:stretch;position:relative;padding:18px 20px;border-radius:var(--radius-sm);background:transparent;border:2px solid var(--olive);">'+
-        '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:100%;">'+
-          '<div style="font-family:\'Oswald\',var(--sans);font-weight:600;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;text-align:center;width:100%;">Overall Score</div>'+
-          '<div id="profPopupScoreVal" style="font-family:var(--bebas);font-size:48px;color:var(--olive);line-height:1;display:flex;align-items:center;justify-content:center;width:100%;gap:6px;"></div>'+
-        '</div>'+
-      '</div>'+
-      '<button class="cg-close-btn" onclick="profClosePopup()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;flex-shrink:0;transition:color .15s;position:absolute;z-index:1;" onmouseenter="this.style.color=\'var(--text)\'" onmouseleave="this.style.color=\'var(--text-3)\'">&#x2715;</button>'+
-    '</div>'+
-    '<div id="profPopupBody" style="padding:20px 24px 6px;"></div>'+
-    '<div id="profPopupActions" style="display:flex;gap:8px;padding:4px 24px 24px;flex-wrap:wrap;">'+
-      '<button class="popup-action-btn" id="profPopupEditBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>'+
-      '<button class="popup-action-btn" onclick="rewatchEntry(_profPopupEntryId)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg> Rewatch</button>'+
-      '<button class="popup-action-btn" onclick="createShareCard(_profPopupEntryId)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Create Card</button>'+
-      '<button class="popup-action-btn popup-action-danger" onclick="_profPopupDeleteEntry()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete</button>'+
-    '</div>';
-  ov.addEventListener('click', function(ev){ if(ev.target===ov) profClosePopup(); });
-  ov.appendChild(card);
-  document.body.appendChild(ov);
-}
 
-function _profPopupNarrowObserver() {
-  var card = document.getElementById('profPopupCard');
-  if (!card || card._cgObserverAttached) return;
-  card._cgObserverAttached = true;
-  var apply = function(){ card.classList.toggle('cg-narrow', card.getBoundingClientRect().width <= 600); };
-  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(apply).observe(card);
-  else window.addEventListener('resize', apply);
-  apply();
-}
-
-async function _profPopupDeleteEntry() {
-  var id = _profPopupEntryId;
-  if (!id) return;
-  var _e = (typeof _pEntries !== 'undefined' && _pEntries.find(function(x){ return x.id === id; })) || null;
-  if (!(await showConfirm({ title: 'Delete entry?', message: '"' + ((_e && _e.title) || 'This entry') + '" will be permanently removed.', confirmText: 'Delete', iconName: 'x' }))) return;
-  deleteEntry(id, _pUser.id).then(function(){
-    _pEntries = _pEntries.filter(function(e){ return e.id !== id; });
-    profClosePopup();
-    renderLibrary();
-  });
-}
 
 function profOpenPopup(id) {
-  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  _profPopupEntryId = id;
-  var e = _profEntryMap[id];
-  if (!e) { e = _pEntries.find(function(x){return x.id===id;}); }
+  var e = _profEntryMap[id] || _pEntries.find(function(x){ return x.id===id; });
   if (!e) return;
-  _injectProfPopup();
-  _profPopupNarrowObserver();
-
-  document.getElementById('profPopupPoster').innerHTML = posterHTML(e);
-  var _pyIsMovie = e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
-  var _pyStart = e.year || null;
-  var _pyEnd = (e.ratings && e.ratings._completion_year) || null;
-  var _pyStr = '';
-  if (_pyStart) {
-    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ' <span style="font-family:var(--bebas);font-size:0.65em;font-weight:400;color:var(--text-2);vertical-align:middle;">'+_pyStart+'</span>';
-    else _pyStr = ' <span style="font-family:var(--bebas);font-size:0.65em;font-weight:400;color:var(--text-2);vertical-align:middle;">'+_pyStart+'\u2013'+(_pyEnd||'Present')+'</span>';
-  }
-  document.getElementById('profPopupTitle').innerHTML = esc(e.title) + _pyStr;
-
-  var catIsMovie = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-  var catLabel = CAT_META[e.cat] ? CAT_META[e.cat].label : '';
-  document.getElementById('profPopupTags').innerHTML =
-    (catLabel ? '<span class="'+(catIsMovie ? 'type-label' : 'type-label type-label-tv')+'" style="font-family:\'Manrope\',var(--sans);font-weight:500;">'+esc(catLabel)+'</span>' : '') +
-    (e.genres||[]).map(function(g){ return '<span class="w-ep-badge" style="font-family:\'Manrope\',var(--sans);font-weight:500;">'+esc(String(g))+'</span>'; }).join('') +
-    (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
-
-  var completedDateStr = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : null;
-  document.getElementById('profPopupDateRow').innerHTML = completedDateStr
-    ? '<span class="w-ep-badge" style="font-family:\'Manrope\',var(--sans);font-weight:500;">Completed On: '+completedDateStr+'</span>' : '';
-
-  // Runtime / episode count are shown in the Runtime / Season Breakdown
-  // sections below — only To Be Continued titles get a tag, for where you left off.
-  var metaBadge = (e.status==='ongoing' && e.season!=null && e.episode!=null && !_pyIsMovie)
-    ? '<span class="w-ep-badge" style="font-family:\'Manrope\',var(--sans);font-weight:500;">Left off: S'+e.season+' \u00b7 E'+e.episode+'</span>' : '';
-  document.getElementById('profPopupMetaRow').innerHTML = metaBadge;
-  var _prInfoEl = document.getElementById('profPopupInfo');
-  if (_prInfoEl) _prInfoEl.innerHTML = '';
-
-  var dEl = document.getElementById('profPopupDesc');
-  if (e.description) { dEl.textContent = e.description; dEl.style.display = ''; }
-  else { dEl.style.display = 'none'; }
-
-  var sc = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
-  var scoreBoxEl = document.getElementById('profPopupScoreBox');
-  var scoreValEl = document.getElementById('profPopupScoreVal');
-  if (scoreBoxEl) scoreBoxEl.style.display = sc != null ? '' : 'none';
-  if (scoreValEl) scoreValEl.textContent = sc != null ? '\u2605 '+sc : '';
-
-  document.getElementById('profPopupBody').innerHTML = _libBuildRatingsDetail(e);
-  var eb = document.getElementById('profPopupEditBtn');
-  if (eb) eb.onclick = function(){goToDetail(id,'library.html');};
-
-  var ov = document.getElementById('profPopupOverlay');
-  ov.style.pointerEvents='auto'; ov.style.opacity='1';
-  document.getElementById('profPopupCard').style.transform='translateY(0)';
-  document.body.style.overflow='hidden';
-  _refreshTmdbSeasonData(e, _pUser.id, renderLibrary);
-}
-function profClosePopup() {
-  var ov=document.getElementById('profPopupOverlay');
-  if(ov){ov.style.opacity='0';ov.style.pointerEvents='none';}
-  var c=document.getElementById('profPopupCard');
-  if(c)c.style.transform='translateY(18px)';
-  document.body.style.overflow='';
-  _profPopupEntryId = null;
+  MSSRate.forOwnEntry(e, { from: 'library.html', onChange: function(){ renderLibrary(); }, onDelete: _profRemoveEntry });
 }
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     if(document.getElementById('ratingFilterOverlay')?.classList.contains('open')) closeRatingFilter();
     else if(document.getElementById('createCardOverlay')?.classList.contains('open')) closeCreateCard();
     else if(document.getElementById('favSecOverlay')?.classList.contains('open')) closeFavSec();
-    else if(document.getElementById('profPopupOverlay')?.style.opacity==='1') profClosePopup();
   }
 });
 
-function _libBreakdownHTML(e) {
-  var isMovie = e.cat==='movies' || (e.ratings&&e.ratings._media_type==='movie');
-  if (!isMovie) {
-    var bd = Array.isArray(e.ratings&&e.ratings._season_breakdown)
-      ? e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number) : [];
-    var totalS = bd.length || Number(e.total_seasons) || 0;
-    if (totalS > 0) {
-      var chips = '';
-      for (var i=0; i<totalS; i++) {
-        var eps = bd[i] || null;
-        chips += '<span class="popup-info-season-chip">'
-          +'<span class="popup-info-season-num">S'+(i+1)+'</span>'
-          +'<span class="popup-info-season-eps">'+(eps?eps+' ep':'S'+(i+1))+'</span>'
-          +'</span>';
-      }
-      return '<div class="popup-info-block"><div class="popup-info-label">TV Show Breakdown</div><div style="display:flex;flex-wrap:wrap;">'+chips+'</div></div>';
-    } else if (e.total_eps) {
-      return '<div class="popup-info-block"><span style="font-size:11px;color:var(--text-3);">'+e.total_eps+' episodes</span></div>';
-    }
-    return '';
-  } else {
-    var rtH=Number(e.runtime_h)||0, rtM=Number(e.runtime_m)||0;
-    if (rtH||rtM) {
-      var rtStr = rtH ? rtH+'h '+rtM+'m' : rtM+'m';
-      return '<div class="popup-info-block"><span class="popup-info-runtime">'
-        +'<span class="popup-info-runtime-val">'+rtStr+'</span>'
-        +'<span class="popup-info-runtime-lbl">Movie Runtime</span>'
-        +'</span></div>';
-    }
-    return '';
-  }
-}
-
-function buildExpansion(e) {
-  var sc = liveScore(e)!=null?Number(liveScore(e)).toFixed(2):'—';
-  var isM = e.cat==='movies';
-  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  var rd = typeof getRatings==='function' ? getRatings(e.cat) : {core:[],bonus:[]};
-  var isAnimated = e.cat === 'anime' || e.cat === 'cartoons';
-  var cR = (rd.core||[]).map(function(r){var v=e.ratings&&e.ratings[r.key];if(v==null||v==='')return '';return '<div class="fd-rating-row"><span class="fd-rating-label">'+r.label+'</span><span class="fd-rating-val">'+Number(v).toFixed(2)+'</span></div>';}).filter(Boolean).join('');
-  var animRow = (!isAnimated && e.ratings && e.ratings.animation != null && e.ratings.animation !== '')
-    ? '<div class="fd-rating-row"><span class="fd-rating-label">Animation Quality</span><span class="fd-rating-val">'+Number(e.ratings.animation).toFixed(2)+'</span></div>' : '';
-  var bR = (rd.bonus||[]).map(function(r){var v=e.ratings&&e.ratings[r.key];if(v==null||v==='')return '';return '<div class="fd-rating-row"><span class="fd-rating-label">'+r.label+'</span><span class="fd-rating-val">'+Number(v).toFixed(2)+'</span></div>';}).filter(Boolean).join('');
-  var fv = (e.ratings&&e.ratings._favorites)||{};
-  var lw = (e.ratings&&e.ratings._lowlights)||{};
-  var fc = [fv.character?'<span class="fav-chip"><span class="fav-chip-label">Fav Character</span>'+esc(fv.character)+'</span>':'',(!isM&&fv.episode)?'<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span>'+esc(fv.episode)+'</span>':'',(!isM&&fv.season)?'<span class="fav-chip"><span class="fav-chip-label">Fav Season</span>'+esc(fv.season)+'</span>':''].filter(Boolean).join('');
-  var lc = [lw.character?'<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav</span>'+esc(lw.character)+'</span>':''].filter(Boolean).join('');
-  var h=(e.description?'<div class="fd-description">'+esc(e.description)+'</div>':'')+_libBreakdownHTML(e)+'<div class="fd-cols">';
-  if(cR||animRow)h+='<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>'+cR+animRow+'</div>';
-  if(bR)h+='<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>'+bR+'</div>';
-  h+='</div><div class="fd-final"><span>Final Score</span><strong>'+sc+'</strong></div>';
-  if(fc)h+='<div class="fav-chips" style="margin-top:8px;">'+fc+'</div>';
-  if(lc)h+='<div class="fav-chips" style="margin-top:6px;">'+lc+'</div>';
-  if(e.notes)h+='<div class="fd-notes">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>';
-  return h;
-}
 
 /* ── Tab 0: Overview ── */
 function renderTab0() {
@@ -2205,7 +1985,7 @@ function openFavSec(cat) {
   document.getElementById('favSecGrid').innerHTML = items.map(function(e){
     var sc = liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
     var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
-    return '<div class="q-card" style="cursor:pointer;" onclick="profClosePopup();profOpenPopup(&quot;'+e.id+'&quot;)">'
+    return '<div class="q-card" style="cursor:pointer;" onclick="profOpenPopup(&quot;'+e.id+'&quot;)">'
       +'<div class="q-poster">'+posterHTML(e,'big')+'<div class="q-poster-overlay"></div></div>'
       +'<div class="q-info"><div class="q-title">'+esc2(e.title)+'</div>'
       +'<div class="q-genre">'+genreHTML(e.genres, 3)+'</div>'
@@ -2537,83 +2317,25 @@ function closeNotePopup2() {
 }
 
 
-
 /* ══ Info popup: the shared MSSInfo popup (info-popup.js) with your own
    entry's actions — Start Watching / Up Next / Edit / Discover /
    Discover Card / Delete. ══ */
+// After a delete from either popup: drop it from this page and re-render
+function _profRemoveEntry(x) {
+  _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
+  delete _profEntryMap[x.id];
+  renderLibrary();
+}
+
 function openProfInfoPopup(id) {
   var e = _profEntryMap[id] || _pEntries.find(function(en){ return en.id===id; });
   if (!e) return;
   MSSInfo.forOwnEntry(e, {
     from: 'library.html',
     onChange: function(){ renderLibrary(); },
-    onDelete: function(x){
-      _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
-      delete _profEntryMap[x.id];
-      renderLibrary();
-    }
+    onDelete: _profRemoveEntry
   });
 }
-
-// Ratings body — shared by profOpenPopup. Core/Bonus rating
-// columns, Season Breakdown, Highlights (fav/lowlight chips), Notes.
-function _libBuildRatingsDetail(e) {
-  var isMovies = e.cat === 'movies';
-  var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  var rr = getRatings(e.cat);
-  var coreArr = rr.core, bonusArr = rr.bonus;
-  var isAnimated = e.cat === 'anime' || e.cat === 'cartoons';
-
-  var coreRows = coreArr.map(function(r){
-    var val = e.ratings ? e.ratings[r.key] : null;
-    if (val == null || val === '') return '';
-    return '<div class="fd-rating-row"><span class="fd-rating-label">'+r.label+'</span><span class="fd-rating-val">'+Number(val).toFixed(2)+'</span></div>';
-  }).filter(Boolean).join('');
-
-  var animRow = (!isAnimated && e.ratings && e.ratings.animation != null && e.ratings.animation !== '')
-    ? '<div class="fd-rating-row"><span class="fd-rating-label">Animation Quality</span><span class="fd-rating-val">'+Number(e.ratings.animation).toFixed(2)+'</span></div>' : '';
-
-  var bonusRows = bonusArr.map(function(r){
-    var val = e.ratings ? e.ratings[r.key] : null;
-    if (val == null || val === '') return '';
-    return '<div class="fd-rating-row"><span class="fd-rating-label">'+r.label+'</span><span class="fd-rating-val">'+Number(val).toFixed(2)+'</span></div>';
-  }).filter(Boolean).join('');
-
-  var favs = (e.ratings && e.ratings._favorites) || {};
-  var favChips = [
-    favs.character ? '<span class="fav-chip"><span class="fav-chip-label">Fav Character</span><span class="fav-chip-val">'+esc(favs.character)+'</span></span>' : '',
-    (!isMovies && favs.episode) ? '<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span><span class="fav-chip-val">'+esc(favs.episode)+'</span></span>' : '',
-    (!isMovies && favs.season) ? '<span class="fav-chip"><span class="fav-chip-label">Fav Season</span><span class="fav-chip-val">'+esc(favs.season)+'</span></span>' : '',
-  ].filter(Boolean).join('');
-  var lows = (e.ratings && (e.ratings._lowlights || (e.ratings._favorites && e.ratings._favorites._lowlights))) || {};
-  var lowChips = [
-    lows.character ? '<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Character</span><span class="fav-chip-val">'+esc(lows.character)+'</span></span>' : '',
-    (!isMovies && lows.episode) ? '<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Episode</span><span class="fav-chip-val">'+esc(lows.episode)+'</span></span>' : '',
-    (!isMovies && lows.season) ? '<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span><span class="fav-chip-val">'+esc(lows.season)+'</span></span>' : '',
-  ].filter(Boolean).join('');
-
-  var seasonBlock = '';
-  if (!isMovies) {
-    var bd = Array.isArray(e.ratings && e.ratings._season_breakdown) ? e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number) : [];
-    var totalS = bd.length || Number(e.total_seasons) || 0;
-    if (totalS > 0) {
-      var chips = '';
-      for (var i=0;i<totalS;i++){ var eps=bd[i]||null; chips += '<div class="pvi-season-chip"><div class="pvi-season-num">S'+(i+1)+'</div><div class="pvi-season-eps">'+(eps?eps+' eps':'S'+(i+1))+'</div></div>'; }
-      seasonBlock = '<div class="fd-section-hd">Season Breakdown</div><div class="pvi-seasons">'+chips+'</div>';
-    }
-  }
-
-  return seasonBlock
-    + '<div class="fd-cols">'
-    + ((coreRows||animRow) ? '<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>'+coreRows+animRow+'</div>' : '')
-    + (bonusRows ? '<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>'+bonusRows+'</div>' : '')
-    + '</div>'
-    + ((favChips||lowChips) ? '<div class="fd-section-hd" style="margin-top:16px;">Highlights</div>' : '')
-    + (favChips ? '<div class="fav-chips" style="margin-top:6px;">'+favChips+'</div>' : '')
-    + (lowChips ? '<div class="fav-chips" style="margin-top:6px;">'+lowChips+'</div>' : '')
-    + (e.notes ? '<div class="fd-section-hd" style="margin-top:16px;">Notes</div><div class="fd-notes" style="margin-top:0;padding-top:0;border-top:none;">"'+esc(e.notes)+'"</div>' : '');
-}
-
 
 
 /* ── Action button stubs (implemented in later steps) ── */
