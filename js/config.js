@@ -539,6 +539,15 @@ document.addEventListener('keydown', e => {
 /* ══════════════════════════════════════════
    CONFIRM DIALOG
 ══════════════════════════════════════════ */
+// Section label + count on the left, Sort / Filter (or other buttons) on the
+// right — the toolbar above the Notes / Lists cards and the profile tabs.
+function mssToolbarHTML(label, count, barHTML = '', noun = 'item') {
+  return `<div class="mss-toolbar-label">
+      <div class="mss-toolbar-title">${escHTML(label)}</div>
+      <div class="mss-toolbar-count"><b>${count}</b> ${count === 1 ? noun : noun + 's'}</div>
+    </div>${barHTML}`;
+}
+
 // danger (default true) → solid red confirm button; danger:false → solid olive
 // (for non-destructive actions like signing out or starting a rewatch).
 function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', iconName = 'x', danger = true } = {}) {
