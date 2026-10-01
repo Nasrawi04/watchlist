@@ -392,7 +392,9 @@
 <script src="js/nav.js"></script>
 <script src="js/info-popup.js"></script>
 <script src="js/rating-popup.js"></script>
+<script src="js/note-popup.js"></script>
 <script src="js/friend-popups.js"></script>
+<script src="js/entry-views.js"></script>
 <script src="js/list-popup.js"></script>
 <script src="js/sort-filter.js"></script>
 <script>
@@ -443,14 +445,19 @@ function _frTypeBadge(e) {
 }
 const _frScore = e => liveScore(e) != null ? Number(liveScore(e)) : null;
 const _frDate = x => x ? new Date(String(x).length <= 10 ? x + 'T12:00:00' : x) : null;
-// Activity items open what fits: a note → the note popup, something they
-// watched → their ratings popup, watchlist / started / up next → info popup
+// A friend's title: Info, Ratings and Note in one popup (entry-views.js).
+// Activity opens on Info (a "wrote a note" item opens on their note);
+// the Notes tab opens on the note.
+function _frViews(e, order, start) {
+  const p = _frProfiles[e.user_id] || {};
+  MSSViews.open(e, { order, start, profile: p, note: { open: x => MSSFriendPop.note(x, p), close: MSSFriendPop.closeNote } });
+}
 function _frOpenEvent(id, type) {
   const e = window._frEntryMap[id]; if (!e) return;
-  const p = _frProfiles[e.user_id] || {};
-  if (type === 'note' && e.notes && e.notes.trim()) return MSSFriendPop.note(e, p);
-  if (type === 'finished' || type === 'caught_up' || e.status === 'completed' || e.status === 'ongoing') return MSSRate.forFriend(e, p);
-  MSSInfo.fromEntry(e);
+  _frViews(e, ['info', 'rate', 'note'], type === 'note' ? 'note' : 'info');
+}
+function _frOpenNote(id) {
+  const e = window._frEntryMap[id]; if (e) _frViews(e, ['note', 'rate', 'info']);
 }
 function _frFriendOptions() { return [['', 'Everyone'], ..._frAccepted.map(f => [f.friendId, _frName(f.friendId)])]; }
 const _FR_CAT_OPTS = [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
@@ -744,6 +751,7 @@ SF.register('frNotes', {
   },
   sorts: () => ['added', 'length', 'ratings', 'alpha'],
   filters: () => ['genre', 'score'],
+  watched: () => true,          // Year Watched filter
   addedDate: e => e.completed_date || e.updated_at,
   compare: {
     note_long: (a, b) => _frWords(b.notes) - _frWords(a.notes),
@@ -760,7 +768,7 @@ function _frRenderNotes() {
   if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('edit', 'No notes yet', 'Notes your friends write about what they watch will appear here.'); return; }
   // Same cards and popup as the Notes page (friend-popups.js + style.css)
   document.getElementById('frContent').innerHTML = `<div class="nc-grid">${list.map(e =>
-    MSSFriendPop.noteCardHTML(e, _frProfiles[e.user_id], `MSSFriendPop.note(window._frEntryMap['${escHTML(e.id)}'], _frProfiles['${escHTML(e.user_id)}'])`)).join('')}</div>`;
+    MSSFriendPop.noteCardHTML(e, _frProfiles[e.user_id], `_frOpenNote(${attrJSON(e.id)})`)).join('')}</div>`;
 }
 
 /* ══ COMPARE ══
