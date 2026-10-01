@@ -485,57 +485,6 @@
 /* ── Profile tab sticky positions ── */
 @media(max-width:1380px) { .pv-tabs, .prof-tabs { top:64px; } }
 
-/* ── Info Popup (watching/queue) — same as profile-view ── */
-#profInfoOverlay {
-  position:fixed;inset:0;z-index:902;
-  background:rgba(0,0,0,0.72);
-  display:flex;align-items:center;justify-content:center;
-  padding:16px;box-sizing:border-box;
-  opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;
-}
-#profInfoOverlay.open { opacity:1;pointer-events:auto; }
-#profInfoCard {
-  background:var(--bg-2);border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-  width:97%;max-width:640px;max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
-  position:relative;box-sizing:border-box;
-  transform:translateY(18px);transition:transform 260ms var(--ease);
-}
-.pvi-header { display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0; }
-.pvi-poster {
-  width:clamp(52px,14vw,80px);height:clamp(73px,19.5vw,112px);
-  flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;
-  background:var(--bg-3);display:flex;align-items:center;justify-content:center;
-  box-shadow:var(--shadow);font-family:var(--serif);font-size:28px;color:var(--text-3);
-}
-.pvi-poster img { width:100%;height:100%;object-fit:cover; }
-.pvi-meta-wrap { flex:1;min-width:0;padding-top:2px; }
-.pvi-title { font-family:var(--serif);font-size:clamp(16px,4.5vw,22px);font-weight:500;line-height:1.2;margin-bottom:6px;color:var(--text); }
-.pvi-tags { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:0; }
-.pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s; }
-.pvi-close:hover { color:var(--text); }
-.pvi-body { padding:16px 20px 20px; }
-.pvi-desc { font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:16px; }
-.pvi-section-label { font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;display:flex;align-items:center;gap:10px; }
-.pvi-section-label::after { content:'';flex:1;height:0.5px;background:var(--border); }
-.pvi-seasons { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px; }
-.pvi-season-chip { display:flex;flex-direction:column;align-items:center;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;min-width:58px;transition:border-color .15s; }
-.pvi-season-chip:hover { border-color:var(--border-olive); }
-.pvi-season-num { font-family:var(--serif);font-size:20px;font-weight:500;color:var(--olive-light);line-height:1; }
-.pvi-season-eps { font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-top:3px;white-space:nowrap; }
-.pvi-runtime { display:inline-flex;align-items:center;gap:10px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;margin-bottom:16px; }
-.pvi-runtime-val { font-family:var(--serif);font-size:24px;font-weight:500;color:var(--olive-light); }
-.pvi-runtime-lbl { font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px; }
-@media(max-width:600px) {
-  .pvi-header { padding:14px 14px 0;gap:12px; }
-  .pvi-body { padding:12px 14px 16px; }
-  .pvi-desc { font-size:12px; }
-  .pvi-season-chip { padding:6px 10px;min-width:46px; }
-  .pvi-season-num { font-size:17px; }
-  .pvi-runtime { padding:8px 14px; }
-  .pvi-runtime-val { font-size:20px; }
-  #profInfoCard { width:97%; }
-}
 </style>
 </head>
 <body>
@@ -624,6 +573,7 @@ function _trimNotes(text) {
 <script src="js/sort-filter.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
+<script src="js/info-popup.js"></script>
 <script src="js/export.js"></script>
 <script>
 /* ── State ── */
@@ -893,8 +843,6 @@ function profClosePopup() {
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     if(document.getElementById('ratingFilterOverlay')?.classList.contains('open')) closeRatingFilter();
-    else if(document.getElementById('catDiscoverOverlay')?.classList.contains('open')) _closeDiscoverPicker();
-    else if(document.getElementById('profInfoOverlay')?.classList.contains('open')) closeProfInfoPopup();
     else if(document.getElementById('createCardOverlay')?.classList.contains('open')) closeCreateCard();
     else if(document.getElementById('profCustomListModal')?.style.display==='flex') closeProfCustomListModal();
     else if(document.getElementById('profAddListModal')?.style.display==='flex') closeProfAddListModal();
@@ -1633,116 +1581,21 @@ function profCopyLink() {
   navigator.clipboard && navigator.clipboard.writeText(url).then(function(){ showToast('Link copied!'); });
 }
 
-/* ══ Info Popup for library watching/queue ══ */
-
-function _injectProfInfoPopup() {
-  if (document.getElementById('profInfoOverlay')) return;
-  var el = document.createElement('div');
-  el.id = 'profInfoOverlay';
-  el.innerHTML = '<div id="profInfoCard">'
-    + '<div class="pvi-header">'
-    + '<div class="pvi-poster" id="profInfoPoster"></div>'
-    + '<div class="pvi-meta-wrap"><div class="pvi-title" id="profInfoTitle"></div><div class="pvi-tags" id="profInfoTags"></div></div>'
-    + '<button class="pvi-close" onclick="closeProfInfoPopup()">&#x2715;</button>'
-    + '</div>'
-    + '<div class="pvi-body">'
-    + '<div class="pvi-desc" id="profInfoDesc"></div>'
-    + '<div id="profInfoDetails"></div>'
-    + '</div>'
-    + '<div class="pvi-actions">'
-    + '<button class="pvi-action-btn" onclick="goToDetail(_profInfoId, \'library.html\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>'
-    + '<button class="pvi-action-btn pvi-action-primary" id="profInfoDiscoverBtn" style="flex:1;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Discover</button>'
-    + '<button class="pvi-action-btn" onclick="createShareCard(_profInfoId, 3, true)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Discover Card</button>'
-    + '<button class="pvi-action-btn pvi-action-danger" id="profInfoDeleteBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete</button>'
-    + '</div></div>';
-  el.addEventListener('click', function(ev){ if(ev.target===el) closeProfInfoPopup(); });
-  document.body.appendChild(el);
-}
-
-var _profInfoId = null;
-
+/* ══ Info popup: the shared MSSInfo popup (info-popup.js) with your own
+   entry's actions — Start Watching / Up Next / Edit / Discover /
+   Discover Card / Delete. ══ */
 function openProfInfoPopup(id) {
-  try {
-  _injectProfInfoPopup();
   var e = _profEntryMap[id] || _pEntries.find(function(en){ return en.id===id; });
   if (!e) return;
-  _profInfoId = id;
-  var esc2 = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-
-  var pEl = document.getElementById('profInfoPoster');
-  pEl.innerHTML = safeURL(e.poster_url) ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : esc2((e.title||'?')[0].toUpperCase());
-
-  document.getElementById('profInfoTitle').innerHTML = esc2(e.title) + (e.year ? ' <span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">'+esc2(e.year)+'</span>' : '');
-
-  var catIsMovie = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-  var catLabel = CAT_META[e.cat] ? CAT_META[e.cat].label : '';
-  document.getElementById('profInfoTags').innerHTML =
-    (catLabel ? '<span class="'+(catIsMovie ? 'type-label' : 'type-label type-label-tv')+'">'+esc2(catLabel)+'</span>' : '') +
-    (e.genres||[]).map(function(g){ return '<span class="w-ep-badge">'+esc2(String(g))+'</span>'; }).join('');
-
-  var dEl = document.getElementById('profInfoDesc');
-  if (e.description) { dEl.textContent = e.description; dEl.style.color = ''; }
-  else { dEl.textContent = '\u2014'; dEl.style.color = 'var(--text-3)'; }
-
-  var detEl = document.getElementById('profInfoDetails');
-  var isMovie = e.cat==='movies' || (e.ratings && e.ratings._media_type==='movie');
-  if (!isMovie) {
-    var bd = Array.isArray(e.ratings&&e.ratings._season_breakdown)
-      ? e.ratings._season_breakdown.filter(function(n){ return parseInt(n)>0; }).map(Number) : [];
-    var totalS = bd.length || Number(e.total_seasons) || 0;
-    if (totalS > 0) {
-      var chips = '';
-      for (var i=0; i<totalS; i++) {
-        var eps = bd[i] || null;
-        chips += '<div class="pvi-season-chip">'
-          +'<div class="pvi-season-num">S'+(i+1)+'</div>'
-          +'<div class="pvi-season-eps">'+(eps ? eps+' eps' : 'S'+(i+1))+'</div>'
-          +'</div>';
-      }
-      detEl.innerHTML = '<div class="pvi-section-label">TV Show Breakdown</div><div class="pvi-seasons">'+chips+'</div>';
-    } else if (e.total_eps) {
-      detEl.innerHTML = '<div class="pvi-section-label">Episodes</div>'
-        +'<div class="pvi-runtime"><div class="pvi-runtime-val">'+e.total_eps+'</div><div class="pvi-runtime-lbl">Total Episodes</div></div>';
-    } else { detEl.innerHTML = ''; }
-  } else {
-    var rtH=Number(e.runtime_h)||0, rtM=Number(e.runtime_m)||0;
-    if (rtH||rtM) {
-      var rtStr = rtH ? rtH+'h '+rtM+'m' : rtM+'m';
-      detEl.innerHTML = '<div class="pvi-section-label">Movie Runtime</div>'
-        +'<div class="pvi-runtime"><div class="pvi-runtime-val">'+rtStr+'</div><div class="pvi-runtime-lbl">Movie Runtime</div></div>';
-    } else { detEl.innerHTML = ''; }
-  }
-
-  var ov = document.getElementById('profInfoOverlay');
-  ov.classList.add('open');
-  document.getElementById('profInfoCard').style.transform = 'translateY(0)';
-  document.body.style.overflow = 'hidden';
-
-  var discBtn = document.getElementById('profInfoDiscoverBtn');
-  if (discBtn) discBtn.onclick = function(){ _libGoDiscover(e, discBtn); };
-  var delBtn = document.getElementById('profInfoDeleteBtn');
-  if (delBtn) delBtn.onclick = function(){ _profInfoDeleteEntry(e); };
-  _refreshTmdbSeasonData(e, _pUser.id, renderLibrary);
-  } catch(err) { console.error('openProfInfoPopup error:', err); }
-}
-
-async function _profInfoDeleteEntry(e) {
-  if (!(await showConfirm({ title: 'Delete entry?', message: '"' + e.title + '" will be permanently removed.', confirmText: 'Delete', iconName: 'x' }))) return;
-  try {
-    await deleteEntry(e.id, _pUser.id);
-    _pEntries = _pEntries.filter(function(en){ return en.id !== e.id; });
-    closeProfInfoPopup();
-    renderLibrary();
-  } catch (err) { console.error('_profInfoDeleteEntry error:', err); }
-}
-
-function closeProfInfoPopup() {
-  var ov = document.getElementById('profInfoOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.getElementById('profInfoCard').style.transform = 'translateY(18px)';
-  document.body.style.overflow = '';
-  _profInfoId = null;
+  MSSInfo.forOwnEntry(e, {
+    from: 'profile.html',
+    onChange: function(){ renderLibrary(); },
+    onDelete: function(x){
+      _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
+      delete _profEntryMap[x.id];
+      renderLibrary();
+    }
+  });
 }
 
 // Ratings body — shared by profOpenPopup. Core/Bonus rating
@@ -1804,12 +1657,6 @@ function _libBuildRatingsDetail(e) {
     + (e.notes ? '<div class="fd-section-hd" style="margin-top:16px;">Notes</div><div class="fd-notes" style="margin-top:0;padding-top:0;border-top:none;">"'+esc(e.notes)+'"</div>' : '');
 }
 
-function _closeDiscoverPicker() {
-  var ov = document.getElementById('catDiscoverOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
 
 /* ── Action button stubs (implemented in later steps) ── */
 /* rewatchEntry defined in rewatch.js */
