@@ -1038,18 +1038,16 @@ nav {
   .popup-info-label       { font-size:9px; }
 }
 
-/* ── Info Popup (Watching/Watchlist description+breakdown popup) ──
-   Shared here so category.js (which has no <style> block of its own)
-   can use the same popup as library.html/profile.html/profile-view.html. */
-#profInfoOverlay, #mssInfoOverlay {
+/* ── Info popup (info-popup.js → MSSInfo) — the one info popup used on every page ── */
+#mssInfoOverlay {
   position:fixed;inset:0;z-index:902;
   background:rgba(0,0,0,0.72);
   display:flex;align-items:center;justify-content:center;
   padding:16px;box-sizing:border-box;
   opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;
 }
-#profInfoOverlay.open, #mssInfoOverlay.open { opacity:1;pointer-events:auto; }
-#profInfoCard, #mssInfoCard {
+#mssInfoOverlay.open { opacity:1;pointer-events:auto; }
+#mssInfoCard {
   background:var(--bg-2);border:1.5px solid var(--olive-light);
   box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
   width:97%;max-width:640px;max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
@@ -1088,18 +1086,11 @@ nav {
 .pvi-runtime-lbl { font-family:'Manrope',var(--sans);font-weight:500;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px; }
 /* Prominent MSS score — the person's own final rating, not TMDB's. */
 .pvi-score-row { display:flex; align-items:baseline; gap:8px; margin-bottom:16px; }
-.pvi-actions { display:flex;flex-wrap:wrap;gap:10px;padding:0 20px 20px; }
-.pvi-action-btn {
-  flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
-  min-width:110px;
-  padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;font-family:'Manrope',var(--sans);
-  cursor:pointer;text-decoration:none;transition:all .15s;border:0.5px solid var(--olive);
-  background:var(--olive);color:#fff;
-}
-.pvi-action-btn:hover { background:var(--olive-light); border-color:var(--olive-light); color:#fff; }
-.pvi-action-btn.pvi-action-primary { background:var(--olive); color:#fff; border-color:var(--olive); }
-.pvi-action-btn.pvi-action-danger { background:#b91c1c; border-color:#b91c1c; color:#fff; }
-.pvi-action-btn.pvi-action-danger:hover { background:#dc2626; border-color:#dc2626; }
+/* Buttons are the site's .popup-action-btn (solid olive / red danger) via #mssInfoPopupActions */
+#mssInfoCrew .mss-cast { margin-bottom:16px; }
+.mss-info-actions { display:flex; flex-wrap:wrap; gap:10px; padding:0 20px 20px; }
+.mss-info-actions .popup-action-btn { flex:1 1 calc(33.333% - 10px); min-width:130px; font-size:13px; padding:10px 14px; }
+.mss-info-actions .popup-action-btn:disabled { opacity:.55; cursor:default; }
 
 /* ── Discover confirmation picker — lets the person pick the right
    TMDB match instead of auto-navigating to a possibly-wrong title.
@@ -1122,11 +1113,13 @@ nav {
 .cat-disc-close:hover { color:var(--text); }
 .cat-disc-title { font-family:var(--serif); font-size:20px; font-weight:500; margin-bottom:4px; padding-right:24px; }
 .cat-disc-sub { font-size:12.5px; color:var(--text-3); margin-bottom:1rem; }
-.cat-disc-item { display:flex; gap:12px; padding:10px; border-radius:var(--radius-sm); cursor:pointer; align-items:center; transition:background .15s; }
+.cat-disc-item { display:flex; gap:12px; padding:10px; border-radius:var(--radius-sm); cursor:pointer; align-items:center; transition:background .15s;
+  width:100%; text-align:left; background:none; border:none; font:inherit; color:inherit; }
 .cat-disc-item:hover { background:var(--olive-faint); }
-.cat-disc-thumb { width:46px; height:66px; border-radius:5px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.cat-disc-thumb { display:block; width:46px; height:66px; border-radius:5px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
 .cat-disc-thumb img { width:100%; height:100%; object-fit:cover; }
 .cat-disc-info { flex:1; min-width:0; }
+.cat-disc-name, .cat-disc-meta { display:block; }
 .cat-disc-name { font-size:14px; font-weight:500; color:var(--text); }
 .cat-disc-meta { font-size:11.5px; color:var(--text-3); margin-top:2px; }
 .cat-disc-none { padding:1.5rem 0.5rem; text-align:center; color:var(--text-3); font-size:13px; }
@@ -1144,9 +1137,8 @@ nav {
   .pvi-runtime { padding:8px 14px; }
   .pvi-runtime-val { font-size:20px; }
   .pvi-score-val { font-size:26px; }
-  #profInfoCard, #mssInfoCard { width:97%; }
-  .pvi-actions { padding:0 14px 14px;flex-direction:column; }
-  .pvi-action-btn { width:100%;flex:none;font-size:14px;padding:12px 14px; }
+  #mssInfoCard { width:97%; }
+  .mss-info-actions { padding:0 14px 14px; }
   .pvi-close { top:20px; right:16px; }
   /* Ratings popup — full mobile pass across every section: header,
      poster, title, tags/badges, description, score box, ratings
@@ -1598,7 +1590,6 @@ body.notif-sheet-open { overflow:hidden; }
 /* Shared info popup (info-popup.js) — extra bits */
 .mss-info-loading { display:flex; justify-content:center; padding:10px 0 4px; }
 .mss-info-loading .spinner { width:22px; height:22px; }
-#mssInfoActions .pvi-action-btn:disabled { opacity:.55; cursor:default; }
 .mss-cast { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:12px; margin-top:4px; }
 .mss-cast-item { display:flex; flex-direction:column; align-items:center; text-align:center; min-width:0; }
 .mss-cast-photo {
@@ -1609,7 +1600,7 @@ body.notif-sheet-open { overflow:hidden; }
 .mss-cast-photo img { width:100%; height:100%; object-fit:cover; object-position:center 20%; display:block; }
 .mss-cast-photo.is-char img { object-position:center 15%; }
 .mss-cast-char { font-family:var(--sans); font-size:12.5px; font-weight:700; color:var(--text); line-height:1.25; max-width:100%;
-  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:break-word; }
 .mss-cast-actor { font-size:11px; color:var(--text-3); line-height:1.3; margin-top:2px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mss-cast-loading .mss-cast-photo { animation:mssPulse 1.2s ease-in-out infinite; }
 .mss-cast-bar { width:70%; height:10px; border-radius:5px; background:var(--olive-faint); animation:mssPulse 1.2s ease-in-out infinite; }
@@ -2949,35 +2940,30 @@ body.notif-sheet-open { overflow:hidden; }
 .confirm-title { font-family:var(--serif); font-size:24px; font-weight:500; color:var(--text); }
 .confirm-msg   { font-size:13px; color:var(--text-2); line-height:1.6; max-width:260px; }
 .confirm-actions { display:flex; gap:10px; width:100%; margin-top:6px; }
-.confirm-cancel {
-  flex:1; padding:11px;
-  background:transparent; border:1.5px solid var(--border-2);
-  box-shadow:2px 2px 0 var(--border-2);
-  border-radius:var(--radius-sm); color:var(--text-2);
-  font-size:13px; font-weight:500; cursor:pointer; transition:all .15s var(--ease);
-}
-.confirm-cancel:hover  { border-color:var(--border-olive); color:var(--text); }
-.confirm-cancel:active { transform:translate(2px,2px); box-shadow:none; }
+/* Buttons match the site's popup buttons: Cancel = ghost (same as
+   .np-ghost), confirm = solid red like .popup-action-danger
+   (or solid olive with .is-safe, for non-destructive actions). */
+.confirm-cancel,
 .confirm-ok {
-  flex:2; padding:11px;
-  background:rgba(220,38,38,0.1);
-  border:1.5px solid rgba(220,60,60,0.5);
-  box-shadow:3px 3px 0 rgba(160,20,20,0.4);
-  border-radius:var(--radius-sm); color:#f87171;
-  font-size:13px; font-weight:600; cursor:pointer; transition:all .15s var(--ease);
+  padding:11px; border-radius:var(--radius-sm); cursor:pointer;
+  font-family:'Manrope',var(--sans); font-size:13px; font-weight:500;
+  transition:all .15s var(--ease);
 }
-.confirm-ok:hover  { background:rgba(220,38,38,0.2); }
-.confirm-ok:active { transform:translate(3px,3px); box-shadow:none; }
+.confirm-cancel {
+  flex:1; background:transparent; border:1px solid var(--border-2); color:var(--text-2);
+}
+.confirm-cancel:hover { color:var(--text); border-color:var(--border-olive); background:var(--olive-faint); }
+.confirm-ok {
+  flex:2; background:#b91c1c; border:1px solid #b91c1c; color:#fff;
+}
+.confirm-ok:hover { background:#dc2626; border-color:#dc2626; }
+.confirm-ok.is-safe { background:var(--olive); border-color:var(--olive); }
+.confirm-ok.is-safe:hover { background:var(--olive-light); border-color:var(--olive-light); }
+.confirm-cancel:focus-visible,
+.confirm-ok:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 
 /* Light mode confirm adjustments */
 [data-theme="light"] .confirm-card { background:var(--bg-2); }
-[data-theme="light"] .confirm-ok {
-  background:rgba(200,30,30,0.08);
-  border-color:rgba(180,30,30,0.4);
-  color:#c41e1e;
-}
-[data-theme="light"] .confirm-ok:hover { background:rgba(200,30,30,0.15); }
-[data-theme="light"] .confirm-cancel { border-color:var(--border); }
 
 /* Mobile scaling */
 @media(max-width:480px) {
@@ -4737,25 +4723,6 @@ body { font-size:15px; }
 /* ── Profile icon in mobile nav bar ── */
 #navTopProfileBtn { text-decoration:none; }
 #navTopProfileBtn.active { color:var(--olive-light); }
-/* ══════════════════════════════════════
-   Info Popup (watching/queue) — shared
-══════════════════════════════════════ */
-.pvi-overlay {
-  position:fixed;inset:0;z-index:902;
-  background:rgba(0,0,0,0.72);
-  display:flex;align-items:center;justify-content:center;
-  padding:16px;box-sizing:border-box;
-  opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;
-}
-.pvi-overlay.open { opacity:1;pointer-events:auto; }
-.pvi-card {
-  background:var(--bg-2);border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-  width:97%;max-width:640px;max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
-  position:relative;box-sizing:border-box;
-  transform:translateY(18px);transition:transform 260ms var(--ease);
-}
-.pvi-header { display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0; }
 .pv-add-queue-btn { display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:opacity .15s; }
 .pv-add-queue-btn:hover { opacity:.85; }
 
