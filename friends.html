@@ -391,6 +391,7 @@
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/info-popup.js"></script>
+<script src="js/rating-popup.js"></script>
 <script src="js/friend-popups.js"></script>
 <script src="js/sort-filter.js"></script>
 <script>
@@ -447,7 +448,7 @@ function _frOpenEvent(id, type) {
   const e = window._frEntryMap[id]; if (!e) return;
   const p = _frProfiles[e.user_id] || {};
   if (type === 'note' && e.notes && e.notes.trim()) return MSSFriendPop.note(e, p);
-  if (type === 'finished' || type === 'caught_up' || e.status === 'completed' || e.status === 'ongoing') return MSSFriendPop.rating(e, p);
+  if (type === 'finished' || type === 'caught_up' || e.status === 'completed' || e.status === 'ongoing') return MSSRate.forFriend(e, p);
   MSSInfo.fromEntry(e);
 }
 function _frFriendOptions() { return [['', 'Everyone'], ..._frAccepted.map(f => [f.friendId, _frName(f.friendId)])]; }
