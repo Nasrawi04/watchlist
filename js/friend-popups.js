@@ -126,7 +126,7 @@ const MSSFriendPop = (() => {
     document.body.style.overflow = '';
   }
   function _addToWatchlist() { const e = current; closeRating(); if (e) MSSInfo.fromEntry(e); }
-  function _discover() { const e = current; if (!e) return; if (e.tmdb_id && e.tmdb_type) goToTitle(e.tmdb_type, e.tmdb_id); else { closeRating(); MSSInfo.fromEntry(e); } }
+  function _discover() { const e = current; if (!e) return; closeRating(); MSSInfo.discover(e); }
 
   /* ══ Note card + note popup (Notes-page design) ══ */
   function profileAv(p, size) {
