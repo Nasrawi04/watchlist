@@ -6,7 +6,7 @@
    Filter) and the same cards and popups the pages use.
 
      MSSTabs.notes(el, { entries, owner, name, onDelete })
-       Cards from note-popup.js. Tap → Note · Ratings · Info (entry-views.js);
+       Cards from note-popup.js. Tap → Note · Ratings · Info (MSSViews, info-popup.js);
        your own profile: Edit Note saves in place. Someone else's: read-only,
        spoilers blurred.
      MSSTabs.lists(el, { userId, entries, owner, name })
@@ -14,7 +14,7 @@
        Tap → the list popup → View List (list-view.html); on your own
        profile also "Manage in Lists" (editing stays on the Lists page).
 
-   Requires sort-filter.js, note-popup.js, list-popup.js, entry-views.js.
+   Requires sort-filter.js, note-popup.js, list-popup.js, info-popup.js (MSSViews).
 ═══════════════════════════════════════════════════════════════ */
 
 const MSSTabs = (() => {
@@ -80,7 +80,7 @@ const MSSTabs = (() => {
     const ids = withNotes().map(e => e.id);
     MSSNote.reactionCounts(ids).then(c => { N.counts = c; renderNotes(); }).catch(() => {});
   }
-  // Note first, then Ratings and Info — same as the Notes page (entry-views.js)
+  // Note first, then Ratings and Info — same as the Notes page (MSSViews, info-popup.js)
   function openNote(id) {
     const e = N.entries.find(x => x.id === id);
     if (!e) return;
