@@ -391,57 +391,6 @@
 /* ── Profile tab sticky positions ── */
 @media(max-width:1380px) { .pv-tabs, .prof-tabs { top:64px; } }
 
-/* ══ Info Popup (library watching/queue) ══ */
-#pvInfoOverlay {
-  position:fixed;inset:0;z-index:902;
-  background:rgba(0,0,0,0.72);
-  display:flex;align-items:center;justify-content:center;
-  padding:16px;box-sizing:border-box;
-  opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;
-}
-#pvInfoOverlay.open { opacity:1;pointer-events:auto; }
-#pvInfoCard {
-  background:var(--bg-2);border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-  width:97%;max-width:640px;max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
-  position:relative;box-sizing:border-box;
-  transform:translateY(18px);transition:transform 260ms var(--ease);
-}
-.pvi-header { display:flex;align-items:flex-start;gap:16px;padding:20px 20px 0; }
-.pvi-poster {
-  width:clamp(52px,14vw,80px);height:clamp(73px,19.5vw,112px);
-  flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;
-  background:var(--bg-3);display:flex;align-items:center;justify-content:center;
-  box-shadow:var(--shadow);font-family:var(--serif);font-size:28px;color:var(--text-3);
-}
-.pvi-poster img { width:100%;height:100%;object-fit:cover; }
-.pvi-meta-wrap { flex:1;min-width:0;padding-top:2px; }
-.pvi-title { font-family:var(--serif);font-size:clamp(16px,4.5vw,22px);font-weight:500;line-height:1.2;margin-bottom:6px;color:var(--text); }
-.pvi-tags { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:0; }
-.pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;padding:0 0 0 8px;flex-shrink:0;transition:color .15s; }
-.pvi-close:hover { color:var(--text); }
-.pvi-body { padding:16px 20px 20px; }
-.pvi-desc { font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:16px; }
-.pvi-section-label { font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;display:flex;align-items:center;gap:10px; }
-.pvi-section-label::after { content:'';flex:1;height:0.5px;background:var(--border); }
-.pvi-seasons { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px; }
-.pvi-season-chip { display:flex;flex-direction:column;align-items:center;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;min-width:58px;transition:border-color .15s; }
-.pvi-season-chip:hover { border-color:var(--border-olive); }
-.pvi-season-num { font-family:var(--serif);font-size:20px;font-weight:500;color:var(--olive-light);line-height:1; }
-.pvi-season-eps { font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-top:3px;white-space:nowrap; }
-.pvi-runtime { display:inline-flex;align-items:center;gap:10px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;margin-bottom:16px; }
-.pvi-runtime-val { font-family:var(--serif);font-size:24px;font-weight:500;color:var(--olive-light); }
-.pvi-runtime-lbl { font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px; }
-@media(max-width:600px) {
-  .pvi-header { padding:14px 14px 0;gap:12px; }
-  .pvi-body { padding:12px 14px 16px; }
-  .pvi-desc { font-size:12px; }
-  .pvi-season-chip { padding:6px 10px;min-width:46px; }
-  .pvi-season-num { font-size:17px; }
-  .pvi-runtime { padding:8px 14px; }
-  .pvi-runtime-val { font-size:20px; }
-  #pvInfoCard { width:97%; }
-}
 </style>
 </head>
 <body>
@@ -467,6 +416,7 @@ function _trimNotes(text) {
 <script src="js/dashboard.js"></script>
 <script src="js/sort-filter.js"></script>
 <script src="js/rewatch.js"></script>
+<script src="js/info-popup.js"></script>
 <script>
 let _pvMe = null, _pvMeProfile = null;
 let _pvUserId = null, _pvUsername = null, _pvProfile = null;
@@ -721,8 +671,6 @@ function _pvBuildExpansion(e) {
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'Escape') return;
   if (document.getElementById('ratingFilterOverlay')?.classList.contains('open')) { closeRatingFilter(); return; }
-  if (document.getElementById('catDiscoverOverlay')?.classList.contains('open')) { _closeDiscoverPicker(); return; }
-  if (document.getElementById('pvInfoOverlay')?.classList.contains('open')) { closeInfoPopup(); return; }
   if (document.getElementById('pvPopupOverlay')?.classList.contains('open')) { pvClosePopup(); return; }
   // Notes tab popups (these didn't close on Esc)
 });
@@ -778,7 +726,7 @@ function pvOpenPopup(id) {
   document.getElementById('pvPopupBody').innerHTML = _pvBuildExpansion(e);
 
   const discBtn = document.getElementById('pvDiscoverBtn');
-  if (discBtn) discBtn.onclick = function(){ _pvGoDiscover(e, discBtn); };
+  if (discBtn) discBtn.onclick = function(){ MSSInfo.discover(e, discBtn); };
 
   const ov = document.getElementById('pvPopupOverlay');
   ov.style.pointerEvents = 'auto';
@@ -1557,208 +1505,13 @@ async function postLibReply(prefix, entryId, commentId) {
   } catch(err) { showToast('Could not post reply.','err'); if(input) input.disabled=false; }
 }
 
-/* ══ Info Popup for library watching/queue ══ */
-
-function _injectInfoPopup() {
-  if (document.getElementById('pvInfoOverlay')) return;
-  var el = document.createElement('div');
-  el.id = 'pvInfoOverlay';
-  el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;';
-  el.innerHTML = '<div id="pvInfoCard" style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:100%;max-width:min(97vw, 920px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;position:relative;box-sizing:border-box;transform:translateY(18px);transition:transform 260ms var(--ease);">'
-    + '<div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;padding:24px 24px 0;">'
-    + '<div id="pviPoster" style="width:150px;height:225px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);"></div>'
-    + '<div style="flex:1;min-width:0;padding-top:4px;">'
-    + '<div id="pviTitle" class="cg-popup-title" style="font-family:\'Oswald\',var(--sans);font-weight:600;line-height:1.15;color:var(--text);"></div>'
-    + '<div id="pviTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>'
-    + '<div id="pviMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;"></div>'
-    + '<div id="pviDetails" style="margin-top:4px;"></div>'
-    + '</div>'
-    + '<div id="pviDesc" class="fd-description cg-desc-block" style="margin:16px 0 0;"></div>'
-    + '<button class="cg-close-btn" onclick="closeInfoPopup()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;flex-shrink:0;transition:color .15s;position:absolute;z-index:1;" onmouseenter="this.style.color=\'var(--text)\'" onmouseleave="this.style.color=\'var(--text-3)\'">&#x2715;</button>'
-    + '</div>'
-    + '<div id="pviPopupActions" style="padding:20px 24px 24px;"></div>'
-    + '</div>';
-  el.addEventListener('click', function(ev){ if(ev.target===el) closeInfoPopup(); });
-  document.body.appendChild(el);
-}
-
-function _pviNarrowObserver() {
-  var card = document.getElementById('pvInfoCard');
-  if (!card || card._cgObserverAttached) return;
-  card._cgObserverAttached = true;
-  var apply = function(){ card.classList.toggle('cg-narrow', card.getBoundingClientRect().width <= 600); };
-  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(apply).observe(card);
-  else window.addEventListener('resize', apply);
-  apply();
-}
-
-var _pvInfoId = null;
+/* ══ Info popup: the shared MSSInfo popup (info-popup.js) — Add to
+   Watchlist (notifies your friend) · Discover ══ */
 var _pvFavLists = [];
 
 function openInfoPopup(id) {
-  try {
-  _injectInfoPopup();
-  _pviNarrowObserver();
   var e = _pvEntries.find(function(en){ return en.id===id; });
-  if (!e) { console.warn('openInfoPopup: entry not found for id', id, '_pvEntries length:', _pvEntries.length); return; }
-  _pvInfoId = id;
-  var esc2 = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-
-  var pEl = document.getElementById('pviPoster');
-  pEl.innerHTML = safeURL(e.poster_url) ? '<img src="'+safeURL(e.poster_url)+'" loading="lazy">' : esc2((e.title||'?')[0].toUpperCase());
-
-  var isMovie = e.cat==='movies' || (e.ratings && e.ratings._media_type==='movie');
-  var start = e.year || null;
-  var end = (e.ratings && e.ratings._completion_year) || null;
-  var yrStr = '';
-  if (start) {
-    if (isMovie || String(end) === String(start)) yrStr = ' <span style="font-family:var(--bebas);font-size:0.65em;font-weight:400;color:var(--text-2);vertical-align:middle;">'+start+'</span>';
-    else yrStr = ' <span style="font-family:var(--bebas);font-size:0.65em;font-weight:400;color:var(--text-2);vertical-align:middle;">'+start+'\u2013'+(end||'Present')+'</span>';
-  }
-  document.getElementById('pviTitle').innerHTML = esc2(e.title) + yrStr;
-
-  var catIsMovie = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-  var catLabel = CAT_META[e.cat] ? CAT_META[e.cat].label : '';
-  document.getElementById('pviTags').innerHTML =
-    (catLabel ? '<span class="'+(catIsMovie ? 'type-label' : 'type-label type-label-tv')+'" style="font-family:\'Manrope\',var(--sans);font-weight:500;">'+esc2(catLabel)+'</span>' : '') +
-    (e.genres||[]).map(function(g){ return '<span class="w-ep-badge" style="font-family:\'Manrope\',var(--sans);font-weight:500;">'+esc2(String(g))+'</span>'; }).join('') +
-    (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
-
-  // No runtime / episode-count tag — the details below already show it
-  var metaBadge = '';
-  document.getElementById('pviMetaRow').innerHTML = metaBadge;
-  document.getElementById('pviDetails').innerHTML = '';
-
-  var dEl = document.getElementById('pviDesc');
-  if (e.description) { dEl.textContent = e.description; dEl.style.display = ''; }
-  else { dEl.style.display = 'none'; }
-
-  // Add to Queue + Discover
-  document.getElementById('pviPopupActions').innerHTML =
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-    +'<button onclick="infoAddToQueue()" class="popup-action-btn">'
-    +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'
-    +'Add to Watchlist</button>'
-    +'<button id="pvDiscoverBtn" class="popup-action-btn">'
-    +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'
-    +'Discover</button>'
-    +'</div>';
-  var _pvDiscBtn = document.getElementById('pvDiscoverBtn');
-  if (_pvDiscBtn) _pvDiscBtn.onclick = function(){ _pvGoDiscover(e, _pvDiscBtn); };
-
-  var ov = document.getElementById('pvInfoOverlay');
-  ov.style.pointerEvents = 'auto';
-  ov.style.opacity = '1';
-  document.getElementById('pvInfoCard').style.transform = 'translateY(0)';
-  document.body.style.overflow = 'hidden';
-  } catch(err) { console.error('openInfoPopup error:', err); }
-}
-
-function closeInfoPopup() {
-  var ov = document.getElementById('pvInfoOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  ov.style.opacity = '0';
-  ov.style.pointerEvents = 'none';
-  document.getElementById('pvInfoCard').style.transform = 'translateY(18px)';
-  document.body.style.overflow = '';
-  _pvInfoId = null;
-}
-
-async function _pvGoDiscover(e, btn) {
-  if (e.tmdb_id && e.tmdb_type) {
-    goToTitle(e.tmdb_type, e.tmdb_id);
-    return;
-  }
-  if (typeof _tmdbSearch !== 'function') {
-    showToast('Discover is unavailable right now.', 'err');
-    return;
-  }
-  var origLabel = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = 'Searching…';
-  try {
-    var isMovie = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-    var results = await _tmdbSearch(e.title);
-    var wantType = isMovie ? 'movie' : 'tv';
-    var sorted = results.slice().sort(function(a, b) {
-      return (a.media_type === wantType ? 0 : 1) - (b.media_type === wantType ? 0 : 1);
-    });
-    closeInfoPopup();
-    _openDiscoverPicker(sorted, e.title);
-  } catch (err) {
-    showToast('Error searching TMDB.', 'err');
-    console.error(err);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = origLabel;
-  }
-}
-
-function _injectDiscoverPicker() {
-  if (document.getElementById('catDiscoverOverlay')) return;
-  var el = document.createElement('div');
-  el.id = 'catDiscoverOverlay';
-  el.innerHTML = '<div id="catDiscoverCard">'
-    + '<button class="cat-disc-close" onclick="_closeDiscoverPicker()">✕</button>'
-    + '<div class="cat-disc-title">Which one is it?</div>'
-    + '<div class="cat-disc-sub" id="catDiscoverSub"></div>'
-    + '<div id="catDiscoverList"></div>'
-    + '</div>';
-  el.addEventListener('click', function(ev){ if (ev.target === el) _closeDiscoverPicker(); });
-  document.body.appendChild(el);
-}
-
-function _openDiscoverPicker(results, entryTitle) {
-  _injectDiscoverPicker();
-  var esc3 = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  document.getElementById('catDiscoverSub').textContent = 'Matches for "'+entryTitle+'" — pick the right one';
-
-  var listEl = document.getElementById('catDiscoverList');
-  if (!results.length) {
-    listEl.innerHTML = '<div class="cat-disc-none">No matches found on TMDB.</div>';
-  } else {
-    listEl.innerHTML = results.map(function(r, i) {
-      var isMovie = r.media_type === 'movie';
-      var rTitle  = isMovie ? r.title : r.name;
-      var year    = ((isMovie ? r.release_date : r.first_air_date) || '').split('-')[0];
-      var thumb   = r.poster_path ? TMDB_IMG + r.poster_path : null;
-      return '<div class="cat-disc-item" data-i="'+i+'">'
-        + '<div class="cat-disc-thumb">'+(thumb ? '<img src="'+thumb+'" loading="lazy">' : '')+'</div>'
-        + '<div class="cat-disc-info">'
-        + '<div class="cat-disc-name">'+esc3(rTitle || '—')+'</div>'
-        + '<div class="cat-disc-meta">'+(isMovie ? 'Movie' : 'TV Show')+(year ? ' · '+year : '')+'</div>'
-        + '</div></div>';
-    }).join('');
-    listEl.querySelectorAll('.cat-disc-item').forEach(function(elm, i) {
-      elm.addEventListener('click', function() {
-        var r = results[i];
-        _closeDiscoverPicker();
-        goToTitle(r.media_type === 'movie' ? 'movie' : 'tv', r.id);
-      });
-    });
-  }
-
-  var ov = document.getElementById('catDiscoverOverlay');
-  ov.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function _closeDiscoverPicker() {
-  var ov = document.getElementById('catDiscoverOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-function infoAddToQueue() {
-  var e = _pvEntries.find(function(en){ return en.id===_pvInfoId; });
-  if (!e) return;
-  closeInfoPopup();
-  try { sessionStorage.setItem('mssQueuedFrom', JSON.stringify({ owner: _pvUserId, entry: e.id, title: e.title, t: Date.now() })); } catch(_) {}
-  sessionStorage.setItem('addModalTitle', e.title);
-  sessionStorage.setItem('addModalCat', e.cat);
-  window.location.href = (CAT_META[e.cat]&&CAT_META[e.cat].page)||'index.html';
+  if (e) MSSInfo.fromEntry(e);
 }
 </script>
 
