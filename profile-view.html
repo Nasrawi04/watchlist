@@ -799,7 +799,7 @@ function renderPvLibrary() {
       var ep = isM?rt:(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
       var typeCls = (isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card" style="cursor:pointer;" onclick="openInfoPopup(\''+e.id+'\')">'+'<div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')
-        +(ip?'<div style="position:absolute;inset:0;background:'+(ipUN?'rgba(38,78,120,0.62)':'rgba(74,103,65,0.58)')+';display:flex;align-items:center;justify-content:center;z-index:1;"><span style="font-size:10px;font-weight:700;color:#fff;text-align:center;line-height:1.5;text-transform:uppercase;letter-spacing:1px;">'+(ipUN?'Up<br>Next':'Taking<br>a Break')+'</span></div>':'')
+        +(ip?mssHoldHTML(e):'')
         +'<span class="'+typeCls+'">'+(isM?'Movie':'TV Show')+'</span>'
         +(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
         +'</div><div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
@@ -818,7 +818,7 @@ function renderPvLibrary() {
       var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
       var cs=ip?'background:var(--olive-faint);border-color:var(--border-olive);':''
       return '<div class="fv-w-card fv-w-card-no-hover clickable" style="'+cs+'" onclick="openInfoPopup(\''+e.id+'\')">' 
-        +'<div class="fv-w-poster">'+posterHTML(e)+(ip?'<div style="position:absolute;inset:0;background:'+(ipUN?'rgba(38,78,120,0.62)':'rgba(74,103,65,0.55)')+';display:flex;align-items:center;justify-content:center;border-radius:10px;"><span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.3;">'+(ipUN?'Up<br>Next':'Taking<br>a Break')+'</span></div>':'')+'</div>'
+        +'<div class="fv-w-poster">'+posterHTML(e)+(ip?mssHoldHTML(e):'')+'</div>'
         +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-size:12px;font-weight:400;color:var(--text-3);flex-shrink:0;">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+'</div>'
         +(ep?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+ep+'</span></div>':'')+
         (rt?'<div class="fv-w-ep">'+getTypeBadge(e,'friend')+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')+
