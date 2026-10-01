@@ -79,7 +79,7 @@ const MSSFriendPop = (() => {
     const n = words(e.notes);
     const body = `<blockquote class="np-quote">&ldquo;${esc(e.notes.trim())}&rdquo;</blockquote>`;
     const card = document.getElementById('snPopupCard');
-    card.innerHTML = `${typeof MSSViews !== 'undefined' ? MSSViews.barFor('note', e.id) : ''}
+    card.innerHTML = `${MSSViews.barFor('note', e.id)}
       <div class="np-hero"><div class="np-hero-blur" id="frNoteHero"></div><div class="np-hero-fade"></div>
         <button class="np-close" onclick="MSSFriendPop.closeNote()" aria-label="Close">&#x2715;</button></div>
       <div class="np-head">
