@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   friend-popups.js — popups for a FRIEND's entry (read-only) (v629)
+   friend-popups.js — popups for a FRIEND's entry (read-only) (v642)
 
    (Their ratings popup is the shared MSSRate.forFriend — rating-popup.js.)
    MSSFriendPop.note(entry, profile)     — the Notes-page popup (backdrop header,
@@ -79,7 +79,7 @@ const MSSFriendPop = (() => {
     const n = words(e.notes);
     const body = `<blockquote class="np-quote">&ldquo;${esc(e.notes.trim())}&rdquo;</blockquote>`;
     const card = document.getElementById('snPopupCard');
-    card.innerHTML = `
+    card.innerHTML = `${typeof MSSViews !== 'undefined' ? MSSViews.barFor('note', e.id) : ''}
       <div class="np-hero"><div class="np-hero-blur" id="frNoteHero"></div><div class="np-hero-fade"></div>
         <button class="np-close" onclick="MSSFriendPop.closeNote()" aria-label="Close">&#x2715;</button></div>
       <div class="np-head">
@@ -93,8 +93,7 @@ const MSSFriendPop = (() => {
       <div class="np-stats"><span><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span></div>
       <div class="np-body">${mssIsSpoiler(e) ? mssSpoilerHTML(body) : body}</div>
       <div class="np-footer"><div class="np-actions" id="frNotePopupActions">
-        <button class="popup-action-btn np-grow" onclick="MSSFriendPop.closeNote();MSSRate.forFriend(window._frEntryMap?.[${attrJSON(e.id)}], ${attrJSON(p || {})})">${icon('sparkles', 14)} See their rating</button>
-        <button class="popup-action-btn np-ghost" onclick="MSSFriendPop.closeNote()">Close</button>
+        <button class="popup-action-btn np-ghost np-grow" onclick="MSSFriendPop.closeNote()">Close</button>
       </div></div>`;
     card.classList.toggle('np-long', n > 120);
     const ov = document.getElementById('snPopupOverlay');
