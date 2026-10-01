@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'mss-v613';
+const CACHE_VERSION = 'mss-v631';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -54,7 +54,9 @@ const STATIC_ASSETS = [
   'js/create-card.js',
   'js/export.js',
   'js/info-popup.js',
+  'js/rating-popup.js',
   'js/dashboard.js',
+  'js/friend-popups.js',
   'manifest.json',
   'icons/logo-nav.png',
   'icons/icon-192.png',
