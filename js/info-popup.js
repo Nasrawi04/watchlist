@@ -1,46 +1,59 @@
 /* ═══════════════════════════════════════════════════════════════
-   info-popup.js — Shared "info" popup (v610)
+   info-popup.js — THE info popup, used on every page (v627)
 
-   Opens when you tap a title on Discover, See All lists, or a list's
-   View List page — instead of jumping straight to title.html. Same look
-   as the existing info popups (poster, title, type + genre tags,
-   description, runtime / season breakdown), with:
-     • Add to Watchlist   — adds it to your Watchlist in one tap
-                        (or "In Your Library · View" if you already have it)
-     • Discover       — opens the full title page
+   One popup for every title anywhere on the site: poster, title/years,
+   type + genre + TMDB score tags, description, runtime / season
+   breakdown, Director (movies) / Created By (TV) and Top Cast with
+   photos. Only the buttons change, depending on whose title it is:
 
-   Everything page-specific is in INFO_POPUP_CONFIG below, so the popup
-   can be changed later without touching the pages that use it.
+     Someone else's title / a TMDB title → Add to Watchlist · Discover
+     Your own entry → Start Watching · Up Next (when they apply) · Edit ·
+                      Discover · Discover Card · Delete
+
+   Also owns the shared "Discover" action: a linked title opens its
+   title page; an unlinked one searches TMDB and shows the "Which one
+   is it?" picker.
 
    Usage:
-     MSSInfo.open({ tmdb_id, media_type, title, year, poster_url,
-                    genres, overview, cat, genre_ids, origin_country,
-                    original_language })
-     MSSInfo.fromDiscover(item)   // Discover-shaped item
-     MSSInfo.fromEntry(entry)     // a library entry (list pages)
-   Requires config.js (icon, escHTML, safeURL), nav.js (tmdbFetch, TMDB_*),
-   db.js (quickCreate, getOwnEntryByTmdb, getCurrentUser).
+     MSSInfo.fromDiscover(item)            // Discover-shaped TMDB item
+     MSSInfo.fromEntry(entry)              // someone else's library entry
+     MSSInfo.forOwnEntry(entry, {          // your own entry
+       onChange(entry),                    //   re-render after a status change
+       onDelete(entry),                    //   drop it from the page's arrays + re-render
+       handlers: { start, upnext },        //   optional: page's own status functions (id) => …
+       from: 'library.html',               //   where Edit returns to (defaults to this page)
+     })
+     MSSInfo.discover(entryOrItem, btn)    // the Discover action on its own
+     MSSInfo.open(item, opts) / MSSInfo.close()
+
+   Requires config.js (icon, escHTML, safeURL, attrJSON, CAT_META,
+   showConfirm), nav.js (tmdbFetch, TMDB_*, mssFetchCast, _tmdbSearch,
+   _refreshTmdbSeasonData), db.js (quickCreate, getOwnEntryByTmdb,
+   updateProgress, deleteEntry, getCurrentUser).
 ═══════════════════════════════════════════════════════════════ */
 
 const INFO_POPUP_CONFIG = {
-  // Buttons, left → right. Remove / reorder / add here.
-  actions: ['queue', 'discover'],
-  // Status used by "Add to Watchlist"
-  addStatus: 'queue',
-  // Show the TMDB community rating in the tags row
-  showTmdbScore: true,
-  // Top cast row (character first, actor / voice actor underneath)
-  showCast: true,
+  // Buttons, left → right. Remove / reorder here.
+  actions: ['queue', 'discover'],                                         // someone else's / TMDB title
+  ownerActions: ['start', 'upnext', 'edit', 'discover', 'card', 'delete'], // your own entry
+  addStatus: 'queue',      // status used by "Add to Watchlist"
+  showTmdbScore: true,     // TMDB community rating in the tags row
+  showCrew: true,          // Director (movies) / Created By (TV)
+  crewCount: 2,
+  showCast: true,          // Top Cast (character first, actor underneath)
   castCount: 5,
 };
 
 const MSSInfo = (() => {
-  const detailCache = {};          // 'movie:123' → TMDB details
+  const detailCache = {};          // 'movie:123' → TMDB details (+ credits for movies)
   let current = null;              // the item currently shown
+  let opts = {};                   // options for the current item
   let token = 0;                   // guards against out-of-order loads
 
   const esc = s => escHTML(s == null ? '' : s);
   const isMovieType = t => t === 'movie';
+  const entryIsMovie = e => e.cat === 'movies' || e.ratings?._media_type === 'movie';
+  const thisFile = () => location.pathname.split('/').pop() || 'index.html';
 
   /* ── Category for a new library entry: Anime / Cartoons / Movie / TV ── */
   function guessCat(it, d) {
@@ -66,175 +79,268 @@ const MSSInfo = (() => {
             <div class="pvi-title" id="mssInfoTitle"></div>
             <div class="pvi-tags" id="mssInfoTags"></div>
           </div>
-          <button class="pvi-close" onclick="MSSInfo.close()" aria-label="Close">✕</button>
+          <button type="button" class="pvi-close" onclick="MSSInfo.close()" aria-label="Close">✕</button>
         </div>
         <div class="pvi-body">
           <div class="pvi-desc" id="mssInfoDesc"></div>
           <div id="mssInfoDetails"></div>
+          <div id="mssInfoCrew"></div>
           <div id="mssInfoCast"></div>
         </div>
-        <div class="pvi-actions" id="mssInfoActions"></div>
+        <div class="mss-info-actions" id="mssInfoPopupActions"></div>
       </div>`;
     el.addEventListener('click', ev => { if (ev.target === el) close(); });
     document.body.appendChild(el);
     document.addEventListener('keydown', ev => {
-      if (ev.key !== 'Escape' || !el.classList.contains('open')) return;
+      if (ev.key !== 'Escape') return;
       if (document.getElementById('confirmOverlay')?.classList.contains('open')) return;
-      close();
+      if (document.getElementById('catDiscoverOverlay')?.classList.contains('open')) { closePicker(); return; }
+      if (el.classList.contains('open')) close();
     });
   }
 
   /* ── Pieces ── */
   function titleHTML(it, d) {
-    const movie = isMovieType(it.media_type);
-    const start = it.year || ((movie ? d?.release_date : d?.first_air_date) || '').slice(0, 4);
-    let yr = start || '';
-    if (!movie && start && d) {
-      const end = (d.status === 'Ended' || d.status === 'Canceled') ? (d.last_air_date || '').slice(0, 4) : '';
-      yr = end && end !== start ? `${start}–${end}` : (end ? start : `${start}–Present`);
+    const e = it.entry, movie = isMovieType(it.media_type);
+    let yr = '';
+    if (e) {
+      // Your saved years win (start → completion year, or "Present")
+      const start = e.year || '', end = e.ratings?._completion_year || '';
+      yr = !start ? '' : (movie || String(end) === String(start)) ? start : `${start}–${end || 'Present'}`;
+    } else {
+      const start = it.year || ((movie ? d?.release_date : d?.first_air_date) || '').slice(0, 4);
+      yr = start || '';
+      if (!movie && start && d) {
+        const end = (d.status === 'Ended' || d.status === 'Canceled') ? (d.last_air_date || '').slice(0, 4) : '';
+        yr = end && end !== start ? `${start}–${end}` : (end ? start : `${start}–Present`);
+      }
     }
-    return `${esc(it.title)}${yr ? ` <span class="pvi-title-year" style="font-size:0.6em;vertical-align:middle;">${esc(yr)}</span>` : ''}`;
+    return `${esc(it.title)}${yr ? ` <span class="pvi-title-year">${esc(yr)}</span>` : ''}`;
   }
 
   function tagsHTML(it, d) {
     const cat = it.cat || guessCat(it, d);
     const movie = isMovieType(it.media_type);
     const label = (typeof CAT_META !== 'undefined' && CAT_META[cat]?.label) || (movie ? 'Movie' : 'TV Show');
-    const genres = d ? (d.genres || []).map(g => g.name) : (it.genres || []);
+    const genres = (it.entry && it.genres?.length) ? it.genres : d ? (d.genres || []).map(g => g.name) : (it.genres || []);
     const score = INFO_POPUP_CONFIG.showTmdbScore ? (d?.vote_average || it.score) : null;
     return `<span class="${movie ? 'type-label' : 'type-label type-label-tv'}">${esc(label)}</span>`
       + genres.slice(0, 4).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('')
       + (score ? `<span class="w-ep-badge" title="TMDB rating">★ ${Number(score).toFixed(1)}</span>` : '');
   }
 
-  function detailsHTML(it, d) {
-    if (!d) return `<div class="mss-info-loading"><div class="spinner"></div></div>`;
+  const runtimeBox = (val, lbl) => `<div class="pvi-meta-row"><div class="pvi-runtime"><div class="pvi-runtime-val">${val}</div><div class="pvi-runtime-lbl">${lbl}</div></div></div>`;
+  const seasonChips = list => `<div class="pvi-section-label">TV Show Breakdown</div><div class="pvi-seasons">${list.map(([n, eps]) =>
+    `<div class="pvi-season-chip"><div class="pvi-season-num">S${n}</div><div class="pvi-season-eps">${eps ? `${eps} eps` : `S${n}`}</div></div>`).join('')}</div>`;
+
+  // From a library entry (your saved breakdown / runtime)
+  function entryDetailsHTML(e) {
+    if (entryIsMovie(e)) {
+      const h = Number(e.runtime_h) || 0, m = Number(e.runtime_m) || 0;
+      return (h || m) ? runtimeBox(h ? `${h}h ${m}m` : `${m}m`, 'Movie Runtime') : '';
+    }
+    const bd = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
+    const total = bd.length || Number(e.total_seasons) || 0;
+    if (total) return seasonChips(Array.from({ length: total }, (_, i) => [i + 1, bd[i] || null]));
+    return e.total_eps ? runtimeBox(e.total_eps, 'Total Episodes') : '';
+  }
+  // From TMDB
+  function tmdbDetailsHTML(it, d) {
     if (isMovieType(it.media_type)) {
       if (!d.runtime) return '';
       const h = Math.floor(d.runtime / 60), m = d.runtime % 60;
-      return `<div class="pvi-meta-row"><div class="pvi-runtime"><div class="pvi-runtime-val">${h ? `${h}h ${m}m` : `${m}m`}</div><div class="pvi-runtime-lbl">Movie Runtime</div></div></div>`;
+      return runtimeBox(h ? `${h}h ${m}m` : `${m}m`, 'Movie Runtime');
     }
     const seasons = (d.seasons || []).filter(s => s.season_number > 0 && s.episode_count > 0);
-    if (seasons.length) {
-      return `<div class="pvi-section-label">TV Show Breakdown</div><div class="pvi-seasons">${seasons.map(s =>
-        `<div class="pvi-season-chip"><div class="pvi-season-num">S${s.season_number}</div><div class="pvi-season-eps">${s.episode_count} eps</div></div>`).join('')}</div>`;
-    }
-    return d.number_of_episodes
-      ? `<div class="pvi-meta-row"><div class="pvi-runtime"><div class="pvi-runtime-val">${d.number_of_episodes}</div><div class="pvi-runtime-lbl">Total Episodes</div></div></div>` : '';
+    if (seasons.length) return seasonChips(seasons.map(s => [s.season_number, s.episode_count]));
+    return d.number_of_episodes ? runtimeBox(d.number_of_episodes, 'Total Episodes') : '';
+  }
+  function detailsHTML(it, d, loading) {
+    const fromEntry = it.entry ? entryDetailsHTML(it.entry) : '';
+    if (fromEntry) return fromEntry;
+    if (d) return tmdbDetailsHTML(it, d);
+    return loading ? `<div class="mss-info-loading"><div class="spinner"></div></div>` : '';
   }
 
-  /* ── Top cast ── */
-  function castHTML(cast) {
-    if (!cast.length) return '';
-    return `<div class="pvi-section-label">Top Cast</div>
-      <div class="mss-cast">${cast.slice(0, INFO_POPUP_CONFIG.castCount).map(c => {
-        const main = c.character || c.actor, sub = c.character ? c.actor : '';
-        const ph = safeURL(c.photo);
-        return `<div class="mss-cast-item">
-          <div class="mss-cast-photo${c.isCharacterImage ? ' is-char' : ''}">${ph
-            ? `<img src="${ph}" alt="" loading="lazy" onerror="mssImgError(this)" data-letter="${esc((main || '?')[0])}">`
-            : esc((main || '?')[0].toUpperCase())}</div>
-          <div class="mss-cast-char">${esc(main)}</div>
-          ${sub ? `<div class="mss-cast-actor">${esc(sub)}</div>` : ''}
-        </div>`;
-      }).join('')}</div>`;
+  /* ── People rows (Director / Created By, Top Cast) — same circle cards ── */
+  function personHTML(main, sub, photo, isChar) {
+    const ph = safeURL(photo);
+    return `<div class="mss-cast-item">
+      <div class="mss-cast-photo${isChar ? ' is-char' : ''}">${ph
+        ? `<img src="${ph}" alt="" loading="lazy" onerror="mssImgError(this)" data-letter="${esc((main || '?')[0])}">`
+        : esc((main || '?')[0].toUpperCase())}</div>
+      <div class="mss-cast-char">${esc(main)}</div>
+      ${sub ? `<div class="mss-cast-actor">${esc(sub)}</div>` : ''}
+    </div>`;
   }
+  const skeleton = (label, n) => `<div class="pvi-section-label">${label}</div><div class="mss-cast mss-cast-loading">${'<div class="mss-cast-item"><div class="mss-cast-photo"></div><div class="mss-cast-bar"></div></div>'.repeat(n)}</div>`;
+
+  function crewHTML(it, d) {
+    if (!INFO_POPUP_CONFIG.showCrew || !d) return '';
+    const movie = isMovieType(it.media_type);
+    const seen = new Set();
+    const people = (movie ? (d.credits?.crew || []).filter(c => c.job === 'Director') : (d.created_by || []))
+      .filter(p => p.name && !seen.has(p.id) && seen.add(p.id))
+      .slice(0, INFO_POPUP_CONFIG.crewCount);
+    if (!people.length) return '';
+    const role = movie ? 'Director' : 'Creator';
+    return `<div class="pvi-section-label">${movie ? 'Directed By' : 'Created By'}</div>
+      <div class="mss-cast">${people.map(p => personHTML(p.name, role, p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : null, false)).join('')}</div>`;
+  }
+
   async function loadCast(it, d, my) {
     const el = document.getElementById('mssInfoCast');
     if (!INFO_POPUP_CONFIG.showCast || !it.tmdb_id || !el) return;
     const genreIds = (d?.genres || []).map(g => g.id).concat(it.genre_ids || []);
     const animated = genreIds.includes(16) || (it.genres || []).includes('Animation') || it.cat === 'anime' || it.cat === 'cartoons';
-    el.innerHTML = `<div class="pvi-section-label">Top Cast</div><div class="mss-cast mss-cast-loading">${'<div class="mss-cast-item"><div class="mss-cast-photo"></div><div class="mss-cast-bar"></div></div>'.repeat(INFO_POPUP_CONFIG.castCount)}</div>`;
     const cast = await mssFetchCast({
       tmdb_id: it.tmdb_id, tmdb_type: it.media_type, title: it.title || d?.title || d?.name,
       year: it.year || ((d?.release_date || d?.first_air_date || '').slice(0, 4)), animated,
       origin_country: d?.origin_country || it.origin_country, original_language: d?.original_language || it.original_language,
     }).catch(() => []);
     if (my !== token) return;
-    el.innerHTML = castHTML(cast);
+    el.innerHTML = cast.length
+      ? `<div class="pvi-section-label">Top Cast</div><div class="mss-cast">${cast.slice(0, INFO_POPUP_CONFIG.castCount)
+          .map(c => personHTML(c.character || c.actor, c.character ? c.actor : '', c.photo, c.isCharacterImage)).join('')}</div>`
+      : '';
   }
+
+  /* ── Buttons ── */
+  const btn = (key, ico, label, extra = '') =>
+    `<button type="button" class="popup-action-btn${extra}" data-act="${key}" onclick="MSSInfo._act('${key}', this)">${icon(ico, 14)} ${label}</button>`;
 
   function actionsHTML(it, own, user) {
-    const btns = {
+    const e = opts.owner ? it.entry : null;
+    const B = {
       queue: () => {
-        if (!it.tmdb_id) return '';
-        if (!user) return `<a class="pvi-action-btn" href="login.html" style="text-decoration:none;">${icon('plus', 14)} Sign in to add</a>`;
-        if (own === undefined) return `<button class="pvi-action-btn" disabled>${icon('plus', 14)} Add to Watchlist</button>`;
-        if (own) return `<button class="pvi-action-btn" onclick="goToDetail(${attrJSON(own.id)}, location.pathname.split('/').pop() || 'index.html')">${icon('check', 14)} In Your Library · View</button>`;
-        return `<button class="pvi-action-btn" id="mssInfoQueueBtn" onclick="MSSInfo.addToQueue()">${icon('plus', 14)} Add to Watchlist</button>`;
+        if (!user) return `<a class="popup-action-btn" href="login.html" style="text-decoration:none;">${icon('plus', 14)} Sign in to add</a>`;
+        if (own === undefined) return `<button type="button" class="popup-action-btn" disabled>${icon('plus', 14)} Add to Watchlist</button>`;
+        if (own) return `<button type="button" class="popup-action-btn" onclick="goToDetail(${attrJSON(own.id)}, ${attrJSON(thisFile())})">${icon('check', 14)} In Your Library · View</button>`;
+        return btn('queue', 'plus', 'Add to Watchlist');
       },
-      discover: () => it.tmdb_id
-        ? `<button class="pvi-action-btn pvi-action-primary" onclick="MSSInfo.close();goToTitle(${attrJSON(it.media_type)}, ${Number(it.tmdb_id)})">${icon('search', 14)} Discover</button>` : '',
+      discover: () => (it.tmdb_id || it.title) ? btn('discover', 'search', 'Discover') : '',
+      start:  () => e && (e.status === 'queue' || e.status === 'up_next') ? btn('start', 'play', 'Start Watching') : '',
+      upnext: () => e && e.status === 'queue' ? btn('upnext', 'clock', 'Up Next') : '',
+      edit:   () => e ? btn('edit', 'edit', 'Edit') : '',
+      card:   () => e && typeof createShareCard === 'function' ? btn('card', 'image', 'Discover Card') : '',
+      delete: () => e ? btn('delete', 'trash', 'Delete', ' popup-action-danger') : '',
     };
-    return INFO_POPUP_CONFIG.actions.map(k => btns[k] ? btns[k]() : '').join('');
+    const keys = opts.actions || (opts.owner ? INFO_POPUP_CONFIG.ownerActions : INFO_POPUP_CONFIG.actions);
+    return keys.map(k => B[k] ? B[k]() : '').join('');
   }
 
-  function render(it, d, own, user) {
-    const poster = safeURL(d?.poster_path ? TMDB_FULL + d.poster_path : it.poster_url);
+  async function act(key, el) {
+    const it = current, e = it?.entry;
+    if (!it) return;
+    const user = window._navUser || null;
+    if (key === 'queue') return addToQueue(el);
+    if (key === 'discover') return discover(e || it, el);
+    if (!e) return;
+    if (key === 'edit') { goToDetail(e.id, opts.from || thisFile()); return; }
+    if (key === 'card') { close(); createShareCard(e.id, 3, true); return; }
+    if (key === 'delete') {
+      const ok = await showConfirm({ title: 'Delete entry?', message: `"${e.title || 'This entry'}" will be permanently removed.`, confirmText: 'Delete', iconName: 'trash' });
+      if (!ok) return;
+      try {
+        await deleteEntry(e.id, user?.id || (await getCurrentUser()).id);
+        close();
+        opts.onDelete?.(e);
+        showToast('Deleted.');
+      } catch (err) { console.error(err); showToast('Error deleting entry.', 'err'); }
+      return;
+    }
+    if (key === 'start' || key === 'upnext') {
+      const handler = opts.handlers?.[key];
+      close();
+      if (handler) return handler(e.id);
+      // Default: just change the status
+      try {
+        const status = key === 'start' ? 'watching' : 'up_next';
+        await updateProgress(e.id, user?.id || (await getCurrentUser()).id, { status });
+        e.status = status;
+        showToast(key === 'start' ? 'Started watching!' : 'Added to Up Next!');
+        opts.onChange?.(e);
+      } catch (err) { console.error(err); showToast('Error updating. Please try again.', 'err'); }
+    }
+  }
+
+  function render(it, d, own, user, loading) {
+    const poster = safeURL(it.entry ? (it.poster_url || (d?.poster_path && TMDB_FULL + d.poster_path)) : (d?.poster_path ? TMDB_FULL + d.poster_path : it.poster_url));
     document.getElementById('mssInfoPoster').innerHTML = poster
       ? `<img src="${poster}" alt="" onerror="mssImgError(this)" data-letter="${esc((it.title || '?')[0])}">`
       : esc((it.title || '?')[0].toUpperCase());
     document.getElementById('mssInfoTitle').innerHTML = titleHTML(it, d);
     document.getElementById('mssInfoTags').innerHTML = tagsHTML(it, d);
-    const desc = (d?.overview || it.overview || '').trim();
+    const desc = ((it.entry ? it.overview || d?.overview : d?.overview || it.overview) || '').trim();
     const dEl = document.getElementById('mssInfoDesc');
-    dEl.textContent = desc || (d ? 'No description available.' : '');
+    dEl.textContent = desc || (loading ? '' : 'No description available.');
     dEl.style.color = desc ? '' : 'var(--text-3)';
-    document.getElementById('mssInfoDetails').innerHTML = it.tmdb_id ? detailsHTML(it, d) : '';
-    if (!d) document.getElementById('mssInfoCast').innerHTML = '';
-    document.getElementById('mssInfoActions').innerHTML = actionsHTML(it, own, user);
+    document.getElementById('mssInfoDetails').innerHTML = detailsHTML(it, d, loading);
+    document.getElementById('mssInfoCrew').innerHTML = loading && it.tmdb_id && INFO_POPUP_CONFIG.showCrew ? skeleton(isMovieType(it.media_type) ? 'Directed By' : 'Created By', 1) : crewHTML(it, d);
+    if (loading) document.getElementById('mssInfoCast').innerHTML = it.tmdb_id && INFO_POPUP_CONFIG.showCast ? skeleton('Top Cast', INFO_POPUP_CONFIG.castCount) : '';
+    document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, own, user);
   }
 
   async function fetchDetails(it) {
     const key = `${it.media_type}:${it.tmdb_id}`;
     if (detailCache[key]) return detailCache[key];
-    const res = await tmdbFetch(`${TMDB_BASE}/${it.media_type}/${it.tmdb_id}?api_key=${TMDB_KEY}&language=en-US`);
+    const extra = isMovieType(it.media_type) ? '&append_to_response=credits' : '';
+    const res = await tmdbFetch(`${TMDB_BASE}/${it.media_type}/${it.tmdb_id}?api_key=${TMDB_KEY}&language=en-US${extra}`);
     if (!res.ok) throw new Error('TMDB ' + res.status);
     return (detailCache[key] = await res.json());
   }
 
   /* ── Public ── */
-  async function open(item) {
+  async function open(item, o = {}) {
     inject();
     const it = { ...item, media_type: item.media_type === 'movie' ? 'movie' : 'tv' };
-    current = it;
+    current = it; opts = o;
     const my = ++token;
     const user = window._navUser || null;
-    render(it, null, undefined, user);
-    const ov = document.getElementById('mssInfoOverlay');
-    ov.classList.add('open');
+    // Your own entry is already "yours" — no library lookup needed
+    const ownKnown = opts.owner ? it.entry : undefined;
+    render(it, null, ownKnown, user, !!it.tmdb_id);
+    document.getElementById('mssInfoOverlay').classList.add('open');
     document.getElementById('mssInfoCard').style.transform = 'translateY(0)';
     document.body.style.overflow = 'hidden';
-    if (!it.tmdb_id) { render(it, null, null, user); document.getElementById('mssInfoDetails').innerHTML = ''; return; }
 
     const [d, own] = await Promise.all([
-      fetchDetails(it).catch(() => null),
-      user ? getOwnEntryByTmdb(user.id, Number(it.tmdb_id), it.media_type, it.title).catch(() => null) : Promise.resolve(null),
+      it.tmdb_id ? fetchDetails(it).catch(() => null) : Promise.resolve(null),
+      opts.owner ? Promise.resolve(it.entry)
+        : user ? getOwnEntryByTmdb(user.id, it.tmdb_id ? Number(it.tmdb_id) : null, it.media_type, it.title).catch(() => null)
+        : Promise.resolve(null),
     ]);
     if (my !== token) return;                 // another title was opened meanwhile
     it._details = d;
-    render(it, d, own || null, user);
-    if (!d) document.getElementById('mssInfoDetails').innerHTML = '';
+    render(it, d, own || null, user, false);
     loadCast(it, d, my);
   }
 
   function close() {
     const ov = document.getElementById('mssInfoOverlay');
-    if (!ov) return;
+    if (!ov || !ov.classList.contains('open')) return;
     ov.classList.remove('open');
     document.getElementById('mssInfoCard').style.transform = '';
     document.body.style.overflow = '';
     token++;
   }
 
-  async function addToQueue() {
-    const it = current, d = it?._details;
-    const user = window._navUser || await getCurrentUser();
-    if (!it || !user) { location.href = 'login.html'; return; }
-    const btn = document.getElementById('mssInfoQueueBtn');
-    if (btn) { if (btn.disabled) return; btn.disabled = true; btn.innerHTML = 'Adding…'; }
-    const movie = isMovieType(it.media_type);
+  // Builds the new-entry payload from TMDB details, or from the entry
+  // being viewed when it isn't linked to TMDB.
+  function payloadFor(it, d) {
+    const movie = isMovieType(it.media_type), src = it.entry;
     const cat = it.cat || guessCat(it, d);
+    if (!d && src) {
+      const r = src.ratings || {}, ratings = {};
+      ['_season_breakdown', '_completion_year', '_media_type'].forEach(k => { if (r[k] != null) ratings[k] = r[k]; });
+      return {
+        title: src.title, cat, status: INFO_POPUP_CONFIG.addStatus, year: src.year || null,
+        description: src.description || null, genres: src.genres || [], poster_url: src.poster_url || null,
+        total_seasons: src.total_seasons || null, total_eps: src.total_eps || null,
+        runtime_h: src.runtime_h || null, runtime_m: src.runtime_m || null,
+        tmdb_id: src.tmdb_id || null, tmdb_type: src.tmdb_type || null, ratings,
+      };
+    }
     const payload = {
       title: it.title || (movie ? d?.title : d?.name),
       cat, status: INFO_POPUP_CONFIG.addStatus,
@@ -254,24 +360,98 @@ const MSSInfo = (() => {
       if ((d.status === 'Ended' || d.status === 'Canceled') && d.last_air_date) payload.ratings._completion_year = d.last_air_date.slice(0, 4);
     }
     if (cat === 'anime' || cat === 'cartoons') payload.ratings = { ...(payload.ratings || {}), _media_type: it.media_type };
+    return payload;
+  }
+
+  async function addToQueue(b) {
+    const it = current, d = it?._details;
+    const user = window._navUser || await getCurrentUser();
+    if (!it || !user) { location.href = 'login.html'; return; }
+    if (b) { if (b.disabled) return; b.disabled = true; b.innerHTML = 'Adding…'; }
+    const payload = payloadFor(it, d);
+    // Added from a friend's entry → let them know (notify_friend_queued)
+    const src = it.entry;
+    if (src?.user_id && src.user_id !== user.id) {
+      try { sessionStorage.setItem('mssQueuedFrom', JSON.stringify({ owner: src.user_id, entry: src.id, title: payload.title, t: Date.now() })); } catch {}
+    }
     try {
       const entry = await quickCreate(payload, user.id);
       showToast(`Added “${payload.title}” to your Watchlist!`);
-      if (current === it) document.getElementById('mssInfoActions').innerHTML = actionsHTML(it, entry, user);
+      if (current === it) document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, entry, user);
     } catch (err) {
+      try { sessionStorage.removeItem('mssQueuedFrom'); } catch {}
       if (String(err.message).startsWith('DUPLICATE:')) {
-        const own = await getOwnEntryByTmdb(user.id, Number(it.tmdb_id), it.media_type, payload.title).catch(() => null);
+        const own = await getOwnEntryByTmdb(user.id, payload.tmdb_id, payload.tmdb_type, payload.title).catch(() => null);
         showToast('Already in your library.');
-        if (current === it) document.getElementById('mssInfoActions').innerHTML = actionsHTML(it, own, user);
+        if (current === it) document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, own, user);
       } else {
         console.error(err);
         showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Could not add — try again.', 'err');
-        if (btn) { btn.disabled = false; btn.innerHTML = `${icon('plus', 14)} Add to Watchlist`; }
+        if (b) { b.disabled = false; b.innerHTML = `${icon('plus', 14)} Add to Watchlist`; }
       }
     }
   }
 
-  // Shape adapters
+  /* ── Discover: linked → title page; unlinked → search + "Which one is it?" ── */
+  async function discover(src, b) {
+    if (!src) return;
+    const tmdbId = src.tmdb_id, type = src.tmdb_type || src.media_type;
+    if (tmdbId && (type === 'movie' || type === 'tv')) { close(); goToTitle(type, tmdbId); return; }
+    const label = b?.innerHTML;
+    if (b) { b.disabled = true; b.innerHTML = 'Searching…'; }
+    try {
+      const want = (src.media_type === 'movie' || entryIsMovie(src)) ? 'movie' : 'tv';
+      const results = (await _tmdbSearch(src.title)).slice()
+        .sort((a, c) => (a.media_type === want ? 0 : 1) - (c.media_type === want ? 0 : 1));
+      close();
+      openPicker(results, src.title);
+    } catch (err) {
+      console.error(err);
+      showToast('Error searching TMDB.', 'err');
+    } finally {
+      if (b) { b.disabled = false; b.innerHTML = label; }
+    }
+  }
+
+  function openPicker(results, entryTitle) {
+    let ov = document.getElementById('catDiscoverOverlay');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'catDiscoverOverlay';
+      ov.innerHTML = `<div id="catDiscoverCard" role="dialog" aria-modal="true" aria-labelledby="catDiscoverTitle">
+          <button type="button" class="cat-disc-close" onclick="MSSInfo._closePicker()" aria-label="Close">✕</button>
+          <div class="cat-disc-title" id="catDiscoverTitle">Which one is it?</div>
+          <div class="cat-disc-sub" id="catDiscoverSub"></div>
+          <div id="catDiscoverList"></div>
+        </div>`;
+      ov.addEventListener('click', ev => { if (ev.target === ov) closePicker(); });
+      document.body.appendChild(ov);
+      inject();                                // registers the Esc handler
+    }
+    document.getElementById('catDiscoverSub').textContent = `Matches for "${entryTitle}" — pick the right one`;
+    const list = document.getElementById('catDiscoverList');
+    list.innerHTML = results.length ? results.map(r => {
+      const movie = r.media_type === 'movie';
+      const year = ((movie ? r.release_date : r.first_air_date) || '').split('-')[0];
+      return `<button type="button" class="cat-disc-item" onclick="MSSInfo._closePicker();goToTitle(${attrJSON(movie ? 'movie' : 'tv')}, ${Number(r.id)})">
+        <span class="cat-disc-thumb">${r.poster_path ? `<img src="${TMDB_IMG + r.poster_path}" alt="" loading="lazy">` : ''}</span>
+        <span class="cat-disc-info">
+          <span class="cat-disc-name">${esc((movie ? r.title : r.name) || '—')}</span>
+          <span class="cat-disc-meta">${movie ? 'Movie' : 'TV Show'}${year ? ' · ' + esc(year) : ''}</span>
+        </span>
+      </button>`;
+    }).join('') : `<div class="cat-disc-none">No matches found on TMDB.</div>`;
+    ov.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePicker() {
+    const ov = document.getElementById('catDiscoverOverlay');
+    if (!ov) return;
+    ov.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  /* ── Shape adapters ── */
   function fromDiscover(x) {
     return open({
       tmdb_id: x.id, media_type: x.media_type, title: x.title, year: x.year, poster_url: x.poster_url,
@@ -279,13 +459,23 @@ const MSSInfo = (() => {
       origin_country: x.origin_country, original_language: x.original_language,
     });
   }
-  function fromEntry(e) {
-    const movie = e.tmdb_type ? e.tmdb_type === 'movie' : (e.cat === 'movies' || e.ratings?._media_type === 'movie');
-    return open({
+  function entryItem(e) {
+    const movie = e.tmdb_type ? e.tmdb_type === 'movie' : entryIsMovie(e);
+    return {
       tmdb_id: e.tmdb_id || null, media_type: movie ? 'movie' : 'tv', title: e.title, year: e.year,
-      poster_url: e.poster_url, overview: e.description, genres: e.genres, cat: e.cat,
-    });
+      poster_url: e.poster_url, overview: e.description, genres: e.genres, cat: e.cat, entry: e,
+    };
+  }
+  function fromEntry(e) { return open(entryItem(e)); }
+  function forOwnEntry(e, o = {}) {
+    open(entryItem(e), { ...o, owner: true });
+    // Quietly pick up any new seasons TMDB has for it
+    const uid = window._navUser?.id;
+    if (uid && typeof _refreshTmdbSeasonData === 'function') _refreshTmdbSeasonData(e, uid, () => o.onChange?.(e));
   }
 
-  return { open, close, addToQueue, fromDiscover, fromEntry, config: INFO_POPUP_CONFIG };
+  return {
+    open, close, fromDiscover, fromEntry, forOwnEntry, discover, config: INFO_POPUP_CONFIG,
+    _act: act, _closePicker: closePicker,
+  };
 })();
