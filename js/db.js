@@ -447,15 +447,18 @@ async function getOwnEntryByTmdb(userId, tmdbId, tmdbType, title) {
   // broke this check (returning null, i.e. "not owned") for any title
   // that already had duplicate entries from a past race-condition bug —
   // which then let the page think it was safe to add yet another one.
-  const { data, error } = await sb.from('entries')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('tmdb_id', tmdbId)
-    .eq('tmdb_type', tmdbType)
-    .order('created_at', { ascending: true })
-    .limit(1);
-  if (error) { console.error('getOwnEntryByTmdb:', error); return null; }
-  if (data && data[0]) return data[0];
+  // No TMDB id (an unlinked title) → go straight to the title match below
+  if (tmdbId) {
+    const { data, error } = await sb.from('entries')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('tmdb_id', tmdbId)
+      .eq('tmdb_type', tmdbType)
+      .order('created_at', { ascending: true })
+      .limit(1);
+    if (error) { console.error('getOwnEntryByTmdb:', error); return null; }
+    if (data && data[0]) return data[0];
+  }
 
   // Fall back to a title match — catches entries that were added without
   // a TMDB link (tmdb_id/tmdb_type are null there), which the check above
