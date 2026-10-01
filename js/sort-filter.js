@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   sort-filter.js — Shared Sort & Filter system (v564)
+   sort-filter.js — Shared Sort & Filter system (v640)
 
    One implementation of the Sort / Filter popups for every page.
    Each page registers a "scope" describing what's different about it
@@ -20,6 +20,9 @@
               // mixed movie+show pages can use 'runtime' / 'episodes' instead
               // of 'length' (movies-only / shows-only, the rest go last)
      filters: section => ['genre','year','score','length','person'],
+     watched: section => true,              // adds "Year Watched" (From / To) for sections of
+                                            // watched titles; reads watchedDate (default completed_date)
+     watchedDate: e => e.completed_date,
      choiceFilters: section => [       // single-pick filters, e.g. Status
        { key: 'status', label: 'Status', options: [['', 'All'], ['completed', 'Watched']],
          test: (entry, value) => entry.status === value,     // test optional
@@ -85,7 +88,7 @@ const SF = (() => {
   };
   const DEFAULT_SORTS   = ['alpha', 'added', 'release', 'ratings', 'length'];
   const DEFAULT_FILTERS = ['genre', 'year', 'score', 'length', 'person'];
-  const EMPTY_FILTER = () => ({ genres: [], yearMin: '', yearMax: '', scoreMin: '', scoreMax: '', lengthMin: '', lengthMax: '', person: '', choice: {} });
+  const EMPTY_FILTER = () => ({ genres: [], yearMin: '', yearMax: '', watchedMin: '', watchedMax: '', scoreMin: '', scoreMax: '', lengthMin: '', lengthMax: '', person: '', choice: {} });
 
   // Session caches shared by every scope (keyed by TMDB id)
   const creditsCache = {};
@@ -118,7 +121,8 @@ const SF = (() => {
     return keys.map(k => (s.cfg.presets && s.cfg.presets[k]) || SORT_PRESETS[k]).filter(Boolean);
   }
   function filtersFor(s, section) {
-    return (s.cfg.filters ? s.cfg.filters(section) : DEFAULT_FILTERS).filter(Boolean);
+    const list = (s.cfg.filters ? s.cfg.filters(section) : DEFAULT_FILTERS).filter(Boolean);
+    return s.cfg.watched && s.cfg.watched(section) ? [...list, 'watched'] : list;
   }
   function showRating(s, section) {
     return !!(s.cfg.ratingSort && (!s.cfg.ratingSort.show || s.cfg.ratingSort.show(section)));
@@ -131,7 +135,7 @@ const SF = (() => {
     return S(scope).filter[section] || EMPTY_FILTER();
   }
   function filterCount(f) {
-    return Object.values(f.choice || {}).filter(Boolean).length + (f.genres || []).length + (f.yearMin || f.yearMax ? 1 : 0) + (f.scoreMin || f.scoreMax ? 1 : 0)
+    return Object.values(f.choice || {}).filter(Boolean).length + (f.genres || []).length + (f.yearMin || f.yearMax ? 1 : 0) + (f.watchedMin || f.watchedMax ? 1 : 0) + (f.scoreMin || f.scoreMax ? 1 : 0)
          + (f.lengthMin || f.lengthMax ? 1 : 0) + (f.person ? 1 : 0);
   }
   function sortLabel(s, value) {
@@ -208,6 +212,12 @@ const SF = (() => {
     if (f.genres?.length) out = out.filter(e => (e.genres || []).some(g => f.genres.includes(g)));
     if (f.yearMin)   out = out.filter(e => e.year && Number(e.year) >= Number(f.yearMin));
     if (f.yearMax)   out = out.filter(e => e.year && Number(e.year) <= Number(f.yearMax));
+    if (f.watchedMin || f.watchedMax) {
+      const wd = s.cfg.watchedDate || (e => e.completed_date);
+      const wy = e => { const d = wd(e); return d ? Number(String(d).slice(0, 4)) || 0 : 0; };
+      if (f.watchedMin) out = out.filter(e => wy(e) && wy(e) >= Number(f.watchedMin));
+      if (f.watchedMax) out = out.filter(e => wy(e) && wy(e) <= Number(f.watchedMax));
+    }
     const sc = scoreFn(s);
     if (f.scoreMin)  out = out.filter(e => sc(e) != null && sc(e) >= Number(f.scoreMin));
     if (f.scoreMax)  out = out.filter(e => sc(e) != null && sc(e) <= Number(f.scoreMax));
@@ -436,6 +446,9 @@ const SF = (() => {
     if (on.has('year')) {
       html += `<div class="sf-section-label">Release Year</div>` + rangeRow('sfYearMin', 'sfYearMax', f.yearMin, f.yearMax, 'From', 'To');
     }
+    if (on.has('watched')) {
+      html += `<div class="sf-section-label">Year Watched</div>` + rangeRow('sfWatchedMin', 'sfWatchedMax', f.watchedMin, f.watchedMax, 'From', 'To');
+    }
     if (on.has('score')) {
       html += `<div class="sf-section-label">${escHTML(s.cfg.scoreLabel || 'MyScreenScore')} <span class="sf-section-hint">(rated items only)</span></div>` +
         rangeRow('sfScoreMin', 'sfScoreMax', f.scoreMin, f.scoreMax, 'Min', 'Max', 'step="0.1" min="0" max="10"');
@@ -471,6 +484,7 @@ const SF = (() => {
     const v = id => document.getElementById(id)?.value ?? '';
     Object.assign(stagedFilter, {
       yearMin: v('sfYearMin'), yearMax: v('sfYearMax'),
+      watchedMin: v('sfWatchedMin'), watchedMax: v('sfWatchedMax'),
       scoreMin: v('sfScoreMin'), scoreMax: v('sfScoreMax'),
       lengthMin: v('sfLengthMin'), lengthMax: v('sfLengthMax'),
     });
