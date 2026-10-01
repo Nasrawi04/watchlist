@@ -961,52 +961,8 @@ nav {
 .fd-rating-row  { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:0.5px solid rgba(255,255,255,0.04); }
 .fd-rating-label{ font-family:'Manrope',var(--sans); font-weight:500; font-size:15.5px; color:var(--text); }
 .fd-rating-val  { font-family:var(--bebas); font-weight:400; font-size:20px; letter-spacing:.5px; color:var(--olive-light); }
-.fd-final       { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
-.fd-final span  { font-family:'Oswald',var(--sans); font-weight:600; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); }
-.fd-final strong{ font-family:var(--bebas); font-size:38px; letter-spacing:.5px; font-weight:400; color:var(--olive-light); }
 .fd-notes       { font-family:'Manrope',var(--sans); font-weight:500; font-size:14px; color:var(--text); font-style:italic; line-height:1.6; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
 .fd-description { font-family:'Manrope',var(--sans); font-weight:500; font-size:16.5px; color:var(--text); line-height:1.65; margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
-.popup-info-block { margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
-
-/* ── Popup info bar (season chips / runtime) ── */
-.popup-info-season-chip {
-  display:inline-flex;flex-direction:column;align-items:center;
-  background:var(--card);border:0.5px solid var(--border);
-  border-radius:var(--radius-sm);padding:5px 12px;
-  margin:0 4px 4px 0;transition:border-color .15s;
-}
-.popup-info-season-chip:hover { border-color:var(--border-olive); }
-.popup-info-season-num {
-  font-family:var(--bebas);font-weight:400;font-size:17px;letter-spacing:.3px;color:var(--olive-light);line-height:1;
-}
-.popup-info-season-eps {
-  font-family:'Manrope',var(--sans);font-weight:500;font-size:10px;color:var(--text-3);text-transform:uppercase;
-  letter-spacing:0.8px;margin-top:2px;
-}
-.popup-info-runtime {
-  display:inline-flex;align-items:center;gap:6px;
-  background:var(--card);border:0.5px solid var(--border);
-  border-radius:var(--radius-sm);padding:6px 14px;
-}
-.popup-info-runtime-val {
-  font-family:var(--bebas);font-weight:400;font-size:20px;letter-spacing:.3px;color:var(--olive-light);
-}
-.popup-info-runtime-lbl {
-  font-family:'Manrope',var(--sans);font-weight:500;font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.8px;
-}
-.popup-info-label {
-  font-family:'Oswald',var(--sans);font-weight:600;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
-  color:var(--text-3);margin-bottom:5px;
-}
-@media(max-width:600px) {
-  .popup-info-season-chip { padding:4px 9px; margin:0 3px 3px 0; }
-  .popup-info-season-num  { font-size:14px; }
-  .popup-info-season-eps  { font-size:9px; }
-  .popup-info-runtime     { padding:5px 12px; }
-  .popup-info-runtime-val { font-size:17px; }
-  .popup-info-label       { font-size:10px; }
-}
-
 /* ── Popup ratings: mobile scaling ── */
 @media(max-width:600px) {
   .fd-cols         { gap:10px; }
@@ -1015,27 +971,16 @@ nav {
   .fd-rating-val   { font-size:16px; }
   .fd-rating-row   { padding:5px 0; }
   .fd-section-hd   { font-size:10px; margin-bottom:6px; }
-  .fd-final strong { font-size:28px; }
-  .fd-final span   { font-size:10px; }
   .fd-notes        { font-size:12px; margin-top:8px; padding-top:8px; }
   .fd-description  { font-size:13px; margin-bottom:10px; padding-bottom:10px; }
-  .popup-info-block { margin-bottom:10px; padding-bottom:10px; }
-  .fd-edit-link    { font-size:11px; }
 }
-.fd-edit-link   { display:block; margin-top:10px; padding-top:10px; border-top:0.5px solid var(--border); font-size:12px; color:var(--olive-light); }
 
 @media(max-width:400px) {
   .fd-rating-label { font-size:12px; }
   .fd-rating-val   { font-size:14px; }
   .fd-section-hd   { font-size:9px; }
-  .fd-final strong { font-size:24px; }
   .fd-notes        { font-size:11px; }
   .fd-description  { font-size:11.5px; margin-bottom:8px; padding-bottom:8px; }
-  .popup-info-block { margin-bottom:8px; padding-bottom:8px; }
-  .popup-info-season-num  { font-size:12px; }
-  .popup-info-season-eps  { font-size:8px; }
-  .popup-info-runtime-val { font-size:15px; }
-  .popup-info-label       { font-size:9px; }
 }
 
 /* ── Info popup (info-popup.js → MSSInfo) — the one info popup used on every page ── */
@@ -1066,7 +1011,6 @@ nav {
 .pvi-title { font-family:'Oswald',var(--sans);font-size:clamp(16px,4.5vw,22px);font-weight:600;line-height:1.2;margin-bottom:6px;color:var(--text); }
 .pvi-title-year { font-family:var(--bebas);font-size:0.62em;font-weight:400;color:var(--text-2);vertical-align:middle; }
 .pvi-tags { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0; }
-.pvi-tag { font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:0.4px;font-family:var(--sans); }
 .pvi-close { background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;flex-shrink:0;transition:color .15s;position:absolute;top:24px;right:24px;z-index:1; }
 .pvi-close:hover { color:var(--text); }
 .pvi-body { padding:16px 20px 20px; }
@@ -1084,8 +1028,6 @@ nav {
 .pvi-runtime { display:inline-flex;align-items:center;gap:10px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px; }
 .pvi-runtime-val { font-family:var(--bebas);font-size:24px;font-weight:400;color:var(--olive-light); }
 .pvi-runtime-lbl { font-family:'Manrope',var(--sans);font-weight:500;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px; }
-/* Prominent MSS score — the person's own final rating, not TMDB's. */
-.pvi-score-row { display:flex; align-items:baseline; gap:8px; margin-bottom:16px; }
 /* Buttons are the site's .popup-action-btn (solid olive / red danger) via #mssInfoPopupActions */
 #mssInfoCrew .mss-cast { margin-bottom:16px; }
 .mss-info-actions { display:flex; flex-wrap:wrap; gap:10px; padding:0 20px 20px; }
@@ -1123,8 +1065,6 @@ nav {
 .cat-disc-name { font-size:14px; font-weight:500; color:var(--text); }
 .cat-disc-meta { font-size:11.5px; color:var(--text-3); margin-top:2px; }
 .cat-disc-none { padding:1.5rem 0.5rem; text-align:center; color:var(--text-3); font-size:13px; }
-.cg-close-btn { top:24px; right:24px; }
-.cg-popup-title { font-size:26px; margin-bottom:10px; }
 
 @media(max-width:768px) {
   .pvi-header { padding:14px 14px 0;gap:12px;flex-wrap:wrap; }
@@ -1136,49 +1076,32 @@ nav {
   .pvi-season-num { font-size:17px; }
   .pvi-runtime { padding:8px 14px; }
   .pvi-runtime-val { font-size:20px; }
-  .pvi-score-val { font-size:26px; }
   #mssInfoCard { width:97%; }
   .mss-info-actions { padding:0 14px 14px; }
   .pvi-close { top:20px; right:16px; }
-  /* Ratings popup — full mobile pass across every section: header,
-     poster, title, tags/badges, description, score box, ratings
-     columns, season chips, highlights, and actions. */
-  #cgPopupHeader { flex-wrap:wrap; padding:16px 16px 0; gap:12px; }
-  #cgPopupPoster { width:90px; height:135px; }
-  /* Same mobile pass for every copy of the ratings popup — Library/Profile
-     (prof*), friend profiles (pv*), Watched (cp*) — not just Category. */
-  #cgPopupTitle, #profPopupTitle, #pvPopupTitle, #cpPopupTitle { font-size:19px; margin-bottom:8px; padding-right:30px; }
-  #cgPopupTags, #cgPopupDateRow, #cgPopupMetaRow,
-  #profPopupTags, #profPopupDateRow, #profPopupMetaRow,
-  #pvPopupTags, #pvPopupDateRow, #pvPopupMetaRow,
-  #cpPopupTags, #cpPopupDateRow, #cpPopupMetaRow { gap:5px; }
-  #cgPopupTags .w-ep-badge, #cgPopupTags .type-label,
-  #cgPopupDateRow .w-ep-badge, #cgPopupMetaRow .w-ep-badge,
-  #profPopupTags .w-ep-badge, #profPopupTags .type-label, #profPopupDateRow .w-ep-badge, #profPopupMetaRow .w-ep-badge,
-  #pvPopupTags .w-ep-badge, #pvPopupTags .type-label, #pvPopupDateRow .w-ep-badge, #pvPopupMetaRow .w-ep-badge,
-  #cpPopupTags .w-ep-badge, #cpPopupTags .type-label, #cpPopupDateRow .w-ep-badge, #cpPopupMetaRow .w-ep-badge { font-size:12px; padding:5px 10px; }
-  .cg-close-btn { top:20px; right:16px; }
-  /* Order swaps here vs desktop — description sits above the score box
-     once everything wraps, instead of the score box appearing first. */
-  #cgPopupDesc, #profPopupDesc, #pvPopupDesc, #cpPopupDesc { font-size:13px; margin:12px 0 0; }
-  #cgPopupBody, #profPopupBody, #pvPopupBody, #cpPopupBody { padding:14px 16px 4px; }
+  /* Ratings popup (rating-popup.js) — mobile pass */
+  .mr-head { padding:16px 16px 0; gap:12px; }
+  .mr-poster { width:90px; height:135px; }
+  .mr-title { font-size:19px; margin-bottom:8px; padding-right:30px; }
+  .mr-by { padding-right:30px; }
+  .mr-row { gap:5px; }
+  .mr-row .w-ep-badge, .mr-row .type-label { font-size:12px; padding:5px 10px; }
+  .mr-close { top:20px; right:16px; }
+  .mr-desc { font-size:13px; margin:12px 0 0; }
+  .mr-body { padding:14px 16px 4px; }
   .fd-description { font-size:13px; }
   .fd-cols { flex-direction:column; gap:4px; }
   .fd-col { min-width:0; }
   .fd-rating-row { padding:5px 0; }
   .fd-rating-label { font-size:13px; }
   .fd-rating-val { font-size:17px; }
-  .popup-info-season-chip { padding:6px 10px; min-width:46px; }
-  .popup-info-season-num { font-size:15px; }
-  .popup-info-runtime { padding:6px 12px; }
-  .popup-info-runtime-val { font-size:17px; }
   .fav-chip { font-size:13px; padding:5px 11px; }
   .fd-notes { font-size:13px; }
-  #cgPopupActions, [id$="PopupActions"] { padding:4px 16px 16px; }
-  #cgPopupActions .popup-action-btn, [id$="PopupActions"] .popup-action-btn { font-size:14px; padding:12px 14px; }
+  [id$="PopupActions"] { padding:4px 16px 16px; }
+  [id$="PopupActions"] .popup-action-btn { font-size:14px; padding:12px 14px; }
 }
 
-/* Toggled by JS (ResizeObserver on #cgPopupCard). order/flex-basis live
+/* Toggled by JS (ResizeObserver on #mssRateCard). order/flex-basis live
    here (not inline in the markup) specifically so this override can
    actually take effect — inline styles beat any stylesheet rule
    regardless of specificity, which is what silently defeated every
@@ -1187,10 +1110,49 @@ nav {
 .cg-score-box { order:3; width:190px; margin-right:32px; }
 .cg-narrow .cg-desc-block { order:3; }
 .cg-narrow .cg-score-box { order:4; width:100%; flex-basis:100%; margin-right:0; min-height:110px; padding:32px 14px; margin-top:8px; }
-.cg-narrow .cg-score-box [id$="PopupScoreVal"] { font-size:36px !important; gap:8px !important; }
-.cg-narrow .cg-score-box > div > div:first-child { font-size:12px !important; }
+.cg-narrow .mr-score-val { font-size:36px; gap:8px; }
+.cg-narrow .mr-score-lbl { font-size:12px; }
 /* Long date badges ("Completed On: …") wrap instead of running off the card */
-[id$="PopupDateRow"] .w-ep-badge, [id$="PopupMetaRow"] .w-ep-badge { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+#mssRatePopupDateRow .w-ep-badge { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+
+/* ── Ratings popup (rating-popup.js → MSSRate) — the one ratings popup on every page ── */
+#mssRateOverlay {
+  position:fixed; inset:0; z-index:900; background:rgba(0,0,0,0.72);
+  display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;
+  opacity:0; transition:opacity 220ms var(--ease); pointer-events:none;
+}
+#mssRateOverlay.open { opacity:1; pointer-events:auto; }
+#mssRateCard {
+  background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg);
+  width:100%; max-width:min(97vw, 920px); max-height:90dvh; overflow-y:auto; overscroll-behavior-y:contain;
+  position:relative; box-sizing:border-box; transform:translateY(18px); transition:transform 260ms var(--ease);
+}
+#mssRateOverlay.open #mssRateCard { transform:translateY(0); }
+.mr-head { display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap; padding:24px 24px 0; }
+.mr-poster { width:150px; height:225px; flex-shrink:0; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-3); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); }
+.mr-meta { flex:1; min-width:0; padding-top:4px; }
+.mr-by { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--text-2); margin-bottom:8px; }
+.mr-by-av { width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0; background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:11px; }
+.mr-by-av img { width:100%; height:100%; object-fit:cover; }
+.mr-title { font-family:var(--serif); font-weight:600; font-size:26px; line-height:1.15; color:var(--text); margin-bottom:10px; }
+.mr-title-year { font-family:var(--bebas); font-size:0.65em; font-weight:400; color:var(--text-2); vertical-align:middle; }
+.mr-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+.mr-row .w-ep-badge, .mr-row .type-label { font-family:var(--sans); font-weight:500; }
+.mr-desc { margin:16px 0 0; }
+.mr-score-box { flex-shrink:0; flex-grow:0; text-align:center; align-self:stretch; position:relative; padding:18px 20px; border-radius:var(--radius-sm); background:transparent; border:2px solid var(--olive); }
+.mr-score-inner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; width:100%; }
+.mr-score-lbl { font-family:var(--serif); font-weight:600; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; }
+.mr-score-val { font-family:var(--bebas); font-size:48px; color:var(--olive); line-height:1; display:flex; align-items:center; justify-content:center; gap:6px; }
+.mr-close { position:absolute; top:24px; right:24px; z-index:1; background:none; border:none; color:var(--text-3); cursor:pointer; font-size:22px; line-height:1; transition:color .15s; }
+.mr-close:hover { color:var(--text); }
+.mr-body { padding:20px 24px 6px; }
+.mr-gap { margin-top:16px; }
+.mr-chips { margin-top:6px; }
+.mr-notes { margin-top:0; padding-top:0; border-top:none; }
+.mr-cc { padding:0 20px 12px; }
+.mr-cc:empty { display:none; }
+.mr-cc .cc-strip { margin-top:4px; }
+#mssRatePopupActions { display:flex; gap:8px; padding:4px 24px 24px; flex-wrap:wrap; }
 
 /* ── Rating filter picker — lets the person sort/filter a section by any
    specific rating (core or bonus) instead of just overall score. A full
@@ -4739,23 +4701,20 @@ body { font-size:15px; }
   flex:1;min-width:0;
   justify-content:center;
 }
-/* Scoped to the category ratings popup specifically, per current
-   request — other popups' buttons keep the default font for now. */
-#cgPopupActions .popup-action-btn, [id$="PopupActions"] .popup-action-btn { font-family:'Manrope',var(--sans); font-weight:500; }
-/* Filled look — solid olive background instead of the neutral outline
-   style, matching the badges/pills used throughout this popup. */
-#cgPopupActions .popup-action-btn, [id$="PopupActions"] .popup-action-btn {
+/* Every popup's button row (any id ending in "PopupActions") — Manrope, solid olive, red danger. */
+[id$="PopupActions"] .popup-action-btn { font-family:'Manrope',var(--sans); font-weight:500; }
+[id$="PopupActions"] .popup-action-btn {
   background:var(--olive); color:#fff; border-color:var(--olive);
 }
-#cgPopupActions .popup-action-btn:hover, [id$="PopupActions"] .popup-action-btn:hover { background:var(--olive-light); border-color:var(--olive-light); color:#fff; }
-#cgPopupActions .popup-action-btn.popup-action-danger, [id$="PopupActions"] .popup-action-btn.popup-action-danger {
+[id$="PopupActions"] .popup-action-btn:hover { background:var(--olive-light); border-color:var(--olive-light); color:#fff; }
+[id$="PopupActions"] .popup-action-btn.popup-action-danger {
   background:#b91c1c; border-color:#b91c1c; color:#fff;
 }
-#cgPopupActions .popup-action-btn.popup-action-danger:hover, [id$="PopupActions"] .popup-action-btn.popup-action-danger:hover { background:#dc2626; border-color:#dc2626; }
+[id$="PopupActions"] .popup-action-btn.popup-action-danger:hover { background:#dc2626; border-color:#dc2626; }
 @media(max-width:600px) {
   /* One button per line on phones instead of wrapping 2-3 to a row. */
-  #cgPopupActions, [id$="PopupActions"] { flex-direction:column; }
-  #cgPopupActions .popup-action-btn, [id$="PopupActions"] .popup-action-btn { width:100%; flex:none; }
+  [id$="PopupActions"] { flex-direction:column; }
+  [id$="PopupActions"] .popup-action-btn { width:100%; flex:none; }
 }
 .popup-action-btn:hover {
   border-color:var(--border-olive);color:var(--olive-light);
@@ -4765,7 +4724,7 @@ body { font-size:15px; }
 .popup-action-btn:hover svg { opacity:1; }
 @media(max-width:400px) {
   /* Stack vertically on very small screens */
-  #cgPopupActions, [id$="PopupActions"] {
+  [id$="PopupActions"] {
     flex-direction:column;
   }
   .popup-action-btn { white-space:normal;text-align:center; }
