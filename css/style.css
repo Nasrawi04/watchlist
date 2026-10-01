@@ -983,6 +983,29 @@ nav {
   .fd-description  { font-size:11.5px; margin-bottom:8px; padding-bottom:8px; }
 }
 
+/* ── Info · Ratings · Note switcher (entry-views.js → MSSViews) ──
+   Sits at the top of whichever shared popup is showing; same pill look
+   as the notification tabs. Room on the right for the popup's ✕. */
+.mss-views:empty { display:none; }
+.mss-views { padding:16px 64px 0 20px; }
+.mss-views-bar { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
+.mss-views-bar::-webkit-scrollbar { display:none; }
+.mss-views-tab {
+  flex-shrink:0; display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:999px; cursor:pointer;
+  background:var(--card); border:0.5px solid var(--border); color:var(--text-2);
+  font-family:var(--sans); font-size:12.5px; font-weight:600; white-space:nowrap; transition:all .15s;
+}
+.mss-views-tab svg { width:13px; height:13px; }
+.mss-views-tab:hover { border-color:var(--border-olive); color:var(--text); }
+.mss-views-tab.active { background:var(--olive); border-color:var(--olive); color:#fff; cursor:default; }
+.mss-views-tab:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+#mssNoteOverlay .mss-views, #snPopupCard .mss-views { padding:14px 16px 12px; }
+/* Switching views swaps popups instantly — no fade / slide in between */
+body.mss-switching #mssInfoOverlay, body.mss-switching #mssInfoCard,
+body.mss-switching #mssRateOverlay, body.mss-switching #mssRateCard,
+body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-popup2 { transition:none !important; }
+@media(max-width:640px) { .mss-views { padding:14px 52px 0 14px; } .mss-views-tab { padding:6px 11px; font-size:12px; } }
+
 /* ── Info popup (info-popup.js → MSSInfo) — the one info popup used on every page ── */
 #mssInfoOverlay {
   position:fixed;inset:0;z-index:902;
