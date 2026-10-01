@@ -80,12 +80,12 @@ const MSSTabs = (() => {
     const ids = withNotes().map(e => e.id);
     MSSNote.reactionCounts(ids).then(c => { N.counts = c; renderNotes(); }).catch(() => {});
   }
-  // Note first, then Ratings and Info — same as the Notes page (MSSViews, info-popup.js)
+  // Info · Ratings · Note popup, opening on the note — same as the Notes page (MSSViews, info-popup.js)
   function openNote(id) {
     const e = N.entries.find(x => x.id === id);
     if (!e) return;
     MSSViews.open(e, {
-      order: ['note', 'rate', 'info'], own: N.owner, counts: N.counts[id], profile: N.owner ? null : { display_name: N.name },
+      start: 'note', own: N.owner, counts: N.counts[id], profile: N.owner ? null : { display_name: N.name },
       onNoteSaved: renderNotes, onChange: renderNotes,
       onDelete: x => { N.entries = N.entries.filter(y => y.id !== x.id); renderNotes(); N.onDelete?.(x); },
     });
