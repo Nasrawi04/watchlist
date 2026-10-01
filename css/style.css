@@ -1708,6 +1708,26 @@ body.notif-sheet-open { overflow:hidden; }
 }
 @media(max-width:380px) { .nc-poster { width:56px; } .nc-tags { display:none; } }
 
+/* ── Notes / Lists toolbar: section label + count left, Sort / Filter right
+   (Notes page, Lists page, profile Notes + Lists tabs — mssToolbarHTML in config.js) ── */
+.mss-toolbar {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin:0 0 1.1rem; padding-bottom:12px; border-bottom:0.5px solid var(--border);
+}
+.mss-toolbar-label { display:flex; align-items:baseline; gap:10px; min-width:0; }
+.mss-toolbar-title { font-family:var(--serif); font-size:13px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); white-space:nowrap; }
+.mss-toolbar-count { font-size:12px; color:var(--text-3); white-space:nowrap; }
+.mss-toolbar-count b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); letter-spacing:.3px; }
+.mss-toolbar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.mss-toolbar .sort-bar::before { content:none; }
+.mss-empty { padding:3rem 1rem; text-align:center; font-size:13px; color:var(--text-3); }
+
+/* ── Note popup shell (note-popup.js → MSSNote) ── */
+.note-popup-overlay2 { position:fixed; inset:0; z-index:1100; display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity .2s; }
+.note-popup-overlay2.open { opacity:1; pointer-events:auto; }
+.note-popup2 { width:100%; border-radius:var(--radius-lg); position:relative; transform:scale(.96); transition:transform .22s cubic-bezier(0.4,0,0.2,1); }
+.note-popup-overlay2.open .note-popup2 { transform:scale(1); }
+
 /* ── Popups (Personal + Community share this design) ── */
 .note-popup-overlay2, #snPopupOverlay { background:rgba(0,0,0,.55) !important; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px) !important; }
 .np-card { max-width:540px !important; background:var(--bg-2) !important; border:0.5px solid var(--border) !important; box-shadow:0 28px 70px rgba(0,0,0,.4) !important; display:flex; flex-direction:column; max-height:90dvh; }
@@ -1781,6 +1801,7 @@ body.notif-sheet-open { overflow:hidden; }
 }
 .np-textarea:focus { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
 .np-count { font-size:11px; color:var(--text-3); text-align:right; }
+.np-count.over { color:#c0564a; }
 .np-footer { padding:14px 22px 18px; border-top:0.5px solid var(--border); flex-shrink:0; }
 .np-spoiler-wrap .spoiler-toggle { margin:0 0 12px; }   /* always visible above Save / Cancel */
 .np-actions { display:flex; gap:8px; padding:0 !important; flex-direction:row !important; }
@@ -1838,6 +1859,19 @@ body.notif-sheet-open { overflow:hidden; }
 .social-list-react-btn:hover svg, .snote-rect-btn:hover svg { transform:scale(1.15) rotate(-8deg); }
 /* ── List cards (Personal + Community share one design) ── */
 .lc-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:18px; }
+/* ── Collaborators line + Shared/Collab tag (list-popup.js) ── */
+.cl-tag { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; padding:2px 8px; border-radius:999px; background:var(--olive); color:#fff; vertical-align:1px; }
+.cl-line { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-3); margin:-4px 0 10px; min-width:0; }
+.cl-line span:last-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cl-line b { color:var(--text-2); font-weight:600; }
+.cl-stack { display:inline-flex; flex-shrink:0; }
+.cl-stack .cl-av + .cl-av { margin-left:-7px; }
+.cl-av {
+  width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--olive); color:#fff; font-size:10px; font-weight:700; border:2px solid var(--card);
+}
+.cl-av img { width:100%; height:100%; object-fit:cover; }
+.lp-meta + .cl-line { margin:-6px 0 14px; }
 @media(max-width:1400px) { .lc-grid { grid-template-columns:repeat(3, 1fr); } }
 @media(max-width:1024px) { .lc-grid { grid-template-columns:repeat(2, 1fr); } }
 @media(max-width:640px)  { .lc-grid { grid-template-columns:1fr; gap:12px; } }
@@ -1869,6 +1903,11 @@ body.notif-sheet-open { overflow:hidden; }
 
 /* ── List popup (Personal + Community) ── */
 .lp-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:1.1rem; }
+/* Read-only list popup (list-popup.js → MSSList.open) */
+#mssListOverlay { position:fixed; inset:0; z-index:900; background:rgba(0,0,0,0.75); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); display:none; align-items:center; justify-content:center; padding:24px; }
+#mssListOverlay.open { display:flex; }
+#mssListCard { background:var(--bg-3); border:0.5px solid var(--border); border-radius:var(--radius-lg); max-width:560px; width:100%; max-height:88vh; overflow-y:auto; padding:clamp(1.1rem, 4vw, 1.6rem); box-shadow:0 24px 60px rgba(0,0,0,.35); }
+@media(max-width:640px) { #mssListOverlay { padding:14px; } }
 .lp-eyebrow { font-family:var(--serif); font-size:11.5px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); display:flex; align-items:center; gap:8px; }
 .lp-tag { font-family:var(--sans); letter-spacing:.6px; font-size:10px; padding:2px 8px; border-radius:999px; border:1px solid var(--border-2); color:var(--text-3); }
 .lp-close { background:none; border:none; color:var(--text-3); cursor:pointer; line-height:1; padding:4px; display:flex; }
