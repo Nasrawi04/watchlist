@@ -238,7 +238,6 @@
 <script src="js/info-popup.js"></script>
 <script src="js/rating-popup.js"></script>
 <script src="js/note-popup.js"></script>
-<script src="js/entry-views.js"></script>
 <script src="js/sort-filter.js"></script>
 <script>
 function _lvEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -303,10 +302,11 @@ function _lvTypeCls(e) {
   return isMovie ? 'type-label' : 'type-label type-label-tv';
 }
 
-// Tapping a title opens Info first, then Ratings and Note (entry-views.js)
+// Tapping a title opens Info first, then Ratings and Note (MSSViews, info-popup.js)
 function _lvOpenInfo(id) {
   const e = _lvItems.find(x => x.id === id);
-  if (e) MSSViews.open(e, { order: ['info', 'rate', 'note'] });
+  if (!e) return;
+  MSSViews.open(e, { order: ['info', 'rate', 'note'] });
 }
 
 function _lvCardHTML(e, rank) {
