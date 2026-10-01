@@ -393,6 +393,7 @@
 <script src="js/info-popup.js"></script>
 <script src="js/rating-popup.js"></script>
 <script src="js/friend-popups.js"></script>
+<script src="js/list-popup.js"></script>
 <script src="js/sort-filter.js"></script>
 <script>
 let _fUser = null;
@@ -713,102 +714,23 @@ SF.register('frLists', {
     { key: 'rank', label: 'Ranking', options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked']], test: (l, v) => v === 'yes' ? l.ranked === true : l.ranked === false },
   ],
 });
-/* Lists can hold titles added straight from Discover ("tmdb:movie:123").
-   Look up their posters from TMDB (kept on the device for 14 days —
-   shared with the Lists page's cache) and redraw once they arrive. */
-let _frTmdbItems = {}, _frTmdbLoading = false;
-try {
-  const saved = JSON.parse(localStorage.getItem('mss_tmdb_items_v1') || '{}');
-  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
-  Object.entries(saved).forEach(([k, v]) => { if (v && v._t > cutoff) _frTmdbItems[k] = v; });
-} catch {}
-async function _frHydrateTmdb(lists) {
-  if (_frTmdbLoading) return;
-  const need = [...new Set(lists.flatMap(l => (l.items || []).slice(0, 5)))].filter(id => typeof id === 'string' && id.startsWith('tmdb:') && !_frTmdbItems[id]);
-  if (!need.length) return;
-  _frTmdbLoading = true;
-  await Promise.all(need.slice(0, 60).map(async pid => {
-    const [, type, tid] = pid.split(':');
-    try {
-      const res = await tmdbFetch(`${TMDB_BASE}/${type}/${tid}?api_key=${TMDB_KEY}&language=en-US`);
-      if (!res.ok) return;
-      const d = await res.json();
-      _frTmdbItems[pid] = { id: pid, title: d.title || d.name || '', poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null, tmdb_id: Number(tid), tmdb_type: type,
-        year: (d.release_date || d.first_air_date || '').slice(0, 4), cat: type === 'movie' ? 'movies' : 'tv', _t: Date.now() };
-    } catch {}
-  }));
-  try {
-    const all = JSON.parse(localStorage.getItem('mss_tmdb_items_v1') || '{}');
-    localStorage.setItem('mss_tmdb_items_v1', JSON.stringify({ ...all, ..._frTmdbItems }));
-  } catch {}
-  _frTmdbLoading = false;
-  if (_frTab === 'lists') _frRender();
-}
-
 function _frRenderLists() {
   const list = SF.list('frLists', 'all');
-  _frHydrateTmdb(list);
+  // Titles added from Discover ("tmdb:…") — posters arrive, then redraw
+  MSSList.hydrate(list, 8).then(changed => { if (changed && _frTab === 'lists') _frRender(); });
   _frToolbar("Friends' Lists", list.length, 'frLists', list.length === 1 ? 'list' : 'lists');
   if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('layers', 'No lists yet', 'When your friends make lists, they show up here.'); return; }
-  // Same cards as the Lists page (lc-* in style.css)
-  document.getElementById('frContent').innerHTML = `<div class="lc-grid">${list.map(l => {
-    const items = l.items || [];
-    const posters = items.slice(0, 5).map(_frListItem).filter(Boolean);
-    const p = _frProfiles[l.user_id] || {};
-    return `<div class="lc-card" onclick="_frOpenList(${attrJSON(l.id)})">
-      <div class="social-list-owner">${_frListAv(p)}<div class="social-list-username">@${escHTML(p.username || 'friend')}</div></div>
-      <div class="lc-title-row"><div class="lc-title">${escHTML(l.title)}</div>${_frRankBadge(l.ranked)}</div>
-      <div class="lc-meta"><b>${items.length}</b> ${items.length === 1 ? 'title' : 'titles'}</div>
-      ${l.description ? `<div class="lc-desc">${escHTML(l.description)}</div>` : ''}
-      ${posters.length ? `<div class="lc-posters">${posters.map(e => `<div class="lc-poster">${posterHTML(e, 'big')}</div>`).join('')}</div>`
-        : `<div class="lc-posters"><div class="lc-poster lc-poster-empty">No titles yet</div></div>`}
-    </div>`;
-  }).join('')}</div>`;
+  // Same cards + popup as the Lists page (list-popup.js)
+  document.getElementById('frContent').innerHTML = `<div class="lc-grid">${list.map(l => MSSList.cardHTML(l, {
+    resolve: _frListItem, onclick: `_frOpenList(${attrJSON(l.id)})`, ownerHTML: MSSList.ownerHTML(_frProfiles[l.user_id]),
+  })).join('')}</div>`;
 }
-const _frListItem = id => window._frEntryMap[id] || _frTmdbItems[id] || null;
-function _frListAv(p) {
-  const u = safeURL(p?.avatar_url);
-  return `<div class="social-list-avatar">${u ? `<img src="${u}" loading="lazy" alt="">` : escHTML((p?.username || '?')[0].toUpperCase())}</div>`;
-}
-function _frRankBadge(r) {
-  return r === true ? '<span class="list-rank-badge is-ranked">Ranked</span>' : r === false ? '<span class="list-rank-badge is-unranked">Unranked</span>' : '';
+const _frListItem = id => window._frEntryMap[id] || MSSList.tmdb(id);
+function _frOpenList(id) {
+  const l = _frLists.find(x => x.id === id);
+  if (l) MSSList.open(l, { resolve: _frListItem, owner: _frProfiles[l.user_id] || {} });
 }
 
-/* List popup — the same popup the Lists page uses (lp-* in style.css) */
-function _frOpenList(id) {
-  const l = _frLists.find(x => x.id === id); if (!l) return;
-  let ov = document.getElementById('frListOverlay');
-  if (!ov) {
-    ov = document.createElement('div');
-    ov.id = 'frListOverlay';
-    ov.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
-    ov.innerHTML = `<div id="frListCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:560px;width:100%;max-height:88vh;overflow-y:auto;padding:clamp(1.1rem, 4vw, 1.6rem);box-shadow:0 24px 60px rgba(0,0,0,.35);"></div>`;
-    ov.addEventListener('click', e => { if (e.target === ov) _frCloseList(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && ov.style.display === 'flex') _frCloseList(); });
-    document.body.appendChild(ov);
-  }
-  const items = l.items || [], p = _frProfiles[l.user_id] || {};
-  const shown = items.map(_frListItem).filter(Boolean);
-  const max = shown.length > 8 ? 7 : 8, posters = shown.slice(0, max), extra = shown.length - posters.length;
-  document.getElementById('frListCard').innerHTML = `
-    <div class="lp-head"><div class="social-list-owner" style="margin-bottom:0;">${_frListAv(p)}<div class="social-list-username">@${escHTML(p.username || 'friend')}</div></div>
-      <button class="lp-close" onclick="_frCloseList()" aria-label="Close">${icon('x', 18)}</button></div>
-    <div class="lp-title-row"><div class="lp-title">${escHTML(l.title)}</div>${_frRankBadge(l.ranked)}</div>
-    ${l.description ? `<div class="lp-desc">${escHTML(l.description)}</div>` : ''}
-    <div class="lp-meta"><b>${items.length}</b> ${items.length === 1 ? 'title' : 'titles'}</div>
-    ${posters.length ? `<div class="lp-posters">${posters.map(e => `<div class="lp-poster">${posterHTML(e, 'big')}</div>`).join('')}${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}</div>` : ''}
-    <div id="lpNavPopupActions" class="lp-footer">
-      <button class="popup-action-btn lp-view" onclick="location.href='list-view.html?list=${encodeURIComponent(l.id)}'">${icon('layers', 14)} View List</button>
-      <button class="popup-action-btn lp-replies" onclick="_frCloseList()">Close</button>
-    </div>`;
-  ov.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-}
-function _frCloseList() {
-  const ov = document.getElementById('frListOverlay');
-  if (ov) ov.style.display = 'none';
-  document.body.style.overflow = '';
-}
 
 /* ══ NOTES ══ */
 const _frWords = t => (t || '').trim().split(/\s+/).filter(Boolean).length;
