@@ -539,7 +539,9 @@ document.addEventListener('keydown', e => {
 /* ══════════════════════════════════════════
    CONFIRM DIALOG
 ══════════════════════════════════════════ */
-function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', iconName = 'x' } = {}) {
+// danger (default true) → solid red confirm button; danger:false → solid olive
+// (for non-destructive actions like signing out or starting a rewatch).
+function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', iconName = 'x', danger = true } = {}) {
   return new Promise((resolve) => {
     const overlay  = document.getElementById('confirmOverlay');
     if (!overlay) { resolve(window.confirm(message || title)); return; }
@@ -547,28 +549,39 @@ function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Con
     document.getElementById('confirmTitle').textContent  = title;
     document.getElementById('confirmMsg').textContent    = message;
     document.getElementById('confirmOk').textContent     = confirmText;
+    document.getElementById('confirmOk').classList.toggle('is-safe', !danger);
     document.getElementById('confirmIcon').innerHTML     = icon(iconName, 36);
 
+    // Remember the page's scroll lock + focus, so cancelling a confirm
+    // opened from inside a popup leaves that popup exactly as it was.
+    const prevOverflow = document.body.style.overflow;
+    const prevFocus    = document.activeElement;
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
 
+    const btnOk     = document.getElementById('confirmOk');
+    const btnCancel = document.getElementById('confirmCancel');
     function done(val) {
       overlay.classList.remove('open');
-      document.body.style.overflow = '';
+      document.body.style.overflow = prevOverflow;
       btnOk.removeEventListener('click', onOk);
       btnCancel.removeEventListener('click', onCancel);
       overlay.removeEventListener('click', onBg);
+      document.removeEventListener('keydown', onKey, true);
+      prevFocus?.focus?.({ preventScroll: true });
       resolve(val);
     }
-    const btnOk     = document.getElementById('confirmOk');
-    const btnCancel = document.getElementById('confirmCancel');
     const onOk     = () => done(true);
     const onCancel = () => done(false);
     const onBg     = (e) => { if (e.target === overlay) done(false); };
+    // Esc cancels (popups underneath already skip their own Esc while this is open)
+    const onKey    = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } };
 
     btnOk.addEventListener('click', onOk);
     btnCancel.addEventListener('click', onCancel);
     overlay.addEventListener('click', onBg);
+    document.addEventListener('keydown', onKey, true);
+    btnCancel.focus({ preventScroll: true });
   });
 }
 
