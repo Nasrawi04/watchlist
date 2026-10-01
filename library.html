@@ -820,7 +820,6 @@ function _trimNotes(text) {
 <script src="js/info-popup.js"></script>
 <script src="js/rating-popup.js"></script>
 <script src="js/note-popup.js"></script>
-<script src="js/entry-views.js"></script>
 <script src="js/export.js"></script>
 <script>
 /* ── State ── */
@@ -2201,7 +2200,7 @@ function openProfInfoPopup(id) {
   if (e) _profViews(e);
 }
 
-// Your title: Ratings → Note → Info in one popup (entry-views.js). Opens on
+// Your title: Ratings → Note → Info in one popup (MSSViews, info-popup.js). Opens on
 // Ratings once it's rated/watched, otherwise on Info.
 function _profViews(e) {
   var rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
