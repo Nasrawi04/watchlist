@@ -5,19 +5,20 @@
    no page header or stat boxes — just the toolbar (label + count + Sort /
    Filter) and the same cards and popups the pages use.
 
-     MSSTabs.notes(el, { entries, owner, name })
-       Cards from note-popup.js. Your own profile: tap → read your note →
-       Edit Note (saves in place). Someone else's: read-only, spoilers blurred.
+     MSSTabs.notes(el, { entries, owner, name, onDelete })
+       Cards from note-popup.js. Tap → Note · Ratings · Info (entry-views.js);
+       your own profile: Edit Note saves in place. Someone else's: read-only,
+       spoilers blurred.
      MSSTabs.lists(el, { userId, entries, owner, name })
        Cards from list-popup.js — lists they made plus lists shared with them.
        Tap → the list popup → View List (list-view.html); on your own
        profile also "Manage in Lists" (editing stays on the Lists page).
 
-   Requires sort-filter.js, note-popup.js, list-popup.js.
+   Requires sort-filter.js, note-popup.js, list-popup.js, entry-views.js.
 ═══════════════════════════════════════════════════════════════ */
 
 const MSSTabs = (() => {
-  const N = { el: null, entries: [], owner: false, name: '', counts: {} };
+  const N = { el: null, entries: [], owner: false, name: '', counts: {}, onDelete: null };
   const L = { el: null, lists: null, entries: [], userId: null, owner: false, name: '', collab: {}, map: {}, loading: null };
   const empty = (ico, title, sub) => `<div class="empty" style="padding:3.5rem 1rem;text-align:center;">
       <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon(ico, 44)}</div>
@@ -29,6 +30,7 @@ const MSSTabs = (() => {
   /* ══ Notes ══ */
   const withNotes = () => N.entries.filter(e => e.notes && e.notes.trim());
   SF.register('tabNotes', {
+    watched: () => true,          // Year Watched filter
     base: withNotes,
     render: () => renderNotes(),
     defaultSort: 'newest',
@@ -73,14 +75,20 @@ const MSSTabs = (() => {
         : `<div class="mss-empty">No notes match these filters.</div>`);
   }
   function notes(el, o) {
-    Object.assign(N, { el, entries: o.entries || [], owner: !!o.owner, name: o.name || '' });
+    Object.assign(N, { el, entries: o.entries || [], owner: !!o.owner, name: o.name || '', onDelete: o.onDelete || null });
     renderNotes();
     const ids = withNotes().map(e => e.id);
     MSSNote.reactionCounts(ids).then(c => { N.counts = c; renderNotes(); }).catch(() => {});
   }
+  // Note first, then Ratings and Info — same as the Notes page (entry-views.js)
   function openNote(id) {
     const e = N.entries.find(x => x.id === id);
-    if (e) MSSNote.open(e, { counts: N.counts[id], editable: N.owner, eyebrow: N.owner ? 'Your Note' : `${N.name ? N.name + '’s' : 'Their'} Note`, onSaved: renderNotes });
+    if (!e) return;
+    MSSViews.open(e, {
+      order: ['note', 'rate', 'info'], own: N.owner, counts: N.counts[id], profile: N.owner ? null : { display_name: N.name },
+      onNoteSaved: renderNotes, onChange: renderNotes,
+      onDelete: x => { N.entries = N.entries.filter(y => y.id !== x.id); renderNotes(); N.onDelete?.(x); },
+    });
   }
 
   /* ══ Lists ══ */
