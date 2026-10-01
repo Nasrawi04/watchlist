@@ -184,6 +184,7 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
 <script src="js/discover-categories.js"></script>
 <script>
 let _homeUser = null;
@@ -390,6 +391,55 @@ function _tmdbCardHTML(posterUrl, title, year, onclick) {
   </div>`;
 }
 
+/* Currently Watching — in progress first, then Up Next */
+function renderHomeWatching(entries) {
+  // In progress first, then Up Next (what you've lined up to watch next)
+  const watching = [...entries.filter(e => e.status === 'watching'), ...entries.filter(e => e.status === 'up_next')];
+  const el = document.getElementById('homeWatching');
+  if (!watching.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div class="section-eyebrow">In Progress</div>
+    <div class="section-title">Currently Watching</div>
+    <div class="watch-list">
+      ${watching.slice(0, 6).map(e => {
+        const isM = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+        const pct = e.total_eps ? Math.round(((e.watched||0) / e.total_eps) * 100) : 0;
+        const epStr = isM ? '' : (e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : ''));
+        const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
+        const rtStr = isM && (rtH||rtM) ? (rtH ? `${rtH}h ${rtM}m` : `${rtM}m`) : '';
+        const typeBadge = `<span class="${isM ? 'type-label' : 'type-label type-label-tv'}">${isM ? 'Movie' : 'TV Show'}</span>`;
+        const upNext = e.status === 'up_next';
+        return `<div class="w-card${upNext ? ' is-up-next' : ''}" onclick="_homeOpenInfo('${e.id}')">
+          <div class="w-poster">${posterHTML(e)}</div>
+          <div class="w-body">
+            <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
+            ${epStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${epStr}</span></div>` : ''}
+            ${rtStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${rtStr}</span></div>` : ''}
+            ${!epStr && !rtStr ? `<div class="w-ep-row">${typeBadge}</div>` : ''}
+            ${upNext ? `<div class="w-ep-row"><span class="up-next-tag">Up Next</span></div>` : ''}
+            ${(!isM && e.total_eps) ? `<div class="w-prog-track" style="margin-top:6px;"><div class="w-prog-fill" style="width:${pct}%"></div></div><div class="w-prog-label">${e.watched||0} / ${e.total_eps} eps · ${pct}%</div>` : (!isM && e.watched ? `<div class="w-prog-label">${e.watched} watched</div>` : '')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+/* Tapping one of your titles opens the shared info popup (info-popup.js)
+   with your entry's actions; a change or delete re-draws these sections. */
+function _homeOpenInfo(id) {
+  const e = (window._homeEntries || []).find(x => x.id === id);
+  if (!e) return;
+  MSSInfo.forOwnEntry(e, {
+    from: 'index.html',
+    onChange: _homeRerender,
+    onDelete: x => { window._homeEntries = window._homeEntries.filter(y => y.id !== x.id); _homeRerender(); },
+  });
+}
+function _homeRerender() {
+  renderHomeWatching(window._homeEntries);
+  renderHomeWatchlist(window._homeEntries);
+}
+
 function renderHomeWatchlist(entries) {
   const all = entries.filter(e => e.status === 'queue');
   // Fisher-Yates shuffle — a fresh random sample each page load, instead of
@@ -400,14 +450,15 @@ function renderHomeWatchlist(entries) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   const queue = shuffled.slice(0, 12);
-  const cards = queue.map(e => `<div class="q-card" onclick="goToDetail('${e.id}','index.html')">
+  const cards = queue.map(e => `<div class="q-card" onclick="_homeOpenInfo('${e.id}')">
     <div class="q-poster" style="position:relative">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${getTypeBadgeOverlay(e,'latest')}</div>
     <div class="q-info"><div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${escHTML(e.title)}</div>${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}</div></div>
   </div>`).join('');
   _homeHScrollSection('homeWatchlist', 'homeWatchlistGrid', 'Saved', 'From Your Watchlist', cards);
 }
 function renderHomeRecentlyViewed(rows) {
-  const cards = rows.map(r => _tmdbCardHTML(r.poster_url, r.title, null, `goToTitle('${r.tmdb_type}', ${r.tmdb_id})`)).join('');
+  const cards = rows.map(r => _tmdbCardHTML(r.poster_url, r.title, null,
+    `MSSInfo.fromDiscover({ id: ${Number(r.tmdb_id)}, media_type: ${escHTML(JSON.stringify(r.tmdb_type === 'movie' ? 'movie' : 'tv'))}, title: ${escHTML(JSON.stringify(r.title || ''))}, poster_url: ${escHTML(JSON.stringify(r.poster_url || ''))} })`)).join('');
   _homeHScrollSection('homeRecentlyViewed', 'homeRecentlyViewedGrid', 'History', 'Recently Viewed', cards);
 }
 
@@ -441,36 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const entries = await getEntries(user.id);
     window._homeEntries = entries;
 
-    /* Currently watching */
-    // In progress first, then Up Next (what you've lined up to watch next)
-    const watching = [...entries.filter(e => e.status === 'watching'), ...entries.filter(e => e.status === 'up_next')];
-    if (watching.length) {
-      document.getElementById('homeWatching').innerHTML = `
-        <div class="section-eyebrow">In Progress</div>
-        <div class="section-title">Currently Watching</div>
-        <div class="watch-list">
-          ${watching.slice(0, 6).map(e => {
-            const isM = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-            const pct = e.total_eps ? Math.round(((e.watched||0) / e.total_eps) * 100) : 0;
-            const epStr = isM ? '' : (e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : ''));
-            const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
-            const rtStr = isM && (rtH||rtM) ? (rtH ? `${rtH}h ${rtM}m` : `${rtM}m`) : '';
-            const typeBadge = `<span class="${isM ? 'type-label' : 'type-label type-label-tv'}">${isM ? 'Movie' : 'TV Show'}</span>`;
-            const upNext = e.status === 'up_next';
-            return `<div class="w-card${upNext ? ' is-up-next' : ''}" onclick="goToDetail('${e.id}','index.html')">
-              <div class="w-poster">${posterHTML(e)}</div>
-              <div class="w-body">
-                <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
-                ${epStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${epStr}</span></div>` : ''}
-                ${rtStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${rtStr}</span></div>` : ''}
-                ${!epStr && !rtStr ? `<div class="w-ep-row">${typeBadge}</div>` : ''}
-                ${upNext ? `<div class="w-ep-row"><span class="up-next-tag">Up Next</span></div>` : ''}
-                ${(!isM && e.total_eps) ? `<div class="w-prog-track" style="margin-top:6px;"><div class="w-prog-fill" style="width:${pct}%"></div></div><div class="w-prog-label">${e.watched||0} / ${e.total_eps} eps · ${pct}%</div>` : (!isM && e.watched ? `<div class="w-prog-label">${e.watched} watched</div>` : '')}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>`;
-    }
+    renderHomeWatching(entries);
 
     /* New discovery sections — TMDB fetches run in parallel with each other
        and don't block the rest of the page; local sections (Watchlist,
