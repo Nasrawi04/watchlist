@@ -983,28 +983,46 @@ nav {
   .fd-description  { font-size:11.5px; margin-bottom:8px; padding-bottom:8px; }
 }
 
-/* ── Info · Ratings · Note switcher (entry-views.js → MSSViews) ──
-   Sits at the top of whichever shared popup is showing; same pill look
-   as the notification tabs. Room on the right for the popup's ✕. */
-.mss-views:empty { display:none; }
-.mss-views { padding:16px 64px 0 20px; }
-.mss-views-bar { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
-.mss-views-bar::-webkit-scrollbar { display:none; }
-.mss-views-tab {
-  flex-shrink:0; display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:999px; cursor:pointer;
-  background:var(--card); border:0.5px solid var(--border); color:var(--text-2);
-  font-family:var(--sans); font-size:12.5px; font-weight:600; white-space:nowrap; transition:all .15s;
+/* ── Segmented toggle: Personal / Community (Notes, Lists) and the
+   popups' Info / Ratings / Note switcher ── */
+.pn-toggle {
+  display:flex; width:fit-content; margin:0 auto 1.5rem;
+  background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius-sm); overflow:hidden;
 }
-.mss-views-tab svg { width:13px; height:13px; }
-.mss-views-tab:hover { border-color:var(--border-olive); color:var(--text); }
-.mss-views-tab.active { background:var(--olive); border-color:var(--olive); color:#fff; cursor:default; }
-.mss-views-tab:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.pn-toggle-btn {
+  padding:10px 32px; font-family:'Manrope',var(--sans); font-size:13.5px; font-weight:600;
+  background:none; border:none; color:var(--text-3); cursor:pointer;
+  transition:all .15s;
+}
+.pn-toggle-btn + .pn-toggle-btn { border-left:0.5px solid var(--border-2); }
+.pn-toggle-btn:hover { color:var(--text); }
+.pn-toggle-btn.active { background:var(--olive); color:#fff; }
+.pn-toggle-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
+
+/* ── Info · Ratings · Note switcher (MSSViews, info-popup.js) ──
+   The same segmented toggle, full width across the top of the popup,
+   with the popup's ✕ beside it (the popup's own ✕ hides meanwhile). */
+.mss-views:empty { display:none; }
+.mss-views { display:flex; align-items:center; gap:10px; padding:16px 20px 4px; }
+.mss-views .pn-toggle { flex:1; width:auto; margin:0; }
+.mss-views .pn-toggle-btn { flex:1; padding:10px 8px; }
+.mss-views .pn-toggle-btn.active { cursor:default; }
+.mss-views-close {
+  flex-shrink:0; width:38px; height:38px; border-radius:var(--radius-sm); cursor:pointer;
+  background:var(--bg-3); border:0.5px solid var(--border-2); color:var(--text-2);
+  font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; transition:all .15s;
+}
+.mss-views-close:hover { color:var(--text); border-color:var(--border-olive); }
+#mssInfoCard:has(> .mss-views:not(:empty)) .pvi-close,
+#mssRateCard:has(> .mss-views:not(:empty)) .mr-close,
+.note-popup2:has(> .mss-views:not(:empty)) .np-close,
+#snPopupCard:has(> .mss-views) .np-close { display:none; }
 #mssNoteOverlay .mss-views, #snPopupCard .mss-views { padding:14px 16px 12px; }
 /* Switching views swaps popups instantly — no fade / slide in between */
 body.mss-switching #mssInfoOverlay, body.mss-switching #mssInfoCard,
 body.mss-switching #mssRateOverlay, body.mss-switching #mssRateCard,
 body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-popup2 { transition:none !important; }
-@media(max-width:640px) { .mss-views { padding:14px 52px 0 14px; } .mss-views-tab { padding:6px 11px; font-size:12px; } }
+@media(max-width:640px) { .mss-views { padding:14px 14px 4px; } .mss-views .pn-toggle-btn { padding:9px 6px; font-size:13px; } }
 
 /* ── Info popup (info-popup.js → MSSInfo) — the one info popup used on every page ── */
 #mssInfoOverlay {
