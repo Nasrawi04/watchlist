@@ -987,7 +987,7 @@
       <div class="det-actions-bar">
         <button class="btn-save" id="btnSave" onclick="doSave()">Save Entry</button>
         <button class="btn-delete" id="dDeleteBtn" style="display:none" onclick="doDelete()">Delete</button>
-        <button class="popup-action-btn" id="dDiscoverBtn" style="display:none;" onclick="_detGoToDiscover(this)">
+        <button class="popup-action-btn" id="dDiscoverBtn" style="display:none;" onclick="MSSInfo.discover(_detEntry, this)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           Discover
         </button>
@@ -1054,6 +1054,7 @@
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
 
 <script>
 let _detUser   = null;
@@ -2041,7 +2042,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initPage(async (user) => {
     _detUser = user;
     const e = _detId ? await getEntry(_detId) : null;
-    _detEntry = e || null;  // store for fav-lists-popup
+    _detEntry = e || null;
 
     // Populate form
     draftRatings = (e && e.ratings) ? { ...e.ratings } : {};
@@ -2209,8 +2210,6 @@ function closeCommentsModal() {
 // Close on Escape — whichever overlay is actually open, not just Comments
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  const discoverOv = document.getElementById('catDiscoverOverlay');
-  if (discoverOv && discoverOv.classList.contains('open')) { _closeDetDiscoverPicker?.(); return; }
   const commentsOv = document.getElementById('detCommentsOverlay');
   if (commentsOv && commentsOv.classList.contains('open')) { closeCommentsModal(); return; }
   const completionOv = document.getElementById('completionOverlay');
@@ -2644,103 +2643,6 @@ function _showDuplicatePopup(title, existing) {
 </script>
 
 <script>
-/* "Discover" button — same behavior as the category page popups: if this
-   entry already has a linked TMDB id/type, jump straight to its title.html
-   page (via the shared goToTitle() helper). Otherwise, search TMDB by
-   title and show a "Which one is it?" picker so the user can choose the
-   right match before navigating. Adapted from category.js's
-   _catGoDiscover/_openDiscoverPicker (not loaded here directly, since it
-   has its own page-init logic tied to window.PAGE_CAT that doesn't apply
-   to this page) — reuses the same shared CSS classes (#catDiscoverOverlay,
-   .cat-disc-*) already defined in style.css. */
-async function _detGoToDiscover(btn) {
-  const e = _detEntry;
-  if (!e) return;
-  if (e.tmdb_id && e.tmdb_type) {
-    goToTitle(e.tmdb_type, e.tmdb_id);
-    return;
-  }
-  if (typeof _tmdbSearch !== 'function') {
-    showToast('Discover is unavailable right now.', 'err');
-    return;
-  }
-  const origLabel = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = 'Searching…';
-  try {
-    const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
-    const results = await _tmdbSearch(e.title);
-    const sorted = [...results].sort((a, b) => {
-      const wantType = isMovie ? 'movie' : 'tv';
-      return (a.media_type === wantType ? 0 : 1) - (b.media_type === wantType ? 0 : 1);
-    });
-    _openDetDiscoverPicker(sorted, e.title);
-  } catch (err) {
-    showToast('Error searching TMDB.', 'err');
-    console.error(err);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = origLabel;
-  }
-}
-
-function _injectDetDiscoverPicker() {
-  if (document.getElementById('catDiscoverOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'catDiscoverOverlay';
-  el.innerHTML = `<div id="catDiscoverCard">
-    <button class="cat-disc-close" onclick="_closeDetDiscoverPicker()">✕</button>
-    <div class="cat-disc-title">Which one is it?</div>
-    <div class="cat-disc-sub" id="catDiscoverSub"></div>
-    <div id="catDiscoverList"></div>
-  </div>`;
-  el.addEventListener('click', ev => { if (ev.target === el) _closeDetDiscoverPicker(); });
-  document.body.appendChild(el);
-}
-
-function _openDetDiscoverPicker(results, entryTitle) {
-  _injectDetDiscoverPicker();
-  const esc2 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  document.getElementById('catDiscoverSub').textContent = `Matches for "${entryTitle}" — pick the right one`;
-
-  const listEl = document.getElementById('catDiscoverList');
-  if (!results.length) {
-    listEl.innerHTML = `<div class="cat-disc-none">No matches found on TMDB.</div>`;
-  } else {
-    listEl.innerHTML = results.map((r, i) => {
-      const isMovie = r.media_type === 'movie';
-      const rTitle  = isMovie ? r.title : r.name;
-      const year    = ((isMovie ? r.release_date : r.first_air_date) || '').split('-')[0];
-      const thumb   = r.poster_path ? TMDB_IMG + r.poster_path : null;
-      return `<div class="cat-disc-item" data-i="${i}">
-        <div class="cat-disc-thumb">${thumb ? `<img src="${thumb}" loading="lazy">` : ''}</div>
-        <div class="cat-disc-info">
-          <div class="cat-disc-name">${esc2(rTitle || '—')}</div>
-          <div class="cat-disc-meta">${isMovie ? 'Movie' : 'TV Show'}${year ? ' · ' + year : ''}</div>
-        </div>
-      </div>`;
-    }).join('');
-    listEl.querySelectorAll('.cat-disc-item').forEach((elm, i) => {
-      elm.addEventListener('click', () => {
-        const r = results[i];
-        _closeDetDiscoverPicker();
-        goToTitle(r.media_type === 'movie' ? 'movie' : 'tv', r.id);
-      });
-    });
-  }
-
-  const ov = document.getElementById('catDiscoverOverlay');
-  ov.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function _closeDetDiscoverPicker() {
-  const ov = document.getElementById('catDiscoverOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
 (function() {
   // Wait for the existing init flow (in the main script above) to finish
   // populating _detEntry and reveal the page, rather than calling
