@@ -237,19 +237,6 @@
   #lpPopupActions:has(> .popup-action-btn:nth-child(4)) { flex-wrap:wrap !important; }
   #lpPopupActions:has(> .popup-action-btn:nth-child(4)) .popup-action-btn { flex:1 1 calc(50% - 4px) !important; }
 }
-/* ── Collaboration ── */
-.cl-tag { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; padding:2px 8px; border-radius:999px; background:var(--olive); color:#fff; vertical-align:1px; }
-.cl-line { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-3); margin:-4px 0 10px; min-width:0; }
-.cl-line span:last-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.cl-line b { color:var(--text-2); font-weight:600; }
-.cl-stack { display:inline-flex; flex-shrink:0; }
-.cl-stack .cl-av + .cl-av { margin-left:-7px; }
-.cl-av {
-  width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
-  background:var(--olive); color:#fff; font-size:10px; font-weight:700; border:2px solid var(--card);
-}
-.cl-av img { width:100%; height:100%; object-fit:cover; }
-.lp-meta + .cl-line { margin:-6px 0 14px; }
 #collabOverlay {
   position:fixed; inset:0; z-index:1250; background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
   display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity .2s;
@@ -346,18 +333,6 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
 .lr-ghost .lr-pos, .lr-ghost .lr-move { visibility:hidden; }
 .lr-toggle.active { background:var(--olive) !important; color:#fff !important; border-color:var(--olive) !important; }
 
-/* ── Toolbar above the cards (same on both tabs) ── */
-.lists-toolbar {
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-  margin:0 0 1.1rem; padding-bottom:12px; border-bottom:0.5px solid var(--border);
-}
-.lists-toolbar-label { display:flex; align-items:baseline; gap:10px; min-width:0; }
-.lists-toolbar-title { font-family:var(--serif); font-size:13px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); white-space:nowrap; }
-.lists-toolbar-count { font-size:12px; color:var(--text-3); white-space:nowrap; }
-.lists-toolbar-count b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); letter-spacing:.3px; }
-.lists-toolbar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
-.lists-toolbar .sort-bar::before { content:none; }
-.lists-empty { padding:3rem 1rem; text-align:center; font-size:13px; color:var(--text-3); }
 </style>
 </head>
 <body>
@@ -401,7 +376,7 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
   <div id="llDropdown" class="username-dropdown"></div>
 
   <!-- Toolbar: section label + Sort / Filter (both tabs) -->
-  <div class="lists-toolbar fade-up fade-up-1" id="listsToolbar" style="display:none;"></div>
+  <div class="mss-toolbar fade-up fade-up-1" id="listsToolbar" style="display:none;"></div>
 
   <!-- Main content -->
   <div id="listsPageContent" class="fade-up fade-up-2">
@@ -492,6 +467,7 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/sort-filter.js"></script>
+<script src="js/list-popup.js"></script>
 <script>
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -519,19 +495,6 @@ let _listsAll = [];
 let _listsOrderSort = 'default';
 
 let _listsEntryMap = {};
-let _tmdbItemCache = {}; // 'tmdb:movie:123' -> resolved {id, title, poster_url, tmdb_id, tmdb_type, year}
-// Kept on the device for 14 days so lists with Discover titles show
-// their posters instantly on the next visit instead of re-asking TMDB.
-const _TMDB_ITEM_STORE = 'mss_tmdb_items_v1';
-try {
-  const saved = JSON.parse(localStorage.getItem(_TMDB_ITEM_STORE) || '{}');
-  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
-  Object.entries(saved).forEach(([k, v]) => { if (v && v._t > cutoff) _tmdbItemCache[k] = v; });
-} catch {}
-function _saveTmdbItemCache() {
-  try { localStorage.setItem(_TMDB_ITEM_STORE, JSON.stringify(_tmdbItemCache)); } catch {}
-}
-
 // List items can be either a personal entry's UUID (existing behavior)
 // or a bare "tmdb:movie:123" / "tmdb:tv:456" reference for something
 // added straight from Discover, with no personal entry behind it at
@@ -540,38 +503,10 @@ function _saveTmdbItemCache() {
 // every renderer already expects — so hScrollSection/social
 // previews/list-view.html don't need to know the difference.
 function _resolveListItem(id) {
-  if (typeof id === 'string' && id.startsWith('tmdb:')) return _tmdbItemCache[id] || null;
+  if (typeof id === 'string' && id.startsWith('tmdb:')) return MSSList.tmdb(id);
   return _listsEntryMap[id] || null;
 }
 
-async function _hydrateTmdbItems(allLists) {
-  const toFetch = new Set();
-  (allLists || []).forEach(l => (l.items || []).forEach(id => {
-    if (typeof id === 'string' && id.startsWith('tmdb:') && !_tmdbItemCache[id]) toFetch.add(id);
-  }));
-  if (!toFetch.size) return false;
-  await Promise.all([...toFetch].map(async pseudoId => {
-    const [, type, tmdbId] = pseudoId.split(':');
-    try {
-      const res = await tmdbFetch(`${TMDB_BASE}/${type}/${tmdbId}?api_key=${TMDB_KEY}&language=en-US`);
-      if (!res.ok) return;
-      const d = await res.json();
-      const title = type === 'movie' ? d.title : d.name;
-      const dateStr = type === 'movie' ? d.release_date : d.first_air_date;
-      _tmdbItemCache[pseudoId] = {
-        id: pseudoId,
-        title, poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null,
-        tmdb_id: Number(tmdbId), tmdb_type: type,
-        year: (dateStr || '').split('-')[0],
-        genres: (d.genres || []).map(g => g.name),
-        cat: type === 'movie' ? 'movies' : 'tv',
-        _t: Date.now(),
-      };
-    } catch (e) { console.error('Hydrate TMDB item error:', pseudoId, e); }
-  }));
-  _saveTmdbItemCache();
-  return true;
-}
 let _listsMode = 'personal';
 let _socialListsSort = 'popular';
 let _socialListsRaw = [];
@@ -642,7 +577,7 @@ async function loadListsPage() {
     (foreignRows || []).forEach(e => { _listsEntryMap[e.id] = e; });
   }
   if (_listsMode === 'personal') renderListsPage();
-  if (await _hydrateTmdbItems(_listsAll) && _listsMode === 'personal') renderListsPage();
+  if (await MSSList.hydrate(_listsAll) && _listsMode === 'personal') renderListsPage();
 
   _mssIdle(() => _fetchSocialLists());                         // warm up Community
 }
@@ -715,11 +650,6 @@ async function deleteFavoriteList(id) {
 
 
 // Badge only — no badge at all for lists that haven't picked yet
-function _rankBadge(ranked) {
-  if (ranked === true)  return `<span class="list-rank-badge is-ranked">Ranked</span>`;
-  if (ranked === false) return `<span class="list-rank-badge is-unranked">Unranked</span>`;
-  return '';
-}
 // Owner's pick for an undecided list (shown inside the popup)
 function _rankChoiceHTML(listId) {
   const mark = '<span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>';
@@ -730,7 +660,6 @@ function _rankChoiceHTML(listId) {
   </span></div>`;
 }
 // Kept for any older caller
-function _rankedBadgeHTML(listId, ranked) { return _rankBadge(ranked); }
 
 async function setListRanked(listId, value) {
   try {
@@ -760,11 +689,6 @@ const _LIST_ICONS = {
   del:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
 };
 
-function _lcPostersHTML(items, resolve) {
-  const posters = items.slice(0, 5).map(resolve).filter(Boolean);
-  if (!posters.length) return `<div class="lc-posters"><div class="lc-poster lc-poster-empty">No titles yet</div></div>`;
-  return `<div class="lc-posters">${posters.map(e => `<div class="lc-poster">${posterHTML(e, 'big')}</div>`).join('')}</div>`;
-}
 /* ══ Reorder lists (drag, or arrows) ══
    Tap "Reorder" → cards get a grip bar; drag any card (mouse or finger)
    and the others slide out of the way (FLIP animation). Arrows do the
@@ -803,23 +727,6 @@ async function _loadCollabData() {
   } catch (e) { console.warn('Collab data load failed (run 021 SQL?):', e); }
 }
 
-function _collabAvatar(p, cls = 'cl-av') {
-  const u = p && safeURL(p.avatar_url);
-  return `<span class="${cls}">${u ? `<img src="${u}" alt="">` : esc(((p && p.username) || '?')[0].toUpperCase())}</span>`;
-}
-// "With @maya, @omar" line for a list's popup / card
-function _collabLineHTML(list) {
-  if (list._collab) {
-    return `<div class="cl-line">${_collabAvatar(list._owner)}<span>Shared by <b>@${esc(list._owner?.username || 'user')}</b></span></div>`;
-  }
-  const people = (_listsCollab[list.id] || []);
-  const joined = people.filter(p => p.status === 'accepted');
-  const pending = people.filter(p => p.status === 'pending').length;
-  if (!joined.length && !pending) return '';
-  const names = joined.slice(0, 3).map(p => '@' + esc(p.profile?.username || 'user')).join(', ');
-  return `<div class="cl-line"><span class="cl-stack">${joined.slice(0, 3).map(p => _collabAvatar(p.profile)).join('')}</span>
-    <span>${joined.length ? `With <b>${names}</b>${joined.length > 3 ? ` +${joined.length - 3}` : ''}` : ''}${joined.length && pending ? ' · ' : ''}${pending ? `${pending} invite${pending === 1 ? '' : 's'} pending` : ''}</span></div>`;
-}
 
 /* ── Friends picker (with search) for inviting ── */
 let _collabPickerList = null, _collabPickerThen = null;
@@ -929,7 +836,7 @@ function _renderCollabPicker() {
       ? `<button class="cp-btn cp-sent" disabled>Invited</button>`
       : `<button class="cp-btn cp-invite" onclick="_collabInvite(this, ${attrJSON(p.id)})">Invite</button>`;
     return `<div class="cp-row">
-      ${_collabAvatar(p, 'cp-av')}
+      ${MSSList.avatarHTML(p, 'cp-av')}
       <div class="cp-who"><div class="cp-name">${esc(p.display_name || p.username)}</div><div class="cp-user">@${esc(p.username)}</div></div>
       ${btn}
     </div>`;
@@ -1143,9 +1050,14 @@ function _lrPointerUp() {
   _lr = null;
 }
 
-function _lcCountHTML(n) { return `<b>${n}</b> ${n === 1 ? 'title' : 'titles'}`; }
 
-// Personal list card — same design as the Community cards
+// " · Imported" / " · Shared" / " · Collab" after the title count
+function _listMetaExtra(list) {
+  return (list.forked_from ? ' · Imported' : '')
+    + (list._collab ? ' · <span class="cl-tag">Shared</span>' : (_listsCollab[list.id] || []).some(c => c.status === 'accepted') ? ' · <span class="cl-tag">Collab</span>' : '');
+}
+
+// Personal list card — same design as the Community cards (list-popup.js)
 function myListCardHTML(list, idx, total) {
   const items = list.items || [];
   const id = attrJSON(list.id);
@@ -1160,11 +1072,7 @@ function myListCardHTML(list, idx, total) {
         <button type="button" class="lr-arrow" aria-label="Move later" ${idx === total - 1 ? 'disabled' : ''} onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();_lrMove(${id}, 1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
       </span>
     </div>` : ''}
-    <div class="lc-title-row"><div class="lc-title">${esc(list.title)}</div>${_rankBadge(list.ranked)}</div>
-    <div class="lc-meta">${_lcCountHTML(items.length)}${list.forked_from ? ' · Imported' : ''}${list._collab ? ' · <span class="cl-tag">Shared</span>' : (_listsCollab[list.id] || []).some(c => c.status === 'accepted') ? ' · <span class="cl-tag">Collab</span>' : ''}</div>
-    ${_collabLineHTML(list)}
-    ${list.description ? `<div class="lc-desc">${esc(list.description)}</div>` : ''}
-    ${_lcPostersHTML(items, _resolveListItem)}
+    ${MSSList.cardInnerHTML(list, { resolve: _resolveListItem, metaExtra: _listMetaExtra(list), collabLine: MSSList.collabLineHTML(list, _listsCollab[list.id]) })}
   </div>`;
 }
 
@@ -1297,10 +1205,7 @@ function _renderListsToolbar(label, count, barHTML) {
   if (!el) return;
   if (!barHTML) { el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = '';
-  el.innerHTML = `<div class="lists-toolbar-label">
-      <div class="lists-toolbar-title">${esc(label)}</div>
-      <div class="lists-toolbar-count"><b>${count}</b> ${count === 1 ? 'list' : 'lists'}</div>
-    </div>${barHTML}`;
+  el.innerHTML = mssToolbarHTML(label, count, barHTML, 'list');
 }
 
 /* Community Sort & Filter (shared js/sort-filter.js module) */
@@ -1554,7 +1459,7 @@ function setSocialListsSort(val) { SF.setSort('social', 'all', val === 'latest' 
 
 let _socialEntryMap = {}; // entry_id -> entry (across ALL social lists, not just the viewer's own)
 function _resolveSocialItem(id) {
-  if (typeof id === 'string' && id.startsWith('tmdb:')) return _tmdbItemCache[id] || null;
+  if (typeof id === 'string' && id.startsWith('tmdb:')) return MSSList.tmdb(id);
   return _socialEntryMap[id] || null;
 }
 let _listsFilterMode = null; // { type: 'user'|'item', label, ... }
@@ -1579,7 +1484,7 @@ function _fetchSocialLists(force) {
     _socialListsMyReactions = {};
     (reactRes.data || []).forEach(r => { _socialListsMyReactions[r.list_id] = r.is_like ? 'like' : 'dislike'; });
     _socialListsCache = lists;
-    _hydrateTmdbItems(lists).then(changed => { if (changed && _listsMode === 'social') renderSocialLists(); });
+    MSSList.hydrate(lists).then(changed => { if (changed && _listsMode === 'social') renderSocialLists(); });
     return lists;
   })().catch(err => { _socialListsPromise = null; throw err; });
   return _socialListsPromise;
@@ -1624,7 +1529,7 @@ function renderSocialLists() {
     </div>`;
     return;
   }
-  if (!source.length) { wrap.innerHTML = `<div class="lists-empty">No lists match these filters.</div>`; return; }
+  if (!source.length) { wrap.innerHTML = `<div class="mss-empty">No lists match these filters.</div>`; return; }
   const sorted = source;
 
   wrap.innerHTML = `<div class="lc-grid">${sorted.map(l => {
@@ -1637,9 +1542,9 @@ function renderSocialLists() {
         <div class="social-list-avatar">${safeURL(l.avatar_url) ? `<img src="${safeURL(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
         <div class="social-list-username">@${esc(l.username || 'user')}</div>
       </div>
-      <div class="lc-title-row"><div class="lc-title">${esc(l.title)}</div>${_rankBadge(l.ranked)}</div>
-      <div class="lc-meta">${_lcCountHTML(items.length)}</div>
-      ${_lcPostersHTML(items, _resolveSocialItem)}
+      <div class="lc-title-row"><div class="lc-title">${esc(l.title)}</div>${MSSList.rankBadge(l.ranked)}</div>
+      <div class="lc-meta">${MSSList.countHTML(items.length)}</div>
+      ${MSSList.postersHTML(items, _resolveSocialItem)}
       <div class="social-list-reactions">
         <button class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialList(${id}, true)">
           ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${l.like_count || 0}</span>
@@ -1750,10 +1655,10 @@ function _renderListPopup() {
 
   card.innerHTML = `
     <div class="lp-head">${head}<button class="lp-close" onclick="closeSocialListPopup()" aria-label="Close">${icon('x', 18)}</button></div>
-    <div class="lp-title-row"><div class="lp-title">${esc(l.title)}</div>${_rankBadge(l.ranked)}</div>
+    <div class="lp-title-row"><div class="lp-title">${esc(l.title)}</div>${MSSList.rankBadge(l.ranked)}</div>
     ${l.description ? `<div class="lp-desc">${esc(l.description)}</div>` : ''}
-    <div class="lp-meta">${_lcCountHTML(items.length)}</div>
-    ${mine ? _collabLineHTML(l) : ''}
+    <div class="lp-meta">${MSSList.countHTML(items.length)}</div>
+    ${mine ? MSSList.collabLineHTML(l, _listsCollab[l.id]) : ''}
     ${isOwn && l.ranked == null ? _rankChoiceHTML(l.id) : ''}
     ${posters.length ? `<div class="lp-posters">
       ${posters.map(e => `<div class="lp-poster">${posterHTML(e, 'big')}</div>`).join('')}
@@ -2218,7 +2123,7 @@ async function _favRunDiscoverSearch(q) {
     // Full-size (w500) poster goes in the cache — that's what the list's
     // grid cards render. Never overwrite an item already hydrated from
     // the details endpoint (it also carries genres/cat).
-    merged.forEach(m => { if (_tmdbItemCache[m.pseudoId]) return; _tmdbItemCache[m.pseudoId] = { id: m.pseudoId, title: m.title, poster_url: m.poster_url, tmdb_id: m.tmdb_id, tmdb_type: m.tmdb_type, year: m.year }; });
+    merged.forEach(m => { if (MSSList.cache[m.pseudoId]) return; MSSList.cache[m.pseudoId] = { id: m.pseudoId, title: m.title, poster_url: m.poster_url, tmdb_id: m.tmdb_id, tmdb_type: m.tmdb_type, year: m.year }; });
 
     document.getElementById('favListPickerList').innerHTML = merged.map(m => {
       const isSel = _favListPickerSelected.includes(m.pseudoId);
