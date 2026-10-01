@@ -47,6 +47,7 @@ const MSSRate = (() => {
     const el = document.createElement('div');
     el.id = 'mssRateOverlay';
     el.innerHTML = `<div id="mssRateCard" role="dialog" aria-modal="true" aria-labelledby="mssRateTitle">
+        <div class="mss-views" id="mssRateViews"></div>
         <div class="mr-head">
           <div class="mr-poster" id="mssRatePoster"></div>
           <div class="mr-meta">
@@ -169,6 +170,7 @@ const MSSRate = (() => {
     inject();
     current = e; opts = o;
     const $ = id => document.getElementById(id);
+    $('mssRateViews').innerHTML = '';   // MSSViews fills it when switching views
     $('mssRatePoster').innerHTML = posterHTML(e);
     const p = o.profile && (o.profile.username || o.profile.display_name) ? o.profile : null;
     $('mssRateBy').innerHTML = p ? `<span class="mr-by-av">${safeURL(p.avatar_url) ? `<img src="${safeURL(p.avatar_url)}" alt="">` : esc((p.username || '?')[0].toUpperCase())}</span><span>${esc(p.display_name || p.username || 'Friend')}’s rating</span>` : '';
@@ -209,9 +211,9 @@ const MSSRate = (() => {
 
   function forOwnEntry(e, o = {}) {
     open(e, { ...o, owner: true });
-    // Quietly pick up any new seasons TMDB has for it
+    // Quietly pick up any new seasons TMDB has for it (once — not on every view switch)
     const uid = window._navUser?.id;
-    if (e && uid && typeof _refreshTmdbSeasonData === 'function') _refreshTmdbSeasonData(e, uid, () => o.onChange?.(e));
+    if (e && !o.noRefresh && uid && typeof _refreshTmdbSeasonData === 'function') _refreshTmdbSeasonData(e, uid, () => o.onChange?.(e));
   }
   function forFriend(e, profile) { open(e, { owner: false, profile }); }
 
