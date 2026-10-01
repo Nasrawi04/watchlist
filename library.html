@@ -2200,12 +2200,12 @@ function openProfInfoPopup(id) {
   if (e) _profViews(e);
 }
 
-// Your title: Ratings → Note → Info in one popup (MSSViews, info-popup.js). Opens on
+// Your title: Info · Ratings · Note in one popup (MSSViews, info-popup.js). Opens on
 // Ratings once it's rated/watched, otherwise on Info.
 function _profViews(e) {
   var rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
   MSSViews.open(e, {
-    order: ['rate', 'note', 'info'], start: rated ? 'rate' : 'info', own: true, from: 'library.html',
+    start: rated ? 'rate' : 'info', own: true, from: 'library.html',
     onChange: function(){ renderLibrary(); }, onNoteSaved: function(){ renderLibrary(); }, onDelete: _profRemoveEntry
   });
 }
