@@ -316,13 +316,13 @@ function injectChrome() {
   confirmEl.className = 'confirm-overlay';
   confirmEl.id = 'confirmOverlay';
   confirmEl.innerHTML = `
-    <div class="confirm-card">
-      <div class="confirm-icon"  id="confirmIcon"></div>
+    <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMsg">
+      <div class="confirm-icon"  id="confirmIcon" aria-hidden="true"></div>
       <div class="confirm-title" id="confirmTitle">Are you sure?</div>
       <div class="confirm-msg"   id="confirmMsg"></div>
       <div class="confirm-actions">
-        <button class="confirm-cancel" id="confirmCancel">Cancel</button>
-        <button class="confirm-ok"     id="confirmOk">Confirm</button>
+        <button type="button" class="confirm-cancel" id="confirmCancel">Cancel</button>
+        <button type="button" class="confirm-ok"     id="confirmOk">Confirm</button>
       </div>
     </div>`;
 
