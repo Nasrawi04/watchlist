@@ -521,34 +521,6 @@ function cpOpenPopupToComments(id) {
   openCommentsPopupCompleted(id);
 }
 
-async function _cpGoDiscover(id) {
-  const e = _allCompleted.find(en => en.id === id);
-  if (!e) return;
-  if (e.tmdb_id && e.tmdb_type) {
-    goToTitle(e.tmdb_type, e.tmdb_id);
-    return;
-  }
-  if (typeof _tmdbSearch !== 'function') {
-    showToast('Discover is unavailable right now.', 'err');
-    return;
-  }
-  try {
-    const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
-    const results = await _tmdbSearch(e.title);
-    const sorted = [...results].sort((a, b) => {
-      const aMatch = (a.media_type === 'movie') === isMovie ? 0 : 1;
-      const bMatch = (b.media_type === 'movie') === isMovie ? 0 : 1;
-      return aMatch - bMatch;
-    });
-    const best = sorted[0];
-    if (best) goToTitle(best.media_type, best.id);
-    else showToast("Couldn't find this title on TMDB.", 'err');
-  } catch (err) {
-    console.error(err);
-    showToast('Error searching TMDB.', 'err');
-  }
-}
-
 function cpClosePopup() {
   const ov = document.getElementById('cpPopupOverlay');
   if (!ov) return;
@@ -782,8 +754,6 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (document.getElementById('ratingFilterOverlay')?.classList.contains('open')) {
       closeRatingFilter();
-    } else if (document.getElementById('catDiscoverOverlay')?.classList.contains('open')) {
-      _closeCardLinkPicker();
     } else if (document.getElementById('createCardOverlay')?.classList.contains('open')) {
       closeCreateCard();
     } else if (document.getElementById('commentsPopupCompletedOverlay')?.style.opacity === '1') {
