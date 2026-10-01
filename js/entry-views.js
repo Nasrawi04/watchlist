@@ -55,23 +55,31 @@ const MSSViews = (() => {
     st.cur = v;
     // Swap popups without their fade / slide so it feels like one popup
     document.body.classList.add('mss-switching');
-    closeAll();
-    Object.values(VIEWS).forEach(x => { const el = document.getElementById(x.slot); if (el) el.innerHTML = ''; });
-    const cbs = { from: o.from, onChange: o.onChange, onDelete: o.onDelete, noRefresh: st.refreshed };
-    if (v === 'info') o.own ? MSSInfo.forOwnEntry(e, cbs) : MSSInfo.fromEntry(e);
-    if (v === 'rate') o.own ? MSSRate.forOwnEntry(e, cbs) : MSSRate.forFriend(e, o.profile);
-    if (v === 'note' && o.note) o.note.open(e);
-    else if (v === 'note') MSSNote.open(e, {
-      counts: st.counts, editable: !!o.own,
-      eyebrow: o.own ? 'Your Note' : `${o.profile?.display_name || o.profile?.username ? (o.profile.display_name || o.profile.username) + '’s' : 'Their'} Note`,
-      onSaved: x => { o.onNoteSaved?.(x); },
-    });
-    st.refreshed = true;
-    if (st.views.length > 1) {
-      if (v === 'note' && o.note) bindSwipe(document.querySelector('#snPopupCard'));   // custom popup renders its own bar
-      else { document.getElementById(VIEWS[v].slot).innerHTML = barHTML(); bindSwipe(cardOf(v)); }
+    try {
+      closeAll();
+      Object.values(VIEWS).forEach(x => { const el = document.getElementById(x.slot); if (el) el.innerHTML = ''; });
+      const cbs = { from: o.from, onChange: o.onChange, onDelete: o.onDelete, noRefresh: st.refreshed };
+      if (v === 'info') o.own ? MSSInfo.forOwnEntry(e, cbs) : MSSInfo.fromEntry(e);
+      if (v === 'rate') o.own ? MSSRate.forOwnEntry(e, cbs) : MSSRate.forFriend(e, o.profile);
+      if (v === 'note' && o.note) o.note.open(e);
+      else if (v === 'note') MSSNote.open(e, {
+        counts: st.counts, editable: !!o.own,
+        eyebrow: o.own ? 'Your Note' : `${o.profile?.display_name || o.profile?.username ? (o.profile.display_name || o.profile.username) + '’s' : 'Their'} Note`,
+        onSaved: x => { o.onNoteSaved?.(x); },
+      });
+      st.refreshed = true;
+      if (st.views.length > 1) {
+        if (v === 'note' && o.note) bindSwipe(document.querySelector('#snPopupCard'));   // custom popup renders its own bar
+        else {
+          const slot = document.getElementById(VIEWS[v].slot);
+          // No slot = an old cached copy of info-popup / rating-popup / note-popup.js
+          if (slot) { slot.innerHTML = barHTML(); bindSwipe(cardOf(v)); }
+          else console.warn('MSSViews: popup file is out of date (no switcher slot) — hard refresh to update.');
+        }
+      }
+    } finally {
+      requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('mss-switching')));
     }
-    requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('mss-switching')));
   }
 
   // For a page's own note popup: the switcher markup for the top of its card
