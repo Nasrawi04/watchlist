@@ -133,6 +133,7 @@ const MSSNote = (() => {
     el.className = 'note-popup-overlay2';
     el.id = 'mssNoteOverlay';
     el.innerHTML = `<div class="note-popup2 np-card" role="dialog" aria-modal="true" aria-labelledby="mssNoteTitle">
+        <div class="mss-views" id="mssNoteViews"></div>
         <div class="np-hero">
           <div class="np-hero-blur" id="mssNoteBlur"></div>
           <div class="np-hero-fade"></div>
@@ -207,6 +208,7 @@ const MSSNote = (() => {
     inject();
     current = e; opts = o;
     const $ = id => document.getElementById(id);
+    $('mssNoteViews').innerHTML = '';   // MSSViews fills it when switching views
     loadHero($('mssNoteBlur'), e);
     $('mssNotePoster').innerHTML = safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" loading="lazy" alt="">` : esc(((e.title || '?')[0]).toUpperCase());
     $('mssNoteEyebrow').textContent = o.eyebrow || 'Your Note';
