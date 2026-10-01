@@ -126,25 +126,7 @@
 .fv-entry-block{display:flex;flex-direction:column;}
 
 .fv-queue-no-hover{pointer-events:none;cursor:default;}
-.fv-queue-no-hover.clickable{pointer-events:auto;} #pvPopupOverlay {
-  position:fixed;inset:0;z-index:1100;
-  background:rgba(0,0,0,0.72);
-  display:flex;align-items:center;justify-content:center;
-  padding:16px;box-sizing:border-box;
-  opacity:0;transition:opacity 220ms var(--ease);
-  pointer-events:none;
-} #pvPopupOverlay.open {
-  opacity:1; pointer-events:auto;
-} #pvPopupCard {
-  background:var(--bg-2);border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-  width:100%;max-width:min(97vw, 760px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
-  box-sizing:border-box;
-  transform:translateY(18px);transition:transform 260ms var(--ease);
-}
-
-@media(max-width:600px) { #pvPopupCard { max-height:88dvh; }
-}
+.fv-queue-no-hover.clickable{pointer-events:auto;}
 
 /* pv-friend-btn styling */
 
@@ -417,6 +399,7 @@ function _trimNotes(text) {
 <script src="js/sort-filter.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/info-popup.js"></script>
+<script src="js/rating-popup.js"></script>
 <script>
 let _pvMe = null, _pvMeProfile = null;
 let _pvUserId = null, _pvUsername = null, _pvProfile = null;
@@ -543,217 +526,27 @@ async function pvToggleNotify() {
   } catch (e) { console.error(e); showToast('Could not update notifications — try again.', 'err'); }
 }
 
-function _pvInjectPopup() {
-  if (document.getElementById('pvPopupOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'pvPopupOverlay';
-  el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;';
-  const card = document.createElement('div');
-  card.id = 'pvPopupCard';
-  card.style.cssText = 'background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:100%;max-width:min(97vw, 920px);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;position:relative;box-sizing:border-box;transform:translateY(18px);transition:transform 260ms var(--ease);';
-  card.innerHTML = [
-    '<div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;padding:24px 24px 0;">',
-      '<div id="pvPopupPoster" style="width:150px;height:225px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);"></div>',
-      '<div style="flex:1;min-width:0;padding-top:4px;">',
-        '<div id="pvPopupTitle" class="cg-popup-title" style="font-family:\'Oswald\',var(--sans);font-weight:600;line-height:1.15;color:var(--text);"></div>',
-        '<div id="pvPopupTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>',
-        '<div id="pvPopupDateRow" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>',
-        '<div id="pvPopupMetaRow" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;"></div>',
-        '<div id="pvPopupInfo" style="margin-top:4px;"></div>',
-      '</div>',
-      '<div id="pvPopupDesc" class="fd-description cg-desc-block" style="margin:16px 0 0;"></div>',
-      '<div id="pvPopupScoreBox" class="cg-score-box" style="flex-shrink:0;flex-grow:0;text-align:center;align-self:stretch;position:relative;padding:18px 20px;border-radius:var(--radius-sm);background:transparent;border:2px solid var(--olive);">',
-        '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:100%;">',
-          '<div style="font-family:\'Oswald\',var(--sans);font-weight:600;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;text-align:center;width:100%;">Overall Score</div>',
-          '<div id="pvPopupScoreVal" style="font-family:var(--bebas);font-size:48px;color:var(--olive);line-height:1;display:flex;align-items:center;justify-content:center;width:100%;gap:6px;"></div>',
-        '</div>',
-      '</div>',
-      '<button class="cg-close-btn" onclick="pvClosePopup()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:22px;line-height:1;flex-shrink:0;transition:color .15s;position:absolute;z-index:1;" onmouseenter="this.style.color=\'var(--text)\'" onmouseleave="this.style.color=\'var(--text-3)\'">\u2715</button>',
-    '</div>',
-    '<div id="pvPopupBody" style="padding:20px 24px 6px;"></div>',
-    '<div id="pvPopupActions" style="display:flex;gap:8px;padding:4px 24px 24px;flex-wrap:wrap;">',
-      '<button onclick="pvAddToQueue()" class="popup-action-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Add to Watchlist</button>',
-      '<button id="pvDiscoverBtn" class="popup-action-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Discover</button>',
-    '</div>'
-  ].join('');
-  el.addEventListener('click', function(ev) { if (ev.target === el) pvClosePopup(); });
-  el.appendChild(card);
-  document.body.appendChild(el);
-}
 
-function _pvPopupNarrowObserver() {
-  var card = document.getElementById('pvPopupCard');
-  if (!card || card._cgObserverAttached) return;
-  card._cgObserverAttached = true;
-  var apply = function(){ card.classList.toggle('cg-narrow', card.getBoundingClientRect().width <= 600); };
-  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(apply).observe(card);
-  else window.addEventListener('resize', apply);
-  apply();
-}
-
-let _pvPopupId = null;
 let _pvEntryMapPv = {};
 
 function pvBuildEntryMap() {
   _pvEntryMapPv = Object.fromEntries(_pvEntries.map(function(e) { return [e.id, e]; }));
 }
 
-/* ── Ratings expansion for profile-view (read-only) ── */
-function _pvBreakdownHTML(e) {
-  var isMovie = e.cat==='movies' || (e.ratings&&e.ratings._media_type==='movie');
-  if (!isMovie) {
-    var bd = Array.isArray(e.ratings&&e.ratings._season_breakdown)
-      ? e.ratings._season_breakdown.filter(function(n){return parseInt(n)>0;}).map(Number) : [];
-    var totalS = bd.length || Number(e.total_seasons) || 0;
-    if (totalS > 0) {
-      var chips = '';
-      for (var i=0; i<totalS; i++) {
-        var eps = bd[i] || null;
-        chips += '<div class="pvi-season-chip"><div class="pvi-season-num">S'+(i+1)+'</div><div class="pvi-season-eps">'+(eps?eps+' eps':'S'+(i+1))+'</div></div>';
-      }
-      return '<div class="fd-section-hd">Season Breakdown</div><div class="pvi-seasons">'+chips+'</div>';
-    }
-    return '';
-  }
-  return '';
-}
-
-function _pvBuildExpansion(e) {
-  var isMovies = e.cat === 'movies';
-  var esc = function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  var ratingDef = typeof getRatings === 'function' ? getRatings(e.cat) : {core:[],bonus:[]};
-  var coreArr = ratingDef.core || [];
-  var bonusArr = ratingDef.bonus || [];
-  var isAnimated = e.cat === 'anime' || e.cat === 'cartoons';
-
-  var coreRows = coreArr.map(function(r) {
-    var val = e.ratings?.[r.key];
-    if (val == null || val === '') return '';
-    return '<div class="fd-rating-row"><span class="fd-rating-label">'+r.label+'</span><span class="fd-rating-val">'+Number(val).toFixed(2)+'</span></div>';
-  }).filter(Boolean).join('');
-
-  var animRow = (!isAnimated && e.ratings?.animation != null && e.ratings?.animation !== '')
-    ? '<div class="fd-rating-row"><span class="fd-rating-label">Animation Quality</span><span class="fd-rating-val">'+Number(e.ratings.animation).toFixed(2)+'</span></div>' : '';
-
-  var bonusRows = bonusArr.map(function(r) {
-    var val = e.ratings?.[r.key];
-    if (val == null || val === '') return '';
-    return '<div class="fd-rating-row"><span class="fd-rating-label">'+r.label+'</span><span class="fd-rating-val">'+Number(val).toFixed(2)+'</span></div>';
-  }).filter(Boolean).join('');
-
-  var favs = e.ratings?._favorites || {};
-  var favChips = [
-    favs.character ? '<span class="fav-chip"><span class="fav-chip-label">Fav Character</span><span class="fav-chip-val">'+esc(favs.character)+'</span></span>' : '',
-    (!isMovies && favs.episode) ? '<span class="fav-chip"><span class="fav-chip-label">Fav Episode</span><span class="fav-chip-val">'+esc(favs.episode)+'</span></span>' : '',
-    (!isMovies && favs.season)  ? '<span class="fav-chip"><span class="fav-chip-label">Fav Season</span><span class="fav-chip-val">'+esc(favs.season)+'</span></span>' : '',
-  ].filter(Boolean).join('');
-  var lows = e.ratings?._lowlights || e.ratings?._favorites?._lowlights || {};
-  var lowChips = [
-    lows.character ? '<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Character</span><span class="fav-chip-val">'+esc(lows.character)+'</span></span>' : '',
-    (!isMovies && lows.episode) ? '<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Episode</span><span class="fav-chip-val">'+esc(lows.episode)+'</span></span>' : '',
-    (!isMovies && lows.season)  ? '<span class="fav-chip low-chip"><span class="fav-chip-label">Least Fav Season</span><span class="fav-chip-val">'+esc(lows.season)+'</span></span>' : '',
-  ].filter(Boolean).join('');
-
-  var html = _pvBreakdownHTML(e)+'<div class="fd-cols">';
-  if (coreRows || animRow)  html += '<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>'+coreRows+animRow+'</div>';
-  if (bonusRows) html += '<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>'+bonusRows+'</div>';
-  html += '</div>';
-  if (favChips || lowChips) html += '<div class="fd-section-hd" style="margin-top:16px;">Highlights</div>';
-  if (favChips) html += '<div class="fav-chips" style="margin-top:6px;">'+favChips+'</div>';
-  if (lowChips) html += '<div class="fav-chips" style="margin-top:6px;">'+lowChips+'</div>';
-  if (e.notes) { var _nt = '<div class="fd-notes" style="margin-top:0;padding-top:0;border-top:none;">"'+esc(e.notes.trim())+'"</div>';
-    html += '<div class="fd-section-hd" style="margin-top:16px;">Notes</div>' + (mssIsSpoiler(e) ? mssSpoilerHTML(_nt, { compact: true }) : _nt); }
-  return html;
-}
 
 /* ── Favorite Sections (profile-view) ── */
 
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'Escape') return;
   if (document.getElementById('ratingFilterOverlay')?.classList.contains('open')) { closeRatingFilter(); return; }
-  if (document.getElementById('pvPopupOverlay')?.classList.contains('open')) { pvClosePopup(); return; }
   // Notes tab popups (these didn't close on Esc)
 });
+// Their ratings: the shared MSSRate popup (rating-popup.js) — Add to Watchlist · Discover
 function pvOpenPopup(id) {
   const e = _pvEntryMapPv[id] || _pvEntries.find(function(en) { return en.id === id; });
-  if (!e) return;
-  _pvInjectPopup();
-  _pvPopupNarrowObserver();
-  _pvPopupId = id;
-  const esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-
-  document.getElementById('pvPopupPoster').innerHTML = posterHTML(e);
-  const _pyIsMovie = e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
-  const _pyStart = e.year || null;
-  const _pyEnd = (e.ratings && e.ratings._completion_year) || null;
-  let _pyStr = '';
-  if (_pyStart) {
-    if (_pyIsMovie || String(_pyEnd) === String(_pyStart)) _pyStr = ' <span style="font-family:var(--bebas);font-size:0.65em;font-weight:400;color:var(--text-2);vertical-align:middle;">'+_pyStart+'</span>';
-    else _pyStr = ' <span style="font-family:var(--bebas);font-size:0.65em;font-weight:400;color:var(--text-2);vertical-align:middle;">'+_pyStart+'\u2013'+(_pyEnd||'Present')+'</span>';
-  }
-  document.getElementById('pvPopupTitle').innerHTML = esc(e.title) + _pyStr;
-
-  const catIsMovie = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-  const catLabel = CAT_META[e.cat] ? CAT_META[e.cat].label : '';
-  document.getElementById('pvPopupTags').innerHTML =
-    (catLabel ? '<span class="'+(catIsMovie ? 'type-label' : 'type-label type-label-tv')+'" style="font-family:\'Manrope\',var(--sans);font-weight:500;">'+esc(catLabel)+'</span>' : '') +
-    (e.genres||[]).map(function(g){ return '<span class="w-ep-badge" style="font-family:\'Manrope\',var(--sans);font-weight:500;">'+esc(String(g))+'</span>'; }).join('') +
-    (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
-
-  const completedDateStr = e.completed_date ? new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : null;
-  document.getElementById('pvPopupDateRow').innerHTML = completedDateStr
-    ? '<span class="w-ep-badge" style="font-family:\'Manrope\',var(--sans);font-weight:500;">Completed On: '+completedDateStr+'</span>' : '';
-
-  // Runtime / episode count are in the popup's own sections — only To Be
-  // Continued titles get a tag, for where they left off.
-  const _pvIsMov = e.cat === 'movies' || e.ratings?._media_type === 'movie';
-  let metaBadge = (e.status === 'ongoing' && e.season != null && e.episode != null && !_pvIsMov)
-    ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Left off: S${e.season} · E${e.episode}</span>` : '';
-  document.getElementById('pvPopupMetaRow').innerHTML = metaBadge;
-  var _pvInfoEl = document.getElementById('pvPopupInfo');
-  if (_pvInfoEl) _pvInfoEl.innerHTML = '';
-
-  const dEl = document.getElementById('pvPopupDesc');
-  if (e.description) { dEl.textContent = e.description; dEl.style.display = ''; }
-  else { dEl.style.display = 'none'; }
-
-  const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
-  const scoreBoxEl = document.getElementById('pvPopupScoreBox');
-  const scoreValEl = document.getElementById('pvPopupScoreVal');
-  if (scoreBoxEl) scoreBoxEl.style.display = score != null ? '' : 'none';
-  if (scoreValEl) scoreValEl.textContent = score != null ? '\u2605 '+score : '';
-
-  document.getElementById('pvPopupBody').innerHTML = _pvBuildExpansion(e);
-
-  const discBtn = document.getElementById('pvDiscoverBtn');
-  if (discBtn) discBtn.onclick = function(){ MSSInfo.discover(e, discBtn); };
-
-  const ov = document.getElementById('pvPopupOverlay');
-  ov.style.pointerEvents = 'auto';
-  ov.style.opacity = '1';
-  document.getElementById('pvPopupCard').style.transform = 'translateY(0)';
-  document.body.style.overflow = 'hidden';
+  if (e) MSSRate.forFriend(e);
 }
 
-function pvAddToQueue() {
-  var e = _pvEntryMapPv[_pvPopupId] || _pvEntries.find(function(en){return en.id===_pvPopupId;});
-  if (!e) return;
-  var catPage = (CAT_META[e.cat]&&CAT_META[e.cat].page)||'index.html';
-  pvClosePopup();
-  try { sessionStorage.setItem('mssQueuedFrom', JSON.stringify({ owner: _pvUserId, entry: e.id, title: e.title, t: Date.now() })); } catch(_) {}
-  sessionStorage.setItem('addModalTitle', e.title);
-  sessionStorage.setItem('addModalCat', e.cat);
-  window.location.href = catPage;
-}
-
-function pvClosePopup() {
-  const ov = document.getElementById('pvPopupOverlay');
-  if (ov) { ov.style.opacity = '0'; ov.style.pointerEvents = 'none'; }
-  const card = document.getElementById('pvPopupCard');
-  if (card) card.style.transform = 'translateY(18px)';
-  document.body.style.overflow = '';
-  _pvPopupId = null;
-}
 
 function pvTabSwitch(n) { var tabs=document.querySelectorAll(".pv-tab"); if(tabs[n]) pvTab(n,tabs[n]); var s=document.getElementById("pvTabsSelect"); if(s) s.value=n; }
 
