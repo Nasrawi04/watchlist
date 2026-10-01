@@ -8,153 +8,21 @@ let _catAll    = [];
 const collapsed   = { watching: false, queue: false, completed: false };
 const _sort = { watching: 'newest', queue: 'newest', completed: 'newest', ongoing: 'newest' };
 
-/* ══════════════════════════════════════════
-   Watching / Watchlist info popup
-   Same popup used on library.html for these sections, with two
-   added actions: Edit (→ the personal entry editor) and
-   Discover (→ the TMDB title page, when the entry has a tmdb_id).
-══════════════════════════════════════════ */
-let _catInfoId = null;
-
-function _catYearSpanHTML(e, escFn, cls) {
-  const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
-  const start = e.year || null;
-  const end = e.ratings?._completion_year || null;
-  const title = escFn(e.title);
-  if (!start) return title;
-  const yr = (isMovie || String(end) === String(start)) ? start : (start + '\u2013' + (end || 'Present'));
-  return `${title} <span class="${cls || ''}" style="font-size:0.6em;vertical-align:middle;">${yr}</span>`;
-}
-
-function _injectCatInfoPopup() {
-  if (document.getElementById('profInfoOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'profInfoOverlay';
-  el.innerHTML = `<div id="profInfoCard">
-      <div class="pvi-header">
-        <div class="pvi-poster" id="profInfoPoster"></div>
-        <div class="pvi-meta-wrap"><div class="pvi-title" id="profInfoTitle"></div><div class="pvi-tags" id="profInfoTags"></div></div>
-        <button class="pvi-close" onclick="closeCatInfoPopup()">✕</button>
-      </div>
-      <div class="pvi-body">
-        <div class="pvi-desc" id="profInfoDesc"></div>
-        <div id="profInfoDetails"></div>
-      </div>
-      <div class="pvi-actions">
-        <button class="pvi-action-btn" id="catInfoEditBtn">${icon('list',14)} Edit</button>
-        <button class="pvi-action-btn pvi-action-primary" id="catInfoDiscoverBtn">${icon('search',14)} Discover</button>
-        <button class="pvi-action-btn" id="catInfoCardBtn" onclick="createShareCard(_catInfoId, 3, true)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Discover Card</button>
-        <button class="pvi-action-btn pvi-action-danger" id="catInfoDeleteBtn">${icon('trash',14)} Delete</button>
-      </div>
-    </div>`;
-  el.addEventListener('click', ev => { if (ev.target === el) closeCatInfoPopup(); });
-  document.body.appendChild(el);
-}
-
-/* ── Auto-refresh season/episode counts from TMDB ──
-   Season/episode totals are only fetched once, at add-time. If a show
-   airs a new season after that, the stored counts go stale and the
-   person has to notice and manually re-enter them. This quietly checks
-   TMDB for a linked show whenever its detail popup opens or the person
-   starts/resumes watching it, and updates the entry in the background
-   if TMDB now shows more seasons/episodes than what's stored. */
-/* ── _refreshTmdbSeasonData now lives in nav.js, shared across every
-   page with its own entry-info popup (this one, library, profile,
-   completed) instead of duplicated per page. ── */
-
+/* ── Info popup: the shared MSSInfo popup (info-popup.js), with your
+   own entry's actions (Start Watching / Up Next / Edit / Discover /
+   Discover Card / Delete) wired to this page's functions. ── */
 function openCatInfoPopup(id) {
-  try {
-  _injectCatInfoPopup();
   const e = _catAll.find(en => en.id === id);
   if (!e) return;
-  _catInfoId = id;
-  const esc2 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-  const pEl = document.getElementById('profInfoPoster');
-  pEl.innerHTML = safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" loading="lazy">` : esc2((e.title||'?')[0].toUpperCase());
-
-  document.getElementById('profInfoTitle').innerHTML = _catYearSpanHTML(e, esc2, 'pvi-title-year');
-
-  // Category label (Movie/TV Show/Anime/Cartoons) uses the real
-  // Movie/TV type-badge colors (matching every poster overlay on the
-  // site) instead of being lumped in with genres as a plain olive tag.
-  const catLabel = CAT_META[e.cat] ? CAT_META[e.cat].label : '';
-  const catIsMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
-  document.getElementById('profInfoTags').innerHTML =
-    (catLabel ? `<span class="${catIsMovie ? 'type-label' : 'type-label type-label-tv'}">${esc2(catLabel)}</span>` : '') +
-    (e.genres || []).map(g => `<span class="w-ep-badge">${esc2(String(g))}</span>`).join('');
-
-  const dEl = document.getElementById('profInfoDesc');
-  if (e.description) { dEl.textContent = e.description; dEl.style.color = ''; }
-  else { dEl.textContent = '—'; dEl.style.color = 'var(--text-3)'; }
-
-  const detEl = document.getElementById('profInfoDetails');
-  const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
-
-  if (!isMovie) {
-    const bd = Array.isArray(e.ratings?._season_breakdown)
-      ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
-    const totalS = bd.length || Number(e.total_seasons) || 0;
-    let seasonsHTML = '';
-    if (totalS > 0) {
-      let chips = '';
-      for (let i = 0; i < totalS; i++) {
-        const eps = bd[i] || null;
-        chips += `<div class="pvi-season-chip"><div class="pvi-season-num">S${i+1}</div><div class="pvi-season-eps">${eps ? eps+' eps' : 'S'+(i+1)}</div></div>`;
-      }
-      seasonsHTML = `<div class="pvi-section-label">TV Show Breakdown</div><div class="pvi-seasons">${chips}</div>`;
-    } else if (e.total_eps) {
-      seasonsHTML = `<div class="pvi-meta-row"><div class="pvi-runtime"><div class="pvi-runtime-val">${e.total_eps}</div><div class="pvi-runtime-lbl">Total Episodes</div></div></div>`;
-      detEl.innerHTML = seasonsHTML;
-      return _finishCatInfoPopup(e);
-    }
-    detEl.innerHTML = seasonsHTML;
-  } else {
-    const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
-    const rtStr = rtH ? `${rtH}h ${rtM}m` : (rtM ? `${rtM}m` : null);
-    detEl.innerHTML = rtStr
-      ? `<div class="pvi-meta-row"><div class="pvi-runtime"><div class="pvi-runtime-val">${rtStr}</div><div class="pvi-runtime-lbl">Movie Runtime</div></div></div>`
-      : '';
-  }
-  _finishCatInfoPopup(e);
-  } catch(err) { console.error('openCatInfoPopup error:', err); }
-}
-
-function _finishCatInfoPopup(e) {
-  const editBtn = document.getElementById('catInfoEditBtn');
-  if (editBtn) editBtn.onclick = () => goToDetail(e.id, currentFile());
-
-  const discBtn = document.getElementById('catInfoDiscoverBtn');
-  if (discBtn) {
-    discBtn.style.display = '';
-    discBtn.disabled = false;
-    discBtn.innerHTML = `${icon('search',14)} Discover`;
-    discBtn.onclick = () => _catGoDiscover(e, discBtn);
-  }
-
-  const delBtn = document.getElementById('catInfoDeleteBtn');
-  if (delBtn) delBtn.onclick = () => _catInfoDeleteEntry(e);
-
-  const ov = document.getElementById('profInfoOverlay');
-  ov.classList.add('open');
-  document.getElementById('profInfoCard').style.transform = 'translateY(0)';
-  document.body.style.overflow = 'hidden';
-  _refreshTmdbSeasonData(e, _catUser.id, renderSections);
-}
-
-async function _catInfoDeleteEntry(e) {
-  if (!(await showConfirm({ title: 'Delete entry?', message: `"${e.title}" will be permanently removed.`, confirmText: 'Delete', iconName: 'x' }))) return;
-  try {
-    await deleteEntry(e.id, _catUser.id);
-    _catAllRaw = _catAllRaw.filter(x => x.id !== e.id);
-    _catAll = _catAll.filter(x => x.id !== e.id);
-    closeCatInfoPopup();
-    renderSections();
-    showToast('Deleted.');
-  } catch (err) {
-    console.error(err);
-    showToast('Error deleting entry.', 'err');
-  }
+  MSSInfo.forOwnEntry(e, {
+    onChange: renderSections,
+    onDelete: x => {
+      _catAllRaw = _catAllRaw.filter(y => y.id !== x.id);
+      _catAll = _catAll.filter(y => y.id !== x.id);
+      renderSections();
+    },
+    handlers: { start: x => (e.status === 'up_next' ? resumeEntry(x) : startWatching(x)), upnext: markUpNext },
+  });
 }
 
 async function _cgPopupDeleteEntry() {
@@ -173,103 +41,6 @@ async function _cgPopupDeleteEntry() {
     showToast('Error deleting entry.', 'err');
   }
 }
-
-async function _catGoDiscover(e, btn) {
-  if (e.tmdb_id && e.tmdb_type) {
-    goToTitle(e.tmdb_type, e.tmdb_id);
-    return;
-  }
-  if (typeof _tmdbSearch !== 'function') {
-    showToast('Discover is unavailable right now.', 'err');
-    return;
-  }
-  const origLabel = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = 'Searching…';
-  try {
-    const isMovie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
-    const results = await _tmdbSearch(e.title);
-    // Matches for this entry's category (movie vs tv) first, rest after
-    const sorted = [...results].sort((a, b) => {
-      const wantType = isMovie ? 'movie' : 'tv';
-      return (a.media_type === wantType ? 0 : 1) - (b.media_type === wantType ? 0 : 1);
-    });
-    closeCatInfoPopup();
-    _openDiscoverPicker(sorted, e.title);
-  } catch (err) {
-    showToast('Error searching TMDB.', 'err');
-    console.error(err);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = origLabel;
-  }
-}
-
-function _injectDiscoverPicker() {
-  if (document.getElementById('catDiscoverOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'catDiscoverOverlay';
-  el.innerHTML = `<div id="catDiscoverCard">
-    <button class="cat-disc-close" onclick="_closeDiscoverPicker()">✕</button>
-    <div class="cat-disc-title">Which one is it?</div>
-    <div class="cat-disc-sub" id="catDiscoverSub"></div>
-    <div id="catDiscoverList"></div>
-  </div>`;
-  el.addEventListener('click', ev => { if (ev.target === el) _closeDiscoverPicker(); });
-  document.body.appendChild(el);
-}
-
-function _openDiscoverPicker(results, entryTitle) {
-  _injectDiscoverPicker();
-  const esc2 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  document.getElementById('catDiscoverSub').textContent = `Matches for "${entryTitle}" — pick the right one`;
-
-  const listEl = document.getElementById('catDiscoverList');
-  if (!results.length) {
-    listEl.innerHTML = `<div class="cat-disc-none">No matches found on TMDB.</div>`;
-  } else {
-    listEl.innerHTML = results.map((r, i) => {
-      const isMovie = r.media_type === 'movie';
-      const rTitle  = isMovie ? r.title : r.name;
-      const year    = ((isMovie ? r.release_date : r.first_air_date) || '').split('-')[0];
-      const thumb   = r.poster_path ? TMDB_IMG + r.poster_path : null;
-      return `<div class="cat-disc-item" data-i="${i}">
-        <div class="cat-disc-thumb">${thumb ? `<img src="${thumb}" loading="lazy">` : ''}</div>
-        <div class="cat-disc-info">
-          <div class="cat-disc-name">${esc2(rTitle || '—')}</div>
-          <div class="cat-disc-meta">${isMovie ? 'Movie' : 'TV Show'}${year ? ' · ' + year : ''}</div>
-        </div>
-      </div>`;
-    }).join('');
-    listEl.querySelectorAll('.cat-disc-item').forEach((elm, i) => {
-      elm.addEventListener('click', () => {
-        const r = results[i];
-        _closeDiscoverPicker();
-        goToTitle(r.media_type === 'movie' ? 'movie' : 'tv', r.id);
-      });
-    });
-  }
-
-  const ov = document.getElementById('catDiscoverOverlay');
-  ov.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function _closeDiscoverPicker() {
-  const ov = document.getElementById('catDiscoverOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-function closeCatInfoPopup() {
-  const ov = document.getElementById('profInfoOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.getElementById('profInfoCard').style.transform = 'translateY(18px)';
-  document.body.style.overflow = '';
-}
-
 
 /* ── Shared ep/runtime badge helper ── */
 function _entryMeta(e) {
@@ -1537,10 +1308,6 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (document.getElementById('ratingFilterOverlay')?.classList.contains('open')) {
       closeRatingFilter();
-    } else if (document.getElementById('catDiscoverOverlay')?.classList.contains('open')) {
-      _closeDiscoverPicker();
-    } else if (document.getElementById('profInfoOverlay')?.classList.contains('open')) {
-      closeCatInfoPopup();
     } else if (document.getElementById('createCardOverlay')?.classList.contains('open')) {
       closeCreateCard();
     } else if (document.getElementById('commentsPopupOverlay')?.style.opacity === '1') {
