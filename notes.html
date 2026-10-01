@@ -287,7 +287,10 @@
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/sort-filter.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/rating-popup.js"></script>
 <script src="js/note-popup.js"></script>
+<script src="js/entry-views.js"></script>
 <script>
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -359,6 +362,7 @@ const _noteLenCompare = {
 
 /* Personal Sort & Filter (shared js/sort-filter.js) */
 SF.register('notesMine', {
+  watched: () => true,          // Year Watched filter (titles you've finished)
   base: () => _notesEntries.filter(e => e.notes && e.notes.trim()),
   render: () => renderNotesPage(),
   defaultSort: 'newest',
@@ -389,6 +393,7 @@ SF.register('notesMine', {
 /* Community Sort & Filter */
 const _snScore = n => Number(n.like_count || 0) - Number(n.dislike_count || 0);
 SF.register('notesSocial', {
+  watched: () => true,
   base: () => _socialNotesRaw || [],
   render: () => renderSocialNotes(),
   defaultSort: 'popular',
@@ -448,10 +453,15 @@ function renderNotesPage() {
     MSSNote.cardHTML(e, { counts: _notesReactionCounts[e.id], onclick: `_notesOpen(${attrJSON(e.id)})` })).join('')}</div>`;
 }
 
-// Your note: the shared note popup (note-popup.js) — read, then Edit Note
+// Your note first, then its Ratings and Info (entry-views.js)
 function _notesOpen(id) {
   const e = _notesEntries.find(en => en.id === id);
-  if (e) MSSNote.open(e, { counts: _notesReactionCounts[id], editable: true, onSaved: renderNotesPage });
+  if (!e) return;
+  MSSViews.open(e, {
+    order: ['note', 'rate', 'info'], own: true, writeNote: true, from: 'notes.html', counts: _notesReactionCounts[id],
+    onNoteSaved: renderNotesPage, onChange: renderNotesPage,
+    onDelete: x => { _notesEntries = _notesEntries.filter(y => y.id !== x.id); renderNotesPage(); },
+  });
 }
 
 /* ── Double-tap-to-like (touch screens) ── */
@@ -848,7 +858,7 @@ function renderSocialNotes() {
     const id = attrJSON(n.entry_id);
     const initial = (n.username || '?')[0].toUpperCase();
     const words = MSSNote.words(n.notes);
-    return `<article class="nc-card" onclick="openSocialNotePopup(${id})" ontouchend="_dtHandleTouch(event, 'snote-${escHTML(n.entry_id)}', () => reactToSocialNote(${id}, true), () => _socialNotesMyReactions[${id}] === 'like')">
+    return `<article class="nc-card" onclick="_notesOpenSocial(${id})" ontouchend="_dtHandleTouch(event, 'snote-${escHTML(n.entry_id)}', () => reactToSocialNote(${id}, true), () => _socialNotesMyReactions[${id}] === 'like')">
       ${MSSNote.poster(n.poster_url, n.title, 'nc-poster')}
       <div class="nc-main">
         <div class="nc-top">
@@ -891,6 +901,17 @@ function _injectSocialNotePopupOverlay() {
 
 let _snPopupEntryId = null;
 
+// Someone's note first (with its reactions + replies), then their Ratings and Info
+function _notesOpenSocial(entryId) {
+  const n = _socialNotesRaw.find(x => x.entry_id === entryId);
+  if (!n) return;
+  MSSViews.open({ ...n, id: n.entry_id }, {
+    order: ['note', 'rate', 'info'], own: !!_notesUser && n.user_id === _notesUser.id, from: 'notes.html',
+    profile: { username: n.username, avatar_url: n.avatar_url },
+    note: { open: () => openSocialNotePopup(entryId), close: closeSocialNotePopup },
+  });
+}
+
 function openSocialNotePopup(entryId) {
   const n = _socialNotesRaw.find(x => x.entry_id === entryId);
   if (!n) return;
@@ -916,7 +937,7 @@ function _renderSocialNotePopup(n) {
   const initial = (n.username || '?')[0].toUpperCase();
   const words = MSSNote.words(n.notes);
   const rerender = `.then(() => _renderSocialNotePopup(_socialNotesRaw.find(x => x.entry_id === ${escHTML(JSON.stringify(n.entry_id))})))`;
-  document.getElementById('snPopupCard').innerHTML = `
+  document.getElementById('snPopupCard').innerHTML = `${MSSViews.barFor('note', n.entry_id)}
     <div class="np-hero">
       <div class="np-hero-blur" id="snHeroImg"></div>
       <div class="np-hero-fade"></div>
