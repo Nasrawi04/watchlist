@@ -75,9 +75,7 @@ async function rewatchEntry(id) {
 
     showToast('Moved to Currently Watching!');
     // Close any open popup
-    if (typeof closeGridPopup   === 'function') closeGridPopup();
-    if (typeof cpClosePopup     === 'function') cpClosePopup();
-    if (typeof profClosePopup   === 'function') profClosePopup();
+    if (typeof MSSRate !== 'undefined') MSSRate.close();
     // Re-render
     if (typeof renderPage       === 'function') renderPage();
     if (typeof renderLibrary    === 'function') renderLibrary();
