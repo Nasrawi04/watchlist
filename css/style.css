@@ -4475,27 +4475,45 @@ body { font-size:15px; }
 .start-watching-wrap .up-next-btn { flex-shrink:0; width:38px; display:flex; align-items:center; justify-content:center; padding:0; }
 .up-next-btn:hover { color:#fff; background:#264e78; border-color:#264e78; }
 /* ── "Up Next" / "Taking a Break" poster cover (mssHoldHTML in config.js) ──
-   The poster behind is softly blurred + dimmed so the label always reads;
-   the label pill scales with the poster's own width (cqi), so it stays
-   inside even the small list-view posters on a phone. */
+   The poster goes grey, dim and softly blurred; a card in the status colour
+   (deep blue / deep green) holds the label, and a round icon badge in the
+   same colour (play-next / coffee cup) rises out of its top edge as one
+   connected shape. Everything sizes from the poster's own width (cqi), so
+   it stays inside even the small list-view posters on a phone. */
 .mss-hold {
   position:absolute; inset:0; z-index:1; border-radius:inherit; overflow:hidden;
   display:flex; align-items:center; justify-content:center; padding:6%;
-  background:rgba(8,12,10,0.38);
-  -webkit-backdrop-filter:blur(3px) saturate(0.85); backdrop-filter:blur(3px) saturate(0.85);
+  background:rgba(10,12,10,0.38);
+  -webkit-backdrop-filter:grayscale(0.85) brightness(0.8) blur(2px); backdrop-filter:grayscale(0.85) brightness(0.8) blur(2px);
   container-type:inline-size; pointer-events:none;
 }
 .mss-hold-label {
-  display:block; max-width:100%; box-sizing:border-box;
+  --hold-top:#24391f; --hold-bot:#152313; --hold-line:rgba(140,195,118,.4);
+  position:relative; display:block; max-width:100%; min-width:min(100%, 64cqi); box-sizing:border-box;
+  margin-top:1.45em; padding:0 1.3em 1em; border-radius:.9em;
   font-family:'Manrope',var(--sans); font-weight:800; color:#fff; text-align:center; text-transform:uppercase;
-  font-size:11px; font-size:clamp(8px, 15cqi, 20px); line-height:1.15; letter-spacing:.05em;
-  padding:.45em .7em; overflow-wrap:anywhere; border-radius:6px; box-shadow:0 2px 10px rgba(0,0,0,.35);
-  text-shadow:0 1px 2px rgba(0,0,0,.35);
+  font-size:11px; font-size:clamp(7.5px, 11cqi, 16px); line-height:1.2; letter-spacing:.08em; overflow-wrap:anywhere;
+  /* solid top colour where the circle sits, then the fade — so circle + card match exactly */
+  background:linear-gradient(180deg, var(--hold-top) 0, var(--hold-top) 1.6em, var(--hold-bot) 100%);
+  border:1px solid var(--hold-line);
+  text-shadow:0 1px 2px rgba(0,0,0,.6); box-shadow:0 8px 22px rgba(0,0,0,.4);
 }
-/* Tiny list-view posters on phones: tighter pill so the words never clip */
-@container (max-width:72px) { .mss-hold-label { letter-spacing:.01em; padding:.4em .35em; border-radius:4px; } }
-.mss-hold.is-up-next .mss-hold-label { background:rgba(38,78,120,0.94); }
-.mss-hold.is-break .mss-hold-label { background:rgba(54,80,46,0.94); }
+.mss-hold.is-up-next .mss-hold-label { --hold-top:#1c3553; --hold-bot:#0f1f33; --hold-line:rgba(150,195,240,.4); }
+/* The circle: the card's top colour, outlined only on its upper half */
+.mss-hold-label::before {
+  content:''; display:block; width:2.6em; height:2.6em; margin:-1.35em auto .5em; border-radius:50%; box-sizing:border-box;
+  background:var(--hold-top); border:1px solid var(--hold-line); border-bottom-color:transparent; border-left-color:transparent;
+  transform:rotate(-45deg);
+}
+/* The icon, on top of the circle */
+.mss-hold-label::after {
+  content:''; position:absolute; top:-1.35em; left:50%; width:2.6em; height:2.6em; transform:translateX(-50%);
+  background:center / 50% no-repeat;
+}
+.mss-hold.is-break .mss-hold-label::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EADCB8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 2v2'/%3E%3Cpath d='M14 2v2'/%3E%3Cpath d='M6 2v2'/%3E%3Cpath d='M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1'/%3E%3C/svg%3E"); }
+.mss-hold.is-up-next .mss-hold-label::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EADCB8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='6 4 16 12 6 20 6 4'/%3E%3Cline x1='19' y1='5' x2='19' y2='19'/%3E%3C/svg%3E"); }
+/* Tiny list-view posters on phones: tighter card so the words never clip */
+@container (max-width:72px) { .mss-hold-label { padding:0 .35em .5em; border-radius:.6em; letter-spacing:.02em; } }
 .up-next-tag { display:inline-flex; align-items:center; padding:3px 9px; border-radius:var(--radius-xs, 4px); background:#264e78; color:#fff;
   font-family:'Manrope',var(--sans); font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; }
 
