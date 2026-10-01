@@ -30,7 +30,7 @@
 .pn-toggle-btn:hover { color:var(--text); }
 .pn-toggle-btn.active { background:var(--olive); color:#fff; }
 
-/* ── Social note row — same layout as .note-row, plus avatar/username ── */
+/* ── Social note row ── */
 .snote-row-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
 .snote-rect-btn {
   flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
@@ -41,7 +41,6 @@
 .snote-rect-btn:hover { border-color:var(--border-olive); color:var(--text); }
 .snote-rect-btn.active-like { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
 .snote-rect-btn.active-dislike { background:rgba(192,104,90,0.12); border-color:rgba(192,104,90,0.4); color:#c0685a; }
-.note-row { position:relative; }
 .dt-heart-pop {
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.4);
   font-size:56px; color:var(--olive-light); text-shadow:0 2px 14px rgba(0,0,0,.35);
@@ -190,26 +189,7 @@
   background:none; border:none; color:var(--olive-light); font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:underline;
 }
 
-/* ── Note card list (reused from profile.html's Notes tab design) ── */
-.note-row{display:flex;gap:20px;align-items:flex-start;padding:20px 24px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;cursor:pointer;transition:all var(--trans) var(--ease);}
-.note-row:hover{border-color:var(--border-olive);background:var(--card-2);}
-.note-row-personal:hover{border-color:var(--border);background:var(--card);}
-.note-poster{width:84px;height:120px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:24px;color:var(--olive-light);overflow:hidden;}
-.note-poster img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);}
-.note-body{flex:1;min-width:0;}
-.note-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.note-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:4px;}
-.note-date{font-size:11px;color:var(--text-3);white-space:nowrap;}
-.note-text{font-size:13px;color:var(--text-2);font-style:italic;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:6px;}
-.note-score{font-family:var(--bebas);font-size:27px;font-weight:400;color:var(--olive-light);flex-shrink:0;line-height:1;}
 @media(max-width:640px){
-  .note-row { padding:12px 14px; gap:12px; border-radius:var(--radius); }
-  .note-poster { width:64px; height:90px; font-size:20px; }
-  .note-title { font-size:15px; }
-  .note-tags { gap:4px; margin-bottom:3px; }
-  .note-text { font-size:11px; margin-top:4px; }
-  .note-score { font-size:20px; }
-  .note-date { font-size:10px; }
   .notes-search-card-header { padding:14px 16px; }
   .notes-search-card-title { font-size:18px; }
   .notes-search-input-wrap { padding:14px 16px 10px; }
@@ -222,11 +202,6 @@
   .notes-search-item-has-note { font-size:8px; padding:2px 6px; }
 }
 @media(max-width:400px){
-  .note-row { padding:10px 12px; gap:10px; }
-  .note-poster { width:54px; height:76px; font-size:18px; }
-  .note-title { font-size:13px; }
-  .note-text { font-size:10px; }
-  .note-score { font-size:17px; }
   .notes-search-card-header { padding:12px 14px; }
   .notes-search-card-title { font-size:16px; }
   .notes-search-input-wrap { padding:12px 14px 8px; }
@@ -238,74 +213,6 @@
   .notes-search-item-title { font-size:12px; }
 }
 
-/* ── Note popup (same visual design as profile.html's notePopup2, but
-   editable here instead of view-then-navigate-away) ── */
-.note-popup-overlay2{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
-.note-popup-overlay2.open{opacity:1;pointer-events:auto;}
-.note-popup2{width:100%;max-width:520px;background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);overflow:hidden;transform:scale(.96);transition:transform .22s cubic-bezier(0.4,0,0.2,1);position:relative;max-height:90dvh;display:flex;flex-direction:column;}
-.note-popup-overlay2.open .note-popup2{transform:scale(1);}
-.note-popup2-header{position:relative;height:150px;flex-shrink:0;overflow:hidden;}
-.note-popup2-header-blur{position:absolute;inset:-16px;background-size:cover;background-position:center 25%;filter:blur(20px) brightness(0.55);transform:scale(1.15);}
-.note-popup2-header-fade{position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,0.1), var(--bg-2) 95%);}
-.note-popup2-info-row{padding:0 20px 16px;margin-top:-56px;position:relative;display:flex;gap:16px;align-items:flex-end;}
-.note-popup2-poster{width:82px;height:120px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--olive-faint);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:26px;color:var(--olive-light);border:3px solid var(--bg-2);box-shadow:0 6px 16px rgba(0,0,0,0.35);}
-.note-popup2-poster img{width:100%;height:100%;object-fit:cover;}
-.note-popup2-info{flex:1;min-width:0;padding-bottom:4px;}
-.note-popup2-title{font-family:var(--serif);font-size:21px;font-weight:500;color:var(--text);margin-bottom:5px;line-height:1.2;}
-.note-popup2-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
-.note-popup2-reactions{display:flex;gap:14px;padding:0 20px 14px;border-bottom:0.5px solid var(--border);}
-.note-popup2-reaction-count{display:inline-flex;align-items:center;gap:6px;color:var(--text-3);font-size:12.5px;font-weight:500;}
-.note-popup2-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:5px;}
-.note-popup2-date{font-size:11px;color:var(--text-3);}
-.note-popup2-body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;overscroll-behavior-y:contain;}
-.note-popup2-text{font-size:14px;color:var(--text-2);font-style:italic;line-height:1.7;}
-.note-popup2-empty{font-size:13px;color:var(--text-3);}
-.note-popup2-textarea{
-  width:100%; box-sizing:border-box; min-height:160px; resize:vertical;
-  padding:12px 14px; border-radius:var(--radius-sm); border:1px solid var(--border);
-  background:var(--bg-3); color:var(--text); font-family:var(--sans); font-size:16px;
-  line-height:1.6; outline:none; transition:border-color .15s;
-}
-.note-popup2-textarea:focus{border-color:var(--olive-light);}
-.note-popup2-count{font-size:10.5px;color:var(--text-3);text-align:right;}
-.note-popup2-count.over{color:#c0564a;}
-.note-popup2-footer{display:flex;gap:10px;padding:14px 20px;border-top:0.5px solid var(--border);flex-shrink:0;}
-.note-popup2-cancel{flex:1;padding:10px;border-radius:var(--radius-sm);background:var(--bg-3);color:var(--text-2);border:0.5px solid var(--border);font-family:var(--sans);font-size:14px;cursor:pointer;}
-.note-popup2-edit{flex:1;padding:10px;border-radius:var(--radius-sm);background:var(--olive-faint);color:var(--olive-light);border:0.5px solid var(--border-olive);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;}
-.note-popup2-save{flex:2;padding:10px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;}
-.note-popup2-save:disabled{opacity:.5;cursor:default;}
-@media(max-width:640px){
-  .note-popup2-header{height:120px;}
-  .note-popup2-poster{width:66px;height:96px;font-size:20px;}
-  .note-popup2-title{font-size:17px;}
-  .note-popup2-body{padding:14px 16px 18px;}
-  .note-popup2-textarea{min-height:130px;padding:10px 12px;}
-  .note-popup2-footer{padding:12px 16px;}
-  .note-popup2-cancel,.note-popup2-edit,.note-popup2-save{padding:9px;font-size:13px;}
-  .note-popup2-text{font-size:13px;}
-}
-@media(max-width:400px){
-  .note-popup2-header{height:100px;}
-  .note-popup2-poster{width:56px;height:82px;font-size:17px;}
-  .note-popup2-title{font-size:15px;}
-  .note-popup2-body{padding:12px 14px 16px;}
-  .note-popup2-textarea{min-height:110px;}
-  .note-popup2-count{font-size:10px;}
-}
-/* ══════════════════════════════════════════
-   v576 — Notes redesign (cards, toolbar, popups)
-══════════════════════════════════════════ */
-.notes-toolbar {
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-  margin:0 0 1.1rem; padding-bottom:12px; border-bottom:0.5px solid var(--border);
-}
-.notes-toolbar-label { display:flex; align-items:baseline; gap:10px; min-width:0; }
-.notes-toolbar-title { font-family:var(--serif); font-size:13px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); white-space:nowrap; }
-.notes-toolbar-count { font-size:12px; color:var(--text-3); white-space:nowrap; }
-.notes-toolbar-count b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); letter-spacing:.3px; }
-.notes-toolbar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
-.notes-toolbar .sort-bar::before { content:none; }
-.notes-empty { padding:3rem 1rem; text-align:center; font-size:13px; color:var(--text-3); }
 @media(max-width:640px) { #notesPageStats { display:grid; grid-template-columns:repeat(2, 1fr); } }
 
 </style>
@@ -351,7 +258,7 @@
   <div id="nuDropdown" class="username-dropdown"></div>
 
   <!-- Toolbar: section label + Sort / Filter (both tabs) -->
-  <div class="notes-toolbar fade-up fade-up-1" id="notesToolbar" style="display:none;"></div>
+  <div class="mss-toolbar fade-up fade-up-1" id="notesToolbar" style="display:none;"></div>
 
   <!-- Notes list -->
   <div id="notesPageContent" class="fade-up fade-up-2">
@@ -375,55 +282,12 @@
   </div>
 </div>
 
-<!-- Note popup (Personal) — Community uses the same classes, built in JS -->
-<div class="note-popup-overlay2" id="notePopup2" onclick="if(event.target===this)closeNotePopup2()">
-  <div class="note-popup2 np-card">
-    <div class="np-hero">
-      <div class="np-hero-blur" id="notePopup2Blur"></div>
-      <div class="np-hero-fade"></div>
-      <button class="np-close" onclick="closeNotePopup2()" aria-label="Close">&#x2715;</button>
-    </div>
-    <div class="np-head">
-      <div class="np-poster" id="notePopup2Poster"></div>
-      <div class="np-head-info">
-        <div class="np-eyebrow">Your Note</div>
-        <div class="np-title" id="notePopup2Title"></div>
-        <div class="np-meta-row"><div class="np-meta" id="notePopup2Tags"></div><span id="notePopup2Score" class="np-score-slot"></span></div>
-      </div>
-    </div>
-    <div class="np-stats" id="notePopup2Reactions" style="display:none;"></div>
-
-    <!-- View mode (default) -->
-    <div class="np-body" id="notePopup2ViewBody">
-      <blockquote class="np-quote" id="notePopup2Text"></blockquote>
-    </div>
-    <div class="np-footer" id="notePopup2ViewFooter">
-      <div class="np-actions" id="npViewPopupActions">
-        <button class="popup-action-btn np-grow" onclick="_notePopup2EnterEditMode()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit Note</button>
-        <button class="popup-action-btn np-ghost" onclick="closeNotePopup2()">Close</button>
-      </div>
-    </div>
-
-    <!-- Edit mode -->
-    <div class="np-body" id="notePopup2EditBody" style="display:none">
-      <textarea class="np-textarea" id="notePopup2Textarea" placeholder="What did you think? Favorite moments, hot takes, anything…" oninput="_notePopup2UpdateWordCount()"></textarea>
-      <div class="note-popup2-count np-count" id="notePopup2Count">0 / 500 words</div>
-    </div>
-    <div class="np-footer" id="notePopup2EditFooter" style="display:none">
-      <div id="notePopup2SpoilerWrap" class="np-spoiler-wrap"></div>
-      <div class="np-actions" id="npEditPopupActions">
-        <button class="popup-action-btn np-grow" id="notePopup2SaveBtn" onclick="saveNotePopup2()">Save Note</button>
-        <button class="popup-action-btn np-ghost" onclick="_notePopup2ExitEditMode()">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/sort-filter.js"></script>
+<script src="js/note-popup.js"></script>
 <script>
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -478,77 +342,19 @@ async function loadNotesPage() {
   idle(() => _fetchSocialNotes().catch(() => {}));            // warm up Community
 }
 
-// Date the title was watched (finished), falling back to when it was added
-// for things still in progress — used by the Date sort and the date badges.
-function _watchedDate(e) { return e.completed_date || e.created_at; }
-function _wordCount(t) { return (t || '').trim().split(/\s+/).filter(Boolean).length; }
-function _noteDate(d, withDay) {
-  if (!d) return '';
-  const dt = new Date(String(d).length <= 10 ? d + 'T12:00:00' : d);
-  return isNaN(dt) ? '' : dt.toLocaleDateString('en-US', withDay ? { day:'numeric', month:'short', year:'numeric' } : { month:'short', year:'numeric' });
-}
-function _notesPoster(url, title, cls) {
-  const u = safeURL(url);
-  return `<div class="${cls}">${u ? `<img src="${u}" loading="lazy" alt="" data-letter="${esc((title || '?')[0])}" onerror="mssImgError(this)">` : esc((title || '?')[0].toUpperCase())}</div>`;
-}
-// Score exactly like the category list view: plain Bebas, olive, no pill
-function _notesScorePill(v) { return v != null ? `<span class="nc-score">★ ${Number(v).toFixed(2)}</span>` : ''; }
-
-// Badges exactly like the category ratings popup: type-label for the type,
-// w-ep-badge for genres and dates
-const _NB = `style="font-family:'Manrope',var(--sans);font-weight:500;"`;
-function _noteTypeBadge(e) {
-  const isMovie = e.cat === 'movies' || e.tmdb_type === 'movie' || e.ratings?._media_type === 'movie';
-  const label = (e.cat && CAT_META[e.cat]?.label) || (isMovie ? 'Movie' : e.tmdb_type === 'tv' ? 'TV Show' : '');
-  return label ? `<span class="${isMovie ? 'type-label' : 'type-label type-label-tv'}" ${_NB}>${esc(label)}</span>` : '';
-}
-function _noteBadges(e, { genres = 3, dateLabel = '', date = '' } = {}) {
-  return _noteTypeBadge(e)
-    + (e.genres || []).slice(0, genres).map(g => `<span class="w-ep-badge" ${_NB}>${esc(g)}</span>`).join('')
-    + (date ? `<span class="w-ep-badge" ${_NB}>${dateLabel ? esc(dateLabel) + ' ' : ''}${esc(date)}</span>` : '');
-}
-
-/* ── Popup header: the title's TMDB backdrop (the wide landscape still),
-   shown crisp. Until it loads — or when a title has none — a softly
-   blurred poster fills in. Backdrops are cached for the session. */
-const _npBackdropCache = {};
-async function _npLoadHero(el, item) {
-  if (!el) return;
-  const poster = safeURL(item.poster_url);
-  el.classList.remove('is-backdrop');
-  el.style.backgroundImage = poster ? cssURL(item.poster_url) : 'none';
-  if (!item.tmdb_id || !item.tmdb_type) return;
-  const key = `${item.tmdb_type}:${item.tmdb_id}`;
-  let path = _npBackdropCache[key];
-  if (path === undefined) {
-    try {
-      const res = await tmdbFetch(`${TMDB_BASE}/${item.tmdb_type}/${item.tmdb_id}?api_key=${TMDB_KEY}&language=en-US`);
-      path = res.ok ? ((await res.json()).backdrop_path || null) : null;
-    } catch { path = null; }
-    _npBackdropCache[key] = path;
-  }
-  if (!path || !el.isConnected) return;
-  const url = `https://image.tmdb.org/t/p/w1280${path}`;
-  const img = new Image();
-  img.onload = () => { el.style.backgroundImage = cssURL(url); el.classList.add('is-backdrop'); };
-  img.src = url;
-}
 
 // Section label + count left, Sort / Filter right
 function _renderNotesToolbar(label, count, barHTML) {
   const el = document.getElementById('notesToolbar');
   if (!barHTML) { el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = '';
-  el.innerHTML = `<div class="notes-toolbar-label">
-      <div class="notes-toolbar-title">${esc(label)}</div>
-      <div class="notes-toolbar-count"><b>${count}</b> ${count === 1 ? 'note' : 'notes'}</div>
-    </div>${barHTML}`;
+  el.innerHTML = mssToolbarHTML(label, count, barHTML, 'note');
 }
 
 const _NOTE_LEN_PRESET = { length: { header: 'Note Length', opts: [['note_long', 'Longest'], ['note_short', 'Shortest']] } };
 const _noteLenCompare = {
-  note_long:  (a, b) => _wordCount(b.notes) - _wordCount(a.notes),
-  note_short: (a, b) => _wordCount(a.notes) - _wordCount(b.notes),
+  note_long:  (a, b) => MSSNote.words(b.notes) - MSSNote.words(a.notes),
+  note_short: (a, b) => MSSNote.words(a.notes) - MSSNote.words(b.notes),
 };
 
 /* Personal Sort & Filter (shared js/sort-filter.js) */
@@ -556,7 +362,7 @@ SF.register('notesMine', {
   base: () => _notesEntries.filter(e => e.notes && e.notes.trim()),
   render: () => renderNotesPage(),
   defaultSort: 'newest',
-  addedDate: _watchedDate,
+  addedDate: MSSNote.watchedDate,
   presets: {
     added: { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Earliest']] },
     ..._NOTE_LEN_PRESET,
@@ -594,10 +400,10 @@ SF.register('notesSocial', {
   sorts: () => ['popularity', 'added', 'alpha', 'length', 'ratings'],
   filters: () => ['score'],
   scoreOf: n => n.final_score != null ? Number(n.final_score) : null,
-  addedDate: _watchedDate,
+  addedDate: MSSNote.watchedDate,
   compare: {
     ..._noteLenCompare,
-    popular: (a, b) => (_snScore(b) - _snScore(a)) || (new Date(_watchedDate(b)) - new Date(_watchedDate(a))),
+    popular: (a, b) => (_snScore(b) - _snScore(a)) || (new Date(MSSNote.watchedDate(b)) - new Date(MSSNote.watchedDate(a))),
     least_popular: (a, b) => (Number(b.dislike_count) - Number(a.dislike_count)) || (_snScore(a) - _snScore(b)),
   },
   choiceFilters: () => [{
@@ -607,29 +413,13 @@ SF.register('notesSocial', {
   }],
 });
 
-// Card preview only — popups always show the full note (up to NOTE_WORD_LIMIT)
-function _trimNotes(text) {
-  if (!text) return '';
-  const words = text.trim().split(/\s+/);
-  return words.length > 60 ? words.slice(0, 60).join(' ') + '…' : text;
-}
-// Long notes: shorter header, upright (non-italic) text for easier reading,
-// and a soft fade at the bottom of the text while there's more to scroll.
-function _npFitLong(card, words) {
-  if (!card) return;
-  card.classList.toggle('np-long', words > 120);
-  requestAnimationFrame(() => card.querySelectorAll('.np-body').forEach(b => {
-    const upd = () => b.classList.toggle('np-more', b.scrollHeight - b.scrollTop - b.clientHeight > 8);
-    b.onscroll = upd; upd();
-  }));
-}
 
 function renderNotesPage() {
   const withNotes = _notesEntries.filter(e => e.notes && e.notes.trim());
 
   // Stats: how much you've written, how long your notes run, and how
   // they've landed with others (likes on your notes from the community)
-  const totalWords = withNotes.reduce((t, e) => t + _wordCount(e.notes), 0);
+  const totalWords = withNotes.reduce((t, e) => t + MSSNote.words(e.notes), 0);
   const avgWords = withNotes.length ? Math.round(totalWords / withNotes.length) : 0;
   const likesReceived = withNotes.reduce((t, e) => t + (_notesReactionCounts[e.id]?.like || 0), 0);
   document.getElementById('notesPageStats').innerHTML = `
@@ -653,27 +443,15 @@ function renderNotesPage() {
   }
 
   const sorted = SF.list('notesMine', 'all');
-  if (!sorted.length) { document.getElementById('notesPageContent').innerHTML = `<div class="notes-empty">No notes match these filters.</div>`; return; }
-  document.getElementById('notesPageContent').innerHTML = `<div class="nc-grid">${sorted.map(e => {
-    const counts = _notesReactionCounts[e.id] || { like: 0, dislike: 0 };
-    const date = _noteDate(_watchedDate(e), true);
-    const words = _wordCount(e.notes);
-    return `<article class="nc-card" onclick="openNotePopup2(${attrJSON(e.id)})">
-      ${_notesPoster(e.poster_url, e.title, 'nc-poster')}
-      <div class="nc-main">
-        <div class="nc-top"><div class="nc-title">${esc(e.title)}</div>${_notesScorePill(liveScore(e))}</div>
-        <div class="nc-tags">${_noteBadges(e, { genres: 2, date })}${mssIsSpoiler(e) ? mssSpoilerTag() : ''}</div>
-        <blockquote class="nc-quote">&ldquo;${esc(_trimNotes(e.notes))}&rdquo;</blockquote>
-        <div class="nc-foot">
-          <div class="nc-reacts">
-            <span class="snote-react-btn" style="cursor:default;">${icon('thumbsUp', 13)} <span>${counts.like}</span></span>
-            <span class="snote-react-btn" style="cursor:default;">${icon('thumbsDown', 13)} <span>${counts.dislike}</span></span>
-          </div>
-          <span class="nc-words"><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>
-        </div>
-      </div>
-    </article>`;
-  }).join('')}</div>`;
+  if (!sorted.length) { document.getElementById('notesPageContent').innerHTML = `<div class="mss-empty">No notes match these filters.</div>`; return; }
+  document.getElementById('notesPageContent').innerHTML = `<div class="nc-grid">${sorted.map(e =>
+    MSSNote.cardHTML(e, { counts: _notesReactionCounts[e.id], onclick: `_notesOpen(${attrJSON(e.id)})` })).join('')}</div>`;
+}
+
+// Your note: the shared note popup (note-popup.js) — read, then Edit Note
+function _notesOpen(id) {
+  const e = _notesEntries.find(en => en.id === id);
+  if (e) MSSNote.open(e, { counts: _notesReactionCounts[id], editable: true, onSaved: renderNotesPage });
 }
 
 /* ── Double-tap-to-like (touch screens) ── */
@@ -1063,15 +841,15 @@ function renderSocialNotes() {
     </div>`;
     return;
   }
-  if (!list.length) { wrap.innerHTML = `<div class="notes-empty">No notes match these filters.</div>`; return; }
+  if (!list.length) { wrap.innerHTML = `<div class="mss-empty">No notes match these filters.</div>`; return; }
 
   wrap.innerHTML = `<div class="nc-grid">${list.map(n => {
     const myReaction = _socialNotesMyReactions[n.entry_id];
     const id = attrJSON(n.entry_id);
     const initial = (n.username || '?')[0].toUpperCase();
-    const words = _wordCount(n.notes);
+    const words = MSSNote.words(n.notes);
     return `<article class="nc-card" onclick="openSocialNotePopup(${id})" ontouchend="_dtHandleTouch(event, 'snote-${escHTML(n.entry_id)}', () => reactToSocialNote(${id}, true), () => _socialNotesMyReactions[${id}] === 'like')">
-      ${_notesPoster(n.poster_url, n.title, 'nc-poster')}
+      ${MSSNote.poster(n.poster_url, n.title, 'nc-poster')}
       <div class="nc-main">
         <div class="nc-top">
           <div class="nc-author">
@@ -1079,11 +857,11 @@ function renderSocialNotes() {
             <span>@${esc(n.username || 'user')}</span>
           </div>
         </div>
-        <div class="nc-top"><div class="nc-title">${esc(n.title)}</div>${_notesScorePill(n.final_score)}</div>
-        <div class="nc-tags">${_noteBadges(n, { date: _noteDate(_watchedDate(n), true) })}</div>
+        <div class="nc-top"><div class="nc-title">${esc(n.title)}</div>${MSSNote.scorePill(n.final_score)}</div>
+        <div class="nc-tags">${MSSNote.badges(n, { date: MSSNote.date(MSSNote.watchedDate(n), true) })}</div>
         ${mssIsSpoiler(n) && n.user_id !== _notesUser?.id
-          ? mssSpoilerHTML(`<blockquote class="nc-quote">&ldquo;${esc(_trimNotes(n.notes))}&rdquo;</blockquote>`, { compact: true })
-          : `<blockquote class="nc-quote">&ldquo;${esc(_trimNotes(n.notes))}&rdquo;</blockquote>`}
+          ? mssSpoilerHTML(`<blockquote class="nc-quote">&ldquo;${esc(MSSNote.trim(n.notes))}&rdquo;</blockquote>`, { compact: true })
+          : `<blockquote class="nc-quote">&ldquo;${esc(MSSNote.trim(n.notes))}&rdquo;</blockquote>`}
         <div class="nc-foot">
           <div class="nc-reacts">
             <button class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialNote(${id}, true)">
@@ -1136,7 +914,7 @@ function _renderSocialNotePopup(n) {
   const myReaction = _socialNotesMyReactions[n.entry_id];
   const id = attrJSON(n.entry_id);
   const initial = (n.username || '?')[0].toUpperCase();
-  const words = _wordCount(n.notes);
+  const words = MSSNote.words(n.notes);
   const rerender = `.then(() => _renderSocialNotePopup(_socialNotesRaw.find(x => x.entry_id === ${escHTML(JSON.stringify(n.entry_id))})))`;
   document.getElementById('snPopupCard').innerHTML = `
     <div class="np-hero">
@@ -1145,14 +923,14 @@ function _renderSocialNotePopup(n) {
       <button class="np-close" onclick="closeSocialNotePopup()" aria-label="Close">&#x2715;</button>
     </div>
     <div class="np-head">
-      ${_notesPoster(n.poster_url, n.title, 'np-poster')}
+      ${MSSNote.poster(n.poster_url, n.title, 'np-poster')}
       <div class="np-head-info">
         <div class="np-eyebrow">
           <div class="snote-avatar">${safeURL(n.avatar_url) ? `<img src="${safeURL(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
           <span class="np-user">@${esc(n.username || 'user')}</span>
         </div>
         <div class="np-title">${esc(n.title)}</div>
-        <div class="np-meta-row"><div class="np-meta">${_noteBadges(n, { dateLabel: n.completed_date ? 'Watched On:' : 'Added On:', date: _noteDate(_watchedDate(n), true) })}</div><span class="np-score-slot">${_notesScorePill(n.final_score)}</span></div>
+        <div class="np-meta-row"><div class="np-meta">${MSSNote.badges(n, { dateLabel: n.completed_date ? 'Watched On:' : 'Added On:', date: MSSNote.date(MSSNote.watchedDate(n), true) })}</div><span class="np-score-slot">${MSSNote.scorePill(n.final_score)}</span></div>
       </div>
     </div>
     <div class="np-stats"><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span></div>
@@ -1171,8 +949,8 @@ function _renderSocialNotePopup(n) {
       </div>
     </div>
   `;
-  _npLoadHero(document.getElementById('snHeroImg'), n);
-  _npFitLong(document.getElementById('snPopupCard'), words);
+  MSSNote.loadHero(document.getElementById('snHeroImg'), n);
+  MSSNote.fitLong(document.getElementById('snPopupCard'), words);
 }
 
 /* ── Replies popup — shared for notes and lists via `kind` ── */
@@ -1542,156 +1320,17 @@ function _notesPageSearchPick(i) {
   const e = _notesSearchResultsList[i];
   if (!e) return;
   closeNotesSearchPopup();
-  openNotePopup2(e.id);
+  _notesOpen(e.id);
 }
 
 /* ── Note popup — editable ── */
-function openNotePopup2(id) {
-  const e = _notesEntries.find(en => en.id === id);
-  if (!e) return;
-  _notesActiveId = null;
-  window._notesCurrentEntryId = id;
 
-  const date = _noteDate(_watchedDate(e), true);
-  const hasPoster = !!safeURL(e.poster_url);
-  _npLoadHero(document.getElementById('notePopup2Blur'), e);
-  document.getElementById('notePopup2Poster').innerHTML = hasPoster ? `<img src="${safeURL(e.poster_url)}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase());
-  document.getElementById('notePopup2Title').textContent = e.title;
-  document.getElementById('notePopup2Score').innerHTML = _notesScorePill(liveScore(e));
-  document.getElementById('notePopup2Tags').innerHTML = _noteBadges(e, { genres: 3, dateLabel: e.completed_date ? 'Completed On:' : 'Added On:', date });
-
-  const counts = _notesReactionCounts[id] || { like: 0, dislike: 0 };
-  const words = _wordCount(e.notes);
-  const stats = document.getElementById('notePopup2Reactions');
-  stats.innerHTML = `<span>${icon('thumbsUp', 14)} <b>${counts.like}</b></span><span>${icon('thumbsDown', 14)} <b>${counts.dislike}</b></span><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>${mssIsSpoiler(e) ? mssSpoilerTag() : ''}`;
-  stats.style.display = (e.notes && e.notes.trim()) ? 'flex' : 'none';
-
-  document.getElementById('notePopup2').classList.add('open');
-  document.body.style.overflow = 'hidden';
-
-  // Existing note — open in read-only view, matching how it's shown on
-  // profile.html; editing requires an explicit tap on "Edit Note" instead
-  // of dropping straight into an editable field. A brand-new note has
-  // nothing to view, so that case goes straight to edit mode.
-  if (e.notes && e.notes.trim()) {
-    document.getElementById('notePopup2Text').innerHTML = '&ldquo;' + esc(e.notes.trim()) + '&rdquo;';
-    _notePopup2ShowView();
-  } else {
-    _notePopup2ShowEdit();
-  }
-}
-
-function _notePopup2ShowView() {
-  document.getElementById('notePopup2ViewBody').style.display = '';
-  document.getElementById('notePopup2ViewFooter').style.display = '';
-  document.getElementById('notePopup2EditBody').style.display = 'none';
-  document.getElementById('notePopup2EditFooter').style.display = 'none';
-  const e = _notesEntries.find(en => en.id === window._notesCurrentEntryId);
-  _npFitLong(document.querySelector('#notePopup2 .np-card'), _wordCount(e?.notes));
-}
-
-function _notePopup2ShowEdit() {
-  const e = _notesEntries.find(en => en.id === window._notesCurrentEntryId);
-  const textarea = document.getElementById('notePopup2Textarea');
-  textarea.value = e?.notes || '';
-  const spw = document.getElementById('notePopup2SpoilerWrap');
-  if (!spw.firstChild) spw.innerHTML = mssSpoilerToggleHTML('notePopup2Spoiler');
-  document.getElementById('notePopup2Spoiler').checked = mssIsSpoiler(e);
-  _notePopup2UpdateWordCount();
-  _notePopup2GuardWordLimit();
-
-  document.getElementById('notePopup2ViewBody').style.display = 'none';
-  document.getElementById('notePopup2ViewFooter').style.display = 'none';
-  document.getElementById('notePopup2EditBody').style.display = '';
-  document.getElementById('notePopup2EditFooter').style.display = '';
-  _npFitLong(document.querySelector('#notePopup2 .np-card'), NOTE_WORD_LIMIT);   // editing: compact header, most room for typing
-  setTimeout(() => textarea.focus(), 100);
-}
-
-function _notePopup2EnterEditMode() { _notePopup2ShowEdit(); }
-
-function _notePopup2ExitEditMode() {
-  const e = _notesEntries.find(en => en.id === window._notesCurrentEntryId);
-  // A brand-new note has nothing to go "back" to view — cancelling just
-  // closes the popup entirely instead of showing an empty view state.
-  if (!e || !e.notes || !e.notes.trim()) { closeNotePopup2(); return; }
-  document.getElementById('notePopup2Text').innerHTML = '&ldquo;' + esc(e.notes.trim()) + '&rdquo;';
-  _notePopup2ShowView();
-}
-
-function closeNotePopup2() {
-  document.getElementById('notePopup2').classList.remove('open');
-  document.body.style.overflow = '';
-  window._notesCurrentEntryId = null;
-}
-
-async function saveNotePopup2() {
-  const id = window._notesCurrentEntryId;
-  if (!id) return;
-  const notes = document.getElementById('notePopup2Textarea').value.trim();
-  const btn = document.getElementById('notePopup2SaveBtn');
-  const origLabel = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Saving…';
-  try {
-    const entry = _notesEntries.find(en => en.id === id);
-    const spoiler = !!document.getElementById('notePopup2Spoiler')?.checked;
-    const ratings = { ...(entry?.ratings || {}), _notes_spoiler: spoiler && !!notes };
-    const { error } = await sb.from('entries').update({ notes, ratings }).eq('id', id).eq('user_id', _notesUser.id);
-    if (error) throw error;
-    if (entry) { entry.notes = notes; entry.ratings = ratings; }
-    closeNotePopup2();
-    renderNotesPage();
-    showToast('Note saved!');
-  } catch (err) {
-    console.error('saveNotePopup2:', err);
-    showToast('Error saving note.', 'err');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = origLabel;
-  }
-}
-
-/* NOTE_WORD_LIMIT (500) cap, matching detail.html's Personal Notes field — blocks
-   further typing at the limit instead of silently trimming after the
-   fact, with a clear message when you hit it. */
-function _notePopup2UpdateWordCount() {
-  const el = document.getElementById('notePopup2Textarea');
-  const countEl = document.getElementById('notePopup2Count');
-  if (!el || !countEl) return;
-  const words = el.value.trim().split(/\s+/).filter(Boolean);
-  if (words.length > NOTE_WORD_LIMIT) {
-    el.value = clampWords(el.value, NOTE_WORD_LIMIT);
-    countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`;
-    countEl.classList.add('over');
-    return;
-  }
-  const count = words.length;
-  countEl.textContent = `${count} / ${NOTE_WORD_LIMIT} words`;
-  countEl.classList.toggle('over', count >= NOTE_WORD_LIMIT);
-}
-function _notePopup2GuardWordLimit() {
-  const el = document.getElementById('notePopup2Textarea');
-  if (!el || el.dataset.wordLimitGuarded) return;
-  el.dataset.wordLimitGuarded = '1';
-  el.addEventListener('beforeinput', e => {
-    if (e.inputType && e.inputType.startsWith('delete')) return;
-    if (el.selectionStart !== el.selectionEnd) return;
-    const count = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
-    if (count >= NOTE_WORD_LIMIT) {
-      e.preventDefault();
-      const countEl = document.getElementById('notePopup2Count');
-      if (countEl) { countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`; countEl.classList.add('over'); }
-    }
-  });
-}
 
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (document.getElementById('confirmOverlay')?.classList.contains('open')) return;   // the confirm handles its own Esc
   // Community note popup (it had no Esc at all)
   if (document.getElementById('snPopupOverlay')?.style.display === 'flex') { closeSocialNotePopup(); return; }
-  if (document.getElementById('notePopup2')?.classList.contains('open')) { closeNotePopup2(); return; }
   if (document.getElementById('notesSearchOverlay')?.classList.contains('open')) { closeNotesSearchPopup(); return; }
 });
 </script>
