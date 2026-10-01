@@ -1013,10 +1013,11 @@ nav {
   font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; transition:all .15s;
 }
 .mss-views-close:hover { color:var(--text); border-color:var(--border-olive); }
-#mssInfoCard:has(> .mss-views:not(:empty)) .pvi-close,
-#mssRateCard:has(> .mss-views:not(:empty)) .mr-close,
-.note-popup2:has(> .mss-views:not(:empty)) .np-close,
-#snPopupCard:has(> .mss-views) .np-close { display:none; }
+/* the popup's own ✕ hides while the switcher (with its ✕) is showing —
+   sibling selectors, so it works in every browser (no :has needed) */
+.mss-views:not(:empty) ~ .pvi-header .pvi-close,
+.mss-views:not(:empty) ~ .mr-head .mr-close,
+.mss-views:not(:empty) ~ .np-hero .np-close { display:none; }
 #mssNoteOverlay .mss-views, #snPopupCard .mss-views { padding:14px 16px 12px; }
 /* Switching views swaps popups instantly — no fade / slide in between */
 body.mss-switching #mssInfoOverlay, body.mss-switching #mssInfoCard,
