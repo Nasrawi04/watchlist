@@ -410,7 +410,7 @@ function renderHomeWatching(entries) {
         const typeBadge = `<span class="${isM ? 'type-label' : 'type-label type-label-tv'}">${isM ? 'Movie' : 'TV Show'}</span>`;
         const upNext = e.status === 'up_next';
         return `<div class="w-card${upNext ? ' is-up-next' : ''}" onclick="_homeOpenInfo('${e.id}')">
-          <div class="w-poster">${posterHTML(e)}</div>
+          <div class="w-poster" style="position:relative">${posterHTML(e)}${mssHoldHTML(e)}</div>
           <div class="w-body">
             <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
             ${epStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${epStr}</span></div>` : ''}
