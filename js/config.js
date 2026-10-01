@@ -539,6 +539,15 @@ document.addEventListener('keydown', e => {
 /* ══════════════════════════════════════════
    CONFIRM DIALOG
 ══════════════════════════════════════════ */
+// "Up Next" / "Taking a Break" cover on a poster: the poster softly
+// blurred + dimmed, with a big label pill that scales with the poster
+// (style.css .mss-hold). Use inside a position:relative poster box.
+function mssHoldHTML(e) {
+  const upNext = e.status === 'up_next';
+  if (!upNext && e.status !== 'paused') return '';
+  return `<div class="mss-hold ${upNext ? 'is-up-next' : 'is-break'}"><span class="mss-hold-label">${upNext ? 'Up<br>Next' : 'Taking<br>a Break'}</span></div>`;
+}
+
 // Section label + count on the left, Sort / Filter (or other buttons) on the
 // right — the toolbar above the Notes / Lists cards and the profile tabs.
 function mssToolbarHTML(label, count, barHTML = '', noun = 'item') {
