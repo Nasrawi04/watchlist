@@ -19,7 +19,7 @@
 /* Score styling — matches Discover's grid card exactly */
 .home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
 .home-tmdb-score { font-family:var(--bebas); color:var(--olive-light); font-size:clamp(15px, 3.3vw, 17px); font-weight:400; white-space:nowrap; }
-/* ── Lists page (mirrors favorites.html's list styling) ── */
+/* ── Lists page ── */
 .fav-page-list-header {
   display:block;
   margin-bottom:1rem;
@@ -994,7 +994,7 @@ async function _collabCopyLink() {
   btn.textContent = 'Copied ✓'; setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
 }
 async function _collabResetLink() {
-  const ok = await showConfirm({ title: 'Reset invite link?', message: 'The current link will stop working. People who already joined stay on the list.', confirmText: 'Reset', iconName: 'refresh' });
+  const ok = await showConfirm({ title: 'Reset invite link?', message: 'The current link will stop working. People who already joined stay on the list.', confirmText: 'Reset', iconName: 'refresh', danger: false });
   if (ok) _collabLoadLink(true);
 }
 function closeCollabPicker() {
