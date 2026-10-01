@@ -598,11 +598,11 @@ function buildWatching(items) {
   return getView('watching') === 'grid' ? renderWatchingGrid(items) : renderWatchingList(items);
 }
 
-/* Up Next / Taking a Break share one look on the poster (a tinted cover
-   with a label). Up Next is blue so the two read apart at a glance. */
+/* Up Next / Taking a Break: the poster gets the shared cover (mssHoldHTML
+   in config.js) and the card's button becomes Start / Resume. */
 function _catHold(e) {
-  if (e.status === 'up_next') return { label: 'Up<br>Next', bg: 'rgba(38,78,120,0.62)', btn: 'Start', title: 'Start watching', fn: 'startWatching' };
-  if (e.status === 'paused')  return { label: 'Taking<br>a Break', bg: 'rgba(74,103,65,0.58)', btn: 'Resume', title: 'Resume', fn: 'resumeEntry' };
+  if (e.status === 'up_next') return { btn: 'Start', title: 'Start watching', fn: 'startWatching' };
+  if (e.status === 'paused')  return { btn: 'Resume', title: 'Resume', fn: 'resumeEntry' };
   return null;
 }
 
@@ -619,9 +619,7 @@ function renderMoviesWatchingList(items) {
     return `<div class="w-card" style="${cardStyle}" onclick="openCatInfoPopup('${e.id}')">
       <div class="w-poster" style="position:relative">
         ${posterHTML(e)}
-        ${isPaused ? `<div style="position:absolute;inset:0;background:${hold.bg};display:flex;align-items:center;justify-content:center;border-radius:10px">
-          <span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:2px 4px;line-height:1.3">${hold.label}</span>
-        </div>` : ''}
+        ${isPaused ? mssHoldHTML(e) : ''}
       </div>
       <div class="w-body">
         <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
@@ -654,11 +652,7 @@ function buildMoviesWatching(activeItems, pausedItems = []) {
     return `<div class="wg-card" onclick="openCatInfoPopup('${e.id}')">
       <div class="wg-poster" style="position:relative;">
         ${posterHTML(e, 'big')}
-        ${isPaused
-          ? `<div style="position:absolute;inset:0;background:${hold.bg};display:flex;align-items:center;justify-content:center;z-index:1">
-               <span style="font-size:clamp(9px,2.4vw,12px);font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">${hold.label}</span>
-             </div>`
-          : ''}
+        ${isPaused ? mssHoldHTML(e) : ''}
         ${SHOW_TYPE_TAG() ? `<span class="${typeClsPcg}">Movie</span>` : ''}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
       </div>
@@ -693,9 +687,7 @@ function renderWatchingList(items) {
     return `<div class="w-card" style="${cardStyle}" onclick="openCatInfoPopup('${e.id}')">
       <div class="w-poster" style="position:relative">
         ${posterHTML(e)}
-        ${isPaused ? `<div style="position:absolute;inset:0;background:${hold.bg};display:flex;align-items:center;justify-content:center;border-radius:10px">
-          <span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:2px 4px;line-height:1.3">${hold.label}</span>
-        </div>` : ''}
+        ${isPaused ? mssHoldHTML(e) : ''}
       </div>
       <div class="w-body">
         <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
@@ -760,11 +752,7 @@ function renderWatchingGrid(items) {
     return `<div class="wg-card" onclick="openCatInfoPopup('${e.id}')">
       <div class="wg-poster" style="position:relative;">
         ${posterHTML(e, 'big')}
-        ${isPaused
-          ? `<div style="position:absolute;inset:0;background:${hold.bg};display:flex;align-items:center;justify-content:center;z-index:1">
-               <span style="font-size:clamp(9px,2.4vw,12px);font-weight:700;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:1.5">${hold.label}</span>
-             </div>`
-          : ''}
+        ${isPaused ? mssHoldHTML(e) : ''}
         ${SHOW_TYPE_TAG() ? `<span class="${typeCls}">${isMovieG ? 'Movie' : 'TV Show'}</span>` : ''}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
       </div>
