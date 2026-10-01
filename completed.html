@@ -631,6 +631,7 @@ function setCompView(v) {
 const _compSortState = { all: 'newest' };
 SF.register('comp', {
   base: () => _allCompleted,
+  watched: () => true,          // Year Watched filter
   render() {
     // Keep the page-level globals the stats/export/ranked views read in sync
     const f = SF.filterState('comp', 'all');
