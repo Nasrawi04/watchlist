@@ -493,12 +493,11 @@ const MSSInfo = (() => {
    popup, or use the ← → keys. Only the views a title actually has show
    up (Ratings once it's rated / watched, Note once it has one).
 
-   The order (and so the first view) depends on where you opened it:
+   Tabs are always in the same order — Info · Ratings · Note — only the
+   one it opens on depends on where you opened it:
      MSSViews.open(entry, {
-       order: ['info', 'rate', 'note'],   // lists, friends' activity
-              ['note', 'rate', 'info'],   // notes
-              ['rate', 'note', 'info'],   // your library / dashboard
-       start: 'info',          // optional: open on this view instead of the first
+       start: 'note',          // lists / friends → 'info' (default), notes → 'note',
+                               // library / dashboard → 'rate' (falls back to the first tab it has)
        own: true,              // your entry → Edit / Delete…, editable note
        writeNote: true,        // with own: show Note even when empty (opens the editor)
        profile,                // their profile, for "Sam's rating"
@@ -515,26 +514,28 @@ const MSSInfo = (() => {
 
 const MSSViews = (() => {
   const VIEWS = {
-    info: { label: 'Info',    ico: 'info',     slot: 'mssInfoViews', card: 'mssInfoCard' },
-    rate: { label: 'Ratings', ico: 'trophy',   slot: 'mssRateViews', card: 'mssRateCard' },
-    note: { label: 'Note',    ico: 'notebook', slot: 'mssNoteViews', card: null },        // .note-popup2
+    info: { label: 'Info',    slot: 'mssInfoViews', card: 'mssInfoCard' },
+    rate: { label: 'Ratings', slot: 'mssRateViews', card: 'mssRateCard' },
+    note: { label: 'Note',    slot: 'mssNoteViews', card: null },        // .note-popup2
   };
   let st = null;   // { e, views, cur, o, refreshed }
 
   const isRated = e => e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
   const hasNote = e => !!(e.notes && e.notes.trim());
   // writeNote: your own entry gets the Note view even before it has one (to write it)
-  const available = (e, order, o) => order.filter(v => v === 'info' || (v === 'rate' && isRated(e)) || (v === 'note' && (hasNote(e) || (o.own && o.writeNote))));
+  const ORDER = ['info', 'rate', 'note'];
+  const available = (e, o) => ORDER.filter(v => v === 'info' || (v === 'rate' && isRated(e)) || (v === 'note' && (hasNote(e) || (o.own && o.writeNote))));
   const cardOf = v => v === 'note' ? document.querySelector('#mssNoteOverlay .note-popup2') : document.getElementById(VIEWS[v].card);
 
   function closeAll() { MSSInfo.close(); MSSRate.close(); MSSNote.close(); st?.o.note?.close(); }
 
   function barHTML() {
-    return `<div class="mss-views-bar" role="tablist" aria-label="Views">${st.views.map(v => {
+    return `<div class="pn-toggle" role="tablist" aria-label="Views">${st.views.map(v => {
       const on = v === st.cur;
-      return `<button type="button" role="tab" class="mss-views-tab${on ? ' active' : ''}" aria-selected="${on}" ${on ? '' : `onclick="MSSViews.show('${v}')"`}>${icon(VIEWS[v].ico, 13)}<span>${VIEWS[v].label}</span></button>`;
-    }).join('')}</div>`;
+      return `<button type="button" role="tab" class="pn-toggle-btn${on ? ' active' : ''}" aria-selected="${on}" ${on ? '' : `onclick="MSSViews.show('${v}')"`}>${VIEWS[v].label}</button>`;
+    }).join('')}</div><button type="button" class="mss-views-close" onclick="MSSViews.close()" aria-label="Close">✕</button>`;
   }
+
 
   function show(v) {
     if (!st || !st.views.includes(v)) return;
@@ -610,7 +611,7 @@ const MSSViews = (() => {
     if (!st || (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight')) return;
     if (ev.target.closest?.('input, textarea, select, [contenteditable]')) return;
     const anyOpen = document.querySelector('#mssInfoOverlay.open, #mssRateOverlay.open, #mssNoteOverlay.open') || document.getElementById('snPopupOverlay')?.style.display === 'flex';
-    if (!anyOpen || ![...document.querySelectorAll('.mss-views-bar')].some(b => b.offsetParent)) return;
+    if (!anyOpen || ![...document.querySelectorAll('.mss-views .pn-toggle')].some(b => b.offsetParent)) return;
     step(ev.key === 'ArrowRight' ? 1 : -1);
   });
 
@@ -629,7 +630,7 @@ const MSSViews = (() => {
   async function open(entry, o = {}) {
     if (!entry) return;
     const e = await full(entry);
-    const views = available(e, o.order || ['info', 'rate', 'note'], o);
+    const views = available(e, o);
     st = { e, o, views, cur: null, refreshed: false, counts: o.counts };
     if (!o.counts && hasNote(e) && views.includes('note') && typeof MSSNote.reactionCounts === 'function') {
       MSSNote.reactionCounts([e.id]).then(c => { if (st && st.e === e) st.counts = c[e.id]; }).catch(() => {});
@@ -637,5 +638,7 @@ const MSSViews = (() => {
     show(o.start && views.includes(o.start) ? o.start : views[0]);
   }
 
-  return { open, show, barFor };
+  function close() { closeAll(); st = null; }
+
+  return { open, show, close, barFor };
 })();
