@@ -4474,6 +4474,28 @@ body { font-size:15px; }
 .start-watching-wrap .continue-btn { flex:1; }
 .start-watching-wrap .up-next-btn { flex-shrink:0; width:38px; display:flex; align-items:center; justify-content:center; padding:0; }
 .up-next-btn:hover { color:#fff; background:#264e78; border-color:#264e78; }
+/* ── "Up Next" / "Taking a Break" poster cover (mssHoldHTML in config.js) ──
+   The poster behind is softly blurred + dimmed so the label always reads;
+   the label pill scales with the poster's own width (cqi), so it stays
+   inside even the small list-view posters on a phone. */
+.mss-hold {
+  position:absolute; inset:0; z-index:1; border-radius:inherit; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; padding:6%;
+  background:rgba(8,12,10,0.38);
+  -webkit-backdrop-filter:blur(3px) saturate(0.85); backdrop-filter:blur(3px) saturate(0.85);
+  container-type:inline-size; pointer-events:none;
+}
+.mss-hold-label {
+  display:block; max-width:100%; box-sizing:border-box;
+  font-family:'Manrope',var(--sans); font-weight:800; color:#fff; text-align:center; text-transform:uppercase;
+  font-size:11px; font-size:clamp(8px, 15cqi, 20px); line-height:1.15; letter-spacing:.05em;
+  padding:.45em .7em; overflow-wrap:anywhere; border-radius:6px; box-shadow:0 2px 10px rgba(0,0,0,.35);
+  text-shadow:0 1px 2px rgba(0,0,0,.35);
+}
+/* Tiny list-view posters on phones: tighter pill so the words never clip */
+@container (max-width:72px) { .mss-hold-label { letter-spacing:.01em; padding:.4em .35em; border-radius:4px; } }
+.mss-hold.is-up-next .mss-hold-label { background:rgba(38,78,120,0.94); }
+.mss-hold.is-break .mss-hold-label { background:rgba(54,80,46,0.94); }
 .up-next-tag { display:inline-flex; align-items:center; padding:3px 9px; border-radius:var(--radius-xs, 4px); background:#264e78; color:#fff;
   font-family:'Manrope',var(--sans); font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; }
 
