@@ -544,13 +544,13 @@ document.addEventListener('keydown', function(e) {
   if (document.getElementById('ratingFilterOverlay')?.classList.contains('open')) { closeRatingFilter(); return; }
   // Notes tab popups (these didn't close on Esc)
 });
-// Their title: Ratings → Note → Info in one popup (MSSViews, info-popup.js) — opens on
+// Their title: Info · Ratings · Note in one popup (MSSViews, info-popup.js) — opens on
 // Ratings once it's rated/watched, otherwise on Info. Add to Watchlist · Discover.
 function pvOpenPopup(id) {
   const e = _pvEntryMapPv[id] || _pvEntries.find(function(en) { return en.id === id; });
   if (!e) return;
   const rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
-  MSSViews.open(e, { order: ['rate', 'note', 'info'], start: rated ? 'rate' : 'info', profile: _pvProfile || {} });
+  MSSViews.open(e, { start: rated ? 'rate' : 'info', profile: _pvProfile || {} });
 }
 
 
@@ -627,22 +627,22 @@ function _profStatBox(num, label) {
   var tabBar = '<div class="pv-tabs">'
     +'<div class="pv-tab active" onclick="pvTab(0,this)" id="pvTab0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="pv-tab-label">Overview</span></div>'
     +'<div class="pv-tab" onclick="pvTab(1,this)" id="pvTab1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="pv-tab-label">Library</span></div>'
-    +'<div class="pv-tab" onclick="pvTab(2,this)" id="pvTab2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="prof-tab-label">Notes</span></div>'
-    +'<div class="pv-tab" onclick="pvTab(3,this)" id="pvTab3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><span class="prof-tab-label">Lists</span></div>'
+    +'<div class="pv-tab" onclick="pvTab(2,this)" id="pvTab2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><span class="prof-tab-label">Lists</span></div>'
+    +'<div class="pv-tab" onclick="pvTab(3,this)" id="pvTab3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="prof-tab-label">Notes</span></div>'
     +'</div>';
 
   var mobileSelect = '<select class="prof-tab-select" id="pvTabsSelect" onchange="pvTabSwitch(parseInt(this.value))">'
     +'<option value="0">Overview</option>'
     +'<option value="1">Library</option>'
-    +'<option value="2">Notes</option>'
-    +'<option value="3">Lists</option>'
+    +'<option value="2">Lists</option>'
+    +'<option value="3">Notes</option>'
     +'</select>';
 
   var panel0 = '<div class="pv-panel active" id="pvPanel0"><div id="pvOverviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>';
   var panel1 = '<div class="pv-panel" id="pvPanel1"><div id="pvLibraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="pvLibraryContent" style="display:none"></div></div>';
 
-  var panel2 = '<div class="pv-panel" id="pvPanel2"><div id="pvNotesContent"></div></div>';
-  var panel3 = '<div class="pv-panel" id="pvPanel3"><div id="pvListsContent"></div></div>';
+  var panel2 = '<div class="pv-panel" id="pvPanel2"><div id="pvListsContent"></div></div>';
+  var panel3 = '<div class="pv-panel" id="pvPanel3"><div id="pvNotesContent"></div></div>';
 
   document.getElementById('pvContent').innerHTML = header + mobileSelect + tabBar + panel0 + panel1 + panel2 + panel3;
 
@@ -654,10 +654,10 @@ function _profStatBox(num, label) {
     var sel = document.getElementById('pvTabsSelect');
     if (sel && parseInt(sel.value) !== n) sel.value = n;
     if (n === 1) { renderPvLibrary(); }
-    // Notes + Lists: the Personal sections of the Notes / Lists pages, read-only (profile-tabs.js)
+    // Lists + Notes: the Personal sections of the Notes / Lists pages, read-only (profile-tabs.js)
     var tabOpts = { userId: _pvUserId, entries: _pvEntries, owner: !!(_pvMe && _pvMe.id === _pvUserId), name: (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '' };
-    if (n === 2) MSSTabs.notes(document.getElementById('pvNotesContent'), tabOpts);
-    if (n === 3) MSSTabs.lists(document.getElementById('pvListsContent'), tabOpts);
+    if (n === 2) MSSTabs.lists(document.getElementById('pvListsContent'), tabOpts);
+    if (n === 3) MSSTabs.notes(document.getElementById('pvNotesContent'), tabOpts);
   };
 
   renderPvOverview();
