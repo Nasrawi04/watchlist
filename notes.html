@@ -16,19 +16,6 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 <style>
-/* ── Personal / Social toggle ── */
-.pn-toggle {
-  display:flex; width:fit-content; margin:0 auto 1.5rem;
-  background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius-sm); overflow:hidden;
-}
-.pn-toggle-btn {
-  padding:10px 32px; font-size:13.5px; font-weight:600;
-  background:none; border:none; color:var(--text-3); cursor:pointer;
-  transition:all .15s;
-}
-.pn-toggle-btn + .pn-toggle-btn { border-left:0.5px solid var(--border-2); }
-.pn-toggle-btn:hover { color:var(--text); }
-.pn-toggle-btn.active { background:var(--olive); color:#fff; }
 
 /* ── Social note row ── */
 .snote-row-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
@@ -452,12 +439,12 @@ function renderNotesPage() {
     MSSNote.cardHTML(e, { counts: _notesReactionCounts[e.id], onclick: `_notesOpen(${attrJSON(e.id)})` })).join('')}</div>`;
 }
 
-// Your note first, then its Ratings and Info (MSSViews, info-popup.js)
+// Info · Ratings · Note popup, opening on your note (MSSViews, info-popup.js)
 function _notesOpen(id) {
   const e = _notesEntries.find(en => en.id === id);
   if (!e) return;
   MSSViews.open(e, {
-    order: ['note', 'rate', 'info'], own: true, writeNote: true, from: 'notes.html', counts: _notesReactionCounts[id],
+    start: 'note', own: true, writeNote: true, from: 'notes.html', counts: _notesReactionCounts[id],
     onNoteSaved: renderNotesPage, onChange: renderNotesPage,
     onDelete: x => { _notesEntries = _notesEntries.filter(y => y.id !== x.id); renderNotesPage(); },
   });
@@ -900,12 +887,12 @@ function _injectSocialNotePopupOverlay() {
 
 let _snPopupEntryId = null;
 
-// Someone's note first (with its reactions + replies), then their Ratings and Info
+// Someone's note (with its reactions + replies) in the Info · Ratings · Note popup, opening on the note
 function _notesOpenSocial(entryId) {
   const n = _socialNotesRaw.find(x => x.entry_id === entryId);
   if (!n) return;
   MSSViews.open({ ...n, id: n.entry_id }, {
-    order: ['note', 'rate', 'info'], own: !!_notesUser && n.user_id === _notesUser.id, from: 'notes.html',
+    start: 'note', own: !!_notesUser && n.user_id === _notesUser.id, from: 'notes.html',
     profile: { username: n.username, avatar_url: n.avatar_url },
     note: { open: () => openSocialNotePopup(entryId), close: closeSocialNotePopup },
   });
