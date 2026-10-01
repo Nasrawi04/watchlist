@@ -403,6 +403,7 @@ function _trimNotes(text) {
 <script src="js/note-popup.js"></script>
 <script src="js/list-popup.js"></script>
 <script src="js/profile-tabs.js"></script>
+<script src="js/entry-views.js"></script>
 <script>
 let _pvMe = null, _pvMeProfile = null;
 let _pvUserId = null, _pvUsername = null, _pvProfile = null;
@@ -544,10 +545,13 @@ document.addEventListener('keydown', function(e) {
   if (document.getElementById('ratingFilterOverlay')?.classList.contains('open')) { closeRatingFilter(); return; }
   // Notes tab popups (these didn't close on Esc)
 });
-// Their ratings: the shared MSSRate popup (rating-popup.js) — Add to Watchlist · Discover
+// Their title: Ratings → Note → Info in one popup (entry-views.js) — opens on
+// Ratings once it's rated/watched, otherwise on Info. Add to Watchlist · Discover.
 function pvOpenPopup(id) {
   const e = _pvEntryMapPv[id] || _pvEntries.find(function(en) { return en.id === id; });
-  if (e) MSSRate.forFriend(e);
+  if (!e) return;
+  const rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
+  MSSViews.open(e, { order: ['rate', 'note', 'info'], start: rated ? 'rate' : 'info', profile: _pvProfile || {} });
 }
 
 
@@ -1085,6 +1089,7 @@ function _libBaseEntries(sec){
   return _pvEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&&inCat(e);});
 }
 SF.register('pv', {
+  watched: function(sec){ return sec==='completed'; },   // Year Watched filter
   base: _libBaseEntries,
   render: function(){ renderPvLibrary(); },
   sortState: _libSort,
@@ -1312,14 +1317,9 @@ async function postLibReply(prefix, entryId, commentId) {
   } catch(err) { showToast('Could not post reply.','err'); if(input) input.disabled=false; }
 }
 
-/* ══ Info popup: the shared MSSInfo popup (info-popup.js) — Add to
-   Watchlist (notifies your friend) · Discover ══ */
 var _pvFavLists = [];
 
-function openInfoPopup(id) {
-  var e = _pvEntries.find(function(en){ return en.id===id; });
-  if (e) MSSInfo.fromEntry(e);
-}
+function openInfoPopup(id) { pvOpenPopup(id); }
 </script>
 
 <script>
