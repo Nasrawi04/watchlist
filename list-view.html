@@ -302,11 +302,11 @@ function _lvTypeCls(e) {
   return isMovie ? 'type-label' : 'type-label type-label-tv';
 }
 
-// Tapping a title opens Info first, then Ratings and Note (MSSViews, info-popup.js)
+// Tapping a title: Info · Ratings · Note popup, opening on Info (MSSViews, info-popup.js)
 function _lvOpenInfo(id) {
   const e = _lvItems.find(x => x.id === id);
   if (!e) return;
-  MSSViews.open(e, { order: ['info', 'rate', 'note'] });
+  MSSViews.open(e, { start: 'info' });
 }
 
 function _lvCardHTML(e, rank) {
