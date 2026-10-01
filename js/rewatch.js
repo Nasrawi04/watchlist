@@ -46,7 +46,8 @@ async function rewatchEntry(id) {
     title: 'Start Rewatch?',
     message: `Move "${e.title}" back to Currently Watching?`,
     confirmText: 'Rewatch',
-    iconName: 'refresh'
+    iconName: 'refresh',
+    danger: false
   });
   if (!confirmed) return;
 
