@@ -489,6 +489,8 @@
   <select class="prof-tab-select" id="profTabsSelect" aria-label="Profile tab" onchange="switchTab(+this.value)">
     <option value="0">Overview</option>
     <option value="1">Library</option>
+    <option value="2">Notes</option>
+    <option value="3">Lists</option>
     <option value="4">Exports</option>
   </select>
 
@@ -501,6 +503,14 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       <span class="prof-tab-label">Library</span>
     </div>
+    <div class="prof-tab" id="tab2" onclick="switchTab(2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+      <span class="prof-tab-label">Notes</span>
+    </div>
+    <div class="prof-tab" id="tab3" onclick="switchTab(3)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+      <span class="prof-tab-label">Lists</span>
+    </div>
     <div class="prof-tab" id="tab4" onclick="switchTab(4)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <span class="prof-tab-label">Exports</span>
@@ -509,6 +519,8 @@
 
   <div class="prof-panel active" id="panel0"><div id="overviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>
+  <div class="prof-panel" id="panel2"><div id="notesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+  <div class="prof-panel" id="panel3"><div id="listsTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel4"><div id="exportsContent"></div></div>
 
 </div>
@@ -554,6 +566,9 @@ function _trimNotes(text) {
 <script src="js/create-card.js"></script>
 <script src="js/info-popup.js"></script>
 <script src="js/rating-popup.js"></script>
+<script src="js/note-popup.js"></script>
+<script src="js/list-popup.js"></script>
+<script src="js/profile-tabs.js"></script>
 <script src="js/export.js"></script>
 <script>
 /* ── State ── */
@@ -601,6 +616,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (_activeTab === 1) renderLibrary();
   });
 });
+
+/* ── Notes + Lists tabs: the Personal sections of the Notes / Lists pages
+   (profile-tabs.js). They wait for your library, which their cards use. ── */
+function _renderPersonalTab(n) {
+  _pEntriesReady.then(function() {
+    if (n === 2) MSSTabs.notes(document.getElementById('notesTabContent'), { entries: _pEntries, owner: true });
+    else MSSTabs.lists(document.getElementById('listsTabContent'), { userId: _pUser.id, entries: _pEntries, owner: true });
+  });
+}
 
 /* ── Profile stats (5 boxes) ── */
 function computeProfileStats(entries) {
@@ -686,6 +710,7 @@ function switchTab(n) {
     if(p) p.classList.toggle('active', i===n);
   });
   if (n===1) renderLibrary();
+  if (n===2 || n===3) _renderPersonalTab(n);
   if (n===4) renderExports();
   if (n===0 && _pEntries.length) renderTab0();
 }
@@ -702,8 +727,6 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     if(document.getElementById('ratingFilterOverlay')?.classList.contains('open')) closeRatingFilter();
     else if(document.getElementById('createCardOverlay')?.classList.contains('open')) closeCreateCard();
-    else if(document.getElementById('profCustomListModal')?.style.display==='flex') closeProfCustomListModal();
-    else if(document.getElementById('profAddListModal')?.style.display==='flex') closeProfAddListModal();
     else if(document.getElementById('exportOverlay')?.classList.contains('open')) closeExportPopup();
   }
 });
@@ -1126,73 +1149,6 @@ function renderLibrary(){
   if(loading)loading.style.display='none';
   el.style.display='block';
 }
-
-/* ── Tab 2: Favorites ── */
-
-/* ── Tab 5: Lists (favorite_lists table — cat='custom' rows only; genre+cat lists live on the Favorites tab) ── */
-
-/* ── Custom List Modal (title + description, works for any list type on edit) ── */
-var _profCustomListEditId = null;
-function closeProfCustomListModal(){
-  var el=document.getElementById('profCustomListModal');
-  if(el)el.style.display='none';
-  document.body.style.overflow='';
-  _profCustomListEditId = null;
-}
-// 50-word cap on description fields. _listsGuardWordLimit blocks further
-// typing once the limit is reached (deletions and replacing a selection
-// still work) instead of letting extra words in and yanking them back
-// after the fact. _listsUpdateWordCount stays as a safety-net fallback
-// for input paths that bypass beforeinput (e.g. some IME flows). Shared
-// by both the Add List and Custom List modals, and by the Lists tab's
-// edit-details flow.
-function _listsUpdateWordCount(inputId, countId) {
-  var el = document.getElementById(inputId);
-  var words = el.value.trim().split(/\s+/).filter(Boolean);
-  var countEl = document.getElementById(countId);
-  if (words.length > 50) {
-    el.value = words.slice(0, 50).join(' ');
-    if (countEl) { countEl.textContent = 'Reached max word limit (50/50 words)'; countEl.classList.add('over'); }
-    return;
-  }
-  var count = words.length;
-  if (countEl) {
-    countEl.textContent = count + ' / 50 words';
-    countEl.classList.toggle('over', count >= 50);
-  }
-}
-function _listsGuardWordLimit(inputId, countId) {
-  var el = document.getElementById(inputId);
-  if (!el || el.dataset.wordLimitGuarded) return;
-  el.dataset.wordLimitGuarded = '1';
-  el.addEventListener('beforeinput', function(e) {
-    if (e.inputType && e.inputType.indexOf('delete') === 0) return;
-    if (el.selectionStart !== el.selectionEnd) return;
-    var count = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
-    if (count >= 50) {
-      e.preventDefault();
-      var countEl = document.getElementById(countId);
-      if (countEl) { countEl.textContent = 'Reached max word limit (50/50 words)'; countEl.classList.add('over'); }
-    }
-  });
-}
-
-/* ── Unified picker for favorites and recommended ── */
-
-/* ── Profile custom list picker ── */
-
-/* ── Add new list modal (in profile) ── */
-var _profNewCat=null, _profNewGenre=null;
-
-function closeProfAddListModal(){
-  var el=document.getElementById('profAddListModal');
-  if(el)el.style.display='none';
-  document.body.style.overflow='';
-}
-
-/* ── Favorite Sections ── */
-
-/* ── Tab 3: Notes ── */
 
 /* ── Tab 4: Exports ── */
 // Exports is static, so its tab shows straight away; an export started
