@@ -489,8 +489,8 @@
   <select class="prof-tab-select" id="profTabsSelect" aria-label="Profile tab" onchange="switchTab(+this.value)">
     <option value="0">Overview</option>
     <option value="1">Library</option>
-    <option value="2">Notes</option>
-    <option value="3">Lists</option>
+    <option value="2">Lists</option>
+    <option value="3">Notes</option>
     <option value="4">Exports</option>
   </select>
 
@@ -504,12 +504,12 @@
       <span class="prof-tab-label">Library</span>
     </div>
     <div class="prof-tab" id="tab2" onclick="switchTab(2)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-      <span class="prof-tab-label">Notes</span>
-    </div>
-    <div class="prof-tab" id="tab3" onclick="switchTab(3)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
       <span class="prof-tab-label">Lists</span>
+    </div>
+    <div class="prof-tab" id="tab3" onclick="switchTab(3)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+      <span class="prof-tab-label">Notes</span>
     </div>
     <div class="prof-tab" id="tab4" onclick="switchTab(4)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -519,8 +519,8 @@
 
   <div class="prof-panel active" id="panel0"><div id="overviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>
-  <div class="prof-panel" id="panel2"><div id="notesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
-  <div class="prof-panel" id="panel3"><div id="listsTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+  <div class="prof-panel" id="panel2"><div id="listsTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+  <div class="prof-panel" id="panel3"><div id="notesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel4"><div id="exportsContent"></div></div>
 
 </div>
@@ -617,12 +617,12 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-/* ── Notes + Lists tabs: the Personal sections of the Notes / Lists pages
+/* ── Lists + Notes tabs: the Personal sections of the Notes / Lists pages
    (profile-tabs.js). They wait for your library, which their cards use. ── */
 function _renderPersonalTab(n) {
   _pEntriesReady.then(function() {
-    if (n === 2) MSSTabs.notes(document.getElementById('notesTabContent'), { entries: _pEntries, owner: true, onDelete: _profRemoveEntry });
-    else MSSTabs.lists(document.getElementById('listsTabContent'), { userId: _pUser.id, entries: _pEntries, owner: true });
+    if (n === 2) MSSTabs.lists(document.getElementById('listsTabContent'), { userId: _pUser.id, entries: _pEntries, owner: true });
+    else MSSTabs.notes(document.getElementById('notesTabContent'), { entries: _pEntries, owner: true, onDelete: _profRemoveEntry });
   });
 }
 
@@ -1406,12 +1406,12 @@ function openProfInfoPopup(id) {
   if (e) _profViews(e);
 }
 
-// Your title: Ratings → Note → Info in one popup (MSSViews, info-popup.js). Opens on
+// Your title: Info · Ratings · Note in one popup (MSSViews, info-popup.js). Opens on
 // Ratings once it's rated/watched, otherwise on Info.
 function _profViews(e) {
   var rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
   MSSViews.open(e, {
-    order: ['rate', 'note', 'info'], start: rated ? 'rate' : 'info', own: true, from: 'profile.html',
+    start: rated ? 'rate' : 'info', own: true, from: 'profile.html',
     onChange: function(){ renderLibrary(); }, onNoteSaved: function(){ renderLibrary(); }, onDelete: _profRemoveEntry
   });
 }
