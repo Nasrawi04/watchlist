@@ -73,6 +73,7 @@ const MSSInfo = (() => {
     const el = document.createElement('div');
     el.id = 'mssInfoOverlay';
     el.innerHTML = `<div id="mssInfoCard" role="dialog" aria-modal="true" aria-labelledby="mssInfoTitle">
+        <div class="mss-views" id="mssInfoViews"></div>
         <div class="pvi-header">
           <div class="pvi-poster" id="mssInfoPoster"></div>
           <div class="pvi-meta-wrap">
@@ -295,6 +296,7 @@ const MSSInfo = (() => {
     inject();
     const it = { ...item, media_type: item.media_type === 'movie' ? 'movie' : 'tv' };
     current = it; opts = o;
+    document.getElementById('mssInfoViews').innerHTML = '';   // MSSViews fills it when switching views
     const my = ++token;
     const user = window._navUser || null;
     // Your own entry is already "yours" — no library lookup needed
@@ -469,9 +471,9 @@ const MSSInfo = (() => {
   function fromEntry(e) { return open(entryItem(e)); }
   function forOwnEntry(e, o = {}) {
     open(entryItem(e), { ...o, owner: true });
-    // Quietly pick up any new seasons TMDB has for it
+    // Quietly pick up any new seasons TMDB has for it (once — not on every view switch)
     const uid = window._navUser?.id;
-    if (uid && typeof _refreshTmdbSeasonData === 'function') _refreshTmdbSeasonData(e, uid, () => o.onChange?.(e));
+    if (!o.noRefresh && uid && typeof _refreshTmdbSeasonData === 'function') _refreshTmdbSeasonData(e, uid, () => o.onChange?.(e));
   }
 
   return {
