@@ -344,6 +344,14 @@ nav {
   flex:1; min-width:0; transition:none; box-sizing:border-box;
 }
 #heroSearch::placeholder { color:var(--text-3); font-size:14px; }
+.hero-search-clear {
+  flex-shrink:0; align-self:center; width:34px; height:34px; margin-right:8px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  background:transparent; border:none; color:var(--text-3); transition:color .15s, background .15s;
+}
+.hero-search-clear[hidden] { display:none; }
+.hero-search-clear:hover { color:var(--text); background:var(--olive-faint); }
+.hero-search-clear:focus-visible { outline:2px solid var(--olive-light); outline-offset:1px; }
 .hero-search-btn {
   flex-shrink:0; display:flex; align-items:center; gap:8px;
   padding:0 26px; border:none; cursor:pointer;
