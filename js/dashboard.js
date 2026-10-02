@@ -24,6 +24,7 @@ const DASH_SECTIONS = [
   { key: 'fav_cartoons', eyebrow: 'Top 5',           title: 'Cartoons',      cat: 'cartoons' },
 ];
 const DASH_MAX = 5;
+const DASH_PICK_PAGE = 60;   // picker shows this many at a time, then "View more"
 
 const MSSDash = (() => {
   let opts = null, el = null;
@@ -107,11 +108,12 @@ const MSSDash = (() => {
   function openPick(key, idx) {
     const sec = DASH_SECTIONS.find(s => s.key === key);
     injectPicker();
-    pickState = { sec, idx };
+    pickState = { sec, idx, limit: DASH_PICK_PAGE };
     document.getElementById('dpEyebrow').textContent = sec.cat ? `Top ${sec.title}` : sec.title;
     document.getElementById('dpTitle').textContent = idx < idsOf(key).length ? `Replace #${idx + 1}` : `Pick #${idx + 1}`;
     document.getElementById('dpSearch').value = '';
     renderPick();
+    document.getElementById('dpGrid').scrollTop = 0;
     document.getElementById('dashPickOverlay').classList.add('open');
     document.body.style.overflow = 'hidden';
     if (!window.matchMedia('(max-width:640px)').matches) setTimeout(() => document.getElementById('dpSearch').focus(), 80);
@@ -135,12 +137,14 @@ const MSSDash = (() => {
       .filter(e => e.status in PICKABLE && (!sec.cat || e.cat === sec.cat) && !taken.has(e.id) && (!q || (e.title || '').toLowerCase().includes(q)))
       .sort((a, b) => rank(a) - rank(b) || (liveScore(b) || 0) - (liveScore(a) || 0));
     const grid = document.getElementById('dpGrid');
-    grid.innerHTML = list.length ? list.slice(0, 120).map(e => `
+    const shown = list.slice(0, pickState.limit);
+    grid.innerHTML = list.length ? shown.map(e => `
       <button type="button" class="dp-item" onclick="MSSDash._choose(${attrJSON(e.id)})">
         <span class="dp-poster">${posterHTML(e, 'big')}</span>
         <span class="dp-name">${esc(e.title)}</span>
         ${liveScore(e) != null ? `<span class="dp-score">★ ${Number(liveScore(e)).toFixed(2)}</span>` : ''}
       </button>`).join('')
+        + (list.length > shown.length ? `<button type="button" class="dp-more" onclick="MSSDash._pickMore()">View more <span>(${list.length - shown.length} left)</span></button>` : '')
       : `<div class="dp-empty">${q ? `No titles match “${esc(q)}”.` : `No watched ${sec.cat ? esc(sec.title) : 'titles'} yet.`}</div>`;
   }
   function choose(id) {
@@ -211,6 +215,8 @@ const MSSDash = (() => {
   return {
     render,
     _tap: tap, _remove: remove, _toggleEdit: toggleEdit, _down: down,
-    _pickFor: (key, idx) => openPick(key, idx), _choose: choose, _closePick: closePick, _renderPick: renderPick,
+    _pickFor: (key, idx) => openPick(key, idx), _choose: choose, _closePick: closePick,
+    _renderPick: () => { if (pickState) pickState.limit = DASH_PICK_PAGE; renderPick(); },
+    _pickMore: () => { if (pickState) { pickState.limit += DASH_PICK_PAGE; renderPick(); } },
   };
 })();
