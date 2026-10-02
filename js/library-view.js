@@ -299,7 +299,18 @@ function _libGridWrap(gid,html){
     +'<button class="grid-nav-btn arr-right" onclick="event.stopPropagation();var el=document.getElementById(\''+gid+'\');if(el)el.scrollBy({left:220,behavior:\'smooth\'})">'+_LIB_ARROW_R+'</button>'
     +html+'</div>';
 }
+// Never leave the Library stuck on its spinner: if drawing fails, say so
+// (with the reason) so it can be reported/fixed.
 function renderLibrary(){
+  try { _libRender(); }
+  catch (err) {
+    console.error('Library render failed:', err);
+    var el = document.getElementById('libraryContent'), loading = document.getElementById('libraryLoading');
+    if (loading) loading.style.display = 'none';
+    if (el) { el.style.display = 'block'; el.innerHTML = '<div class="fv-empty">Couldn’t show this library — ' + escHTML(String(err && err.message || err)) + '</div>'; }
+  }
+}
+function _libRender(){
   var el=document.getElementById('libraryContent');
   var loading=document.getElementById('libraryLoading');
   if(!el)return;
