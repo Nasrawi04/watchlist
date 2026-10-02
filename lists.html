@@ -1603,10 +1603,10 @@ function _renderListPopup() {
     head = `<div class="lp-eyebrow">${l._collab ? 'Shared List' : 'Your List'}${l.forked_from ? '<span class="lp-tag">Imported</span>' : ''}</div>`;
   } else {
     const initial = (l.username || '?')[0].toUpperCase();
-    head = `<div class="social-list-owner" style="margin-bottom:0;">
+    head = mssProfileLinkHTML({ id: l.user_id, username: l.username }, `<div class="social-list-owner" style="margin-bottom:0;">
       <div class="social-list-avatar">${safeURL(l.avatar_url) ? `<img src="${safeURL(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
       <div class="social-list-username">@${esc(l.username || 'user')}</div>
-    </div>`;
+    </div>`);
   }
 
   let actions;
@@ -1782,7 +1782,7 @@ function _replyRenderList() {
       <div class="social-list-avatar">${r.avatar_url ? `<img src="${esc(r.avatar_url)}" loading="lazy">` : esc(initial)}</div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-          <span class="social-list-username">@${esc(r.username || 'user')}</span>
+          ${mssProfileLinkHTML({ id: r.user_id, username: r.username }, `<span class="social-list-username">@${esc(r.username || 'user')}</span>`)}
           <span style="font-size:11px;color:var(--text-3);">${dateStr}</span>
         </div>
         <div style="font-size:13.5px;line-height:1.6;color:var(--text-2);white-space:pre-line;margin-bottom:8px;">${esc(r.content)}</div>
