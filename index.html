@@ -484,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
   _xpRender();   // cards show instantly in their colors; posters fill in as they load
   _xpAutoScroll();
   _xpLoad();
-  initDiscoverSearch('heroSearch', { max: 20, connected: true, includePersons: true });
+  initInlineSearch('heroSearch', { hide: ['.xp', '#homeWatching', '#homeWatchlist', '#homeRecentlyViewed', '#guestCta'] });   // live results on the page (no dropdown)
   initPageGuest(async (user) => {
     if (!user) { renderGuestLanding(); return; }
     _homeUser = user;
