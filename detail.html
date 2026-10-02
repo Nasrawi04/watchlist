@@ -292,9 +292,12 @@
 .rating-stepper-grid{display:flex;flex-direction:column;gap:8px}
 .rating-stepper-item{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:10px 14px;
+  padding:10px 14px;position:relative;overflow:hidden;
   background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-sm);
 }
+/* thin meter along the bottom of each rating — fills with the value */
+.rating-meter{position:absolute;left:0;right:0;bottom:0;height:3px;background:transparent;pointer-events:none}
+.rating-meter i{display:block;height:100%;width:0;background:var(--olive-light);border-radius:0 3px 3px 0;transition:width .3s cubic-bezier(.4,0,.2,1)}
 .rating-stepper-label{
   font-size:13px;color:var(--text-2);flex:1;min-width:0;
   display:flex;align-items:center;
@@ -438,7 +441,31 @@
   display:flex; gap:clamp(1.25rem, 3vw, 2rem); align-items:flex-start; flex-wrap:wrap;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
   padding:clamp(1.5rem, 3vw, 2rem); margin-bottom:1.5rem; max-width:100%; box-sizing:border-box;
+  /* above the cards below it, so its dropdowns (type / status / month) open over them */
+  position:relative; z-index:3;
 }
+/* Small inline message under a field (bad year / day) */
+.det-field-hint { font-size:11.5px; color:#c0564a; margin-top:6px; min-height:0; }
+.det-field-hint:empty { display:none; }
+[data-theme="dark"] .det-field-hint { color:#e08585; }
+
+/* Month: type or pick (same look as the site dropdowns) */
+.mcombo { position:relative; flex:1; min-width:7.5em; }
+.mcombo-input { width:100%; padding-right:30px !important; }
+.mcombo-chev { position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--text-3); pointer-events:none; transition:transform .15s; }
+.mcombo.open .mcombo-chev { transform:translateY(-50%) rotate(180deg); color:var(--olive-light); }
+.mcombo-menu {
+  display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:60;
+  background:var(--bg-3); border:0.5px solid var(--olive-light); border-radius:var(--radius-sm);
+  box-shadow:var(--shadow-lg); max-height:230px; overflow-y:auto; overscroll-behavior-y:contain; text-align:left;
+}
+.mcombo.open .mcombo-menu { display:block; }
+.mcombo-menu .sel-dd-opt.hl { background:var(--bg-2); }
+.mcombo-empty { padding:10px 14px; font-size:13px; color:var(--text-3); }
+/* No number spinners on the date / year boxes (they also ate the width on phones) */
+.det-year-input, .date-3box-input { -moz-appearance:textfield; appearance:textfield; }
+.det-year-input::-webkit-inner-spin-button, .det-year-input::-webkit-outer-spin-button,
+.date-3box-input::-webkit-inner-spin-button, .date-3box-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
 
 /* Poster — reuses .detail-poster-wrap class (handlePosterUpload's querySelector depends on it) */
 .det-header .detail-poster-wrap {
@@ -486,7 +513,8 @@
 
 .det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem; }
 .det-eyebrow-row .sel-dd { width:auto; min-width:120px; }
-.det-eyebrow-row .sel-dd-trigger { height:32px; padding:0 12px; border-radius:20px; font-size:12.5px; }
+.det-eyebrow-row .sel-dd-trigger { height:34px; padding:0 12px; border-radius:var(--radius-sm); font-size:12.5px; }
+.det-eyebrow-row .sel-dd.open .sel-dd-trigger { border-bottom-left-radius:0; border-bottom-right-radius:0; }
 
 .det-title-input {
   display:block; width:100%; background:transparent; border:none; border-bottom:1.5px solid var(--border);
@@ -512,17 +540,6 @@
   outline:none; -moz-appearance:textfield; appearance:textfield;
 }
 .det-year-input::placeholder { color:var(--text-3); }
-@media(max-width:1100px) and (min-width:761px) {
-  /* Details (Genres + Description) sharing the header row with the
-     title means the year box only gets roughly half the row's width,
-     not the full remaining space next to the poster — so "Release
-     Year" / "Completion Year" together can outgrow that half before
-     the two columns naturally wrap to full-width at 561px. Shortening
-     the label text keeps the original single-line box design instead
-     of letting it wrap or clip. Range kept generous since the exact
-     wrap point shifts with the poster's own width. */
-  .det-year-label-full { display:none; }
-}
 
 .det-final-score-card {
   text-align:center; padding:clamp(1.5rem, 4vw, 2.25rem) 1.5rem;
@@ -542,8 +559,10 @@
   .det-year-box { margin:0 auto; }
   .det-year-field { padding:8px 10px; gap:5px; }
   .det-year-field label { font-size:9px; }
-  .det-year-input { width:48px; font-size:12px; }
-  .det-header, .det-header-info, .det-header-notes, .det-header-main { overflow-x:hidden; }
+  .det-year-input { width:42px; font-size:13px; }
+  /* clip (not hidden): hidden turned these into scroll boxes, so the status /
+     month dropdowns got cut off and scrolled inside the card on phones */
+  .det-header, .det-header-info, .det-header-notes, .det-header-main { overflow-x:hidden; overflow-x:clip; }
 }
 
 /* ── Content cards ── */
@@ -578,6 +597,14 @@
    happening on its own. */
 @media(max-width:760px) {
   .det-header-info, .det-header-details { flex:1 1 100%; min-width:0; }
+}
+/* Tablets (iPad etc.) and small laptops: the title box and Details were too
+   cramped side by side next to the poster (title cut off, month box crushed) —
+   stack them there too, Details under the title. */
+@media(max-width:1180px) {
+  .det-header-main .det-header-info, .det-header-main .det-header-details { flex:1 1 100%; min-width:0; }
+  .det-header .det-header-main .det-header-details { border-left:none; border-top:0.5px solid var(--border); padding-left:0; padding-right:0; padding-top:1.5rem; margin-top:.5rem; }
+  .det-header-main .det-header-info { padding-left:0; padding-right:0; }
 }
 .det-row-2col-half:last-child { border-left:0.5px solid var(--border); }
 /* Same width-safety lock as .det-header-notes above — genres previously
@@ -733,21 +760,22 @@
           <button class="tmdb-lock-btn" id="tmdbLockBtn-year" onclick="_toggleTmdbFieldLock('year')" title="Synced from TMDB — click to edit manually"></button>
           <div class="det-year-field">
             <label>Release<span class="det-year-label-full"> Year</span></label>
-            <input class="det-year-input" id="dYear" type="number" min="1900" max="2030" placeholder="Year">
+            <input class="det-year-input" id="dYear" type="text" inputmode="numeric" maxlength="4" placeholder="Year" aria-label="Release year">
           </div>
           <div class="det-year-divider" id="detYearDivider"></div>
           <div class="det-year-field" id="completionYearGroup">
             <label>Completion<span class="det-year-label-full"> Year</span></label>
-            <input class="det-year-input" id="dCompletionYear" type="number" min="1900" max="2030" placeholder="—">
+            <input class="det-year-input" id="dCompletionYear" type="text" inputmode="numeric" maxlength="4" placeholder="—" aria-label="Completion year">
           </div>
         </div>
+        <div class="det-field-hint" id="yearHint" role="status" aria-live="polite"></div>
 
         <div class="field-group" id="completedOnGroup" style="display:none;margin-top:1.25rem;margin-bottom:0;">
-          <div class="field-label">Completed On <span style="font-size:9px;color:var(--text-3);font-weight:400;">(when you finished)</span></div>
+          <div class="field-label">Completed On</div>
           <div class="date-3box" id="completedDateWrap">
-            <input class="field-input date-3box-input" id="dDay"   type="number" min="1" max="31" placeholder="DD" style="width:64px;text-align:center">
-            <select class="field-input date-3box-input" id="dMonth" style="flex:1;display:none">
-              <option value="">Month</option>
+            <input class="field-input date-3box-input" id="dDay" type="text" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="Day" style="width:64px;text-align:center">
+            <select id="dMonth" style="display:none" aria-hidden="true" tabindex="-1">
+              <option value=""></option>
               <option value="01">January</option><option value="02">February</option>
               <option value="03">March</option><option value="04">April</option>
               <option value="05">May</option><option value="06">June</option>
@@ -755,9 +783,17 @@
               <option value="09">September</option><option value="10">October</option>
               <option value="11">November</option><option value="12">December</option>
             </select>
-            <div id="dMonthDD" style="flex:1"></div>
-            <input class="field-input date-3box-input" id="dCYear" type="number" min="1900" max="2100" placeholder="YYYY" style="width:80px;text-align:center">
+            <!-- Month: type it ("mar", "3") or pick it from the list -->
+            <div class="mcombo" id="dMonthCombo">
+              <input class="field-input date-3box-input mcombo-input" id="dMonthInput" type="text" placeholder="Month" autocomplete="off" spellcheck="false"
+                     role="combobox" aria-expanded="false" aria-controls="dMonthList" aria-autocomplete="list" aria-label="Month"
+                     oninput="_mcFilter()" onfocus="_mcOpen()" onkeydown="_mcKey(event)" onblur="_mcBlur()">
+              <svg class="mcombo-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              <div class="mcombo-menu" id="dMonthList" role="listbox"></div>
+            </div>
+            <input class="field-input date-3box-input" id="dCYear" type="text" inputmode="numeric" maxlength="4" placeholder="YYYY" aria-label="Year" style="width:84px;text-align:center">
           </div>
+          <div class="det-field-hint" id="dateHint" role="status" aria-live="polite"></div>
         </div>
 
       </div>
@@ -890,10 +926,14 @@
                   <label>Favorite Character</label>
                   <button type="button" class="fav-clear-btn" id="favCharacterClearBtn" onclick="_favClearField('fav','Character')" aria-label="Clear favorite character">&times;</button>
                 </div>
-                <button type="button" class="field-input fav-person-trigger" id="favCharacterBtn" onclick="_favOpenPersonPicker('fav')" style="text-align:left;">
-                  <span id="favCharacterLabel" class="fav-person-placeholder">Choose from cast…</span>
-                </button>
-                <input type="hidden" id="favCharacter">
+                <!-- Type any name (nicknames welcome) or pick from the cast -->
+                <div class="fav-char-field">
+                  <input type="text" class="field-input fav-char-input" id="favCharacter" maxlength="80" autocomplete="off"
+                         placeholder="Type or pick from cast" aria-label="Favorite character" oninput="_favCharTyped('fav')">
+                  <button type="button" class="fav-cast-btn" onclick="_favOpenPersonPicker('fav')" aria-label="Pick favorite character from the cast" title="Pick from cast">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </button>
+                </div>
               </div>
               <div class="fav-field" id="favEpisodeWrap">
                 <div class="fav-label-row">
@@ -923,10 +963,14 @@
                   <label>Least Favorite Character</label>
                   <button type="button" class="fav-clear-btn" id="lowCharacterClearBtn" onclick="_favClearField('low','Character')" aria-label="Clear least favorite character">&times;</button>
                 </div>
-                <button type="button" class="field-input fav-person-trigger" id="lowCharacterBtn" onclick="_favOpenPersonPicker('low')" style="text-align:left;">
-                  <span id="lowCharacterLabel" class="fav-person-placeholder">Choose from cast…</span>
-                </button>
-                <input type="hidden" id="lowCharacter">
+                <!-- Type any name (nicknames welcome) or pick from the cast -->
+                <div class="fav-char-field">
+                  <input type="text" class="field-input fav-char-input" id="lowCharacter" maxlength="80" autocomplete="off"
+                         placeholder="Type or pick from cast" aria-label="Least favorite character" oninput="_favCharTyped('low')">
+                  <button type="button" class="fav-cast-btn" onclick="_favOpenPersonPicker('low')" aria-label="Pick least favorite character from the cast" title="Pick from cast">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </button>
+                </div>
               </div>
               <div class="fav-field low-field" id="lowEpisodeWrap">
                 <div class="fav-label-row">
@@ -1084,6 +1128,107 @@ function _setCompletedDate(iso) {
   document.getElementById('dMonth')._ddSync?.();
   document.getElementById('dCYear').value  = dt.getFullYear();
 }
+/* ── Completed On: month combobox + checks ── */
+const _MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+let _mcHl = -1;
+function _mcEls() { return { wrap: document.getElementById('dMonthCombo'), input: document.getElementById('dMonthInput'), list: document.getElementById('dMonthList'), sel: document.getElementById('dMonth') }; }
+// "mar", "March", "3", "03" → 3 (1-based); otherwise matching months for the list
+function _mcMatches(q) {
+  q = q.trim().toLowerCase();
+  if (!q) return _MONTHS.map((_, i) => i);
+  if (/^\d{1,2}$/.test(q)) { const n = +q; return n >= 1 && n <= 12 ? [n - 1] : []; }
+  const pre = _MONTHS.map((m, i) => i).filter(i => _MONTHS[i].toLowerCase().startsWith(q));
+  return pre.length ? pre : _MONTHS.map((m, i) => i).filter(i => _MONTHS[i].toLowerCase().includes(q));
+}
+function _mcRender(idxs) {
+  const { list, sel } = _mcEls();
+  list.innerHTML = idxs.length ? idxs.map((i, k) => {
+    const v = String(i + 1).padStart(2, '0');
+    return `<div class="sel-dd-opt${v === sel.value ? ' active' : ''}${k === _mcHl ? ' hl' : ''}" role="option" aria-selected="${v === sel.value}" data-i="${i}" onmousedown="event.preventDefault();_mcPick(${i})">${_MONTHS[i]}</div>`;
+  }).join('') : `<div class="mcombo-empty">No month matches</div>`;
+}
+function _mcOpen() {
+  const { wrap, input } = _mcEls();
+  _mcHl = -1; _mcRender(_MONTHS.map((_, i) => i));
+  wrap.classList.add('open'); input.setAttribute('aria-expanded', 'true');
+  input.select();
+}
+function _mcClose() { const { wrap, input } = _mcEls(); wrap.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); }
+function _mcFilter() { _mcHl = 0; _mcRender(_mcMatches(_mcEls().input.value)); _mcEls().wrap.classList.add('open'); }
+function _mcPick(i) {
+  const { input, sel } = _mcEls();
+  sel.value = i == null ? '' : String(i + 1).padStart(2, '0');
+  input.value = i == null ? '' : _MONTHS[i];
+  _mcClose();
+  _detCheckDay();
+}
+function _mcKey(ev) {
+  const idxs = _mcMatches(_mcEls().input.value);
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    _mcEls().wrap.classList.add('open');
+    _mcHl = Math.max(0, Math.min(idxs.length - 1, _mcHl + (ev.key === 'ArrowDown' ? 1 : -1)));
+    _mcRender(idxs);
+  } else if (ev.key === 'Enter') {
+    ev.preventDefault();
+    if (idxs.length) _mcPick(idxs[Math.max(0, _mcHl)]);
+  } else if (ev.key === 'Escape') { _mcClose(); }
+}
+// Leaving the box: keep a valid month, clear an empty one, revert nonsense
+function _mcBlur() {
+  const { input, sel } = _mcEls();
+  const q = input.value.trim();
+  if (!q) { _mcPick(null); return; }
+  const idxs = _mcMatches(q);
+  if (idxs.length === 1 || (idxs.length && _MONTHS[idxs[0]].toLowerCase() === q.toLowerCase())) { _mcPick(idxs[0]); return; }
+  input.value = sel.value ? _MONTHS[+sel.value - 1] : '';
+  _mcClose();
+  if (q) _detHint('dateHint', `“${q}” isn't a month — pick one from the list.`);
+}
+// Keeps the text box in step when code sets #dMonth (load, defaults)
+function _mcSync() { const { input, sel } = _mcEls(); input.value = sel.value ? _MONTHS[+sel.value - 1] : ''; }
+
+function _detHint(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  clearTimeout(el._t);
+  if (msg) el._t = setTimeout(() => { el.textContent = ''; }, 5000);
+}
+// Years must be all 4 digits — anything else is cleared, with a note
+function _detCheckYear(el, hintId) {
+  const v = el.value.trim();
+  if (!v || /^\d{4}$/.test(v)) { _detHint(hintId, ''); if (hintId === 'dateHint') _detCheckDay(); return; }
+  el.value = '';
+  _detHint(hintId, `“${v}” isn't a full year — use 4 digits, like 2004.`);
+}
+// Day must exist in that month (Feb: 29 only in leap years; 29 if no year yet)
+function _detCheckDay() {
+  const dEl = document.getElementById('dDay');
+  const raw = dEl.value.trim();
+  if (!raw) return;
+  _detHint('dateHint', '');
+  const d = parseInt(raw, 10), m = parseInt(document.getElementById('dMonth').value || '0', 10);
+  const yRaw = document.getElementById('dCYear').value.trim(), y = /^\d{4}$/.test(yRaw) ? +yRaw : null;
+  const max = m ? new Date(y || 2024, m, 0).getDate() : 31;
+  if (!/^\d{1,2}$/.test(raw) || d < 1 || d > max) {
+    dEl.value = '';
+    _detHint('dateHint', !/^\d{1,2}$/.test(raw) || d < 1 ? 'Enter a day number, like 14.'
+      : `${_MONTHS[m - 1] || 'That month'}${y ? ' ' + y : ''} only has ${max} days.`);
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dDay').addEventListener('change', _detCheckDay);
+  document.getElementById('dCYear').addEventListener('change', e => _detCheckYear(e.target, 'dateHint'));
+  document.getElementById('dYear').addEventListener('change', e => _detCheckYear(e.target, 'yearHint'));
+  document.getElementById('dCompletionYear').addEventListener('change', e => _detCheckYear(e.target, 'yearHint'));
+  // digits only while typing
+  ['dDay', 'dCYear', 'dYear', 'dCompletionYear'].forEach(id => document.getElementById(id).addEventListener('input', e => {
+    const c = e.target.value.replace(/\D/g, ''); if (c !== e.target.value) e.target.value = c;
+  }));
+  document.getElementById('dMonth')._ddSync = _mcSync;
+});
+
 let _fromPage  = sessionStorage.getItem('detailFrom') || 'index.html';
 let _detEntry  = null;
 let draftRatings = {};
@@ -1109,6 +1254,7 @@ function buildRatingStepper(key, label, iconName) {
              onblur="typeRating('${key}',this.value)">
       <button class="ep-btn" onclick="stepRating('${key}',+0.5)" style="width:32px;height:32px;font-size:16px;">+</button>
     </div>
+    <div class="rating-meter" aria-hidden="true"><i id="smeter-${key}" style="width:${hasVal ? Number(val) * 10 : 0}%"></i></div>
   </div>`;
 }
 
@@ -1142,7 +1288,12 @@ function stepRating(key, delta) {
   draftRatings[key] = next;
   const el = document.getElementById('sval-' + key);
   if (el) { el.value = next.toFixed(1); el.classList.add('has-val'); }
+  _setMeter(key, next);
   recalcFinal();
+}
+function _setMeter(key, v) {
+  const m = document.getElementById('smeter-' + key);
+  if (m) m.style.width = (v == null ? 0 : Number(v) * 10) + '%';
 }
 
 function typeRating(key, rawVal) {
@@ -1151,6 +1302,7 @@ function typeRating(key, rawVal) {
     delete draftRatings[key];
     const el = document.getElementById('sval-' + key);
     if (el) { el.value = ''; el.classList.remove('has-val'); }
+    _setMeter(key, null);
     recalcFinal(); return;
   }
   const raw = parseFloat(s);
@@ -1164,6 +1316,7 @@ function typeRating(key, rawVal) {
   draftRatings[key] = snapped;
   const el = document.getElementById('sval-' + key);
   if (el) { el.value = snapped.toFixed(1); el.classList.add('has-val'); }
+  _setMeter(key, snapped);
   recalcFinal();
 }
 
@@ -1186,6 +1339,7 @@ function toggleAnimation() {
   }
   recalcFinal();
 }
+
 
 function recalcFinal() {
   const cat = document.getElementById('dCat').value;
@@ -1562,6 +1716,9 @@ function onStatusChange() {
 
 function updateStatusUI() {
   const status    = document.getElementById('dStatus').value;
+  // Times Watched: for titles you've watched (Watched / To Be Continued)
+  const rewatchSec = document.getElementById('dRewatchSection');
+  if (rewatchSec) rewatchSec.style.display = (status === 'completed' || status === 'ongoing') ? '' : 'none';
   const mediaType = getMediaType();
   const isMovie   = mediaType === 'movie';
   const showProgress = !isMovie && status !== 'queue';
@@ -1711,12 +1868,25 @@ async function _favLoadData(tmdbId, tmdbType) {
 }
 
 function _favSetLabel(which, field, value) {
+  // Character is a text box you can type in (or fill from the cast picker)
+  if (field === 'Character') {
+    const input = document.getElementById(`${which}Character`);
+    if (input) { input.value = value || ''; input.title = value || ''; }
+    document.getElementById(`${which}CharacterClearBtn`)?.classList.toggle('visible', !!value);
+    return;
+  }
   const el = document.getElementById(`${which}${field}Label`);
   if (!el) return;
   el.textContent = value || `Choose ${field === 'Character' ? 'from cast' : field === 'Episode' ? 'an episode' : 'a season'}…`;
   el.classList.toggle('fav-person-placeholder', !value);
   const clearBtn = document.getElementById(`${which}${field}ClearBtn`);
   if (clearBtn) clearBtn.classList.toggle('visible', !!value);
+}
+
+function _favCharTyped(which) {
+  const v = document.getElementById(`${which}Character`).value;
+  document.getElementById(`${which}Character`).title = v;
+  document.getElementById(`${which}CharacterClearBtn`)?.classList.toggle('visible', !!v.trim());
 }
 
 function _favClearField(which, field) {
@@ -1892,29 +2062,34 @@ function _favOpenPersonPicker(which) {
   }
   document.getElementById('favPersonSearch').value = '';
   _favCastFiltered = (_favData?.cast || []).filter(c => c.character);
-  _favRenderPersonGrid(_favCastFiltered);
+  _favRenderPersonGrid(_favCastFiltered, '');
   document.getElementById('favPersonOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 let _favCastFiltered = [];
 
-function _favRenderPersonGrid(cast) {
+function _favRenderPersonGrid(cast, query) {
   const grid = document.getElementById('favPersonGrid');
-  grid.innerHTML = cast.length ? `<div class="fav-person-grid">${cast.map(c => `
+  const q = (query || '').trim();
+  // Searched for a name that isn't in the cast list (a nickname, someone
+  // uncredited…)? Offer to use exactly what was typed.
+  const exact = q && cast.some(c => c.character.toLowerCase() === q.toLowerCase());
+  const useTyped = q && !exact ? `<button type="button" class="fav-use-typed" onclick="_favPickPerson(${attrJSON(q.slice(0, 80))})">Use “${escHTML(q.slice(0, 80))}”</button>` : '';
+  grid.innerHTML = useTyped + (cast.length ? `<div class="fav-person-grid">${cast.map(c => `
     <button type="button" class="fav-person-card" onclick="_favPickPerson(${attrJSON(String(c.character || ''))})">
       <div class="fav-person-photo">${c.profile_path ? `<img src="https://image.tmdb.org/t/p/w185${c.profile_path}" loading="lazy">` : (c.name[0]||'?')}</div>
       <div class="fav-person-name">${escHTML(c.character)}</div>
       <div class="fav-person-actor">${escHTML(c.name)}</div>
     </button>`).join('')}</div>`
-    : `<div class="sf-empty">No matching characters.</div>`;
+    : `<div class="sf-empty">No matching characters.</div>`);
 }
 
 function _favFilterPersonGrid(query) {
   const q = query.trim().toLowerCase();
   const all = (_favData?.cast || []).filter(c => c.character);
   const matches = q ? all.filter(c => c.character.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)) : all;
-  _favRenderPersonGrid(matches);
+  _favRenderPersonGrid(matches, query);
 }
 
 function _favClosePersonPicker() {
@@ -2038,7 +2213,6 @@ document.addEventListener('DOMContentLoaded', () => {
   _makeShadowDD('dCat', 'dCatDD');
   _makeShadowDD('dMediaType', 'dMediaTypeDD');
   _makeShadowDD('dStatus', 'dStatusDD');
-  _makeShadowDD('dMonth', 'dMonthDD');
   initPage(async (user) => {
     _detUser = user;
     const e = _detId ? await getEntry(_detId) : null;
