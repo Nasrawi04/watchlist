@@ -264,7 +264,7 @@ function _initDiscSideNavScrollSpy() {
 // keeps the exact scroll position for free.)
 
 document.addEventListener('DOMContentLoaded', () => {
-  initDiscoverSearch('heroSearch', { max: 20, connected: true, includePersons: true });
+  initInlineSearch('heroSearch', { hide: ['#discNavDD', '.disc-layout'] });   // live results on the page (no dropdown)
   // Layout + any rows cached from this session are drawn right away (none
   // of it depends on sign-in), so coming back restores the scroll position
   // on the very first frame instead of after the auth check.
