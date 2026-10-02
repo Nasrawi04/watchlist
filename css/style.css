@@ -2073,9 +2073,26 @@ body.notif-sheet-open { overflow:hidden; }
   .sf-radio-text, .sf-dd-trigger, .sf-check-row span:last-child, .sf-range-input { font-size:13px; }
 }
 
-/* ── detail.html favorites/lowlights: Season & Episode dropdowns reuse
-   the same .td-dd/.sf-dd component built for Sort & Filter; Character
-   is a popup grid of cast photos instead of free text. ── */
+/* ── detail.html favorites/lowlights: Season & Episode open small picker
+   popups; Character is a text box (type any name / nickname) with a
+   cast button that opens the cast photo grid. ── */
+.fav-char-field { position:relative; }
+.fav-char-input { width:100%; box-sizing:border-box; padding-right:42px !important; font-family:'Manrope',var(--sans); font-weight:500; font-size:13.5px; }
+.fav-char-input::placeholder { font-weight:400; }
+.fav-cast-btn {
+  position:absolute; top:50%; right:5px; transform:translateY(-50%);
+  width:32px; height:32px; border-radius:var(--radius-sm); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); transition:all .15s;
+}
+.fav-cast-btn:hover { background:var(--olive); border-color:var(--olive); color:#fff; }
+.fav-cast-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.fav-use-typed {
+  display:block; width:100%; margin:0 0 12px; padding:11px 14px; border-radius:var(--radius-sm); cursor:pointer; text-align:left;
+  font-family:'Manrope',var(--sans); font-size:13.5px; font-weight:600;
+  background:var(--olive-faint); border:1px dashed var(--border-olive); color:var(--olive-light); overflow-wrap:anywhere;
+}
+.fav-use-typed:hover { background:var(--olive); border-style:solid; color:#fff; }
 .fav-person-trigger {
   width:100%; display:flex; align-items:center; cursor:pointer;
   font-family:'Manrope',var(--sans); font-weight:500; font-size:13.5px; color:var(--text);
@@ -3106,12 +3123,14 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 
 .genre-picker { display:flex; flex-wrap:wrap; gap:6px; justify-content:space-between; }
 .genre-opt {
-  font-size:11px; padding:4px 12px; border-radius:20px; cursor:pointer;
-  background:var(--bg-3); border:0.5px solid var(--border-2); color:var(--text-2);
+  /* same shape as the genre tags (.w-ep-badge); picked = the tag's dark green */
+  font-family:var(--sans); font-weight:600; font-size:11.5px; letter-spacing:0.3px;
+  padding:4px 10px; border-radius:3px; cursor:pointer; white-space:nowrap;
+  background:transparent; border:0.5px solid var(--border-2); color:var(--text-2);
   transition:all var(--trans) var(--ease); user-select:none;
 }
 .genre-opt:hover { border-color:var(--border-olive); color:var(--text); }
-.genre-opt.selected { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+.genre-opt.selected { background:var(--olive); border-color:var(--olive); color:#fff; }
 
 .progress-edit-section { background:var(--bg-3); border:0.5px solid var(--border); border-radius:var(--radius); padding:1.25rem; }
 .progress-edit-title { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:1rem; }
