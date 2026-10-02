@@ -173,11 +173,11 @@ const MSSRate = (() => {
     $('mssRateViews').innerHTML = '';   // MSSViews fills it when switching views
     $('mssRatePoster').innerHTML = posterHTML(e);
     const p = o.profile && (o.profile.username || o.profile.display_name) ? o.profile : null;
-    $('mssRateBy').innerHTML = p ? `<span class="mr-by-av">${safeURL(p.avatar_url) ? `<img src="${safeURL(p.avatar_url)}" alt="">` : esc((p.username || '?')[0].toUpperCase())}</span><span>${esc(p.display_name || p.username || 'Friend')}’s rating</span>` : '';
+    $('mssRateBy').innerHTML = p ? mssProfileLinkHTML(p, `<span class="mr-by-av">${safeURL(p.avatar_url) ? `<img src="${safeURL(p.avatar_url)}" alt="">` : esc((p.username || '?')[0].toUpperCase())}</span><span>${esc(p.display_name || p.username || 'Friend')}’s rating</span>`) : '';
     $('mssRateBy').style.display = p ? '' : 'none';
     const start = e.year, end = e.ratings?._completion_year;
     const yr = start ? (isMovie(e) || String(end) === String(start) ? start : `${start}–${end || 'Present'}`) : '';
-    $('mssRateTitle').innerHTML = esc(e.title) + (yr ? ` <span class="mr-title-year">${esc(yr)}</span>` : '');
+    $('mssRateTitle').innerHTML = mssTitleLinkHTML(e, esc(e.title)) + (yr ? ` <span class="mr-title-year">${esc(yr)}</span>` : '');
     const label = CAT_META[e.cat]?.label || '';
     $('mssRateTags').innerHTML =
       (label ? `<span class="${isMovie(e) ? 'type-label' : 'type-label type-label-tv'}">${esc(label)}</span>` : '') +
