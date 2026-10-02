@@ -983,6 +983,29 @@ nav {
   .fd-description  { font-size:11.5px; margin-bottom:8px; padding-bottom:8px; }
 }
 
+/* ── Profile tabs (profile.html + profile-view.html — one design) ── */
+.prof-tabs {
+  display:flex; border-bottom:0.5px solid var(--border);
+  position:sticky; top:120px; z-index:200;
+  background:var(--bg); margin-left:calc(-50vw + 50%); width:100vw;
+}
+@media(max-width:1380px) { .prof-tabs { top:64px; } }
+.prof-tab { flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:12px 0; cursor:pointer; border-bottom:2px solid transparent; color:var(--text-3); transition:all .15s; }
+.prof-tab svg { width:18px; height:18px; flex-shrink:0; }
+.prof-tab:hover { color:var(--text); }
+.prof-tab.active { color:var(--olive-light); border-bottom-color:var(--olive-light); }
+.prof-tab-label { display:none; }
+@media(min-width:640px) { .prof-tab-label { display:inline; font-size:11px; letter-spacing:.3px; } }
+@media(max-width:640px) { .prof-tab { padding:10px 0; } .prof-tab svg { width:16px; height:16px; } }
+.prof-panel { display:none; padding-top:2rem; }
+.prof-panel.active { display:block; }
+/* Phone tab picker (hidden unless a page turns it on) */
+.prof-tab-select {
+  display:none; width:100%; padding:11px 36px 11px 14px; font-family:var(--sans); font-size:14px; color:var(--text);
+  background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 14px center;
+  border:none; border-bottom:2px solid var(--olive-light); border-radius:0; cursor:pointer; outline:none; -webkit-appearance:none; appearance:none;
+}
+
 /* ── Segmented toggle: Personal / Community (Notes, Lists) and the
    popups' Info / Ratings / Note switcher ── */
 .pn-toggle {
