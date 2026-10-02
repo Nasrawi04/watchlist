@@ -2249,15 +2249,15 @@ body.notif-sheet-open { overflow:hidden; }
   display:flex; flex-direction:column; box-sizing:border-box; position:relative;
 }
 /* Seasons: poster grid */
-.fav-season-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:14px; }
-.fav-season-grid .td-season-block { width:auto; text-align:left; padding:0; font:inherit; color:inherit; }
+.fav-season-grid { display:flex; flex-wrap:wrap; justify-content:center; gap:18px; padding:4px 0 8px; }
+.fav-season-grid .td-season-block { width:clamp(150px, 22vw, 190px); text-align:left; padding:0; font:inherit; color:inherit; }
 .td-season-block.picked, .td-episode-card.picked { border-color:var(--olive-light); box-shadow:0 0 0 2px var(--olive-light); }
 /* Episodes: season strip on top, then the episode cards */
 .fav-ep-seasons { display:flex; gap:10px; overflow-x:auto; padding:12px 20px 4px; flex-shrink:0; scrollbar-width:thin; scrollbar-color:var(--border-olive) transparent; }
-.fav-ep-seasons .td-season-block { width:84px; text-align:left; padding:0; font:inherit; color:inherit; border-width:1.5px; }
-.fav-ep-seasons .td-season-block-info { padding:6px 8px; }
-.fav-ep-seasons .td-season-block-name { font-size:12px; margin:0; }
-.fav-ep-seasons .td-season-block-sub { font-size:10.5px; }
+.fav-ep-seasons .td-season-block { width:128px; text-align:left; padding:0; font:inherit; color:inherit; border-width:1.5px; }
+.fav-ep-seasons .td-season-block-info { padding:8px 10px; }
+.fav-ep-seasons .td-season-block-name { font-size:13px; margin:0 0 2px; }
+.fav-ep-seasons .td-season-block-sub { font-size:11px; }
 .fav-ep-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:14px; }
 .fav-ep-grid .td-episode-card { width:auto; cursor:pointer; text-align:left; padding:0; font:inherit; color:inherit; }
 .fav-ep-group { grid-column:1 / -1; font-family:var(--serif); font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-top:4px; }
@@ -2284,7 +2284,9 @@ body.notif-sheet-open { overflow:hidden; }
 
 @media(max-width:520px) {
   #favSeasonCard, #favEpisodeCard { max-width:100%; }
-  .fav-season-grid { grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:10px; }
+  .fav-season-grid { gap:12px; }
+  .fav-season-grid .td-season-block { width:calc(50% - 6px); max-width:200px; }
+  .fav-ep-seasons .td-season-block { width:108px; }
   .fav-ep-grid { grid-template-columns:1fr; }
 }
 
