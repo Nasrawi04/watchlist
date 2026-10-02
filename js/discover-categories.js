@@ -570,6 +570,17 @@ function initInlineSearch(inputId, opts = {}) {
   const hide = (opts.hide || []).flatMap(sel => [...document.querySelectorAll(sel)]);
   let timer = null, seq = 0, lastQ = '';
 
+  // ✕ inside the bar (shows once there's text) — clears it in one tap
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.className = 'hero-search-clear';
+  clear.setAttribute('aria-label', 'Clear search');
+  clear.innerHTML = icon('x', 16);
+  clear.hidden = true;
+  input.insertAdjacentElement('afterend', clear);
+  const syncClear = () => { clear.hidden = !input.value; };
+  clear.addEventListener('click', () => { input.value = ''; syncClear(); run(); input.focus(); });
+
   const setSearching = on => {
     box.hidden = !on;
     hide.forEach(el => { el.style.display = on ? 'none' : ''; });
@@ -622,9 +633,9 @@ function initInlineSearch(inputId, opts = {}) {
         : `<div class="mss-empty">Nothing found for “${esc(q)}”. Try another spelling.</div>`);
   }
 
-  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, input.value.trim().length < 2 ? 0 : 280); });
+  input.addEventListener('input', () => { syncClear(); clearTimeout(timer); timer = setTimeout(run, input.value.trim().length < 2 ? 0 : 280); });
   input.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { input.value = ''; run(); }
+    if (e.key === 'Escape') { input.value = ''; syncClear(); run(); }
     if (e.key === 'Enter') { clearTimeout(timer); run(); }
   });
   // Enter / Space on a result card (they're divs with onclick)
