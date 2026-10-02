@@ -576,24 +576,30 @@ function initInlineSearch(inputId, opts = {}) {
   };
   const esc = s => escHTML(s == null ? '' : String(s));
 
+  // Same card as the Discover lists (discover-list.html): big poster with the
+  // Movie / TV Show tag, full title + year, TMDB ★ score
   function cardHTML(r) {
     if (r.media_type === 'person') {
-      const ph = r.profile_path ? TMDB_IMG + r.profile_path : null;
+      const ph = r.profile_path ? TMDB_FULL + r.profile_path : null;
       return `<a class="q-card is-person" href="person.html?id=${encodeURIComponent(r.id)}">
-        <div class="q-poster" style="position:relative">${ph ? `<img src="${ph}" alt="" loading="lazy" data-letter="${esc((r.name || '?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">` : `<div class="home-tmdb-poster-fallback">${esc((r.name || '?')[0].toUpperCase())}</div>`}</div>
-        <div class="q-info"><div class="q-title">${esc(r.name)}</div><div class="inline-search-sub">${esc(r.known_for_department || 'Person')}</div></div>
+        <div class="q-poster" style="position:relative">${ph ? `<img src="${ph}" alt="" loading="lazy" data-letter="${esc((r.name || '?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">` : `<div class="home-tmdb-poster-fallback">${esc((r.name || '?')[0].toUpperCase())}</div>`}
+          <div class="q-poster-overlay"></div><span class="type-label type-label-overlay-bottom inline-search-person-tag">${esc(r.known_for_department || 'Person')}</span></div>
+        <div class="q-info"><div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${esc(r.name)}</div></div></div>
       </a>`;
     }
     const it = _discNormalize(r, r.media_type);
     const sc = _discFloorScore(it.score);
+    const movie = it.media_type === 'movie';
     return `<div class="q-card" ${_discClickAttr(it)} role="button" tabindex="0">
       <div class="q-poster" style="position:relative">${safeURL(it.poster_url)
         ? `<img src="${safeURL(it.poster_url)}" alt="" loading="lazy" data-letter="${esc((it.title || '?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">`
-        : `<div class="home-tmdb-poster-fallback">${esc((it.title || '?')[0].toUpperCase())}</div>`}<div class="q-poster-overlay"></div>
-        <span class="inline-search-type">${it.media_type === 'movie' ? 'Movie' : 'TV'}</span></div>
+        : `<div class="home-tmdb-poster-fallback">${esc((it.title || '?')[0].toUpperCase())}</div>`}
+        <div class="q-poster-overlay"></div>
+        <span class="${movie ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${movie ? 'Movie' : 'TV Show'}</span>
+      </div>
       <div class="q-info">
         <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${esc(it.title)}</div>${it.year ? `<span class="title-year-inline">${esc(it.year)}</span>` : ''}</div>
-        ${sc ? `<div class="inline-search-score">★ ${sc}</div>` : ''}
+        ${sc ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${sc}</span></div>` : ''}
       </div>
     </div>`;
   }
