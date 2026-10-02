@@ -52,7 +52,7 @@ const MSSDash = (() => {
   }
   function emptyHTML(sec, i) {
     return `<button type="button" class="dash-empty" onclick="MSSDash._pickFor(${attrJSON(sec.key)}, ${i})" aria-label="Add a title to ${esc(sec.title)}">
-      <span class="dash-empty-plus">${icon('plus', 22)}</span><span class="dash-empty-lbl">Add</span>
+      <span class="dash-empty-inner"><span class="dash-empty-plus">${icon('plus', 22)}</span><span class="dash-empty-lbl">Add</span></span>
     </button>`;
   }
 
