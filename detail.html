@@ -1845,12 +1845,10 @@ function _closePosterPicker() {
    free-text fields the person had to type exactly.
    ══════════════════════════════════════════════════════════════════ */
 
-let _favData = null; // { seasons:[{number,name}], episodesBySeasonNum:{}, cast:[{name,character,profile_path}] }
-let _favEpisodesLoaded = false;
+let _favData = null; // { seasons:[{number,name,poster_path,episode_count,air_date}], episodesBySeasonNum:{}, cast:[{name,character,profile_path}] }
 
 async function _favLoadData(tmdbId, tmdbType) {
   _favData = null;
-  _favEpisodesLoaded = false;
   try {
     // TV's basic "credits" only returns a short top-billed list — the
     // full cast (matching what the title page shows) needs the
@@ -1862,7 +1860,8 @@ async function _favLoadData(tmdbId, tmdbType) {
     const res = await tmdbFetch(`${TMDB_BASE}/${tmdbType}/${tmdbId}?api_key=${TMDB_KEY}&language=en-US&append_to_response=${extra}`);
     if (!res.ok) return;
     const data = await res.json();
-    const seasons = tmdbType === 'tv' ? (data.seasons || []).filter(s => s.season_number > 0).map(s => ({ number: s.season_number, name: s.name })) : [];
+    const seasons = tmdbType === 'tv' ? (data.seasons || []).filter(s => s.season_number > 0)
+      .map(s => ({ number: s.season_number, name: s.name, poster_path: s.poster_path, episode_count: s.episode_count, air_date: s.air_date })) : [];
     const castSource = tmdbType === 'movie' ? (data.credits?.cast || []) : (data.aggregate_credits?.cast || data.credits?.cast || []);
     const cast = castSource.map(c => ({ name: c.name, character: c.character || c.roles?.[0]?.character || '', profile_path: c.profile_path })).filter(c => c.name);
     _favData = { seasons, episodesBySeasonNum: {}, cast };
@@ -1905,37 +1904,48 @@ function _favClearField(which, field) {
    and silently swallow a click meant for it. A centered modal has no
    such neighbor to collide with. ── */
 
+/* Shared bits: TMDB image sizes + the overlay shell */
+const _favImg = (path, size) => path ? `${TMDB_IMG.replace('w185', size)}${path}` : '';
+function _favOverlay(id, cardId, title, closeFn, extra = '') {
+  if (document.getElementById(id)) return;
+  const el = document.createElement('div');
+  el.id = id;
+  el.innerHTML = `<div id="${cardId}" role="dialog" aria-modal="true" aria-label="${title}">
+      <div class="sf-header">
+        <div class="sf-title">${title}</div>
+        <button class="sf-close" onclick="${closeFn}()" aria-label="Close">${icon('x', 18)}</button>
+      </div>${extra}
+      <div class="sf-body" id="${id}Body"></div>
+    </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) window[closeFn](); });
+  document.body.appendChild(el);
+}
+const _favSeasonBlock = (s, onclick, picked) => `<button type="button" class="td-season-block${picked ? ' picked' : ''}" onclick="${onclick}">
+    <div class="td-season-block-poster">${s.poster_path ? `<img src="${_favImg(s.poster_path, 'w342')}" alt="" loading="lazy">` : ''}</div>
+    <div class="td-season-block-info">
+      <div class="td-season-block-name">${escHTML(s.name || 'Season ' + s.number)}</div>
+      <div class="td-season-block-sub">${s.episode_count ? `${s.episode_count} ep${s.episode_count !== 1 ? 's' : ''}` : ''}${s.air_date ? ` · ${s.air_date.split('-')[0]}` : ''}</div>
+    </div>
+  </button>`;
+
+/* ── Season picker: the title page's season posters ── */
 function _favOpenSeasonPicker(which) {
   _favPersonTarget = which;
-  if (!document.getElementById('favSeasonOverlay')) {
-    const el = document.createElement('div');
-    el.id = 'favSeasonOverlay';
-    el.innerHTML = `<div id="favSeasonCard">
-      <div class="sf-header">
-        <div class="sf-title">Choose a Season</div>
-        <button class="sf-close" onclick="_favCloseSeasonPicker()">${typeof icon === 'function' ? icon('x',18) : '✕'}</button>
-      </div>
-      <div class="sf-body" id="favSeasonList"></div>
-    </div>`;
-    el.addEventListener('click', ev => { if (ev.target === el) _favCloseSeasonPicker(); });
-    document.body.appendChild(el);
-  }
-  const listEl = document.getElementById('favSeasonList');
+  _favOverlay('favSeasonOverlay', 'favSeasonCard', 'Choose a Season', '_favCloseSeasonPicker');
   const seasons = _favData?.seasons || [];
-  listEl.innerHTML = seasons.length
-    ? seasons.map(s => `<button type="button" class="fav-list-row" onclick="_favPickSeason(${s.number})">Season ${s.number}${s.name && s.name !== `Season ${s.number}` ? ' – ' + s.name : ''}</button>`).join('')
+  const current = document.getElementById(`${which}Season`).value;
+  document.getElementById('favSeasonOverlayBody').innerHTML = seasons.length
+    ? `<div class="fav-season-grid">${seasons.map(s => _favSeasonBlock(s, `_favPickSeason(${s.number})`, current === `Season ${s.number}`)).join('')}</div>`
     : `<div class="sf-empty">No season data available — link this title to TMDB first.</div>`;
   document.getElementById('favSeasonOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
-
 function _favCloseSeasonPicker() {
   const ov = document.getElementById('favSeasonOverlay');
   if (!ov) return;
   ov.classList.remove('open');
   document.body.style.overflow = '';
 }
-
 function _favPickSeason(seasonNumber) {
   const which = _favPersonTarget;
   const label = `Season ${seasonNumber}`;
@@ -1944,87 +1954,107 @@ function _favPickSeason(seasonNumber) {
   _favCloseSeasonPicker();
 }
 
-function _favEpisodeLabel(seasonNumber, ep) {
-  return `S${seasonNumber}E${ep.number} - ${escHTML(ep.name)}`;
+/* ── Episode picker: season strip on top, then the title page's episode
+   cards (still, badge, rating · date · runtime, description). Searching
+   looks through every season. ── */
+let _favEpSeason = null;
+const _favEpisodeLabel = (seasonNumber, ep) => `S${seasonNumber}E${ep.number} - ${ep.name}`;   // the saved value (plain text)
+
+async function _favLoadSeasonEpisodes(n) {
+  if (_favData.episodesBySeasonNum[n]) return;
+  try {
+    const res = await tmdbFetch(`${TMDB_BASE}/tv/${_pendingTmdbId}/season/${n}?api_key=${TMDB_KEY}&language=en-US`);
+    const d = res.ok ? await res.json() : null;
+    _favData.episodesBySeasonNum[n] = (d?.episodes || []).map(ep => ({
+      number: ep.episode_number, name: ep.name || `Episode ${ep.episode_number}`, still_path: ep.still_path,
+      overview: ep.overview, vote_average: ep.vote_average, air_date: ep.air_date, runtime: ep.runtime,
+    }));
+  } catch { _favData.episodesBySeasonNum[n] = []; }
 }
 
 async function _favOpenEpisodePicker(which) {
   _favPersonTarget = which;
-  if (!document.getElementById('favEpisodeOverlay')) {
-    const el = document.createElement('div');
-    el.id = 'favEpisodeOverlay';
-    el.innerHTML = `<div id="favEpisodeCard">
-      <div class="sf-header">
-        <div class="sf-title">Choose an Episode</div>
-        <button class="sf-close" onclick="_favCloseEpisodePicker()">${typeof icon === 'function' ? icon('x',18) : '✕'}</button>
-      </div>
+  _favOverlay('favEpisodeOverlay', 'favEpisodeCard', 'Choose an Episode', '_favCloseEpisodePicker', `
+      <div class="fav-ep-seasons" id="favEpSeasons"></div>
       <div class="search-wrap fav-picker-search">
-        <span class="search-icon-wrap">${typeof icon === 'function' ? icon('search',14) : '🔍'}</span>
-        <input type="text" id="favEpisodeSearch" placeholder="Search episodes…" autocomplete="off" oninput="_favFilterEpisodeList(this.value)">
-      </div>
-      <div class="sf-body" id="favEpisodeList"></div>
-    </div>`;
-    el.addEventListener('click', ev => { if (ev.target === el) _favCloseEpisodePicker(); });
-    document.body.appendChild(el);
-  }
-  const searchEl = document.getElementById('favEpisodeSearch');
-  searchEl.value = '';
-  const listEl = document.getElementById('favEpisodeList');
+        <span class="search-icon-wrap">${icon('search', 14)}</span>
+        <input type="text" id="favEpisodeSearch" placeholder="Search every episode…" autocomplete="off" aria-label="Search episodes" oninput="_favFilterEpisodes(this.value)">
+      </div>`);
+  document.getElementById('favEpisodeSearch').value = '';
   document.getElementById('favEpisodeOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+  const body = document.getElementById('favEpisodeOverlayBody');
   if (!_favData?.seasons?.length) {
-    listEl.innerHTML = `<div class="sf-empty">No episode data available — link this title to TMDB first.</div>`;
+    document.getElementById('favEpSeasons').innerHTML = '';
+    body.innerHTML = `<div class="sf-empty">No episode data available — link this title to TMDB first.</div>`;
     return;
   }
-  if (!_favEpisodesLoaded) {
-    listEl.innerHTML = `<div class="sf-empty">Loading episodes…</div>`;
-    const tmdbId = _pendingTmdbId;
-    await Promise.all(_favData.seasons.map(async s => {
-      try {
-        const res = await tmdbFetch(`${TMDB_BASE}/tv/${tmdbId}/season/${s.number}?api_key=${TMDB_KEY}&language=en-US`);
-        if (res.ok) { const d = await res.json(); _favData.episodesBySeasonNum[s.number] = (d.episodes || []).map(ep => ({ number: ep.episode_number, name: ep.name })); }
-      } catch {}
-    }));
-    _favEpisodesLoaded = true;
-  }
-  // Guard against the person having closed the popup (or opened a
-  // different one) while the fetch above was still in flight.
-  if (_favPersonTarget !== which || !document.getElementById('favEpisodeOverlay')?.classList.contains('open')) return;
-  // Flatten once into a single searchable list ({seasonNumber, ep}),
-  // rather than re-walking _favData on every keystroke.
-  _favEpisodeFlat = [];
-  _favData.seasons.forEach(s => {
-    (_favData.episodesBySeasonNum[s.number] || []).forEach(ep => _favEpisodeFlat.push({ seasonNumber: s.number, ep }));
-  });
-  _favRenderEpisodeList(_favEpisodeFlat);
+  // Open on the season of the episode already picked, else Season 1
+  const cur = document.getElementById(`${which}Episode`).value.match(/^S(\d+)E/);
+  const start = cur && _favData.seasons.some(s => s.number === +cur[1]) ? +cur[1] : _favData.seasons[0].number;
+  _favShowSeason(start);
 }
 
-let _favEpisodeFlat = [];
-
-function _favHtmlEscape(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+async function _favShowSeason(n) {
+  _favEpSeason = n;
+  document.getElementById('favEpSeasons').innerHTML = _favData.seasons.map(s => _favSeasonBlock(s, `_favShowSeason(${s.number})`, s.number === n)).join('');
+  document.querySelector('#favEpSeasons .picked')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  document.getElementById('favEpisodeSearch').value = '';
+  const body = document.getElementById('favEpisodeOverlayBody');
+  body.innerHTML = `<div class="sf-empty">Loading episodes…</div>`;
+  await _favLoadSeasonEpisodes(n);
+  if (_favEpSeason !== n) return;            // another season was picked meanwhile
+  _favRenderEpisodes((_favData.episodesBySeasonNum[n] || []).map(ep => ({ seasonNumber: n, ep })), false);
 }
 
-function _favRenderEpisodeList(items) {
-  const listEl = document.getElementById('favEpisodeList');
-  if (!items.length) { listEl.innerHTML = `<div class="sf-empty">No episodes found.</div>`; return; }
-  let html = '';
-  let lastSeason = null;
+function _favEpCardHTML(seasonNumber, ep) {
+  const label = _favEpisodeLabel(seasonNumber, ep);
+  const picked = document.getElementById(`${_favPersonTarget}Episode`)?.value === label;
+  const rating = ep.vote_average ? Number(ep.vote_average).toFixed(1) : '';
+  return `<button type="button" class="td-episode-card${picked ? ' picked' : ''}" onclick="_favPickEpisode(${attrJSON(label)})">
+    <div class="td-ep-still">
+      ${ep.still_path ? `<img src="${_favImg(ep.still_path, 'w500')}" alt="" loading="lazy">` : ''}
+      <span class="td-ep-num-badge">S${seasonNumber} · E${ep.number}</span>
+    </div>
+    <div class="td-ep-body">
+      <div class="td-ep-title">${escHTML(ep.name)}</div>
+      <div class="td-ep-meta-row">
+        ${rating ? `<span class="td-ep-rating">★ ${rating}</span>` : ''}
+        ${ep.air_date ? `<span>${escHTML(ep.air_date)}</span>` : ''}
+        ${ep.runtime ? `<span>${ep.runtime}m</span>` : ''}
+      </div>
+      <div class="td-ep-overview">${escHTML(ep.overview || 'No description available.')}</div>
+    </div>
+  </button>`;
+}
+
+function _favRenderEpisodes(items, grouped) {
+  const body = document.getElementById('favEpisodeOverlayBody');
+  if (!items.length) { body.innerHTML = `<div class="sf-empty">No episodes found.</div>`; return; }
+  let html = '', last = null;
   items.forEach(({ seasonNumber, ep }) => {
-    if (seasonNumber !== lastSeason) { html += `<div class="sf-dd-group-label">Season ${seasonNumber}</div>`; lastSeason = seasonNumber; }
-    const label = _favEpisodeLabel(seasonNumber, ep);
-    // Saved value (passed to the click handler) stays the exact plain
-    // "S#E# - Name" string; the visible markup separately bolds just
-    // the episode name so it stands out from the S#E# prefix.
-    html += `<button type="button" class="fav-list-row" onclick="_favPickEpisode('${label.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">S${seasonNumber}E${ep.number} - <strong>${_favHtmlEscape(ep.name)}</strong></button>`;
+    if (grouped && seasonNumber !== last) { html += `<div class="fav-ep-group">Season ${seasonNumber}</div>`; last = seasonNumber; }
+    html += _favEpCardHTML(seasonNumber, ep);
   });
-  listEl.innerHTML = html;
+  body.innerHTML = `<div class="fav-ep-grid">${html}</div>`;
 }
 
-function _favFilterEpisodeList(query) {
+let _favSearchSeq = 0;
+async function _favFilterEpisodes(query) {
   const q = query.trim().toLowerCase();
-  const matches = q ? _favEpisodeFlat.filter(({ seasonNumber, ep }) => _favEpisodeLabel(seasonNumber, ep).toLowerCase().includes(q)) : _favEpisodeFlat;
-  _favRenderEpisodeList(matches);
+  if (!q) { _favShowSeason(_favEpSeason); return; }
+  const seq = ++_favSearchSeq;
+  const missing = _favData.seasons.filter(s => !_favData.episodesBySeasonNum[s.number]);
+  if (missing.length) {
+    document.getElementById('favEpisodeOverlayBody').innerHTML = `<div class="sf-empty">Searching every season…</div>`;
+    await Promise.all(missing.map(s => _favLoadSeasonEpisodes(s.number)));
+    if (seq !== _favSearchSeq) return;
+  }
+  const hits = [];
+  _favData.seasons.forEach(s => (_favData.episodesBySeasonNum[s.number] || []).forEach(ep => {
+    if (_favEpisodeLabel(s.number, ep).toLowerCase().includes(q) || (ep.overview || '').toLowerCase().includes(q)) hits.push({ seasonNumber: s.number, ep });
+  }));
+  _favRenderEpisodes(hits, true);
 }
 
 function _favCloseEpisodePicker() {
