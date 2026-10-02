@@ -106,23 +106,6 @@
     .xp-group + .xp-group { display:none; }   /* no drift → no need for the loop copy */
   }
 
-  /* TMDB-sourced home cards (Trending/Top Picks/Upcoming/Recently Viewed) —
-     poster-fallback letter and year text, scaled to match how .q-card
-     itself already shrinks at the site's existing breakpoints. */
-  .home-tmdb-poster-fallback {
-    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-    background:var(--bg-3); font-family:var(--serif); color:var(--olive-light);
-    font-size:clamp(22px, 6vw, 32px);
-  }
-  .home-tmdb-year { font-family:var(--bebas); color:var(--text-3); font-size:clamp(15px, 3.3vw, 17px); }
-  @media(max-width:640px) {
-    .home-tmdb-poster-fallback { font-size:26px; }
-    .home-tmdb-year { font-size:12px; }
-  }
-  @media(max-width:400px) {
-    .home-tmdb-poster-fallback { font-size:22px; }
-    .home-tmdb-year { font-size:11px; }
-  }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
