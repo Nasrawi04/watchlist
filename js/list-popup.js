@@ -124,7 +124,7 @@ const MSSList = (() => {
     const items = list.items || [];
     const shown = items.map(o.resolve).filter(Boolean);
     const max = shown.length > 8 ? 7 : 8, posters = shown.slice(0, max), extra = shown.length - posters.length;
-    const head = o.owner ? ownerHTML(o.owner).replace('class="social-list-owner"', 'class="social-list-owner" style="margin-bottom:0;"')
+    const head = o.owner ? mssProfileLinkHTML(o.owner, ownerHTML(o.owner).replace('class="social-list-owner"', 'class="social-list-owner" style="margin-bottom:0;"'))
       : `<div class="lp-eyebrow">${esc(o.eyebrow || 'List')}${list.forked_from ? '<span class="lp-tag">Imported</span>' : ''}</div>`;
     const url = `list-view.html?list=${encodeURIComponent(list.id)}`;
     document.getElementById('mssListCard').innerHTML = `
