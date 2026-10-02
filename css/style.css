@@ -1645,10 +1645,16 @@ body.notif-sheet-open { overflow:hidden; }
   background:#d0342c; color:#fff; border:2px solid #fff; display:flex; align-items:center; justify-content:center; padding:0;
 }
 .dash-empty {
-  aspect-ratio:2/3; width:100%; border-radius:var(--radius); cursor:pointer;
-  border:1.5px dashed var(--border-2); background:transparent; color:var(--text-3);
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  position:relative; display:block; aspect-ratio:2/3; width:100%; padding:0; border-radius:var(--radius); cursor:pointer;
+  border:1.5px dashed var(--border-2); background:transparent; color:var(--text-3); font:inherit;
+  -webkit-appearance:none; appearance:none;
   transition:border-color .15s, color .15s, background .15s; align-self:start;
+}
+/* + and "Add" pinned to the exact centre of the slot (some mobile browsers
+   don't lay out flex inside a <button> reliably) */
+.dash-empty-inner {
+  position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);
+  display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none;
 }
 .dash-empty:hover { border-color:var(--olive-light); color:var(--olive-light); background:var(--olive-faint); }
 .dash-empty-plus { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:1.5px solid currentColor; }
