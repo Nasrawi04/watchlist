@@ -85,8 +85,8 @@ const MSSFriendPop = (() => {
       <div class="np-head">
         ${poster(e, 'np-poster')}
         <div class="np-head-info">
-          <div class="np-eyebrow">${profileAv(p, 20)}<span class="np-user">@${esc(p?.username || 'friend')}</span></div>
-          <div class="np-title">${esc(e.title)}</div>
+          <div class="np-eyebrow">${mssProfileLinkHTML(p, `${profileAv(p, 20)}<span class="np-user">@${esc(p?.username || 'friend')}</span>`)}</div>
+          <div class="np-title">${mssTitleLinkHTML(e, esc(e.title))}</div>
           <div class="np-meta-row"><div class="np-meta">${typeBadge(e)}${e.completed_date ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Watched On: ${fmtDate(e.completed_date)}</span>` : ''}</div><span class="np-score-slot">${scorePill(e)}</span></div>
         </div>
       </div>
