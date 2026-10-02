@@ -117,7 +117,8 @@ const MSSInfo = (() => {
         yr = end && end !== start ? `${start}–${end}` : (end ? start : `${start}–Present`);
       }
     }
-    return `${esc(it.title)}${yr ? ` <span class="pvi-title-year">${esc(yr)}</span>` : ''}`;
+    const t = mssTitleLinkHTML({ ...(it.entry || {}), title: it.title, tmdb_id: it.tmdb_id, media_type: it.media_type }, esc(it.title));
+    return `${t}${yr ? ` <span class="pvi-title-year">${esc(yr)}</span>` : ''}`;
   }
 
   function tagsHTML(it, d) {
