@@ -549,3 +549,80 @@ const DISCOVER_CATEGORIES = [
 function getDiscoverCategory(key) {
   return DISCOVER_CATEGORIES.find(c => c.key === key) || DISCOVER_CATEGORIES[0];
 }
+
+
+/* ══ Live search results (index + Discover hero search) ══
+   From the 2nd letter on, results appear right on the page as cards (same
+   cards as Discover) instead of a dropdown, and the page's other sections
+   step aside until the search is cleared. Titles open the info popup,
+   people open their page.
+     initInlineSearch('heroSearch', { hide: ['.xp', '#homeWatching'] }) */
+function initInlineSearch(inputId, opts = {}) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const anchor = input.closest('.hero-search-wrap') || input;
+  const box = document.createElement('section');
+  box.className = 'inline-search';
+  box.id = inputId + 'Results';
+  box.setAttribute('aria-live', 'polite');
+  box.hidden = true;
+  anchor.insertAdjacentElement('afterend', box);
+  const hide = (opts.hide || []).flatMap(sel => [...document.querySelectorAll(sel)]);
+  let timer = null, seq = 0, lastQ = '';
+
+  const setSearching = on => {
+    box.hidden = !on;
+    hide.forEach(el => { el.style.display = on ? 'none' : ''; });
+  };
+  const esc = s => escHTML(s == null ? '' : String(s));
+
+  function cardHTML(r) {
+    if (r.media_type === 'person') {
+      const ph = r.profile_path ? TMDB_IMG + r.profile_path : null;
+      return `<a class="q-card is-person" href="person.html?id=${encodeURIComponent(r.id)}">
+        <div class="q-poster" style="position:relative">${ph ? `<img src="${ph}" alt="" loading="lazy" data-letter="${esc((r.name || '?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">` : `<div class="home-tmdb-poster-fallback">${esc((r.name || '?')[0].toUpperCase())}</div>`}</div>
+        <div class="q-info"><div class="q-title">${esc(r.name)}</div><div class="inline-search-sub">${esc(r.known_for_department || 'Person')}</div></div>
+      </a>`;
+    }
+    const it = _discNormalize(r, r.media_type);
+    const sc = _discFloorScore(it.score);
+    return `<div class="q-card" ${_discClickAttr(it)} role="button" tabindex="0">
+      <div class="q-poster" style="position:relative">${safeURL(it.poster_url)
+        ? `<img src="${safeURL(it.poster_url)}" alt="" loading="lazy" data-letter="${esc((it.title || '?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">`
+        : `<div class="home-tmdb-poster-fallback">${esc((it.title || '?')[0].toUpperCase())}</div>`}<div class="q-poster-overlay"></div>
+        <span class="inline-search-type">${it.media_type === 'movie' ? 'Movie' : 'TV'}</span></div>
+      <div class="q-info">
+        <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${esc(it.title)}</div>${it.year ? `<span class="title-year-inline">${esc(it.year)}</span>` : ''}</div>
+        ${sc ? `<div class="inline-search-score">★ ${sc}</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  async function run() {
+    const q = input.value.trim();
+    if (q.length < 2) { lastQ = ''; setSearching(false); box.innerHTML = ''; return; }
+    if (q === lastQ) return;
+    lastQ = q;
+    const my = ++seq;
+    setSearching(true);
+    box.innerHTML = `<div class="inline-search-head"><div class="section-eyebrow">Search</div><div class="section-title" style="margin-bottom:0">Results for “${esc(q)}”</div></div>
+      <div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>`;
+    const results = await _tmdbSearch(q, 20, opts.includePersons !== false);
+    if (my !== seq) return;               // a newer search is already on the way
+    box.innerHTML = `<div class="inline-search-head"><div class="section-eyebrow">Search</div>
+        <div class="section-title" style="margin-bottom:0">Results for “${esc(q)}”</div>
+        <div class="inline-search-count"><b>${results.length}</b> ${results.length === 1 ? 'result' : 'results'}</div></div>`
+      + (results.length ? `<div class="inline-search-grid">${results.map(cardHTML).join('')}</div>`
+        : `<div class="mss-empty">Nothing found for “${esc(q)}”. Try another spelling.</div>`);
+  }
+
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, input.value.trim().length < 2 ? 0 : 280); });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { input.value = ''; run(); }
+    if (e.key === 'Enter') { clearTimeout(timer); run(); }
+  });
+  // Enter / Space on a result card (they're divs with onclick)
+  box.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('q-card') && !e.target.href) { e.preventDefault(); e.target.click(); }
+  });
+}
