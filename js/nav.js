@@ -429,35 +429,53 @@ function mobileLibraryGroup(page) {
 }
 
 
-/* ── Toggle functions ── */
+/* ── Toggle functions ──
+   Only one top-bar panel is open at a time: opening the menu (☰), search,
+   notifications or the profile menu closes the others first — otherwise the
+   profile / search panels opened *underneath* the full-screen phone menu
+   and looked like they did nothing. */
+function _navCloseAll(except) {
+  if (except !== 'nav')    document.getElementById('mobileNav')?.classList.remove('open');
+  if (except !== 'search') document.getElementById('mobileSearchBar')?.classList.remove('open');
+  if (except !== 'user') {
+    document.getElementById('userMenuDropdown')?.classList.remove('open');
+    document.getElementById('userMenuDropdownMobile')?.classList.remove('open');
+  }
+  if (except !== 'notif' && typeof closeNotifPanel === 'function') closeNotifPanel();
+  document.getElementById('navLibDropdown')?.classList.remove('open');
+  document.getElementById('navLibGroup')?.classList.remove('menu-open');
+  document.getElementById('mobileLibGroup')?.classList.remove('menu-open');
+}
+
 function toggleMobileNav() {
   const nav = document.getElementById('mobileNav');
-  if (nav) nav.classList.toggle('open');
+  if (!nav) return;
+  if (!nav.classList.contains('open')) _navCloseAll('nav');
+  nav.classList.toggle('open');
 }
 
 function toggleMobileSearch() {
   const bar = document.getElementById('mobileSearchBar');
-  if (bar) {
-    bar.classList.toggle('open');
-    if (bar.classList.contains('open')) {
-      document.getElementById('mobileSearchInput')?.focus();
-    }
-  }
+  if (!bar) return;
+  if (!bar.classList.contains('open')) _navCloseAll('search');
+  bar.classList.toggle('open');
+  if (bar.classList.contains('open')) document.getElementById('mobileSearchInput')?.focus();
 }
 
 function toggleMobileUser(e) {
   e.stopPropagation();
-  document.getElementById('mobileLibGroup')?.classList.remove('menu-open');
   const dd = document.getElementById('userMenuDropdownMobile');
-  if (dd) dd.classList.toggle('open');
+  if (!dd) return;
+  if (!dd.classList.contains('open')) _navCloseAll('user');
+  dd.classList.toggle('open');
 }
 
 function toggleUserMenu(e) {
   e.stopPropagation();
-  document.getElementById('navLibDropdown')?.classList.remove('open');
-  document.getElementById('navLibGroup')?.classList.remove('menu-open');
   const dd = document.getElementById('userMenuDropdown');
-  if (dd) dd.classList.toggle('open');
+  if (!dd) return;
+  if (!dd.classList.contains('open')) _navCloseAll('user');
+  dd.classList.toggle('open');
 }
 
 /* ── Library dropdown (desktop) ── */
@@ -1996,6 +2014,7 @@ async function toggleNotifPanel(ev) {
   _notifPeekHide();
   const el = _notifEnsurePanel();
   if (el.classList.contains('open')) { closeNotifPanel(); return; }
+  _navCloseAll('notif');
   _notifSheetNew = new Set(_notifItems.filter(n => !n.read_at).map(n => n.id));
   const top = _notifSheetTop() + 'px';
   el.style.setProperty('--notif-top', top);
