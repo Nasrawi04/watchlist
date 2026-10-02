@@ -984,7 +984,7 @@ async function loadCommentsPopupComments(entryId) {
         const runame2 = _ccEsc(r.profiles?.username || 'Unknown');
         const rdate2  = new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
         return `<div class="det-reply-item" id="cmpop-${r.id}">
-          <div class="det-reply-author" style="color:var(--olive-light);">@${runame2}</div>
+          <div class="det-reply-author" style="color:var(--olive-light);">${mssProfileLinkHTML({ id: r.author_id, username: r.profiles?.username }, `@${runame2}`)}</div>
           <div class="det-reply-text">${_ccMention(r.content)}</div>
           <div class="det-reply-meta"><span>${rdate2}</span>
             ${r.author_id === me ? `<button class="cc-del" onclick="deleteCommentFromPopup('${r.id}','${entryId}')">delete</button>` : ''}
@@ -993,7 +993,7 @@ async function loadCommentsPopupComments(entryId) {
       }).join('');
       return `<div class="cc-comment" id="cmpop-${c.id}">
         <div class="cc-comment-body">
-          <div class="cc-author">@${uname2}</div>
+          <div class="cc-author">${mssProfileLinkHTML({ id: c.author_id, username: c.profiles?.username }, `@${uname2}`)}</div>
           <div class="cc-text">${_ccMention(c.content)}</div>
           <div class="cc-meta">
             <span>${date}</span>
@@ -1602,7 +1602,7 @@ async function ccLoad(entryId) {
       const runame = _ccEsc(r.profiles?.username || 'Unknown');
       const rdate  = new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
       return `<div class="det-reply-item" id="cm-${r.id}">
-        <div class="det-reply-author" style="color:var(--olive-light);">@${runame}</div>
+        <div class="det-reply-author" style="color:var(--olive-light);">${mssProfileLinkHTML({ id: r.author_id, username: r.profiles?.username }, `@${runame}`)}</div>
         <div class="det-reply-text">${_ccMention(r.content)}</div>
         <div class="det-reply-meta"><span>${rdate}</span>
           ${r.author_id === me ? `<button class="cc-del" onclick="ccDel('${r.id}','${entryId}')">delete</button>` : ''}
@@ -1611,7 +1611,7 @@ async function ccLoad(entryId) {
     }).join('');
     return `<div class="cc-comment" id="cm-${c.id}">
       <div class="cc-comment-body">
-        <div class="cc-author">@${uname}</div>
+        <div class="cc-author">${mssProfileLinkHTML({ id: c.author_id, username: c.profiles?.username }, `@${uname}`)}</div>
         <div class="cc-text">${_ccMention(c.content)}</div>
         <div class="cc-meta">
           ${new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
