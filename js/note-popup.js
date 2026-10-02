@@ -212,7 +212,7 @@ const MSSNote = (() => {
     loadHero($('mssNoteBlur'), e);
     $('mssNotePoster').innerHTML = safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" loading="lazy" alt="">` : esc(((e.title || '?')[0]).toUpperCase());
     $('mssNoteEyebrow').textContent = o.eyebrow || 'Your Note';
-    $('mssNoteTitle').textContent = e.title || '';
+    $('mssNoteTitle').innerHTML = mssTitleLinkHTML(e, esc(e.title || ''));
     $('mssNoteScore').innerHTML = scorePill(liveScore(e));
     $('mssNoteTags').innerHTML = badges(e, { genres: 3, dateLabel: e.completed_date ? 'Completed On:' : 'Added On:', date: date(watchedDate(e), true) });
     stats();
