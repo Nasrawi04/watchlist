@@ -195,7 +195,7 @@
 </head>
 <body>
 <div class="page-wrap">
-  <a class="lv-back" href="lists.html" id="lvBack" onclick="if(history.length>1){history.back();return false;}">
+  <a class="lv-back" href="lists.html" id="lvBack">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     Back
   </a>
@@ -301,6 +301,21 @@ function _lvTypeCls(e) {
   const isMovie = e.tmdb_type === 'movie' || e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
   return isMovie ? 'type-label' : 'type-label type-label-tv';
 }
+
+// Back: to the page that opened this list (Lists, a profile, Friends…) —
+// remembered on arrival, so it still works after list → detail → Back
+// (where the browser's own "back" would just bounce to the detail page).
+(function _lvRememberFrom() {
+  try {
+    const r = document.referrer ? new URL(document.referrer) : null;
+    if (r && r.origin === location.origin && !/\/(detail|list-view|login)\.html$/.test(r.pathname)) {
+      sessionStorage.setItem('lvFrom', r.pathname.split('/').pop() + r.search);
+    }
+  } catch {}
+  const back = document.getElementById('lvBack');
+  const from = sessionStorage.getItem('lvFrom');
+  if (back && from) back.setAttribute('href', from);
+})();
 
 // Tapping a title: Info · Ratings · Note popup, opening on Info (MSSViews, info-popup.js)
 function _lvOpenInfo(id) {
