@@ -451,9 +451,30 @@ function goToTitle(type, id) {
   window.location.href = `title.html?type=${type}&id=${id}`;
 }
 
-function toggleMobileNav() {
-  const mn = document.getElementById('mobileNav');
-  if (mn) mn.classList.toggle('open');
+// A title in a popup header → its title page. Titles not linked to TMDB yet
+// open the "Which one is it?" search (MSSInfo.discover) instead.
+function mssTitleLinkHTML(e, innerHTML) {
+  const type = e?.tmdb_type || e?.media_type, id = e?.tmdb_id;
+  if (id && (type === 'movie' || type === 'tv')) {
+    return `<a class="mss-title-link" href="title.html?type=${type}&id=${encodeURIComponent(id)}">${innerHTML}</a>`;
+  }
+  if (!e?.title || typeof MSSInfo === 'undefined') return innerHTML;
+  const src = { title: e.title, cat: e.cat || '', media_type: type || '', ratings: e.ratings?._media_type ? { _media_type: e.ratings._media_type } : {} };
+  return `<button type="button" class="mss-title-link" onclick="mssOpenTitle(${attrJSON(src)}, this)">${innerHTML}</button>`;
+}
+function mssOpenTitle(src, btn) {
+  // close whichever popup it came from — the search picker opens on its own
+  if (typeof MSSRate !== 'undefined') MSSRate.close();
+  if (typeof MSSNote !== 'undefined') MSSNote.close();
+  if (typeof MSSFriendPop !== 'undefined') MSSFriendPop.closeNote();
+  if (typeof closeSocialNotePopup === 'function') closeSocialNotePopup();
+  MSSInfo.discover(src, btn);
+}
+// A username in a popup → their profile (your own goes to your profile)
+function mssProfileLinkHTML(p, innerHTML) {
+  if (!p || (!p.id && !p.username)) return innerHTML;
+  const q = p.id ? 'id=' + encodeURIComponent(p.id) : 'u=' + encodeURIComponent(p.username);
+  return `<a class="mss-user-link" href="profile-view.html?${q}">${innerHTML}</a>`;
 }
 
 function openAddModal(cat) {
@@ -477,26 +498,7 @@ function closeModalIfBg(e) {
 
 /* markActiveNav() lives in nav.js — it runs right after the nav is rendered. */
 
-/* ── User menu toggles ── */
-function toggleUserMenu(e) {
-  if (e) e.stopPropagation();
-  document.getElementById('userMenuDropdownMobile')?.classList?.remove('open');
-  document.getElementById('userMenuDropdown')?.classList?.toggle('open');
-}
-function toggleMobileUser(e) {
-  if (e) e.stopPropagation();
-  document.getElementById('userMenuDropdown')?.classList?.remove('open');
-  document.getElementById('userMenuDropdownMobile')?.classList?.toggle('open');
-}
-
-function toggleMobileSearch() {
-  const bar = document.getElementById('mobileSearchBar');
-  if (!bar) return;
-  const isOpen = bar.classList.toggle('open');
-  if (isOpen) {
-    setTimeout(() => document.getElementById('mobileSearchInput')?.focus(), 120);
-  }
-}
+/* (Top-bar toggles — menu, search, profile menu — live in nav.js.) */
 
 /* ── Rating dropdown helpers ── */
 function toggleRDrop(key) {
