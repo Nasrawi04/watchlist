@@ -421,9 +421,19 @@ function _lvRenderGrid() {
     grid.innerHTML = `<div class="lv-empty">Nothing in this list matches these filters.</div>`;
     return;
   }
-  // Rank badges keep each title's position in the list, whatever the sort
+  // Number badges (same corner badges as the category pages):
+  //   • a Ranked list in its own order (or reversed) → the title's place in the list
+  //   • sorted by rating (Highest / Lowest) → its place in that rating order,
+  //     ranked list or not (unrated titles get no number)
+  //   • any other sort, or an unranked list in its order → no numbers
+  const sort = SF.getSort('lv', 'all');
+  const byScore = sort === 'highest' || sort === 'lowest';
+  const byOrder = (sort === 'rank' || sort === 'rankRev') && _lvList?.ranked === true;
+  let n = 0;
   grid.innerHTML = shown.map(e => {
-    const rank = _lvList?.ranked === true ? e._rank - 1 : null;
+    let rank = null;
+    if (byScore) rank = (_lvIsTmdbOnly(e) ? null : liveScore(e)) != null ? n++ : null;
+    else if (byOrder) rank = e._rank - 1;
     return _lvView === 'list' ? _lvListRowHTML(e, rank) : _lvCardHTML(e, rank);
   }).join('');
   _lvObserveCards();
