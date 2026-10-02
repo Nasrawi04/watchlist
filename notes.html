@@ -893,7 +893,7 @@ function _notesOpenSocial(entryId) {
   if (!n) return;
   MSSViews.open({ ...n, id: n.entry_id }, {
     start: 'note', own: !!_notesUser && n.user_id === _notesUser.id, from: 'notes.html',
-    profile: { username: n.username, avatar_url: n.avatar_url },
+    profile: { id: n.user_id, username: n.username, avatar_url: n.avatar_url },
     note: { open: () => openSocialNotePopup(entryId), close: closeSocialNotePopup },
   });
 }
@@ -932,11 +932,11 @@ function _renderSocialNotePopup(n) {
     <div class="np-head">
       ${MSSNote.poster(n.poster_url, n.title, 'np-poster')}
       <div class="np-head-info">
-        <div class="np-eyebrow">
+        <div class="np-eyebrow">${mssProfileLinkHTML({ id: n.user_id, username: n.username }, `
           <div class="snote-avatar">${safeURL(n.avatar_url) ? `<img src="${safeURL(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
-          <span class="np-user">@${esc(n.username || 'user')}</span>
+          <span class="np-user">@${esc(n.username || 'user')}</span>`)}
         </div>
-        <div class="np-title">${esc(n.title)}</div>
+        <div class="np-title">${mssTitleLinkHTML(n, esc(n.title))}</div>
         <div class="np-meta-row"><div class="np-meta">${MSSNote.badges(n, { dateLabel: n.completed_date ? 'Watched On:' : 'Added On:', date: MSSNote.date(MSSNote.watchedDate(n), true) })}</div><span class="np-score-slot">${MSSNote.scorePill(n.final_score)}</span></div>
       </div>
     </div>
@@ -1081,7 +1081,7 @@ function _replyRenderList() {
       <div class="snote-avatar">${r.avatar_url ? `<img src="${esc(r.avatar_url)}" loading="lazy">` : esc(initial)}</div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-          <span class="snote-username">@${esc(r.username || 'user')}</span>
+          ${mssProfileLinkHTML({ id: r.user_id, username: r.username }, `<span class="snote-username">@${esc(r.username || 'user')}</span>`)}
           <span class="note-date">${dateStr}</span>
         </div>
         <div style="font-size:13.5px;line-height:1.6;color:var(--text-2);white-space:pre-line;margin-bottom:8px;">${esc(r.content)}</div>
