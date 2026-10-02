@@ -443,7 +443,11 @@ function getTypeBadgeOverlay(entry, context) {
 /* ── Navigation helpers ── */
 function goToDetail(id, fromFile) {
   sessionStorage.setItem('detailId', id);
-  sessionStorage.setItem('detailFrom', fromFile || 'index.html');
+  // Coming from this very page → keep its ?query too, so Back returns to the
+  // same title / list / profile (title.html without ?type&id showed nothing)
+  const here = location.pathname.split('/').pop() || 'index.html';
+  const from = fromFile && fromFile.split('?')[0] === here && !fromFile.includes('?') ? here + location.search : fromFile;
+  sessionStorage.setItem('detailFrom', from || 'index.html');
   window.location.href = 'detail.html';
 }
 
