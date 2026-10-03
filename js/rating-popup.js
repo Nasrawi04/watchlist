@@ -20,7 +20,8 @@
        onComments(entry),        // optional: shows the Comments strip
        from: 'library.html',     // where Edit returns to (defaults to this page)
      })
-     MSSRate.forFriend(entry, profile?)
+     MSSRate.forFriend(entry, profile?, { hideNotes })
+     (hideNotes: true leaves out the Notes block — used when the switcher has a Note tab)
      MSSRate.close()
 
    Requires config.js (icon, escHTML, posterHTML, liveScore, getRatings,
@@ -98,7 +99,8 @@ const MSSRate = (() => {
     return `<div class="fd-section-hd">TV Show Breakdown</div><div class="pvi-seasons">${chips}</div>`;
   }
 
-  function bodyHTML(e, blurSpoilers) {
+  // hideNotes: the Info · Ratings · Note switcher already has a Note tab
+  function bodyHTML(e, blurSpoilers, hideNotes) {
     const { core = [], bonus = [] } = getRatings(e.cat) || {};
     const row = (label, v) => v == null || v === '' ? '' : `<div class="fd-rating-row"><span class="fd-rating-label">${esc(label)}</span><span class="fd-rating-val">${Number(v).toFixed(2)}</span></div>`;
     const animated = e.cat === 'anime' || e.cat === 'cartoons';
@@ -116,7 +118,7 @@ const MSSRate = (() => {
     if (favChips || lowChips) html += '<div class="fd-section-hd mr-gap">Highlights</div>';
     if (favChips) html += `<div class="fav-chips mr-chips">${favChips}</div>`;
     if (lowChips) html += `<div class="fav-chips mr-chips">${lowChips}</div>`;
-    if (e.notes && e.notes.trim()) {
+    if (!hideNotes && e.notes && e.notes.trim()) {
       const nt = `<div class="fd-notes mr-notes">&ldquo;${esc(e.notes.trim())}&rdquo;</div>`;
       html += '<div class="fd-section-hd mr-gap">Notes</div>' + (blurSpoilers && mssIsSpoiler(e) ? mssSpoilerHTML(nt, { compact: true }) : nt);
     }
@@ -192,7 +194,7 @@ const MSSRate = (() => {
     const sc = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     $('mssRateScoreBox').style.display = sc != null ? '' : 'none';
     $('mssRateScoreVal').textContent = sc != null ? '★ ' + sc : '';
-    $('mssRateBody').innerHTML = bodyHTML(e, !o.owner);
+    $('mssRateBody').innerHTML = bodyHTML(e, !o.owner, !!o.hideNotes);
     $('mssRateCc').innerHTML = o.onComments
       ? `<button type="button" class="cc-strip" onclick="MSSRate._comments()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Comments</span></button>` : '';
     $('mssRatePopupActions').innerHTML = actionsHTML(e);
@@ -215,7 +217,7 @@ const MSSRate = (() => {
     const uid = window._navUser?.id;
     if (e && !o.noRefresh && uid && typeof _refreshTmdbSeasonData === 'function') _refreshTmdbSeasonData(e, uid, () => o.onChange?.(e));
   }
-  function forFriend(e, profile) { open(e, { owner: false, profile }); }
+  function forFriend(e, profile, o = {}) { open(e, { ...o, owner: false, profile }); }
 
   return {
     forOwnEntry, forFriend, close, config: RATING_POPUP_CONFIG,
