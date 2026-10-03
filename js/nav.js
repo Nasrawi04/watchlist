@@ -340,6 +340,7 @@ function injectChrome() {
   // Init TMDB search now that #mTitle exists in DOM
   setTimeout(_initTMDBOnModal, 300);
   document.body.insertBefore(themeEl,    first);
+  _navInitBackToTop(themeEl);
   document.body.insertBefore(fabEl,      first);
   document.body.insertBefore(bottomNavEl,first);
   document.body.insertBefore(mobileNavEl,first);
@@ -428,6 +429,51 @@ function mobileLibraryGroup(page) {
     </div>`;
 }
 
+
+/* ── Back to top ──
+   A round olive button that floats just above the dark / light toggle once
+   you've scrolled down a good way and start scrolling back up; tap it to
+   glide to the top. It sits centred over the toggle on every screen size
+   (it measures the toggle, so it follows it on phones too). */
+function _navInitBackToTop(themeEl) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'back-to-top';
+  btn.id = 'backToTop';
+  btn.setAttribute('aria-label', 'Back to top');
+  btn.title = 'Back to top';
+  btn.innerHTML = icon('chevup', 22);
+  btn.tabIndex = -1;
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    btn.blur();
+  });
+  document.body.appendChild(btn);
+
+  const place = () => {
+    const r = themeEl.getBoundingClientRect();
+    if (!r.width) return;
+    const size = btn.offsetWidth || 46;
+    btn.style.right = Math.round(window.innerWidth - (r.left + r.width / 2) - size / 2) + 'px';
+    btn.style.bottom = Math.round(window.innerHeight - r.top + 12) + 'px';
+  };
+  let lastY = window.scrollY, upFor = 0, shown = false;
+  const show = on => {
+    if (on === shown) return;
+    shown = on;
+    if (on) place();
+    btn.classList.toggle('show', on);
+    btn.tabIndex = on ? 0 : -1;
+  };
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY, dy = y - lastY;
+    lastY = y;
+    if (y < 400) { upFor = 0; show(false); return; }
+    if (dy < 0) { upFor += -dy; if (upFor > 40) show(true); }        // scrolling back up
+    else if (dy > 0) { upFor = 0; if (dy > 4) show(false); }          // scrolling on down
+  }, { passive: true });
+  window.addEventListener('resize', () => { if (shown) place(); });
+}
 
 /* ── Toggle functions ──
    Only one top-bar panel is open at a time: opening the menu (☰), search,
