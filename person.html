@@ -20,9 +20,12 @@
   display:grid; grid-template-columns:280px 1fr; gap:clamp(1.25rem, 3vw, 2.5rem);
   align-items:start;
 }
-.pp-sticky-col { align-self:start; position:sticky; top:calc(var(--page-pt, 80px) + 16px); }
+/* Left column runs the full height of the page; the photo + Personal Info
+   scroll away normally and only the Acting / Directing box stays pinned, so
+   nothing floats over the credits. */
+.pp-sticky-col { align-self:stretch; }
 /* Jump-to box under Personal Info — same card style */
-.pp-nav-card { margin-top:1rem; }
+.pp-nav-card { margin-top:1rem; position:sticky; top:calc(var(--page-pt, 80px) + 16px); z-index:2; }
 .pp-nav-btn {
   display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
   padding:10px 12px; margin-bottom:6px; border-radius:var(--radius-sm); cursor:pointer;
@@ -101,7 +104,8 @@
 @media(max-width:760px) {
   .pp-layout { grid-template-columns:1fr; gap:1.5rem; }
   .pp-sticky-col { position:static; display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-start; }
-  .pp-nav-card { flex-basis:100%; margin-top:0; display:flex; flex-wrap:wrap; gap:8px; }
+  .pp-sticky-col { align-self:start; }
+  .pp-nav-card { flex-basis:100%; margin-top:0; display:flex; flex-wrap:wrap; gap:8px; position:static; }
   .pp-nav-card .pp-info-title { flex-basis:100%; margin-bottom:.25rem; }
   .pp-nav-btn { flex:1 1 140px; margin-bottom:0; }
   .pp-photo { width:clamp(96px, 32vw, 140px); flex-shrink:0; margin-bottom:0; }
