@@ -1398,7 +1398,7 @@ function renderQueueList(items) {
 /* _cgBadge and renderCompletedGrid defined above */
 
 function buildCompleted(items, sectionKey = 'completed') {
-  if (!items.length) return `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('trophy',40)}</div><div class="empty-text">Nothing here yet.</div></div>`;
+  if (!items.length) return `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('check',40)}</div><div class="empty-text">Nothing here yet.</div></div>`;
   return getView(sectionKey) === 'grid' ? renderCompletedGrid(items, sectionKey) : renderCompletedList(items, sectionKey);
 }
 
