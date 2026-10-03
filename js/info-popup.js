@@ -248,10 +248,9 @@ const MSSInfo = (() => {
       const ok = await showConfirm({ title: 'Delete entry?', message: `"${e.title || 'This entry'}" will be permanently removed.`, confirmText: 'Delete', iconName: 'trash' });
       if (!ok) return;
       try {
-        await deleteEntry(e.id, user?.id || (await getCurrentUser()).id);
         close();
+        await mssDeleteWithUndo(e, user?.id || (await getCurrentUser()).id);
         opts.onDelete?.(e);
-        showToast('Deleted.');
       } catch (err) { console.error(err); showToast('Error deleting entry.', 'err'); }
       return;
     }
@@ -261,11 +260,16 @@ const MSSInfo = (() => {
       if (handler) return handler(e.id);
       // Default: just change the status
       try {
-        const status = key === 'start' ? 'watching' : 'up_next';
-        await updateProgress(e.id, user?.id || (await getCurrentUser()).id, { status });
+        const status = key === 'start' ? 'watching' : 'up_next', prev = e.status;
+        const uid = user?.id || (await getCurrentUser()).id;
+        await updateProgress(e.id, uid, { status });
         e.status = status;
-        showToast(key === 'start' ? 'Started watching!' : 'Added to Up Next!');
         opts.onChange?.(e);
+        showUndoToast(key === 'start' ? `Started watching “${e.title}”` : `“${e.title}” is Up Next`, async () => {
+          await updateProgress(e.id, uid, { status: prev });
+          e.status = prev;
+          opts.onChange?.(e);
+        });
       } catch (err) { console.error(err); showToast('Error updating. Please try again.', 'err'); }
     }
   }
@@ -383,8 +387,11 @@ const MSSInfo = (() => {
     }
     try {
       const entry = await quickCreate(payload, user.id);
-      showToast(`Added “${payload.title}” to your Watchlist!`);
       if (current === it) document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, entry, user);
+      showUndoToast(`Added “${payload.title}” to your Watchlist`, async () => {
+        await deleteEntry(entry.id, user.id);
+        if (current === it) document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, null, user);
+      });
     } catch (err) {
       try { sessionStorage.removeItem('mssQueuedFrom'); } catch {}
       if (String(err.message).startsWith('DUPLICATE:')) {
