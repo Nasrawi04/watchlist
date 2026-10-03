@@ -3490,6 +3490,22 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 /* ════════════════════════════════════════════
    THEME TOGGLE PILL
 ════════════════════════════════════════════ */
+.back-to-top {
+  position:fixed; right:30px; bottom:80px; z-index:394;
+  width:46px; height:46px; border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; color:#fff;
+  background:linear-gradient(145deg, var(--olive-light), var(--olive));
+  border:2px solid var(--card-2-solid, var(--card)); box-shadow:0 6px 18px rgba(0,0,0,.28), 0 0 0 1px var(--border-olive);
+  opacity:0; transform:translateY(12px) scale(.9); pointer-events:none;
+  transition:opacity 200ms var(--ease), transform 200ms var(--ease), box-shadow .15s;
+}
+.back-to-top.show { opacity:1; transform:none; pointer-events:auto; }
+.back-to-top:hover { box-shadow:0 8px 22px rgba(0,0,0,.34), 0 0 0 1px var(--olive-light); }
+.back-to-top:active { transform:scale(.94); }
+.back-to-top:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
+.back-to-top svg { stroke-width:2.6; }
+@media(max-width:640px) { .back-to-top { width:42px; height:42px; } .back-to-top svg { width:20px; height:20px; } }
+@media print { .back-to-top { display:none; } }
 .theme-toggle-pill {
   position:fixed; bottom:24px; right:24px; z-index:395;
   display:flex; align-items:center; gap:2px; padding:3px;
