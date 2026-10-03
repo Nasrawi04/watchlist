@@ -123,20 +123,24 @@ const ANIME_CORE_RATINGS = [
 ];
 
 const ANIME_BONUS_RATINGS = [
-  { key: 'action',    label: 'Action Choreography',               icon: 'zap'      },
-  { key: 'emotional', label: 'Emotional Impact',                  icon: 'heart'    },
-  { key: 'music',     label: 'Soundtrack',                        icon: 'music'    },
-  { key: 'villains',  label: 'Main Character vs Villain Dynamics',icon: 'users'    },
-  { key: 'plottwist', label: 'Plot Twist Quality',               icon: 'shuffle'  },
-  { key: 'rewatch',   label: 'Rewatchability',                    icon: 'refresh'  },
-  { key: 'funny',     label: 'Funny',                             icon: 'smile'    },
-  { key: 'bingeable', label: 'Bingeable',                         icon: 'fastForward' },
+  { key: 'action',    label: 'Action Choreography' },
+  { key: 'emotional', label: 'Emotional Impact' },
+  { key: 'music',     label: 'Soundtrack' },
+  { key: 'villains',  label: 'Main Character vs Villain Dynamics' },
+  { key: 'plottwist', label: 'Plot Twist Quality' },
+  { key: 'rewatch',   label: 'Rewatchability' },
+  { key: 'funny',     label: 'Funny' },
+  { key: 'bingeable', label: 'Bingeable' },
+  { key: 'horror',    label: 'Horror' },
 ];
 
-function getRatings(cat) {
+// isMovie (default: the Movies category) — movies have no "Bingeable" rating;
+// pass it for anime / cartoon movies too.
+function getRatings(cat, isMovie = cat === 'movies') {
   const isAnimated = cat === 'anime' || cat === 'cartoons';
+  const bonus = isAnimated ? ANIME_BONUS_RATINGS : BONUS_RATINGS;
   return { core: isAnimated ? ANIME_CORE_RATINGS : CORE_RATINGS,
-           bonus: isAnimated ? ANIME_BONUS_RATINGS : BONUS_RATINGS };
+           bonus: isMovie ? bonus.filter(r => r.key !== 'bingeable') : bonus };
 }
 
 const CORE_RATINGS = [
@@ -155,13 +159,14 @@ const CORE_RATINGS = [
 const ANIMATION_RATING = { key: 'animation', label: 'Animation Quality' };
 
 const BONUS_RATINGS = [
-  { key: 'music',      label: 'Music & Soundtrack',                icon: 'music'    },
-  { key: 'emotional',  label: 'Emotional Impact',                  icon: 'heart'    },
-  { key: 'villains',   label: 'Main Character vs Villain Dynamics',icon: 'users'    },
-  { key: 'rewatch',    label: 'Rewatchability',                    icon: 'refresh'  },
-  { key: 'plottwist',  label: 'Plot Twist Quality',               icon: 'shuffle'  },
-  { key: 'funny',      label: 'Funny',                             icon: 'smile'    },
-  { key: 'bingeable',  label: 'Bingeable',                         icon: 'fastForward' },
+  { key: 'music',      label: 'Music & Soundtrack' },
+  { key: 'emotional',  label: 'Emotional Impact' },
+  { key: 'villains',   label: 'Main Character vs Villain Dynamics' },
+  { key: 'rewatch',    label: 'Rewatchability' },
+  { key: 'plottwist',  label: 'Plot Twist Quality' },
+  { key: 'funny',      label: 'Funny' },
+  { key: 'bingeable',  label: 'Bingeable' },
+  { key: 'horror',     label: 'Horror' },
 ];
 
 const RATING_VALS = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10];
@@ -170,7 +175,7 @@ const RATING_VALS = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5
 // Final = 70% Core avg (excl. enjoyment) + 20% Enjoyment + 10% Bonus avg
 function calcFinal(ratings, cat) {
   if (!ratings) return null;
-  const { core: coreArr, bonus: bonusArr } = getRatings(cat);
+  const { core: coreArr, bonus: bonusArr } = getRatings(cat, cat === 'movies' || ratings._media_type === 'movie');
   const isAnimated = cat === 'anime' || cat === 'cartoons';
   // Core keys — for non-animated, add animation if it was rated via toggle
   const coreKeys = coreArr.filter(r => r.key !== 'enjoyment').map(r => r.key);
