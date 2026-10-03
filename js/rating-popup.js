@@ -158,10 +158,9 @@ const MSSRate = (() => {
       const ok = await showConfirm({ title: 'Delete entry?', message: `"${e.title || 'This entry'}" will be permanently removed.`, confirmText: 'Delete', iconName: 'trash' });
       if (!ok) return;
       try {
-        await deleteEntry(e.id, window._navUser?.id || (await getCurrentUser()).id);
         close();
+        await mssDeleteWithUndo(e, window._navUser?.id || (await getCurrentUser()).id);
         opts.onDelete?.(e);
-        showToast('Deleted.');
       } catch (err) { console.error(err); showToast('Error deleting entry.', 'err'); }
     }
   }
