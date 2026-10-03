@@ -265,10 +265,46 @@ function showToast(msg, type = 'ok') {
     t.id = 'toast';
     document.body.appendChild(t);
   }
-  t.textContent = msg;
+  t.textContent = msg;                       // (also clears any Undo button)
   t.className = 'toast visible' + (type === 'err' ? ' toast-err' : '');
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.remove('visible'), 3000);
+}
+
+/* ── Toast with Undo ──
+   showUndoToast(message, undoFn, ms = 6000): the usual toast plus an "Undo"
+   button and a bar that runs down for the time left. undoFn may be async;
+   when it finishes the toast says "Undone." (or explains if it couldn't). */
+function showUndoToast(msg, undo, ms = 6000) {
+  let t = document.getElementById('toast');
+  if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
+  t.innerHTML = `<span class="toast-msg"></span><button type="button" class="toast-undo">Undo</button><span class="toast-bar" aria-hidden="true"></span>`;
+  t.querySelector('.toast-msg').textContent = msg;
+  t.className = 'toast visible toast-has-undo';
+  t.setAttribute('role', 'status');
+  t.style.setProperty('--toast-ms', ms + 'ms');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('visible'), ms);
+  const btn = t.querySelector('.toast-undo');
+  btn.onclick = async () => {
+    clearTimeout(t._timer);
+    btn.disabled = true; btn.textContent = 'Undoing…';
+    try { await undo(); showToast('Undone.'); }
+    catch (err) { console.error('Undo failed:', err); showToast('Couldn’t undo that — please try again.', 'err'); }
+  };
+}
+
+// Delete one of your entries with Undo: a full copy is kept first, so Undo
+// puts it back exactly (ratings, notes, dates). Returns the deleted copy.
+async function mssDeleteWithUndo(e, uid, { onUndone } = {}) {
+  const { data: copy } = await sb.from('entries').select('*').eq('id', e.id).single();
+  await deleteEntry(e.id, uid);
+  showUndoToast(`Deleted “${e.title || 'entry'}”`, async () => {
+    const { error } = await sb.from('entries').insert(copy || e);
+    if (error) throw error;
+    if (onUndone) onUndone(copy || e); else location.reload();   // reload keeps your scroll position
+  });
+  return copy;
 }
 
 /* ── Poster helpers ── */
