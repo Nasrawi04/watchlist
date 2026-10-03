@@ -1037,7 +1037,8 @@ function _cmpShowTitle(picker) {
   // Ratings can be saved as numbers or numeric text — read both, so nobody's
   // breakdown shows up empty / half-filled
   const rv = (e, key) => { const v = e?.ratings?.[key]; if (v === '' || v == null) return null; const n = Number(v); return isNaN(n) ? null : n; };
-  const { core = [], bonus = [] } = getRatings(g.cat) || {};
+  const anyEntry = Object.values(g.byUser)[0] || {};
+  const { core = [], bonus = [] } = getRatings(g.cat, g.cat === 'movies' || anyEntry.ratings?._media_type === 'movie' || anyEntry.tmdb_type === 'movie') || {};
   const animated = g.cat === 'anime' || g.cat === 'cartoons';
   const allRows = [...core, ...(animated ? [] : [{ key: 'animation', label: 'Animation Quality' }]), ...bonus];
   const rows = allRows.filter(r => people.some(u => rv(g.byUser[u], r.key) != null));
