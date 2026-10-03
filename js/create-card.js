@@ -555,7 +555,7 @@ async function _drawCardPage1(myToken) {
     const ratings = e.ratings || {};
     const cat = e.cat;
     const isAnimated = cat === 'anime' || cat === 'cartoons';
-    const { core: coreArr, bonus: bonusArr } = (typeof getRatings === 'function') ? getRatings(cat) : { core: [], bonus: [] };
+    const { core: coreArr, bonus: bonusArr } = (typeof getRatings === 'function') ? getRatings(cat, cat === 'movies' || ratings._media_type === 'movie') : { core: [], bonus: [] };
     const hasVal = v => v !== undefined && v !== null && v !== '';
     const coreItems = coreArr.filter(r => r.key !== 'enjoyment')
       .map(r => ({ label: r.label, value: ratings[r.key] }))
