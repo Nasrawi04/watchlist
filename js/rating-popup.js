@@ -101,7 +101,7 @@ const MSSRate = (() => {
 
   // hideNotes: the Info · Ratings · Note switcher already has a Note tab
   function bodyHTML(e, blurSpoilers, hideNotes) {
-    const { core = [], bonus = [] } = getRatings(e.cat) || {};
+    const { core = [], bonus = [] } = getRatings(e.cat, isMovie(e)) || {};
     const row = (label, v) => v == null || v === '' ? '' : `<div class="fd-rating-row"><span class="fd-rating-label">${esc(label)}</span><span class="fd-rating-val">${Number(v).toFixed(2)}</span></div>`;
     const animated = e.cat === 'anime' || e.cat === 'cartoons';
     const coreRows = core.map(r => row(r.label, e.ratings?.[r.key])).join('') + (animated ? '' : row('Animation Quality', e.ratings?.animation));
