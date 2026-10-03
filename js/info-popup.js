@@ -223,9 +223,9 @@ const MSSInfo = (() => {
       },
       discover: () => (it.tmdb_id || it.title) ? btn('discover', 'search', 'Discover') : '',
       start:  () => e && (e.status === 'queue' || e.status === 'up_next') ? btn('start', 'play', 'Start Watching') : '',
-      upnext: () => e && e.status === 'queue' ? btn('upnext', 'clock', 'Up Next') : '',
+      upnext: () => e && e.status === 'queue' ? btn('upnext', 'skipForward', 'Up Next') : '',
       edit:   () => e ? btn('edit', 'edit', 'Edit') : '',
-      card:   () => e && typeof createShareCard === 'function' ? btn('card', 'image', 'Discover Card') : '',
+      card:   () => e && typeof createShareCard === 'function' ? btn('card', 'idCard', 'Discover Card') : '',
       delete: () => e ? btn('delete', 'trash', 'Delete', ' popup-action-danger') : '',
     };
     const keys = opts.actions || (opts.owner ? INFO_POPUP_CONFIG.ownerActions : INFO_POPUP_CONFIG.actions);
@@ -643,5 +643,7 @@ const MSSViews = (() => {
 
   function close() { closeAll(); st = null; }
 
-  return { open, show, close, barFor };
+  const has = v => !!st && st.views.includes(v);   // e.g. a note popup's "See Ratings" button
+
+  return { open, show, close, barFor, has };
 })();
