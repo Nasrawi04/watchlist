@@ -166,15 +166,18 @@ const MSSInfo = (() => {
   }
 
   /* ── People rows (Director / Created By, Top Cast) — same circle cards ── */
-  function personHTML(main, sub, photo, isChar) {
+  // With a TMDB person id the card links to their page (directors open on Directing)
+  function personHTML(main, sub, photo, isChar, personId, directing) {
     const ph = safeURL(photo);
-    return `<div class="mss-cast-item">
+    const tag = personId ? 'a' : 'div';
+    const link = personId ? ` href="person.html?id=${encodeURIComponent(personId)}${directing ? '&mode=directing' : ''}" title="See ${esc(isChar ? sub || main : main)}'s page"` : '';
+    return `<${tag} class="mss-cast-item${personId ? ' is-link' : ''}"${link}>
       <div class="mss-cast-photo${isChar ? ' is-char' : ''}">${ph
         ? `<img src="${ph}" alt="" loading="lazy" onerror="mssImgError(this)" data-letter="${esc((main || '?')[0])}">`
         : esc((main || '?')[0].toUpperCase())}</div>
       <div class="mss-cast-char">${esc(main)}</div>
       ${sub ? `<div class="mss-cast-actor">${esc(sub)}</div>` : ''}
-    </div>`;
+    </${tag}>`;
   }
   const skeleton = (label, n) => `<div class="pvi-section-label">${label}</div><div class="mss-cast mss-cast-loading">${'<div class="mss-cast-item"><div class="mss-cast-photo"></div><div class="mss-cast-bar"></div></div>'.repeat(n)}</div>`;
 
@@ -188,7 +191,7 @@ const MSSInfo = (() => {
     if (!people.length) return '';
     const role = movie ? 'Director' : 'Creator';
     return `<div class="pvi-section-label">${movie ? 'Directed By' : 'Created By'}</div>
-      <div class="mss-cast">${people.map(p => personHTML(p.name, role, p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : null, false)).join('')}</div>`;
+      <div class="mss-cast">${people.map(p => personHTML(p.name, role, p.profile_path ? `https://image.tmdb.org/t/p/w185${p.profile_path}` : null, false, p.id, true)).join('')}</div>`;
   }
 
   async function loadCast(it, d, my) {
@@ -204,7 +207,7 @@ const MSSInfo = (() => {
     if (my !== token) return;
     el.innerHTML = cast.length
       ? `<div class="pvi-section-label">Top Cast</div><div class="mss-cast">${cast.slice(0, INFO_POPUP_CONFIG.castCount)
-          .map(c => personHTML(c.character || c.actor, c.character ? c.actor : '', c.photo, c.isCharacterImage)).join('')}</div>`
+          .map(c => personHTML(c.character || c.actor, c.character ? c.actor : '', c.photo, c.isCharacterImage, c.personId)).join('')}</div>`
       : '';
   }
 
