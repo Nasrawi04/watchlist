@@ -113,7 +113,7 @@ const MSSNote = (() => {
       <div class="nc-main">
         <div class="nc-top"><div class="nc-title">${esc(e.title)}</div>${scorePill(liveScore(e))}</div>
         <div class="nc-tags">${badges(e, { genres: 2, date: date(watchedDate(e), true) })}${mssIsSpoiler(e) ? mssSpoilerTag() : ''}</div>
-        ${blurSpoiler && mssIsSpoiler(e) ? mssSpoilerHTML(quote, { compact: true }) : quote}
+        ${blurSpoiler && mssIsSpoiler(e) ? mssSpoilerHTML(quote, { compact: true, id: e.id }) : quote}
         <div class="nc-foot">
           <div class="nc-reacts">
             <span class="snote-react-btn" style="cursor:default;">${icon('thumbsUp', 13)} <span>${c.like}</span></span>
@@ -177,7 +177,7 @@ const MSSNote = (() => {
   function showView() {
     const e = current, $ = id => document.getElementById(id);
     const q = `<blockquote class="np-quote">&ldquo;${esc((e.notes || '').trim())}&rdquo;</blockquote>`;
-    $('mssNoteText').innerHTML = !opts.editable && mssIsSpoiler(e) ? mssSpoilerHTML(q) : q;
+    $('mssNoteText').innerHTML = !opts.editable && mssIsSpoiler(e) ? mssSpoilerHTML(q, { id: e.id }) : q;
     $('mssNoteViewPopupActions').innerHTML = (opts.editable
       ? `<button type="button" class="popup-action-btn np-grow" onclick="MSSNote._edit()">${PEN}Edit Note</button>` : '')
       + `<button type="button" class="popup-action-btn np-ghost${opts.editable ? '' : ' np-grow'}" onclick="MSSNote.close()">Close</button>`;
