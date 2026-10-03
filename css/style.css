@@ -1,7 +1,141 @@
-/* ════════════════════════════════════════════
-   ENTERTAINMENT TRACKER — Design System v2
-   Apple-level dark luxury · Mobile-first
-════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════
+   MyScreenScore — style.css (shared by every page)
+
+   Fonts: Oswald (titles, --serif) · Bebas Neue (numbers, --bebas) ·
+          Manrope (everything else, --sans)
+   Colours via CSS variables (--olive, --bg, --text …), light / dark
+   through [data-theme]. Page files keep only page-specific styles.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── CONTENTS ─────────────────────────────────────────────────────
+   Search “§NN” for a section, or a component name below.
+   Sections stay in cascade order (later rules override earlier ones).
+
+          · Design Tokens
+          · Reset
+          · Disable double-tap zoom on mobile
+          · Base
+          · Scrollbar — hidden globally except main page scroll
+          · Main page scrollbar — visible, themed
+          · Keyframes
+          · Page layout
+   §01  Top Navigation
+          · Library dropdown (desktop combined TV/Movies/Anime/Cartoons)
+          · Library accordion (mobile hamburger)
+   §02  Bottom Navigation (mobile)
+   §03  FAB (Floating Action Button)
+   §04  Footer
+   §05  Home Page
+   §06  Category Page Header
+   §07  Section Module
+   §08  Currently Watching Cards
+          · Friend/Library "Watching" list rows (library.html, profile.htm
+          · Done button — same style as continue-btn everywhere
+          · Inline detail expansion panel
+          · Popup ratings: mobile scaling
+          · Live search results on index / Discover (initInlineSearch)
+          · Profile tabs (profile.html + profile-view.html — one design)
+          · Segmented toggle: Personal / Community (Notes, Lists) and the 
+          · Info · Ratings · Note switcher (MSSViews, info-popup.js)
+          · Clickable titles + usernames in popups (mssTitleLinkHTML / mss
+          · Info popup (info-popup.js → MSSInfo) — the one info popup used
+          · Discover confirmation picker — lets the person pick the right 
+          · Ratings popup (rating-popup.js → MSSRate) — the one ratings po
+          · Rating filter picker — lets the person sort/filter a section b
+          · Sort & Filter — two separate popups (Sort, Filter), each with 
+          · Ranked / Unranked badges (lists, list view)
+          · Notifications (bell in the top bar)
+          · Spoiler notes
+          · Profile dashboard (dashboard.js)
+          · Note avatars, cards & popups — shared by Notes and Friends (mo
+          · Note cards
+          · Notes / Lists toolbar: section label + count left, Sort / Filt
+          · Note popup shell (note-popup.js → MSSNote)
+          · List cards & list popup — shared by Lists and Friends (moved f
+          · List cards (Personal + Community share one design)
+          · Collaborators line + Shared/Collab tag (list-popup.js)
+          · List popup (Personal + Community)
+          · detail.html favorites/lowlights: Season & Episode open small p
+          · Seasons: bigger blocks, left to right
+          · Episode cards — horizontal scroll, image-on-top card
+   §09  Favorite Chips
+          · Completed entry comment blocks
+          · Reply thread styles (shared across all pages)
+          · Friend comments inbox
+   §10  Watchlist Grid
+   §11  Completed List
+   §12  Genre, Type & Status Badges
+          · Favorites Picker (shared: profile, profile-view, favorites)
+          · Favorites shared (favorites.html, profile, profile-view)
+          · Favorite Picks row (overview)
+          · Favorite Sections popup grid
+          · Favorites grid container (fixed height, vertical scroll on wra
+          · Fav edit button (shared)
+   §13  Modals & Overlays
+   §14  Confirm Dialog
+   §15  Toast
+   §16  Loading + Empty States
+   §17  Detail Page
+   §18  Rating Dropdowns (detail page)
+   §19  Profile & Public Profile
+   §20  Responsive
+   §21  Light Mode
+   §22  Theme Toggle Pill
+   §23  View Toggle
+   §24  VIEW: Watching Grid
+   §25  View: Facts Grid
+   §26  Profile Stats Box
+   §27  Completed Grid
+          · Rank badge (used everywhere a list is ranked)
+   §28  What Should I Watch Next (Popup)
+   §29  VIEW: Completed Grid (container)
+   §30  Score Badge System
+   §31  Global Spacing + Typography
+   §32  Scrollable Section Content
+          · List views: contained scroll in accordion
+          · Grid views: horizontal scroll in accordion
+          · Grid views: horizontal scroll
+          · Grid cards (inside horizontal scroll grids)
+   §33  Phones — up to 640px
+          · Grid views → 2-column compact wrap on mobile
+          · fav chips + all tag badges scaled for phone
+          · Buttons: scale down on mobile
+          · Completed grid — larger cards, score always visible
+          · List cards: compact
+          · Section header wrap
+          · QP button: icon only on mobile
+          · Sort bar
+          · Accordion inner padding
+          · Modals
+          · Friend view list cards
+          · Detail page
+          · Home comments
+          · Main completed page
+          · Hero search
+   §34  Small Phones — up to 400px
+   §35  Tablets — 641px to 1024px
+   §36  Large Displays — 1536px+
+   §37  TV & Ultrawide — 1920px+
+   §38  Tablet-only Nav
+   §39  Touch Experience
+   §40  Grid Navigation Arrows
+          · Continue Watching button — Ongoing section
+          · Start Watching button (queue cards)
+          · "Up Next" / "Taking a Break" poster cover (mssHoldHTML in conf
+          · fv-entry-block: list view wrapper for completed cards
+          · Library comments popup (index-style)
+          · Comments popup mobile fix
+   §41  Profile Additions
+          · Overview 5-col fixed grid (no scroll)
+   §42  TMDB Search Dropdown
+          · Universal input clear (×) button
+          · sel-dd: reusable theme-aware dropdown (select replacement)
+   §43  Popup Action Buttons
+   §44  Rewatch System
+          · Rewatch badge responsive scaling — same size across all three,
+   §45  Create Card Modal
+          · Library cards (js/library-view.js — library.html + both profil
+   ──────────────────────────────────────────────────────────────── */
 
 /* ── Design Tokens ── */
 :root {
@@ -37,7 +171,7 @@
 
   --text:         #EDEDED;
   --text-2:       #A8A8A8;
-  --text-3:       #808080; /* was #6E6E6E — ~3.7:1 contrast against --bg, below WCAG AA's 4.5:1 for normal text. This is used everywhere (item counts, years, hints, muted labels), so it was the actual weak point in dark mode. #808080 lands at ~4.7:1. */
+  --text-3:       #808080; /* #808080 lands at ~4.7:1. */
 
   --serif: 'Oswald', Georgia, sans-serif;
   --bebas: 'Bebas Neue', var(--sans);
@@ -81,13 +215,11 @@ button, a, input, select, textarea, label, [role="button"] {
 html {
   scroll-behavior:smooth; font-size:16px;
   -webkit-tap-highlight-color:transparent;
-  /* Stop Safari from auto-boosting text size to match the device's
-     accessibility Text Size setting ("small A"/"big A"). Without this,
-     that OS setting silently rescales every font-size on the page —
-     which is why things looked oversized at a bigger accessibility
-     setting, and why a smaller one exposed inputs sitting right at the
-     16px line meant to prevent zoom-on-focus. This makes our own CSS
-     values the single source of truth regardless of that OS setting. */
+  /* Stop Safari from auto-boosting text size to match the device's accessibility
+   Text Size setting ("small A"/"big A"). Without this, that OS setting
+   silently rescales every font-size on the page — which is why things looked
+   oversized at a bigger accessibility setting, and why a smaller one exposed
+   inputs sitting right at the 16px line meant to prevent zoom-on-focus. */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -137,7 +269,7 @@ html[data-theme="light"]::-webkit-scrollbar-thumb {
 .fade-up   { animation:fadeUp .38s var(--ease) both; }
 .fade-up-1 { animation-delay:.07s; }
 .fade-up-2 { animation-delay:.14s; }
-.fade-up-3 { animation-delay:.21s; }
+
 .fade-up-4 { animation-delay:.28s; }
 
 /* ── Page layout ── */
@@ -150,9 +282,9 @@ html[data-theme="light"]::-webkit-scrollbar-thumb {
 @media(min-width:1281px) { .page-wrap { padding-top:140px; --page-pt:140px; } }
 @media(max-width:1380px) { .page-wrap { padding:84px 18px 110px; --page-px:18px; --page-pt:84px; } }
 
-/* ════════════════════════════════════════════
-   TOP NAVIGATION
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §01  Top Navigation
+   ═════════════════════════════════════════════════════════════ */
 nav {
   position:fixed; top:0; left:0; right:0; z-index:400;
   background:rgba(11,11,15,0.86);
@@ -172,7 +304,7 @@ nav {
 .nav-top .nav-hamburger {
   position:relative; flex-shrink:0; margin-right:auto;
 }
-/* Logo absolutely centered so it's always mid-screen regardless of icon count */
+
 .nav-top .nav-logo {
   position:absolute; left:50%; transform:translateX(-50%);
   pointer-events:auto; white-space:nowrap;
@@ -459,9 +591,9 @@ nav {
 .mobile-nav-submenu.open { max-height:320px; }
 .mobile-nav-submenu .mobile-nav-link { padding-left:44px; }
 
-/* ════════════════════════════════════════════
-   BOTTOM NAVIGATION (mobile)
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §02  Bottom Navigation (mobile)
+   ═════════════════════════════════════════════════════════════ */
 .bottom-nav {
   display:none;
   position:fixed; bottom:0; left:0; right:0; z-index:400;
@@ -486,9 +618,9 @@ nav {
 .bn-item.active { color:var(--olive-light); }
 .bn-item:not(.active):active { color:var(--text-2); }
 
-/* ════════════════════════════════════════════
-   FAB (Floating Action Button)
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §03  FAB (Floating Action Button)
+   ═════════════════════════════════════════════════════════════ */
 .fab {
   display:none;
   position:fixed; bottom:24px; right:20px; z-index:390;
@@ -503,9 +635,9 @@ nav {
 .fab:hover { background:var(--olive-2); transform:scale(1.05); }
 .fab:active { transform:scale(0.93); }
 
-/* ════════════════════════════════════════════
-   FOOTER
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §04  Footer
+   ═════════════════════════════════════════════════════════════ */
 .site-footer {
   text-align:center; padding:1.5rem 1rem;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -538,12 +670,12 @@ nav {
   .site-footer { padding:1.2rem 1rem; gap:5px; font-size:12px; margin-top:2.5rem; }
   .footer-row-main { font-size:12px; }
   .footer-row-tmdb { font-size:10px; }
-  .footer-tmdb-logo { height:11px; }
+
 }
 
-/* ════════════════════════════════════════════
-   HOME PAGE
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §05  Home Page
+   ═════════════════════════════════════════════════════════════ */
 .home-hero { text-align:center; padding:2.5rem 0 4rem; }
 .home-eyebrow {
   font-size:11px; letter-spacing:3px; text-transform:uppercase;
@@ -564,69 +696,30 @@ nav {
   display:flex; gap:6px; flex-wrap:wrap;
   padding:10px 20px 12px; border-bottom:1px solid var(--border); margin-bottom:18px;
   position:sticky; top:0; z-index:5;
-  background:var(--card-solid); /* was var(--card) — that's translucent in dark mode (fine for a static background, but a sticky bar needs to be fully opaque or scrolled content shows through it) */
+  background:var(--card-solid);
   margin-left:-20px; margin-right:-20px;
 }
-/* Caps a hairline sub-pixel rendering seam that can appear above a
-   sticky element when it's exactly abutting the page's sticky header
-   above it — extends the same solid background slightly upward so
-   there's never a fractional-pixel gap for scrolled content to peek
-   through, regardless of the exact rounding cause. */
+
 .sort-bar::before {
   content:''; position:absolute; left:0; right:0; top:-10px; height:10px;
   background:var(--card-solid);
 }
-/* Same hairline-seam-cap fix as #compSortBar in completed.html — this
-   standalone type filter bar isn't sticky, so it never needed this. */
+
 #catTypeFilterWrap .sort-bar::before { content:none; }
-.sort-btn { font-family:'Manrope',var(--sans); background:transparent; border:1px solid var(--border); border-radius:var(--radius-xs); padding:clamp(4px, 1vw, 5px) clamp(9px, 2.2vw, 12px); font-size:clamp(11px, 2.5vw, 12.5px); font-weight:500; color:var(--text-3); cursor:pointer; transition:all var(--trans) var(--ease); white-space:nowrap; letter-spacing:.3px; }
-.sort-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
-.sort-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); font-weight:600; }
+
 .guest-page-state { text-align:center; padding:5rem 2rem; }
 .guest-page-icon { display:flex; justify-content:center; color:var(--olive-light); margin-bottom:1.25rem; opacity:.5; }
 .guest-page-title { font-family:var(--serif); font-size:28px; font-weight:500; margin-bottom:10px; }
 .guest-page-sub { font-size:14px; color:var(--text-3); max-width:380px; margin:0 auto; }
 
 /* Category grid */
-.category-grid {
-  display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:4rem;
-}
-@media(max-width:1024px) { .category-grid { grid-template-columns:repeat(2,1fr); } }
-@media(max-width:480px)  { .category-grid { grid-template-columns:1fr 1fr; gap:10px; } }
-
-.cat-card {
-  display:flex; flex-direction:column; gap:14px;
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:1.5rem 1.25rem; cursor:pointer;
-  transition:transform var(--trans) var(--ease), border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
-  position:relative; overflow:hidden;
-}
-.cat-card:hover { border-color:var(--border-olive); background:var(--card-2); }
-.cat-card:active { transform:scale(0.98); }
-
-.cat-icon {
-  width:40px; height:40px; border-radius:var(--radius-sm);
-  background:var(--olive-faint); border:0.5px solid var(--border-olive);
-  display:flex; align-items:center; justify-content:center; color:var(--olive-light);
-}
-.cat-icon svg { width:20px; height:20px; }
-.cat-emoji { width:40px; height:40px; border-radius:var(--radius-sm);
-  background:var(--olive-faint); border:0.5px solid var(--border-olive);
-  display:flex; align-items:center; justify-content:center; font-size:20px; }
-
-.cat-card-content { flex:1; }
-.cat-card-label { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--text-3); margin-bottom:4px; }
-.cat-card-title { font-family:'Oswald',var(--sans); font-weight:600; font-size:17px; margin-bottom:4px; }
-.cat-card-count { font-size:12px; color:var(--text-2); }
-.cat-card-arrow { color:var(--text-3); font-size:16px; align-self:flex-end; transition:transform var(--trans) var(--ease), color var(--trans) var(--ease); }
-.cat-card:hover .cat-card-arrow { transform:translateX(4px); color:var(--olive-light); }
 
 .section-eyebrow { font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
 .section-title { font-family:var(--serif); font-size:28px; font-weight:500; margin-bottom:1.5rem; }
 
-/* ════════════════════════════════════════════
-   CATEGORY PAGE HEADER
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §06  Category Page Header
+   ═════════════════════════════════════════════════════════════ */
 .cat-page-header {
   display:flex; align-items:flex-end; justify-content:space-between;
   gap:1rem; padding-bottom:1.5rem;
@@ -651,12 +744,7 @@ nav {
   background:var(--bg);
   z-index:-1;
 }
-.cat-page-eyebrow {
-  font-size:11px; letter-spacing:2.5px; text-transform:uppercase;
-  color:var(--olive-light); margin-bottom:6px;
-  display:flex; align-items:center; gap:7px;
-}
-.cat-page-eyebrow svg { width:13px; height:13px; }
+
 .cat-page-title { font-family:'Oswald',var(--sans); font-size:47px; font-weight:600; line-height:1; letter-spacing:-0.5px; padding-top:14px; }
 .cat-page-sub { font-family:'Manrope',var(--sans); font-weight:500; font-size:14.5px; color:var(--text-2); margin-top:6px; }
 
@@ -683,30 +771,30 @@ nav {
   transition:border-color var(--trans) var(--ease);
 }
 .page-stat:hover { border-color:var(--border-olive); }
-.page-stat-num { font-family:var(--bebas); font-size:28px; font-weight:400; color:var(--olive-light); line-height:1; }
+.page-stat-num { font-family:var(--bebas);  font-weight:400; color:var(--olive-light); line-height:1; }
 .page-stat-label { font-family:'Oswald',var(--sans); font-weight:600; font-size:9px; color:var(--text-3); text-transform:uppercase; letter-spacing:1.5px; margin-top:5px; }
 
 /* Desktop — all in one row */
 @media(min-width:641px) {
   .page-stats { grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:10px; }
-  .page-stat-num { font-size:24px; }
+
   .page-stat { padding:.85rem .75rem; }
 }
 /* Tablet */
 @media(max-width:1080px) and (min-width:641px) {
-  .page-stat-num { font-size:22px; }
+
   .page-stat { padding:.75rem .65rem; }
 }
 /* Mobile — 2 rows: TV/Movies = 3+2, Anime/Cartoon = 3+3 */
 @media(max-width:640px) {
   .page-stats { grid-template-columns:repeat(3,1fr); gap:8px; }
-  .page-stat-num { font-size:20px; }
+
   .page-stat { padding:.7rem .65rem; }
   .page-stat-label { font-size:8px; letter-spacing:.5px; }
 }
 @media(max-width:400px) {
   .page-stats { grid-template-columns:repeat(3,1fr); gap:6px; }
-  .page-stat-num { font-size:17px; }
+
   .page-stat { padding:.6rem .5rem; }
   .page-stat-label { font-size:7px; letter-spacing:.3px; }
 }
@@ -715,20 +803,20 @@ nav {
 .page-stats.mixed-stats { grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); }
 @media(max-width:640px) { .page-stats.mixed-stats { grid-template-columns:repeat(3,1fr); } }
 
-/* ════════════════════════════════════════════
-   SECTION MODULE
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §07  Section Module
+   ═════════════════════════════════════════════════════════════ */
 .section-block {
   background:var(--card-solid); border:0.5px solid var(--border);
   border-radius:var(--radius-lg); overflow:clip;
-  margin-bottom:20px; box-shadow:var(--shadow);
+   box-shadow:var(--shadow);
   transition:box-shadow var(--trans) var(--ease);
   position:relative; z-index:1;
 }
 .section-block:has(.accordion-body.open) { box-shadow:var(--shadow); }
 .section-block:has(.accordion-body.open) .section-block-header { border-bottom:0.5px solid var(--border); }
 
-.section-block-header, .accordion-header {
+.section-block-header {
   display:flex; align-items:center; width:100%;
   padding:15px 20px; gap:0;
   background:transparent; border:none; border-bottom:0.5px solid transparent;
@@ -753,23 +841,16 @@ nav {
 .chevron-btn:hover { color:var(--text-2); background:var(--card-3); }
 .chevron-btn svg { width:15px; height:15px; }
 
-.section-block-title { font-family:'Oswald',var(--sans); font-size:14.5px; font-weight:600; display:flex; align-items:center; gap:8px; letter-spacing:0.1px; }
+.section-block-title { font-family:'Oswald',var(--sans);   display:flex; align-items:center; gap:8px; letter-spacing:0.1px; }
 .section-block-title svg { width:14px; height:14px; color:var(--olive-light); }
 .section-pill {
   font-family:var(--bebas); font-size:13px; font-weight:400; padding:2px 10px; border-radius:6px;
   background:var(--olive); border:0.5px solid var(--olive);
   color:#fff;
 }
-.section-tabs { display:flex; gap:3px; }
-.stab {
-  padding:5px 11px; border:0.5px solid var(--border); border-radius:20px;
-  background:transparent; color:var(--text-3); font-size:11px;
-  cursor:pointer; transition:all var(--trans) var(--ease); white-space:nowrap;
-}
-.stab:hover { color:var(--text-2); border-color:var(--border-2); }
-.stab.active { border-color:var(--border-olive); color:var(--olive-light); background:var(--olive-faint); }
+
 .accordion-chevron { display:flex; align-items:center; }
-.accordion-chevron svg { width:15px; height:15px; }
+
 .accordion-body {
   max-height:0; overflow:hidden; opacity:0;
   transition:max-height .38s var(--ease), opacity .28s var(--ease);
@@ -780,9 +861,9 @@ nav {
 }
 .accordion-inner { padding:20px; animation:fadeIn 0.22s var(--ease); }
 
-/* ════════════════════════════════════════════
-   CURRENTLY WATCHING CARDS
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §08  Currently Watching Cards
+   ═════════════════════════════════════════════════════════════ */
 .watch-list { display:flex; flex-direction:column; gap:10px; }
 .w-card {
   display:flex; align-items:center; gap:22px;
@@ -802,7 +883,7 @@ nav {
 .w-body { flex:1; min-width:0; }
 .w-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px; }
 .w-title { font-family:'Oswald',var(--sans); font-weight:600; font-size:19px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
-.w-score { color:var(--olive-light); font-size:clamp(13px, 3vw, 15px); font-weight:600; flex-shrink:0; }
+
 .w-genre { font-size:12px; color:var(--text-3); margin-bottom:10px; display:flex; gap:6px; flex-wrap:wrap; }
 .w-ep-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; flex-wrap:wrap; }
 .w-ep-total { font-size:10px; color:var(--text-3); white-space:nowrap; }
@@ -812,54 +893,32 @@ nav {
 .w-prog-label { font-size:11px; color:var(--text-3); margin-top:6px; }
 .w-ep-controls { display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
 
-/* ── Friend/Library "Watching" list rows (library.html, profile.html,
-   profile-view.html) — same card design as .w-card above, just a
-   distinct class prefix since these come from a separate template.
-   These had almost no base styling at all before, which is why this
-   list view looked broken/unstyled compared to every other list. ── */
-.fv-watch-list { display:flex; flex-direction:column; gap:10px; }
+/* ── Friend/Library "Watching" list rows (library.html, profile.html, profile-view.html) — same card design as .w-card above, just a distinct class prefix since these come from a separate template. These had almost no base styling at all before, which is why this list view looked broken/unstyled compared to every other list. ── */
+
 .fv-w-card {
-  display:flex; align-items:center; gap:22px;
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:22px 26px; cursor:pointer; transition:all var(--trans) var(--ease);
+
+   cursor:pointer; transition:all var(--trans) var(--ease);
   height:180px; overflow:hidden;
 }
 .fv-w-card:hover { border-color:var(--border-olive); background:var(--card-2); }
 .fv-w-card:active { transform:scale(0.99); }
-.fv-w-card-no-hover:hover { border-color:var(--border); background:var(--card); }
-.fv-w-poster {
-  position:relative; width:96px; height:136px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0;
-  background:var(--bg-3); display:flex; align-items:center; justify-content:center;
-  box-shadow:var(--shadow);
-}
-.fv-w-poster img { width:100%; height:100%; object-fit:cover; }
-.fv-w-body { flex:1; min-width:0; }
-.fv-w-title {
-  font-size:clamp(13px, 3vw, 15px); font-weight:600;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
-  margin-bottom:6px;
-}
-.fv-w-ep { display:flex; align-items:center; gap:6px; margin-bottom:5px; flex-wrap:wrap; }
+
+.fv-w-ep {     flex-wrap:wrap; }
 .fv-w-ep-badge {
-  font-family:var(--sans); font-weight:600; font-size:var(--badge-font-size);
-  padding:clamp(2px, 0.5vw, 3px) clamp(6px, 1.6vw, 9px); border-radius:3px;
-  color:#fff; background:var(--olive); border:0.5px solid var(--olive);
-  letter-spacing:0.3px; white-space:nowrap; flex-shrink:0; display:inline-block;
+
+   white-space:nowrap; flex-shrink:0; display:inline-block;
 }
-.fv-w-prog-track { height:3px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; margin-top:6px; }
-[data-theme="light"] .fv-w-prog-track { background:rgba(0,0,0,0.16); }
-.fv-w-prog-fill { height:100%; background:var(--olive-light); border-radius:2px; transition:width .5s var(--ease); }
-.fv-w-prog-label { font-size:11px; color:var(--text-3); margin-top:6px; }
+.fv-w-prog-track {     margin-top:6px; }
+
 @media(max-width:480px) {
   /* Matches .w-card's own ≤600px tier exactly for consistency */
-  .fv-w-card { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
-  .fv-w-poster { width:72px; height:102px; }
-  .fv-w-title { font-size:14px; }
+  .fv-w-card {  height:auto !important;   }
+
 }
 @media(max-width:400px) {
   /* Matches .w-card's own ≤400px tier exactly for consistency */
-  .fv-w-card { padding:8px 10px; gap:10px; height:auto !important; min-height:90px; }
-  .fv-w-poster { width:64px; height:90px; }
+  .fv-w-card {   height:auto !important;  }
+
 }
 .ep-btn {
   width:clamp(28px, 7vw, 34px); height:clamp(28px, 7vw, 34px); border-radius:50%;
@@ -872,10 +931,7 @@ nav {
 .ep-btn:hover { background:var(--olive); border-color:var(--olive); color:#fff; }
 .ep-btn:active { transform:scale(0.95); }
 /* Done and Resume buttons — no scale transform, only color change */
-.ep-btn-done:hover { transform:none !important; }
-.ep-btn-done:active { transform:none !important; }
-.wg-done-btn:hover { transform:none !important; }
-.wg-done-btn:active { transform:none !important; }
+
 .ep-btn-resume:hover { transform:none !important; }
 .ep-btn-resume:active { transform:none !important; }
 /* All list-view icon-only action buttons — standalone, matches pause btn exactly */
@@ -907,7 +963,6 @@ nav {
 .ep-btn-resume { font-size:clamp(11px, 2.8vw, 13px); flex:1; width:auto !important; border-radius:var(--radius-sm) !important; height:clamp(28px, 7vw, 34px) !important; padding:0 12px !important; }
 
 /* ── Done button — same style as continue-btn everywhere ── */
-.ep-btn-done,
 .wg-done-btn {
   /* Match continue-btn exactly */
   background:var(--olive) !important;
@@ -938,33 +993,13 @@ nav {
   width:auto !important; flex:1 !important; min-width:0 !important;
 }
 
-.ep-btn-done:hover,
 .wg-done-btn:hover { background:var(--olive-2) !important; transform:none !important; }
-.ep-btn-done:active,
 .wg-done-btn:active { transform:scale(0.97) !important; }
 
 .ep-btn-minus { border-radius:50% !important; width:clamp(28px, 7vw, 34px) !important; height:clamp(28px, 7vw, 34px) !important; font-size:clamp(13px, 3.4vw, 17px) !important; flex-shrink:0 !important; }
 
-/* ── Rank badge circle ── */
-.rank-badge{
-  position:absolute;top:0;left:6px;z-index:2;
-  width:50px;height:50px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  background:#e8f5e3;border:2.5px solid #1E5C26;
-  font-family:var(--serif);font-size:22px;font-weight:500;color:#1E5C26;
-  box-shadow:0 2px 10px rgba(0,0,0,0.15);
-}
-.rank-badge.muted{background:#f5f5f5;border-color:#bbb;color:#999;}
-[data-theme="dark"] .rank-badge{background:#0d1f0b;border-color:#c4edb4;color:#c4edb4;box-shadow:0 2px 10px rgba(0,0,0,0.5);}
-[data-theme="dark"] .rank-badge.muted{background:#111;border-color:#ccc;color:#ccc;}
-
 /* ── Inline detail expansion panel ── */
-.comp-entry-block { margin-bottom:10px; }
-.comp-detail-panel {
-  background:var(--bg-2); border:0.5px solid var(--border-olive);
-  border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm);
-  padding:16px 20px; animation:fadeIn .18s var(--ease);
-}
+
 .fd-cols { display:flex; gap:20px; flex-wrap:wrap; }
 .fd-col  { flex:1; min-width:180px; }
 .fd-section-hd { font-family:'Oswald',var(--sans); font-weight:600; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:8px; padding-bottom:6px; border-bottom:0.5px solid var(--border); }
@@ -1014,9 +1049,9 @@ nav {
   background:var(--bg-3); font-family:var(--serif); color:var(--olive-light);
   font-size:clamp(22px, 6vw, 32px);
 }
-.home-tmdb-year { font-family:var(--bebas); color:var(--text-3); font-size:clamp(15px, 3.3vw, 17px); }
-@media(max-width:640px) { .home-tmdb-poster-fallback { font-size:26px; } .home-tmdb-year { font-size:12px; } }
-@media(max-width:400px) { .home-tmdb-poster-fallback { font-size:22px; } .home-tmdb-year { font-size:11px; } }
+
+@media(max-width:640px) { .home-tmdb-poster-fallback { font-size:26px; }  }
+@media(max-width:400px) { .home-tmdb-poster-fallback { font-size:22px; }  }
 .home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
 .home-tmdb-score { font-family:var(--bebas); color:var(--olive-light); font-size:clamp(15px, 3.3vw, 17px); font-weight:400; white-space:nowrap; }
 
@@ -1043,8 +1078,7 @@ nav {
   border:none; border-bottom:2px solid var(--olive-light); border-radius:0; cursor:pointer; outline:none; -webkit-appearance:none; appearance:none;
 }
 
-/* ── Segmented toggle: Personal / Community (Notes, Lists) and the
-   popups' Info / Ratings / Note switcher ── */
+/* ── Segmented toggle: Personal / Community (Notes, Lists) and the popups' Info / Ratings / Note switcher ── */
 .pn-toggle {
   display:flex; width:fit-content; margin:0 auto 1.5rem;
   background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius-sm); overflow:hidden;
@@ -1060,8 +1094,8 @@ nav {
 .pn-toggle-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
 
 /* ── Info · Ratings · Note switcher (MSSViews, info-popup.js) ──
-   The same segmented toggle, full width across the top of the popup,
-   with the popup's ✕ beside it (the popup's own ✕ hides meanwhile). */
+   The same segmented toggle, full width across the top of the popup, with the
+   popup's ✕ beside it (the popup's own ✕ hides meanwhile). */
 .mss-views:empty { display:none; }
 .mss-views { display:flex; align-items:center; gap:10px; padding:16px 20px 4px; }
 .mss-views .pn-toggle { flex:1; width:auto; margin:0; }
@@ -1131,8 +1165,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 .pvi-season-chip:hover { border-color:var(--border-olive); }
 .pvi-season-num { font-family:var(--bebas);font-size:20px;font-weight:400;color:var(--olive-light);line-height:1; }
 .pvi-season-eps { font-family:'Manrope',var(--sans);font-weight:500;font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-top:3px;white-space:nowrap; }
-/* Runtime/episode badge + completed-date badge now sit side by side
-   under genres, rather than runtime alone getting its own big block. */
+
 .pvi-meta-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0 16px; }
 .pvi-runtime { display:inline-flex;align-items:center;gap:10px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px; }
 .pvi-runtime-val { font-family:var(--bebas);font-size:24px;font-weight:400;color:var(--olive-light); }
@@ -1143,12 +1176,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 .mss-info-actions .popup-action-btn { flex:1 1 calc(33.333% - 10px); min-width:130px; font-size:13px; padding:10px 14px; }
 .mss-info-actions .popup-action-btn:disabled { opacity:.55; cursor:default; }
 
-/* ── Discover confirmation picker — lets the person pick the right
-   TMDB match instead of auto-navigating to a possibly-wrong title.
-   Can be triggered from inside other modals now (Create Card's
-   "Link to TMDB" prompt), so this needs to sit above every other
-   modal z-index in the app (highest otherwise is 1200), not just
-   the page content behind it. ── */
+/* ── Discover confirmation picker — lets the person pick the right TMDB match instead of auto-navigating to a possibly-wrong title. Can be triggered from inside other modals now (Create Card's "Link to TMDB" prompt), so this needs to sit above every other modal z-index in the app (highest otherwise is 1200), not just the page content behind it. ── */
 #catDiscoverOverlay {
   position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
   display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;
@@ -1188,32 +1216,27 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
   .mss-info-actions { padding:0 14px 14px; }
   .pvi-close { top:20px; right:16px; }
   /* Ratings popup (rating-popup.js) — mobile pass */
-  .mr-head { padding:16px 16px 0; gap:12px; }
-  .mr-poster { width:90px; height:135px; }
-  .mr-title { font-size:19px; margin-bottom:8px; padding-right:30px; }
+
+  .mr-title {   padding-right:30px; }
   .mr-by { padding-right:30px; }
-  .mr-row { gap:5px; }
+
   .mr-row .w-ep-badge, .mr-row .type-label { font-size:12px; padding:5px 10px; }
-  .mr-close { top:20px; right:16px; }
-  .mr-desc { font-size:13px; margin:12px 0 0; }
-  .mr-body { padding:14px 16px 4px; }
+
+  .mr-desc { font-size:13px;  }
+
   .fd-description { font-size:13px; }
   .fd-cols { flex-direction:column; gap:4px; }
   .fd-col { min-width:0; }
   .fd-rating-row { padding:5px 0; }
   .fd-rating-label { font-size:13px; }
   .fd-rating-val { font-size:17px; }
-  .fav-chip { font-size:13px; padding:5px 11px; }
+
   .fd-notes { font-size:13px; }
   [id$="PopupActions"] { padding:4px 16px 16px; }
   [id$="PopupActions"] .popup-action-btn { font-size:14px; padding:12px 14px; }
 }
 
-/* Toggled by JS (ResizeObserver on #mssRateCard). order/flex-basis live
-   here (not inline in the markup) specifically so this override can
-   actually take effect — inline styles beat any stylesheet rule
-   regardless of specificity, which is what silently defeated every
-   earlier media-query/container-query attempt at this exact swap. */
+/* Toggled by JS (ResizeObserver on #mssRateCard). */
 .cg-desc-block { flex-basis:100%; order:4; }
 .cg-score-box { order:3; width:190px; margin-right:32px; }
 .cg-narrow .cg-desc-block { order:3; }
@@ -1262,13 +1285,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 .mr-cc .cc-strip { margin-top:4px; }
 #mssRatePopupActions { display:flex; gap:8px; padding:4px 24px 24px; flex-wrap:wrap; }
 
-/* ── Rating filter picker — lets the person sort/filter a section by any
-   specific rating (core or bonus) instead of just overall score. A full
-   popup rather than a small anchored dropdown, since a category can have
-   up to 18 options with long labels (e.g. "Main Character vs Villain
-   Dynamics") that wouldn't fit comfortably in a compact menu, especially
-   on mobile. Same z-index as the Discover picker (1300, the highest in
-   the app) since this can also be reached from within other contexts. ── */
+/* ── Rating filter picker — lets the person sort/filter a section by any specific rating (core or bonus) instead of just overall score. A full popup rather than a small anchored dropdown, since a category can have up to 18 options with long labels (e.g. "Main Character vs Villain Dynamics") that wouldn't fit comfortably in a compact menu, especially on mobile. Same z-index as the Discover picker (1300, the highest in the app) since this can also be reached from within other contexts. ── */
 #ratingFilterOverlay {
   position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
   display:flex; align-items:center; justify-content:center; padding:16px;
@@ -1297,12 +1314,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 .rf-item-check { color:var(--olive-light); flex-shrink:0; opacity:0; display:flex; }
 .rf-item.active .rf-item-check { opacity:1; }
 
-/* ── Sort & Filter — two separate popups (Sort, Filter), each with its
-   own staged state and Apply/Cancel footer, so nothing takes effect
-   until Apply is pressed. Filter criteria (Genre, Decade) use the same
-   dropdown component as title.html's .td-dd, reimplemented here since
-   that component's structural CSS lives only in title.html's own
-   <style> block. ── */
+/* ── Sort & Filter — two separate popups (Sort, Filter), each with its own staged state and Apply/Cancel footer, so nothing takes effect until Apply is pressed. Filter criteria (Genre, Decade) use the same dropdown component as title.html's .td-dd, reimplemented here since that component's structural CSS lives only in title.html's own <style> block. ── */
 .sf-trigger-row { display:flex; align-items:center; gap:8px; justify-content:flex-end; margin-bottom:8px; }
 .sf-icon-btn {
   display:inline-flex; align-items:center; gap:6px;
@@ -1339,25 +1351,10 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
   color:var(--olive-light); margin:18px 0 10px; padding-bottom:8px; border-bottom:0.5px solid var(--border);
 }
 .sf-section-label:first-child { margin-top:12px; }
-.sf-subgroup-label {
-  font-family:'Manrope',var(--sans); font-weight:600; font-size:10px; letter-spacing:1px; text-transform:uppercase;
-  color:var(--text-3); padding:8px 0 2px;
-}
+
 .sf-empty { font-family:'Manrope',var(--sans); font-size:13px; color:var(--text-3); padding:10px 0; }
 
 /* Radio rows (Sort popup) */
-.sf-radio-list { display:flex; flex-direction:column; }
-.sf-radio-row { display:flex; align-items:center; gap:10px; padding:8px 2px; cursor:pointer; position:relative; }
-.sf-radio-row input { position:absolute; opacity:0; width:0; height:0; }
-.sf-radio-mark {
-  width:17px; height:17px; border-radius:50%; border:1.5px solid var(--border-olive); flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; transition:border-color .15s;
-}
-.sf-radio-mark::after { content:''; width:9px; height:9px; border-radius:50%; background:var(--olive); transform:scale(0); transition:transform .12s; }
-.sf-radio-row input:checked + .sf-radio-mark { border-color:var(--olive); }
-.sf-radio-row input:checked + .sf-radio-mark::after { transform:scale(1); }
-.sf-radio-text { font-family:'Manrope',var(--sans); font-size:13.5px; color:var(--text-2); }
-.sf-radio-text strong { color:var(--text); font-weight:600; }
 
 /* Dropdown component (Filter popup: Genre, Decade) — self-contained
    structural rules, since .td-dd's own structural CSS lives only in
@@ -1391,11 +1388,7 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 }
 .sf-dd .td-dd-opt:hover { background:var(--bg-3); }
 .sf-dd .td-dd-opt.active { background:var(--olive-faint); color:var(--olive-light); font-weight:600; }
-.sf-dd-group-label {
-  font-family:'Oswald',var(--sans); font-weight:600; font-size:9.5px; letter-spacing:1.5px; text-transform:uppercase;
-  color:var(--olive-light); padding:10px 14px 4px;
-}
-.sf-dd-group-label:first-child { padding-top:8px; }
+
 .sf-dd-subgroup-label {
   font-family:'Oswald',var(--sans); font-weight:600; font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
   color:var(--olive-light); padding:8px 14px 3px;
@@ -1418,10 +1411,10 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 .sf-check-row input:checked ~ span:last-child { color:var(--olive-light); font-weight:700; }
 
 /* ── Ranked / Unranked badges (lists, list view) ──
-   Text-only pills in the brand palette:
-   Ranked   = the site's deep olive (primary, "this list has an order")
-   Unranked = the logo's warm sand (secondary, "just a collection")
-   Both are solid so they read at a glance, and both pass contrast. */
+   Text-only pills in the brand palette: Ranked = the site's deep olive
+   (primary, "this list has an order") Unranked = the logo's warm sand
+   (secondary, "just a collection") Both are solid so they read at a glance,
+   and both pass contrast. */
 .list-rank-badge {
   display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
   height:22px; padding:0 11px; border-radius:999px; box-sizing:border-box;
@@ -1478,9 +1471,7 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 }
 #notifPanel.open { transform:none; visibility:visible; transition:transform .34s cubic-bezier(.2,.8,.2,1), visibility 0s; }
 body.notif-sheet-open { overflow:hidden; }
-.notif-head-actions { display:flex; align-items:center; gap:6px; }
-.notif-head-link { font-size:12.5px; font-weight:600; color:var(--olive-light); text-decoration:none; padding:6px 8px; border-radius:var(--radius-sm); }
-.notif-head-link:hover { background:var(--card); }
+
 .notif-head { display:flex; align-items:flex-start; justify-content:space-between; padding:20px 20px 14px; }
 .notif-sub { font-size:12.5px; color:var(--text-3); margin-top:3px; }
 .notif-title { font-family:var(--serif); font-size:24px; font-weight:600; line-height:1.1; }
@@ -1492,7 +1483,7 @@ body.notif-sheet-open { overflow:hidden; }
 .notif-item.unread { background:var(--olive-faint); }
 .notif-item.unread::after { content:''; position:absolute; top:16px; right:12px; width:8px; height:8px; border-radius:50%; background:var(--olive-light); }
 .notif-av {
-  width:38px; height:38px; border-radius:50%; flex-shrink:0; overflow:hidden;
+  width:38px; height:38px; border-radius:50%; flex-shrink:0;
   background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center;
   font-family:var(--serif); font-weight:600; font-size:15px;
 }
@@ -1618,7 +1609,6 @@ body.notif-sheet-open { overflow:hidden; }
   #notifPeek, #notifPanel { transition:opacity .2s; }
 }
 
-
 /* ── Spoiler notes ── */
 .spoiler { position:relative; border-radius:var(--radius-sm); }
 .spoiler-text { filter:blur(7px); user-select:none; -webkit-user-select:none; pointer-events:none; opacity:.7; transition:filter .35s, opacity .35s; }
@@ -1662,6 +1652,11 @@ body.notif-sheet-open { overflow:hidden; }
 .mss-info-loading .spinner { width:22px; height:22px; }
 .mss-cast { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:12px; margin-top:4px; }
 .mss-cast-item { display:flex; flex-direction:column; align-items:center; text-align:center; min-width:0; }
+a.mss-cast-item.is-link { text-decoration:none; color:inherit; cursor:pointer; border-radius:var(--radius-sm); transition:transform .15s; }
+a.mss-cast-item.is-link:hover { transform:translateY(-2px); }
+a.mss-cast-item.is-link:hover .mss-cast-photo { box-shadow:0 0 0 2px var(--olive-light); }
+a.mss-cast-item.is-link:hover .mss-cast-char { color:var(--olive-light); }
+a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
 .mss-cast-photo {
   width:72px; height:72px; border-radius:50%; overflow:hidden; flex-shrink:0; margin-bottom:8px; position:relative;
   background:var(--olive-faint); border:1px solid var(--border); color:var(--olive-light);
@@ -1760,7 +1755,7 @@ body.notif-sheet-open { overflow:hidden; }
 .dp-empty { grid-column:1/-1; padding:2.5rem 1rem; text-align:center; font-size:13px; color:var(--text-3); }
 @media(max-width:520px) { .dp-grid { grid-template-columns:repeat(3, 1fr); gap:10px; padding:4px 14px 16px; } .dp-search { margin:0 14px 10px; } }
 
-/* ══ Note avatars, cards & popups — shared by Notes and Friends (moved from notes.html) ══ */
+/* ── Note avatars, cards & popups — shared by Notes and Friends (moved from notes.html) ── */
 .snote-avatar {
   width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0;
   background:var(--olive-faint); color:var(--olive-light); font-family:var(--serif); font-size:11px;
@@ -1802,7 +1797,7 @@ body.notif-sheet-open { overflow:hidden; }
 .nc-author { display:flex; align-items:center; gap:7px; min-width:0; font-size:12px; color:var(--text-3); }
 .nc-author .snote-avatar { width:22px; height:22px; }
 .nc-author span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.nc-date { font-size:11.5px; color:var(--text-3); white-space:nowrap; }
+
 .nc-score {
   font-family:var(--bebas); color:var(--olive-light); font-size:clamp(17px, 3.8vw, 19px); font-weight:400;
   line-height:1; white-space:nowrap; flex-shrink:0;
@@ -1830,8 +1825,7 @@ body.notif-sheet-open { overflow:hidden; }
 }
 @media(max-width:380px) { .nc-poster { width:56px; } .nc-tags { display:none; } }
 
-/* ── Notes / Lists toolbar: section label + count left, Sort / Filter right
-   (Notes page, Lists page, profile Notes + Lists tabs — mssToolbarHTML in config.js) ── */
+/* ── Notes / Lists toolbar: section label + count left, Sort / Filter right (Notes page, Lists page, profile Notes + Lists tabs — mssToolbarHTML in config.js) ── */
 .mss-toolbar {
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   margin:0 0 1.1rem; padding-bottom:12px; border-bottom:0.5px solid var(--border);
@@ -1850,7 +1844,6 @@ body.notif-sheet-open { overflow:hidden; }
 .note-popup2 { width:100%; border-radius:var(--radius-lg); position:relative; transform:scale(.96); transition:transform .22s cubic-bezier(0.4,0,0.2,1); }
 .note-popup-overlay2.open .note-popup2 { transform:scale(1); }
 
-/* ── Popups (Personal + Community share this design) ── */
 /* Same backdrop as the Info + Ratings popups: dimmed, not blurred */
 .note-popup-overlay2, #snPopupOverlay { background:rgba(0,0,0,0.72) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .np-card { max-width:min(97vw, var(--popup-w)) !important; background:var(--bg-2) !important; border:0.5px solid var(--border) !important; box-shadow:0 28px 70px rgba(0,0,0,.4) !important; display:flex; flex-direction:column; max-height:90dvh; }
@@ -1954,7 +1947,7 @@ body.notif-sheet-open { overflow:hidden; }
   .np-actions .np-react { min-width:58px; }
 }
 
-/* ══ List cards & list popup — shared by Lists and Friends (moved from lists.html) ══ */
+/* ── List cards & list popup — shared by Lists and Friends (moved from lists.html) ── */
 .social-list-owner { display:flex; align-items:center; gap:8px; margin-bottom:.75rem; }
 .social-list-avatar {
   width:26px; height:26px; border-radius:50%; overflow:hidden; flex-shrink:0;
@@ -1963,13 +1956,7 @@ body.notif-sheet-open { overflow:hidden; }
 }
 .social-list-avatar img { width:100%; height:100%; object-fit:cover; }
 .social-list-username { font-size:12.5px; color:var(--text-3); }
-.social-list-title { font-family:var(--serif); font-size:19px; font-weight:400; margin-bottom:4px; }
-.social-list-desc { font-size:12.5px; color:var(--text-2); line-height:1.5; margin-bottom:.75rem; }
-.social-list-count { font-size:11.5px; color:var(--text-3); margin-bottom:.9rem; }
-.social-list-posters { display:flex; gap:6px; margin-bottom:1rem; }
-.social-list-poster-thumb { width:44px; height:64px; border-radius:5px; overflow:hidden; background:var(--bg-3); flex-shrink:0; position:relative; }
-.social-list-poster-thumb img { width:100%; height:100%; object-fit:cover; }
-.social-list-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+
 .social-list-reactions { display:flex; gap:12px; }
 .social-list-react-btn {
   display:inline-flex; align-items:center; gap:5px; background:none; border:none; cursor:pointer;
@@ -2082,7 +2069,6 @@ body.notif-sheet-open { overflow:hidden; }
   #lpPopupActions .popup-action-btn:not(.lp-react) svg, #lpNavPopupActions .popup-action-btn svg { display:none; }
 }
 
-
 /* Letter shown when a poster image fails to load (see mssImgError) */
 .img-fallback {
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
@@ -2151,12 +2137,12 @@ body.notif-sheet-open { overflow:hidden; }
   #sfSortCard, #sfFilterCard, #sfTypeFilterCard { max-width:94%; max-height:88dvh; }
   .sf-dd .td-dd-menu { max-height:180px; }
   .sf-section-label { font-size:10px; }
-  .sf-radio-text, .sf-dd-trigger, .sf-check-row span:last-child, .sf-range-input { font-size:13px; }
+  .sf-dd-trigger,
+.sf-check-row span:last-child,
+.sf-range-input { font-size:13px; }
 }
 
-/* ── detail.html favorites/lowlights: Season & Episode open small picker
-   popups; Character is a text box (type any name / nickname) with a
-   cast button that opens the cast photo grid. ── */
+/* ── detail.html favorites/lowlights: Season & Episode open small picker popups; Character is a text box (type any name / nickname) with a cast button that opens the cast photo grid. ── */
 .fav-char-field { position:relative; }
 .fav-char-input { width:100%; box-sizing:border-box; padding-right:42px !important; font-family:'Manrope',var(--sans); font-weight:500; font-size:13.5px; }
 .fav-char-input::placeholder { font-weight:400; }
@@ -2181,11 +2167,6 @@ body.notif-sheet-open { overflow:hidden; }
 .fav-person-trigger span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; width:100%; }
 .fav-person-placeholder { color:var(--text-3); font-weight:400; }
 
-/* Clear (×) button — sits inline with the field's own label row, so
-   the trigger button below it always stays full width regardless of
-   content length (a long episode name no longer pushes anything
-   around), and clearing a field is a small, secondary action next to
-   its name rather than competing with the trigger for space. */
 .fav-label-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
 .fav-label-row label { margin-bottom:0 !important; }
 .fav-clear-btn {
@@ -2210,8 +2191,6 @@ body.notif-sheet-open { overflow:hidden; }
   display:flex; flex-direction:column; box-sizing:border-box; position:relative;
 }
 
-/* ── Season blocks + episode cards — title.html's Episodes section and the
-   detail page's Favorite / Least Favorite Season & Episode pickers ── */
 /* ── Seasons: bigger blocks, left to right ── */
 .td-season-row { display:flex; gap:18px; overflow-x:auto; padding-bottom:14px; }
 .td-season-row::-webkit-scrollbar { display:block; height:6px; }
@@ -2261,7 +2240,6 @@ body.notif-sheet-open { overflow:hidden; }
   font-size:12.5px; color:var(--text-2); line-height:1.6;
   display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
 }
-
 
 /* Season & Episode pickers (detail.html) — the title page's season posters
    and episode cards (still, number badge, rating · date · runtime,
@@ -2353,8 +2331,6 @@ body.notif-sheet-open { overflow:hidden; }
   .fav-person-photo { width:60px; height:60px; font-size:20px; }
 }
 
-
-
 @media(max-width:520px) {
   .rf-header { padding:1rem 1rem 0.6rem; }
   .rf-title { font-size:18px; }
@@ -2397,9 +2373,9 @@ body.notif-sheet-open { overflow:hidden; }
 .card-link-result-title { font-size:13px; color:var(--text); }
 .card-link-result-meta { font-size:10px; color:var(--text-3); margin-top:2px; }
 
-/* ════════════════════════════════════════════
-   FAVORITES CHIPS — FIX ISSUE 1 (base sizing)
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §09  Favorite Chips
+   ═════════════════════════════════════════════════════════════ */
 .fav-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
 .fav-chip {
   font-size:13px; color:#fff;
@@ -2415,7 +2391,6 @@ body.notif-sheet-open { overflow:hidden; }
   border-color:#b91c1c;
 }
 .low-chip .fav-chip-label { color:rgba(255,255,255,0.75); }
-
 
 /* ── Completed entry comment blocks ── */
 .cc-block { position:relative; margin-bottom:10px; }
@@ -2434,20 +2409,23 @@ body.notif-sheet-open { overflow:hidden; }
 .cc-list { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; max-height:300px; overflow-y:auto;overscroll-behavior-y:contain; }
 .cc-comment { display:flex; gap:9px; align-items:flex-start; padding:9px 13px; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--radius-xs); }
 .cc-comment-body { flex:1; min-width:0; }
-.cc-avatar, .fv-comment-avatar {
+.cc-avatar {
   width:28px; height:28px; border-radius:50%; flex-shrink:0;
   background:var(--olive-faint); border:1px solid var(--border-olive);
   font-family:var(--serif); font-size:12px; color:var(--olive-light);
   display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
-.cc-avatar img, .fv-comment-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.cc-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
 .cc-author { font-size:11px; font-weight:600; color:var(--olive-light); margin-bottom:3px; }
 .cc-text { font-size:13px; color:var(--text); line-height:1.5; word-break:break-word; }
 .cc-meta { font-size:10px; color:var(--text-3); margin-top:5px; display:flex; align-items:center; gap:10px; }
-.cc-del, .cc-reply-btn, .fv-reply-btn, .det-comment-reply-btn { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:10px; padding:0; font-family:var(--sans); transition:color var(--trans) var(--ease); }
+.cc-del,
+.cc-reply-btn,
+.det-comment-reply-btn { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:10px; padding:0; font-family:var(--sans); transition:color var(--trans) var(--ease); }
 .cc-del:hover { color:#f87171; }
-.cc-reply-btn:hover, .fv-reply-btn:hover, .det-comment-reply-btn:hover { color:var(--olive-light); }
-.cc-reply-form, .fv-reply-form { display:flex; gap:6px; margin-top:8px; }
+.cc-reply-btn:hover,
+.det-comment-reply-btn:hover { color:var(--olive-light); }
+.cc-reply-form { display:flex; gap:6px; margin-top:8px; }
 
 /* ── Reply thread styles (shared across all pages) ── */
 .det-reply-item {
@@ -2487,10 +2465,9 @@ body.notif-sheet-open { overflow:hidden; }
   .det-reply-input { height:30px; font-size:11px; }
   .det-reply-send  { height:30px; padding:0 8px; font-size:10px; }
 }
-.cc-reply-form input, .fv-reply-form input { flex:1; background:var(--bg-3); border:0.5px solid var(--border-olive); border-radius:var(--radius-xs); color:var(--text); font-size:12px; padding:5px 10px; outline:none; font-family:var(--sans); }
-.cc-reply-form input:focus, .fv-reply-form input:focus { border-color:var(--olive-light); }
-.fv-comment { display:flex; gap:9px; align-items:flex-start; padding:9px 13px; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--radius-xs); }
-.fv-comment-body { flex:1; min-width:0; }
+.cc-reply-form input { flex:1; background:var(--bg-3); border:0.5px solid var(--border-olive); border-radius:var(--radius-xs); color:var(--text); font-size:12px; padding:5px 10px; outline:none; font-family:var(--sans); }
+.cc-reply-form input:focus { border-color:var(--olive-light); }
+
 .cc-form { display:flex; gap:8px; border-top:0.5px solid var(--border); padding-top:12px; }
 .cc-input {
   flex:1; background:var(--bg-3); border:0.5px solid var(--border-2);
@@ -2501,39 +2478,17 @@ body.notif-sheet-open { overflow:hidden; }
 .cc-input:focus { border-color:var(--border-olive); }
 .cc-input::placeholder { color:var(--text-3); }
 .cc-input:disabled { opacity:.6; }
-.cc-send, .fv-csend {
+.cc-send {
   background:var(--olive); border:none; border-radius:var(--radius-sm);
   color:#fff; font-size:12px; font-weight:500; padding:8px 14px;
   cursor:pointer; transition:background var(--trans) var(--ease); white-space:nowrap;
 }
-.cc-send:hover, .fv-csend:hover { background:var(--olive-2); }
+.cc-send:hover { background:var(--olive-2); }
 .det-comment-del { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:10px; padding:0; font-family:var(--sans); transition:color .15s; }
 .det-comment-del:hover { color:#f87171; }
 .cc-loading, .cc-none { font-size:12px; color:var(--text-3); text-align:center; padding:6px 0; }
 
 /* ── Friend comments inbox ── */
-.comment-inbox-row {
-  display:flex; align-items:flex-start; gap:14px;
-  background:var(--card); border:0.5px solid var(--border);
-  border-radius:var(--radius); padding:14px 18px; cursor:pointer;
-  transition:all var(--trans) var(--ease);
-}
-.comment-inbox-row:hover { border-color:var(--border-olive); background:var(--card-2); }
-.comment-inbox-avatar {
-  width:36px; height:36px; border-radius:50%; flex-shrink:0;
-  background:var(--olive-faint); border:1.5px solid var(--border-olive);
-  font-family:var(--serif); font-size:16px; color:var(--olive-light);
-  display:flex; align-items:center; justify-content:center; overflow:hidden;
-}
-.comment-inbox-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
-.comment-inbox-body { flex:1; min-width:0; }
-.comment-inbox-who { font-size:13px; font-weight:500; margin-bottom:4px; }
-.comment-inbox-who span { color:var(--text-3); font-weight:400; }
-.comment-inbox-text { font-size:13px; color:var(--text-2); font-style:italic; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.comment-inbox-date { font-size:11px; color:var(--text-3); white-space:nowrap; flex-shrink:0; padding-top:2px; }
-.comments-section-toggle { cursor:pointer; display:flex; align-items:center; gap:10px; user-select:none; }
-.comments-section-chevron { color:var(--text-3); transition:transform var(--trans) var(--ease); display:flex; }
-.comments-section-chevron.open { transform:rotate(180deg); }
 
 .w-pause-btn {
   opacity:1; pointer-events:auto;
@@ -2561,10 +2516,10 @@ body.notif-sheet-open { overflow:hidden; }
   .w-ep-controls { display:flex !important; }
 }
 
-/* ════════════════════════════════════════════
-   QUEUE / WATCH LATER GRID
-════════════════════════════════════════════ */
-.queue-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+/* ═════════════════════════════════════════════════════════════
+   §10  Watchlist Grid
+   ═════════════════════════════════════════════════════════════ */
+.queue-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));  }
 .q-card {
   background:var(--card); border:0.5px solid var(--border);
   border-radius:var(--radius); overflow:hidden; cursor:pointer;
@@ -2578,12 +2533,7 @@ body.notif-sheet-open { overflow:hidden; }
 }
 .q-poster img { width:100%; height:100%; object-fit:cover; }
 .q-poster-overlay { display:none; }
-.q-play {
-  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  color:#fff; opacity:0; transition:opacity var(--trans) var(--ease);
-  background:rgba(0,0,0,0.45);
-}
-.q-card:hover .q-play { opacity:1; }
+
 .q-info { padding:10px 12px 12px; position:relative; }
 .fav-card-score {
   position:absolute;bottom:8px;right:10px;
@@ -2594,19 +2544,12 @@ body.notif-sheet-open { overflow:hidden; }
 @media(max-width:640px) { .fav-card-score { font-size:14px;bottom:6px;right:8px; } }
 @media(max-width:400px) { .fav-card-score { font-size:12px;bottom:5px;right:6px; } }
 .q-title { font-family:'Oswald',var(--sans); font-weight:600; font-size:19px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:6px; }
-.q-year { font-size:11px; color:var(--text-3); }
-.q-genre { display:flex; flex-wrap:wrap; gap:6px; }
-.q-meta-row { display:flex; align-items:center; gap:7px; }
-.q-hd-badge {
-  font-size:9px; font-weight:700; color:var(--text-3);
-  border:1px solid var(--border-2); border-radius:3px;
-  padding:1px 4px; letter-spacing:0.5px; flex-shrink:0;
-}
-.q-meta-text { font-size:12px; color:var(--text-2); }
 
-/* ════════════════════════════════════════════
-   COMPLETED LIST
-════════════════════════════════════════════ */
+.q-genre { display:flex; flex-wrap:wrap; gap:6px; }
+
+/* ═════════════════════════════════════════════════════════════
+   §11  Completed List
+   ═════════════════════════════════════════════════════════════ */
 .completed-list { display:flex; flex-direction:column; gap:10px; }
 .comp-row {
   display:flex; align-items:center; gap:22px;
@@ -2618,22 +2561,14 @@ body.notif-sheet-open { overflow:hidden; }
 .comp-poster { width:112px; height:156px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); }
 .comp-poster img { width:100%; height:100%; object-fit:cover; }
 .comp-info { flex:1; min-width:0; }
-.comp-rank { font-size:11px; color:var(--text-3); display:block; margin-bottom:4px; letter-spacing:1px; }
+
 .comp-title { font-family:'Oswald',var(--sans); font-size:19px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .comp-meta { font-size:13px; color:var(--text-3); margin-top:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.fv-rank-meta { font-size:13px; color:var(--text-3); margin-top:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.comp-date { color:var(--text-3); }
-.comp-score-wrap { text-align:right; flex-shrink:0; }
-.comp-score { font-family:var(--bebas); font-size:36px; font-weight:400; color:var(--olive-light); line-height:1; }
-.comp-score-label { font-size:10px; color:var(--text-3); letter-spacing:1px; text-transform:uppercase; margin-top:4px; }
+.fv-rank-meta {    display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 
-/* ════════════════════════════════════════════
-   GENRE + MISC BADGES — one shared visual language for every genre,
-   type (Movie/TV), and runtime/episode tag across the whole app.
-   Explicit font-family/weight so these never silently inherit a
-   surrounding serif title font; clamp() for smooth scaling instead of
-   a patchwork of per-page breakpoint overrides.
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §12  Genre, Type & Status Badges
+   ═════════════════════════════════════════════════════════════ */
 .genre-dot, .type-label, .w-ep-badge, .cat-badge {
   font-family:var(--sans); font-weight:600;
   font-size:var(--badge-font-size);
@@ -2647,11 +2582,7 @@ body.notif-sheet-open { overflow:hidden; }
 }
 /* Score in the grid-card badge row (Currently Watching) — reads off
    the same shared --badge-font-size scale as the badges beside it. */
-.wg-genre .w-score {
-  font-family:var(--bebas);
-  font-size:var(--badge-font-size);
-  font-weight:400;
-}
+
 /* Movie variant of the type tag — its own color, distinct from genre
    tags (olive) and the TV variant (blue) below, so all three read
    apart from each other at a glance. */
@@ -2665,10 +2596,8 @@ body.notif-sheet-open { overflow:hidden; }
 .type-label-tv {
   background:var(--tv-solid); border-color:var(--tv-solid); color:#fff;
 }
-.cat-badge-mini { font-size:14px; flex-shrink:0; }
 
-
-/* ══ Favorites Picker (shared: profile, profile-view, favorites) ══ */
+/* ── Favorites Picker (shared: profile, profile-view, favorites) ── */
 #favPickerOverlay, #favListPickerOverlay {
   position:fixed;inset:0;z-index:1200;
   background:rgba(0,0,0,0.65);backdrop-filter:blur(10px);
@@ -2686,14 +2615,14 @@ body.notif-sheet-open { overflow:hidden; }
 }
 #favPickerOverlay.open #favPickerSheet,
 #favListPickerOverlay.open #favListPickerSheet { transform:translateY(0); }
-.fav-picker-hd, .fav-picker-hd2 {
+.fav-picker-hd {
   display:flex;align-items:center;justify-content:space-between;
   padding:16px 20px;border-bottom:0.5px solid var(--border);flex-shrink:0;
 }
-.fav-picker-title, .fav-picker-title2 {
+.fav-picker-title {
   font-family:var(--serif);font-size:18px;font-weight:500;
 }
-.fav-picker-count, .fav-picker-count2 {
+.fav-picker-count {
   font-size:11px;color:var(--text-3);margin-left:8px;
 }
 .fav-picker-close { background:none;border:none;color:var(--text-3);font-size:20px;cursor:pointer; }
@@ -2717,7 +2646,7 @@ body.notif-sheet-open { overflow:hidden; }
 .fav-picker-empty {
   padding:2rem 20px; text-align:center; font-size:13px; color:var(--text-3);
 }
-.fav-picker-list, .fav-picker-list2 { overflow-y:auto;overscroll-behavior-y:contain;flex:1;padding:8px 0; }
+.fav-picker-list { overflow-y:auto;overscroll-behavior-y:contain;flex:1;padding:8px 0; }
 .fav-picker-item {
   display:flex;align-items:center;gap:16px;padding:14px 20px;
   cursor:pointer;transition:background .12s;border-bottom:0.5px solid var(--border);
@@ -2754,7 +2683,7 @@ body.notif-sheet-open { overflow:hidden; }
   background:var(--olive-faint);box-shadow:0 6px 16px rgba(0,0,0,0.3);
   border-radius:var(--radius-sm);
 }
-.fav-picker-footer, .fav-picker-footer2 {
+.fav-picker-footer {
   padding:12px 20px;border-top:0.5px solid var(--border);
   display:flex;gap:10px;flex-shrink:0;
 }
@@ -2800,32 +2729,7 @@ body.notif-sheet-open { overflow:hidden; }
 .fav-page-list-header {
   display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;
 }
-.fav-h-grid {
-  display:flex;gap:12px;overflow-x:auto;
-  padding-bottom:8px;scroll-snap-type:x mandatory;
-  scrollbar-width:none;-ms-overflow-style:none;
-}
-.fav-h-grid::-webkit-scrollbar { display:none; }
-.fav-h-grid .q-card {
-  flex:0 0 130px;min-width:130px;scroll-snap-align:start;
-}
-.fav-page-section-hd {
-  font-size:11px;letter-spacing:2px;text-transform:uppercase;
-  color:var(--olive-light);margin:2rem 0 1.25rem;
-  display:flex;align-items:center;gap:12px;
-}
-.fav-page-section-hd::after { content:'';flex:1;height:0.5px;background:var(--border); }
-.fav-h-nav {
-  position:absolute;top:35%;transform:translateY(-50%);
-  background:var(--bg-2);border:0.5px solid var(--border);
-  border-radius:50%;width:30px;height:30px;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;z-index:2;transition:border-color .15s;
-  color:var(--text-2);font-size:16px;line-height:1;
-}
-.fav-h-nav:hover { border-color:var(--border-olive);color:var(--olive-light); }
-.fav-h-nav.left { left:-14px; }
-.fav-h-nav.right { right:-14px; }
+
 .fav-cat-btn {
   flex:1;min-width:80px;padding:10px 8px;text-align:center;
   border-radius:var(--radius-sm);border:0.5px solid var(--border);
@@ -2835,21 +2739,11 @@ body.notif-sheet-open { overflow:hidden; }
 .fav-cat-btn.active {
   background:var(--olive-faint);border-color:var(--border-olive);color:var(--olive-light);
 }
-.fav-genre-chip {
-  font-size:11px;padding:4px 12px;border-radius:20px;
-  background:var(--card);border:0.5px solid var(--border);
-  color:var(--text-2);cursor:pointer;transition:all .15s;user-select:none;
-}
-.fav-genre-chip.selected {
-  background:var(--olive-faint);border-color:var(--border-olive);color:var(--olive-light);
-}
+
 @media(max-width:600px) {
-  .fav-h-grid .q-card { flex:0 0 110px;min-width:110px; }
+
   .fav-page-list-title { font-size:16px; }
-  .fav-h-nav { display:none; }
-}
-@media(max-width:400px) {
-  .fav-h-grid .q-card { flex:0 0 96px;min-width:96px; }
+
 }
 
 /* ── Favorite Picks row (overview) ── */
@@ -2901,8 +2795,6 @@ body.notif-sheet-open { overflow:hidden; }
 @media(max-width:700px) { .favsec-grid { grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 18px 20px; } }
 @media(max-width:400px) { .favsec-grid { grid-template-columns:repeat(2,1fr);gap:10px; } }
 
-/* ── Favorites scroll container ── */
-/* ── Favorites grid ── */
 /* Desktop (>1024px): horizontal scroll with nav buttons */
 .fav-watching-grid {
   display:flex !important;
@@ -2915,12 +2807,6 @@ body.notif-sheet-open { overflow:hidden; }
   align-items:stretch;
 }
 .fav-watching-grid::-webkit-scrollbar { display:none; }
-/* Card width/scaling now comes entirely from the shared rule below
-   (.watching-grid .wg-card, ..., .fav-watching-grid .q-card) — this
-   used to duplicate it locally with a fixed flex-basis (flex:0 0 220px),
-   which silently overrode the shared rule's width forever regardless
-   of screen size, since flex-basis takes precedence over width in flex
-   layout when it isn't auto. */
 
 /* Tablet (641–1024px): CSS grid wrapping, contained scroll, no nav buttons */
 @media(min-width:641px) and (max-width:1024px) {
@@ -2936,7 +2822,7 @@ body.notif-sheet-open { overflow:hidden; }
     flex:unset !important; width:100% !important;
     min-width:0 !important; scroll-snap-align:unset !important;
   }
-  .fav-grid-container { max-height:680px; overflow-y:auto;overscroll-behavior-y:contain; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:var(--border-olive) transparent; }
+
   .fav-grid-container::-webkit-scrollbar { width:4px; }
   .fav-grid-container::-webkit-scrollbar-thumb { background:var(--border-olive); border-radius:2px; }
   .fav-grid-container .grid-nav-btn { display:none !important; }
@@ -2957,13 +2843,10 @@ body.notif-sheet-open { overflow:hidden; }
     flex:unset !important; width:100% !important;
     min-width:0 !important; scroll-snap-align:unset !important;
   }
-  .fav-grid-container { max-height:580px; overflow-y:auto;overscroll-behavior-y:contain; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:var(--border-olive) transparent; }
+
   .fav-grid-container::-webkit-scrollbar { width:4px; }
   .fav-grid-container::-webkit-scrollbar-thumb { background:var(--border-olive); border-radius:2px; }
   .fav-grid-container .grid-nav-btn { display:none !important; }
-}
-@media(max-width:400px) {
-  .fav-grid-container { max-height:500px; }
 }
 
 /* ── Favorites grid container (fixed height, vertical scroll on wrap) ── */
@@ -2992,41 +2875,7 @@ body.notif-sheet-open { overflow:hidden; }
   .fav-grid-container { max-height:500px; }
 }
 
-.fav-scroll-wrap {
-  position:relative;
-}
-.fav-scroll-grid {
-  display:flex;gap:14px;
-  overflow-x:auto;overflow-y:hidden;
-  padding:4px 2px 12px;
-  scroll-snap-type:x mandatory;
-  scrollbar-width:none;-ms-overflow-style:none;
-}
-.fav-scroll-grid::-webkit-scrollbar { display:none; }
-.fav-scroll-grid .q-card {
-  flex:0 0 200px;min-width:200px;
-  scroll-snap-align:start;
-}
 /* Nav arrows */
-.fav-scroll-btn {
-  position:absolute;top:35%;transform:translateY(-50%);
-  width:32px;height:32px;border-radius:50%;
-  background:var(--bg-2);border:0.5px solid var(--border-olive);
-  color:var(--olive-light);font-size:18px;line-height:1;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;z-index:2;transition:background .15s;
-  box-shadow:var(--shadow);
-}
-.fav-scroll-btn:hover { background:var(--olive-faint); }
-.fav-scroll-btn.left  { left:-14px; }
-.fav-scroll-btn.right { right:-14px; }
-@media(max-width:640px) {
-  .fav-scroll-grid .q-card { flex:0 0 160px;min-width:160px; }
-  .fav-scroll-btn { display:none; }
-}
-@media(max-width:400px) {
-  .fav-scroll-grid .q-card { flex:0 0 135px;min-width:135px; }
-}
 
 /* ── Fav edit button (shared) ── */
 .fav-edit-btn {
@@ -3040,15 +2889,9 @@ body.notif-sheet-open { overflow:hidden; }
 .fav-edit-btn:hover { background:var(--olive-faint); }
 @media(max-width:640px) { .fav-edit-btn { font-size:11px;padding:6px 12px; } }
 
-/* ── Picker number badge ── */
-/* fav-slot-num-badge removed — now using cg-rank-badge */
-
-/* Type label (Movie / TV Show) styling now lives in the shared
-   .genre-dot, .type-label, .w-ep-badge, .cat-badge rule above. */
-
-/* ════════════════════════════════════════════
-   MODAL / OVERLAY
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §13  Modals & Overlays
+   ═════════════════════════════════════════════════════════════ */
 .modal-overlay {
   position:fixed; inset:0; z-index:700;
   background:rgba(11,11,15,0.82); backdrop-filter:blur(10px);
@@ -3106,8 +2949,7 @@ body.notif-sheet-open { overflow:hidden; }
 .btn-modal-save:disabled { opacity:.5; cursor:not-allowed; transform:none; box-shadow:3px 3px 0 var(--olive-2); }
 
 [data-theme="light"] .modal {
-  background:var(--card);
-  border-color:var(--olive-light);
+
   box-shadow:4px 4px 0 var(--olive);
 }
 [data-theme="light"] .modal-input {
@@ -3121,9 +2963,9 @@ body.notif-sheet-open { overflow:hidden; }
   box-shadow:2px 2px 0 var(--olive-light);
 }
 
-/* ════════════════════════════════════════════
-   CONFIRM DIALOG
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §14  Confirm Dialog
+   ═════════════════════════════════════════════════════════════ */
 .confirm-overlay {
   position:fixed; inset:0; z-index:2100;   /* above every popup, so it always shows on top */
   background:rgba(0,0,0,0.78); backdrop-filter:blur(10px);
@@ -3191,9 +3033,9 @@ body.notif-sheet-open { overflow:hidden; }
   .confirm-ok     { flex:none; }
 }
 
-/* ════════════════════════════════════════════
-   TOAST
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §15  Toast
+   ═════════════════════════════════════════════════════════════ */
 .toast {
   position:fixed; bottom:86px; left:50%; transform:translateX(-50%) translateY(20px);
   background:rgba(28,28,34,0.97); border:0.5px solid var(--border-2);
@@ -3205,9 +3047,9 @@ body.notif-sheet-open { overflow:hidden; }
 .toast.visible { opacity:1; transform:translateX(-50%) translateY(0); }
 .toast.toast-err { border-color:rgba(220,60,60,0.4); background:rgba(35,12,12,0.97); }
 
-/* ════════════════════════════════════════════
-   LOADING + EMPTY STATES
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §16  Loading + Empty States
+   ═════════════════════════════════════════════════════════════ */
 .page-loading { display:flex; align-items:center; justify-content:center; padding:5rem; width:100%; }
 .spinner {
   width:28px; height:28px; border-radius:50%;
@@ -3219,19 +3061,9 @@ body.notif-sheet-open { overflow:hidden; }
 .empty-text { font-size:14px; color:var(--text-3); line-height:1.7; }
 .empty-text a { color:var(--olive-light); }
 
-/* ════════════════════════════════════════════
-   DETAIL PAGE
-════════════════════════════════════════════ */
-.detail-back {
-  display:inline-flex; align-items:center; gap:8px;
-  font-size:13px; color:var(--text-2); margin-bottom:2rem;
-  transition:color var(--trans) var(--ease);
-}
-.detail-back svg { width:16px; height:16px; }
-.detail-back:hover { color:var(--olive-light); }
-
-.detail-layout { display:grid; grid-template-columns:320px 1fr; gap:3rem; align-items:start; }
-@media(max-width:900px) { .detail-layout { grid-template-columns:1fr; gap:2rem; } }
+/* ═════════════════════════════════════════════════════════════
+   §17  Detail Page
+   ═════════════════════════════════════════════════════════════ */
 
 .detail-poster-wrap {
   width:100%; aspect-ratio:2/3; max-height:460px;
@@ -3253,7 +3085,6 @@ body.notif-sheet-open { overflow:hidden; }
 }
 .detail-poster-wrap:hover .poster-upload-overlay { opacity:1; }
 
-.detail-fields { display:flex; flex-direction:column; gap:1rem; }
 .field-group { display:flex; flex-direction:column; }
 .field-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:6px; }
 .field-input {
@@ -3292,9 +3123,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .ep-field input::-webkit-outer-spin-button { -webkit-appearance:none; }
 
 .ratings-wrap { position:sticky; top:74px; }
-.ratings-heading { font-family:var(--serif); font-size:28px; font-weight:500; margin-bottom:.25rem; }
 
-.detail-actions { display:flex; gap:10px; margin-top:1.5rem; flex-wrap:wrap; }
 .btn-save {
   flex:1; background:var(--olive); border:none; border-radius:var(--radius-sm);
   color:#fff; font-size:14px; font-weight:500; padding:12px; cursor:pointer;
@@ -3310,32 +3139,18 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 }
 .btn-delete:hover { background:rgba(220,50,50,.1); border-color:rgba(220,50,50,.5); color:#ff6b6b; }
 
-/* ════════════════════════════════════════════
-   RATING DROPDOWNS (detail page)
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §18  Rating Dropdowns (detail page)
+   ═════════════════════════════════════════════════════════════ */
 .ratings-section-label {
   font-size:10px; letter-spacing:2.5px; text-transform:uppercase;
   color:var(--olive-light); margin-bottom:1rem; margin-top:1.5rem;
   display:flex; align-items:center; gap:10px;
 }
 .ratings-section-label::after { content:''; flex:1; height:0.5px; background:var(--border); }
-.rdrop-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.rdrop-item {
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  padding:9px 12px; background:var(--bg-3); border-radius:var(--radius-sm);
-  border:0.5px solid var(--border);
-}
-.rdrop-label { font-size:12px; color:var(--text-2); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.rdrop-label .icon { margin-right:5px; font-size:13px; }
+
 .rdrop-wrap { position:relative; flex-shrink:0; }
-.rdrop-btn {
-  background:var(--bg); border:0.5px solid var(--border-2); border-radius:var(--radius-xs);
-  padding:5px 10px; min-width:50px; text-align:center; cursor:pointer;
-  font-family:var(--serif); font-size:16px; color:var(--text-3);
-  transition:all .15s var(--ease); white-space:nowrap;
-}
-.rdrop-btn:hover { border-color:var(--border-olive); color:var(--text); }
-.rdrop-btn.rated { color:var(--olive-light); border-color:var(--border-olive); background:var(--olive-faint); }
+
 .rdrop-list {
   position:absolute; right:0; top:calc(100% + 4px);
   width:66px; max-height:210px; overflow-y:auto;overscroll-behavior-y:contain;
@@ -3344,19 +3159,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   box-shadow:var(--shadow-lg);
 }
 .rdrop-list.open { display:flex; animation:fadeIn .12s var(--ease); }
-.rdrop-opt { padding:6px 10px; text-align:center; cursor:pointer; font-size:13px; color:var(--text-2); transition:background .1s; flex-shrink:0; }
-.rdrop-opt:hover { background:var(--olive-faint); color:var(--text); }
-.rdrop-opt.sel { color:var(--olive-light); font-weight:600; background:rgba(74,103,65,.12); }
 
-.final-score-section {
-  background:var(--olive-faint);
-  border:0.5px solid var(--border-olive); border-radius:var(--radius);
-  padding:1.5rem; display:flex; align-items:center; gap:1.5rem; margin-top:1.5rem;
-}
-.final-score-left { text-align:center; flex-shrink:0; min-width:88px; }
-.final-score-num { font-family:var(--bebas); font-size:74px; font-weight:400; color:var(--olive-light); line-height:1; letter-spacing:-2px; }
-.final-score-label { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--text-3); margin-top:4px; }
-.final-score-right { flex:1; }
 .score-breakdown { display:flex; flex-direction:column; gap:6px; }
 .score-breakdown-row { display:flex; align-items:center; gap:8px; font-size:11px; }
 .score-breakdown-row label { color:var(--text-3); width:78px; flex-shrink:0; }
@@ -3367,42 +3170,40 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .det-prog-track { height:2px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; margin-top:8px; }
 .det-prog-fill { height:100%; background:var(--olive-light); border-radius:2px; transition:width .4s var(--ease); }
 
-/* ════════════════════════════════════════════
-   PROFILE / PUBLIC PROFILE
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §19  Profile & Public Profile
+   ═════════════════════════════════════════════════════════════ */
 .pub-hero {
   display:flex; align-items:center; gap:2rem; margin-bottom:3rem; padding:2.5rem;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
 }
 @media(max-width:600px) { .pub-hero { flex-direction:column; gap:1.5rem; text-align:center; } }
 
-/* ════════════════════════════════════════════
-   RESPONSIVE
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §20  Responsive
+   ═════════════════════════════════════════════════════════════ */
 @media(max-width:1380px) {
   .nav-top   { display:flex !important; }
   .nav-inner { display:none !important; }
   .btn-add { display:none; }
   .nav-user-name, .nav-chevron { display:none; }
   .bottom-nav        { display:flex; }
-  .fab               { display:flex; bottom:76px; left:20px; right:auto; }
-  .theme-toggle-pill { bottom:76px; right:16px; left:auto; }
+  .fab               { display:flex;    }
+  .theme-toggle-pill {   left:auto; }
   .cat-page-header { flex-direction:row; align-items:flex-end; justify-content:space-between; top:64px; padding-left:calc(50vw - 50% + 18px); padding-right:calc(50vw - 50% + 18px); }
   .detail-poster-wrap { max-height:300px; }
   .ep-grid { grid-template-columns:1fr 1fr; }
-  .final-score-section { flex-direction:column; align-items:flex-start; gap:1rem; }
-  .final-score-num { font-size:54px; }
-  .rdrop-grid { grid-template-columns:1fr; }
+
 }
 @media(max-width:480px) {
-  .queue-grid { grid-template-columns:repeat(2,1fr); gap:12px; }
+  .queue-grid { grid-template-columns:repeat(2,1fr);  }
   .nav-inner { padding:0 16px; }
   .modal { border-radius:var(--radius-lg); }
 }
 
-/* ════════════════════════════════════════════
-   LIGHT MODE
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §21  Light Mode
+   ═════════════════════════════════════════════════════════════ */
 [data-theme="light"] {
   --bg:           #E2DAD0;
   --bg-2:         #D8D0C5;
@@ -3443,15 +3244,13 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 [data-theme="light"] .nav-user-dropdown { background:#EDE7DE; border-color:rgba(0,0,0,0.14); }
 [data-theme="light"] .toast          { background:rgba(25,22,18,0.96); color:#F0EDE8; border-color:rgba(0,0,0,0.15); }
 [data-theme="light"] .progress-edit-section { background:#DDD5CA; border-color:rgba(0,0,0,0.12); }
-[data-theme="light"] .cat-card:hover     { background:#E8E1D7; border-color:rgba(26,69,32,0.3); }
+
 [data-theme="light"] .w-card:hover       { background:#E8E1D7; }
 [data-theme="light"] .q-card:hover       { background:#E8E1D7; }
 [data-theme="light"] .comp-row:hover     { background:#E8E1D7; }
-[data-theme="light"] .ql-row:hover       { background:#E8E1D7; }
-[data-theme="light"] .rank-row:hover     { background:#E8E1D7; }
-[data-theme="light"] .recent-row:hover   { background:#E8E1D7; }
+
 [data-theme="light"] .wg-card:hover      { background:#E8E1D7; }
-[data-theme="light"] .cg-card:hover      { background:#E8E1D7; }
+
 [data-theme="light"] .section-block-header:hover { background:#E8E1D7; }
 [data-theme="light"] .field-input,
 [data-theme="light"] .modal-input,
@@ -3464,15 +3263,14 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 [data-theme="light"] .hero-search-wrap { background:#D8D0C5; border-color:rgba(0,0,0,0.28); }
 [data-theme="light"] .hero-search-wrap:focus-within { border-color:rgba(26,69,32,0.5); box-shadow:0 0 0 3px rgba(26,69,32,0.1); }
 [data-theme="light"] #heroSearch { color:#1A1A1A; }
-[data-theme="light"] .rdrop-btn { background:#EEE9E1; border-color:rgba(0,0,0,0.15); color:#787878; }
-[data-theme="light"] .rdrop-btn.rated { background:rgba(26,69,32,0.1); border-color:rgba(26,69,32,0.35); color:#2C2C2C; }
+
 [data-theme="light"] .rdrop-list { background:#E3DDD3; border-color:rgba(0,0,0,0.12); }
 [data-theme="light"] .wg-ep { background:rgba(26,69,32,0.8); }
 [data-theme="light"] .w-prog-fill,
 [data-theme="light"] .wg-prog-fill,
 [data-theme="light"] .det-prog-fill { background:var(--olive-light); }
 [data-theme="light"] .score-mini-fill { background:var(--olive-light); }
-[data-theme="light"] .final-score-section { background:var(--olive-faint); }
+
 [data-theme="light"] .view-toggle { background:var(--bg-2); }
 [data-theme="light"] .theme-toggle-pill { background:var(--bg-2); }
 
@@ -3487,9 +3285,9 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
     box-shadow       260ms cubic-bezier(0.4,0,0.2,1) !important;
 }
 
-/* ════════════════════════════════════════════
-   THEME TOGGLE PILL
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §22  Theme Toggle Pill
+   ═════════════════════════════════════════════════════════════ */
 .back-to-top {
   position:fixed; right:30px; bottom:80px; z-index:394;
   width:46px; height:46px; border-radius:50%; cursor:pointer;
@@ -3530,9 +3328,9 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   .fab               { bottom:76px; left:20px; right:auto; }
 }
 
-/* ════════════════════════════════════════════
-   VIEW TOGGLE
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §23  View Toggle
+   ═════════════════════════════════════════════════════════════ */
 .view-toggle {
   display:flex; align-items:center;
   background:var(--bg-3); border:0.5px solid var(--border);
@@ -3551,13 +3349,12 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 
 .accordion-chevron svg { width:16px; height:16px; transition:transform 220ms var(--ease); }
 
-/* ════════════════════════════════════════════
-   VIEW: WATCHING GRID
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §24  VIEW: Watching Grid
+   ═════════════════════════════════════════════════════════════ */
 .watching-grid {
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-  gap:14px;
 }
 .wg-card {
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
@@ -3568,54 +3365,10 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .wg-card:hover { border-color:var(--border-olive); transform:translateY(-1px); box-shadow:var(--shadow); }
 .wg-card:active { transform:scale(0.97) translateY(0); }
 
-/* ════════════════════════════════════════════
-   VIEW: FACTS GRID (poster + director/cast/production details)
-════════════════════════════════════════════ */
-.facts-grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
-  gap:18px;
-}
-.facts-card {
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
-  overflow:hidden; transition:all var(--trans) var(--ease);
-  display:flex; flex-direction:column;
-}
-.facts-card:hover { border-color:var(--border-olive); box-shadow:var(--shadow); }
-.facts-poster {
-  aspect-ratio:2/3; background:var(--bg-3); position:relative; overflow:hidden;
-}
-.facts-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.facts-paused-tag {
-  position:absolute; inset:0; background:rgba(74,103,65,0.58);
-  display:flex; align-items:center; justify-content:center; text-align:center;
-  font-size:11px; font-weight:700; color:#fff; letter-spacing:1px; text-transform:uppercase;
-}
-.facts-body { padding:16px 18px 18px; display:flex; flex-direction:column; gap:10px; }
-.facts-title-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
-.facts-title { font-family:var(--serif); font-size:19px; font-weight:600; color:var(--text); line-height:1.2; }
-.facts-year { font-family:var(--bebas); font-size:16px; color:var(--text-3); font-weight:400; }
-.facts-genre-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
-.facts-rows { display:flex; flex-direction:column; gap:6px; margin-top:2px; padding-top:10px; border-top:0.5px solid var(--border); }
-.facts-row { display:flex; flex-direction:column; gap:1px; font-size:12.5px; }
-.facts-label { font-size:9.5px; letter-spacing:1px; text-transform:uppercase; color:var(--olive-light); }
-.facts-value { color:var(--text-2); line-height:1.4; }
-.facts-row-cast { margin-top:4px; }
-.facts-row-muted { color:var(--text-3); font-size:12px; font-style:italic; }
-.facts-loading { opacity:.7; }
+/* ═════════════════════════════════════════════════════════════
+   §25  View: Facts Grid
+   ═════════════════════════════════════════════════════════════ */
 
-@media(max-width:600px) {
-  .facts-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
-  .facts-body { padding:12px 14px 14px; gap:8px; }
-  .facts-title { font-size:16px; }
-  .facts-year { font-size:12.5px; }
-  .facts-label { font-size:9px; }
-  .facts-value { font-size:11.5px; }
-}
-@media(max-width:400px) {
-  .facts-grid { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); }
-  .facts-title { font-size:14.5px; }
-}
 .wg-poster {
   aspect-ratio:2/3; background:var(--bg-3);
   display:flex; align-items:center; justify-content:center;
@@ -3641,19 +3394,13 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
    primary runtime/ep tag class used everywhere else on the site
    (next to titles, in Completed rows, etc.), not a separate
    poster-overlay-specific variant. */
-.w-ep-badge-overlay {
-  position:absolute !important; z-index:2; bottom:6px; left:6px;
-  max-width:calc(100% - 12px); overflow:hidden; text-overflow:ellipsis;
-}
+
 /* Type badge poster corner overlay (top-left) — positioning only.
    The actual look (solid olive for Movie, solid blue for TV Show)
    comes from the existing .type-label/.type-label-tv classes already
    used everywhere else on the site — this just pins that same badge
    to a poster corner instead of the usual meta-row placement. */
-.type-label-overlay {
-  position:absolute !important; z-index:2; top:6px; left:6px;
-  max-width:calc(100% - 12px); overflow:hidden; text-overflow:ellipsis;
-}
+
 /* Bottom-left variant, used on poster thumbnails where the badge sits
    at the bottom of the poster rather than the top (e.g. next to a
    rank number badge already occupying top-left, or by design choice
@@ -3672,7 +3419,10 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
    inline year and reveals the below-title version instead — so long
    titles get their room back rather than colliding with the year. */
 .title-year-row { display:flex; align-items:baseline; gap:6px; min-width:0; }
-.title-year-row .wg-title, .title-year-row .w-title, .title-year-row .q-title, .title-year-row .fv-w-title, .title-year-row .pp-credit-title { flex:1 1 auto; min-width:0; max-width:100%; margin-bottom:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.title-year-row .wg-title,
+.title-year-row .w-title,
+.title-year-row .q-title,
+.title-year-row .fv-w-title { flex:1 1 auto; min-width:0; max-width:100%; margin-bottom:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .title-year-inline { font-family:var(--bebas); flex-shrink:0; font-size:18px; font-weight:400; color:var(--text-3); white-space:nowrap; }
 .wg-genre { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .wg-controls {
@@ -3684,11 +3434,9 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   color:var(--olive-light); letter-spacing:0.3px;
 }
 
-/* ════════════════════════════════════════════
-   PROFILE STATS BOX — Letterboxd-style row list,
-   shown as a sticky side panel next to Overview
-   content on wider screens, stacked on mobile
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §26  Profile Stats Box
+   ═════════════════════════════════════════════════════════════ */
 .overview-layout {
   display:grid;
   grid-template-columns: minmax(200px, 19%) 1fr;   /* slimmer stats column → bigger dashboard cards */
@@ -3735,16 +3483,15 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   .stats-value { font-size:15px; }
 }
 
-/* ════════════════════════════════════════════
-   COMPLETED GRID — FIX ISSUE 3
-   Taller cards, always-visible score
-════════════════════════════════════════════ */
-/* ── Rank badge on grid cards ── */
+/* ═════════════════════════════════════════════════════════════
+   §27  Completed Grid
+   ═════════════════════════════════════════════════════════════ */
+
 /* ── Rank badge (used everywhere a list is ranked) ──
-   A corner tab that sits flush in the poster's top-left corner with the
-   number in Bebas. #1–#3 get gold / silver / bronze foil; everything else
-   is the site's deep olive. Solid fills + a light inner edge keep it crisp
-   on any poster, in light and dark mode. */
+   A corner tab that sits flush in the poster's top-left corner with the number
+   in Bebas. #1–#3 get gold / silver / bronze foil; everything else is the
+   site's deep olive. Solid fills + a light inner edge keep it crisp on any
+   poster, in light and dark mode. */
 .cg-rank-badge {
   position:absolute; top:0; left:0; z-index:2;
   min-width:32px; height:32px; padding:0 9px 0 8px; box-sizing:border-box;
@@ -3773,16 +3520,14 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .dl-list-poster .cg-rank-badge::after, .lv-list-poster .cg-rank-badge::after,
 .fv-rank-poster .cg-rank-badge::after, .comp-poster .cg-rank-badge::after { display:none; }
 
-/* Score badge — same positioning as ranking badge. "New" MSS-rating
-   refresh: bigger, bolder, star-prefixed (added in the JS builder),
-   and every tier now a genuine solid color rather than a gradient. */
+/* Score badge — same positioning as ranking badge. */
 .cg-score-badge {
   position:absolute; top:7px; left:7px; z-index:2;
   padding:4px 9px; border-radius:5px; min-width:38px; text-align:center;
   font-family:var(--bebas); font-size:17px; font-weight:400; letter-spacing:0.3px;
   box-shadow:0 2px 8px rgba(0,0,0,0.35); line-height:1.5;
 }
-.cg-score-badge-bottom { top:auto; bottom:7px; }
+
 .cg-score-10 { background:#C9A227; color:#1a1200; }
 .cg-score-9  { background:#256B3D; color:#ffffff; }
 .cg-score-8  { background:#4CAF50; color:#0d2e0f; }
@@ -3793,7 +3538,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .cg-score-none { background:rgba(120,120,120,0.55); color:#fff; }
 
 /* Card wrapper — flex column so info fills remaining space */
-.cg-card-wrap { display:flex; flex-direction:column; }
+
 .cg-card-wrap { display:flex !important; flex-direction:column !important; }
 .cg-card-wrap .cg-grid-info { flex:1; min-height:0; display:flex; flex-direction:column; }
 
@@ -3811,54 +3556,12 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   border-top:0.5px solid var(--border);
 }
 .cg-score { font-family:var(--bebas); color:var(--olive-light); font-size:clamp(19px, 4.2vw, 23px); font-weight:400; display:block; }
-.cg-score-lbl { font-family:'Oswald',var(--sans); font-weight:600; font-size:9px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; display:block; margin-top:2px; }
 
 /* The card itself — no overflow:hidden so content shows, allow full height */
-.cg-card {
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
-  overflow:hidden; cursor:pointer; transition:all var(--trans) var(--ease);
-  display:flex; flex-direction:column; /* CRITICAL: flex column so inner wrapper fills */
-}
-.cg-card:hover { border-color:var(--border-olive); transform:translateY(-1px); box-shadow:var(--shadow); }
-.cg-card:active { transform:scale(0.97) translateY(0); }
-.cg-poster {
-  aspect-ratio:2/3; background:var(--bg-3);
-  display:flex; align-items:center; justify-content:center;
-  overflow:hidden; position:relative;
-  flex-shrink:0; /* don't let poster compress */
-}
-.cg-poster img { width:100%; height:100%; object-fit:cover; }
-.cg-poster::after { display:none; }
-.cg-info { padding:10px 10px 12px; }
-.cg-title { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
-.cg-meta  { font-size:11px; color:var(--text-3); }
 
-/* ════════════════════════════════════════════
-   VIEW: QUEUE LIST (compact rows)
-════════════════════════════════════════════ */
-.queue-list { display:flex; flex-direction:column; gap:10px; }
-.ql-row {
-  display:flex; align-items:center; gap:20px;
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:20px 24px; cursor:pointer; transition:all var(--trans) var(--ease);
-  height:180px; overflow:hidden;
-}
-.ql-row:hover { border-color:var(--border-olive); background:var(--card-2); }
-.ql-poster {
-  width:96px; height:136px; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0;
-  background:var(--bg-3); display:flex; align-items:center; justify-content:center;
-  box-shadow:var(--shadow);
-}
-.ql-poster img { width:100%; height:100%; object-fit:cover; }
-.ql-info { flex:1; min-width:0; }
-.ql-title { font-size:20px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ql-meta  { font-size:12px; color:var(--text-3); margin-top:6px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.ql-arrow { color:var(--text-3); display:flex; align-items:center; flex-shrink:0; opacity:.5; transition:opacity var(--trans) var(--ease); }
-.ql-row:hover .ql-arrow { opacity:1; color:var(--olive-light); }
-
-/* ════════════════════════════════════════════
-   WHAT SHOULD YOU WATCH NEXT (popup system)
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §28  What Should I Watch Next (Popup)
+   ═════════════════════════════════════════════════════════════ */
 .qp-trigger {
   display:flex; align-items:center; gap:5px;
   background:transparent; border:0.5px solid var(--border-olive);
@@ -3871,23 +3574,22 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .qp-trigger:disabled { opacity:.35; cursor:not-allowed; pointer-events:none; }
 .qp-trigger svg { width:12px; height:12px; flex-shrink:0; }
 
-/* ════════════════════════════════════════════
-   VIEW: COMPLETED GRID (container)
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §29  VIEW: Completed Grid (container)
+   ═════════════════════════════════════════════════════════════ */
 .completed-grid {
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-  gap:14px;
 }
 
 @media(max-width:600px) {
-  .completed-grid { grid-template-columns:repeat(2,1fr); gap:12px; }
+  .completed-grid { grid-template-columns:repeat(2,1fr);  }
   .wg-genre    { gap:4px; margin-bottom:5px; }
 }
 
-/* ════════════════════════════════════════════
-   SCORE BADGE SYSTEM
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §30  Score Badge System
+   ═════════════════════════════════════════════════════════════ */
 .score-badge {
   border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
   font-family:var(--serif); font-weight:500; flex-shrink:0;
@@ -3896,12 +3598,10 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .score-badge-sm { width:44px; height:44px; font-size:18px; }
 .score-badge-md { width:44px; height:44px; font-size:18px; }
 .score-badge-lg { width:54px; height:54px; font-size:22px; }
-.card-score-badge { position:absolute; top:8px; right:8px; z-index:2; }
-.w-score { color:var(--olive-light); font-size:clamp(13px, 3vw, 15px); font-weight:600; flex-shrink:0; line-height:1; }
 
-/* ════════════════════════════════════════════
-   GLOBAL SPACING + TYPOGRAPHY
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §31  Global Spacing + Typography
+   ═════════════════════════════════════════════════════════════ */
 body { font-size:15px; }
 .modal-input, .field-input { font-size:14px; }
 .section-block { margin-bottom:20px; }
@@ -3910,11 +3610,9 @@ body { font-size:15px; }
 .watching-grid { gap:16px; }
 .completed-grid { gap:16px; }
 .page-stat-num { font-size:34px; }
-.cat-card { padding:1.75rem 1.5rem; gap:16px; }
-.cat-card-title { font-size:18px; }
-.cat-card-count { font-size:13px; }
+
 #homeWatching { margin-top:4.5rem; }
-#homeRecent   { margin-top:4rem; }
+
 .add-friend-input {
   background:var(--bg-2) !important;
   border:0.5px solid var(--border-2) !important;
@@ -3924,12 +3622,11 @@ body { font-size:15px; }
   box-shadow:0 0 0 3px var(--olive-faint) !important;
 }
 
-/* ════════════════════════════════════════════
-   SCROLLABLE SECTION CONTENT
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §32  Scrollable Section Content
+   ═════════════════════════════════════════════════════════════ */
 /* ── List views: contained scroll in accordion ── */
 .accordion-body.open:has(.watch-list),
-.accordion-body.open:has(.queue-list),
 .accordion-body.open:has(.completed-list),
 .accordion-body.open:has(.fv-watch-list),
 .accordion-body.open:has(.fv-ranked-list) {
@@ -3939,13 +3636,11 @@ body { font-size:15px; }
   scrollbar-width:none;
 }
 .accordion-body.open:has(.watch-list)::-webkit-scrollbar,
-.accordion-body.open:has(.queue-list)::-webkit-scrollbar,
 .accordion-body.open:has(.completed-list)::-webkit-scrollbar,
 .accordion-body.open:has(.fv-watch-list)::-webkit-scrollbar,
 .accordion-body.open:has(.fv-ranked-list)::-webkit-scrollbar { display:none; }
 
 .watch-list,
-.queue-list,
 .completed-list,
 .fv-watch-list,
 .fv-ranked-list {
@@ -3984,14 +3679,12 @@ body { font-size:15px; }
 .completed-grid::-webkit-scrollbar { display:none; }
 
 /* ── Grid cards (inside horizontal scroll grids) ──
-   Card width scales continuously with viewport instead of jumping at
-   fixed breakpoints (220→240→260→280px), matching the same clamp()
-   approach used everywhere else in the design system. */
+   Card width scales continuously with viewport instead of jumping at fixed
+   breakpoints (220→240→260→280px), matching the same clamp() approach used
+   everywhere else in the design system. */
 .watching-grid .wg-card,
 .watching-grid .q-card,
-.watching-grid .cg-card,
 .queue-grid .q-card,
-.completed-grid .cg-card,
 .fav-watching-grid .q-card {
   flex-shrink:0 !important;
   width:clamp(220px, 20vw, 280px);
@@ -4001,31 +3694,22 @@ body { font-size:15px; }
   height:auto !important;
 }
 
-.cg-card { min-height:0; }
-
 @media(max-width:640px) {
   .accordion-body.open:has(.watch-list),
-  .accordion-body.open:has(.queue-list),
-  .accordion-body.open:has(.completed-list) { max-height:80vh; }
+.accordion-body.open:has(.completed-list) { max-height:80vh; }
 }
 @media(max-width:400px) {
   .accordion-body.open:has(.watch-list),
-  .accordion-body.open:has(.queue-list),
-  .accordion-body.open:has(.completed-list) { max-height:76vh; }
+.accordion-body.open:has(.completed-list) { max-height:76vh; }
 }
 @media(min-width:1200px) {
   .accordion-body.open:has(.watch-list),
-  .accordion-body.open:has(.queue-list),
-  .accordion-body.open:has(.completed-list) { max-height:80vh; }
+.accordion-body.open:has(.completed-list) { max-height:80vh; }
 }
 
-/* ════════════════════════════════════════════
-   RESPONSIVE DESIGN SYSTEM
-════════════════════════════════════════════ */
-
-/* ─────────────────────────────────────────
-   PHONES — up to 640px
-───────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════
+   §33  Phones — up to 640px
+   ═════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
 
   .grid-nav-wrap .grid-nav-btn { display:flex !important; }
@@ -4034,19 +3718,13 @@ body { font-size:15px; }
 
   .home-title   { font-size:clamp(32px,9vw,52px); }
   .cat-page-title { font-size:clamp(28px,8vw,38px); }
-  .cat-page-eyebrow { font-size:10px; letter-spacing:2px; margin-bottom:4px; }
+
   .cat-page-sub { font-size:12px; margin-top:4px; }
   .cat-page-header { margin-bottom:1.5rem; padding-bottom:1rem; top:64px; padding-left:calc(50vw - 50% + 14px); padding-right:calc(50vw - 50% + 14px); }
   .section-title  { font-size:22px; }
 
   /* Footer */
   .site-footer { font-size:12px; padding:1rem 0; margin-top:2.5rem; }
-
-  .category-grid { grid-template-columns:repeat(2,1fr) !important; gap:8px; }
-  .cat-card { padding:1.25rem 1rem; gap:10px; }
-  .cat-card-title { font-size:15px; }
-  .cat-card-count { font-size:11px; }
-  .cat-icon { width:32px; height:32px; }
 
   .page-stats { gap:8px; margin-bottom:1.5rem; }
   .page-stat   { padding:.75rem .6rem; }
@@ -4073,31 +3751,18 @@ body { font-size:15px; }
   .completed-grid ~ .grid-nav-wrap .grid-nav-btn,
   .grid-nav-wrap .grid-nav-btn { display:none !important; }
 
-  /* At 2 per row the card is much wider than it was at 3. Posters keep
-     their natural 2:3 ratio (uncropped, full artwork) — only the info
-     section's padding is trimmed so the overall card isn't taller than
-     it needs to be, instead of shortening the poster box itself, which
-     was cropping faces/text near the top and bottom of the artwork. */
-  /* .wg-info/.wg-title/.wg-genre padding and spacing now match the
-     same base rule used at every other screen size (10px/10px/12px
-     padding, same title/genre margins) — a mobile-only trim here
-     previously made cards on phones noticeably more cramped than the
-     exact same card on a tablet or desktop for no real reason. */
-
-  /* The base (non-media) rule above fixes .wg-card to width:220px for
-     the desktop horizontal-scroll layout — reset it back to fill the
-     2-column grid cell here, same fix already applied at ≤400px, so
-     phones in the 401-640px range don't get a shrunk, fixed-width card
-     sitting inside a much wider column. */
-  .wg-card, .q-card, .cg-card,
-  .watching-grid .wg-card, .watching-grid .q-card, .watching-grid .cg-card,
-  .queue-grid .q-card, .completed-grid .cg-card {
+  .wg-card,
+.q-card,
+.watching-grid .wg-card,
+.watching-grid .q-card,
+.queue-grid .q-card {
     width:100% !important;
     max-width:100% !important;
     flex-shrink:1 !important;
   }
 
-  .wg-card, .q-card, .cg-card {
+  .wg-card,
+.q-card {
     flex-shrink:unset !important;
     width:100% !important;
     max-width:100% !important;
@@ -4112,7 +3777,7 @@ body { font-size:15px; }
     scrollbar-width:none !important;
   }
 
-  /* ── ISSUE 1 FIX: fav chips + all tag badges scaled for phone ── */
+  /* ── fav chips + all tag badges scaled for phone ── */
   .fav-chip {
     font-size:9px;
     padding:2px 5px;
@@ -4122,15 +3787,8 @@ body { font-size:15px; }
   .fav-chip-label { font-size:8px; letter-spacing:0; }
   .fav-chips { gap:3px; margin-top:4px; }
 
-  /* Genre dots + cat badges now scale smoothly via clamp() in the base
-     rule — no fixed per-breakpoint override needed here anymore. */
-
-  /* Latest Entries: badge in narrow horizontal-scroll cards.
-     Fixed ID — this was #homeRecentGrid, which doesn't match any real
-     element (the actual grid built by _homeHScrollSection has id
-     "homeRecentlyViewedGrid"), so these rules silently never applied
-     at all. Added matching rules for the Watchlist grid too, which
-     had none. */
+  /* Latest Entries: badge in narrow horizontal-scroll cards. Added matching
+   rules for the Watchlist grid too, which had none. */
   #homeRecentlyViewedGrid .w-ep-badge, #homeWatchlistGrid .w-ep-badge { font-size:7px; padding:1px 4px; }
   #homeRecentlyViewedGrid .q-title, #homeWatchlistGrid .q-title { font-size:11px; }
   #homeRecentlyViewedGrid .genre-dot, #homeWatchlistGrid .genre-dot,
@@ -4150,26 +3808,22 @@ body { font-size:15px; }
 
   /* ── Buttons: scale down on mobile ── */
   .btn-add { font-size:12px; padding:7px 12px; }
-  .btn-add-entry { font-size:12px; padding:8px 14px; white-space:nowrap; }
-  .theme-toggle-pill { width:56px; height:34px; gap:1px; }
-  .ttp-btn { width:26px; height:26px; }
-  .ttp-btn svg { width:14px; height:14px; }
+  .btn-add-entry {   white-space:nowrap; }
 
-  /* ── ISSUE 3 FIX: Completed grid — larger cards, score always visible ── */
+  .theme-toggle-pill { width:auto; height:auto; gap:2px; }
+  .ttp-btn { width:32px; height:32px; }
+  .ttp-btn svg { width:16px; height:16px; }
+
+  /* ── Completed grid — larger cards, score always visible ── */
   /* On mobile 3-col, the cards are narrower so we shrink poster less */
-  .cg-poster {
-    aspect-ratio:2/3; /* keep proportion */
-  }
+
   .cg-grid-info { padding:6px 7px 8px; }
-  /* .cg-grid-info .wg-title now scales via the same clamp() base rule
-     as every other card's title — a flat 10px here previously made
-     Completed-section titles noticeably smaller than Watching/
-     Watchlist titles at the same screen width */
+
   .cg-grid-info .wg-genre {
     max-height:none; /* allow full genre display */
     overflow:visible;
   }
-  .cg-score-lbl { font-size:7px; letter-spacing:0.5px; }
+
   .cg-score-row { padding-top:5px; }
 
   /* ── List cards: compact ── */
@@ -4181,13 +3835,11 @@ body { font-size:15px; }
   .w-genre .genre-dot, .w-genre .type-label, .w-genre .cat-badge { font-size:8px; padding:1px 4px; }
   .cg-score-badge { font-size:8px; padding:2px 5px; min-width:24px; top:5px; left:5px; }
   /* Items 3/4/5: always show controls on mobile, scaled down */
-  .w-ep-controls { display:flex !important; gap:5px !important; flex-direction:column !important; align-items:center !important; min-height:80px !important; }
-  .w-ep-controls .ep-btn { width:30px !important; height:30px !important; font-size:15px !important; }
+  .w-ep-controls { display:flex !important;     }
+
   .w-pause-btn {
-    width:26px !important; height:26px !important;
     font-size:11px !important;
-    opacity:1 !important; pointer-events:auto !important;
-    border-radius:var(--radius-xs) !important;
+
   }
   /* Add/FAB button scaling on mobile */
   .btn-add-entry { font-size:11px; padding:7px 10px; }
@@ -4197,12 +3849,10 @@ body { font-size:15px; }
   /* Resume button — icon only on mobile (hide text label, make circular) */
   .w-ep-controls .ep-btn-resume {
     width:auto !important;
-    height:32px !important;
-    padding:0 10px !important;
+
     border-radius:var(--radius-sm) !important;
-    font-size:9px !important;
   }
-  .w-ep-controls .ep-btn-resume .resume-label { display:inline !important; font-size:9px; }
+
   /* Done button scaling — list view (icon only, matches pause) */
   .w-ep-controls .w-list-action-btn.w-list-done-btn {
     width:32px !important; height:32px !important;
@@ -4220,8 +3870,7 @@ body { font-size:15px; }
     width:30px !important; height:30px !important;
     font-size:15px !important; flex-shrink:0 !important;
   }
-  /* .wg-controls buttons (wg-done-btn, ep-btn-minus, continue-btn) now
-     scale via clamp() in their base rules */
+
   .wg-controls--done {
     gap:4px !important;
   }
@@ -4232,29 +3881,23 @@ body { font-size:15px; }
   /* Comments panel — compact sizing */
   .cc-panel { padding:8px 10px 12px; }
   .cc-comment { padding:7px 10px; gap:7px; }
-  .cc-avatar, .fv-comment-avatar { width:24px; height:24px; font-size:10px; }
+  .cc-avatar { width:24px; height:24px; font-size:10px; }
   .cc-text { font-size:12px; }
   .cc-author { font-size:10px; }
   .cc-meta { font-size:9px; gap:7px; }
-  .cc-input, .fv-cinput { font-size:12px; padding:6px 10px; }
-  .cc-send, .fv-csend { font-size:11px; padding:6px 10px; }
-  .cc-list, .fv-clist { max-height:220px; gap:6px; margin-bottom:8px; }
-  .cc-reply-form input, .fv-reply-form input { font-size:11px; padding:4px 8px; }
+  .cc-input { font-size:12px; padding:6px 10px; }
+  .cc-send { font-size:11px; padding:6px 10px; }
+  .cc-list { max-height:220px; gap:6px; margin-bottom:8px; }
+  .cc-reply-form input { font-size:11px; padding:4px 8px; }
 
   .comp-row    { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
   .comp-poster { width:72px; height:102px; }
   .comp-title  { font-size:14px; }
-  .comp-score  { font-size:18px !important; }
-  .comp-score-label { font-size:9px; }
+
   .comp-meta   { font-size:10px; gap:4px; margin-top:4px; }
   .comp-meta .genre-dot, .comp-meta .type-label { font-size:8px; padding:1px 4px; }
-  .fv-rank-meta   { font-size:10px; gap:4px; margin-top:4px; }
+  .fv-rank-meta   {  gap:4px;  }
   .fv-rank-meta .genre-dot, .fv-rank-meta .type-label { font-size:8px; padding:1px 4px; }
-
-  .ql-row    { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
-  .ql-poster { width:72px; height:102px; }
-  .ql-title  { font-size:14px; }
-  .ql-info .genre-dot, .ql-info .type-label, .ql-info .cat-badge { font-size:8px; padding:1px 4px; }
 
   /* ── Section header wrap ── */
   .section-block-header { flex-wrap:nowrap; gap:8px; align-items:center; padding:12px 10px; }
@@ -4264,8 +3907,7 @@ body { font-size:15px; }
   .section-pill { font-size:9px; padding:1px 6px; }
   .vt-btn { width:24px; height:22px; }
   .vt-btn svg { width:12px; height:12px; }
-  .stab { padding:4px 9px; font-size:10px; }
-  .qp-trigger { padding:4px 6px; }
+
   .chevron-btn { width:24px; height:24px; }
 
   /* ── QP button: icon only on mobile ── */
@@ -4274,10 +3916,6 @@ body { font-size:15px; }
 
   /* ── Sort bar ── */
   .sort-bar { gap:3px; padding:8px 14px 10px; margin-bottom:12px; margin-left:-14px; margin-right:-14px; background:var(--card-solid); }
-  .sort-btn  { border-radius:14px; }
-  .sort-btn[data-short]::before { content: attr(data-short); }
-  .sort-btn[data-short] { font-size:0; padding:5px 9px; }
-  .sort-btn[data-short]::before { font-size:10px; }
 
   /* ── Accordion inner padding ── */
   .accordion-inner { padding:14px; }
@@ -4294,19 +3932,14 @@ body { font-size:15px; }
   .fv-w-title, .fv-rank-title { font-size:15px; }
 
   /* ── Detail page ── */
-  .detail-layout { grid-template-columns:1fr !important; }
+
   .detail-poster-wrap { max-height:260px; }
   .ep-grid { grid-template-columns:1fr 1fr !important; }
-  .rdrop-grid { grid-template-columns:1fr !important; }
-  .final-score-num { font-size:48px; }
 
   /* ── Home comments ── */
-  .comment-inbox-row { padding:12px 14px; }
 
   /* ── Main completed page ── */
-  .rank-row, .recent-row { padding:14px 16px !important; height:auto !important; min-height:100px; }
-  .rank-poster, .recent-poster { width:64px !important; height:90px !important; }
-  .rank-title, .recent-title { font-size:15px; }
+
   /* Item 12: allow completed grid to grow freely */
   #mainContent { max-height:none; overflow-y:visible; }
 
@@ -4316,14 +3949,14 @@ body { font-size:15px; }
   .hero-search-btn span { display:none; }
 }
 
-/* ─────────────────────────────────────────
-   SMALL PHONES — up to 400px
-───────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════
+   §34  Small Phones — up to 400px
+   ═════════════════════════════════════════════════════════════ */
 @media (max-width: 400px) {
   .page-wrap { padding:76px 12px 92px; --page-px:12px; --page-pt:76px; }
   .home-title { font-size:clamp(28px,10vw,40px); }
   .cat-page-title { font-size:26px; }
-  .cat-page-eyebrow { font-size:9px; letter-spacing:1.5px; }
+
   .cat-page-sub { font-size:11px; }
   .cat-page-header { top:64px; padding-left:calc(50vw - 50% + 12px); padding-right:calc(50vw - 50% + 12px); }
   .site-footer { font-size:11px; margin-top:1.5rem; }
@@ -4332,73 +3965,61 @@ body { font-size:15px; }
   .page-stat-label { font-size:8px; letter-spacing:.5px; }
   .w-card  { padding:8px 10px; gap:10px; height:auto !important; min-height:90px; }
   .w-poster { width:64px; height:90px; }
-  /* .w-title/.w-genre had a ≤640px reduction but nothing further here,
-     even though .w-poster does shrink further at this width — text
-     was staying at the ≤640px size on the narrowest phones instead of
-     scaling down to match. */
+
   .w-title { font-size:13px; }
   .w-genre { gap:3px; margin-bottom:4px; }
   .w-card .genre-dot, .w-card .type-label { font-size:8px; }
   .comp-row { padding:8px 10px; gap:10px; height:auto !important; min-height:90px; }
   .comp-poster { width:64px; height:90px; }
   .comp-title { font-size:14px; }
-  .comp-score  { font-size:15px !important; }
-  .ql-row   { padding:8px 10px; gap:10px; height:auto !important; min-height:90px; }
-  .ql-poster { width:64px; height:90px; }
-  .ql-title { font-size:14px; }
+
   .cg-score-badge { font-size:7px; padding:1px 4px; min-width:20px; }
-  .category-grid { gap:6px; }
+
   .accordion-inner { padding:10px; }
   .sort-bar { gap:3px; padding:6px 10px 8px; margin-bottom:10px; margin-left:-10px; margin-right:-10px; }
-  .sort-btn { border-radius:12px; }
-  .sort-btn[data-short]::before { font-size:9px; }
-  .sort-btn[data-short] { padding:4px 7px; }
+
   .section-block-header { padding:10px 8px; gap:6px; }
   .section-block-title { font-size:11px; }
   .section-pill { font-size:8px; padding:1px 5px; }
   .vt-btn { width:22px; height:20px; }
   .vt-btn svg { width:11px; height:11px; }
-  .stab { padding:3px 8px; font-size:9px; }
+
   .sec-right { gap:3px; }
-  /* .wg-title now scales via clamp() in the base rule */
+
   /* Extra small tags */
   .fav-chip { font-size:8px; padding:1px 4px; }
-  /* genre-dot / type-label / w-ep-badge now scale via clamp() in the base rule */
+
   /* Done button tiny phones */
   .w-ep-controls--done .w-list-action-btn { width:22px; height:22px; }
   .w-ep-controls--done .w-list-action-btn svg { width:10px; height:10px; }
   .w-list-action-btn { width:22px; height:22px; }
   .w-list-action-btn svg { width:10px; height:10px; }
-  /* .wg-controls buttons (ep-btn, ep-btn-minus, wg-done-btn, continue-btn)
-     now scale via clamp() in their base rules */
+
   #homeRecentlyViewedGrid .w-ep-badge, #homeWatchlistGrid .w-ep-badge { font-size:6px; padding:1px 3px; }
   #homeRecentlyViewedGrid .q-title, #homeWatchlistGrid .q-title { font-size:10px; }
   #homeRecentlyViewedGrid .genre-dot, #homeWatchlistGrid .genre-dot,
   #homeRecentlyViewedGrid .type-label, #homeWatchlistGrid .type-label { font-size:8px; }
   .w-ep-total { font-size:7px; }
   .w-ep-row { gap:4px; }
-  /* Grid: 2 col on phones. Width:100% with matching compound
-     selectors — not a fixed pixel guess — since the base horizontal-
-     scroll rule (.watching-grid .wg-card, etc.) has higher specificity
-     than a plain .wg-card rule and would otherwise silently win here
-     regardless of !important, exactly like it did at the tablet
-     breakpoint before that was fixed the same way. */
+  /* Grid: 2 col on phones. */
   .watching-grid, .queue-grid, .completed-grid {
     grid-template-columns:repeat(2,1fr) !important;
   }
-  .wg-card, .q-card, .cg-card,
-  .watching-grid .wg-card, .watching-grid .q-card, .watching-grid .cg-card,
-  .queue-grid .q-card, .completed-grid .cg-card {
+  .wg-card,
+.q-card,
+.watching-grid .wg-card,
+.watching-grid .q-card,
+.queue-grid .q-card {
     width:100% !important;
     max-width:100% !important;
   }
   /* Score on tiny phones */
-  .cg-score-lbl { font-size:6px; }
+
 }
 
-/* ─────────────────────────────────────────
-   TABLETS — 641px to 1024px
-───────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════
+   §35  Tablets — 641px to 1024px
+   ═════════════════════════════════════════════════════════════ */
 @media (min-width: 641px) and (max-width: 1024px) {
 
   .watching-grid,
@@ -4415,27 +4036,20 @@ body { font-size:15px; }
     scroll-snap-type:unset !important;
     justify-content:start !important;
   }
-  .wg-card, .q-card, .cg-card {
+  .wg-card,
+.q-card {
     flex-shrink:unset !important;
     width:100% !important;
     max-width:200px !important;
     scroll-snap-align:unset !important;
   }
-  /* Card width shrinks to a 180px cap at this breakpoint, but nothing
-     was reducing the title/genre text to match — .q-title/.wg-title
-     stay at their full desktop size (13-14px) here, which looks
-     oversized against a card this narrow. Only ≤640px and ≤400px had
-     scaling before; this fills the gap for the tablet range between
-     them. */
+  /* Only ≤640px and ≤400px had scaling before; this fills the gap for the tablet
+   range between them. */
   .wg-title, .q-title { font-size:13px; }
-  /* .wg-genre/.q-genre are just containers — the actual genre/type
-     tags are the shared .genre-dot/.type-label classes, which have
-     their own explicit clamp()-based font-size that doesn't inherit
-     from a parent, so they need to be targeted directly here. Also,
-     that clamp's formula (2vw) always exceeds its own 10.5px cap
-     throughout this entire 641-1024px range, meaning it was already
-     flatlined at maximum size the whole time — an override is needed
-     to actually shrink it, not just extend the existing curve. */
+  /* .wg-genre/.q-genre are just containers — the actual genre/type tags are the
+   shared .genre-dot/.type-label classes, which have their own explicit
+   clamp()-based font-size that doesn't inherit from a parent, so they need to
+   be targeted directly here. */
   .wg-card .genre-dot, .wg-card .type-label, .wg-card .w-ep-badge, .wg-card .cat-badge,
   .q-card .genre-dot, .q-card .type-label, .q-card .w-ep-badge, .q-card .cat-badge {
     font-size:9px;
@@ -4454,72 +4068,61 @@ body { font-size:15px; }
 
   .home-title    { font-size:clamp(40px,6vw,60px); }
   .cat-page-title { font-size:clamp(32px,5vw,42px); }
-  .category-grid { grid-template-columns:repeat(2,1fr); }
+
   .page-stats { grid-template-columns:repeat(2,1fr); }
   .sec-right { gap:6px; }
 
-  /* ISSUE 1: tag scaling on tablet */
   .fav-chip { font-size:10px; padding:2px 7px; }
-  /* genre-dot / type-label now scale via clamp() in the base rule */
 
   @media (max-width: 768px) {
     .qp-trigger { font-size:10px; padding:5px 8px; }
   }
 }
 
-/* ─────────────────────────────────────────
-   LARGE DISPLAYS — 1536px+
-───────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════
+   §36  Large Displays — 1536px+
+   ═════════════════════════════════════════════════════════════ */
 @media (min-width: 1536px) {
   .watching-grid, .queue-grid, .completed-grid { gap:18px !important; }
 }
 
-/* ─────────────────────────────────────────
-   TV / ULTRAWIDE — 1920px+
-───────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════
+   §37  TV & Ultrawide — 1920px+
+   ═════════════════════════════════════════════════════════════ */
 @media (min-width: 1920px) {
   .home-title  { font-size:80px; }
-  .category-grid { grid-template-columns:repeat(4,1fr); }
+
 }
 
-/* ─────────────────────────────────────────
-   TABLET-ONLY NAV
-───────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════
+   §38  Tablet-only Nav
+   ═════════════════════════════════════════════════════════════ */
 @media (min-width: 641px) and (max-width: 1380px) {
   .page-wrap { padding:76px 24px 110px; --page-pt:76px; }
-  .cat-card { padding:1.5rem 1.25rem; }
+
 }
 
-/* ─────────────────────────────────────────
-   TOUCH EXPERIENCE
-───────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════
+   §39  Touch Experience
+   ═════════════════════════════════════════════════════════════ */
 @media (hover: none) and (pointer: coarse) {
-  .sort-btn   { min-height:36px; }
+
   .vt-btn     { width:34px; height:30px; }
-  /* .ep-btn now scales via clamp() in its base rule at every width,
-     touch devices included — a flat override here previously pinned
-     it to 40px regardless of screen size */
+
   .nav-icon-btn { width:40px; height:40px; }
-  .fv-cat-btn { padding:8px 16px; }
-  .field-input, .modal-input, .cc-input, .fv-cinput {
+
+  .field-input,
+.modal-input,
+.cc-input {
     padding:12px 14px; font-size:16px;
   }
   #heroSearch { font-size:16px; }
   #globalSearch { font-size:16px; }
 }
 /* Cancel touch inflation on phones */
-@media (hover: none) and (pointer: coarse) and (max-width: 640px) {
-  .sort-btn { min-height:unset; }
-  .cf-btn   { padding:4px 9px; font-size:10px; }
-  .stab     { padding:4px 9px; font-size:10px; }
-}
-@media (hover: none) and (pointer: coarse) and (max-width: 400px) {
-  .cf-btn   { padding:3px 7px; font-size:9px; }
-  .stab     { padding:3px 8px; font-size:9px; }
-}
-/* ════════════════════════════════════════════
-   GRID NAV ARROWS — overlaid on first/last card edges
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §40  Grid Navigation Arrows
+   ═════════════════════════════════════════════════════════════ */
 .grid-nav-wrap {
   position: relative;
   overflow: hidden;
@@ -4557,9 +4160,6 @@ body { font-size:15px; }
   .grid-nav-btn { width: 28px; height: 28px; }
 }
 /* Touch devices: always visible */
-@media (hover: none) and (pointer: coarse) {
-  .grid-nav-btn { opacity: 1 !important; pointer-events: auto !important; }
-}
 @media (max-width: 640px) {
   /* Mobile: scale down Currently Watching controls — keep column layout, square buttons */
   .w-ep-controls {
@@ -4582,16 +4182,7 @@ body { font-size:15px; }
     font-size:9px !important;
   }
   /* Done button small phones — list view, keep olive style */
-  .w-ep-controls .ep-btn-done {
-    width:auto !important;
-    height:28px !important;
-    padding:0 10px !important;
-    font-size:11px !important;
-    border-radius:var(--radius-sm) !important;
-    background:var(--olive) !important;
-    color:#fff !important;
-    border:none !important;
-  }
+
   .w-pause-btn {
     opacity:1 !important;
     pointer-events:auto !important;
@@ -4603,16 +4194,14 @@ body { font-size:15px; }
     opacity:1 !important;
     pointer-events:auto !important;
   }
-  /* .wg-controls buttons (ep-btn, ep-btn-resume) now scale via clamp()
-     in their base rules instead of a flat override here */
+
 }
-/* Touch devices: always visible regardless of hover */
+
 @media (hover: none) and (pointer: coarse) {
   .grid-nav-btn { opacity: 1 !important; pointer-events: auto !important; }
 }
 
 /* 1 & 5. Remove Hover on List View inside Friend Profiles / Watch Later lists */
-.friend-view .w-card:hover,
 [class*="friend"] .watch-list .w-card:hover {
   transform: none !important;
   box-shadow: none !important;
@@ -4632,22 +4221,14 @@ body { font-size:15px; }
 }
 
 /* 3. Smooth Scale transition for Resume Button in both grid & list view modes */
-.ep-btn.resume-btn {
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease !important;
-}
-.ep-btn.resume-btn:hover {
-  transform: scale(1.06) !important;
-  cursor: pointer;
-}
 
 /* 4. Make Add Signs/Buttons slightly more compact on Mobile Layouts */
 @media (max-width: 768px) {
-  .add-btn, .add-sign, .floating-add, .mobile-add-sign, [id*="add"] svg {
+  [id*="add"] svg {
     transform: scale(0.82) !important;
     transform-origin: center center !important;
   }
 }
-
 
 /* ── Continue Watching button — Ongoing section ── */
 .continue-btn {
@@ -4663,45 +4244,18 @@ body { font-size:15px; }
 .continue-btn:hover { background:var(--olive-2); }
 .continue-btn:active { transform:scale(0.97); }
 
-.continue-btn-list {
-  display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  width:auto; padding:6px 20px;
-  background:var(--olive); border:none;
-  border-radius:var(--radius-sm);
-  color:#fff; font-size:12px; font-weight:600;
-  cursor:pointer; font-family:var(--sans);
-  transition:background .15s;
-  white-space:nowrap;
-  margin:4px 16px 10px;
-}
-.continue-btn-list:hover { background:var(--olive-2); }
-.continue-btn-list:active { transform:scale(0.97); }
-
 /* ── Start Watching button (queue cards) ── */
-.start-watching-btn {
-  display:inline-flex; align-items:center; justify-content:center;
-  padding:5px 14px;
-  background:var(--olive); border:none;
-  border-radius:var(--radius-sm);
-  color:#fff; font-size:11px; font-weight:600;
-  cursor:pointer; font-family:var(--sans);
-  letter-spacing:.5px; white-space:nowrap;
-  transition:background .15s;
-  margin-top:8px;
-}
-.start-watching-btn--full { width:100%; margin-top:0; }
-.start-watching-btn:hover  { background:var(--olive-2); }
-.start-watching-btn:active { transform:scale(0.97); }
+
 .start-watching-wrap { padding:0 10px 10px; display:flex; gap:6px; }
 .start-watching-wrap .continue-btn { flex:1; }
 .start-watching-wrap .up-next-btn { flex-shrink:0; width:38px; display:flex; align-items:center; justify-content:center; padding:0; }
 .up-next-btn:hover { color:#fff; background:#264e78; border-color:#264e78; }
 /* ── "Up Next" / "Taking a Break" poster cover (mssHoldHTML in config.js) ──
    The poster goes grey, dim and softly blurred; a card in the status colour
-   (deep blue / deep green) holds the label, and a round icon badge in the
-   same colour (play-next / coffee cup) rises out of its top edge as one
-   connected shape. Everything sizes from the poster's own width (cqi), so
-   it stays inside even the small list-view posters on a phone. */
+   (deep blue / deep green) holds the label, and a round icon badge in the same
+   colour (play-next / coffee cup) rises out of its top edge as one connected
+   shape. Everything sizes from the poster's own width (cqi), so it stays
+   inside even the small list-view posters on a phone. */
 .mss-hold {
   position:absolute; inset:0; z-index:1; border-radius:inherit; overflow:hidden;
   display:flex; align-items:center; justify-content:center; padding:6%;
@@ -4739,17 +4293,7 @@ body { font-size:15px; }
 .up-next-tag { display:inline-flex; align-items:center; padding:3px 9px; border-radius:var(--radius-xs, 4px); background:#264e78; color:#fff;
   font-family:'Manrope',var(--sans); font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; }
 
-@media(max-width:480px) {
-  .start-watching-btn:not(.w-start-icon-btn) { font-size:10px; padding:4px 10px; }
-}
-@media(max-width:360px) {
-  .start-watching-btn:not(.w-start-icon-btn) { font-size:9px; padding:3px 8px; }
-}
-/* .continue-btn now scales via clamp() in the base rule */
-
 /* ── fv-entry-block: list view wrapper for completed cards ── */
-.fv-entry-block { display:flex; flex-direction:column; }
-
 
 /* ── Library comments popup (index-style) ── */
 .lcc-overlay {
@@ -4773,14 +4317,7 @@ body { font-size:15px; }
   transition:transform .25s cubic-bezier(0.4,0,0.2,1);
 }
 .lcc-overlay.open .lcc-card { transform:scale(1); }
-.lcc-header {
-  display:flex; align-items:flex-start; flex-wrap:wrap; gap:6px;
-  padding:18px 20px 14px;
-  border-bottom:0.5px solid var(--border);
-}
-.lcc-title { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; color:var(--olive-light); flex:1; }
-.lcc-count { font-size:11px; background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); padding:1px 7px; border-radius:20px; }
-.lcc-entry-name { width:100%; font-size:12px; color:var(--text-2); margin-top:2px; }
+
 .lcc-close { background:none; border:none; cursor:pointer; color:var(--text-3); font-size:18px; line-height:1; padding:2px 4px; transition:color .15s; }
 .lcc-close:hover { color:var(--text); }
 .lcc-list { flex:1; overflow-y:auto;overscroll-behavior-y:contain; padding:12px 20px; display:flex; flex-direction:column; gap:10px; }
@@ -4807,7 +4344,7 @@ body { font-size:15px; }
 .lcc-send:hover { background:var(--olive-2); }
 @media(max-width:640px) {
   .lcc-card { max-height:88dvh; }
-  .lcc-header { padding:14px 16px 12px; }
+
   .lcc-list { padding:10px 14px; }
   .lcc-form { padding:10px 14px; gap:8px; }
   .lcc-input { font-size:14px; padding:9px 12px; }
@@ -4829,21 +4366,9 @@ body { font-size:15px; }
   #commentsPopupBody { padding:12px 16px !important; }
 }
 
-/* ════════════════════════════════════════════
-   PROFILE ADDITIONS
-════════════════════════════════════════════ */
-
-/* ── Cat filter bar (profile library) ── */
-.cat-filter { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:1rem; }
-.cf-btn {
-  padding:6px 12px; border:0.5px solid var(--border-2); border-radius:20px;
-  background:transparent; color:var(--text-2); font-size:12px;
-  cursor:pointer; transition:all var(--trans) var(--ease); white-space:nowrap;
-}
-.cf-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
-.cf-btn.active { border-color:var(--olive); color:var(--olive-light); background:var(--olive-faint); }
-@media(max-width:640px) { .cf-btn { font-size:10px; padding:4px 9px; } }
-@media(max-width:400px) { .cf-btn { font-size:9px; padding:3px 7px; } }
+/* ═════════════════════════════════════════════════════════════
+   §41  Profile Additions
+   ═════════════════════════════════════════════════════════════ */
 
 /* ── Overview 5-col fixed grid (no scroll) ── */
 .prof-ov-grid {
@@ -4856,9 +4381,9 @@ body { font-size:15px; }
 @media(max-width:640px) { .prof-ov-grid { grid-template-columns:repeat(3,1fr); gap:8px; } }
 @media(max-width:400px) { .prof-ov-grid { grid-template-columns:repeat(2,1fr); gap:6px; } }
 
-/* ════════════════════════════════════════════
-   TMDB SEARCH DROPDOWN
-════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §42  TMDB Search Dropdown
+   ═════════════════════════════════════════════════════════════ */
 .tmdb-dropdown {
   position:fixed; z-index:1500;
   background:var(--bg-3); border:0.5px solid var(--border-2);
@@ -4903,8 +4428,8 @@ body { font-size:15px; }
 }
 
 /* ── sel-dd: reusable theme-aware dropdown (select replacement) ──
-   Used anywhere a native <select> needs a connected, custom-styled
-   menu — e.g. the Add Entry modal's Category/Status fields. */
+   Used anywhere a native <select> needs a connected, custom-styled menu — e.g.
+   the Add Entry modal's Category/Status fields. */
 .sel-dd { position:relative; }
 .sel-dd-trigger {
   width:100%; height:42px; box-sizing:border-box; display:flex; align-items:center; justify-content:space-between;
@@ -4931,10 +4456,9 @@ body { font-size:15px; }
 .sel-dd-opt { padding:10px 14px; font-size:14px; color:var(--text); cursor:pointer; transition:background-color .15s; }
 .sel-dd-opt:hover { background:var(--bg-2); }
 .sel-dd-opt.active { background:var(--olive-faint); color:var(--olive-light); }
-/* Inside the Add Entry modal (z-index:700), the dropdown menu needs to clear it,
-   and the trigger should match .modal-input's look (background/shadow/border).
-   Hover/open states re-declared explicitly below — same specificity as the base
-   rules above but later in the file was silently swallowing them otherwise. */
+/* Inside the Add Entry modal (z-index:700), the dropdown menu needs to clear
+   it, and the trigger should match .modal-input's look
+   (background/shadow/border). */
 .modal .sel-dd-menu { z-index:750; border-width:1.5px; }
 .modal .sel-dd-trigger {
   height:auto; background:var(--bg-2); border:1.5px solid var(--border-2);
@@ -4949,10 +4473,7 @@ body { font-size:15px; }
 .tmdb-dropdown.open { display:flex; animation:fadeIn .15s var(--ease); }
 @media(max-width:640px) {
   .tmdb-dropdown { border-radius:var(--radius-sm); max-height:220px; }
-  .tmdb-item { padding:8px 12px; gap:8px; }
-  .tmdb-thumb { width:30px; height:44px; }
-  .tmdb-title { font-size:12px; }
-  .tmdb-meta { font-size:10px; }
+
 }
 .tmdb-loading, .tmdb-empty {
   padding:14px 16px; font-size:13px; color:var(--text-3); text-align:center;
@@ -4976,22 +4497,10 @@ body { font-size:15px; }
 .tmdb-info { flex:1; min-width:0; }
 .tmdb-title { font-size:13px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tmdb-meta { font-size:11px; color:var(--text-3); margin-top:2px; }
-.tmdb-label {
-  font-size:9px; font-weight:600; letter-spacing:.5px; text-transform:uppercase;
-  color:var(--olive-light); background:var(--olive-faint);
-  border:0.5px solid var(--border-olive);
-  border-radius:4px; padding:1px 5px; flex-shrink:0;
-}
 
-/* ── Profile icon in mobile nav bar ── */
-#navTopProfileBtn { text-decoration:none; }
-#navTopProfileBtn.active { color:var(--olive-light); }
-.pv-add-queue-btn { display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:opacity .15s; }
-.pv-add-queue-btn:hover { opacity:.85; }
-
-/* ══════════════════════════════════════
-   Popup Action Buttons
-══════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §43  Popup Action Buttons
+   ═════════════════════════════════════════════════════════════ */
 .popup-action-btn {
   display:inline-flex;align-items:center;gap:6px;
   padding:8px 14px;border-radius:var(--radius-sm);
@@ -5034,104 +4543,10 @@ body { font-size:15px; }
   .popup-action-btn { font-size:11px;padding:7px 10px;gap:5px; }
 }
 
-/* ══════════════════════════════════════
-   Add to Favorites Popup
-══════════════════════════════════════ */
-#favListsOverlay {
-  position:fixed;inset:0;z-index:1100;
-  background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);
-  display:flex;align-items:center;justify-content:center;
-  padding:16px;box-sizing:border-box;
-  opacity:0;pointer-events:none;transition:opacity .2s;
-}
-#favListsOverlay.open { opacity:1;pointer-events:auto; }
-#favListsCard {
-  background:var(--bg-2);border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-  width:97%;max-width:460px;display:flex;flex-direction:column;
-  max-height:80dvh;box-sizing:border-box;
-  transform:translateY(16px);transition:transform .25s cubic-bezier(.4,0,.2,1);
-}
-#favListsOverlay.open #favListsCard { transform:translateY(0); }
-#favListsHeader {
-  display:flex;align-items:flex-start;justify-content:space-between;
-  padding:18px 20px;border-bottom:0.5px solid var(--border);flex-shrink:0;
-}
-#favListsTitle {
-  font-family:var(--serif);font-size:18px;font-weight:500;color:var(--text);
-  margin-bottom:2px;
-}
-#favListsSubtitle {
-  font-size:11px;color:var(--text-3);letter-spacing:.3px;
-  max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-#favListsClose {
-  background:none;border:none;color:var(--text-3);cursor:pointer;
-  font-size:18px;line-height:1;padding:0 0 0 10px;flex-shrink:0;transition:color .15s;
-}
-#favListsClose:hover { color:var(--text); }
-#favListsBody {
-  overflow-y:auto;overscroll-behavior-y:contain;flex:1;min-height:0;
-  scrollbar-width:thin;scrollbar-color:var(--border-olive) transparent;
-}
-#favListsBody::-webkit-scrollbar { width:4px; }
-#favListsBody::-webkit-scrollbar-thumb { background:var(--border-olive);border-radius:2px; }
-#favListsFooter {
-  padding:12px 20px;border-top:0.5px solid var(--border);flex-shrink:0;
-  display:flex;gap:10px;
-}
-.fav-lists-cancel-btn {
-  flex:1;padding:9px;border-radius:var(--radius-sm);
-  background:var(--bg-3);color:var(--text-2);
-  border:0.5px solid var(--border);font-family:var(--sans);
-  font-size:13px;cursor:pointer;transition:border-color .15s;
-}
-.fav-lists-cancel-btn:hover { border-color:var(--border-olive); }
-.fav-lists-done-btn {
-  flex:2;padding:9px 20px;border-radius:var(--radius-sm);
-  background:var(--olive);color:#fff;border:none;
-  font-family:var(--sans);font-size:13px;font-weight:600;
-  cursor:pointer;transition:opacity .15s;
-}
-.fav-lists-done-btn:hover { opacity:.88; }
-.fav-lists-row {
-  display:flex;align-items:center;gap:12px;
-  padding:12px 20px;border-bottom:0.5px solid var(--border);
-  cursor:pointer;transition:background .15s;
-}
-.fav-lists-row:last-child { border-bottom:none; }
-.fav-lists-row:hover { background:var(--card); }
-.fav-lists-row-in { background:var(--olive-faint); }
-.fav-lists-row-in:hover { background:var(--olive-faint); }
-.fav-lists-row-info { flex:1;min-width:0; }
-.fav-lists-row-title {
-  font-size:13px;font-weight:500;color:var(--text);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;
-}
-.fav-lists-row-sub { font-size:11px;color:var(--text-3); }
-.fav-lists-row-check {
-  width:22px;height:22px;border-radius:50%;flex-shrink:0;
-  border:1.5px solid var(--border);display:flex;align-items:center;
-  justify-content:center;transition:all .15s;
-}
-.fav-lists-row-check.active {
-  background:var(--olive);border-color:var(--olive);color:#fff;
-}
-.fav-lists-row-full {
-  opacity:.6;cursor:default;
-}
-.fav-lists-row-full:hover { background:inherit; }
-.fav-lists-row-check.full {
-  border-color:var(--border);color:var(--text-3);
-}
+/* ═════════════════════════════════════════════════════════════
+   §44  Rewatch System
+   ═════════════════════════════════════════════════════════════ */
 
-/* ══════════════════════════════════════
-   Rewatch System
-══════════════════════════════════════ */
-/* All three contexts now share one consistent solid-pill treatment —
-   olive fill, white text — matching the genre/type badges used
-   elsewhere, instead of three different styles (outlined pill, dark
-   rectangle, bare colored text) with three different sizes. */
 .rewatch-badge {
   display:inline-flex;align-items:center;gap:4px;
   padding:4px 10px;border-radius:20px;
@@ -5154,36 +4569,29 @@ body { font-size:15px; }
 .rewatch-card-icon svg { flex-shrink:0;width:11px;height:11px; }
 
 /* Icon on list cards (inline with score) */
-.rewatch-list-icon {
-  display:inline-flex;align-items:center;gap:4px;
-  padding:4px 10px;border-radius:20px;
-  background:var(--olive);border:0.5px solid var(--olive);
-  font-size:11px;color:#fff;font-family:'Manrope',var(--sans);
-  font-weight:600;vertical-align:middle;margin-left:6px;
-  white-space:nowrap;flex-shrink:0;
-}
-.rewatch-list-icon svg { flex-shrink:0;width:11px;height:11px; }
 
-/* ── Rewatch badge responsive scaling — same size across all three,
-   scaled down together instead of drifting independently ── */
+/* ── Rewatch badge responsive scaling — same size across all three, scaled down together instead of drifting independently ── */
 @media(max-width:640px) {
-  .rewatch-badge, .rewatch-card-icon, .rewatch-list-icon {
+  .rewatch-badge,
+.rewatch-card-icon {
     font-size:10px;padding:3px 9px;gap:3px;
   }
-  .rewatch-badge svg, .rewatch-card-icon svg, .rewatch-list-icon svg { width:10px;height:10px; }
+  .rewatch-badge svg,
+.rewatch-card-icon svg { width:10px;height:10px; }
   .rewatch-card-icon { top:4px;right:4px; }
 }
 @media(max-width:400px) {
-  .rewatch-badge, .rewatch-card-icon, .rewatch-list-icon {
+  .rewatch-badge,
+.rewatch-card-icon {
     font-size:9px;padding:3px 8px;
   }
   .rewatch-card-icon { top:3px;right:3px; }
   .rewatch-card-icon svg { width:6px;height:6px; }
 }
 
-/* ══════════════════════════════════════
-   Create Card Modal
-══════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   §45  Create Card Modal
+   ═════════════════════════════════════════════════════════════ */
 #createCardOverlay {
   position:fixed;inset:0;z-index:1150;
   background:rgba(0,0,0,0.82);backdrop-filter:blur(8px);
@@ -5276,9 +4684,7 @@ body { font-size:15px; }
 }
 .create-card-download:hover { opacity:.88; }
 
-/* ── Library cards (js/library-view.js — library.html + both profile Library tabs).
-   Kept at the end of the file: these used to sit in each page's own <style>,
-   after style.css, so they still win over the older rules above. ── */
+/* ── Library cards (js/library-view.js — library.html + both profile Library tabs). Kept at the end of the file: these used to sit in each page's own <style>, after style.css, so they still win over the older rules above. ── */
 .fv-watch-list { display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none; }
 .fv-watch-list::-webkit-scrollbar { display:none; }
 .fv-w-card { display:flex;align-items:center;gap:20px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;min-height:160px;box-sizing:border-box; }
@@ -5286,14 +4692,14 @@ body { font-size:15px; }
 .fv-w-poster img { width:100%;height:100%;object-fit:cover }
 .fv-w-body { flex:1;min-width:0 }
 .fv-w-title { font-family:'Oswald',var(--sans);font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;min-width:0 }
-.fv-w-genre { font-size:12px;color:var(--text-3);margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap }
+
 .fv-w-ep { margin-bottom:7px;display:flex;align-items:center;gap:10px }
 .fv-w-ep-badge { padding:clamp(2px, 0.5vw, 3px) clamp(6px, 1.6vw, 9px);border-radius:3px;background:var(--olive);border:0.5px solid var(--olive);color:#fff;font-family:var(--sans);font-size:var(--badge-font-size);font-weight:600;letter-spacing:0.3px }
 .fv-w-prog-track { height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden }
 [data-theme="light"] .fv-w-prog-track { background:rgba(0,0,0,0.16) }
 .fv-w-prog-fill { height:100%;background:var(--olive-light);border-radius:2px;transition:width .5s var(--ease) }
 .fv-w-prog-label { font-size:10px;color:var(--text-3);margin-top:4px }
-.fv-w-score { font-family:var(--bebas);color:var(--olive-light);font-size:clamp(17px, 3.8vw, 19px);font-weight:400;white-space:nowrap;flex-shrink:0 }
+
 .fv-ranked-list { display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none; }
 .fv-ranked-list::-webkit-scrollbar { display:none; }
 .fv-rank-row { display:flex;align-items:center;gap:20px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;min-height:160px;overflow:hidden;box-sizing:border-box;cursor:pointer;transition:border-color var(--trans) var(--ease),background var(--trans) var(--ease); }
@@ -5305,10 +4711,7 @@ body { font-size:15px; }
 .fv-rank-meta { font-size:12px;color:var(--text-3);margin-top:6px }
 .fv-rank-score { font-family:var(--bebas);color:var(--olive-light);font-size:clamp(17px, 3.8vw, 19px);font-weight:400;white-space:nowrap;text-align:right;flex-shrink:0 }
 .fv-entry-block { display:flex;flex-direction:column; }
-.fv-queue-no-hover { pointer-events:none;cursor:default; }
-.lib-section { margin-bottom:2.5rem; }
-.lib-section-hd { display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--olive-light); }
-.fv-w-card-no-hover { cursor:default; }
+
 @media(max-width:900px) {
   .fv-rank-row { padding:14px 16px; gap:14px; }
   .fv-rank-poster { width:70px; height:98px; }
