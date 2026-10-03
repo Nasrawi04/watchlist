@@ -27,16 +27,18 @@
 /* Jump-to box under Personal Info — same card style */
 .pp-nav-card { margin-top:1rem; position:sticky; top:calc(var(--page-pt, 80px) + 16px); z-index:2; }
 .pp-nav-btn {
-  display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
-  padding:10px 12px; margin-bottom:6px; border-radius:var(--radius-sm); cursor:pointer;
-  background:var(--bg-3); border:0.5px solid var(--border); color:var(--text);
-  font-family:'Manrope',var(--sans); font-size:13.5px; font-weight:600; text-align:left; transition:all .15s;
+  /* same look as the Personal Info rows: label + value, no boxes */
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px; width:100%;
+  padding:8px 0; margin:0; cursor:pointer; text-align:left;
+  background:none; border:none; border-top:0.5px solid var(--border); color:var(--text);
+  font-family:'Manrope',var(--sans); font-size:clamp(12.5px, 3vw, 13.5px); font-weight:500; transition:color .15s;
 }
-.pp-nav-btn:last-child { margin-bottom:0; }
-.pp-nav-btn:hover { border-color:var(--border-olive); background:var(--olive-faint); }
-.pp-nav-btn b { font-family:var(--bebas); font-weight:400; font-size:19px; color:var(--olive-light); letter-spacing:.5px; }
-.pp-card { width:100%; }
-.pp-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
+.pp-nav-btn:first-of-type { border-top:none; padding-top:0; }
+.pp-nav-btn span { display:inline-flex; align-items:center; gap:6px; }
+.pp-nav-btn span::after { content:'›'; color:var(--text-3); font-size:15px; line-height:1; transition:transform .15s, color .15s; }
+.pp-nav-btn:hover { color:var(--olive-light); }
+.pp-nav-btn:hover span::after { color:var(--olive-light); transform:translateX(2px); }
+.pp-nav-btn b { font-family:var(--bebas); font-weight:400; font-size:clamp(17px, 4vw, 20px); color:var(--text); letter-spacing:.5px; line-height:1.2; }
 .pp-nav-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .pp-from { font-weight:600; }
 .pp-section-title { scroll-margin-top:calc(var(--page-pt, 80px) + 24px); }
@@ -103,13 +105,13 @@
 
 @media(max-width:760px) {
   .pp-layout { grid-template-columns:1fr; gap:1.5rem; }
-  .pp-sticky-col { position:static; display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-start; }
-  .pp-sticky-col { align-self:start; }
-  .pp-nav-card { flex-basis:100%; margin-top:0; display:flex; flex-wrap:wrap; gap:8px; position:static; }
-  .pp-nav-card .pp-info-title { flex-basis:100%; margin-bottom:.25rem; }
-  .pp-nav-btn { flex:1 1 140px; margin-bottom:0; }
-  .pp-photo { width:clamp(96px, 32vw, 140px); flex-shrink:0; margin-bottom:0; }
-  .pp-info-card { flex:1; min-width:0; }
+  /* Phone: a bigger photo with the Acting / Directing box under it,
+     Personal Info beside them */
+  .pp-sticky-col { position:static; align-self:start; display:grid; grid-template-columns:clamp(128px, 40vw, 172px) minmax(0, 1fr);
+                   grid-template-areas:"photo info" "nav info"; gap:1rem; align-items:start; }
+  .pp-photo { grid-area:photo; width:100%; margin-bottom:0; }
+  .pp-sticky-col > .pp-info-card:not(.pp-nav-card) { grid-area:info; min-width:0; }
+  .pp-nav-card { grid-area:nav; margin-top:0; position:static; }
   .pp-info-row { margin-bottom:.7rem; }
 }
 @media(max-width:460px) {
@@ -239,11 +241,11 @@ function renderPerson(p) {
           ${p.place_of_birth ? `<div class="pp-info-row"><div class="pp-info-label">Place of Birth</div><div class="pp-info-value muted">${esc(p.place_of_birth)}</div></div>` : ''}
           ${akaList.length ? `<div class="pp-info-row"><div class="pp-info-label">Also Known As</div><div class="pp-info-value muted">${akaList.map(esc).join('<br>')}</div></div>` : ''}
         </div>
-        ${movieCredits.length || tvCredits.length ? `<nav class="pp-info-card pp-nav-card" aria-label="Jump to">
+        ${movieCredits.length || tvCredits.length ? `<div class="pp-info-card pp-nav-card" role="navigation" aria-label="Jump to">
           <div class="pp-info-title">${_ppMode === 'directing' ? 'Directing' : 'Acting'}</div>
           ${movieCredits.length ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppMovies')"><span>${_ppMode === 'directing' ? 'Movies Directed' : 'Movies'}</span><b>${movieCredits.length}</b></button>` : ''}
           ${tvCredits.length ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppTv')"><span>${_ppMode === 'directing' ? 'Shows Created' : 'TV Shows'}</span><b>${tvCredits.length}</b></button>` : ''}
-        </nav>` : ''}
+        </div>` : ''}
       </div>
 
       <div>
