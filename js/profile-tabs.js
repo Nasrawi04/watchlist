@@ -190,7 +190,7 @@ const MSSTabs = (() => {
       resolve,
       eyebrow: L.owner ? (l._collab ? 'Shared List' : 'Your List') : `${L.name ? L.name + '’s' : 'Their'} List`,
       collabLine: MSSList.collabLineHTML(l, L.collab[l.id]),
-      manage: L.owner,
+      manage: L.owner, social: !L.owner,
     });
   }
 
