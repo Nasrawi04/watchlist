@@ -1241,13 +1241,12 @@ document.getElementById('backBtn').href = _fromPage;
 let _animEnabled = false;
 
 /* ── Rating steppers ── */
-function buildRatingStepper(key, label, iconName) {
+function buildRatingStepper(key, label) {
   const val    = draftRatings[key];
   const hasVal = val !== undefined && val !== null && val !== '';
   const display = hasVal ? Number(val).toFixed(1) : '';
-  const iconHTML = iconName ? `<span style="display:inline-flex;align-items:center;margin-right:6px;opacity:.6">${icon(iconName,13)}</span>` : '';
   return `<div class="rating-stepper-item">
-    <div class="rating-stepper-label">${iconHTML}${label}</div>
+    <div class="rating-stepper-label">${label}</div>
     <div class="rating-stepper-controls">
       <button class="ep-btn" onclick="stepRating('${key}',-0.5)" style="width:32px;height:32px;font-size:16px;">−</button>
       <input class="rating-stepper-val${hasVal?' has-val':''}" id="sval-${key}"
@@ -1263,19 +1262,21 @@ function buildRatingStepper(key, label, iconName) {
 function renderRatingGrids() {
   const cat = document.getElementById('dCat').value;
   const isAnimated = cat === 'anime' || cat === 'cartoons';
-  const { core: coreArr, bonus: bonusArr } = getRatings(cat);
+  const isMovie = getMediaType() === 'movie';
+  const { core: coreArr, bonus: bonusArr } = getRatings(cat, isMovie);
+  if (isMovie) delete draftRatings.bingeable;      // movies don't have a Bingeable rating
 
   // Core: use category-specific array (animation already in ANIME_CORE_RATINGS)
-  document.getElementById('coreRatingGrid').innerHTML = coreArr.map(r => buildRatingStepper(r.key, r.label, null)).join('');
+  document.getElementById('coreRatingGrid').innerHTML = coreArr.map(r => buildRatingStepper(r.key, r.label)).join('');
 
   // Bonus: use category-specific array
-  document.getElementById('bonusRatingGrid').innerHTML = bonusArr.map(r => buildRatingStepper(r.key, r.label, r.icon)).join('');
+  document.getElementById('bonusRatingGrid').innerHTML = bonusArr.map(r => buildRatingStepper(r.key, r.label)).join('');
 
   // Animation toggle row: only for TV/movies (anime/cartoons always show it in core)
   const animSection = document.getElementById('animToggleSection');
   if (animSection) animSection.style.display = isAnimated ? 'none' : 'block';
   if (!isAnimated && _animEnabled) {
-    document.getElementById('animRatingRow').innerHTML = buildRatingStepper('animation', 'Animation Quality', null);
+    document.getElementById('animRatingRow').innerHTML = buildRatingStepper('animation', 'Animation Quality');
     document.getElementById('animRatingRow').style.display = 'block';
   }
 }
@@ -1328,7 +1329,7 @@ function toggleAnimation() {
   const row = document.getElementById('animRatingRow');
   const btn = document.getElementById('animToggleBtn');
   if (_animEnabled) {
-    row.innerHTML = buildRatingStepper('animation', 'Animation Quality', null);
+    row.innerHTML = buildRatingStepper('animation', 'Animation Quality');
     row.style.display = 'block';
     btn.textContent = '− Disable Animation Quality';
     btn.classList.add('on');
@@ -1346,8 +1347,9 @@ function toggleAnimation() {
 function recalcFinal() {
   const cat = document.getElementById('dCat').value;
   const isAnimated = cat === 'anime' || cat === 'cartoons';
-  const { core: coreArr, bonus: bonusArr } = getRatings(cat);
-  const score = calcFinal(draftRatings, cat);
+  const isMovie = getMediaType() === 'movie';
+  const { core: coreArr, bonus: bonusArr } = getRatings(cat, isMovie);
+  const score = calcFinal({ ...draftRatings, _media_type: isMovie ? 'movie' : draftRatings._media_type }, cat);
   document.getElementById('finalScoreNum').textContent = score != null ? Number(score).toFixed(2) : '—';
 
   const coreKeys = coreArr.filter(r => r.key !== 'enjoyment').map(r => r.key);
