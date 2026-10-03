@@ -66,6 +66,13 @@ const ICONS = {
   bell:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
   layers:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
   info:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+  activity: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  skipForward: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>`,
+  fastForward: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/></svg>`,
+  shuffle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>`,
+  idCard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6.5 16c.5-1.3 1.4-2 2.5-2s2 .7 2.5 2"/><line x1="14" y1="10" x2="18" y2="10"/><line x1="14" y1="14" x2="18" y2="14"/></svg>`,
+  compare: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4"/><path d="M20 7H4"/><path d="M8 21l-4-4 4-4"/><path d="M4 17h16"/></svg>`,
+  ratingStar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
   notebook: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`,
   compass:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>`,
   crown:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 20h14"/></svg>`,
@@ -97,7 +104,7 @@ function icon(name, size = 18) {
 const CAT_META = {
   tv:       { label: 'TV Shows',  icon: 'tv',       singular: 'TV Show',  page: 'tv-shows.html',  emoji: '📺' },
   movies:   { label: 'Movies',    icon: 'film',      singular: 'Movie',    page: 'movies.html',    emoji: '🎬' },
-  anime:    { label: 'Anime',     icon: 'sparkles',  singular: 'Anime',    page: 'anime.html',     emoji: '🎌' },
+  anime:    { label: 'Anime',     icon: 'animeFace',  singular: 'Anime',    page: 'anime.html',     emoji: '🎌' },
   cartoons: { label: 'Cartoons',  icon: 'brush',     singular: 'Cartoon',  page: 'cartoons.html',  emoji: '🎨' },
 };
 
@@ -120,10 +127,10 @@ const ANIME_BONUS_RATINGS = [
   { key: 'emotional', label: 'Emotional Impact',                  icon: 'heart'    },
   { key: 'music',     label: 'Soundtrack',                        icon: 'music'    },
   { key: 'villains',  label: 'Main Character vs Villain Dynamics',icon: 'users'    },
-  { key: 'plottwist', label: 'Plot Twist Quality',               icon: 'sparkles' },
-  { key: 'rewatch',   label: 'Rewatchability',                    icon: 'check'    },
+  { key: 'plottwist', label: 'Plot Twist Quality',               icon: 'shuffle'  },
+  { key: 'rewatch',   label: 'Rewatchability',                    icon: 'refresh'  },
   { key: 'funny',     label: 'Funny',                             icon: 'smile'    },
-  { key: 'bingeable', label: 'Bingeable',                         icon: 'repeat'   },
+  { key: 'bingeable', label: 'Bingeable',                         icon: 'fastForward' },
 ];
 
 function getRatings(cat) {
@@ -151,10 +158,10 @@ const BONUS_RATINGS = [
   { key: 'music',      label: 'Music & Soundtrack',                icon: 'music'    },
   { key: 'emotional',  label: 'Emotional Impact',                  icon: 'heart'    },
   { key: 'villains',   label: 'Main Character vs Villain Dynamics',icon: 'users'    },
-  { key: 'rewatch',    label: 'Rewatchability',                    icon: 'check'    },
-  { key: 'plottwist',  label: 'Plot Twist Quality',               icon: 'sparkles' },
+  { key: 'rewatch',    label: 'Rewatchability',                    icon: 'refresh'  },
+  { key: 'plottwist',  label: 'Plot Twist Quality',               icon: 'shuffle'  },
   { key: 'funny',      label: 'Funny',                             icon: 'smile'    },
-  { key: 'bingeable',  label: 'Bingeable',                         icon: 'repeat'   },
+  { key: 'bingeable',  label: 'Bingeable',                         icon: 'fastForward' },
 ];
 
 const RATING_VALS = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10];
@@ -330,8 +337,13 @@ function mssImgError(img) {
    always sees their own note normally (with a small Spoiler tag).
    innerHTML must already be escaped. */
 function mssIsSpoiler(e) { return !!(e && (e.spoiler === true || (e.ratings && e.ratings._notes_spoiler === true))); }
+// opts.id: the note's entry id — once revealed (on its card or in its popup)
+// it stays revealed everywhere for the rest of the visit
+const _mssRevealed = new Set();
 function mssSpoilerHTML(innerHTML, opts = {}) {
-  return `<div class="spoiler${opts.compact ? ' spoiler-compact' : ''}">
+  const id = opts.id != null ? String(opts.id) : '';
+  if (id && _mssRevealed.has(id)) return `<div class="spoiler revealed${opts.compact ? ' spoiler-compact' : ''}"><div class="spoiler-text">${innerHTML}</div></div>`;
+  return `<div class="spoiler${opts.compact ? ' spoiler-compact' : ''}"${id ? ` data-sid="${escHTML(id)}"` : ''}>
     <div class="spoiler-text" aria-hidden="true">${innerHTML}</div>
     <button type="button" class="spoiler-reveal" onclick="mssRevealSpoiler(event, this)">
       <span class="spoiler-ic">${icon('eyeOff', 15)}</span>
@@ -343,6 +355,7 @@ function mssRevealSpoiler(ev, btn) {
   ev.stopPropagation(); ev.preventDefault();
   const wrap = btn.closest('.spoiler');
   wrap.classList.add('revealed');
+  if (wrap.dataset.sid) _mssRevealed.add(wrap.dataset.sid);
   wrap.querySelector('.spoiler-text')?.removeAttribute('aria-hidden');
   btn.blur();   // the button disappears — don't leave keyboard focus stranded on it
 }
@@ -474,6 +487,34 @@ function mssOpenTitle(src, btn) {
   if (typeof closeSocialNotePopup === 'function') closeSocialNotePopup();
   MSSInfo.discover(src, btn);
 }
+/* ── Like / dislike on someone's note or list (note_reactions / list_reactions) ──
+   mssReactions → { like, dislike, mine:'like'|'dislike'|null }; mssReact toggles
+   your reaction and returns the new state; mssReactButtonsHTML draws the pair. */
+const _MSS_REACT = { note: ['note_reactions', 'entry_id'], list: ['list_reactions', 'list_id'] };
+async function mssReactions(kind, id) {
+  const [t, c] = _MSS_REACT[kind], me = window._navUser?.id;
+  const { data } = await sb.from(t).select('user_id, is_like').eq(c, id);
+  const st = { like: 0, dislike: 0, mine: null };
+  (data || []).forEach(r => { r.is_like ? st.like++ : st.dislike++; if (r.user_id === me) st.mine = r.is_like ? 'like' : 'dislike'; });
+  return st;
+}
+async function mssReact(kind, id, isLike, state) {
+  const me = window._navUser?.id;
+  if (!me) { showToast('Sign in to react.', 'err'); return state; }
+  const [t, c] = _MSS_REACT[kind], want = isLike ? 'like' : 'dislike', next = { ...state };
+  if (state.mine) next[state.mine] = Math.max(0, next[state.mine] - 1);
+  try {
+    if (state.mine === want) { next.mine = null; await sb.from(t).delete().eq(c, id).eq('user_id', me); }
+    else { next.mine = want; next[want]++; const { error } = await sb.from(t).upsert({ [c]: id, user_id: me, is_like: isLike }, { onConflict: c + ',user_id' }); if (error) throw error; }
+    return next;
+  } catch (err) { console.error(err); showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save that — try again.', 'err'); return state; }
+}
+function mssReactButtonsHTML(state, onLike, onDislike) {
+  const st = state || { like: 0, dislike: 0, mine: null };
+  return `<button type="button" class="popup-action-btn np-react${st.mine === 'like' ? ' is-on' : ''}" onclick="${onLike}" aria-label="Like" aria-pressed="${st.mine === 'like'}">${icon(st.mine === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)}<span>${st.like}</span></button>
+    <button type="button" class="popup-action-btn np-react np-react-down${st.mine === 'dislike' ? ' is-on' : ''}" onclick="${onDislike}" aria-label="Dislike" aria-pressed="${st.mine === 'dislike'}">${icon(st.mine === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)}<span>${st.dislike}</span></button>`;
+}
+
 // A username in a popup → their profile (your own goes to your profile)
 function mssProfileLinkHTML(p, innerHTML) {
   if (!p || (!p.id && !p.username)) return innerHTML;
