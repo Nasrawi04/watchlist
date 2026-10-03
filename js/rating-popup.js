@@ -120,7 +120,7 @@ const MSSRate = (() => {
     if (lowChips) html += `<div class="fav-chips mr-chips">${lowChips}</div>`;
     if (!hideNotes && e.notes && e.notes.trim()) {
       const nt = `<div class="fd-notes mr-notes">&ldquo;${esc(e.notes.trim())}&rdquo;</div>`;
-      html += '<div class="fd-section-hd mr-gap">Notes</div>' + (blurSpoilers && mssIsSpoiler(e) ? mssSpoilerHTML(nt, { compact: true }) : nt);
+      html += '<div class="fd-section-hd mr-gap">Notes</div>' + (blurSpoilers && mssIsSpoiler(e) ? mssSpoilerHTML(nt, { compact: true, id: e.id }) : nt);
     }
     return html;
   }
@@ -136,7 +136,7 @@ const MSSRate = (() => {
       edit:         () => btn('edit', 'edit', 'Edit'),
       rewatch:      () => !watchingNow && typeof rewatchEntry === 'function' ? btn('rewatch', 'refresh', 'Rewatch') : '',
       card:         () => typeof createShareCard === 'function' ? btn('card', 'image', 'Create Card') : '',
-      discoverCard: () => !finished && typeof createShareCard === 'function' ? btn('discoverCard', 'search', 'Discover Card') : '',
+      discoverCard: () => !finished && typeof createShareCard === 'function' ? btn('discoverCard', 'idCard', 'Discover Card') : '',
       delete:       () => btn('delete', 'trash', 'Delete', ' popup-action-danger'),
       queue:        () => btn('queue', 'plus', 'Add to Watchlist'),
       discover:     () => btn('discover', 'search', 'Discover'),
