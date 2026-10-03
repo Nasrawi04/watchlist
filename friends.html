@@ -73,15 +73,16 @@
 ══════════════════════════════════════════════════════════ */
 .fr-page { --fr-gap: 16px; }
 /* Header */
-.fr-hero { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:1.5rem; }
+/* Title, then the search bar full width underneath — same layout on every screen size
+   (like the Home / Discover search) instead of beside the title on laptops only */
+.fr-hero { display:flex; flex-direction:column; align-items:stretch; gap:16px; margin-bottom:1.5rem; }
 .fr-hero-text { min-width:0; }
 .fr-eyebrow { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:3px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
-.fr-find { flex:1 1 380px; max-width:520px; }
+.fr-find { width:100%; position:relative; }
 .fr-find .fused-search-wrap { display:flex; align-items:stretch; border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-3); transition:border-color .15s, box-shadow .15s; }
 .fr-find .fused-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
 .fr-find .add-friend-input { flex:1; min-width:0; background:transparent; border:none; color:var(--text); font-size:16px; padding:14px 16px; outline:none; }
 .fr-find .btn-send-req { border:none; border-radius:0; padding:0 18px; white-space:nowrap; background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff; font-weight:600; font-size:13px; cursor:pointer; }
-@media(max-width:700px) { .fr-find { flex-basis:100%; max-width:none; } }
 
 /* Tabs — underline style with icons + counts */
 .fr-tabs { display:flex; gap:4px; border-bottom:0.5px solid var(--border); margin-bottom:1.25rem; overflow-x:auto; scrollbar-width:none; }
@@ -98,7 +99,7 @@
 .fr-tab-dot { min-width:18px; height:18px; padding:0 5px; box-sizing:border-box; border-radius:999px; background:#c0392b; color:#fff; font-size:10px; font-weight:700; line-height:18px; text-align:center; }
 /* Phones: five equal tabs, icon over label, all visible without scrolling */
 @media(max-width:600px) {
-  .fr-tabs { display:grid; grid-template-columns:repeat(5, 1fr); gap:0; overflow:visible; }
+  .fr-tabs { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:0; overflow:visible; }
   .fr-tab { flex-direction:column; gap:4px; padding:10px 2px 12px; font-size:11px; }
   .fr-tab svg { width:17px; height:17px; }
   .fr-tab-count { display:none; }
@@ -116,7 +117,7 @@
 .fr-toolbar .sort-bar::before { content:none; }
 
 /* Shared bits */
-.fr-av { border-radius:50%; overflow:hidden; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; font-family:var(--serif); font-weight:600; }
+.fr-av { border-radius:50%; overflow:hidden; flex-shrink:0; vertical-align:middle; display:inline-flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; font-family:var(--serif); font-weight:600; }
 .fr-av img { width:100%; height:100%; object-fit:cover; display:block; }
 .fr-poster, .fa-poster, .cp-hero-poster, .fm-cover-img, .fm-now-poster{ position:relative; overflow:hidden; background:var(--bg-3); }
 .fr-poster img, .fa-poster img, .cp-hero-poster img, .fm-cover-img img, .fm-now-poster img{ width:100%; height:100%; object-fit:cover; display:block; }
@@ -164,7 +165,7 @@
 .fm-cover-empty { grid-column:1/-1; }
 .fm-cover-shade { position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,.05), rgba(0,0,0,.45)); pointer-events:none; }
 .fm-body { padding:0 16px 16px; display:flex; flex-direction:column; align-items:center; text-align:center; flex:1; }
-.fm-av { margin-top:-34px; margin-bottom:8px; border-radius:50%; border:3px solid var(--card); box-shadow:0 4px 12px rgba(0,0,0,.18); position:relative; z-index:1; }
+.fm-av { display:flex; margin-top:-34px; margin-bottom:8px; border-radius:50%; border:3px solid var(--card); box-shadow:0 4px 12px rgba(0,0,0,.18); position:relative; z-index:1; }
 .fm-name { font-family:var(--serif); font-size:18px; font-weight:600; color:var(--text); line-height:1.2; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .fm-user { font-size:12.5px; color:var(--text-3); margin-top:2px; }
 .fm-stats { display:grid; grid-template-columns:repeat(3, 1fr); width:100%; margin:14px 0 12px; padding:10px 0; border-top:0.5px solid var(--border); border-bottom:0.5px solid var(--border); }
@@ -252,7 +253,7 @@
 .fa-score { font-size:26px; }
 .fa-poster { width:72px; height:108px; border-radius:8px; }
 .fa-note { font-size:14px; }
-@media(max-width:900px) { .fa-feed { grid-template-columns:1fr; } }
+@media(max-width:900px) { .fa-feed { grid-template-columns:minmax(0, 1fr); } }   /* minmax(0,…): long titles ellipsize instead of widening the feed */
 @media(max-width:560px) { .fa-poster { width:56px; height:84px; } .fa-title { font-size:17px; } .fa-score { font-size:20px; } }
 .cp-cell { min-width:70px; padding:8px 10px; } .cp-cell b { font-size:22px; }
 .cp-match-name { font-size:20px; }
@@ -392,6 +393,8 @@
   .fn-grid { grid-template-columns:1fr; }
 }
 @media(max-width:480px) {
+  .fr-tab { min-width:0; padding:10px 0 12px; font-size:10.5px; }
+  .fr-tab span:not(.fr-tab-dot) { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .fm-grid { grid-template-columns:1fr; }
   .fm-cover { height:72px; }
   .fa-item { padding:10px; gap:10px; }
