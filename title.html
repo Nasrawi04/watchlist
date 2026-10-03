@@ -277,6 +277,9 @@
   .td-rating-badge { padding:8px 14px; }
   .td-hero-actions { width:100%; margin-top:1.1rem; }
 }
+/* Related rows (collection + recommendations) */
+.td-related { margin-top:2.5rem; }
+.td-related .grid-nav-wrap { margin-top:1rem; }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -304,6 +307,7 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
 <script src="js/discover-categories.js"></script>
 <script>
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -360,14 +364,14 @@ function renderTdError(msg) {
    these pull credits + videos on top of the base detail payload) ── */
 async function _tdFetchMovie(id) {
   try {
-    const res = await tmdbFetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,release_dates`);
+    const res = await tmdbFetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,release_dates,recommendations`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
 }
 async function _tdFetchTV(id) {
   try {
-    const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits,content_ratings`);
+    const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits,recommendations,content_ratings`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
@@ -417,6 +421,63 @@ async function loadTitle() {
   if (firstSeason) _selectSeason(firstSeason);
 
   _tdLoadNotes();
+  _tdLoadRelated(detail);
+}
+
+/* ── Related titles: the movie's collection ("Part of the Avengers
+   Collection", in release order) and "If you like this…" (TMDB
+   recommendations, else similar titles). Same cards as Discover; tapping
+   one opens the info popup. ── */
+function _tdRowHTML(id, eyebrow, title, items) {
+  const L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+  const R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+  return `<div class="td-related">
+      <div class="section-eyebrow">${esc(eyebrow)}</div>
+      <div class="section-title" style="margin-bottom:0">${esc(title)}</div>
+      <div class="grid-nav-wrap">
+        <button class="grid-nav-btn arr-left" onclick="document.getElementById('${id}').scrollBy({left:-660,behavior:'smooth'})" aria-label="Scroll left">${L}</button>
+        <button class="grid-nav-btn arr-right" onclick="document.getElementById('${id}').scrollBy({left:660,behavior:'smooth'})" aria-label="Scroll right">${R}</button>
+        <div class="queue-grid" id="${id}">${items.map(_tdRelCardHTML).join('')}</div>
+      </div>
+    </div>`;
+}
+function _tdRelCardHTML(r) {
+  const it = _discNormalize(r, r.media_type || _tdType);
+  const sc = _discFloorScore(it.score);
+  const movie = it.media_type === 'movie';
+  return `<div class="q-card" ${_discClickAttr(it)} role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
+    <div class="q-poster" style="position:relative"><img src="${safeURL(it.poster_url)}" alt="" loading="lazy" data-letter="${esc((it.title || '?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">
+      <div class="q-poster-overlay"></div>
+      <span class="${movie ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${movie ? 'Movie' : 'TV Show'}</span></div>
+    <div class="q-info">
+      <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${esc(it.title)}</div>${it.year ? `<span class="title-year-inline">${esc(it.year)}</span>` : ''}</div>
+      ${sc ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${sc}</span></div>` : ''}
+    </div>
+  </div>`;
+}
+async function _tdLoadRelated(d) {
+  const withPoster = r => r && r.poster_path && String(r.id) !== String(_tdId);
+  // 1) Collection (movies)
+  const col = _tdType === 'movie' ? d.belongs_to_collection : null;
+  if (col?.id) {
+    try {
+      const res = await tmdbFetch(`${TMDB_BASE}/collection/${col.id}?api_key=${TMDB_KEY}&language=en-US`);
+      const data = res.ok ? await res.json() : null;
+      const parts = (data?.parts || []).filter(withPoster).map(p => ({ ...p, media_type: 'movie' }))
+        .sort((a, b) => (a.release_date || '9999').localeCompare(b.release_date || '9999'));
+      if (parts.length) document.getElementById('tdCollection').innerHTML = _tdRowHTML('tdCollectionRow', 'Part of the collection', data.name || col.name, parts);
+    } catch {}
+  }
+  // 2) Recommendations → similar as a fallback
+  let recs = (d.recommendations?.results || []).filter(withPoster);
+  if (!recs.length) {
+    try {
+      const res = await tmdbFetch(`${TMDB_BASE}/${_tdType}/${_tdId}/similar?api_key=${TMDB_KEY}&language=en-US`);
+      recs = res.ok ? ((await res.json()).results || []).filter(withPoster) : [];
+    } catch { recs = []; }
+  }
+  recs = recs.map(r => ({ ...r, media_type: r.media_type || _tdType })).slice(0, 18);
+  if (recs.length) document.getElementById('tdRecs').innerHTML = _tdRowHTML('tdRecsRow', 'If you like this', 'You might also like', recs);
 }
 
 function _tdBuildHTML(d, mssScore, ownEntry) {
@@ -523,6 +584,9 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
     ${cast.length > 10 ? `<button class="td-cast-more-btn" id="tdCastMoreBtn" data-expanded="0" onclick="_tdShowAllCast()">See More (${cast.length - 10} more)</button>` : ''}` : ''}
 
     ${!isMovie ? _tdSeasonsHTML(d) : ''}
+
+    <div id="tdCollection"></div>
+    <div id="tdRecs"></div>
 
     <div class="td-section-title">Community Notes</div>
     <div class="td-notes-controls">
