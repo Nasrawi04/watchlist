@@ -539,12 +539,17 @@ async function loadFriends() {
     _frEntries = ents; _frLists = lists;
   } else { _frEntries = []; _frLists = []; }
   _frEntries.forEach(e => { window._frEntryMap[e.id] = e; });
+  // Top Favorites older than the recent entries loaded above — fetch those too
+  const favIds = _frAccepted.flatMap(f => Array.isArray(f.friendProfile?.top_picks) ? f.friendProfile.top_picks.slice(0, 4) : []);
+  const missing = [...new Set(favIds)].filter(id => !window._frEntryMap[id]);
+  const extraFavs = missing.length ? await sb.from('entries').select('*').in('id', missing).then(r => r.data || [], () => []) : [];
+  const favMap = Object.fromEntries(extraFavs.map(e => [e.id, e]));
   _frStats = {};
   _frAccepted.forEach(f => {
     const mine = _frEntries.filter(e => e.user_id === f.friendId);
     _frStats[f.friendId] = { ...computeStats(mine), recent: mine[0]?.updated_at || null,
       watchingNow: mine.find(e => e.status === 'watching') || null,
-      posters: _frCoverPosters(f.friendProfile || {}, mine),
+      posters: _frCoverPosters(f.friendProfile || {}, mine, favMap),
       latest: null };
   });
   // Each friend's most recent activity (shown when they aren't watching anything)
@@ -628,9 +633,9 @@ SF.register('frFriends', {
 
 // Friend card cover: their Top Favorites (profile dashboard), then — if they
 // haven't picked 4 — their most recent titles to fill the rest
-function _frCoverPosters(p, mine) {
+function _frCoverPosters(p, mine, extra = {}) {
   const withPoster = e => e && safeURL(e.poster_url);
-  const favs = (Array.isArray(p.top_picks) ? p.top_picks : []).map(id => mine.find(e => e.id === id)).filter(withPoster);
+  const favs = (Array.isArray(p.top_picks) ? p.top_picks : []).map(id => mine.find(e => e.id === id) || extra[id]).filter(withPoster);
   const recent = mine.filter(e => withPoster(e) && !favs.includes(e));   // mine is newest-first
   return favs.concat(recent).slice(0, 4);
 }
