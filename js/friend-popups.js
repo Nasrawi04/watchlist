@@ -17,6 +17,25 @@ const MSSFriendPop = (() => {
   const words = t => (t || '').trim().split(/\s+/).filter(Boolean).length;
 
   /* ══ Note card + note popup (Notes-page design) ══ */
+  let noteCur = null, noteReact = null;
+  const rated = e => e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
+  function footerHTML(e, st) {
+    return mssReactButtonsHTML(st, 'MSSFriendPop._react(true)', 'MSSFriendPop._react(false)')
+      + (rated(e) ? `<button class="popup-action-btn np-grow" onclick="MSSFriendPop._ratings()">${icon('ratingStar', 14)} See Ratings</button>` : '')
+      + `<button class="popup-action-btn np-ghost${rated(e) ? '' : ' np-grow'}" onclick="MSSFriendPop.closeNote()">Close</button>`;
+  }
+  async function react(isLike) {
+    if (!noteCur || !noteReact) return;
+    const e = noteCur;
+    noteReact = await mssReact('note', e.id, isLike, noteReact);
+    if (noteCur === e) document.getElementById('frNotePopupActions').innerHTML = footerHTML(e, noteReact);
+  }
+  // Ratings: the switcher's Ratings tab when it's open there, else the ratings popup
+  function seeRatings() {
+    const e = noteCur; if (!e) return;
+    if (typeof MSSViews !== 'undefined' && MSSViews.has('rate')) { MSSViews.show('rate'); return; }
+    closeNote(); MSSRate.forFriend(e);
+  }
   function profileAv(p, size) {
     const u = safeURL(p?.avatar_url);
     return `<div class="snote-avatar" style="width:${size}px;height:${size}px">${u ? `<img src="${u}" alt="">` : esc((p?.username || '?')[0].toUpperCase())}</div>`;
@@ -41,7 +60,7 @@ const MSSFriendPop = (() => {
         <div class="nc-top"><div class="nc-author">${profileAv(p, 22)}<span>@${esc(p?.username || 'friend')}</span></div></div>
         <div class="nc-top"><div class="nc-title">${esc(e.title)}</div>${scorePill(e)}</div>
         <div class="nc-tags">${typeBadge(e)}${(e.completed_date || e.updated_at) ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">${fmtDate(e.completed_date || e.updated_at)}</span>` : ''}</div>
-        ${mssIsSpoiler(e) ? mssSpoilerHTML(quote, { compact: true }) : quote}
+        ${mssIsSpoiler(e) ? mssSpoilerHTML(quote, { compact: true, id: e.id }) : quote}
         <div class="nc-foot"><span></span><span class="nc-words"><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span></div>
       </div>
     </article>`;
@@ -91,11 +110,11 @@ const MSSFriendPop = (() => {
         </div>
       </div>
       <div class="np-stats"><span><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span></div>
-      <div class="np-body">${mssIsSpoiler(e) ? mssSpoilerHTML(body) : body}</div>
-      <div class="np-footer"><div class="np-actions" id="frNotePopupActions">
-        <button class="popup-action-btn np-ghost np-grow" onclick="MSSFriendPop.closeNote()">Close</button>
-      </div></div>`;
+      <div class="np-body">${mssIsSpoiler(e) ? mssSpoilerHTML(body, { id: e.id }) : body}</div>
+      <div class="np-footer"><div class="np-actions" id="frNotePopupActions">${footerHTML(e, null)}</div></div>`;
     card.classList.toggle('np-long', n > 120);
+    noteCur = e;
+    mssReactions('note', e.id).then(st => { if (noteCur === e) { noteReact = st; document.getElementById('frNotePopupActions').innerHTML = footerHTML(e, st); } }).catch(() => {});
     const ov = document.getElementById('snPopupOverlay');
     ov.style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -114,5 +133,5 @@ const MSSFriendPop = (() => {
     if (document.getElementById('snPopupOverlay')?.style.display === 'flex') closeNote();
   });
 
-  return { note, closeNote, noteCardHTML };
+  return { note, closeNote, noteCardHTML, _react: react, _ratings: seeRatings };
 })();
