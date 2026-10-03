@@ -5,6 +5,8 @@
 
 /* ── Design Tokens ── */
 :root {
+  /* one width for the Info, Ratings and Note popups (with or without the switcher) */
+  --popup-w: 920px;
   --bg:           #0A0A0E;
   --bg-2:         #111117;
   --bg-3:         #19191F;
@@ -1102,7 +1104,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 #mssInfoCard {
   background:var(--bg-2);border:1.5px solid var(--olive-light);
   box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-  width:97%;max-width:640px;max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
+  width:100%;max-width:var(--popup-w);max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
   position:relative;box-sizing:border-box;
   transform:translateY(18px);transition:transform 260ms var(--ease);
 }
@@ -1183,7 +1185,6 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
   .pvi-season-num { font-size:17px; }
   .pvi-runtime { padding:8px 14px; }
   .pvi-runtime-val { font-size:20px; }
-  #mssInfoCard { width:97%; }
   .mss-info-actions { padding:0 14px 14px; }
   .pvi-close { top:20px; right:16px; }
   /* Ratings popup (rating-popup.js) — mobile pass */
@@ -1231,7 +1232,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 #mssRateOverlay.open { opacity:1; pointer-events:auto; }
 #mssRateCard {
   background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg);
-  width:100%; max-width:min(97vw, 920px); max-height:90dvh; overflow-y:auto; overscroll-behavior-y:contain;
+  width:100%; max-width:min(97vw, var(--popup-w)); max-height:90dvh; overflow-y:auto; overscroll-behavior-y:contain;
   position:relative; box-sizing:border-box; transform:translateY(18px); transition:transform 260ms var(--ease);
 }
 #mssRateOverlay.open #mssRateCard { transform:translateY(0); }
@@ -1850,15 +1851,16 @@ body.notif-sheet-open { overflow:hidden; }
 .note-popup-overlay2.open .note-popup2 { transform:scale(1); }
 
 /* ── Popups (Personal + Community share this design) ── */
-.note-popup-overlay2, #snPopupOverlay { background:rgba(0,0,0,.55) !important; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px) !important; }
-.np-card { max-width:540px !important; background:var(--bg-2) !important; border:0.5px solid var(--border) !important; box-shadow:0 28px 70px rgba(0,0,0,.4) !important; display:flex; flex-direction:column; max-height:90dvh; }
+/* Same backdrop as the Info + Ratings popups: dimmed, not blurred */
+.note-popup-overlay2, #snPopupOverlay { background:rgba(0,0,0,0.72) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+.np-card { max-width:min(97vw, var(--popup-w)) !important; background:var(--bg-2) !important; border:0.5px solid var(--border) !important; box-shadow:0 28px 70px rgba(0,0,0,.4) !important; display:flex; flex-direction:column; max-height:90dvh; }
 #snPopupCard.np-card { border-radius:var(--radius-lg); overflow:hidden; width:100%; }
 /* The card never grows past the screen: header, poster row, stats and
    buttons stay put and only the note text scrolls (fits 500-word notes). */
 .np-card { overflow:hidden; }
 .np-card > .np-hero, .np-card > .np-head, .np-card > .np-stats, .np-card > .np-footer { flex-shrink:0; }
 .np-card > .np-body { flex:1 1 auto; min-height:0; }
-.np-hero { position:relative; height:230px; flex-shrink:0; overflow:hidden; background:linear-gradient(135deg, var(--olive) 0%, var(--olive-faint) 70%); }
+.np-hero { position:relative; height:340px; flex-shrink:0; overflow:hidden; background:linear-gradient(135deg, var(--olive) 0%, var(--olive-faint) 70%); }
 /* Blurred poster that melts into the card: blur + a masked fade instead of a hard gradient band */
 .np-hero-blur {
   position:absolute; inset:-30px; background-size:cover; background-position:center 25%;
@@ -1903,13 +1905,13 @@ body.notif-sheet-open { overflow:hidden; }
 .np-body { padding:16px 22px 18px; overflow-y:auto; overscroll-behavior-y:contain; display:flex; flex-direction:column; gap:8px; scrollbar-width:thin; }
 .np-body.np-more { -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 44px), transparent); mask-image:linear-gradient(to bottom, #000 calc(100% - 44px), transparent); }
 /* Long notes */
-.np-long .np-hero { height:150px; }
+.np-long .np-hero { height:240px; }
 .np-long .np-head { margin-top:-66px; }
 .np-long .np-poster { width:96px; }
 .np-long .np-quote { font-style:normal; font-size:15px; line-height:1.8; padding-left:16px; }
 .np-long .np-textarea { min-height:min(46dvh, 420px); }
 @media(max-width:640px) {
-  .np-long .np-hero { height:110px; }
+  .np-long .np-hero { height:170px; }
   .np-long .np-head { margin-top:-50px; }
   .np-long .np-poster { width:76px; }
   .np-long .np-quote { font-size:14.5px; line-height:1.75; }
@@ -1937,7 +1939,7 @@ body.notif-sheet-open { overflow:hidden; }
 .np-actions .np-react-down.is-on { background:#b91c1c !important; border-color:#b91c1c !important; }
 .np-actions .popup-action-btn:disabled { opacity:.55; cursor:default; }
 @media(max-width:640px) {
-  .np-hero { height:170px; }
+  .np-hero { height:230px; }
   .np-head { margin-top:-74px; padding:0 16px; gap:14px; }
   .np-meta .type-label, .np-meta .w-ep-badge { font-size:11px; padding:4px 8px; }
   .np-poster { width:96px; font-size:26px; }
