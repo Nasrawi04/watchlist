@@ -118,8 +118,8 @@
 /* Shared bits */
 .fr-av { border-radius:50%; overflow:hidden; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; font-family:var(--serif); font-weight:600; }
 .fr-av img { width:100%; height:100%; object-fit:cover; display:block; }
-.fr-poster, .fa-poster, .cp-row-poster, .cp-hero-poster, .fm-cover-img, .fm-now-poster{ position:relative; overflow:hidden; background:var(--bg-3); }
-.fr-poster img, .fa-poster img, .cp-row-poster img, .cp-hero-poster img, .fm-cover-img img, .fm-now-poster img{ width:100%; height:100%; object-fit:cover; display:block; }
+.fr-poster, .fa-poster, .cp-hero-poster, .fm-cover-img, .fm-now-poster{ position:relative; overflow:hidden; background:var(--bg-3); }
+.fr-poster img, .fa-poster img, .cp-hero-poster img, .fm-cover-img img, .fm-now-poster img{ width:100%; height:100%; object-fit:cover; display:block; }
 .fr-poster-letter { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--serif); color:var(--olive-light); font-size:18px; }
 .fr-empty { text-align:center; padding:3.5rem 1.25rem; }
 .fr-empty-ic { width:60px; height:60px; margin:0 auto 14px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--olive-faint); color:var(--olive-light); }
@@ -201,7 +201,7 @@
 .fa-text { font-size:13px; color:var(--text-3); }
 .fa-text b { color:var(--text-2); font-weight:700; }
 .fa-title { font-family:var(--serif); font-size:17px; font-weight:500; color:var(--text); line-height:1.25; margin:1px 0 5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.fa-title span, .cp-row-title span, .cp-hero-title span { font-family:var(--bebas); font-weight:400; color:var(--text-3); font-size:.85em; letter-spacing:.3px; }
+.fa-title span, .cp-hero-title span { font-family:var(--bebas); font-weight:400; color:var(--text-3); font-size:.85em; letter-spacing:.3px; }
 .fa-meta { display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:11.5px; color:var(--text-3); }
 .fa-meta .type-label { font-size:10.5px; padding:2px 7px; }
 .fa-note { margin-top:8px; padding-left:10px; border-left:2px solid var(--border-olive); font-size:13px; font-style:italic; color:var(--text-2); line-height:1.55; }
@@ -254,9 +254,6 @@
 .fa-note { font-size:14px; }
 @media(max-width:900px) { .fa-feed { grid-template-columns:1fr; } }
 @media(max-width:560px) { .fa-poster { width:56px; height:84px; } .fa-title { font-size:17px; } .fa-score { font-size:20px; } }
-.cp-row { padding:12px 16px 12px 12px; }
-.cp-row-poster { width:52px; height:78px; }
-.cp-row-title { font-size:18px; }
 .cp-cell { min-width:70px; padding:8px 10px; } .cp-cell b { font-size:22px; }
 .cp-match-name { font-size:20px; }
 .cp-ring { width:96px; height:96px; } .cp-ring > div { width:78px; height:78px; } .cp-ring b { font-size:30px; }
@@ -296,12 +293,20 @@
 .cp-search .add-friend-input { flex:1; min-width:0; background:transparent; border:none; color:var(--text); font-size:16px; padding:12px 16px; outline:none; }
 .cp-search .fused-search-btn { flex-shrink:0; display:flex; align-items:center; padding:0 18px; border:none; cursor:pointer; background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff; }
 .cp-search .fused-search-btn svg { width:16px; height:16px; }
-.cp-list { display:flex; flex-direction:column; gap:8px; }
-.cp-row { display:flex; align-items:center; gap:14px; width:100%; padding:10px 14px 10px 10px; cursor:pointer; text-align:left; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); color:var(--text); transition:border-color .15s, transform .15s; }
-.cp-row:hover { border-color:var(--border-olive); transform:translateX(2px); }
-.cp-row-poster { width:42px; height:63px; border-radius:6px; flex-shrink:0; }
-.cp-row-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
-.cp-row-title { font-family:var(--serif); font-size:16px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cp-list { display:flex; flex-direction:column; gap:10px; }
+/* Shared-title rows use .fv-rank-row (the Library list card); score columns
+   are fixed-width so they line up whether you compare with 1 friend or 5 */
+.cp-row.fv-rank-row { cursor:pointer; min-height:0; }
+.cp-year { font-family:var(--bebas); font-size:18px; font-weight:400; color:var(--text-3); }
+.cp-row .fv-rank-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; }
+.cp-row .cp-cells { display:grid; grid-template-columns:repeat(var(--cp-n, 2), 86px); gap:8px; flex-shrink:0; }
+.cp-row .cp-cell { min-width:0; padding:8px 6px; }
+.cp-row .cp-cell b { font-size:18px; white-space:nowrap; }
+.cp-hero-line { margin-top:12px; font-size:12.5px; color:rgba(255,255,255,.82); }
+.cp-hero-line svg { width:12px; height:12px; vertical-align:-1px; margin-right:4px; }
+.cp-hero-line b { color:#fff; }
+.cp-table .cp-total td { font-weight:400; color:var(--olive-light); border-top:1px solid var(--border-olive); }
+.cp-table .cp-total td:first-child { font-weight:700; color:var(--text); }
 .cp-cells { display:flex; gap:6px; flex-shrink:0; }
 .cp-cell { min-width:58px; padding:6px 8px; border-radius:var(--radius-sm); background:var(--bg-3); display:flex; flex-direction:column; align-items:center; gap:1px; }
 .cp-cell.me { background:var(--olive-faint); }
@@ -309,7 +314,14 @@
 .cp-cell b { font-family:var(--bebas); font-weight:400; font-size:19px; color:var(--olive-light); line-height:1; }
 .cp-delta { font-size:11.5px; font-weight:700; }
 .cp-delta.up { color:#2f8a3a; } .cp-delta.down { color:#c0392b; } .cp-delta.same { color:var(--olive-light); } .cp-delta.none { color:var(--text-3); font-weight:600; }
-@media(max-width:600px) { .cp-row { flex-wrap:wrap; } .cp-cells { width:100%; padding-left:56px; } .cp-cell { flex:1; min-width:0; } }
+/* Small screens: score columns drop under the card and share the width evenly */
+@media(max-width:760px) {
+  .cp-row.fv-rank-row { flex-wrap:wrap; }
+  .cp-row .cp-cells { width:100%; grid-template-columns:repeat(var(--cp-n, 2), minmax(0, 1fr)); }
+  .cp-hero { flex-direction:column; align-items:flex-start; text-align:left; }
+  .cp-hero-stats { gap:14px 20px; }
+  .cp-hero-stats b { font-size:22px; }
+}
 .cp-back { display:inline-flex; align-items:center; gap:6px; margin:4px 0 12px; background:none; border:none; color:var(--olive-light); font-weight:700; font-size:13px; cursor:pointer; padding:0; }
 .cp-back svg { width:13px; height:13px; transform:rotate(180deg); }
 .cp-hero { position:relative; display:flex; gap:20px; align-items:center; padding:20px; border-radius:var(--radius-lg); overflow:hidden; margin-bottom:14px; border:0.5px solid var(--border); isolation:isolate; }
@@ -343,6 +355,56 @@
 .cp-table td { font-family:var(--bebas); font-size:18px; color:var(--text-2); }
 .cp-table td.best { color:var(--olive-light); }
 .cp-table tr:last-child td { border-bottom:none; }
+
+/* ══ Small screens — one sizing pass for the whole Friends page ══ */
+@media(max-width:760px) {
+  .fr-page { --fr-gap:12px; }
+  .fr-hero { gap:14px; margin-bottom:1rem; }
+  .fr-toolbar { flex-wrap:wrap; row-gap:8px; }
+  .fr-toolbar .sort-bar { margin-left:auto; }
+  /* friend cards: two per row */
+  .fm-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .fm-cover { height:80px; }
+  .fm-body { padding:0 12px 12px; }
+  .fm-name { font-size:16px; }
+  .fm-stats { margin:10px 0; padding:8px 0; }
+  .fm-stats b { font-size:19px; }
+  .fm-stats span { font-size:9px; letter-spacing:.6px; }
+  .fm-actions { flex-wrap:wrap; }
+  /* activity */
+  .fa-item { gap:12px; padding:12px; }
+  .fa-text { font-size:13px; }
+  /* compare */
+  .cp-pick { padding:12px; }
+  .cp-person { width:62px; font-size:11px; }
+  .cp-matches { grid-template-columns:1fr; }
+  .cp-match { gap:12px; padding:12px; }
+  .cp-ring { width:76px; height:76px; } .cp-ring > div { width:62px; height:62px; } .cp-ring b { font-size:23px; }
+  .cp-match-name { font-size:16px; }
+  .cp-hero { padding:16px; gap:14px; }
+  .cp-hero-poster { width:84px; align-self:flex-start; }
+  .cp-pcards { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+  .cp-pcard { padding:12px; }
+  .cp-pcard-score { font-size:32px; }
+  .cp-table th, .cp-table td { padding:9px 10px; }
+  .cp-table td { font-size:16px; }
+  .cp-table th:first-child, .cp-table td:first-child { font-size:12px; }
+  .fn-grid { grid-template-columns:1fr; }
+}
+@media(max-width:480px) {
+  .fm-grid { grid-template-columns:1fr; }
+  .fm-cover { height:72px; }
+  .fa-item { padding:10px; gap:10px; }
+  .fa-poster { width:46px; height:69px; }
+  .fa-title { font-size:15px; }
+  .fa-score { font-size:17px; }
+  .cp-pcards { grid-template-columns:1fr; }
+  .cp-row .cp-cell b { font-size:16px; }
+  .cp-row .cp-cell span { font-size:8.5px; }
+  .cp-hero-stats { gap:12px 16px; }
+  .cp-hero-stats b { font-size:19px; }
+  .cp-hero-stats span { font-size:9px; letter-spacing:.8px; }
+}
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -421,10 +483,10 @@ window._frEntryMap = {};
 
 const _FR_TABS = [
   { key: 'friends',  label: 'Friends',  icon: 'users' },
-  { key: 'activity', label: 'Activity', icon: 'play' },
+  { key: 'activity', label: 'Activity', icon: 'activity' },
   { key: 'lists',    label: 'Lists',    icon: 'layers' },
-  { key: 'notes',    label: 'Notes',    icon: 'edit' },
-  { key: 'compare',  label: 'Compare',  icon: 'sparkles' },
+  { key: 'notes',    label: 'Notes',    icon: 'notebook' },
+  { key: 'compare',  label: 'Compare',  icon: 'compare' },
 ];
 
 /* ── Small helpers ── */
@@ -482,7 +544,7 @@ async function loadFriends() {
     const mine = _frEntries.filter(e => e.user_id === f.friendId);
     _frStats[f.friendId] = { ...computeStats(mine), recent: mine[0]?.updated_at || null,
       watchingNow: mine.find(e => e.status === 'watching') || null,
-      posters: mine.filter(e => safeURL(e.poster_url) && (e.status === 'completed' || e.status === 'watching' || e.status === 'ongoing')).slice(0, 4),
+      posters: _frCoverPosters(f.friendProfile || {}, mine),
       latest: null };
   });
   // Each friend's most recent activity (shown when they aren't watching anything)
@@ -564,11 +626,20 @@ SF.register('frFriends', {
   postSort: (sec, list) => { const pin = _fProfile?.pinned_friend_id; return pin ? [...list.filter(f => f.friendId === pin), ...list.filter(f => f.friendId !== pin)] : list; },
 });
 
+// Friend card cover: their Top Favorites (profile dashboard), then — if they
+// haven't picked 4 — their most recent titles to fill the rest
+function _frCoverPosters(p, mine) {
+  const withPoster = e => e && safeURL(e.poster_url);
+  const favs = (Array.isArray(p.top_picks) ? p.top_picks : []).map(id => mine.find(e => e.id === id)).filter(withPoster);
+  const recent = mine.filter(e => withPoster(e) && !favs.includes(e));   // mine is newest-first
+  return favs.concat(recent).slice(0, 4);
+}
+
 function _frMemberCard(f) {
   const st = _frStats[f.friendId] || {};
   const p = f.friendProfile || {};
   const un = p.username || 'unknown';
-  const name = p.display_name && p.display_name.toLowerCase() !== un.toLowerCase() ? p.display_name : null;
+  const name = p.display_name || null;
   const somePinned = !!_fProfile?.pinned_friend_id, isPinned = _fProfile?.pinned_friend_id === f.friendId;
   const cover = (st.posters || []);
   const now = st.watchingNow;
@@ -580,8 +651,8 @@ function _frMemberCard(f) {
     </div>
     <div class="fm-body">
       <div class="fm-av">${_frAvHTML(p, 64)}</div>
-      <div class="fm-name">${escHTML(name || '@' + un)}</div>
-      ${name ? `<div class="fm-user">@${escHTML(un)}</div>` : ''}
+      <div class="fm-name">${escHTML(name || un)}</div>
+      <div class="fm-user">@${escHTML(un)}</div>
       <div class="fm-stats">
         <div><b>${st.completed || 0}</b><span>Watched</span></div>
         <div><b>${st.avgScore || '—'}</b><span>Avg Score</span></div>
@@ -591,7 +662,7 @@ function _frMemberCard(f) {
         : st.latest ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(st.latest.e.id)}, ${attrJSON(st.latest.type)})">${_frPosterHTML(st.latest.e, 'fm-now-poster')}<span><small>Latest · ${escHTML(_FR_ACT[st.latest.type].label)}</small>${escHTML(st.latest.e.title)}</span></button>`
         : `<div class="fm-now fm-now-idle"><span><small>Latest</small>No activity yet</span></div>`}
       <div class="fm-actions" onclick="event.stopPropagation()">
-        <button class="fm-btn fm-btn-primary" onclick="_frCompareWith(${attrJSON(f.friendId)})">${icon('sparkles', 13)} Compare</button>
+        <button class="fm-btn fm-btn-primary" onclick="_frCompareWith(${attrJSON(f.friendId)})">${icon('compare', 13)} Compare</button>
         <button class="fm-btn" onclick="viewFriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">Profile</button>
         <button class="fm-icon-btn fm-danger" title="Remove friend" aria-label="Remove friend" onclick="doUnfriend(${attrJSON(f.id)}, ${attrJSON(un)})">${icon('x', 13)}</button>
       </div>
@@ -628,24 +699,34 @@ function _frRenderFriends() {
 
 /* ══ ACTIVITY ══ */
 const _FR_ACT = {
-  finished:  { verb: 'finished',                 color: '#1e5c26', ic: 'check',   label: 'Finished' },
-  caught_up: { verb: 'is caught up on',          color: '#8a5a1c', ic: 'refresh', label: 'Caught Up' },
+  finished:  { verb: 'watched',                  color: '#1e5c26', ic: 'check',   label: 'Watched' },
+  logged:    { verb: 'logged',                   color: '#55705a', ic: 'notebook', label: 'Logged' },
+  caught_up: { verb: 'is caught up on',          color: '#8a5a1c', ic: 'clock',   label: 'Caught Up' },
   started:   { verb: 'started watching',         color: '#2f7a3a', ic: 'play',    label: 'Started' },
-  up_next:   { verb: 'lined up',                 color: '#264e78', ic: 'play',    label: 'Up Next' },
-  watchlist: { verb: 'added to their watchlist', color: '#6b6b6b', ic: 'plus',    label: 'Watchlist' },
-  note:      { verb: 'wrote a note on',          color: '#7a3e78', ic: 'edit',    label: 'Note' },
+  up_next:   { verb: 'lined up',                 color: '#264e78', ic: 'skipForward', label: 'Up Next' },
+  watchlist: { verb: 'added to their watchlist', color: '#6b6b6b', ic: 'bookmark', label: 'Watchlist' },
+  note:      { verb: 'wrote a note on',          color: '#7a3e78', ic: 'notebook', label: 'Note' },
+  list:      { verb: 'made a list',              color: '#3d5a80', ic: 'layers',  label: 'New List' },
 };
 function _frEvents() {
   const ev = [];
   _frEntries.forEach(e => {
     const push = (type, at) => { const d = _frDate(at); if (d && !isNaN(d)) ev.push({ ...e, _ev: type, _at: d, id: e.id + ':' + type }); };
-    if (e.status === 'completed' && e.completed_date) push('finished', e.completed_date);
+    // Watched recently → "watched"; added with a finish date a month+ before
+    // they logged it → "logged" (catching up their history)
+    if (e.status === 'completed' && e.completed_date) {
+      const done = _frDate(e.completed_date), added = _frDate(e.created_at);
+      const old = done && added && (added - done) >= 30 * 86400000;
+      push(old ? 'logged' : 'finished', old ? e.created_at : e.completed_date);
+    }
     else if (e.status === 'ongoing') push('caught_up', e.updated_at);
     else if (e.status === 'watching') push('started', e.updated_at);
     else if (e.status === 'up_next') push('up_next', e.updated_at);
     else if (e.status === 'queue') push('watchlist', e.created_at);
     if (e.notes && e.notes.trim()) push('note', e.updated_at);
   });
+  // "made a list"
+  _frLists.forEach(l => { const d = _frDate(l.created_at); if (d && !isNaN(d)) ev.push({ id: 'list:' + l.id, user_id: l.user_id, title: l.title, _list: l, _ev: 'list', _at: d }); });
   return ev;
 }
 SF.register('frActivity', {
@@ -675,22 +756,35 @@ let _frActShown = 40;
 function _frRenderActivity() {
   const list = SF.list('frActivity', 'all');
   _frToolbar('Activity', list.length, 'frActivity', list.length === 1 ? 'update' : 'updates');
-  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('play', 'Nothing here yet', 'Try another friend or clear the filter.'); return; }
+  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('activity', 'Nothing here yet', 'Try another friend or clear the filter.'); return; }
   const byDate = (SF.getSort('frActivity', 'all') || 'newest') === 'newest' || SF.getSort('frActivity', 'all') === 'oldest';
   let html = '<div class="fa-feed">', lastDay = '';
   list.slice(0, _frActShown).forEach(x => {
     const a = _FR_ACT[x._ev], sc = _frScore(x);
     const day = _frDayLabel(x._at);
     if (byDate && day !== lastDay) { html += `<div class="fa-day">${day}</div>`; lastDay = day; }
+    if (x._ev === 'list') {
+      const n = (x._list.items || []).length;
+      html += `<article class="fa-item" onclick="_frOpenList(${attrJSON(x._list.id)})">
+        <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
+        <div class="fa-body">
+          <div class="fa-text"><b>${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
+          <div class="fa-title">${escHTML(x.title)}</div>
+          <div class="fa-meta"><span class="w-ep-badge">${n} ${n === 1 ? 'title' : 'titles'}</span><span>${x._at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+        </div>
+        ${(() => { const first = (x._list.items || []).map(_frListItem).find(Boolean); return first ? _frPosterHTML(first, 'fa-poster') : ''; })()}
+      </article>`;
+      return;
+    }
     html += `<article class="fa-item" onclick="_frOpenEvent(${attrJSON(x.id.split(':')[0])}, '${x._ev}')">
       <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
       <div class="fa-body">
         <div class="fa-text"><b>${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
         <div class="fa-title">${escHTML(x.title)}${x.year ? ` <span>${escHTML(String(x.year).slice(0, 4))}</span>` : ''}</div>
-        <div class="fa-meta">${_frTypeBadge(x)}<span>${x._ev === 'finished' ? x._at.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+        <div class="fa-meta">${_frTypeBadge(x)}<span>${x._ev === 'finished' || x._ev === 'logged' ? x._at.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
         ${x._ev === 'note' ? `<div class="fa-note">${mssIsSpoiler(x) ? mssSpoilerTag() : `&ldquo;${escHTML(x.notes.trim().split(/\s+/).slice(0, 30).join(' '))}${x.notes.trim().split(/\s+/).length > 30 ? '…' : ''}&rdquo;`}</div>` : ''}
       </div>
-      ${(x._ev === 'finished' || x._ev === 'caught_up') && sc != null ? `<div class="fa-score">★ ${sc.toFixed(2)}</div>` : ''}
+      ${(x._ev === 'finished' || x._ev === 'logged' || x._ev === 'caught_up') && sc != null ? `<div class="fa-score">★ ${sc.toFixed(2)}</div>` : ''}
       ${_frPosterHTML(x, 'fa-poster')}
     </article>`;
   });
@@ -734,7 +828,7 @@ function _frRenderLists() {
 const _frListItem = id => window._frEntryMap[id] || MSSList.tmdb(id);
 function _frOpenList(id) {
   const l = _frLists.find(x => x.id === id);
-  if (l) MSSList.open(l, { resolve: _frListItem, owner: _frProfiles[l.user_id] || {} });
+  if (l) MSSList.open(l, { resolve: _frListItem, owner: _frProfiles[l.user_id] || {}, social: true });
 }
 
 
@@ -886,13 +980,18 @@ function _cmpRenderList() {
   const cnt = document.querySelector('#cmpToolbar .fr-toolbar-count b'); if (cnt) cnt.textContent = list.length;
   el.innerHTML = list.length ? `<div class="cp-list">${list.slice(0, 120).map(g => {
     const cols = [_fUser.id, ..._cmpWith].map(u => { const e = g.byUser[u]; const sc = e ? _frScore(e) : null;
-      return `<div class="cp-cell${u === _fUser.id ? ' me' : ''}"><span>${u === _fUser.id ? 'You' : escHTML(_frName(u))}</span><b>${e ? (sc != null ? sc.toFixed(1) : '—') : '·'}</b></div>`; }).join('');
+      return `<div class="cp-cell${u === _fUser.id ? ' me' : ''}"><span>${u === _fUser.id ? 'You' : escHTML(_frName(u))}</span><b>${e ? (sc != null ? '★ ' + sc.toFixed(2) : '—') : '·'}</b></div>`; }).join('');
     const d = g._diff;
-    return `<button type="button" class="cp-row" onclick="_cmpOpen(${attrJSON(g.key)})">
-      ${_frPosterHTML(g, 'cp-row-poster')}
-      <div class="cp-row-info"><div class="cp-row-title">${escHTML(g.title)}${g.year ? ` <span>${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div><div class="fa-meta">${_frTypeBadge(g)}${d != null ? `<span class="cp-delta ${Math.abs(d) < .5 ? 'same' : d > 0 ? 'up' : 'down'}">${Math.abs(d) < .5 ? 'In sync' : (d > 0 ? '+' : '') + d.toFixed(1) + ' vs you'}</span>` : ''}</div></div>
+    // Same card as the Library's list view; score columns are a fixed width
+    // so they line up row to row however many friends are compared
+    return `<div class="fv-rank-row cp-row" role="button" tabindex="0" onclick="_cmpOpen(${attrJSON(g.key)})" onkeydown="if(event.key==='Enter')this.click()" style="--cp-n:${_cmpWith.length + 1}">
+      <div class="fv-rank-poster">${posterHTML(g)}</div>
+      <div class="fv-rank-info">
+        <div class="fv-rank-title">${escHTML(g.title)}${g.year ? `<span class="cp-year">${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
+        <div class="fv-rank-meta">${_frTypeBadge(g)}${d != null ? `<span class="cp-delta ${Math.abs(d) < .5 ? 'same' : d > 0 ? 'up' : 'down'}">${Math.abs(d) < .5 ? 'In sync' : (d > 0 ? '+' : '') + d.toFixed(1) + ' vs you'}</span>` : ''}</div>
+      </div>
       <div class="cp-cells">${cols}</div>
-    </button>`;
+    </div>`;
   }).join('')}</div>` : _frEmptyHTML('search', _cmpQuery ? 'No shared titles match' : 'Nothing shared yet', _cmpQuery ? 'Try a different search.' : 'Once you both log the same title, it shows up here.');
 }
 function _cmpToggle(uid) {
@@ -927,8 +1026,23 @@ function _cmpShowTitle(picker) {
   const myScore = _frScore(g.byUser[me]);
   const scored = people.map(u => _frScore(g.byUser[u])).filter(v => v != null);
   const avg = scored.length ? scored.reduce((a, b) => a + b, 0) / scored.length : null;
-  const { core, bonus } = getRatings(g.cat);
-  const rows = [...core, ...bonus].filter(r => people.some(u => typeof g.byUser[u].ratings?.[r.key] === 'number'));
+  // Ratings can be saved as numbers or numeric text — read both, so nobody's
+  // breakdown shows up empty / half-filled
+  const rv = (e, key) => { const v = e?.ratings?.[key]; if (v === '' || v == null) return null; const n = Number(v); return isNaN(n) ? null : n; };
+  const { core = [], bonus = [] } = getRatings(g.cat) || {};
+  const animated = g.cat === 'anime' || g.cat === 'cartoons';
+  const allRows = [...core, ...(animated ? [] : [{ key: 'animation', label: 'Animation Quality' }]), ...bonus];
+  const rows = allRows.filter(r => people.some(u => rv(g.byUser[u], r.key) != null));
+  // Headline stats
+  const pairs = people.filter(u => u !== me).map(u => _frScore(g.byUser[u])).filter(v => v != null);
+  const spread = scored.length > 1 ? Math.max(...scored) - Math.min(...scored) : null;
+  const closest = myScore != null && pairs.length ? Math.min(...pairs.map(v => Math.abs(v - myScore))) : null;
+  const finished = people.filter(u => ['completed', 'ongoing'].includes(g.byUser[u].status)).length;
+  let agree = null;                                         // categories within 1 point of each other
+  const both = rows.filter(r => people.filter(u => rv(g.byUser[u], r.key) != null).length > 1);
+  if (both.length) agree = Math.round(100 * both.filter(r => { const v = people.map(u => rv(g.byUser[u], r.key)).filter(x => x != null); return Math.max(...v) - Math.min(...v) <= 1; }).length / both.length);
+  // best-rated category among ones at least two of you rated
+  const topRow = both.map(r => { const v = people.map(u => rv(g.byUser[u], r.key)).filter(x => x != null); return { r, avg: v.reduce((a, b) => a + b, 0) / v.length }; }).sort((a, b) => b.avg - a.avg)[0];
   const card = u => {
     const e = g.byUser[u], sc = _frScore(e);
     const diff = u !== me && sc != null && myScore != null ? sc - myScore : null;
@@ -949,18 +1063,27 @@ function _cmpShowTitle(picker) {
       <div class="cp-hero-info">
         <div class="cp-hero-title">${escHTML(g.title)}${g.year ? ` <span>${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
         <div class="fa-meta">${_frTypeBadge(g)}</div>
-        <div class="cp-hero-stats"><div><b>${avg != null ? avg.toFixed(2) : '—'}</b><span>Group avg</span></div><div><b>${myScore != null ? myScore.toFixed(2) : '—'}</b><span>Your score</span></div><div><b>${people.length}</b><span>Logged it</span></div></div>
+        <div class="cp-hero-stats">
+          <div><b>${avg != null ? '★ ' + avg.toFixed(2) : '—'}</b><span>Group avg</span></div>
+          <div><b>${myScore != null ? '★ ' + myScore.toFixed(2) : '—'}</b><span>Your score</span></div>
+          <div><b>${spread != null ? spread.toFixed(2) : '—'}</b><span>Score gap</span></div>
+          ${closest != null ? `<div><b>${closest.toFixed(2)}</b><span>Closest to you</span></div>` : ''}
+          ${agree != null ? `<div><b>${agree}%</b><span>Ratings agree</span></div>` : ''}
+          <div><b>${finished}/${people.length}</b><span>Finished</span></div>
+        </div>
+        ${topRow ? `<div class="cp-hero-line">${icon('ratingStar', 12)} Rated highest together: <b>${escHTML(topRow.r.label)}</b> (${topRow.avg.toFixed(1)} avg)</div>` : ''}
       </div>
     </div>
     <div class="cp-pcards">${people.map(card).join('')}</div>
     ${rows.length ? `<div class="fr-toolbar-title cp-sec">Ratings breakdown</div>
     <div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Category</th>${people.map(u => `<th>${escHTML(name(u))}</th>`).join('')}</tr></thead>
-      <tbody>${rows.map(r => { const vals = people.map(u => g.byUser[u].ratings?.[r.key]); const nums = vals.filter(v => typeof v === 'number'); const top = nums.length > 1 ? Math.max(...nums) : null;
-        return `<tr><td>${escHTML(r.label)}</td>${vals.map(v => `<td class="${typeof v === 'number' && v === top ? 'best' : ''}">${typeof v === 'number' ? Number(v).toFixed(1) : '—'}</td>`).join('')}</tr>`; }).join('')}</tbody></table></div>` : ''}
+      <tbody>${rows.map(r => { const vals = people.map(u => rv(g.byUser[u], r.key)); const nums = vals.filter(v => v != null); const top = nums.length > 1 ? Math.max(...nums) : null;
+        return `<tr><td>${escHTML(r.label)}</td>${vals.map(v => `<td class="${v != null && v === top ? 'best' : ''}">${v != null ? v.toFixed(1) : '—'}</td>`).join('')}</tr>`; }).join('')}
+        <tr class="cp-total"><td>Final score</td>${people.map(u => { const v = _frScore(g.byUser[u]); return `<td>${v != null ? '★ ' + v.toFixed(2) : '—'}</td>`; }).join('')}</tr></tbody></table></div>` : ''}
     ${people.some(u => g.byUser[u].notes && g.byUser[u].notes.trim()) ? `<div class="fr-toolbar-title cp-sec">Notes</div>
     <div class="fn-grid">${people.filter(u => g.byUser[u].notes && g.byUser[u].notes.trim()).map(u => { const e = g.byUser[u];
       const text = `<blockquote class="fn-text">${escHTML(e.notes.trim())}</blockquote>`;
-      return `<article class="fn-card"><div class="fn-by">${_frAvHTML(prof(u), 22)}<span>${escHTML(name(u))}</span></div>${mssIsSpoiler(e) && u !== me ? mssSpoilerHTML(text, { compact: true }) : text}</article>`; }).join('')}</div>` : ''}`;
+      return `<article class="fn-card"><div class="fn-by">${_frAvHTML(prof(u), 22)}<span>${escHTML(name(u))}</span></div>${mssIsSpoiler(e) && u !== me ? mssSpoilerHTML(text, { compact: true, id: e.id }) : text}</article>`; }).join('')}</div>` : ''}`;
 }
 
 /* ── Start ── */
