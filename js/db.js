@@ -289,7 +289,7 @@ async function getFriendships(userId) {
 
   // Collect all friend user IDs
   const friendIds = rows.map(f => f.requester_id === userId ? f.addressee_id : f.requester_id);
-  const { data: profiles } = await sb.from('profiles').select('id,username,display_name,avatar_url').in('id', friendIds);
+  const { data: profiles } = await sb.from('profiles').select('id,username,display_name,avatar_url,top_picks').in('id', friendIds);
 
   return rows.map(f => ({
     ...f,
