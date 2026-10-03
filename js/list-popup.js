@@ -7,7 +7,8 @@
      MSSList.cardHTML(list, { resolve, onclick, ownerHTML, metaExtra, collabLine })
        → the lc-card: title + Ranked/Unranked pill, title count, optional
          owner / collaborators line, description and up to 5 posters
-     MSSList.open(list, { resolve, owner, eyebrow, collabLine, manage })
+     MSSList.open(list, { resolve, owner, eyebrow, collabLine, manage, social })
+       (social: someone else's list → like / dislike + "Add to My Lists")
        → the lp-* popup, read-only: posters (+N), View List, and on your
          own profile "Manage in Lists"
      MSSList.rankBadge(ranked) · countHTML(n) · postersHTML(items, resolve) ·
@@ -134,15 +135,75 @@ const MSSList = (() => {
       <div class="lp-meta">${countHTML(items.length)}</div>
       ${o.collabLine || ''}
       ${posters.length ? `<div class="lp-posters">${posters.map(e => `<div class="lp-poster">${posterHTML(e, 'big')}</div>`).join('')}${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}</div>` : ''}
-      <div id="lpNavPopupActions" class="lp-footer">
-        <button type="button" class="popup-action-btn lp-view" onclick="location.href=${escHTML(JSON.stringify(url))}">${icon('list', 14)} View List</button>
-        ${o.manage
-          ? `<button type="button" class="popup-action-btn lp-replies" onclick="location.href='lists.html'">${icon('edit', 14)} Manage in Lists</button>`
-          : `<button type="button" class="popup-action-btn lp-replies" onclick="MSSList.close()">Close</button>`}
-      </div>`;
+      <div id="lpNavPopupActions" class="lp-footer${o.social ? ' np-actions' : ''}">${footerHTML(list, o, null, null)}</div>`;
     ov.classList.add('open');
     document.body.style.overflow = 'hidden';
+    cur = { list, o, react: null, imported: null };
+    if (o.social) {
+      const me = window._navUser?.id, c = cur;
+      Promise.all([
+        mssReactions('list', list.id).catch(() => null),
+        me ? sb.from('favorite_lists').select('id').eq('user_id', me).eq('forked_from', list.id).limit(1).then(r => !!(r.data && r.data.length), () => false) : Promise.resolve(false),
+      ]).then(([st, imp]) => { if (cur === c) { c.react = st; c.imported = imp; drawFooter(); } });
+    }
   }
 
-  return { cardHTML, cardInnerHTML, open, close, rankBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
+  /* Footer: View List + Close / Manage — and on someone else's list (o.social)
+     like / dislike and "Add to My Lists" (a copy in your Lists) */
+  let cur = null;
+  function footerHTML(list, o, react, imported) {
+    const url = `list-view.html?list=${encodeURIComponent(list.id)}`;
+    const view = `<button type="button" class="popup-action-btn lp-view" onclick="location.href=${escHTML(JSON.stringify(url))}">${icon('list', 14)} View List</button>`;
+    if (o.social) {
+      return mssReactButtonsHTML(react, 'MSSList._react(true)', 'MSSList._react(false)') + view
+        + (imported ? `<button type="button" class="popup-action-btn lp-replies" disabled>${icon('check', 14)} In My Lists</button>`
+          : `<button type="button" class="popup-action-btn lp-replies" onclick="MSSList._import(this)">${icon('plus', 14)} Add to My Lists</button>`);
+    }
+    return view + (o.manage
+      ? `<button type="button" class="popup-action-btn lp-replies" onclick="location.href='lists.html'">${icon('edit', 14)} Manage in Lists</button>`
+      : `<button type="button" class="popup-action-btn lp-replies" onclick="MSSList.close()">Close</button>`);
+  }
+  function drawFooter() {
+    const el = document.getElementById('lpNavPopupActions');
+    if (el && cur) el.innerHTML = footerHTML(cur.list, cur.o, cur.react, cur.imported);
+  }
+  async function react(isLike) {
+    if (!cur || !cur.react) return;
+    const c = cur;
+    c.react = await mssReact('list', c.list.id, isLike, c.react);
+    if (cur === c) drawFooter();
+  }
+  // Copy into your Lists: their titles become yours (your entry when you have
+  // the title, otherwise the TMDB title) — same as "Import" on list-view.html
+  async function importList(btn) {
+    const me = window._navUser?.id;
+    if (!me) { showToast('Sign in to add lists.', 'err'); return; }
+    if (!cur) return;
+    const { list, o } = cur;
+    btn.disabled = true;
+    try {
+      const { data: mine } = await sb.from('entries').select('id, tmdb_id, tmdb_type').eq('user_id', me).not('tmdb_id', 'is', null);
+      const myByTmdb = Object.fromEntries((mine || []).map(e => [`${e.tmdb_type}:${e.tmdb_id}`, e.id]));
+      const items = [];
+      (list.items || []).forEach(id => {
+        let next = id;
+        if (isTmdbId(id)) { const [, t, n] = id.split(':'); next = myByTmdb[`${t}:${n}`] || id; }
+        else { const e = o.resolve(id); if (e?.tmdb_id && e?.tmdb_type) next = myByTmdb[`${e.tmdb_type}:${e.tmdb_id}`] || `tmdb:${e.tmdb_type}:${e.tmdb_id}`; }
+        if (!items.includes(next)) items.push(next);
+      });
+      const { error } = await sb.from('favorite_lists').insert({
+        user_id: me, cat: 'custom', genre: list.genre || '', title: list.title, description: list.description || null,
+        items, ranked: list.ranked ?? null, forked_from: list.id,
+      });
+      if (error) throw error;
+      showToast('Added to your lists!');
+      cur.imported = true; drawFooter();
+    } catch (err) {
+      console.error('Add list:', err);
+      showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t add that list — try again.', 'err');
+      btn.disabled = false;
+    }
+  }
+
+  return { _react: react, _import: importList, cardHTML, cardInnerHTML, open, close, rankBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
 })();
