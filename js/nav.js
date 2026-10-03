@@ -2238,7 +2238,7 @@ if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
    titles AniList doesn't list keep the voice actor's photo.
    Results are kept on the device for 7 days.
 ══════════════════════════════════════════ */
-const _MSS_CAST_STORE = 'mss_cast_v1';
+const _MSS_CAST_STORE = 'mss_cast_v2';   // v2: entries carry the TMDB person id
 const _MSS_CAST_TTL = 7 * 24 * 60 * 60 * 1000;
 function _mssCastCache() { try { return JSON.parse(localStorage.getItem(_MSS_CAST_STORE) || '{}'); } catch { return {}; } }
 function _mssCastSave(key, cast) {
@@ -2300,6 +2300,7 @@ async function mssFetchCast(it) {
       tmdb = ((await res.json()).cast || []).map(c => ({
         character: (c.character || c.roles?.[0]?.character || '').replace(/\s*\(voice\)\s*/i, '').trim(),
         actor: c.name || '',
+        personId: c.id || null,          // TMDB person → person.html
         photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : null,
         isCharacterImage: false,
       })).filter(c => c.actor);
@@ -2313,6 +2314,7 @@ async function mssFetchCast(it) {
     const edges = media?.characters?.edges || [];
     if (edges.length) {
       const tmdbActors = new Set(tmdb.map(c => _mssNorm(c.actor)));
+      const tmdbIds = Object.fromEntries(tmdb.map(c => [_mssNorm(c.actor), c.personId]));
       const jp = (it.origin_country || []).includes('JP') || it.original_language === 'ja';
       cast = edges.slice(0, 5).map(ed => {
         const vas = [...(ed.ja || []), ...(ed.en || [])].map(v => v.name?.full).filter(Boolean);
@@ -2320,7 +2322,7 @@ async function mssFetchCast(it) {
         const actor = vas.find(n => tmdbActors.has(_mssNorm(n)))
           || (jp ? ed.ja?.[0]?.name?.full : ed.en?.[0]?.name?.full)
           || vas[0] || '';
-        return { character: ed.node?.name?.full || '', actor, photo: ed.node?.image?.large || null, isCharacterImage: true };
+        return { character: ed.node?.name?.full || '', actor, personId: tmdbIds[_mssNorm(actor)] || null, photo: ed.node?.image?.large || null, isCharacterImage: true };
       }).filter(c => c.character);
       // Fill up to 5 with TMDB cast AniList didn't cover (actor photo)
       const have = new Set(cast.map(c => _mssNorm(c.character)));
