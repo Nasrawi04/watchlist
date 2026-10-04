@@ -1847,14 +1847,13 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 /* Same backdrop as the Info + Ratings popups: dimmed, not blurred */
 .note-popup-overlay2, #snPopupOverlay { background:rgba(0,0,0,0.72) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .np-card { max-width:min(97vw, var(--popup-w)) !important; background:var(--bg-2) !important; border:0.5px solid var(--border) !important; box-shadow:0 28px 70px rgba(0,0,0,.4) !important; display:flex; flex-direction:column; max-height:90dvh; }
-#snPopupCard.np-card { border-radius:var(--radius-lg); overflow:hidden; width:100%; }
-/* The card never grows past the screen: header, poster row, stats and
-   buttons stay put and only the note text scrolls (fits 500-word notes). */
-.np-card { overflow:hidden; }
-.np-card > .np-hero, .np-card > .np-head, .np-card > .np-stats, .np-card > .np-footer { flex-shrink:0; }
-.np-card > .np-body { flex:1 1 auto; min-height:0; }
+#snPopupCard.np-card { border-radius:var(--radius-lg); width:100%; }
+/* The whole card scrolls (header, note and buttons together), so long notes
+   get the full height instead of a small inner box. */
+.np-card { overflow-y:auto; overscroll-behavior-y:contain; scrollbar-width:thin; }
+.np-card > * { flex-shrink:0; }
 .np-hero { position:relative; height:340px; flex-shrink:0; overflow:hidden; background:linear-gradient(135deg, var(--olive) 0%, var(--olive-faint) 70%); }
-/* Blurred poster that melts into the card: blur + a masked fade instead of a hard gradient band */
+/* Header image: a blurred poster until the TMDB backdrop loads */
 .np-hero-blur {
   position:absolute; inset:-30px; background-size:cover; background-position:center 25%;
   filter:blur(22px) saturate(1.2) brightness(.8); transform:scale(1.1);
@@ -1862,7 +1861,6 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 }
 /* TMDB backdrop loaded: show it sharp and full-strength */
 .np-hero-blur.is-backdrop { inset:0; filter:none; transform:none; background-position:center 30%; }
-.np-hero-fade { position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,.25) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, var(--bg-2) 100%); pointer-events:none; }
 .np-close {
   position:absolute; top:12px; right:12px; width:34px; height:34px; border-radius:50%;
   background:rgba(0,0,0,.42); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
@@ -1870,7 +1868,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   display:flex; align-items:center; justify-content:center; transition:background .15s;
 }
 .np-close:hover { background:rgba(0,0,0,.62); }
-.np-head { position:relative; display:flex; gap:18px; align-items:flex-end; padding:0 22px; margin-top:-96px; }
+.np-head { --np-overlap:96px; position:relative; display:flex; gap:18px; align-items:flex-start; padding:0 22px; margin-top:calc(-1 * var(--np-overlap)); }
 .np-poster {
   width:122px; aspect-ratio:2/3; flex-shrink:0; border-radius:10px; overflow:hidden;
   background:var(--olive-faint); display:flex; align-items:center; justify-content:center;
@@ -1878,7 +1876,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   border:none; box-shadow:0 12px 30px rgba(0,0,0,.4);
 }
 .np-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.np-head-info { flex:1; min-width:0; padding-bottom:2px; }
+.np-head-info { flex:1; min-width:0; padding-bottom:2px; padding-top:calc(var(--np-overlap, 96px) + 12px); }
 .np-eyebrow { font-family:var(--serif); font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; display:flex; align-items:center; gap:7px; }
 .np-eyebrow .snote-avatar { width:20px; height:20px; font-size:10px; letter-spacing:0; }
 .np-eyebrow .np-user { font-family:var(--sans); letter-spacing:0; text-transform:none; font-size:12.5px; font-weight:600; color:var(--text-2); }
@@ -1895,17 +1893,12 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .np-stats { display:flex; align-items:center; gap:16px; padding:14px 22px 0; font-size:12.5px; color:var(--text-3); }
 .np-stats span { display:inline-flex; align-items:center; gap:5px; }
 .np-stats b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); letter-spacing:.3px; }
-.np-body { padding:16px 22px 18px; overflow-y:auto; overscroll-behavior-y:contain; display:flex; flex-direction:column; gap:8px; scrollbar-width:thin; }
-.np-body.np-more { -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 44px), transparent); mask-image:linear-gradient(to bottom, #000 calc(100% - 44px), transparent); }
+.np-body { padding:16px 22px 18px; display:flex; flex-direction:column; gap:8px; }
 /* Long notes */
-.np-long .np-hero { height:240px; }
-.np-long .np-head { margin-top:-66px; }
 .np-long .np-poster { width:96px; }
 .np-long .np-quote { font-style:normal; font-size:15px; line-height:1.8; padding-left:16px; }
 .np-long .np-textarea { min-height:min(46dvh, 420px); }
 @media(max-width:640px) {
-  .np-long .np-hero { height:170px; }
-  .np-long .np-head { margin-top:-50px; }
   .np-long .np-poster { width:76px; }
   .np-long .np-quote { font-size:14.5px; line-height:1.75; }
 }
@@ -1933,7 +1926,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .np-actions .popup-action-btn:disabled { opacity:.55; cursor:default; }
 @media(max-width:640px) {
   .np-hero { height:230px; }
-  .np-head { margin-top:-74px; padding:0 16px; gap:14px; }
+  .np-head { --np-overlap:74px; padding:0 16px; gap:14px; }
   .np-meta .type-label, .np-meta .w-ep-badge { font-size:11px; padding:4px 8px; }
   .np-poster { width:96px; font-size:26px; }
   .np-stats { padding:12px 16px 0; }
