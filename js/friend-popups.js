@@ -99,7 +99,7 @@ const MSSFriendPop = (() => {
     const body = `<blockquote class="np-quote">&ldquo;${esc(e.notes.trim())}&rdquo;</blockquote>`;
     const card = document.getElementById('snPopupCard');
     card.innerHTML = `${MSSViews.barFor('note', e.id)}
-      <div class="np-hero"><div class="np-hero-blur" id="frNoteHero"></div><div class="np-hero-fade"></div>
+      <div class="np-hero"><div class="np-hero-blur" id="frNoteHero"></div>
         <button class="np-close" onclick="MSSFriendPop.closeNote()" aria-label="Close">&#x2715;</button></div>
       <div class="np-head">
         ${poster(e, 'np-poster')}
@@ -119,7 +119,7 @@ const MSSFriendPop = (() => {
     ov.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     loadHero(document.getElementById('frNoteHero'), e);
-    requestAnimationFrame(() => card.querySelectorAll('.np-body').forEach(b => { const u = () => b.classList.toggle('np-more', b.scrollHeight - b.scrollTop - b.clientHeight > 8); b.onscroll = u; u(); }));
+    card.scrollTop = 0;
   }
   function closeNote() {
     const ov = document.getElementById('snPopupOverlay');
