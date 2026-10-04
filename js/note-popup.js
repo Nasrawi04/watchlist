@@ -82,14 +82,11 @@ const MSSNote = (() => {
     img.onload = () => { el.style.backgroundImage = cssURL(url); el.classList.add('is-backdrop'); };
     img.src = url;
   }
-  // Long notes: shorter header, upright text, and a soft fade while there's more to scroll
+  // Long notes: upright text that's easier to read; the whole card scrolls
   function fitLong(card, n) {
     if (!card) return;
     card.classList.toggle('np-long', n > 120);
-    requestAnimationFrame(() => card.querySelectorAll('.np-body').forEach(b => {
-      const upd = () => b.classList.toggle('np-more', b.scrollHeight - b.scrollTop - b.clientHeight > 8);
-      b.onscroll = upd; upd();
-    }));
+    card.scrollTop = 0;
   }
 
   async function reactionCounts(ids) {
@@ -136,7 +133,6 @@ const MSSNote = (() => {
         <div class="mss-views" id="mssNoteViews"></div>
         <div class="np-hero">
           <div class="np-hero-blur" id="mssNoteBlur"></div>
-          <div class="np-hero-fade"></div>
           <button type="button" class="np-close" onclick="MSSNote.close()" aria-label="Close">&#x2715;</button>
         </div>
         <div class="np-head">
