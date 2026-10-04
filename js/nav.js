@@ -199,6 +199,7 @@ function injectChrome() {
         ${navLink('index.html',     page, 'home',     'Home')}
         ${navLink('discover.html',  page, 'compass',  'Discover')}
         ${navLibraryDropdown(page)}
+        ${navLink('episodes.html',   page, 'grid',     'Episodes')}
         ${navLink('lists.html',      page, 'layers',   'Lists')}
         ${navLink('notes.html',      page, 'notebook',     'Notes')}
         ${navLink('friends.html',   page, 'users',    'Friends')}
@@ -237,6 +238,7 @@ function injectChrome() {
     ${mobileNavLink('index.html',     page, 'home',     'Home')}
     ${mobileNavLink('discover.html',  page, 'compass',  'Discover')}
     ${mobileLibraryGroup(page)}
+    ${mobileNavLink('episodes.html',  page, 'grid',     'Episodes')}
     ${mobileNavLink('lists.html',     page, 'layers',   'Lists')}
     ${mobileNavLink('notes.html',     page, 'notebook',     'Notes')}
     ${mobileNavLink('friends.html',   page, 'users',    'Friends')}
@@ -1792,6 +1794,7 @@ function fitTitleYear(root) {
 /* ══════════════════════════════════════════
    Notifications — bell panel + notifications.html
    Sections:
+     episodes  — new_episode (tv-schedule.js → add_new_episode_notifications, 033)
      activity  — friend_started, friend_queued
      lists     — list_invite, list_invite_accepted
      requests  — friend_request
@@ -1802,10 +1805,11 @@ let _notifUser = null;
 let _notifItems = [];
 let _notifTab = 'all';
 const NOTIF_SECTIONS = [
-  ['all', 'All'], ['activity', 'Friend Activity'], ['lists', 'Lists'], ['requests', 'Friend Requests'],
+  ['all', 'All'], ['episodes', 'New Episodes'], ['activity', 'Friend Activity'], ['lists', 'Lists'], ['requests', 'Friend Requests'],
 ];
 function _notifSection(n) {
   if (n.type === 'friend_request') return 'requests';
+  if (n.type === 'new_episode') return 'episodes';
   if (n.type === 'list_invite' || n.type === 'list_invite_accepted' || n.type === 'list_invite_declined') return 'lists';
   return 'activity';
 }
@@ -1924,7 +1928,9 @@ function _notifItemHTML(n, opts = {}) {
   const name = n.actor ? escHTML(n.actor.display_name || n.actor.username) : 'Someone';
   const who = `<b>${name}</b>`;
   const title = n.list ? `<b>&ldquo;${escHTML(n.list.title)}&rdquo;</b>` : 'a list';
-  const av = n.actor && safeURL(n.actor.avatar_url)
+  const av = n.type === 'new_episode' && safeURL(n.meta?.poster_url)
+    ? `<img src="${safeURL(n.meta.poster_url)}" alt="">`
+    : n.actor && safeURL(n.actor.avatar_url)
     ? `<img src="${safeURL(n.actor.avatar_url)}" alt="">`
     : escHTML(((n.actor && n.actor.username) || '?')[0].toUpperCase());
   let text = '', actions = '', extra = '', href = '', icon2 = '';
@@ -1954,6 +1960,10 @@ function _notifItemHTML(n, opts = {}) {
     text = `${who} started watching ${_notifKind(n.meta)}`; icon2 = 'play';
     extra = _notifTitleCard(n.meta);
     href = n.meta?.tmdb_id && n.meta?.tmdb_type ? `title.html?type=${n.meta.tmdb_type}&id=${n.meta.tmdb_id}` : (n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : '');
+  } else if (n.type === 'new_episode') {
+    const m = n.meta || {};
+    text = `New episode of <b>${escHTML(m.title || 'a show')}</b> — S${escHTML(m.season)} · E${escHTML(m.episode)}${m.episode_name ? ` “${escHTML(m.episode_name)}”` : ''}`; icon2 = 'tv';
+    href = m.tmdb_id ? `episodes.html?show=${encodeURIComponent(m.tmdb_id)}` : '';
   } else if (n.type === 'friend_queued') {
     text = `${who} added something from your library to their watchlist`; icon2 = 'plus';
     extra = _notifTitleCard(n.meta);
@@ -2170,6 +2180,7 @@ function _notifShortText(n) {
     case 'list_invite_declined': return `${who} declined your invite to ${list}`;
     case 'friend_started':       return `${who} started watching ${t}`;
     case 'friend_queued':        return `${who} added ${t} from your library`;
+    case 'new_episode':          return `New episode of ${t} — S${escHTML(n.meta?.season)} · E${escHTML(n.meta?.episode)}`;
   }
   return 'New notification';
 }
