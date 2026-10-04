@@ -78,6 +78,8 @@
     </button>
   </div>
 
+  <div id="discYourTV" class="ys-wrap"></div>
+
   <div class="disc-nav-dd-wrap" id="discNavDD"></div>
 
   <div class="disc-layout">
@@ -95,6 +97,7 @@
 <script src="js/nav.js"></script>
 <script src="js/info-popup.js"></script>
 <script src="js/discover-categories.js"></script>
+<script src="js/tv-schedule.js"></script>
 <script>
 function _discEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -251,7 +254,7 @@ function _initDiscSideNavScrollSpy() {
 // keeps the exact scroll position for free.)
 
 document.addEventListener('DOMContentLoaded', () => {
-  initInlineSearch('heroSearch', { hide: ['#discNavDD', '.disc-layout'] });   // live results on the page (no dropdown)
+  initInlineSearch('heroSearch', { hide: ['#discYourTV', '#discNavDD', '.disc-layout'] });   // live results on the page (no dropdown)
   // Layout + any rows cached from this session are drawn right away (none
   // of it depends on sign-in), so coming back restores the scroll position
   // on the very first frame instead of after the auth check.
@@ -269,6 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Uncached rows load with a small stagger (not all 13+ requests at
     // once) — easier on TMDB's shared API key.
     toFetch.forEach((cat, i) => setTimeout(() => _discLoadCategory(cat), i * 220));
+    // Your TV: new episodes, episode guide, release calendar, upcoming seasons (tv-schedule.js)
+    MSSSchedule.renderDiscover(document.getElementById('discYourTV'));
   });
 });
 </script>
