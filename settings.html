@@ -295,6 +295,17 @@
         </div>
 
         <div class="settings-section fade-up fade-up-2">
+          <div class="settings-title">Episode Ratings</div>
+          <p class="settings-desc">When you mark an episode watched with “+”, MyScreenScore can ask you to rate it.</p>
+          <div class="pn-toggle ep-mode-toggle" role="radiogroup" aria-label="Episode ratings">
+            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="true" data-mode="ask" onclick="setEpisodeMode('ask')">Ask per show</button>
+            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-mode="always" onclick="setEpisodeMode('always')">Always</button>
+            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-mode="off" onclick="setEpisodeMode('off')">Never</button>
+          </div>
+          <p class="settings-desc" id="epModeHint" style="margin-top:.6rem;margin-bottom:0"></p>
+        </div>
+
+        <div class="settings-section fade-up fade-up-2">
           <div class="settings-title">Sessions</div>
           <p class="settings-desc">Signed in on a shared or lost device? Sign out of MyScreenScore everywhere, including this browser.</p>
           <button type="button" class="set-btn" onclick="doSignOutEverywhere()">
@@ -344,6 +355,7 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/episode-ratings.js"></script>
 <script>
 let _sUser = null, _sProfile = null;
 let _usernameCheckTimer = null;
@@ -696,6 +708,26 @@ function toggleNotifPopupsSetting() {
   showToast(on ? 'Notification alerts on.' : 'Alerts off — new notifications will just show on the bell.');
 }
 document.addEventListener('DOMContentLoaded', refreshNotifPopupsSetting);
+
+/* ── Episode ratings setting (episode-ratings.js) ── */
+const _EP_MODE_HINT = {
+  ask:    'Asks once for each show whether you want to rate its episodes (default).',
+  always: 'Rates every show — the rating popup opens after each “+” without asking first.',
+  off:    'Never asks. You can still rate any episode from a show’s info popup.',
+};
+function _paintEpisodeMode(m) {
+  document.querySelectorAll('.ep-mode-toggle .pn-toggle-btn').forEach(b => {
+    const on = b.dataset.mode === m;
+    b.classList.toggle('active', on); b.setAttribute('aria-checked', on);
+  });
+  document.getElementById('epModeHint').textContent = _EP_MODE_HINT[m] || '';
+}
+async function setEpisodeMode(m) {
+  _paintEpisodeMode(m);
+  try { await MSSEp.setMode(m); showToast('Saved.'); }
+  catch (err) { console.error(err); showToast('Couldn’t save that — try again.', 'err'); }
+}
+document.addEventListener('DOMContentLoaded', () => { MSSEp.mode().then(_paintEpisodeMode); });
 </script>
 <script>
 if ('serviceWorker' in navigator) {
