@@ -474,12 +474,12 @@ nav {
   background:var(--bg-3); transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
 }
 .hero-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
-#heroSearch {
+#heroSearch, .hero-search-wrap > input {
   background:transparent; border:none; color:var(--text);
   font-size:16px; padding:18px 20px; outline:none;
   flex:1; min-width:0; transition:none; box-sizing:border-box;
 }
-#heroSearch::placeholder { color:var(--text-3); font-size:14px; }
+#heroSearch::placeholder, .hero-search-wrap > input::placeholder { color:var(--text-3); font-size:14px; }
 .hero-search-clear {
   flex-shrink:0; align-self:center; width:34px; height:34px; margin-right:8px; border-radius:50%;
   display:flex; align-items:center; justify-content:center; cursor:pointer;
@@ -3283,7 +3283,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 [data-theme="light"] #globalSearch:focus { border-color:rgba(26,69,32,0.5); box-shadow:0 0 0 3px rgba(26,69,32,0.1); }
 [data-theme="light"] .hero-search-wrap { background:#D8D0C5; border-color:rgba(0,0,0,0.28); }
 [data-theme="light"] .hero-search-wrap:focus-within { border-color:rgba(26,69,32,0.5); box-shadow:0 0 0 3px rgba(26,69,32,0.1); }
-[data-theme="light"] #heroSearch { color:#1A1A1A; }
+[data-theme="light"] #heroSearch, [data-theme="light"] .hero-search-wrap > input { color:#1A1A1A; }
 
 [data-theme="light"] .rdrop-list { background:#E3DDD3; border-color:rgba(0,0,0,0.12); }
 [data-theme="light"] .wg-ep { background:rgba(26,69,32,0.8); }
@@ -3965,7 +3965,7 @@ body { font-size:15px; }
   #mainContent { max-height:none; overflow-y:visible; }
 
   /* ── Hero search ── */
-  #heroSearch { padding:14px 14px; }
+  #heroSearch, .hero-search-wrap > input { padding:14px 14px; }
   .hero-search-btn { padding:0 16px; }
   .hero-search-btn span { display:none; }
 }
@@ -4137,7 +4137,7 @@ body { font-size:15px; }
 .cc-input {
     padding:12px 14px; font-size:16px;
   }
-  #heroSearch { font-size:16px; }
+  #heroSearch, .hero-search-wrap > input { font-size:16px; }
   #globalSearch { font-size:16px; }
 }
 /* Cancel touch inflation on phones */
