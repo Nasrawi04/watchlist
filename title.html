@@ -280,6 +280,20 @@
 /* Related rows (collection + recommendations) */
 .td-related { margin-top:2.5rem; }
 .td-related .grid-nav-wrap { margin-top:1rem; }
+.td-section-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.td-ep-graph-link { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--olive-light); text-decoration:none; }
+.td-ep-graph-link:hover { text-decoration:underline; text-underline-offset:3px; }
+.td-ep-scores { position:absolute; top:8px; right:8px; display:flex; gap:4px; }
+.td-ep-scores span { padding:2px 7px; border-radius:4px; font-family:var(--bebas); font-size:14px; letter-spacing:.4px; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+.td-fans { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-top:1rem; }
+.td-fan-card { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:16px; }
+.td-fan-label { font-family:var(--serif); font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:10px; }
+.td-fan-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.td-fan-list li { display:flex; align-items:center; gap:10px; }
+.td-fan-rank { width:24px; height:24px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:var(--bebas); font-size:15px; background:var(--olive); color:#fff; }
+.td-fan-list li:first-child .td-fan-rank { background:#c9a227; color:#1a1a1a; }
+.td-fan-pick { flex:1; min-width:0; font-size:14px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.td-fan-count { font-size:11.5px; color:var(--text-3); white-space:nowrap; }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -308,6 +322,7 @@
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/info-popup.js"></script>
+<script src="js/episode-ratings.js"></script>
 <script src="js/discover-categories.js"></script>
 <script>
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -422,6 +437,27 @@ async function loadTitle() {
 
   _tdLoadNotes();
   _tdLoadRelated(detail);
+  _tdLoadFans();
+  if (_tdType === 'tv') _tdLoadEpScores();
+}
+
+/* ── Fan favorites: the 3 most picked Favorite Episode / Season / Character
+   across MyScreenScore (get_title_favorites, 2+ picks each). Hidden when
+   nobody has picked any. ── */
+async function _tdLoadFans() {
+  let rows = [];
+  try { const { data } = await sb.rpc('get_title_favorites', { p_tmdb_id: Number(_tdId), p_tmdb_type: _tdType }); rows = data || []; } catch { return; }
+  if (!rows.length) return;
+  const groups = [['episode', 'Favorite Episodes'], ['season', 'Favorite Seasons'], ['character', 'Favorite Characters']]
+    .map(([k, label]) => ({ label, items: rows.filter(r => r.kind === k) })).filter(g => g.items.length);
+  document.getElementById('tdFans').innerHTML = `<div class="td-related">
+      <div class="section-eyebrow">On MyScreenScore</div>
+      <div class="section-title">Fan Favorites</div>
+      <div class="td-fans">${groups.map(g => `<div class="td-fan-card">
+          <div class="td-fan-label">${esc(g.label)}</div>
+          <ol class="td-fan-list">${g.items.map((r, i) => `<li><span class="td-fan-rank">${i + 1}</span><span class="td-fan-pick">${esc(r.pick)}</span><span class="td-fan-count">${r.picks} pick${r.picks === 1 ? '' : 's'}</span></li>`).join('')}</ol>
+        </div>`).join('')}</div>
+    </div>`;
 }
 
 /* ── Related titles: the movie's collection ("Part of the Avengers
@@ -585,6 +621,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
 
     ${!isMovie ? _tdSeasonsHTML(d) : ''}
 
+    <div id="tdFans"></div>
     <div id="tdCollection"></div>
     <div id="tdRecs"></div>
 
@@ -774,7 +811,8 @@ function _tdSeasonsHTML(d) {
   const seasons = (d.seasons || []).filter(s => s.season_number > 0 || d.seasons.length === 1);
   if (!seasons.length) return '';
   return `
-    <div class="td-section-title">Episodes</div>
+    <div class="td-section-head"><div class="td-section-title">Episodes</div>
+      <a class="td-ep-graph-link" href="episodes.html?show=${_tdId}">${icon('grid', 14)} Episode ratings graph</a></div>
     <div class="td-season-row" id="tdSeasonRow">
       ${seasons.map(s => `
         <div class="td-season-block" data-season="${s.season_number}" data-tv="${_tdId}">
@@ -786,6 +824,24 @@ function _tdSeasonsHTML(d) {
         </div>`).join('')}
     </div>
     <div id="tdEpisodesList"></div>`;
+}
+
+/* Your episode scores + MSS community averages (episode-ratings, 031) */
+let _tdMyEp = {}, _tdCommEp = {};
+let _tdEpScoresReady = Promise.resolve();
+function _tdLoadEpScores() {
+  _tdEpScoresReady = (async () => {
+    try {
+      const { data: comm } = await sb.rpc('get_episode_community', { p_tmdb_id: Number(_tdId) });
+      (comm || []).forEach(r => { _tdCommEp[`${r.season_number}:${r.episode_number}`] = r; });
+      const uid = window._navUser?.id;
+      if (!uid) return;
+      const { data: en } = await sb.from('entries').select('id').eq('user_id', uid).eq('tmdb_id', Number(_tdId)).eq('tmdb_type', 'tv').limit(1).maybeSingle();
+      if (!en) return;
+      const { data: mine } = await sb.from('episode_ratings').select('season_number,episode_number,score').eq('entry_id', en.id).gt('episode_number', 0);
+      (mine || []).forEach(r => { _tdMyEp[`${r.season_number}:${r.episode_number}`] = Number(r.score); });
+    } catch {}
+  })();
 }
 
 async function _selectSeason(el) {
@@ -804,8 +860,10 @@ async function _selectSeason(el) {
     return;
   }
 
+  await _tdEpScoresReady;
   epsWrap.innerHTML = `<div class="td-episode-row">${eps.map((ep, i) => {
     const runtime = ep.runtime ? `${ep.runtime}m` : '';
+    const k = `${seasonNum}:${ep.episode_number}`, mineS = _tdMyEp[k], commS = _tdCommEp[k];
     const rating = ep.vote_average ? _discFloorScore(ep.vote_average) : null;
     const date = ep.air_date || '';
     return `
@@ -813,6 +871,7 @@ async function _selectSeason(el) {
       <div class="td-ep-still">
         ${ep.still_path ? `<img src="${TMDB_IMG.replace('w185', 'w500')}${ep.still_path}" loading="lazy">` : ''}
         <span class="td-ep-num-badge">Episode ${ep.episode_number}</span>
+        ${mineS != null || commS ? `<span class="td-ep-scores">${mineS != null ? `<span class="ep-band-${MSSEp.band(mineS).key}" title="Your rating">You ${mineS.toFixed(1)}</span>` : ''}${commS ? `<span class="ep-band-${MSSEp.band(commS.avg_score).key}" title="MyScreenScore average · ${commS.rating_count} ratings">MSS ${Number(commS.avg_score).toFixed(1)}</span>` : ''}</span>` : ''}
       </div>
       <div class="td-ep-body">
         <div class="td-ep-title">${esc(ep.name)}</div>
