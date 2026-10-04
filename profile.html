@@ -440,6 +440,7 @@
     <option value="1">Library</option>
     <option value="2">Lists</option>
     <option value="3">Notes</option>
+    <option value="5">Episodes</option>
     <option value="4">Exports</option>
   </select>
 
@@ -460,6 +461,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
       <span class="prof-tab-label">Notes</span>
     </div>
+    <div class="prof-tab" id="tab5" onclick="switchTab(5)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span class="prof-tab-label">Episodes</span>
+    </div>
     <div class="prof-tab" id="tab4" onclick="switchTab(4)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <span class="prof-tab-label">Exports</span>
@@ -471,6 +476,7 @@
   <div class="prof-panel" id="panel2"><div id="listsTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel3"><div id="notesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel4"><div id="exportsContent"></div></div>
+  <div class="prof-panel" id="panel5"><div id="episodesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
 
 </div>
 
@@ -516,6 +522,7 @@ function _trimNotes(text) {
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
 <script src="js/info-popup.js"></script>
+<script src="js/episode-ratings.js"></script>
 <script src="js/rating-popup.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/list-popup.js"></script>
@@ -656,6 +663,7 @@ function switchTab(n) {
   if (n===1) renderLibrary();
   if (n===2 || n===3) _renderPersonalTab(n);
   if (n===4) renderExports();
+  if (n===5) MSSTabs.episodes(document.getElementById('episodesTabContent'), { userId: _pUser.id, owner: true });
   if (n===0 && _pEntries.length) renderTab0();
 }
 
