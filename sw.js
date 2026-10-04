@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'mss-v642';
+const CACHE_VERSION = 'mss-v697';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -34,6 +34,7 @@ const STATIC_ASSETS = [
   'profile-view.html',
   'lists.html',
   'list-view.html',
+  'episodes.html',
   'notes.html',
   'notifications.html',
   'detail.html',
@@ -58,8 +59,10 @@ const STATIC_ASSETS = [
   'js/note-popup.js',
   'js/list-popup.js',
   'js/profile-tabs.js',
-  'js/entry-views.js',
   'js/dashboard.js',
+  'js/library-view.js',
+  'js/episode-ratings.js',
+  'js/tv-schedule.js',
   'js/friend-popups.js',
   'manifest.json',
   'icons/logo-nav.png',
@@ -76,8 +79,12 @@ self.addEventListener('install', event => {
     // so a single missing/renamed file would silently leave NOTHING
     // precached, including offline.html.
     caches.open(STATIC_CACHE).then(cache =>
+      // cache:'reload' skips the browser's HTTP cache — GitHub Pages lets files
+      // sit there for 10 minutes, so right after a deploy the new version could
+      // otherwise get precached with OLD copies of some files (mixed versions:
+      // new pages calling code that isn't there yet).
       Promise.allSettled(STATIC_ASSETS.map(asset =>
-        cache.add(asset).catch(err => console.warn('SW: failed to cache', asset, err))
+        cache.add(new Request(asset, { cache: 'reload' })).catch(err => console.warn('SW: failed to cache', asset, err))
       ))
     )
   );
@@ -98,10 +105,15 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
+/* Local development (VS Code Live Server etc.): never cache anything, so
+   every save shows up on the next reload. */
+const IS_LOCAL = ['localhost', '127.0.0.1', '[::1]'].includes(self.location.hostname);
+
 /* ── Fetch: route requests ── */
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
+  if (IS_LOCAL) return;
 
   // A user-triggered hard refresh (Ctrl/Cmd+Shift+R) only bypasses the
   // browser's HTTP cache for THIS ONE request — it says nothing about
@@ -168,13 +180,17 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Static assets (HTML, CSS, JS) — stale-while-revalidate
-  if (request.destination === 'document' ||
+  // The site's own pages, JS and CSS — network first, so you always get the
+  // version that's live (stale-while-revalidate kept serving the PREVIOUS
+  // copy, so new pages could load next to old scripts). The cached copy is
+  // used when offline, or if the network takes longer than 3.5s.
+  if (url.origin === self.location.origin && (
+      request.destination === 'document' ||
       request.destination === 'script'   ||
       request.destination === 'style'    ||
       url.pathname.includes('/css/')     ||
-      url.pathname.includes('/js/')) {
-    event.respondWith(staleWhileRevalidate(request, STATIC_CACHE));
+      url.pathname.includes('/js/'))) {
+    event.respondWith(networkFirstFresh(request, STATIC_CACHE, 3500));
     return;
   }
 
@@ -206,12 +222,38 @@ async function staleWhileRevalidate(request, cacheName) {
   const cache  = await caches.open(cacheName);
   const cached = await cache.match(request);
 
-  const fetchPromise = fetch(request).then(response => {
+  // Background refresh always checks with the server (no-cache = revalidate,
+  // a quick 304 when nothing changed) so a stale HTTP-cache copy can't win.
+  // (A page navigation can't be re-created with options, so it's fetched by URL.)
+  const fresh = request.mode === 'navigate'
+    ? fetch(request.url, { cache: 'no-cache', credentials: 'same-origin' })
+    : fetch(request, { cache: 'no-cache' });
+  const fetchPromise = fresh.then(response => {
     if (response.ok) cache.put(request, response.clone());
     return response;
   }).catch(() => null);
 
   return cached || await fetchPromise || caches.match('offline.html');
+}
+
+async function networkFirstFresh(request, cacheName, timeoutMs) {
+  const cache = await caches.open(cacheName);
+  // (A page navigation can't be re-created with options, so it's fetched by URL.)
+  const net = (request.mode === 'navigate'
+      ? fetch(request.url, { cache: 'no-cache', credentials: 'same-origin' })
+      : fetch(request, { cache: 'no-cache' }))
+    .then(response => { if (response.ok) cache.put(request, response.clone()); return response; });
+  const timeout = new Promise(res => setTimeout(res, timeoutMs, null));
+  try {
+    const first = await Promise.race([net, timeout]);
+    if (first) return first;
+    // Slow network: show the saved copy now, the fresh one is saved for next time
+    const cached = await cache.match(request);
+    return cached || await net;
+  } catch {
+    const cached = await cache.match(request);
+    return cached || (request.mode === 'navigate' ? caches.match('offline.html') : Response.error());
+  }
 }
 
 async function networkFirst(request) {
