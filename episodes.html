@@ -97,6 +97,7 @@
 .eg-overlay.open { opacity:1; pointer-events:auto; }
 .eg-dialog { width:100%; max-width:440px; max-height:90dvh; display:flex; flex-direction:column; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg); }
 .eg-dialog .sf-body { overflow-y:auto; }
+.eg-pick-search { margin:0; }
 .eg-pick-list { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
 .eg-pick { display:flex; gap:12px; align-items:center; padding:8px; border-radius:var(--radius-sm); text-decoration:none; color:var(--text); }
 .eg-pick:hover { background:var(--bg-3); }
@@ -191,8 +192,10 @@ async function renderHome() {
       <div class="eg-stat"><b>${top ? '★ ' + fmt(top.score) : '—'}</b><span>${top ? `Top: ${esc(topShow?.title || '')} S${top.season_number}·E${top.episode_number}` : 'Top episode'}</span></div>
     </div>
     <div class="eg-search">
-      <div class="search-wrap"><span class="search-icon-wrap">${icon('search', 14)}</span>
-        <input type="text" id="egSearch" placeholder="Look up any show’s episode ratings…" autocomplete="off" aria-label="Search shows"></div>
+      <div class="hero-search-wrap">
+        <input type="text" id="egSearch" placeholder="Look up any show’s episode ratings…" autocomplete="off" aria-label="Search shows">
+        <button type="button" class="hero-search-btn" tabindex="-1" onclick="document.getElementById('egSearch').focus()">${icon('search', 16)}<span>Search</span></button>
+      </div>
       <div class="eg-search-results" id="egSearchResults"></div>
     </div>
     ${rated.length ? `<div class="section-eyebrow">Rated</div><div class="section-title">Your shows</div><div class="eg-shows">${rated.map(card).join('')}</div>` : ''}
@@ -544,7 +547,7 @@ function egComparePick() {
     ov.innerHTML = `<div class="eg-dialog" role="dialog" aria-modal="true" aria-label="Compare with another show">
         <div class="sf-header"><div class="sf-title">Compare with…</div><button class="sf-close" onclick="egPickClose()" aria-label="Close">${icon('x', 18)}</button></div>
         <div class="sf-body">
-          <div class="search-wrap"><span class="search-icon-wrap">${icon('search', 14)}</span><input type="text" id="egPickInput" placeholder="Search a show…" autocomplete="off" aria-label="Search a show"></div>
+          <div class="search-wrap fav-picker-search eg-pick-search"><span class="search-icon-wrap">${icon('search', 14)}</span><input type="text" id="egPickInput" placeholder="Search a show…" autocomplete="off" aria-label="Search a show"></div>
           <div class="eg-pick-list" id="egPickList"></div>
           <div class="sf-section-label" style="margin-top:1rem">Or compare this show with a friend</div>
           <div class="eg-pick-list" id="egPickFriends"><div class="sf-empty">Loading friends…</div></div>
