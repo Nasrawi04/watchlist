@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Episodes — MyScreenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ── Episodes page ── */
+.eg-back { display:inline-flex; align-items:center; gap:6px; margin-bottom:1rem; font-size:13px; font-weight:600; color:var(--text-2); text-decoration:none; }
+.eg-back:hover { color:var(--olive-light); }
+/* show view header */
+.eg-head { display:flex; gap:18px; align-items:flex-end; margin-bottom:1.25rem; }
+.eg-head-poster { width:110px; aspect-ratio:2/3; border-radius:var(--radius); overflow:hidden; flex-shrink:0; background:var(--bg-3); box-shadow:0 10px 26px rgba(0,0,0,.28); }
+.eg-head-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.eg-head-title { font-family:var(--serif); font-size:clamp(24px, 5vw, 38px); font-weight:600; line-height:1.1; color:var(--text); margin:4px 0; }
+.eg-head-sub { font-size:13px; color:var(--text-3); }
+.eg-controls { display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin:1rem 0; }
+.eg-controls .pn-toggle { margin:0; }
+.eg-controls .pn-toggle-btn { padding:8px 14px; font-size:12.5px; }
+.eg-layout { display:grid; grid-template-columns:minmax(0, 1fr) 260px; gap:20px; align-items:start; }
+/* SeriesGraph grid */
+.eg-grid-wrap { overflow-x:auto; padding-bottom:6px; scrollbar-width:thin; }
+.eg-grid { border-collapse:separate; border-spacing:4px; }
+.eg-grid th { font-family:var(--bebas); font-weight:400; font-size:15px; letter-spacing:.6px; color:var(--text-3); padding:2px 4px; text-align:center; }
+.eg-grid th.eg-ep { position:sticky; left:0; background:var(--bg); z-index:1; text-align:right; padding-right:8px; }
+.eg-cell { width:44px; height:44px; border-radius:7px; padding:0; border:none; cursor:pointer; font-family:var(--bebas); font-size:17px; letter-spacing:.3px; display:flex; align-items:center; justify-content:center; transition:transform .12s; }
+.eg-cell:hover { transform:scale(1.08); }
+.eg-cell:focus-visible { outline:2px solid var(--text); outline-offset:2px; }
+.eg-cell.eg-empty { background:transparent; border:1.5px dashed var(--border-2); color:var(--text-3); }
+.eg-cell.eg-unaired { background:repeating-linear-gradient(45deg, var(--bg-3) 0 4px, transparent 4px 8px); color:transparent; cursor:default; }
+.eg-cell.eg-best { box-shadow:0 0 0 2.5px #c9a227; }
+.eg-cell.eg-worst { box-shadow:0 0 0 2px var(--band-bad); }
+.eg-cell.eg-diff-up { background:#2f6e3a; color:#fff; } .eg-cell.eg-diff-down { background:#a8433b; color:#fff; } .eg-cell.eg-diff-same { background:var(--bg-3); color:var(--text-2); }
+.eg-avg td { padding-top:6px; }
+.eg-avg .eg-cell { cursor:default; font-size:18px; box-shadow:inset 0 -3px 0 rgba(0,0,0,.18); }
+.eg-legend { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:12px; font-size:11.5px; color:var(--text-2); }
+.eg-legend span { display:inline-flex; align-items:center; gap:6px; }
+.eg-legend i { width:14px; height:14px; border-radius:3px; display:inline-block; }
+.eg-legend i.eg-unaired-sw { background:repeating-linear-gradient(45deg, var(--bg-3) 0 3px, transparent 3px 6px); border:0.5px solid var(--border-2); }
+/* graph */
+.eg-graph { width:100%; height:auto; display:block; }
+.eg-graph .eg-pt { cursor:pointer; }
+/* list */
+.eg-list { display:flex; flex-direction:column; gap:10px; }
+.eg-row { display:flex; gap:12px; align-items:center; padding:10px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); cursor:pointer; }
+.eg-row:hover { border-color:var(--border-olive); }
+.eg-row-still { width:120px; aspect-ratio:16/9; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.eg-row-still img { width:100%; height:100%; object-fit:cover; display:block; }
+.eg-row-info { flex:1; min-width:0; }
+.eg-row-title { font-family:var(--serif); font-size:15.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.eg-row-meta { font-size:12px; color:var(--text-3); margin-top:2px; }
+.eg-row-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.eg-row-tags span { font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:3px; background:var(--olive); color:#fff; }
+.eg-chip { min-width:50px; padding:6px 8px; border-radius:6px; text-align:center; font-family:var(--bebas); font-size:19px; line-height:1; }
+.eg-chip small { display:block; font-family:'Manrope',var(--sans); font-size:8.5px; letter-spacing:1px; text-transform:uppercase; opacity:.85; margin-top:2px; }
+/* stats panel */
+.eg-panel { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:16px; position:sticky; top:calc(var(--page-pt, 80px) + 16px); }
+.eg-panel-row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:0.5px solid var(--border); font-size:13px; color:var(--text-2); }
+.eg-panel-row:first-of-type { border-top:none; }
+.eg-panel-row b { font-family:var(--bebas); font-weight:400; font-size:18px; color:var(--text); white-space:nowrap; }
+.eg-panel-ep { cursor:pointer; text-align:right; }
+.eg-panel-ep:hover b { color:var(--olive-light); }
+/* episode popup */
+#egEpOverlay { position:fixed; inset:0; z-index:904; background:rgba(0,0,0,0.72); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
+#egEpOverlay.open { opacity:1; pointer-events:auto; }
+#egEpCard { width:100%; max-width:min(97vw, 560px); max-height:90dvh; overflow-y:auto; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg); position:relative; }
+.eg-pop-scores { display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:8px; margin:14px 0; }
+.eg-pop-score { border-radius:var(--radius); padding:10px; text-align:center; background:var(--bg-3); }
+.eg-pop-score b { display:block; font-family:var(--bebas); font-weight:400; font-size:34px; line-height:1; }
+.eg-pop-score span { font-size:10px; letter-spacing:1.4px; text-transform:uppercase; opacity:.85; }
+.eg-pop-over { font-size:13.5px; color:var(--text-2); line-height:1.6; }
+.eg-pop-note { margin-top:10px; padding-left:12px; border-left:2px solid var(--olive-light); font-style:italic; color:var(--text); font-size:14px; }
+.eg-tools { display:flex; gap:8px; margin-left:auto; }
+.eg-season-row th { font-size:12px; letter-spacing:1px; }
+.eg-cmp { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
+.eg-cmp-col { min-width:0; }
+.eg-cmp-title { display:block; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--text); text-decoration:none; margin-bottom:.5rem; }
+.eg-cmp-title:hover { color:var(--olive-light); }
+.eg-cmp-key { display:flex; gap:16px; font-size:12.5px; color:var(--text-2); margin:.4rem 0 .6rem; }
+.eg-cmp-key i { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+.eg-table-wrap { overflow-x:auto; margin-top:1rem; }
+.eg-cmp-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+.eg-cmp-table th, .eg-cmp-table td { padding:10px 12px; border-bottom:0.5px solid var(--border); text-align:left; }
+.eg-cmp-table th { font-family:var(--serif); font-size:13px; color:var(--text); }
+.eg-cmp-table td:not(:first-child) { font-family:var(--bebas); font-size:18px; color:var(--text); }
+.eg-cmp-table small { font-family:'Manrope',var(--sans); font-size:11px; color:var(--text-3); }
+.eg-overlay { position:fixed; inset:0; z-index:906; background:rgba(0,0,0,0.72); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
+.eg-overlay.open { opacity:1; pointer-events:auto; }
+.eg-dialog { width:100%; max-width:440px; max-height:90dvh; display:flex; flex-direction:column; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg); }
+.eg-dialog .sf-body { overflow-y:auto; }
+.eg-pick-list { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+.eg-pick { display:flex; gap:12px; align-items:center; padding:8px; border-radius:var(--radius-sm); text-decoration:none; color:var(--text); }
+.eg-pick:hover { background:var(--bg-3); }
+.eg-pick-poster { width:36px; aspect-ratio:2/3; border-radius:4px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.eg-pick-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.eg-pick-av { aspect-ratio:1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--serif); color:var(--olive-light); }
+.eg-pick b { display:block; font-size:14px; } .eg-pick small { font-size:12px; color:var(--text-3); }
+.eg-ex-seg { width:100%; margin:0 0 1rem; } .eg-ex-seg .pn-toggle-btn { flex:1; padding:9px 6px; }
+.eg-ex-hint { font-size:12.5px; color:var(--text-3); margin:0; }
+@media(max-width:900px) { .eg-layout { grid-template-columns:1fr; } .eg-panel { position:static; } .eg-cmp { grid-template-columns:1fr; } }
+@media(max-width:640px) {
+  .eg-cell { width:36px; height:36px; font-size:15px; border-radius:6px; }
+  .eg-grid { border-spacing:3px; }
+  .eg-head-poster { width:84px; }
+  .eg-row-still { width:88px; }
+  .eg-controls .pn-toggle { width:100%; }
+  .eg-controls .pn-toggle-btn { flex:1; padding:8px 6px; }
+}
+</style>
+</head>
+<body>
+<div class="page-wrap" id="egPage">
+  <div class="page-loading"><div class="spinner"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/episode-ratings.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   episodes.html — Episode Ratings
+     episodes.html               your shows (mini heatmaps), search, stats
+     episodes.html?show=<tmdb>   one show: SeriesGraph-style grid / graph /
+                                 list · source: TMDB (default) · Mine ·
+                                 Community (3+ ratings) · Mine vs TMDB
+═══════════════════════════════════════════════════════════════ */
+const esc = s => escHTML(s == null ? '' : String(s));
+let _egUser = null;
+
+const _egParams = new URLSearchParams(location.search);
+const _egShowId = parseInt(_egParams.get('show'), 10) || null;
+const _egVsId   = parseInt(_egParams.get('vs'), 10) || null;          // compare with another show
+const _egUserQ  = _egParams.get('user') || null;                      // someone else's ratings (profile)
+const _egVsUser = _egParams.get('vsUser') || null;                    // compare this show with a friend's ratings
+
+const bandCls = v => v == null ? '' : 'ep-band-' + MSSEp.band(v).key;
+const fmt = v => v == null ? '—' : Number(v).toFixed(1);
+const avg = arr => { const v = arr.filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+
+/* ══ Home: your shows ══ */
+async function renderHome() {
+  const page = document.getElementById('egPage');
+  const { data: entries } = await sb.from('entries').select('id,title,cat,status,poster_url,tmdb_id,tmdb_type,ratings,updated_at')
+    .eq('user_id', _egUser.id).not('tmdb_id', 'is', null).eq('tmdb_type', 'tv').order('updated_at', { ascending: false });
+  const shows = (entries || []).filter(e => MSSEp.isShow(e));
+  const ids = shows.map(e => e.id);
+  const { data: ratings } = ids.length ? await sb.from('episode_ratings').select('entry_id,season_number,episode_number,score,updated_at').in('entry_id', ids) : { data: [] };
+  const byEntry = {};
+  (ratings || []).forEach(r => (byEntry[r.entry_id] = byEntry[r.entry_id] || []).push(r));
+  const rated = shows.filter(e => byEntry[e.id]?.length)
+    .sort((a, b) => Math.max(...byEntry[b.id].map(r => +new Date(r.updated_at))) - Math.max(...byEntry[a.id].map(r => +new Date(r.updated_at))));
+  const others = shows.filter(e => !byEntry[e.id]?.length);
+  const all = ratings || [];
+  const top = all.length ? all.reduce((a, b) => (b.score > a.score ? b : a)) : null;
+  const topShow = top && shows.find(e => e.id === top.entry_id);
+
+  const card = e => {
+    const rs = (byEntry[e.id] || []).slice().sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
+    const a = avg(rs.map(r => Number(r.score)));
+    return `<a class="eg-show" href="episodes.html?show=${e.tmdb_id}">
+      <div class="eg-show-poster">${safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" alt="" loading="lazy">` : ''}</div>
+      <div class="eg-show-info">
+        <div class="eg-show-title">${esc(e.title)}</div>
+        <div class="eg-show-sub">${rs.length ? `<b>★ ${fmt(a)}</b> · ${rs.length} rated` : 'No episodes rated yet'}</div>
+        ${rs.length ? `<div class="eg-mini" aria-hidden="true">${rs.slice(0, 80).map(r => `<i class="${bandCls(r.score)}"></i>`).join('')}</div>` : ''}
+      </div>
+    </a>`;
+  };
+  page.innerHTML = `
+    <div class="cat-page-header fade-up">
+      <div>
+        <h1 class="cat-page-title">Episodes</h1>
+        <div class="cat-page-sub">Episode ratings for every show — yours, the community’s and TMDB’s</div>
+      </div>
+    </div>
+    <div class="eg-stats">
+      <div class="eg-stat"><b>${all.length}</b><span>Episodes rated</span></div>
+      <div class="eg-stat"><b>${rated.length}</b><span>Shows</span></div>
+      <div class="eg-stat"><b>${all.length ? '★ ' + fmt(avg(all.map(r => Number(r.score)))) : '—'}</b><span>Your average</span></div>
+      <div class="eg-stat"><b>${top ? '★ ' + fmt(top.score) : '—'}</b><span>${top ? `Top: ${esc(topShow?.title || '')} S${top.season_number}·E${top.episode_number}` : 'Top episode'}</span></div>
+    </div>
+    <div class="eg-search">
+      <div class="search-wrap"><span class="search-icon-wrap">${icon('search', 14)}</span>
+        <input type="text" id="egSearch" placeholder="Look up any show’s episode ratings…" autocomplete="off" aria-label="Search shows"></div>
+      <div class="eg-search-results" id="egSearchResults"></div>
+    </div>
+    ${rated.length ? `<div class="section-eyebrow">Rated</div><div class="section-title">Your shows</div><div class="eg-shows">${rated.map(card).join('')}</div>` : ''}
+    ${others.length ? `<div class="section-eyebrow" style="margin-top:2rem">In your library</div><div class="section-title">More shows to rate</div><div class="eg-shows">${others.map(card).join('')}</div>` : ''}
+    ${!shows.length ? `<div class="mss-empty">Add a show to your library, or search above to see any show’s episode ratings.</div>` : ''}`;
+  let t = null;
+  document.getElementById('egSearch').addEventListener('input', ev => {
+    clearTimeout(t);
+    const q = ev.target.value.trim();
+    t = setTimeout(async () => {
+      const box = document.getElementById('egSearchResults');
+      if (q.length < 2) { box.innerHTML = ''; return; }
+      try {
+        const res = await tmdbFetch(`${TMDB_BASE}/search/tv?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`);
+        const list = res.ok ? ((await res.json()).results || []).filter(r => r.poster_path).slice(0, 12) : [];
+        box.innerHTML = list.map(r => `<a class="q-card" href="episodes.html?show=${r.id}" style="text-decoration:none;color:inherit">
+          <div class="q-poster"><img src="${TMDB_IMG}${r.poster_path}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover"></div>
+          <div class="q-info"><div class="title-year-row"><div class="q-title" style="margin-bottom:0">${esc(r.name)}</div><span class="title-year-inline">${esc((r.first_air_date || '').slice(0, 4))}</span></div></div></a>`).join('') || `<div class="mss-empty">No shows match “${esc(q)}”.</div>`;
+      } catch { box.innerHTML = ''; }
+    }, 300);
+  });
+}
+
+/* ══ One show ══ */
+const blankState = () => ({ show: null, seasons: [], eps: {}, mine: {}, comm: {}, entry: null, source: 'tmdb', view: 'grid', readOnly: false, whoName: '' });
+let S = blankState();
+const key = (s, n) => `${s}:${n}`;
+const withS = (state, fn) => { const prev = S; S = state; try { return fn(); } finally { S = prev; } };
+function scoreOf(s, ep) {
+  const k = key(s, ep.n);
+  if (S.source === 'tmdb') return ep.vote ? Math.round(ep.vote * 10) / 10 : null;
+  if (S.source === 'mine') return S.mine[k] ? Number(S.mine[k].score) : null;
+  if (S.source === 'community') return S.comm[k] ? Number(S.comm[k].avg_score) : null;
+  return S.mine[k] && ep.vote ? Math.round((Number(S.mine[k].score) - ep.vote) * 10) / 10 : null;   // mine vs tmdb
+}
+// Season score (whole-season ratings: episode_number 0; TMDB's season score)
+function seasonScore(sn) {
+  const t = (S.show.seasons || []).find(x => x.season_number === sn)?.vote_average || null;
+  const tm = t ? Math.round(t * 10) / 10 : null, mine = S.mine[key(sn, 0)] ? Number(S.mine[key(sn, 0)].score) : null;
+  if (S.source === 'tmdb') return tm;
+  if (S.source === 'mine') return mine;
+  if (S.source === 'community') return S.comm[key(sn, 0)] ? Number(S.comm[key(sn, 0)].avg_score) : null;
+  return mine != null && tm != null ? Math.round((mine - tm) * 10) / 10 : null;
+}
+const aired = ep => ep.air && new Date(ep.air) <= new Date();
+
+async function loadState(tmdbId, userId) {
+  const X = blankState();
+  const res = await tmdbFetch(`${TMDB_BASE}/tv/${tmdbId}?api_key=${TMDB_KEY}&language=en-US`);
+  if (!res.ok) return null;
+  X.show = await res.json();
+  X.seasons = (X.show.seasons || []).filter(x => x.season_number > 0 && x.episode_count > 0).map(x => x.season_number);
+  for (let i = 0; i < X.seasons.length; i += 4) {                 // TMDB episodes, 4 seasons at a time (cached)
+    const chunk = X.seasons.slice(i, i + 4);
+    const lists = await Promise.all(chunk.map(sn => MSSEp.seasonEpisodes(tmdbId, sn)));
+    chunk.forEach((sn, j) => { X.eps[sn] = lists[j]; });
+  }
+  const { data: entry } = await sb.from('entries').select('*').eq('user_id', userId).eq('tmdb_id', tmdbId).eq('tmdb_type', 'tv').limit(1).maybeSingle();
+  X.entry = entry || null;
+  X.readOnly = userId !== _egUser.id;
+  if (X.entry) {
+    const { data } = await sb.from('episode_ratings').select('*').eq('entry_id', X.entry.id);
+    (data || []).forEach(r => { X.mine[key(r.season_number, r.episode_number)] = r; });
+  }
+  try {
+    const { data: comm } = await sb.rpc('get_episode_community', { p_tmdb_id: tmdbId });
+    (comm || []).forEach(r => { X.comm[key(r.season_number, r.episode_number)] = r; });
+  } catch {}
+  return X;
+}
+let S2 = null;   // compared show
+async function renderShow() {
+  const page = document.getElementById('egPage');
+  const userId = _egUserQ || _egUser.id;
+  const X = await loadState(_egShowId, userId);
+  if (!X) { page.innerHTML = `<div class="mss-empty">Couldn’t load this show.</div>`; return; }
+  if (X.readOnly) {
+    const { data: p } = await sb.from('profiles').select('username,display_name').eq('id', userId).maybeSingle();
+    X.whoName = p?.display_name || p?.username || 'Their';
+    X.source = Object.keys(X.mine).length ? 'mine' : 'tmdb';
+  }
+  S = X;
+  if (_egVsId) { S2 = await loadState(_egVsId, userId); if (S2) S2.readOnly = X.readOnly; }
+  else if (_egVsUser && _egVsUser !== userId) {
+    S2 = await loadState(_egShowId, _egVsUser);
+    if (S2) {
+      const { data: p } = await sb.from('profiles').select('username,display_name').eq('id', _egVsUser).maybeSingle();
+      S2.whoName = p?.display_name || p?.username || 'Friend';
+      S.source = S2.source = 'mine';
+    }
+  }
+  draw();
+}
+async function loadMine() {
+  S.mine = {};
+  if (!S.entry) return;
+  const { data } = await sb.from('episode_ratings').select('*').eq('entry_id', S.entry.id);
+  (data || []).forEach(r => { S.mine[key(r.season_number, r.episode_number)] = r; });
+}
+
+function draw() {
+  const sh = S.show, page = document.getElementById('egPage');
+  const poster = sh.poster_path ? `https://image.tmdb.org/t/p/w342${sh.poster_path}` : null;
+  const years = [(sh.first_air_date || '').slice(0, 4), sh.status === 'Ended' ? (sh.last_air_date || '').slice(0, 4) : 'Present'].filter(Boolean).join('–');
+  const mineCount = Object.keys(S.mine).length;
+  page.innerHTML = `
+    <a class="eg-back" href="episodes.html"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Episodes</a>
+    <div class="eg-head">
+      <div class="eg-head-poster">${poster ? `<img src="${poster}" alt="">` : ''}</div>
+      <div>
+        <div class="section-eyebrow">Episode ratings</div>
+        <div class="eg-head-title">${esc(sh.name)}</div>
+        <div class="eg-head-sub">${esc(years)} · ${S.seasons.length} season${S.seasons.length === 1 ? '' : 's'}${mineCount ? ` · ${mineCount} rated by you` : ''}</div>
+      </div>
+    </div>
+    <div class="eg-controls">
+      <div class="pn-toggle" role="tablist" aria-label="Whose ratings">
+        ${[['tmdb', 'TMDB'], ['mine', S.readOnly ? esc(S.whoName) + '’s' : 'Mine'], ['community', 'Community'], ['diff', (S.readOnly ? esc(S.whoName) : 'Mine') + ' vs TMDB']].map(([k, l]) => `<button type="button" class="pn-toggle-btn${S.source === k ? ' active' : ''}" onclick="egSet('source','${k}')">${l}</button>`).join('')}
+      </div>
+      <div class="pn-toggle" role="tablist" aria-label="View">
+        ${[['grid', 'Grid'], ['graph', 'Graph'], ['list', 'List']].map(([k, l]) => `<button type="button" class="pn-toggle-btn${S.view === k ? ' active' : ''}" onclick="egSet('view','${k}')">${l}</button>`).join('')}
+      </div>
+      <div class="eg-tools">
+        <button type="button" class="sf-icon-btn" onclick="egComparePick()">${icon('compare', 15)}<span class="sf-icon-btn-label">${S2 ? 'Change comparison' : 'Compare'}</span></button>
+        <button type="button" class="sf-icon-btn" onclick="egExport()">${icon('download', 15)}<span class="sf-icon-btn-label">Export</span></button>
+      </div>
+    </div>
+    ${S.source === 'mine' && !S.entry ? `<div class="mss-empty" style="margin-bottom:1rem">${S.readOnly ? 'No episode ratings for this show yet.' : 'Add this show to your library to rate its episodes.'}</div>` : ''}
+    ${S.source === 'community' && !Object.keys(S.comm).length ? `<div class="mss-empty" style="margin-bottom:1rem">Community scores appear once an episode has 3+ ratings on MyScreenScore.</div>` : ''}
+    ${S2 ? compareHTML() : `<div class="eg-layout">
+      <div>${S.view === 'grid' ? gridHTML() : S.view === 'graph' ? graphHTML() : listHTML()}</div>
+      ${panelHTML()}
+    </div>`}`;
+}
+function egSet(k, v) { S[k] = v; if (S2 && k === 'source') S2.source = v; draw(); }
+
+function allScored() {
+  const out = [];
+  S.seasons.forEach(sn => (S.eps[sn] || []).forEach(ep => { const v = scoreOf(sn, ep); if (v != null) out.push({ s: sn, ep, v }); }));
+  return out;
+}
+function cellHTML(sn, ep, extra = '') {
+  if (!aired(ep) && !S.mine[key(sn, ep.n)]) return `<div class="eg-cell eg-unaired" title="Not aired yet" aria-label="Season ${sn} episode ${ep.n}, not aired yet"></div>`;
+  const v = scoreOf(sn, ep);
+  const label = `Season ${sn}, Episode ${ep.n}${ep.name ? ' — ' + ep.name : ''}: ${v == null ? 'not rated' : (S.source === 'diff' ? (v > 0 ? '+' : '') + v.toFixed(1) + ' vs TMDB' : v.toFixed(1) + ', ' + MSSEp.band(v).name)}`;
+  let cls = 'eg-cell ', txt = '';
+  if (v == null) { cls += 'eg-empty'; txt = '·'; }
+  else if (S.source === 'diff') { cls += Math.abs(v) < 0.3 ? 'eg-diff-same' : v > 0 ? 'eg-diff-up' : 'eg-diff-down'; txt = (v > 0 ? '+' : '') + v.toFixed(1); }
+  else { cls += bandCls(v); txt = v.toFixed(1); }
+  return `<button type="button" class="${cls}${extra}" onclick="egOpen(${sn},${ep.n})" title="${esc(label)}" aria-label="${esc(label)}">${txt}</button>`;
+}
+function gridHTML() {
+  const maxEp = Math.max(0, ...S.seasons.map(sn => (S.eps[sn] || []).length));
+  const scored = S.source === 'diff' ? [] : allScored();
+  const best = scored.length > 2 ? scored.reduce((a, b) => (b.v > a.v ? b : a)) : null;
+  const worst = scored.length > 2 ? scored.reduce((a, b) => (b.v < a.v ? b : a)) : null;
+  let rows = '';
+  for (let n = 1; n <= maxEp; n++) {
+    rows += `<tr><th class="eg-ep" scope="row">E${n}</th>${S.seasons.map(sn => {
+      const ep = (S.eps[sn] || []).find(x => x.n === n);
+      if (!ep) return '<td></td>';
+      const extra = best && best.s === sn && best.ep.n === n ? ' eg-best' : worst && worst.s === sn && worst.ep.n === n ? ' eg-worst' : '';
+      return `<td>${cellHTML(sn, ep, extra)}</td>`;
+    }).join('')}</tr>`;
+  }
+  const avgRow = `<tr class="eg-avg"><th class="eg-ep" scope="row">AVG</th>${S.seasons.map(sn => {
+    const a = avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep)));
+    if (a == null) return '<td><div class="eg-cell eg-empty">·</div></td>';
+    const cls = S.source === 'diff' ? (Math.abs(a) < 0.3 ? 'eg-diff-same' : a > 0 ? 'eg-diff-up' : 'eg-diff-down') : bandCls(a);
+    return `<td><div class="eg-cell ${cls}" title="Season ${sn} average">${S.source === 'diff' && a > 0 ? '+' : ''}${a.toFixed(1)}</div></td>`;
+  }).join('')}</tr>`;
+  const canRate = !S.readOnly && S.entry;
+  const seasonRow = `<tr class="eg-avg eg-season-row"><th class="eg-ep" scope="row" title="Whole-season rating">SEASON</th>${S.seasons.map(sn => {
+    const v = seasonScore(sn);
+    const cls = v == null ? 'eg-empty' : S.source === 'diff' ? (Math.abs(v) < 0.3 ? 'eg-diff-same' : v > 0 ? 'eg-diff-up' : 'eg-diff-down') : bandCls(v);
+    const txt = v == null ? (canRate && S.source === 'mine' ? '+' : '·') : (S.source === 'diff' && v > 0 ? '+' : '') + v.toFixed(1);
+    return canRate ? `<td><button type="button" class="eg-cell ${cls}" onclick="egRate(${sn},0)" title="Rate season ${sn}" aria-label="Season ${sn} rating: ${v == null ? 'not rated' : v.toFixed(1)}. Rate the season">${txt}</button></td>`
+      : `<td><div class="eg-cell ${cls}" title="Season ${sn} rating">${txt}</div></td>`;
+  }).join('')}</tr>`;
+  const legend = S.source === 'diff'
+    ? `<span><i class="eg-diff-up"></i>You rated higher</span><span><i class="eg-diff-same"></i>About the same</span><span><i class="eg-diff-down"></i>You rated lower</span>`
+    : MSSEp.BANDS.map(b => `<span><i class="ep-band-${b.key}"></i>${b.name} ${b.min ? b.min.toFixed(1) + '+' : '< 5'}</span>`).join('') + `<span><i style="border:1.5px dashed var(--border-2)"></i>Not rated</span><span><i class="eg-unaired-sw"></i>Not aired</span>`;
+  return `<div class="eg-grid-wrap"><table class="eg-grid" aria-label="Episode ratings by season">
+      <thead><tr><th class="eg-ep"></th>${S.seasons.map(sn => `<th scope="col">S${sn}</th>`).join('')}</tr></thead>
+      <tbody>${rows}${avgRow}${seasonRow}</tbody></table></div>
+    <div class="eg-legend">${legend}</div>`;
+}
+function graphHTML() {
+  const pts = []; let i = 0;
+  S.seasons.forEach((sn, si) => (S.eps[sn] || []).forEach(ep => { i++; const v = scoreOf(sn, ep); if (v != null) pts.push({ x: i, v, s: sn, n: ep.n, si }); }));
+  if (!pts.length) return `<div class="mss-empty">Nothing to plot for this source yet.</div>`;
+  const W = 900, H = 340, L = 34, R = 10, T = 12, B = 28, total = i;
+  const diff = S.source === 'diff', lo = diff ? -3 : 1, hi = diff ? 3 : 10;
+  const X = x => L + (total <= 1 ? 0 : (x - 1) / (total - 1)) * (W - L - R);
+  const Y = v => T + (1 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * (H - T - B);
+  const stripes = diff ? '' : MSSEp.BANDS.map((b, k) => {
+    const top = k === 0 ? 10 : MSSEp.BANDS[k - 1].min, bot = Math.max(1, b.min);
+    return `<rect x="${L}" y="${Y(top)}" width="${W - L - R}" height="${Y(bot) - Y(top)}" class="ep-band-${b.key}" style="opacity:.12" fill="currentColor"></rect>`;
+  }).join('');
+  const shades = ['var(--olive-light)', '#5b8f4c', '#9a7a2e', '#3c6f8f', '#8a4f7d'];
+  let lines = '';
+  S.seasons.forEach((sn, si) => {
+    const sp = pts.filter(p => p.s === sn);
+    if (sp.length > 1) lines += `<polyline fill="none" stroke="${shades[si % shades.length]}" stroke-width="2.4" points="${sp.map(p => `${X(p.x)},${Y(p.v)}`).join(' ')}"></polyline>`;
+  });
+  const dots = pts.map(p => `<circle class="eg-pt" cx="${X(p.x)}" cy="${Y(p.v)}" r="4.5" fill="${shades[p.si % shades.length]}" stroke="var(--bg)" stroke-width="1.5" onclick="egOpen(${p.s},${p.n})"><title>S${p.s} · E${p.n}: ${p.v.toFixed(1)}</title></circle>`).join('');
+  const ticks = (diff ? [-3, -1.5, 0, 1.5, 3] : [2, 4, 6, 8, 10]).map(v => `<text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--text-3)">${v}</text><line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--border)" stroke-width="0.5"></line>`).join('');
+  const seasonLabels = S.seasons.map((sn, si) => { const sp = pts.filter(p => p.s === sn); if (!sp.length) return ''; return `<text x="${X(sp[0].x)}" y="${H - 8}" font-size="11" fill="${shades[si % shades.length]}">S${sn}</text>`; }).join('');
+  return `<svg class="eg-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="Episode scores across the series">${stripes}${ticks}${lines}${dots}${seasonLabels}</svg>`;
+}
+function listHTML() {
+  const rows = [];
+  S.seasons.forEach(sn => (S.eps[sn] || []).forEach(ep => {
+    const k = key(sn, ep.n), mine = S.mine[k], comm = S.comm[k];
+    const chip = (v, lbl) => `<div class="eg-chip ${v == null ? '' : bandCls(v)}" style="${v == null ? 'background:var(--bg-3);color:var(--text-3)' : ''}">${fmt(v)}<small>${lbl}</small></div>`;
+    rows.push(`<div class="eg-row" role="button" tabindex="0" onclick="egOpen(${sn},${ep.n})" onkeydown="if(event.key==='Enter')this.click()">
+      <div class="eg-row-still">${ep.still ? `<img src="https://image.tmdb.org/t/p/w300${ep.still}" alt="" loading="lazy">` : ''}</div>
+      <div class="eg-row-info">
+        <div class="eg-row-title">S${sn} · E${ep.n} — ${esc(ep.name || 'Episode ' + ep.n)}</div>
+        <div class="eg-row-meta">${esc([ep.air, ep.rt ? ep.rt + 'm' : ''].filter(Boolean).join(' · '))}</div>
+        ${mine?.tags?.length ? `<div class="eg-row-tags">${mine.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
+      </div>
+      ${chip(mine ? Number(mine.score) : null, 'You')}${chip(comm ? Number(comm.avg_score) : null, 'MSS')}${chip(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}
+    </div>`);
+  }));
+  return `<div class="eg-list">${rows.join('')}</div>`;
+}
+function panelHTML() {
+  if (S.source === 'diff') {
+    const d = allScored(); const a = avg(d.map(x => x.v));
+    return `<aside class="eg-panel"><div class="section-eyebrow">You vs TMDB</div>
+      <div class="eg-panel-row"><span>Average difference</span><b>${a == null ? '—' : (a > 0 ? '+' : '') + a.toFixed(2)}</b></div>
+      <div class="eg-panel-row"><span>Episodes compared</span><b>${d.length}</b></div></aside>`;
+  }
+  const sc = allScored();
+  if (!sc.length) return `<aside class="eg-panel"><div class="section-eyebrow">Stats</div><div class="eg-panel-row"><span>No scores for this source yet.</span></div></aside>`;
+  const a = avg(sc.map(x => x.v));
+  const best = sc.reduce((x, y) => (y.v > x.v ? y : x)), worst = sc.reduce((x, y) => (y.v < x.v ? y : x));
+  const seasonAvgs = S.seasons.map(sn => ({ sn, a: avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep))) })).filter(x => x.a != null);
+  const bestS = seasonAvgs.reduce((x, y) => (y.a > x.a ? y : x));
+  const great = Math.round(100 * sc.filter(x => x.v >= 8.5).length / sc.length);
+  const sd = Math.sqrt(avg(sc.map(x => (x.v - a) ** 2)));
+  const epLink = x => `<span class="eg-panel-ep" role="button" tabindex="0" onclick="egOpen(${x.s},${x.ep.n})"><b>${x.v.toFixed(1)}</b><br><small>S${x.s} · E${x.ep.n}</small></span>`;
+  return `<aside class="eg-panel"><div class="section-eyebrow">${S.source === 'tmdb' ? 'TMDB' : S.source === 'mine' ? 'Your' : 'Community'} stats</div>
+    <div class="eg-panel-row"><span>Series average</span><b>★ ${a.toFixed(2)}</b></div>
+    <div class="eg-panel-row"><span>Best episode</span>${epLink(best)}</div>
+    <div class="eg-panel-row"><span>Lowest episode</span>${epLink(worst)}</div>
+    <div class="eg-panel-row"><span>Best season</span><b>S${bestS.sn} · ${bestS.a.toFixed(1)}</b></div>
+    <div class="eg-panel-row"><span>Great or better</span><b>${great}%</b></div>
+    <div class="eg-panel-row"><span>Consistency (± spread)</span><b>${sd.toFixed(2)}</b></div>
+    <div class="eg-panel-row"><span>Episodes scored</span><b>${sc.length}</b></div></aside>`;
+}
+
+/* ══ Episode popup ══ */
+function egOpen(sn, n) {
+  const ep = (S.eps[sn] || []).find(x => x.n === n); if (!ep) return;
+  const k = key(sn, n), mine = S.mine[k], comm = S.comm[k];
+  let ov = document.getElementById('egEpOverlay');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'egEpOverlay';
+    ov.innerHTML = '<div id="egEpCard" role="dialog" aria-modal="true" aria-labelledby="egEpTitle"></div>';
+    ov.addEventListener('click', ev => { if (ev.target === ov) egClose(); });
+    document.addEventListener('keydown', ev => { if (ov.classList.contains('open')) { if (ev.key === 'Escape') egClose(); if (ev.key === 'ArrowRight') egStep(1); if (ev.key === 'ArrowLeft') egStep(-1); } });
+    document.body.appendChild(ov);
+  }
+  ov.dataset.s = sn; ov.dataset.n = n;
+  const box = (v, lbl) => `<div class="eg-pop-score ${v == null ? '' : bandCls(v)}"><b>${fmt(v)}</b><span>${lbl}</span></div>`;
+  document.getElementById('egEpCard').innerHTML = `
+    <div class="ep-hero">${ep.still ? `<img src="https://image.tmdb.org/t/p/w780${ep.still}" alt="">` : `<div class="ep-hero-empty">${esc(S.show.name)}</div>`}
+      <span class="ep-se">S${sn} · E${n}</span>
+      <button type="button" class="ep-close" onclick="egClose()" aria-label="Close">✕</button></div>
+    <div class="ep-body">
+      <div class="ep-eyebrow">${esc(S.show.name)}</div>
+      <div class="ep-title" id="egEpTitle">${esc(ep.name || 'Episode ' + n)}</div>
+      <div class="ep-meta">${esc([ep.air ? new Date(ep.air + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '', ep.rt ? ep.rt + 'm' : ''].filter(Boolean).join(' · '))}</div>
+      <div class="eg-pop-scores">${box(mine ? Number(mine.score) : null, 'Yours')}${box(comm ? Number(comm.avg_score) : null, comm ? `MSS · ${comm.rating_count}` : 'MSS')}${box(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}</div>
+      ${mine?.tags?.length ? `<div class="eg-row-tags">${mine.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
+      ${mine?.note ? `<div class="eg-pop-note">“${esc(mine.note)}”</div>` : ''}
+      ${ep.overview ? `<p class="eg-pop-over">${esc(ep.overview)}</p>` : ''}
+    </div>
+    <div class="ep-nav">
+      <button type="button" class="ep-nav-btn" onclick="egStep(-1)" aria-label="Previous episode">‹ Prev</button>
+      <span></span>
+      <button type="button" class="ep-nav-btn" onclick="egStep(1)" aria-label="Next episode">Next ›</button>
+    </div>
+    <div class="ep-actions">
+      <button type="button" class="popup-action-btn np-ghost" onclick="egClose()">Close</button>
+      ${S.entry && !S.readOnly ? `<button type="button" class="popup-action-btn ep-save" onclick="egRate(${sn},${n})">${mine ? 'Edit Rating' : 'Rate'}</button>` : ''}
+    </div>`;
+  ov.classList.add('open'); document.body.style.overflow = 'hidden';
+}
+function egClose() { document.getElementById('egEpOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
+function egStep(d) {
+  const ov = document.getElementById('egEpOverlay'); let sn = +ov.dataset.s, n = +ov.dataset.n + d;
+  if (n < 1) { const i = S.seasons.indexOf(sn); if (i > 0) { sn = S.seasons[i - 1]; n = (S.eps[sn] || []).length; } else return; }
+  else if (n > (S.eps[sn] || []).length) { const i = S.seasons.indexOf(sn); if (i < S.seasons.length - 1) { sn = S.seasons[i + 1]; n = 1; } else return; }
+  egOpen(sn, n);
+}
+function egRate(sn, n) {
+  egClose();
+  if (S.readOnly || !S.entry) return;
+  MSSEp.rate(S.entry, sn, n, { onSaved: async () => { await loadMine(); draw(); } });
+}
+
+/* ══ Compare two shows ══ */
+function showStats(X) {
+  return withS(X, () => {
+    const sc = allScored(); if (!sc.length) return null;
+    const a = avg(sc.map(x => x.v));
+    const best = sc.reduce((x, y) => (y.v > x.v ? y : x));
+    const sa = X.seasons.map(sn => ({ sn, a: avg((X.eps[sn] || []).map(ep => scoreOf(sn, ep))) })).filter(x => x.a != null);
+    return { a, best, bestS: sa.reduce((x, y) => (y.a > x.a ? y : x)), sa, great: Math.round(100 * sc.filter(x => x.v >= 8.5).length / sc.length), sd: Math.sqrt(avg(sc.map(x => (x.v - a) ** 2))), n: sc.length };
+  });
+}
+const sameShow = () => S2 && S2.show.id === S.show.id;
+const cmpName = X => sameShow() ? (X.readOnly ? X.whoName : 'You') : X.show.name;
+function compareHTML() {
+  const A = showStats(S), B = showStats(S2);
+  const col = (X, st) => `<div class="eg-cmp-col">
+      <a class="eg-cmp-title" href="episodes.html?show=${X.show.id}${_egUserQ ? '&user=' + encodeURIComponent(_egUserQ) : ''}">${esc(sameShow() ? (X.readOnly ? X.whoName + '’s ratings' : 'Your ratings') : X.show.name)}</a>
+      ${withS(X, () => gridHTML())}
+    </div>`;
+  const row = (label, f) => `<tr><td>${label}</td><td>${A ? f(A) : '—'}</td><td>${B ? f(B) : '—'}</td></tr>`;
+  // season averages of both on one chart
+  const W = 900, H = 260, L = 34, R = 10, T = 12, Bm = 26, maxS = Math.max(S.seasons.length, S2.seasons.length, 2);
+  const X = i => L + (i / (maxS - 1)) * (W - L - R), Y = v => T + (1 - (v - 1) / 9) * (H - T - Bm);
+  const line = (st, color) => st && st.sa.length ? `<polyline fill="none" stroke="${color}" stroke-width="2.6" points="${st.sa.map((p, i) => `${X(i)},${Y(p.a)}`).join(' ')}"></polyline>${st.sa.map((p, i) => `<circle cx="${X(i)}" cy="${Y(p.a)}" r="4.5" fill="${color}"><title>S${p.sn}: ${p.a.toFixed(1)}</title></circle>`).join('')}` : '';
+  const ticks = [2, 4, 6, 8, 10].map(v => `<text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--text-3)">${v}</text><line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--border)" stroke-width="0.5"></line>`).join('');
+  const sx = Array.from({ length: maxS }, (_, i) => `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--text-3)">S${i + 1}</text>`).join('');
+  return `<div class="eg-cmp">${col(S, A)}${col(S2, B)}</div>
+    <div class="section-eyebrow" style="margin-top:2rem">Season averages</div>
+    <div class="eg-cmp-key"><span><i style="background:var(--olive-light)"></i>${esc(cmpName(S))}</span><span><i style="background:#c9a227"></i>${esc(cmpName(S2))}</span></div>
+    <svg class="eg-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="Season averages of both shows">${ticks}${line(A, 'var(--olive-light)')}${line(B, '#c9a227')}${sx}</svg>
+    <div class="eg-table-wrap"><table class="eg-cmp-table">
+      <thead><tr><th></th><th>${esc(cmpName(S))}</th><th>${esc(cmpName(S2))}</th></tr></thead>
+      <tbody>
+        ${row('Series average', x => '★ ' + x.a.toFixed(2))}
+        ${row('Best episode', x => `${x.best.v.toFixed(1)} <small>S${x.best.s}·E${x.best.ep.n}</small>`)}
+        ${row('Best season', x => `S${x.bestS.sn} · ${x.bestS.a.toFixed(1)}`)}
+        ${row('Great or better', x => x.great + '%')}
+        ${row('Consistency (± spread)', x => x.sd.toFixed(2))}
+        ${row('Episodes scored', x => x.n)}
+      </tbody></table></div>`;
+}
+function egComparePick() {
+  let ov = document.getElementById('egPickOverlay');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'egPickOverlay'; ov.className = 'eg-overlay';
+    ov.innerHTML = `<div class="eg-dialog" role="dialog" aria-modal="true" aria-label="Compare with another show">
+        <div class="sf-header"><div class="sf-title">Compare with…</div><button class="sf-close" onclick="egPickClose()" aria-label="Close">${icon('x', 18)}</button></div>
+        <div class="sf-body">
+          <div class="search-wrap"><span class="search-icon-wrap">${icon('search', 14)}</span><input type="text" id="egPickInput" placeholder="Search a show…" autocomplete="off" aria-label="Search a show"></div>
+          <div class="eg-pick-list" id="egPickList"></div>
+          <div class="sf-section-label" style="margin-top:1rem">Or compare this show with a friend</div>
+          <div class="eg-pick-list" id="egPickFriends"><div class="sf-empty">Loading friends…</div></div>
+        </div></div>`;
+    ov.addEventListener('click', ev => { if (ev.target === ov) egPickClose(); });
+    document.body.appendChild(ov);
+    let t = null;
+    document.getElementById('egPickInput').addEventListener('input', ev => {
+      clearTimeout(t); const q = ev.target.value.trim();
+      t = setTimeout(async () => {
+        const list = document.getElementById('egPickList');
+        if (q.length < 2) { list.innerHTML = ''; return; }
+        const res = await tmdbFetch(`${TMDB_BASE}/search/tv?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`);
+        const items = res.ok ? ((await res.json()).results || []).filter(r => r.id !== _egShowId).slice(0, 10) : [];
+        list.innerHTML = items.map(r => `<a class="eg-pick" href="episodes.html?show=${_egShowId}&vs=${r.id}${_egUserQ ? '&user=' + encodeURIComponent(_egUserQ) : ''}">
+            <span class="eg-pick-poster">${r.poster_path ? `<img src="${TMDB_IMG}${r.poster_path}" alt="">` : ''}</span>
+            <span><b>${esc(r.name)}</b><small>${esc((r.first_air_date || '').slice(0, 4))}</small></span></a>`).join('') || `<div class="sf-empty">No shows match.</div>`;
+      }, 300);
+    });
+  }
+  ov.classList.add('open'); document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('egPickInput').focus(), 50);
+  getFriendships(_egUser.id).then(fs => {
+    const box = document.getElementById('egPickFriends');
+    const ok = (fs || []).filter(f => f.status === 'accepted');
+    box.innerHTML = ok.length ? ok.map(f => { const p = f.friendProfile || {}; return `<a class="eg-pick" href="episodes.html?show=${_egShowId}&vsUser=${encodeURIComponent(f.friendId)}">
+        <span class="eg-pick-poster eg-pick-av">${safeURL(p.avatar_url) ? `<img src="${safeURL(p.avatar_url)}" alt="">` : esc((p.username || '?')[0].toUpperCase())}</span>
+        <span><b>${esc(p.display_name || p.username || 'Friend')}</b><small>@${esc(p.username || '')}</small></span></a>`; }).join('') : '<div class="sf-empty">No friends yet.</div>';
+  }).catch(() => { document.getElementById('egPickFriends').innerHTML = ''; });
+}
+function egPickClose() { document.getElementById('egPickOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
+
+/* ══ Export: SeriesGraph-style image (Square / Story / Wide · Light / Dark) + CSV ══ */
+const EX = { size: 'square', theme: 'dark' };
+function egExport() {
+  let ov = document.getElementById('egExportOverlay');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'egExportOverlay'; ov.className = 'eg-overlay';
+    ov.addEventListener('click', ev => { if (ev.target === ov) egExportClose(); });
+    document.body.appendChild(ov);
+  }
+  const seg = (k, opts) => `<div class="pn-toggle eg-ex-seg">${opts.map(([v, l]) => `<button type="button" class="pn-toggle-btn${EX[k] === v ? ' active' : ''}" onclick="EX.${k}='${v}';egExport()">${l}</button>`).join('')}</div>`;
+  ov.innerHTML = `<div class="eg-dialog" role="dialog" aria-modal="true" aria-label="Export">
+      <div class="sf-header"><div class="sf-title">Export</div><button class="sf-close" onclick="egExportClose()" aria-label="Close">${icon('x', 18)}</button></div>
+      <div class="sf-body">
+        <div class="sf-section-label">Image size</div>${seg('size', [['square', 'Square'], ['story', 'Story'], ['wide', 'Wide']])}
+        <div class="sf-section-label">Theme</div>${seg('theme', [['dark', 'Dark'], ['light', 'Light']])}
+        <p class="eg-ex-hint">Uses the scores you’re looking at now (${S.source === 'tmdb' ? 'TMDB' : S.source === 'mine' ? (S.readOnly ? esc(S.whoName) + '’s' : 'yours') : S.source === 'community' ? 'Community' : 'difference vs TMDB'}).</p>
+      </div>
+      <div class="sf-footer">
+        ${Object.keys(S.mine).length ? `<button type="button" class="sf-clear" onclick="egCSV()">Download CSV</button>` : ''}
+        <button type="button" class="sf-apply" onclick="egImage(this)">Download Image</button>
+      </div></div>`;
+  ov.classList.add('open'); document.body.style.overflow = 'hidden';
+}
+function egExportClose() { document.getElementById('egExportOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
+async function egImage(btn) {
+  btn.disabled = true; btn.textContent = 'Drawing…';
+  try {
+    await document.fonts.ready;
+    const dims = { square: [1080, 1080], story: [1080, 1920], wide: [1600, 900] }[EX.size];
+    const [W, H] = dims, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'), dark = EX.theme === 'dark';
+    const css = getComputedStyle(document.documentElement), band = k => css.getPropertyValue('--band-' + k).trim();
+    const C = dark ? { bg: '#121614', text: '#f0ede8', sub: '#9aa39c', line: '#2a312c', empty: '#2a312c' } : { bg: '#f3eee6', text: '#1a1d1b', sub: '#5f665f', line: '#d9d2c6', empty: '#e3dccf' };
+    g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+    const pad = Math.round(W * 0.055);
+    // header: poster + title
+    let y = pad;
+    const pH = Math.round(H * (EX.size === 'story' ? 0.14 : EX.size === 'wide' ? 0.22 : 0.17)), pW = Math.round(pH * 2 / 3);
+    let drew = false;
+    if (S.show.poster_path) {
+      try {
+        const img = new Image(); img.crossOrigin = 'anonymous';
+        img.src = `https://image.tmdb.org/t/p/w342${S.show.poster_path}`;
+        await new Promise((ok, no) => { img.onload = ok; img.onerror = no; setTimeout(no, 6000); });
+        g.save(); g.beginPath(); g.roundRect(pad, y, pW, pH, 12); g.clip(); g.drawImage(img, pad, y, pW, pH); g.restore(); drew = true;
+      } catch {}
+    }
+    const tx = drew ? pad + pW + 28 : pad;
+    g.fillStyle = band('great'); g.font = `600 ${Math.round(W * 0.016)}px Oswald, sans-serif`; g.fillText('EPISODE RATINGS · ' + ({ tmdb: 'TMDB', mine: S.readOnly ? S.whoName.toUpperCase() : 'MINE', community: 'MSS COMMUNITY', diff: 'VS TMDB' }[S.source]), tx, y + Math.round(W * 0.02));
+    g.fillStyle = C.text; g.font = `600 ${Math.round(W * 0.05)}px Oswald, sans-serif`;
+    let title = S.show.name; while (g.measureText(title).width > W - tx - pad && title.length > 3) title = title.slice(0, -2) + '…';
+    g.fillText(title, tx, y + Math.round(W * 0.075));
+    const sc = allScored(), sa = sc.length ? avg(sc.map(x => x.v)) : null;
+    g.fillStyle = C.sub; g.font = `500 ${Math.round(W * 0.02)}px Manrope, sans-serif`;
+    g.fillText(`${(S.show.first_air_date || '').slice(0, 4)} · ${S.seasons.length} seasons${sa != null && S.source !== 'diff' ? ' · average ' + sa.toFixed(1) : ''}`, tx, y + Math.round(W * 0.11));
+    y += pH + 34;
+    // grid: seasons across, episodes down
+    const maxEp = Math.max(1, ...S.seasons.map(sn => (S.eps[sn] || []).length));
+    const legendH = 70, footH = 50, labW = Math.round(W * 0.05);
+    const availW = W - pad * 2 - labW, availH = H - y - legendH - footH - pad;
+    const cell = Math.max(10, Math.min(Math.floor(availW / S.seasons.length), Math.floor(availH / (maxEp + 2)), 80));
+    const gap = Math.max(2, Math.round(cell * 0.1)), box = cell - gap;
+    const gx = pad + labW + Math.max(0, (availW - cell * S.seasons.length) / 2);
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const colorFor = v => S.source === 'diff' ? (Math.abs(v) < 0.3 ? C.empty : v > 0 ? '#2f6e3a' : '#a8433b') : band(MSSEp.band(v).key);
+    const textFor = v => S.source === 'diff' ? (Math.abs(v) < 0.3 ? C.text : '#fff') : (['good', 'decent', 'meh'].includes(MSSEp.band(v).key) ? '#1a1a1a' : '#fff');
+    g.font = `400 ${Math.round(box * 0.42)}px "Bebas Neue", sans-serif`;
+    S.seasons.forEach((sn, ci) => { g.fillStyle = C.sub; g.fillText('S' + sn, gx + ci * cell + box / 2, y + box / 2); });
+    const drawBox = (x, yy, v) => {
+      g.fillStyle = v == null ? C.empty : colorFor(v);
+      g.beginPath(); g.roundRect(x, yy, box, box, Math.max(3, box * 0.16)); g.fill();
+      if (v != null && box >= 18) { g.fillStyle = textFor(v); g.fillText((S.source === 'diff' && v > 0 ? '+' : '') + v.toFixed(1), x + box / 2, yy + box / 2 + 1); }
+    };
+    for (let n = 1; n <= maxEp; n++) {
+      const yy = y + n * cell;
+      g.fillStyle = C.sub; g.textAlign = 'right'; g.fillText('E' + n, gx - 10, yy + box / 2); g.textAlign = 'center';
+      S.seasons.forEach((sn, ci) => { const ep = (S.eps[sn] || []).find(x => x.n === n); if (ep) drawBox(gx + ci * cell, yy, scoreOf(sn, ep)); });
+    }
+    const ay = y + (maxEp + 1) * cell + gap;
+    g.fillStyle = C.sub; g.textAlign = 'right'; g.fillText('AVG', gx - 10, ay + box / 2); g.textAlign = 'center';
+    S.seasons.forEach((sn, ci) => drawBox(gx + ci * cell, ay, avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep)))));
+    // legend
+    const ly = H - pad - footH - legendH / 2;
+    g.font = `600 ${Math.round(W * 0.015)}px Manrope, sans-serif`; g.textAlign = 'left';
+    const items = S.source === 'diff' ? [['#2f6e3a', 'Higher'], [C.empty, 'Same'], ['#a8433b', 'Lower']] : MSSEp.BANDS.map(b => [band(b.key), b.name]);
+    const iw = (W - pad * 2) / items.length;
+    items.forEach(([c, l], i) => { const x = pad + i * iw; g.fillStyle = c; g.beginPath(); g.roundRect(x, ly - 10, 20, 20, 4); g.fill(); g.fillStyle = C.text; g.fillText(l, x + 28, ly + 1); });
+    // footer
+    g.fillStyle = C.line; g.fillRect(pad, H - pad - footH + 8, W - pad * 2, 1);
+    g.fillStyle = C.sub; g.font = `600 ${Math.round(W * 0.018)}px Oswald, sans-serif`; g.textAlign = 'left';
+    g.fillText('MYSCREENSCORE', pad, H - pad - footH / 2 + 10);
+    g.textAlign = 'right'; g.font = `500 ${Math.round(W * 0.014)}px Manrope, sans-serif`; g.fillText('Episode data: TMDB', W - pad, H - pad - footH / 2 + 10);
+    const a = document.createElement('a');
+    a.download = `${S.show.name.replace(/[^\w]+/g, '-').toLowerCase()}-episodes-${EX.size}.png`;
+    a.href = cv.toDataURL('image/png'); a.click();
+    showToast('Image downloaded.');
+  } catch (err) { console.error('Export:', err); showToast('Couldn’t make the image — try again.', 'err'); }
+  btn.disabled = false; btn.textContent = 'Download Image';
+}
+function egCSV() {
+  const rows = [['Show', 'Season', 'Episode', 'Title', 'Score', 'Band', 'Tags', 'Note', 'Rated']];
+  Object.values(S.mine).sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number).forEach(r => {
+    const ep = r.episode_number ? (S.eps[r.season_number] || []).find(x => x.n === r.episode_number) : null;
+    rows.push([S.show.name, r.season_number, r.episode_number || 'Season', r.episode_number ? (ep?.name || '') : `Season ${r.season_number}`, Number(r.score).toFixed(1), MSSEp.band(r.score).name, (r.tags || []).join('; '), r.note || '', (r.updated_at || '').slice(0, 10)]);
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `${S.show.name.replace(/[^\w]+/g, '-').toLowerCase()}-episode-ratings.csv`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async user => {
+    _egUser = user;
+    try { if (_egShowId) await renderShow(); else await renderHome(); }
+    catch (err) {
+      console.error('Episodes:', err);
+      document.getElementById('egPage').innerHTML = `<div class="mss-empty">Couldn’t load episode ratings — please refresh.</div>`;
+    }
+  });
+});
+</script>
+</body>
+</html>
