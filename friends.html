@@ -357,6 +357,8 @@
 .cp-table td.best { color:var(--olive-light); }
 .cp-table tr:last-child td { border-bottom:none; }
 
+.fa-score.ep-score-chip { padding:3px 8px; border-radius:5px; font-size:18px; align-self:center; }
+
 /* ══ Small screens — one sizing pass for the whole Friends page ══ */
 @media(max-width:760px) {
   .fr-page { --fr-gap:12px; }
@@ -459,6 +461,7 @@
 <script src="js/rating-popup.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/friend-popups.js"></script>
+<script src="js/episode-ratings.js"></script>
 <script src="js/list-popup.js"></script>
 <script src="js/sort-filter.js"></script>
 <script>
@@ -479,7 +482,7 @@ const _PIN_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" st
 const _PIN_SVG_FILLED = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>`;
 let _frTab = 'friends';
 let _frAccepted = [], _frIncoming = [], _frOutgoing = [];
-let _frEntries = [], _frLists = [], _frProfiles = {}, _frStats = {}, _frLoaded = false;
+let _frEntries = [], _frLists = [], _frEpRatings = [], _frProfiles = {}, _frStats = {}, _frLoaded = false;
 let _frSentOpen = false;
 let _frAuthKnown = false;          // until sign-in is checked, show a spinner (never the signed-out view)
 window._frEntryMap = {};
@@ -535,12 +538,13 @@ async function loadFriends() {
   _frProfiles = Object.fromEntries(_frAccepted.map(f => [f.friendId, f.friendProfile || {}]));
   const ids = _frAccepted.map(f => f.friendId);
   if (ids.length) {
-    const [ents, lists] = await Promise.all([
+    const [ents, lists, eps] = await Promise.all([
       sb.from('entries').select('*').in('user_id', ids).order('updated_at', { ascending: false }).limit(3000).then(r => r.data || [], () => []),
       sb.from('favorite_lists').select('*').in('user_id', ids).eq('cat', 'custom').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+      sb.from('episode_ratings').select('id,user_id,entry_id,season_number,episode_number,score,updated_at').in('user_id', ids).order('updated_at', { ascending: false }).limit(150).then(r => r.data || [], () => []),
     ]);
-    _frEntries = ents; _frLists = lists;
-  } else { _frEntries = []; _frLists = []; }
+    _frEntries = ents; _frLists = lists; _frEpRatings = eps;
+  } else { _frEntries = []; _frLists = []; _frEpRatings = []; }
   _frEntries.forEach(e => { window._frEntryMap[e.id] = e; });
   // Top Favorites older than the recent entries loaded above — fetch those too
   const favIds = _frAccepted.flatMap(f => Array.isArray(f.friendProfile?.top_picks) ? f.friendProfile.top_picks.slice(0, 4) : []);
@@ -715,6 +719,7 @@ const _FR_ACT = {
   watchlist: { verb: 'added to their watchlist', color: '#6b6b6b', ic: 'bookmark', label: 'Watchlist' },
   note:      { verb: 'wrote a note on',          color: '#7a3e78', ic: 'notebook', label: 'Note' },
   list:      { verb: 'made a list',              color: '#3d5a80', ic: 'layers',  label: 'New List' },
+  rated_ep:  { verb: 'rated',                    color: '#1f4d2b', ic: 'ratingStar', label: 'Episode Rating' },
 };
 function _frEvents() {
   const ev = [];
@@ -725,7 +730,7 @@ function _frEvents() {
     if (e.status === 'completed' && e.completed_date) {
       const done = _frDate(e.completed_date), added = _frDate(e.created_at);
       const old = done && added && (added - done) >= 30 * 86400000;
-      push(old ? 'logged' : 'finished', old ? e.created_at : e.completed_date);
+      push(old ? 'logged' : 'finished', old ? e.created_at : (e.completed_at || e.completed_date));   // completed_at: exact time it was marked watched
     }
     else if (e.status === 'ongoing') push('caught_up', e.updated_at);
     else if (e.status === 'watching') push('started', e.updated_at);
@@ -735,6 +740,11 @@ function _frEvents() {
   });
   // "made a list"
   _frLists.forEach(l => { const d = _frDate(l.created_at); if (d && !isNaN(d)) ev.push({ id: 'list:' + l.id, user_id: l.user_id, title: l.title, _list: l, _ev: 'list', _at: d }); });
+  // "rated S2 · E5" / "rated Season 2" (episode ratings)
+  _frEpRatings.forEach(r => {
+    const e = window._frEntryMap[r.entry_id], d = new Date(r.updated_at);
+    if (e && !isNaN(d)) ev.push({ ...e, id: 'ep:' + r.id, user_id: r.user_id, _epr: r, _ev: 'rated_ep', _at: d });
+  });
   return ev;
 }
 SF.register('frActivity', {
@@ -771,6 +781,20 @@ function _frRenderActivity() {
     const a = _FR_ACT[x._ev], sc = _frScore(x);
     const day = _frDayLabel(x._at);
     if (byDate && day !== lastDay) { html += `<div class="fa-day">${day}</div>`; lastDay = day; }
+    if (x._ev === 'rated_ep') {
+      const r = x._epr, what = r.episode_number ? `S${r.season_number} · E${r.episode_number}` : `Season ${r.season_number}`;
+      html += `<article class="fa-item" onclick="location.href='episodes.html?show=${encodeURIComponent(x.tmdb_id)}&user=${encodeURIComponent(r.user_id)}'">
+        <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
+        <div class="fa-body">
+          <div class="fa-text"><b>${escHTML(_frName(x.user_id))}</b> rated ${what} of</div>
+          <div class="fa-title">${escHTML(x.title)}</div>
+          <div class="fa-meta">${_frTypeBadge(x)}<span>${x._at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+        </div>
+        <div class="fa-score ep-score-chip ep-band-${MSSEp.band(r.score).key}">${Number(r.score).toFixed(1)}</div>
+        ${_frPosterHTML(x, 'fa-poster')}
+      </article>`;
+      return;
+    }
     if (x._ev === 'list') {
       const n = (x._list.items || []).length;
       html += `<article class="fa-item" onclick="_frOpenList(${attrJSON(x._list.id)})">
