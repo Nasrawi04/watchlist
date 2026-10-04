@@ -1100,6 +1100,7 @@
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/episode-ratings.js"></script>
 <script src="js/info-popup.js"></script>
 
 <script>
@@ -1977,6 +1978,7 @@ async function _favLoadSeasonEpisodes(n) {
 async function _favOpenEpisodePicker(which) {
   _favPersonTarget = which;
   _favOverlay('favEpisodeOverlay', 'favEpisodeCard', 'Choose an Episode', '_favCloseEpisodePicker', `
+      <div class="fav-ep-suggest" id="favEpSuggest"></div>
       <div class="fav-ep-seasons" id="favEpSeasons"></div>
       <div class="search-wrap fav-picker-search">
         <span class="search-icon-wrap">${icon('search', 14)}</span>
@@ -1991,10 +1993,29 @@ async function _favOpenEpisodePicker(which) {
     body.innerHTML = `<div class="sf-empty">No episode data available — link this title to TMDB first.</div>`;
     return;
   }
+  _favSuggest(which);
   // Open on the season of the episode already picked, else Season 1
   const cur = document.getElementById(`${which}Episode`).value.match(/^S(\d+)E/);
   const start = cur && _favData.seasons.some(s => s.number === +cur[1]) ? +cur[1] : _favData.seasons[0].number;
   _favShowSeason(start);
+}
+
+// "From your ratings": your 3 highest (Favorite) or lowest (Least Favorite) rated episodes
+async function _favSuggest(which) {
+  const box = document.getElementById('favEpSuggest');
+  if (!box || !_detId) return;
+  box.innerHTML = '';
+  try {
+    const { data } = await sb.from('episode_ratings').select('season_number,episode_number,score').eq('entry_id', _detId).gt('episode_number', 0)
+      .order('score', { ascending: which === 'low' }).limit(3);
+    if (!data?.length) return;
+    box.innerHTML = `<span class="fav-sug-label">From your ratings</span>${data.map(r => `<button type="button" class="fav-sug ep-band-${MSSEp.band(r.score).key}" onclick="_favPickRated(${r.season_number},${r.episode_number})">S${r.season_number} · E${r.episode_number} <b>${Number(r.score).toFixed(1)}</b></button>`).join('')}`;
+  } catch {}
+}
+async function _favPickRated(sn, n) {
+  await _favLoadSeasonEpisodes(sn);
+  const ep = (_favData.episodesBySeasonNum[sn] || []).find(x => x.number === n) || { number: n, name: `Episode ${n}` };
+  _favPickEpisode(_favEpisodeLabel(sn, ep));
 }
 
 async function _favShowSeason(n) {
