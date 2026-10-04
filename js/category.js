@@ -1192,6 +1192,8 @@ async function adjustEp(id, delta) {
       entry.season  = newSeason;
       SF.refresh('cat', 'watching'); // keeps the active sort + filters
       showToast('Progress updated');
+      // "+" marked an episode watched → episode rating (episode-ratings.js)
+      if (delta > 0 && newEp > 0 && typeof MSSEp !== 'undefined') MSSEp.afterWatch(entry, newSeason, newEp);
     } catch(e) { showToast('Error updating progress.', 'err'); }
   } else {
     // For movies: auto-complete. For shows: ask Completed or Ongoing
