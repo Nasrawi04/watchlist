@@ -8,8 +8,8 @@
    photos. Only the buttons change, depending on whose title it is:
 
      Someone else's title / a TMDB title → Add to Watchlist · Discover
-     Your own entry → Start Watching · Up Next (when they apply) · Edit ·
-                      Discover · Discover Card · Delete
+     Your own entry → Start Watching · Up Next (when they apply) ·
+                      Rate Episodes (shows) · Edit · Discover · Discover Card · Delete
 
    Also owns the shared "Discover" action: a linked title opens its
    title page; an unlinked one searches TMDB and shows the "Which one
@@ -36,7 +36,7 @@
 const INFO_POPUP_CONFIG = {
   // Buttons, left → right. Remove / reorder here.
   actions: ['queue', 'discover'],                                         // someone else's / TMDB title
-  ownerActions: ['start', 'upnext', 'edit', 'discover', 'card', 'delete'], // your own entry
+  ownerActions: ['start', 'upnext', 'rateEps', 'edit', 'discover', 'card', 'delete'], // your own entry
   addStatus: 'queue',      // status used by "Add to Watchlist"
   showTmdbScore: true,     // TMDB community rating in the tags row
   showCrew: true,          // Director (movies) / Created By (TV)
@@ -227,6 +227,7 @@ const MSSInfo = (() => {
       discover: () => (it.tmdb_id || it.title) ? btn('discover', 'search', 'Discover') : '',
       start:  () => e && (e.status === 'queue' || e.status === 'up_next') ? btn('start', 'play', 'Start Watching') : '',
       upnext: () => e && e.status === 'queue' ? btn('upnext', 'skipForward', 'Up Next') : '',
+      rateEps: () => e && typeof MSSEp !== 'undefined' && MSSEp.isShow(e) ? btn('rateEps', 'ratingStar', 'Rate Episodes') : '',
       edit:   () => e ? btn('edit', 'edit', 'Edit') : '',
       card:   () => e && typeof createShareCard === 'function' ? btn('card', 'idCard', 'Discover Card') : '',
       delete: () => e ? btn('delete', 'trash', 'Delete', ' popup-action-danger') : '',
@@ -243,6 +244,7 @@ const MSSInfo = (() => {
     if (key === 'discover') return discover(e || it, el);
     if (!e) return;
     if (key === 'edit') { goToDetail(e.id, opts.from || thisFile()); return; }
+    if (key === 'rateEps') { close(); MSSEp.rate(e, e.season || 1, Math.max(1, e.episode || 1)); return; }
     if (key === 'card') { close(); createShareCard(e.id, 3, true); return; }
     if (key === 'delete') {
       const ok = await showConfirm({ title: 'Delete entry?', message: `"${e.title || 'This entry'}" will be permanently removed.`, confirmText: 'Delete', iconName: 'trash' });
