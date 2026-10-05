@@ -93,6 +93,14 @@
 .eg-pop-note { margin-top:10px; padding-left:12px; border-left:2px solid var(--olive-light); font-style:italic; color:var(--text); font-size:14px; }
 .eg-tools { display:flex; gap:8px; align-items:flex-end; }
 .eg-season-row th { font-size:12px; letter-spacing:1px; }
+.eg-season-btn svg:last-child { margin-left:2px; opacity:.7; }
+.eg-season-dialog { max-width:720px; }
+.eg-season-all { display:inline-flex; align-items:center; gap:6px; margin-bottom:14px; padding:8px 14px; border-radius:var(--radius-sm); cursor:pointer; font-family:'Manrope',var(--sans); font-size:13px; font-weight:600; background:transparent; border:1px solid var(--border-2); color:var(--text-2); }
+.eg-season-all.on { background:var(--olive); border-color:var(--olive); color:#fff; }
+.eg-season-all svg { display:none; } .eg-season-all.on svg { display:inline; }
+.eg-season-grid .td-season-block { width:clamp(110px, 18vw, 140px); }
+.td-season-block-poster { position:relative; }
+.eg-season-check { position:absolute; top:6px; right:6px; width:24px; height:24px; border-radius:50%; background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.3); }
 .eg-cmp-bar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:1.25rem auto 1.5rem; max-width:860px; padding:14px 16px; border-radius:var(--radius); background:var(--olive-faint); border:0.5px solid var(--border-olive); }
 .eg-cmp-bar-ic { width:40px; height:40px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; }
 .eg-cmp-bar-text { flex:1; min-width:200px; display:flex; flex-direction:column; gap:2px; }
@@ -262,6 +270,16 @@ function seasonScore(sn) {
   return mine != null && tm != null ? Math.round((mine - tm) * 10) / 10 : null;
 }
 const aired = ep => ep.air && new Date(ep.air) <= new Date();
+// Season filter (all views + export): S.sel = Set of seasons, or null for all.
+// Kept while you stay on the page (rating episodes doesn't reset it).
+const vis = () => (S.sel && S.sel.size && !S2) ? S.seasons.filter(sn => S.sel.has(sn)) : S.seasons;
+const selLabel = () => {
+  const v = vis();
+  if (!S.sel || !S.sel.size || v.length === S.seasons.length) return 'All seasons';
+  if (v.length === 1) return 'Season ' + v[0];
+  const contiguous = v.every((x, i) => i === 0 || x === v[i - 1] + 1);
+  return contiguous ? `Seasons ${v[0]}–${v[v.length - 1]}` : `${v.length} seasons`;
+};
 
 async function loadState(tmdbId, userId) {
   const X = blankState();
@@ -354,6 +372,8 @@ function draw() {
       <div class="pn-toggle" role="tablist" aria-label="View">
         ${[['grid', 'Grid'], ['graph', 'Graph'], ['list', 'List']].map(([k, l]) => `<button type="button" class="pn-toggle-btn${S.view === k ? ' active' : ''}" onclick="egSet('view','${k}')">${l}</button>`).join('')}
       </div></div>
+      ${S.seasons.length > 1 ? `<div class="eg-ctl"><div class="eg-ctl-label">Seasons</div>
+        <button type="button" class="sf-icon-btn eg-season-btn${S.sel && S.sel.size ? ' active' : ''}" onclick="egSeasonPick()" aria-haspopup="dialog">${icon('layers', 15)}<span class="sf-icon-btn-label">${esc(selLabel())}</span>${icon('chevdown', 13)}</button></div>` : ''}
       <div class="eg-tools">
         <button type="button" class="sf-icon-btn" onclick="egComparePick()">${icon('compare', 15)}<span class="sf-icon-btn-label">${S2 ? 'Change comparison' : 'Compare'}</span></button>
         <button type="button" class="sf-icon-btn" onclick="egExport()">${icon('download', 15)}<span class="sf-icon-btn-label">Export</span></button>
@@ -370,7 +390,7 @@ function egSet(k, v) { S[k] = v; if (S2 && k === 'source') S2.source = v; draw()
 
 function allScored() {
   const out = [];
-  S.seasons.forEach(sn => (S.eps[sn] || []).forEach(ep => { const v = scoreOf(sn, ep); if (v != null) out.push({ s: sn, ep, v }); }));
+  vis().forEach(sn => (S.eps[sn] || []).forEach(ep => { const v = scoreOf(sn, ep); if (v != null) out.push({ s: sn, ep, v }); }));
   return out;
 }
 function cellHTML(sn, ep, extra = '') {
@@ -384,27 +404,27 @@ function cellHTML(sn, ep, extra = '') {
   return `<button type="button" class="${cls}${extra}" onclick="egOpen(${sn},${ep.n})" title="${esc(label)}" aria-label="${esc(label)}">${txt}</button>`;
 }
 function gridHTML() {
-  const maxEp = Math.max(0, ...S.seasons.map(sn => (S.eps[sn] || []).length));
+  const maxEp = Math.max(0, ...vis().map(sn => (S.eps[sn] || []).length));
   const scored = S.source === 'diff' ? [] : allScored();
   const best = scored.length > 2 ? scored.reduce((a, b) => (b.v > a.v ? b : a)) : null;
   const worst = scored.length > 2 ? scored.reduce((a, b) => (b.v < a.v ? b : a)) : null;
   let rows = '';
   for (let n = 1; n <= maxEp; n++) {
-    rows += `<tr><th class="eg-ep" scope="row">E${n}</th>${S.seasons.map(sn => {
+    rows += `<tr><th class="eg-ep" scope="row">E${n}</th>${vis().map(sn => {
       const ep = (S.eps[sn] || []).find(x => x.n === n);
       if (!ep) return '<td></td>';
       const extra = best && best.s === sn && best.ep.n === n ? ' eg-best' : worst && worst.s === sn && worst.ep.n === n ? ' eg-worst' : '';
       return `<td>${cellHTML(sn, ep, extra)}</td>`;
     }).join('')}</tr>`;
   }
-  const avgRow = `<tr class="eg-avg"><th class="eg-ep" scope="row">AVG</th>${S.seasons.map(sn => {
+  const avgRow = `<tr class="eg-avg"><th class="eg-ep" scope="row">AVG</th>${vis().map(sn => {
     const a = avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep)));
     if (a == null) return '<td><div class="eg-cell eg-empty">·</div></td>';
     const cls = S.source === 'diff' ? (Math.abs(a) < 0.3 ? 'eg-diff-same' : a > 0 ? 'eg-diff-up' : 'eg-diff-down') : bandCls(a);
     return `<td><div class="eg-cell ${cls}" title="Season ${sn} average">${S.source === 'diff' && a > 0 ? '+' : ''}${a.toFixed(1)}</div></td>`;
   }).join('')}</tr>`;
   const canRate = !S.readOnly && S.entry;
-  const seasonRow = `<tr class="eg-avg eg-season-row"><th class="eg-ep" scope="row" title="Whole-season rating">SEASON</th>${S.seasons.map(sn => {
+  const seasonRow = `<tr class="eg-avg eg-season-row"><th class="eg-ep" scope="row" title="Whole-season rating">SEASON</th>${vis().map(sn => {
     const v = seasonScore(sn);
     const cls = v == null ? 'eg-empty' : S.source === 'diff' ? (Math.abs(v) < 0.3 ? 'eg-diff-same' : v > 0 ? 'eg-diff-up' : 'eg-diff-down') : bandCls(v);
     const txt = v == null ? (canRate && S.source === 'mine' ? '+' : '·') : (S.source === 'diff' && v > 0 ? '+' : '') + v.toFixed(1);
@@ -415,13 +435,13 @@ function gridHTML() {
     ? `<span><i class="eg-diff-up"></i>You rated higher</span><span><i class="eg-diff-same"></i>About the same</span><span><i class="eg-diff-down"></i>You rated lower</span>`
     : MSSEp.BANDS.map(b => `<span><i class="ep-band-${b.key}"></i>${b.name} ${b.min ? b.min.toFixed(1) + '+' : '< 5'}</span>`).join('') + `<span><i style="border:1.5px dashed var(--border-2)"></i>Not rated</span><span><i class="eg-unaired-sw"></i>Not aired</span>`;
   return `<div class="eg-grid-wrap"><table class="eg-grid" aria-label="Episode ratings by season">
-      <thead><tr><th class="eg-ep"></th>${S.seasons.map(sn => `<th scope="col">S${sn}</th>`).join('')}</tr></thead>
+      <thead><tr><th class="eg-ep"></th>${vis().map(sn => `<th scope="col">S${sn}</th>`).join('')}</tr></thead>
       <tbody>${rows}${avgRow}${seasonRow}</tbody></table></div>
     <div class="eg-legend">${legend}</div>`;
 }
 function graphHTML() {
   const pts = []; let i = 0;
-  S.seasons.forEach((sn, si) => (S.eps[sn] || []).forEach(ep => { i++; const v = scoreOf(sn, ep); if (v != null) pts.push({ x: i, v, s: sn, n: ep.n, si }); }));
+  vis().forEach((sn, si) => (S.eps[sn] || []).forEach(ep => { i++; const v = scoreOf(sn, ep); if (v != null) pts.push({ x: i, v, s: sn, n: ep.n, si }); }));
   if (!pts.length) return `<div class="mss-empty">Nothing to plot for this source yet.</div>`;
   const W = 900, H = 340, L = 34, R = 10, T = 12, B = 28, total = i;
   const diff = S.source === 'diff', lo = diff ? -3 : 1, hi = diff ? 3 : 10;
@@ -434,24 +454,24 @@ function graphHTML() {
   // dots and line segments take the colour of their band (as in the grid)
   const col = v => diff ? (Math.abs(v) < 0.3 ? 'var(--text-3)' : v > 0 ? '#2f6e3a' : '#a8433b') : `var(--band-${MSSEp.band(v).key})`;
   let lines = '';
-  S.seasons.forEach(sn => {
+  vis().forEach(sn => {
     const sp = pts.filter(p => p.s === sn);
     for (let k = 1; k < sp.length; k++) lines += `<line x1="${X(sp[k - 1].x)}" y1="${Y(sp[k - 1].v)}" x2="${X(sp[k].x)}" y2="${Y(sp[k].v)}" stroke="${col((sp[k - 1].v + sp[k].v) / 2)}" stroke-width="2.6" stroke-linecap="round"></line>`;
   });
   const dots = pts.map(p => `<circle class="eg-pt" cx="${X(p.x)}" cy="${Y(p.v)}" r="5" fill="${col(p.v)}" stroke="var(--bg)" stroke-width="1.5" onclick="egOpen(${p.s},${p.n})"><title>S${p.s} · E${p.n}: ${p.v.toFixed(1)}</title></circle>`).join('');
   const ticks = (diff ? [-3, -1.5, 0, 1.5, 3] : [2, 4, 6, 8, 10]).map(v => `<text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--text-3)">${v}</text><line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--border)" stroke-width="0.5"></line>`).join('');
-  const seasonLabels = S.seasons.map(sn => { const sp = pts.filter(p => p.s === sn); if (!sp.length) return ''; return `<line x1="${X(sp[0].x) - 6}" x2="${X(sp[0].x) - 6}" y1="${T}" y2="${H - B}" stroke="var(--border-2)" stroke-dasharray="3 4"></line><text x="${X(sp[0].x)}" y="${H - 8}" font-size="11" font-weight="600" fill="var(--olive-light)">S${sn}</text>`; }).join('');
+  const seasonLabels = vis().map(sn => { const sp = pts.filter(p => p.s === sn); if (!sp.length) return ''; return `<line x1="${X(sp[0].x) - 6}" x2="${X(sp[0].x) - 6}" y1="${T}" y2="${H - B}" stroke="var(--border-2)" stroke-dasharray="3 4"></line><text x="${X(sp[0].x)}" y="${H - 8}" font-size="11" font-weight="600" fill="var(--olive-light)">S${sn}</text>`; }).join('');
   return `<svg class="eg-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="Episode scores across the series">${stripes}${ticks}${lines}${dots}${seasonLabels}</svg>`;
 }
 function listHTML() {
   const rows = [];
-  S.seasons.forEach(sn => (S.eps[sn] || []).forEach(ep => {
+  vis().forEach(sn => (S.eps[sn] || []).forEach(ep => {
     const k = key(sn, ep.n), mine = S.mine[k], comm = S.comm[k];
     const chip = (v, lbl) => `<div class="eg-chip ${v == null ? 'eg-chip-empty' : bandCls(v)}">${fmt(v)}<small>${lbl}</small></div>`;
     rows.push(`<div class="eg-row" role="button" tabindex="0" onclick="egOpen(${sn},${ep.n})" onkeydown="if(event.key==='Enter')this.click()">
       <div class="eg-row-still">${ep.still ? `<img src="https://image.tmdb.org/t/p/w300${ep.still}" alt="" loading="lazy">` : ''}</div>
       <div class="eg-row-info">
-        <div class="eg-row-title">S${sn} · E${ep.n} — ${esc(ep.name || 'Episode ' + ep.n)}</div>
+        <div class="eg-row-title">S${sn} · E${ep.n}${ep.abs ? ` (#${ep.abs})` : ''} — ${esc(ep.name || 'Episode ' + ep.n)}</div>
         <div class="eg-row-meta">${esc([ep.air, ep.rt ? ep.rt + 'm' : ''].filter(Boolean).join(' · '))}</div>
         ${ep.overview ? `<div class="eg-row-desc">${esc(ep.overview)}</div>` : ''}
         ${mine?.tags?.length ? `<div class="eg-row-tags">${mine.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
@@ -472,7 +492,7 @@ function panelHTML() {
   if (!sc.length) return `<aside class="eg-panel"><div class="section-eyebrow">Stats</div><div class="eg-panel-row"><span>No scores for this source yet.</span></div></aside>`;
   const a = avg(sc.map(x => x.v));
   const best = sc.reduce((x, y) => (y.v > x.v ? y : x)), worst = sc.reduce((x, y) => (y.v < x.v ? y : x));
-  const seasonAvgs = S.seasons.map(sn => ({ sn, a: avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep))) })).filter(x => x.a != null);
+  const seasonAvgs = vis().map(sn => ({ sn, a: avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep))) })).filter(x => x.a != null);
   const bestS = seasonAvgs.reduce((x, y) => (y.a > x.a ? y : x));
   const great = Math.round(100 * sc.filter(x => x.v >= 8.5).length / sc.length);
   const sd = Math.sqrt(avg(sc.map(x => (x.v - a) ** 2)));
@@ -503,7 +523,7 @@ function egOpen(sn, n) {
   const box = (v, lbl) => `<div class="eg-pop-score ${v == null ? '' : bandCls(v)}"><b>${fmt(v)}</b><span>${lbl}</span></div>`;
   document.getElementById('egEpCard').innerHTML = `
     <div class="ep-hero">${ep.still ? `<img src="https://image.tmdb.org/t/p/w780${ep.still}" alt="">` : `<div class="ep-hero-empty">${esc(S.show.name)}</div>`}
-      <span class="ep-se">S${sn} · E${n}</span>
+      <span class="ep-se">S${sn} · E${n}${ep.abs ? ` <small>#${ep.abs}</small>` : ''}</span>
       <button type="button" class="ep-close" onclick="egClose()" aria-label="Close">✕</button></div>
     <div class="ep-body">
       <div class="ep-eyebrow">${esc(S.show.name)}</div>
@@ -528,8 +548,8 @@ function egOpen(sn, n) {
 function egClose() { document.getElementById('egEpOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
 function egStep(d) {
   const ov = document.getElementById('egEpOverlay'); let sn = +ov.dataset.s, n = +ov.dataset.n + d;
-  if (n < 1) { const i = S.seasons.indexOf(sn); if (i > 0) { sn = S.seasons[i - 1]; n = (S.eps[sn] || []).length; } else return; }
-  else if (n > (S.eps[sn] || []).length) { const i = S.seasons.indexOf(sn); if (i < S.seasons.length - 1) { sn = S.seasons[i + 1]; n = 1; } else return; }
+  if (n < 1) { const i = vis().indexOf(sn); if (i > 0) { sn = vis()[i - 1]; n = (S.eps[sn] || []).length; } else return; }
+  else if (n > (S.eps[sn] || []).length) { const i = vis().indexOf(sn); if (i < vis().length - 1) { sn = vis()[i + 1]; n = 1; } else return; }
   egOpen(sn, n);
 }
 function egRate(sn, n) {
@@ -537,6 +557,42 @@ function egRate(sn, n) {
   if (S.readOnly || !S.entry) return;
   MSSEp.rate(S.entry, sn, n, { onSaved: async () => { await loadMine(); draw(); } });
 }
+
+/* ══ Season picker (season posters, like the Favorite Season picker) ══ */
+function egSeasonPick() {
+  let ov = document.getElementById('egSeasonOverlay');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'egSeasonOverlay'; ov.className = 'eg-overlay';
+    ov.addEventListener('click', ev => { if (ev.target === ov) egSeasonClose(); });
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && ov.classList.contains('open')) egSeasonClose(); });
+    document.body.appendChild(ov);
+  }
+  const all = !S.sel || !S.sel.size;
+  const meta = sn => (S.show.seasons || []).find(x => x.season_number === sn) || {};
+  ov.innerHTML = `<div class="eg-dialog eg-season-dialog" role="dialog" aria-modal="true" aria-label="Choose seasons">
+      <div class="sf-header"><div class="sf-title">Seasons</div><button class="sf-close" onclick="egSeasonClose()" aria-label="Close">${icon('x', 18)}</button></div>
+      <div class="sf-body">
+        <button type="button" class="eg-season-all${all ? ' on' : ''}" onclick="egSeasonSet(null)">${icon('check', 14)} All seasons</button>
+        <div class="fav-season-grid eg-season-grid">${S.seasons.map(sn => { const m = meta(sn), on = !all && S.sel.has(sn); return `
+          <button type="button" class="td-season-block${on ? ' picked' : ''}" onclick="egSeasonSet(${sn})" aria-pressed="${on}">
+            <div class="td-season-block-poster">${m.poster_path ? `<img src="https://image.tmdb.org/t/p/w342${m.poster_path}" alt="" loading="lazy">` : ''}${on ? `<span class="eg-season-check">${icon('check', 14)}</span>` : ''}</div>
+            <div class="td-season-block-info"><div class="td-season-block-name">${esc(m.name || 'Season ' + sn)}</div>
+              <div class="td-season-block-sub">${m.episode_count ? m.episode_count + ' eps' : ''}${m.air_date ? ' · ' + m.air_date.slice(0, 4) : ''}</div></div>
+          </button>`; }).join('')}</div>
+      </div>
+      <div class="sf-footer"><button type="button" class="sf-clear-btn" onclick="egSeasonSet(null)">Show all</button><button type="button" class="sf-apply-btn" onclick="egSeasonClose()">Done</button></div>
+    </div>`;
+  ov.classList.add('open'); document.body.style.overflow = 'hidden';
+}
+// Tap seasons to add / remove them; "All" clears the filter
+function egSeasonSet(sn) {
+  if (sn == null) S.sel = null;
+  else { S.sel = new Set(S.sel || []); S.sel.has(sn) ? S.sel.delete(sn) : S.sel.add(sn); if (!S.sel.size || S.sel.size === S.seasons.length) S.sel = null; }
+  const scroll = document.querySelector('#egSeasonOverlay .sf-body')?.scrollTop || 0;
+  draw(); egSeasonPick();
+  const b = document.querySelector('#egSeasonOverlay .sf-body'); if (b) b.scrollTop = scroll;
+}
+function egSeasonClose() { document.getElementById('egSeasonOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
 
 /* ══ Compare two shows ══ */
 function showStats(X) {
@@ -637,8 +693,9 @@ function egComparePick() {
 function egPickClose() { document.getElementById('egPickOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
 
 /* ══ Export: SeriesGraph-style image (Square / Story / Wide · Light / Dark) + CSV ══ */
-const EX = { size: 'square', theme: 'dark' };
+const EX = { size: 'square', theme: 'dark', source: null };
 function egExport() {
+  if (!EX.source || !['tmdb', 'mine', 'community'].includes(EX.source)) EX.source = S.source === 'diff' ? 'mine' : S.source;
   let ov = document.getElementById('egExportOverlay');
   if (!ov) {
     ov = document.createElement('div'); ov.id = 'egExportOverlay'; ov.className = 'eg-overlay';
@@ -651,7 +708,8 @@ function egExport() {
       <div class="sf-body">
         <div class="sf-section-label">Image size</div>${seg('size', [['square', 'Square'], ['story', 'Story'], ['wide', 'Wide']])}
         <div class="sf-section-label">Theme</div>${seg('theme', [['dark', 'Dark'], ['light', 'Light']])}
-        <p class="eg-ex-hint">Uses the scores you’re looking at now (${S.source === 'tmdb' ? 'TMDB' : S.source === 'mine' ? (S.readOnly ? esc(S.whoName) + '’s' : 'yours') : S.source === 'community' ? 'Community' : 'difference vs TMDB'}).</p>
+        <div class="sf-section-label">Scores</div>${seg('source', [['tmdb', 'TMDB'], ['mine', S.readOnly ? esc(S.whoName) + '’s' : 'Mine'], ['community', 'Community']])}
+        <p class="eg-ex-hint">Includes ${esc(selLabel().toLowerCase())} — change it with the Seasons button.</p>
       </div>
       <div class="sf-footer">
         ${Object.keys(S.mine).length ? `<button type="button" class="sf-clear-btn" onclick="egCSV()">${icon('download', 14)} Download CSV</button>` : ''}
@@ -661,83 +719,129 @@ function egExport() {
 }
 function egExportClose() { document.getElementById('egExportOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
 async function egImage(btn) {
-  btn.disabled = true; btn.textContent = 'Drawing…';
+  btn.disabled = true; btn.innerHTML = 'Drawing…';
+  const viewSource = S.source;
+  S.source = EX.source || S.source;            // draw the scores picked in the export popup
   try {
     await document.fonts.ready;
-    const dims = { square: [1080, 1080], story: [1080, 1920], wide: [1600, 900] }[EX.size];
-    const [W, H] = dims, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const [W, H] = { square: [1080, 1080], story: [1080, 1920], wide: [1600, 900] }[EX.size];
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const g = cv.getContext('2d'), dark = EX.theme === 'dark';
     const css = getComputedStyle(document.documentElement), band = k => css.getPropertyValue('--band-' + k).trim();
-    const C = dark ? { bg: '#121614', text: '#f0ede8', sub: '#9aa39c', line: '#2a312c', empty: '#2a312c' } : { bg: '#f3eee6', text: '#1a1d1b', sub: '#5f665f', line: '#d9d2c6', empty: '#e3dccf' };
-    g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+    const C = dark ? { bg: '#111613', card: '#1a211c', text: '#f0ede8', sub: '#9aa39c', line: '#2a312c', empty: '#26302a', olive: '#7fbf6a' }
+                   : { bg: '#f3eee6', card: '#ebe4d8', text: '#1a1d1b', sub: '#5f665f', line: '#d6cebf', empty: '#e0d8ca', olive: '#1e5c26' };
+    const load = (src, cors = true) => new Promise(ok => { if (!src) return ok(null); const im = new Image(); if (cors) im.crossOrigin = 'anonymous'; im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src; setTimeout(() => ok(null), 7000); });
+    // who: the ratings' owner for "Mine", else you (the exporter)
+    const whoId = S.readOnly && (S.source === 'mine' || S.source === 'diff') ? (_egUserQ || _egUser.id) : _egUser.id;
+    const { data: who } = await sb.from('profiles').select('username,avatar_url').eq('id', whoId).maybeSingle();
+    const [backdrop, poster, logo, avatar] = await Promise.all([
+      load(S.show.backdrop_path ? `https://image.tmdb.org/t/p/w1280${S.show.backdrop_path}` : null),
+      load(S.show.poster_path ? `https://image.tmdb.org/t/p/w342${S.show.poster_path}` : null),
+      load('icons/icon-192.png', false),   // same site — no CORS needed
+      load(safeURL(who?.avatar_url)),
+    ]);
     const pad = Math.round(W * 0.055);
-    // header: poster + title
-    let y = pad;
-    const pH = Math.round(H * (EX.size === 'story' ? 0.14 : EX.size === 'wide' ? 0.22 : 0.17)), pW = Math.round(pH * 2 / 3);
-    let drew = false;
-    if (S.show.poster_path) {
-      try {
-        const img = new Image(); img.crossOrigin = 'anonymous';
-        img.src = `https://image.tmdb.org/t/p/w342${S.show.poster_path}`;
-        await new Promise((ok, no) => { img.onload = ok; img.onerror = no; setTimeout(no, 6000); });
-        g.save(); g.beginPath(); g.roundRect(pad, y, pW, pH, 12); g.clip(); g.drawImage(img, pad, y, pW, pH); g.restore(); drew = true;
-      } catch {}
+    g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+
+    // ── Header: backdrop band (sharp, darkened), poster overlapping, title ──
+    const bandH = Math.round(H * (EX.size === 'story' ? 0.2 : EX.size === 'wide' ? 0.3 : 0.26));
+    if (backdrop) {
+      const r = Math.max(W / backdrop.width, bandH / backdrop.height), dw = backdrop.width * r, dh = backdrop.height * r;
+      g.drawImage(backdrop, (W - dw) / 2, (bandH - dh) * 0.35, dw, dh);
+    } else { g.fillStyle = band('masterpiece'); g.fillRect(0, 0, W, bandH); }
+    g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(0, 0, W, bandH);
+    const pH = Math.round(bandH * 0.92), pW = Math.round(pH * 2 / 3), pY = Math.round(bandH * 0.38);
+    if (poster) {
+      g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 24; g.shadowOffsetY = 8;
+      g.beginPath(); g.roundRect(pad, pY, pW, pH, 14); g.fillStyle = C.card; g.fill(); g.restore();
+      g.save(); g.beginPath(); g.roundRect(pad, pY, pW, pH, 14); g.clip(); g.drawImage(poster, pad, pY, pW, pH); g.restore();
     }
-    const tx = drew ? pad + pW + 28 : pad;
-    g.fillStyle = band('great'); g.font = `600 ${Math.round(W * 0.016)}px Oswald, sans-serif`; g.fillText('EPISODE RATINGS · ' + ({ tmdb: 'TMDB', mine: S.readOnly ? S.whoName.toUpperCase() : 'MINE', community: 'MSS COMMUNITY', diff: 'VS TMDB' }[S.source]), tx, y + Math.round(W * 0.02));
-    g.fillStyle = C.text; g.font = `600 ${Math.round(W * 0.05)}px Oswald, sans-serif`;
+    const tx = poster ? pad + pW + 30 : pad;
+    const srcName = { tmdb: 'TMDB scores', mine: S.readOnly ? `${S.whoName}’s ratings` : 'My ratings', community: 'MSS community', diff: 'vs TMDB' }[S.source];
+    g.textBaseline = 'alphabetic'; g.textAlign = 'left';
+    g.fillStyle = '#ffffff'; g.font = `600 ${Math.round(W * 0.017)}px Oswald, sans-serif`;
+    g.fillText(('EPISODE RATINGS · ' + srcName).toUpperCase(), tx, bandH - Math.round(W * 0.03));
+    g.fillStyle = C.text; g.font = `600 ${Math.round(W * 0.052)}px Oswald, sans-serif`;
     let title = S.show.name; while (g.measureText(title).width > W - tx - pad && title.length > 3) title = title.slice(0, -2) + '…';
-    g.fillText(title, tx, y + Math.round(W * 0.075));
-    const sc = allScored(), sa = sc.length ? avg(sc.map(x => x.v)) : null;
+    const ty = bandH + Math.round(W * 0.06);
+    g.fillText(title, tx, ty);
+    const seasons = vis(), sc = allScored(), sa = sc.length ? avg(sc.map(x => x.v)) : null;
+    const years = [(S.show.first_air_date || '').slice(0, 4), S.show.status === 'Ended' ? (S.show.last_air_date || '').slice(0, 4) : 'Present'].filter(Boolean).join('–');
     g.fillStyle = C.sub; g.font = `500 ${Math.round(W * 0.02)}px Manrope, sans-serif`;
-    g.fillText(`${(S.show.first_air_date || '').slice(0, 4)} · ${S.seasons.length} seasons${sa != null && S.source !== 'diff' ? ' · average ' + sa.toFixed(1) : ''}`, tx, y + Math.round(W * 0.11));
-    y += pH + 34;
-    // grid: seasons across, episodes down
-    const maxEp = Math.max(1, ...S.seasons.map(sn => (S.eps[sn] || []).length));
-    const legendH = 70, footH = 50, labW = Math.round(W * 0.05);
-    const availW = W - pad * 2 - labW, availH = H - y - legendH - footH - pad;
-    const cell = Math.max(10, Math.min(Math.floor(availW / S.seasons.length), Math.floor(availH / (maxEp + 2)), 80));
-    const gap = Math.max(2, Math.round(cell * 0.1)), box = cell - gap;
-    const gx = pad + labW + Math.max(0, (availW - cell * S.seasons.length) / 2);
-    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(`${years} · ${selLabel()}`, tx, ty + Math.round(W * 0.035));
+    if (sa != null && S.source !== 'diff') {                 // average badge
+      const b = MSSEp.band(sa), bw = Math.round(W * 0.12), bh = Math.round(W * 0.07), bx = W - pad - bw, by = bandH + Math.round(W * 0.012);
+      g.fillStyle = band(b.key); g.beginPath(); g.roundRect(bx, by, bw, bh, 12); g.fill();
+      g.fillStyle = ['good', 'decent', 'meh'].includes(b.key) ? '#1a1a1a' : '#fff'; g.textAlign = 'center';
+      g.font = `400 ${Math.round(bh * 0.55)}px "Bebas Neue", sans-serif`; g.fillText(sa.toFixed(1), bx + bw / 2, by + bh * 0.62);
+      g.font = `600 ${Math.round(bh * 0.17)}px Oswald, sans-serif`; g.fillText(b.name.toUpperCase(), bx + bw / 2, by + bh * 0.88); g.textAlign = 'left';
+    }
+
+    // ── Grid: seasons across, episodes down (+ AVG row); numbers only when boxes are big enough ──
+    const gridTop = Math.max(pY + pH, ty + Math.round(W * 0.05)) + Math.round(W * 0.04);
+    const legendH = Math.round(W * 0.05), footH = Math.round(W * 0.08);
+    const maxEp = Math.max(1, ...seasons.map(sn => (S.eps[sn] || []).length));
+    const labW = Math.round(W * (maxEp >= 100 ? 0.06 : 0.045));
+    const availW = W - pad * 2 - labW, availH = H - gridTop - legendH - footH - pad;
+    const cell = Math.max(4, Math.min(Math.floor(availW / Math.max(1, seasons.length)), Math.floor(availH / (maxEp + 2)), 84));
+    const gap = Math.max(1, Math.round(cell * 0.1)), box = cell - gap;
+    const gx = pad + labW + Math.max(0, (availW - cell * seasons.length) / 2);
     const colorFor = v => S.source === 'diff' ? (Math.abs(v) < 0.3 ? C.empty : v > 0 ? '#2f6e3a' : '#a8433b') : band(MSSEp.band(v).key);
     const textFor = v => S.source === 'diff' ? (Math.abs(v) < 0.3 ? C.text : '#fff') : (['good', 'decent', 'meh'].includes(MSSEp.band(v).key) ? '#1a1a1a' : '#fff');
-    g.font = `400 ${Math.round(box * 0.42)}px "Bebas Neue", sans-serif`;
-    S.seasons.forEach((sn, ci) => { g.fillStyle = C.sub; g.fillText('S' + sn, gx + ci * cell + box / 2, y + box / 2); });
+    const showNums = box >= 22, labelEvery = cell >= 14 ? 1 : Math.ceil(14 / cell) * 5;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `400 ${Math.max(9, Math.round(Math.min(box, 40) * 0.42))}px "Bebas Neue", sans-serif`;
+    seasons.forEach((sn, ci) => { if (cell >= 14 || ci % Math.ceil(14 / cell) === 0) { g.fillStyle = C.sub; g.fillText('S' + sn, gx + ci * cell + box / 2, gridTop + box / 2); } });
     const drawBox = (x, yy, v) => {
       g.fillStyle = v == null ? C.empty : colorFor(v);
-      g.beginPath(); g.roundRect(x, yy, box, box, Math.max(3, box * 0.16)); g.fill();
-      if (v != null && box >= 18) { g.fillStyle = textFor(v); g.fillText((S.source === 'diff' && v > 0 ? '+' : '') + v.toFixed(1), x + box / 2, yy + box / 2 + 1); }
+      g.beginPath(); g.roundRect(x, yy, box, box, Math.max(1, box * 0.16)); g.fill();
+      if (v != null && showNums) { g.fillStyle = textFor(v); g.fillText((S.source === 'diff' && v > 0 ? '+' : '') + v.toFixed(1), x + box / 2, yy + box / 2 + 1); }
     };
     for (let n = 1; n <= maxEp; n++) {
-      const yy = y + n * cell;
-      g.fillStyle = C.sub; g.textAlign = 'right'; g.fillText('E' + n, gx - 10, yy + box / 2); g.textAlign = 'center';
-      S.seasons.forEach((sn, ci) => { const ep = (S.eps[sn] || []).find(x => x.n === n); if (ep) drawBox(gx + ci * cell, yy, scoreOf(sn, ep)); });
+      const yy = gridTop + n * cell;
+      if (n === 1 || n % labelEvery === 0) { g.fillStyle = C.sub; g.textAlign = 'right'; g.fillText('E' + n, gx - 8, yy + box / 2); g.textAlign = 'center'; }
+      seasons.forEach((sn, ci) => { const ep = (S.eps[sn] || []).find(x => x.n === n); if (ep) drawBox(gx + ci * cell, yy, scoreOf(sn, ep)); });
     }
-    const ay = y + (maxEp + 1) * cell + gap;
-    g.fillStyle = C.sub; g.textAlign = 'right'; g.fillText('AVG', gx - 10, ay + box / 2); g.textAlign = 'center';
-    S.seasons.forEach((sn, ci) => drawBox(gx + ci * cell, ay, avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep)))));
-    // legend
+    const ay = gridTop + (maxEp + 1) * cell + gap * 2;
+    g.fillStyle = C.olive; g.textAlign = 'right'; g.fillText('AVG', gx - 8, ay + box / 2); g.textAlign = 'center';
+    seasons.forEach((sn, ci) => drawBox(gx + ci * cell, ay, avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep)))));
+
+    // ── Legend ──
     const ly = H - pad - footH - legendH / 2;
-    g.font = `600 ${Math.round(W * 0.015)}px Manrope, sans-serif`; g.textAlign = 'left';
-    const items = S.source === 'diff' ? [['#2f6e3a', 'Higher'], [C.empty, 'Same'], ['#a8433b', 'Lower']] : MSSEp.BANDS.map(b => [band(b.key), b.name]);
+    g.font = `600 ${Math.round(W * 0.0145)}px Manrope, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
+    const items = S.source === 'diff' ? [['#2f6e3a', 'Higher than TMDB'], [C.empty, 'Same'], ['#a8433b', 'Lower than TMDB']] : MSSEp.BANDS.map(b => [band(b.key), b.name]);
     const iw = (W - pad * 2) / items.length;
-    items.forEach(([c, l], i) => { const x = pad + i * iw; g.fillStyle = c; g.beginPath(); g.roundRect(x, ly - 10, 20, 20, 4); g.fill(); g.fillStyle = C.text; g.fillText(l, x + 28, ly + 1); });
-    // footer
-    g.fillStyle = C.line; g.fillRect(pad, H - pad - footH + 8, W - pad * 2, 1);
-    g.fillStyle = C.sub; g.font = `600 ${Math.round(W * 0.018)}px Oswald, sans-serif`; g.textAlign = 'left';
-    g.fillText('MYSCREENSCORE', pad, H - pad - footH / 2 + 10);
-    g.textAlign = 'right'; g.font = `500 ${Math.round(W * 0.014)}px Manrope, sans-serif`; g.fillText('Episode data: TMDB', W - pad, H - pad - footH / 2 + 10);
+    items.forEach(([c, l], i) => { const x = pad + i * iw; g.fillStyle = c; g.beginPath(); g.roundRect(x, ly - 11, 22, 22, 5); g.fill(); g.fillStyle = C.text; g.fillText(l, x + 30, ly + 1); });
+
+    // ── Footer: user (left) · MyScreenScore logo + name (right) ──
+    const fy = H - pad - footH / 2 + 6;
+    g.fillStyle = C.line; g.fillRect(pad, H - pad - footH + 6, W - pad * 2, 1.5);
+    const av = Math.round(footH * 0.62);
+    g.save(); g.beginPath(); g.arc(pad + av / 2, fy, av / 2, 0, Math.PI * 2); g.closePath();
+    if (avatar) { g.clip(); g.drawImage(avatar, pad, fy - av / 2, av, av); }
+    else { g.fillStyle = band('great'); g.fill(); g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = `600 ${Math.round(av * 0.48)}px Oswald, sans-serif`; g.fillText((who?.username || '?')[0].toUpperCase(), pad + av / 2, fy + 1); }
+    g.restore();
+    g.textAlign = 'left'; g.fillStyle = C.text; g.font = `600 ${Math.round(W * 0.019)}px Manrope, sans-serif`;
+    g.fillText('@' + (who?.username || 'myscreenscore'), pad + av + 14, fy);
+    const lg = Math.round(footH * 0.6);
+    g.textAlign = 'right'; g.fillStyle = C.olive; g.font = `600 ${Math.round(W * 0.022)}px Oswald, sans-serif`;
+    const brand = 'MYSCREENSCORE', bw = g.measureText(brand).width;
+    g.fillText(brand, W - pad, fy);
+    if (logo) { g.save(); g.beginPath(); g.roundRect(W - pad - bw - lg - 12, fy - lg / 2, lg, lg, lg * 0.22); g.clip(); g.drawImage(logo, W - pad - bw - lg - 12, fy - lg / 2, lg, lg); g.restore(); }
+    g.fillStyle = C.sub; g.font = `500 ${Math.round(W * 0.012)}px Manrope, sans-serif`; g.textAlign = 'center';
+    g.fillText('Episode data: TMDB', W / 2, H - Math.round(pad * 0.45));
+
     const a = document.createElement('a');
-    a.download = `${S.show.name.replace(/[^\w]+/g, '-').toLowerCase()}-episodes-${EX.size}.png`;
+    a.download = `${S.show.name.replace(/[^\w]+/g, '-').toLowerCase()}-episodes${S.sel && S.sel.size ? '-' + selLabel().replace(/[^\w]+/g, '-').toLowerCase() : ''}-${EX.size}.png`;
     a.href = cv.toDataURL('image/png'); a.click();
     showToast('Image downloaded.');
   } catch (err) { console.error('Export:', err); showToast('Couldn’t make the image — try again.', 'err'); }
+  S.source = viewSource;
   btn.disabled = false; btn.innerHTML = `${icon('download', 14)} Download Image`;
 }
 function egCSV() {
   const rows = [['Show', 'Season', 'Episode', 'Title', 'Score', 'Band', 'Tags', 'Note', 'Rated']];
-  Object.values(S.mine).sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number).forEach(r => {
+  Object.values(S.mine).filter(r => vis().includes(r.season_number)).sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number).forEach(r => {
     const ep = r.episode_number ? (S.eps[r.season_number] || []).find(x => x.n === r.episode_number) : null;
     rows.push([S.show.name, r.season_number, r.episode_number || 'Season', r.episode_number ? (ep?.name || '') : `Season ${r.season_number}`, Number(r.score).toFixed(1), MSSEp.band(r.score).name, (r.tags || []).join('; '), r.note || '', (r.updated_at || '').slice(0, 10)]);
   });
