@@ -18,14 +18,14 @@
 .eg-back { display:inline-flex; align-items:center; gap:6px; margin-bottom:1rem; font-size:13px; font-weight:600; color:var(--text-2); text-decoration:none; }
 .eg-back:hover { color:var(--olive-light); }
 /* show view header: backdrop image (no blur) with the poster overlapping it */
-.eg-top { position:relative; height:clamp(160px, 26vw, 300px); margin:0 calc(-1 * var(--page-px, 24px)) 0; border-radius:0 0 var(--radius-lg) var(--radius-lg); overflow:hidden; background:var(--bg-3); }
+.eg-top { position:relative; height:clamp(240px, 36vw, 480px); margin:0 calc(-1 * var(--page-px, 24px)) 0; overflow:hidden; background:var(--bg-3); }
 .eg-top-img { position:absolute; inset:0; background-size:cover; background-position:center 25%; }
-.eg-top::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.35) 0%, transparent 35%, transparent 60%, var(--bg) 100%); }
 .eg-top .eg-back { position:absolute; top:14px; left:var(--page-px, 24px); z-index:1; color:#fff; background:rgba(0,0,0,.4); padding:6px 12px; border-radius:20px; margin:0; }
 .eg-top .eg-back:hover { color:#fff; background:rgba(0,0,0,.6); }
 /* show view header */
-.eg-head { display:flex; gap:22px; align-items:flex-end; margin:calc(-1 * clamp(70px, 9vw, 110px)) 0 1.5rem; position:relative; z-index:1; padding:0 4px; }
-.eg-head-text { padding-bottom:6px; min-width:0; }
+/* the poster overlaps the bottom of the header image; the title block starts just below it */
+.eg-head { --eg-overlap:clamp(70px, 9vw, 120px); display:flex; gap:22px; align-items:flex-start; margin:calc(-1 * var(--eg-overlap)) 0 1.5rem; position:relative; z-index:1; padding:0 4px; }
+.eg-head-text { padding-top:calc(var(--eg-overlap) + 14px); min-width:0; }
 .eg-head-poster { width:clamp(120px, 14vw, 180px); aspect-ratio:2/3; border-radius:var(--radius); overflow:hidden; flex-shrink:0; background:var(--bg-3); box-shadow:0 10px 26px rgba(0,0,0,.28); }
 .eg-head-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .eg-head-title { font-family:var(--serif); font-size:clamp(24px, 5vw, 38px); font-weight:600; line-height:1.1; color:var(--text); margin:4px 0; }
@@ -51,7 +51,7 @@
 .eg-cell.eg-diff-up { background:#2f6e3a; color:#fff; } .eg-cell.eg-diff-down { background:#a8433b; color:#fff; } .eg-cell.eg-diff-same { background:var(--bg-3); color:var(--text-2); }
 .eg-avg td { padding-top:6px; }
 .eg-avg .eg-cell { cursor:default; font-size:18px; box-shadow:inset 0 -3px 0 rgba(0,0,0,.18); }
-.eg-legend { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:12px; font-size:11.5px; color:var(--text-2); }
+.eg-legend { display:flex; flex-wrap:wrap; justify-content:center; gap:6px 14px; margin:14px auto 0; max-width:640px; font-size:11.5px; color:var(--text-2); }
 .eg-legend span { display:inline-flex; align-items:center; gap:6px; }
 .eg-legend i { width:14px; height:14px; border-radius:3px; display:inline-block; }
 .eg-legend i.eg-unaired-sw { background:repeating-linear-gradient(45deg, var(--bg-3) 0 3px, transparent 3px 6px); border:0.5px solid var(--border-2); }
@@ -93,6 +93,13 @@
 .eg-pop-note { margin-top:10px; padding-left:12px; border-left:2px solid var(--olive-light); font-style:italic; color:var(--text); font-size:14px; }
 .eg-tools { display:flex; gap:8px; align-items:flex-end; }
 .eg-season-row th { font-size:12px; letter-spacing:1px; }
+.eg-cmp-bar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:1.25rem auto 1.5rem; max-width:860px; padding:14px 16px; border-radius:var(--radius); background:var(--olive-faint); border:0.5px solid var(--border-olive); }
+.eg-cmp-bar-ic { width:40px; height:40px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; }
+.eg-cmp-bar-text { flex:1; min-width:200px; display:flex; flex-direction:column; gap:2px; }
+.eg-cmp-bar-text b { font-family:var(--serif); font-size:17px; font-weight:600; color:var(--text); }
+.eg-cmp-bar-text small { font-size:12px; color:var(--text-3); }
+.eg-cmp-bar-actions { display:flex; gap:8px; }
+.eg-cmp-bar-actions a { text-decoration:none; }
 .eg-cmp { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
 .eg-cmp-col { min-width:0; }
 .eg-cmp-title { display:block; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--text); text-decoration:none; margin-bottom:.5rem; }
@@ -190,11 +197,11 @@ async function renderHome() {
         <div class="cat-page-sub">Episode ratings for every show — yours, the community’s and TMDB’s</div>
       </div>
     </div>
-    <div class="eg-stats">
-      <div class="eg-stat"><b>${epRows.length}</b><span>Episodes rated</span></div>
-      <div class="eg-stat"><b>${Object.keys(by).length}</b><span>Shows rated</span></div>
-      <div class="eg-stat"><b>${epRows.length ? '★ ' + fmt(avg(epRows.map(r => Number(r.score)))) : '—'}</b><span>Your average</span></div>
-      <div class="eg-stat"><b>${top ? '★ ' + fmt(top.score) : '—'}</b><span>${top ? `Top: ${esc(topShow?.title || '')} S${top.season_number}·E${top.episode_number}` : 'Top episode'}</span></div>
+    <div class="page-stats" style="margin-bottom:2rem;">
+      <div class="page-stat"><div class="page-stat-num">${epRows.length}</div><div class="page-stat-label">Episodes rated</div></div>
+      <div class="page-stat"><div class="page-stat-num">${Object.keys(by).length}</div><div class="page-stat-label">Shows rated</div></div>
+      <div class="page-stat"><div class="page-stat-num">${epRows.length ? '★ ' + fmt(avg(epRows.map(r => Number(r.score)))) : '—'}</div><div class="page-stat-label">Your average</div></div>
+      <div class="page-stat"><div class="page-stat-num">${top ? '★ ' + fmt(top.score) : '—'}</div><div class="page-stat-label">${top ? `Top: ${esc(topShow?.title || '')} S${top.season_number}·E${top.episode_number}` : 'Top episode'}</div></div>
     </div>
     <div class="eg-search">
       <div class="hero-search-wrap">
@@ -338,7 +345,7 @@ function draw() {
         <div class="eg-head-sub">${esc(years)} · ${S.seasons.length} season${S.seasons.length === 1 ? '' : 's'}${mineCount ? ` · ${mineCount} rated${S.readOnly ? '' : ' by you'}` : ''}</div>
       </div>
     </div>
-    <div class="eg-controls">
+    ${S2 ? compareBarHTML() : `<div class="eg-controls">
       <div class="eg-ctl"><div class="eg-ctl-label">Ratings</div>
       <div class="pn-toggle" role="tablist" aria-label="Whose ratings">
         ${[['tmdb', 'TMDB'], ['mine', S.readOnly ? esc(S.whoName) + '’s' : 'Mine'], ['community', 'Community'], ['diff', (S.readOnly ? esc(S.whoName) : 'Mine') + ' vs TMDB']].map(([k, l]) => `<button type="button" class="pn-toggle-btn${S.source === k ? ' active' : ''}" onclick="egSet('source','${k}')">${l}</button>`).join('')}
@@ -353,7 +360,7 @@ function draw() {
       </div>
     </div>
     ${S.source === 'mine' && !S.entry ? `<div class="mss-empty" style="margin-bottom:1rem">${S.readOnly ? 'No episode ratings for this show yet.' : 'Add this show to your library to rate its episodes.'}</div>` : ''}
-    ${S.source === 'community' && !Object.keys(S.comm).length ? `<div class="mss-empty" style="margin-bottom:1rem">Community scores appear once an episode has 3+ ratings on MyScreenScore.</div>` : ''}
+    ${S.source === 'community' && !Object.keys(S.comm).length ? `<div class="mss-empty" style="margin-bottom:1rem">Community scores appear once an episode has 3+ ratings on MyScreenScore.</div>` : ''}`}
     ${S2 ? compareHTML() : `<div class="eg-layout">
       <div>${S.view === 'grid' ? gridHTML() : S.view === 'graph' ? graphHTML() : listHTML()}</div>
       ${panelHTML()}
@@ -542,6 +549,20 @@ function showStats(X) {
   });
 }
 const sameShow = () => S2 && S2.show.id === S.show.id;
+// Comparing: a bar that says so (the Ratings / View toggles don't apply here)
+function compareBarHTML() {
+  const exit = `episodes.html?show=${S.show.id}${_egUserQ ? '&user=' + encodeURIComponent(_egUserQ) : ''}`;
+  const what = sameShow() ? `${S.readOnly ? esc(S.whoName) + '’s' : 'Your'} ratings vs ${esc(S2.whoName)}’s` : `${esc(S.show.name)} vs ${esc(S2.show.name)}`;
+  const scores = sameShow() ? 'Each person’s own episode ratings' : (S.source === 'mine' ? 'Your episode ratings' : 'TMDB episode ratings');
+  return `<div class="eg-cmp-bar" role="status">
+      <span class="eg-cmp-bar-ic">${icon('compare', 18)}</span>
+      <span class="eg-cmp-bar-text"><span class="eg-ctl-label">Comparison</span><b>${what}</b><small>${scores}</small></span>
+      <span class="eg-cmp-bar-actions">
+        <button type="button" class="sf-icon-btn" onclick="egComparePick()">${icon('compare', 15)}<span class="sf-icon-btn-label">Change</span></button>
+        <a class="sf-icon-btn" href="${exit}">${icon('x', 15)}<span class="sf-icon-btn-label">Exit comparison</span></a>
+      </span>
+    </div>`;
+}
 const cmpName = X => sameShow() ? (X.readOnly ? X.whoName : 'You') : X.show.name;
 function compareHTML() {
   const A = showStats(S), B = showStats(S2);
