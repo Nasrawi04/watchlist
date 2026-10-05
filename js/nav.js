@@ -199,7 +199,7 @@ function injectChrome() {
         ${navLink('index.html',     page, 'home',     'Home')}
         ${navLink('discover.html',  page, 'compass',  'Discover')}
         ${navLibraryDropdown(page)}
-        ${navLink('episodes.html',   page, 'grid',     'Episodes')}
+        ${navLink('episodes.html',   page, 'episodes', 'Episodes')}
         ${navLink('lists.html',      page, 'layers',   'Lists')}
         ${navLink('notes.html',      page, 'notebook',     'Notes')}
         ${navLink('friends.html',   page, 'users',    'Friends')}
@@ -238,7 +238,7 @@ function injectChrome() {
     ${mobileNavLink('index.html',     page, 'home',     'Home')}
     ${mobileNavLink('discover.html',  page, 'compass',  'Discover')}
     ${mobileLibraryGroup(page)}
-    ${mobileNavLink('episodes.html',  page, 'grid',     'Episodes')}
+    ${mobileNavLink('episodes.html',  page, 'episodes', 'Episodes')}
     ${mobileNavLink('lists.html',     page, 'layers',   'Lists')}
     ${mobileNavLink('notes.html',     page, 'notebook',     'Notes')}
     ${mobileNavLink('friends.html',   page, 'users',    'Friends')}
