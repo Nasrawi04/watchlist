@@ -13,6 +13,8 @@
    • episode 0 = the whole season: MSSEp.rate(entry, season, 0) rates a
      season. Pressing "+" again while the popup is open queues the next
      episode ("Episode 2 of 3"); finishing a season shows a summary card.
+   • MSSEp.showPopup({ title, poster, tmdbId, status, rows, total, userId, whoName })
+       A show's rating summary with "View & Rate Episodes".
    • MSSEp.band(score) → { key, name } — the shared colour bands.
 
    Scores 1.0–10.0 (0.1 steps) · up to 3 tags · optional note ≤ 100 words.
@@ -312,6 +314,69 @@ const MSSEp = (() => {
     catch { showToast('Couldn’t save that — try again.', 'err'); }
   }
 
+  /* ── 4) Show popup: a show's episode-rating summary, then "View & Rate"
+     (Episodes page cards and profile Episodes tabs) ──
+     o = { title, poster, tmdbId, status, rows:[{season_number, episode_number, score, updated_at}],
+           total, userId (someone else's), whoName } */
+  const STATUS_LABEL = { watching: 'Watching', ongoing: 'To Be Continued', completed: 'Watched', up_next: 'Up Next', paused: 'Taking a Break', queue: 'Watchlist' };
+  function showPopup(o) {
+    const rows = (o.rows || []).filter(r => r.episode_number > 0).sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
+    const avg = rows.length ? rows.reduce((x, r) => x + Number(r.score), 0) / rows.length : null;
+    const best = rows.length ? rows.reduce((x, y) => (Number(y.score) > Number(x.score) ? y : x)) : null;
+    const last = rows.length ? rows.reduce((x, y) => (new Date(y.updated_at) > new Date(x.updated_at) ? y : x)) : null;
+    const b = avg != null ? band(avg) : null;
+    const href = `episodes.html?show=${o.tmdbId}${o.userId ? '&user=' + encodeURIComponent(o.userId) : ''}`;
+    const poster = safeURL(o.poster);
+    show(`<div class="ep-show-head">
+        <div class="ep-show-poster">${poster ? `<img src="${poster}" alt="">` : esc((o.title || '?')[0])}</div>
+        <div class="ep-show-info">
+          <div class="ep-eyebrow">${o.whoName ? esc(o.whoName) + '’s episode ratings' : 'Episode ratings'}</div>
+          <div class="ep-title" id="mssEpTitle">${esc(o.title)}</div>
+          ${o.status ? `<span class="ep-status">${esc(STATUS_LABEL[o.status] || o.status)}</span>` : ''}
+        </div>
+        <button type="button" class="ep-close ep-close-flat" onclick="MSSEp.close()" aria-label="Close">✕</button>
+      </div>
+      <div class="ep-body">
+        <div class="ep-show-stats">
+          <div class="ep-show-stat ${b ? 'ep-band-' + b.key : ''}"><b>${avg != null ? avg.toFixed(1) : '—'}</b><span>${b ? b.name : 'Average'}</span></div>
+          <div class="ep-show-stat"><b>${rows.length}${o.total ? `<small>/${o.total}</small>` : ''}</b><span>Rated</span></div>
+          <div class="ep-show-stat"><b>${best ? Number(best.score).toFixed(1) : '—'}</b><span>${best ? `Best · S${best.season_number}·E${best.episode_number}` : 'Best'}</span></div>
+        </div>
+        ${o.total ? `<div class="ep-show-progress" aria-label="${rows.length} of ${o.total} episodes rated"><span style="width:${Math.min(100, Math.round(100 * rows.length / o.total))}%"></span></div>` : ''}
+        ${rows.length ? `<div class="eg-mini ep-show-mini" aria-hidden="true">${rows.slice(0, 120).map(r => `<i class="ep-band-${band(r.score).key}" title="S${r.season_number}·E${r.episode_number}: ${Number(r.score).toFixed(1)}"></i>`).join('')}</div>` : `<p class="ep-ask-sub">No episodes rated yet${o.userId ? '' : ' — open the show to start rating'}.</p>`}
+        ${last ? `<div class="ep-meta" style="margin-top:10px">Last rated: S${last.season_number} · E${last.episode_number} · ${new Date(last.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>` : ''}
+      </div>
+      <div class="ep-actions">
+        <button type="button" class="popup-action-btn np-ghost" onclick="MSSEp.close()">Close</button>
+        <a class="popup-action-btn ep-save" href="${href}">${o.userId ? 'View Ratings' : 'View & Rate Episodes'}</a>
+      </div>`);
+  }
+
+  /* Show card (Episodes page + profile Episodes tabs) → opens showPopup */
+  const cards = {};
+  const totalOf = e => (Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.map(Number).filter(n => n > 0).reduce((a, b) => a + b, 0) : 0) || null;
+  function showCardHTML(e, rows, o = {}) {
+    cards[e.id] = { e, rows, o };
+    const rs = (rows || []).filter(r => r.episode_number > 0).sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
+    const avg = rs.length ? rs.reduce((x, r) => x + Number(r.score), 0) / rs.length : null;
+    const total = totalOf(e), b = avg != null ? band(avg) : null;
+    const poster = safeURL(e.poster_url);
+    return `<button type="button" class="eg-show" onclick="MSSEp._card(${attrJSON(e.id)})" aria-label="${esc(e.title)} — episode ratings">
+      <span class="eg-show-poster">${poster ? `<img src="${poster}" alt="" loading="lazy">` : ''}</span>
+      <span class="eg-show-info">
+        <span class="eg-show-title">${esc(e.title)}</span>
+        <span class="eg-show-tags">${e.status ? `<span class="ep-status">${esc(STATUS_LABEL[e.status] || e.status)}</span>` : ''}${b ? `<span class="eg-show-avg ep-band-${b.key}">${avg.toFixed(1)}</span>` : ''}</span>
+        <span class="eg-show-sub">${rs.length ? `${rs.length}${total ? ' / ' + total : ''} episodes rated` : 'No episodes rated yet'}</span>
+        ${total ? `<span class="ep-show-progress eg-show-progress"><span style="width:${Math.min(100, Math.round(100 * rs.length / total))}%"></span></span>` : ''}
+        ${rs.length ? `<span class="eg-mini" aria-hidden="true">${rs.slice(0, 60).map(r => `<i class="ep-band-${band(r.score).key}"></i>`).join('')}</span>` : ''}
+      </span>
+    </button>`;
+  }
+  function openCard(id) {
+    const c = cards[id]; if (!c) return;
+    showPopup({ title: c.e.title, poster: c.e.poster_url, tmdbId: c.e.tmdb_id, status: c.e.status, rows: c.rows, total: totalOf(c.e), userId: c.o.userId, whoName: c.o.whoName });
+  }
+
   /* ── After "+" ── */
   const askedThisVisit = new Set();
   async function afterWatch(e, s, n) {
@@ -357,7 +422,7 @@ const MSSEp = (() => {
 
   return {
     afterWatch, rate: (e, s, n, o = {}) => open(e, s, n, { ...o, rewatch: typeof isRewatching === 'function' && isRewatching(e) }),
-    close, band, BANDS, TAGS, mode, setMode, isShow, seasonEpisodes,
+    close, band, BANDS, TAGS, mode, setMode, isShow, seasonEpisodes, showPopup, showCardHTML, _card: openCard,
     _ask: answerAsk, _slide: setScore, _step: d => st && setScore(st.score + d), _tag: toggleTag, _note: onNote,
     _toggle: k => { if (!st) return; st[k === 'tags' ? 'showTags' : 'showNote'] = !st[k === 'tags' ? 'showTags' : 'showNote']; render(st.eps?.find(x => x.n === st.n)); },
     _go: go, _save: save, _stop: stop, _skip: skip,
