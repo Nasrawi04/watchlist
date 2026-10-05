@@ -17,7 +17,7 @@
 ═══════════════════════════════════════════════════════════════ */
 
 const MSSSchedule = (() => {
-  const STORE = 'mss_tv_sched_v1', TTL = 12 * 36e5, DAY = 864e5;
+  const STORE = 'mss_tv_sched_v2', TTL = 12 * 36e5, DAY = 864e5;
   const TRACKED = ['watching', 'up_next', 'paused', 'ongoing', 'queue'];
   const esc = s => escHTML(s == null ? '' : String(s));
   const cache = (() => { try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch { return {}; } })();
@@ -38,7 +38,14 @@ const MSSSchedule = (() => {
       const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US`);
       if (!res.ok) return hit?.d || null;
       const x = await res.json();
-      const ep = e => e ? { s: e.season_number, n: e.episode_number, name: e.name, air: e.air_date, still: e.still_path } : null;
+      // Series-wide episode numbers (One Piece) → the episode's place in its season
+      const before = sn => (x.seasons || []).filter(z => z.season_number > 0 && z.season_number < sn).reduce((a, z) => a + (z.episode_count || 0), 0);
+      const ep = e => {
+        if (!e) return null;
+        const size = (x.seasons || []).find(z => z.season_number === e.season_number)?.episode_count || 0;
+        const n = size && e.episode_number > size ? e.episode_number - before(e.season_number) : e.episode_number;
+        return { s: e.season_number, n: n > 0 ? n : e.episode_number, name: e.name, air: e.air_date, still: e.still_path };
+      };
       const d = {
         name: x.name, poster: x.poster_path, status: x.status, inProd: !!x.in_production,
         next: ep(x.next_episode_to_air), last: ep(x.last_episode_to_air),
