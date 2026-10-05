@@ -368,7 +368,7 @@ const MSSEp = (() => {
         <span class="eg-show-tags">${e.status ? `<span class="ep-status">${esc(STATUS_LABEL[e.status] || e.status)}</span>` : ''}${b ? `<span class="eg-show-avg ep-band-${b.key}">${avg.toFixed(1)}</span>` : ''}</span>
         <span class="eg-show-sub">${rs.length ? `${rs.length}${total ? ' / ' + total : ''} episodes rated` : 'No episodes rated yet'}</span>
         ${total ? `<span class="ep-show-progress eg-show-progress"><span style="width:${Math.min(100, Math.round(100 * rs.length / total))}%"></span></span>` : ''}
-        ${rs.length ? `<span class="eg-mini" aria-hidden="true">${rs.slice(0, 60).map(r => `<i class="ep-band-${band(r.score).key}"></i>`).join('')}</span>` : ''}
+        ${rs.length ? `<span class="eg-mini" title="Your episode scores — one square per rated episode">${rs.slice(0, 60).map(r => `<i class="ep-band-${band(r.score).key}" title="S${r.season_number}·E${r.episode_number}: ${Number(r.score).toFixed(1)}"></i>`).join('')}</span>` : ''}
       </span>
     </button>`;
   }
