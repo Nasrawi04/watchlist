@@ -198,33 +198,25 @@ const MSSTabs = (() => {
   async function episodes(el, o) {
     el.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
     try {
-      const { data: rs } = await sb.from('episode_ratings').select('entry_id,season_number,episode_number,score,updated_at').eq('user_id', o.userId).gt('episode_number', 0);
+      const { data: rs } = await sb.from('episode_ratings').select('entry_id,season_number,episode_number,score,updated_at').eq('user_id', o.userId);
       const ids = [...new Set((rs || []).map(r => r.entry_id))];
-      const { data: es } = ids.length ? await sb.from('entries').select('id,title,poster_url,tmdb_id').in('id', ids) : { data: [] };
+      const { data: es } = ids.length ? await sb.from('entries').select('id,title,status,poster_url,tmdb_id,ratings').in('id', ids) : { data: [] };
       const by = {}; (rs || []).forEach(r => (by[r.entry_id] = by[r.entry_id] || []).push(r));
       const latest = id => Math.max(...by[id].map(r => +new Date(r.updated_at)));
       const shows = (es || []).filter(e => e.tmdb_id && by[e.id]).sort((a, b) => latest(b.id) - latest(a.id));
       if (!shows.length) { el.innerHTML = `<div class="mss-empty">${o.owner ? 'No episodes rated yet — rate them from a show’s info popup, or as you watch.' : 'No episode ratings yet.'}</div>`; return; }
-      const all = rs || [];
-      const avg = a => a.reduce((x, r) => x + Number(r.score), 0) / a.length;
-      const top = all.reduce((a, b) => (Number(b.score) > Number(a.score) ? b : a));
-      const topShow = (es || []).find(e => e.id === top.entry_id);
-      const userQ = o.owner ? '' : `&user=${encodeURIComponent(o.userId)}`;
+      const eps = (rs || []).filter(r => r.episode_number > 0);
+      const avg = a => a.length ? a.reduce((x, r) => x + Number(r.score), 0) / a.length : 0;
+      const top = eps.length ? eps.reduce((a, b) => (Number(b.score) > Number(a.score) ? b : a)) : null;
+      const topShow = top && (es || []).find(e => e.id === top.entry_id);
+      const cardOpts = o.owner ? {} : { userId: o.userId, whoName: o.name || 'Their' };
       el.innerHTML = `<div class="mss-toolbar">${mssToolbarHTML(o.owner ? 'Your Episodes' : `${possessive(o.name)} Episodes`, shows.length, '', 'show')}</div>
         <div class="eg-stats">
-          <div class="eg-stat"><b>${all.length}</b><span>Episodes rated</span></div>
-          <div class="eg-stat"><b>★ ${avg(all).toFixed(1)}</b><span>Average</span></div>
-          <div class="eg-stat"><b>★ ${Number(top.score).toFixed(1)}</b><span>Top: ${escHTML(topShow?.title || '')} S${top.season_number}·E${top.episode_number}</span></div>
+          <div class="eg-stat"><b>${eps.length}</b><span>Episodes rated</span></div>
+          <div class="eg-stat"><b>${eps.length ? '★ ' + avg(eps).toFixed(1) : '—'}</b><span>Average</span></div>
+          <div class="eg-stat"><b>${top ? '★ ' + Number(top.score).toFixed(1) : '—'}</b><span>${top ? `Top: ${escHTML(topShow?.title || '')} S${top.season_number}·E${top.episode_number}` : 'Top episode'}</span></div>
         </div>
-        <div class="eg-shows">${shows.map(e => {
-          const list = by[e.id].slice().sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
-          return `<a class="eg-show" href="episodes.html?show=${e.tmdb_id}${userQ}">
-            <div class="eg-show-poster">${safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" alt="" loading="lazy">` : ''}</div>
-            <div class="eg-show-info"><div class="eg-show-title">${escHTML(e.title)}</div>
-              <div class="eg-show-sub"><b>★ ${avg(list).toFixed(1)}</b> · ${list.length} rated</div>
-              <div class="eg-mini" aria-hidden="true">${list.slice(0, 80).map(r => `<i class="ep-band-${MSSEp.band(r.score).key}"></i>`).join('')}</div></div>
-          </a>`;
-        }).join('')}</div>`;
+        <div class="eg-shows">${shows.map(e => MSSEp.showCardHTML(e, by[e.id], cardOpts)).join('')}</div>`;
     } catch (err) { console.error('Episodes tab:', err); el.innerHTML = '<div class="mss-empty">Couldn’t load episode ratings.</div>'; }
   }
 
