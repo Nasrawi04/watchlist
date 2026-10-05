@@ -211,10 +211,10 @@ const MSSTabs = (() => {
       const topShow = top && (es || []).find(e => e.id === top.entry_id);
       const cardOpts = o.owner ? {} : { userId: o.userId, whoName: o.name || 'Their' };
       el.innerHTML = `<div class="mss-toolbar">${mssToolbarHTML(o.owner ? 'Your Episodes' : `${possessive(o.name)} Episodes`, shows.length, '', 'show')}</div>
-        <div class="eg-stats">
-          <div class="eg-stat"><b>${eps.length}</b><span>Episodes rated</span></div>
-          <div class="eg-stat"><b>${eps.length ? '★ ' + avg(eps).toFixed(1) : '—'}</b><span>Average</span></div>
-          <div class="eg-stat"><b>${top ? '★ ' + Number(top.score).toFixed(1) : '—'}</b><span>${top ? `Top: ${escHTML(topShow?.title || '')} S${top.season_number}·E${top.episode_number}` : 'Top episode'}</span></div>
+        <div class="page-stats" style="margin-bottom:2rem;">
+          <div class="page-stat"><div class="page-stat-num">${eps.length}</div><div class="page-stat-label">Episodes rated</div></div>
+          <div class="page-stat"><div class="page-stat-num">${eps.length ? '★ ' + avg(eps).toFixed(1) : '—'}</div><div class="page-stat-label">Average</div></div>
+          <div class="page-stat"><div class="page-stat-num">${top ? '★ ' + Number(top.score).toFixed(1) : '—'}</div><div class="page-stat-label">${top ? `Top: ${escHTML(topShow?.title || '')} S${top.season_number}·E${top.episode_number}` : 'Top episode'}</div></div>
         </div>
         <div class="eg-shows">${shows.map(e => MSSEp.showCardHTML(e, by[e.id], cardOpts)).join('')}</div>`;
     } catch (err) { console.error('Episodes tab:', err); el.innerHTML = '<div class="mss-empty">Couldn’t load episode ratings.</div>'; }
