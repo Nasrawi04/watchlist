@@ -4832,10 +4832,6 @@ body { font-size:15px; }
 .ep-done-row { display:flex; flex-wrap:wrap; justify-content:center; gap:4px; }
 .ep-done-row i { min-width:34px; height:30px; padding:0 4px; border-radius:5px; display:inline-flex; align-items:center; justify-content:center; font-style:normal; font-family:var(--bebas); font-size:15px; }
 /* Episodes: stats strip + show cards with mini heatmaps (episodes.html, profile Episodes tabs) */
-.eg-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin:1rem 0 1.5rem; }
-.eg-stat { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:12px 14px; }
-.eg-stat b { display:block; font-family:var(--bebas); font-weight:400; font-size:28px; line-height:1; color:var(--text); }
-.eg-stat span { font-size:10.5px; letter-spacing:1.4px; text-transform:uppercase; color:var(--text-3); }
 .eg-search { margin-bottom:2rem; position:relative; }
 .eg-more { display:flex; justify-content:center; margin-top:1.25rem; }
 .eg-search-results { display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:14px; margin-top:1rem; }
@@ -4855,7 +4851,8 @@ body { font-size:15px; }
 .eg-show-sub { font-size:12px; color:var(--text-3); }
 .eg-show-progress { height:4px; margin:0; }
 .eg-mini { display:flex; flex-wrap:wrap; gap:2px; max-height:42px; overflow:hidden; }
-.eg-mini i { width:9px; height:9px; border-radius:2px; background:var(--bg-3); }
+.eg-mini i { width:9px; height:9px; border-radius:2px; }
+.eg-mini i:not([class*="ep-band-"]) { background:var(--bg-3); }
 @media(max-width:640px) { .eg-shows { grid-template-columns:1fr; } }
 .ep-save { background:var(--olive) !important; border-color:var(--olive) !important; color:#fff !important; text-align:center; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
 .ep-save:hover { filter:brightness(1.08); }
