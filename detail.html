@@ -1037,6 +1037,10 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           Discover
         </button>
+        <button class="popup-action-btn" id="dRateEpsBtn" style="display:none;" onclick="MSSEp.rate(_detEntry, _detEntry.season || 1, Math.max(1, _detEntry.episode || 1))">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M13 9l4 2-4 2z"/></svg>
+          Rate Episodes
+        </button>
         <button class="popup-action-btn" id="btnUpdateDetails" style="display:none;" onclick="_openUpdateDetailsPicker()" title="Re-search TMDB to fix missing or outdated details">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
           Update Details
@@ -2888,6 +2892,9 @@ function _showDuplicatePopup(title, existing) {
       // Show for any existing, titled entry — no longer requires a
       // pre-linked tmdb_id/type, since the picker can now find one.
       if (btn) btn.style.display = (typeof _detEntry !== 'undefined' && _detEntry && _detEntry.title) ? 'inline-flex' : 'none';
+      // Rate Episodes: saved shows only (not movies)
+      const rate = document.getElementById('dRateEpsBtn');
+      if (rate) rate.style.display = _detEntry?.id && MSSEp.isShow(_detEntry) ? 'inline-flex' : 'none';
     }
   }, 100);
 })();
