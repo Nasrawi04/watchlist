@@ -61,7 +61,7 @@ const MSSEp = (() => {
   }
 
   /* ── TMDB episode details (name, still, air date, runtime, score) — cached 7 days ── */
-  const EP_STORE = 'mss_ep_seasons_v2', EP_TTL = 7 * 864e5;
+  const EP_STORE = 'mss_ep_seasons_v3', EP_TTL = 7 * 864e5;
   const epCache = (() => { try { return JSON.parse(localStorage.getItem(EP_STORE) || '{}'); } catch { return {}; } })();
   async function seasonEpisodes(tmdbId, season) {
     if (!tmdbId) return [];
@@ -70,7 +70,11 @@ const MSSEp = (() => {
     try {
       const res = await tmdbFetch(`${TMDB_BASE}/tv/${tmdbId}/season/${season}?api_key=${TMDB_KEY}&language=en-US`);
       const d = res.ok ? await res.json() : null;
-      const eps = (d?.episodes || []).map(x => ({ n: x.episode_number, name: x.name, still: x.still_path, air: x.air_date, rt: x.runtime, vote: x.vote_average, overview: x.overview }));
+      // Some shows (One Piece) number episodes across the whole series on
+      // TMDB (Season 2 starts at 62). Always use the episode's place in its
+      // season (1, 2, 3…) to match your progress; keep TMDB's number as abs.
+      const sorted = (d?.episodes || []).slice().sort((a, b) => a.episode_number - b.episode_number);
+      const eps = sorted.map((x, i) => ({ n: i + 1, abs: x.episode_number !== i + 1 ? x.episode_number : null, name: x.name, still: x.still_path, air: x.air_date, rt: x.runtime, vote: x.vote_average, overview: x.overview }));
       epCache[k] = { t: Date.now(), eps };
       const keys = Object.keys(epCache);
       if (keys.length > 120) keys.sort((a, b) => epCache[a].t - epCache[b].t).slice(0, keys.length - 120).forEach(x => delete epCache[x]);
@@ -155,7 +159,7 @@ const MSSEp = (() => {
     const poster = safeURL(e.poster_url);
     const q = st.queue?.length ? `<div class="ep-queue">Episode ${st.qi + 1} of ${st.queue.length}<span style="width:${Math.round(100 * (st.qi + 1) / st.queue.length)}%"></span></div>` : '';
     show(`${q}<div class="ep-hero${season ? ' ep-hero-season' : ''}">${still ? `<img src="${still}" alt="">` : season && poster ? `<img src="${poster}" alt="" class="ep-hero-poster">` : `<div class="ep-hero-empty">${esc(e.title)}</div>`}
-        <span class="ep-se">${season ? 'Season ' + st.s : `S${st.s} · E${st.n}`}</span>
+        <span class="ep-se">${season ? 'Season ' + st.s : `S${st.s} · E${st.n}${m.abs ? ` <small>#${m.abs}</small>` : ''}`}</span>
         <button type="button" class="ep-close" onclick="MSSEp.close()" aria-label="Close">✕</button>
       </div>
       <div class="ep-body">
