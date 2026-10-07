@@ -354,6 +354,27 @@ function mssJumpTo(y) {
    icon even though the poster exists. Add onerror="mssImgError(this)":
    it retries once, then tries smaller sizes, and finally shows the
    title's first letter instead of a broken icon. */
+/* ── Image placeholders ──
+   Pictures inside a frame — posters, stills, backdrops, photos, avatars,
+   cast, covers — stay hidden until they've loaded (and while a failed one
+   retries), so the frame shows a soft shimmer instead of a half-drawn
+   picture or a broken-image icon in its corner. Frames are matched by
+   class name (see FRAMED below and the matching rules in style.css §48). */
+(function mssImagePlaceholders() {
+  const FRAMED = /poster|still|backdrop|photo|avatar|cast|cover|thumb|-av\b|^av\b|fr-av|snote-avatar|social-list-avatar/;
+  const isFramed = el => el && el.tagName === 'IMG' && el.parentElement && FRAMED.test(el.parentElement.className || '');
+  const mark = img => { if (img.complete && img.naturalWidth) img.classList.add('is-loaded'); };
+  document.documentElement.classList.add('mss-img-fx');
+  document.addEventListener('load', e => { if (isFramed(e.target)) e.target.classList.add('is-loaded'); }, true);
+  document.addEventListener('error', e => { if (isFramed(e.target)) e.target.classList.remove('is-loaded'); }, true);
+  const scan = root => root.querySelectorAll && root.querySelectorAll('img').forEach(img => { if (isFramed(img)) mark(img); });
+  document.addEventListener('DOMContentLoaded', () => {
+    scan(document);
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) { if (isFramed(n)) mark(n); scan(n); } })))
+      .observe(document.body, { childList: true, subtree: true });
+  });
+})();
+
 function mssImgError(img) {
   const n = Number(img.dataset.retry || 0);
   img.dataset.retry = n + 1;
@@ -365,6 +386,7 @@ function mssImgError(img) {
   const m = src.match(/^(https:\/\/image\.tmdb\.org\/t\/p\/)(w\d+|original)(\/[^?]+)/);
   const next = ['w342', 'w185'][n - 1];
   if (m && next && next !== m[2]) { img.src = m[1] + next + m[3]; return; }
+  img.classList.add('is-loaded');   // done trying — stop the placeholder shimmer
   img.style.display = 'none';
   const holder = img.parentElement;
   if (holder && !holder.querySelector('.img-fallback')) {
@@ -508,6 +530,13 @@ function goToDetail(id, fromFile) {
 
 function goToTitle(type, id) {
   window.location.href = `title.html?type=${type}&id=${id}`;
+}
+
+// "Season 3: Alabasta" — season pickers always lead with the number, plus
+// TMDB's name when it's more than "Season 3" (anime arcs, named seasons)
+function mssSeasonLabel(n, name) {
+  const nm = (name || '').trim();
+  return !nm || /^season\s*\d+$/i.test(nm) ? `Season ${n}` : `Season ${n}: ${nm}`;
 }
 
 // A title in a popup header → its title page. Titles not linked to TMDB yet
