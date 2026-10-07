@@ -11,13 +11,12 @@
      window.LIB_READONLY = true                    someone else's library
      window.LIB_ENTRIES  = () => entries           (default: _pEntries)
    The page provides: #libraryContent / #libraryLoading, openProfInfoPopup(id),
-   profOpenPopup(id), _libCcBtn(prefix, id), _trimNotes(text).
+   profOpenPopup(id). Comments open in the shared MSSComments popup (comments.js).
 ═══════════════════════════════════════════════════════════════ */
 
 var LIB_SCOPE    = window.LIB_SCOPE || 'lib';
 var LIB_READONLY = !!window.LIB_READONLY;
 var LIB_ENTRIES  = window.LIB_ENTRIES || function(){ return _pEntries; };
-var LIB_CC       = LIB_SCOPE === 'pv' ? 'pv' : 'prof';      // comments popup prefix
 var LIB_KEY      = LIB_SCOPE === 'pv' ? 'pv_' : 'prof_';    // remembered list / grid choice
 var _LIB_ARROW_L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
 var _LIB_ARROW_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -29,6 +28,18 @@ var _libQueueView = localStorage.getItem(LIB_KEY+'libQueueView')||'grid';
 var _libCompView  = localStorage.getItem(LIB_KEY+'libCompView')||'list';
 var _libCatFilter = '';
 var _libEntries = [];
+
+// Comments strip → the shared comments popup
+function _libCcBtn(id) { return MSSComments.buttonHTML("event.stopPropagation();_libComments('" + id + "')"); }
+function _libComments(id) {
+  var e = _libEntries.filter(function(x){ return x.id === id; })[0];
+  if (e) MSSComments.open(e);
+}
+function _trimNotes(text) {
+  if (!text) return '';
+  var words = text.trim().split(/\s+/);
+  return words.length > 150 ? words.slice(0, 150).join(' ') + '…' : text;
+}
 
 
 // Always shows Movie/TV Show regardless of category — unlike getTypeBadge()
@@ -367,7 +378,7 @@ function _libRender(){
         +'<div class="cg-score-row"><span class="cg-score">'+(sc!=null?'★ '+sc:'—')+'</span></div>'
         +'</div>'
         +'<div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">'
-        +_libCcBtn(LIB_CC,e.id)
+        +_libCcBtn(e.id)
         +'</div></div>';
     }).join('');
     cc=_libGridWrap(cg,'<div class="watching-grid" id="'+cg+'">'+ccs+'</div>');
@@ -384,7 +395,7 @@ function _libRender(){
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
         +renderFavChips(e.ratings,e.cat)
         +'</div><div class="fv-rank-score">'+(sc!=null?'★ '+sc:'—')+'</div></div>'
-        +_libCcBtn(LIB_CC,e.id)
+        +_libCcBtn(e.id)
         +'</div>';
     }).join('')+'</div>';
   }
