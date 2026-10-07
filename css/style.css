@@ -886,7 +886,7 @@ nav {
 }
 .w-poster img { width:100%; height:100%; object-fit:cover; }
 .w-body { flex:1; min-width:0; }
-.w-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.w-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:4px; }   /* same title → tags gap as the Library cards (.fv-w-title) */
 .w-title { font-family:'Oswald',var(--sans); font-weight:600; font-size:19px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 
 .w-genre { font-size:12px; color:var(--text-3); margin-bottom:10px; display:flex; gap:6px; flex-wrap:wrap; }
@@ -1117,7 +1117,7 @@ nav {
 .mss-views:not(:empty) ~ .pvi-header .pvi-close,
 .mss-views:not(:empty) ~ .mr-head .mr-close,
 .mss-views:not(:empty) ~ .np-hero .np-close { display:none; }
-#mssNoteOverlay .mss-views, #snPopupCard .mss-views { padding:14px 16px 12px; }
+#mssNoteOverlay .mss-views { padding:14px 16px 12px; }
 /* Switching views swaps popups instantly — no fade / slide in between */
 body.mss-switching #mssInfoOverlay, body.mss-switching #mssInfoCard,
 body.mss-switching #mssRateOverlay, body.mss-switching #mssRateCard,
@@ -1828,9 +1828,8 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .note-popup-overlay2.open .note-popup2 { transform:scale(1); }
 
 /* Same backdrop as the Info + Ratings popups: dimmed, not blurred */
-.note-popup-overlay2, #snPopupOverlay { background:var(--popup-backdrop) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+.note-popup-overlay2 { background:var(--popup-backdrop) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .np-card { max-width:min(97vw, var(--popup-w)) !important; background:var(--bg-2) !important; border:0.5px solid var(--border) !important; box-shadow:0 28px 70px rgba(0,0,0,.4) !important; display:flex; flex-direction:column; max-height:90dvh; }
-#snPopupCard.np-card { border-radius:var(--radius-lg); width:100%; }
 /* The whole card scrolls (header, note and buttons together), so long notes
    get the full height instead of a small inner box. */
 .np-card { overflow-y:auto; overscroll-behavior-y:contain; scrollbar-width:thin; }
@@ -2456,6 +2455,30 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .det-comment-del:hover { color:#f87171; }
 .cc-none { font-size:12px; color:var(--text-3); text-align:center; padding:6px 0; }
 
+/* ── Export popup (export.js → MSSExport) — Profile exports + Completed ── */
+.export-overlay{position:fixed;inset:0;z-index:1150;background:var(--popup-backdrop);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 220ms var(--ease);}
+.export-overlay.open{opacity:1;pointer-events:auto;}
+.export-popup{background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:5px 5px 0 var(--olive);border-radius:var(--radius-lg);padding:2rem 1.75rem;max-width:360px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;}
+.export-popup-icon{color:var(--olive-light);}
+.export-popup-icon svg{width:44px;height:44px;stroke-width:1.5;}
+.export-popup-title{font-family:var(--serif);font-size:26px;font-weight:500;color:var(--text);}
+.export-popup-desc{font-size:13px;color:var(--text-2);line-height:1.6;max-width:260px;}
+.export-theme-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 14px;background:var(--bg-2);border:0.5px solid var(--border-2);border-radius:var(--radius-sm);}
+.export-theme-label{font-size:12px;color:var(--text-2);font-weight:500;}
+.export-theme-btns{display:flex;gap:4px;}
+.eth-btn{padding:5px 14px;border-radius:var(--radius-xs);font-size:12px;font-weight:500;border:1px solid var(--border-2);background:transparent;color:var(--text-3);cursor:pointer;transition:all .15s;}
+.eth-btn.active{background:var(--olive);border-color:var(--olive-light);color:#fff;}
+.export-popup-actions{display:flex;gap:10px;width:100%;margin-top:6px;}
+.export-popup-cancel{flex:1;padding:11px;background:transparent;border:1.5px solid var(--border-2);border-radius:var(--radius-sm);color:var(--text-2);font-size:13px;font-weight:500;cursor:pointer;}
+.export-popup-confirm{flex:2;padding:11px;background:var(--olive);border:1.5px solid var(--olive-light);box-shadow:3px 3px 0 var(--olive-2);border-radius:var(--radius-sm);color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+.export-popup-confirm:disabled{opacity:.5;cursor:not-allowed;}
+.export-theme-row[hidden]{display:none;}
+.export-cat-row{flex-direction:column;align-items:stretch;gap:8px;}
+.export-cat-row .export-theme-btns{flex-wrap:wrap;justify-content:center;}
+.export-cat-row .eth-btn{padding:5px 10px;}
+.eth-btn:focus-visible,.export-popup-cancel:focus-visible,.export-popup-confirm:focus-visible{outline:2px solid var(--olive-light);outline-offset:2px;}
+@media(prefers-reduced-motion:reduce){.export-overlay{transition:none;}}
+
 /* ── Comments popup (comments.js → MSSComments) — the one comments popup,
    used on category pages, Completed, Library, Profile, profile-view and Edit ── */
 #mssCommentsOverlay {
@@ -2575,7 +2598,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .comp-info { flex:1; min-width:0; }
 
 .comp-title { font-family:'Oswald',var(--sans); font-size:19px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.comp-meta { font-size:13px; color:var(--text-3); margin-top:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.comp-meta { font-size:13px; color:var(--text-3); margin-top:4px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .fv-rank-meta {    display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 
 /* ═════════════════════════════════════════════════════════════
@@ -3459,6 +3482,8 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .title-year-row .q-title,
 .title-year-row .fv-w-title { flex:1 1 auto; min-width:0; max-width:100%; margin-bottom:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .title-year-inline { font-family:var(--bebas); flex-shrink:0; font-size:18px; font-weight:400; color:var(--text-3); white-space:nowrap; }
+@media(max-width:640px) { .title-year-inline { font-size:15px; } }
+@media(max-width:400px) { .title-year-inline { font-size:14px; } }
 .wg-genre { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .wg-controls {
   display:flex; align-items:center; justify-content:space-between;
@@ -4277,7 +4302,15 @@ body { font-size:15px; }
 
 .start-watching-wrap { padding:0 10px 10px; display:flex; gap:6px; }
 .start-watching-wrap .continue-btn { flex:1; }
-.start-watching-wrap .up-next-btn { flex-shrink:0; width:38px; display:flex; align-items:center; justify-content:center; padding:0; }
+.start-watching-wrap .up-next-btn {
+  flex-shrink:0; width:38px; height:clamp(28px, 7vw, 34px); padding:0;
+  border-radius:var(--radius-sm); border:0.5px solid var(--border-2); background:var(--bg-3); color:var(--text-2);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:background .15s, border-color .15s, color .15s, transform .12s;
+}
+.start-watching-wrap .up-next-btn:active { transform:scale(0.97); }
+/* List view (Watchlist): Start on top, Up Next below */
+.w-queue-actions { display:flex; flex-direction:column; align-items:center; gap:8px; flex-shrink:0; }
 .up-next-btn:hover { color:#fff; background:#264e78; border-color:#264e78; }
 /* ── "Up Next" / "Taking a Break" poster cover (mssHoldHTML in config.js) ──
    The poster goes grey, dim and softly blurred; a card in the status colour
@@ -4679,7 +4712,7 @@ body { font-size:15px; }
 .fv-rank-poster img { width:100%;height:100%;object-fit:cover }
 .fv-rank-info { flex:1;min-width:0 }
 .fv-rank-title { font-family:'Oswald',var(--sans);font-size:19px;font-weight:600;display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden; }
-.fv-rank-meta { font-size:12px;color:var(--text-3);margin-top:6px }
+.fv-rank-meta { font-size:12px;color:var(--text-3);margin-top:4px }   /* title → tags: 4px on every list card */
 .fv-rank-score { font-family:var(--bebas);color:var(--olive-light);font-size:clamp(17px, 3.8vw, 19px);font-weight:400;white-space:nowrap;text-align:right;flex-shrink:0 }
 .fv-entry-block { display:flex;flex-direction:column; }
 
