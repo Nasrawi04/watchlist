@@ -298,7 +298,6 @@
 /* Shared-title rows use .fv-rank-row (the Library list card); score columns
    are fixed-width so they line up whether you compare with 1 friend or 5 */
 .cp-row.fv-rank-row { cursor:pointer; min-height:0; }
-.cp-year { font-family:var(--bebas); font-size:18px; font-weight:400; color:var(--text-3); }
 .cp-row .fv-rank-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; }
 .cp-row .cp-cells { display:grid; grid-template-columns:repeat(var(--cp-n, 2), 86px); gap:8px; flex-shrink:0; }
 .cp-row .cp-cell { min-width:0; padding:8px 6px; }
@@ -517,7 +516,7 @@ const _frDate = x => x ? new Date(String(x).length <= 10 ? x + 'T12:00:00' : x) 
 // the Notes tab opens on the note.
 function _frViews(e, start) {
   const p = _frProfiles[e.user_id] || {};
-  MSSViews.open(e, { start, profile: p, note: { open: x => MSSFriendPop.note(x, p), close: MSSFriendPop.closeNote } });
+  MSSViews.open(e, { start, profile: p });
 }
 function _frOpenEvent(id, type) {
   const e = window._frEntryMap[id]; if (!e) return;
@@ -1019,7 +1018,7 @@ function _cmpRenderList() {
     return `<div class="fv-rank-row cp-row" role="button" tabindex="0" onclick="_cmpOpen(${attrJSON(g.key)})" onkeydown="if(event.key==='Enter')this.click()" style="--cp-n:${_cmpWith.length + 1}">
       <div class="fv-rank-poster">${posterHTML(g)}</div>
       <div class="fv-rank-info">
-        <div class="fv-rank-title">${escHTML(g.title)}${g.year ? `<span class="cp-year">${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
+        <div class="fv-rank-title">${escHTML(g.title)}${g.year ? `<span class="title-year-inline">${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
         <div class="fv-rank-meta">${_frTypeBadge(g)}${d != null ? `<span class="cp-delta ${Math.abs(d) < .5 ? 'same' : d > 0 ? 'up' : 'down'}">${Math.abs(d) < .5 ? 'In sync' : (d > 0 ? '+' : '') + d.toFixed(1) + ' vs you'}</span>` : ''}</div>
       </div>
       <div class="cp-cells">${cols}</div>
