@@ -154,12 +154,15 @@ const SF = (() => {
     const a = [...base];
     const added = s.cfg.addedDate || (e => e.completed_date || e.created_at);
     const d = e => new Date(added(e) || 0);
+    // Same day? Then the exact moment it was marked watched decides
+    // (completed_at, set by the database), falling back to when it was added.
+    const t = e => new Date(e.completed_at || e.created_at || 0);
     const sc = e => scoreFn(s)(e) || 0;
     const byCreated = (x, y) => new Date(y.created_at) - new Date(x.created_at);
     let out;
     switch (value) {
-      case 'newest':        out = a.sort((x, y) => d(y) - d(x)); break;
-      case 'oldest':        out = a.sort((x, y) => d(x) - d(y)); break;
+      case 'newest':        out = a.sort((x, y) => (d(y) - d(x)) || (t(y) - t(x))); break;
+      case 'oldest':        out = a.sort((x, y) => (d(x) - d(y)) || (t(x) - t(y))); break;
       case 'alpha':         out = a.sort((x, y) => (x.title || '').localeCompare(y.title || '')); break;
       case 'zalpha':        out = a.sort((x, y) => (y.title || '').localeCompare(x.title || '')); break;
       case 'highest':       out = a.sort((x, y) => (sc(y) - sc(x)) || byCreated(x, y)); break;
@@ -307,10 +310,10 @@ const SF = (() => {
     if (document.getElementById(id)) return;
     const el = document.createElement('div');
     el.id = id;
-    el.innerHTML = `<div id="${cardId}">
+    el.innerHTML = `<div id="${cardId}" role="dialog" aria-modal="true" aria-labelledby="${cardId}Title">
       <div class="sf-header">
-        <div class="sf-title">${title}</div>
-        <button class="sf-close" onclick="${closeFn}">${icon('x', 18)}</button>
+        <div class="sf-title" id="${cardId}Title">${title}</div>
+        <button type="button" class="sf-close" onclick="${closeFn}" aria-label="Close">${icon('x', 18)}</button>
       </div>
       <div class="sf-body" id="${bodyId}"></div>
       <div class="sf-footer">
@@ -318,7 +321,7 @@ const SF = (() => {
         <button class="sf-apply-btn" onclick="${applyFn}">Apply</button>
       </div>
     </div>`;
-    el.addEventListener('click', ev => { if (ev.target === el) (closeFn === 'SF.closeSort()' ? closeSort : closeFilter)(); });
+    MSSDialog.bind(el, closeFn === 'SF.closeSort()' ? closeSort : closeFilter);
     document.body.appendChild(el);
   }
 
@@ -337,14 +340,10 @@ const SF = (() => {
     cur = { scope, section };
     stagedSort = getSort(scope, section);
     document.getElementById('sfSortBody').innerHTML = sortBodyHTML();
-    document.getElementById('sfSortOverlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    MSSDialog.open(document.getElementById('sfSortOverlay'));
   }
   function closeSort() {
-    const ov = document.getElementById('sfSortOverlay');
-    if (!ov) return;
-    ov.classList.remove('open');
-    document.body.style.overflow = '';
+    MSSDialog.close(document.getElementById('sfSortOverlay'));
     stagedSort = null;
   }
   function sortBodyHTML() {
@@ -401,14 +400,10 @@ const SF = (() => {
     stagedFilter = { ...EMPTY_FILTER(), ...f, genres: [...(f.genres || [])], choice: { ...(f.choice || {}) } };
     delete stagedFilter._personMatchIds;
     document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
-    document.getElementById('sfFilterOverlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    MSSDialog.open(document.getElementById('sfFilterOverlay'));
   }
   function closeFilter() {
-    const ov = document.getElementById('sfFilterOverlay');
-    if (!ov) return;
-    ov.classList.remove('open');
-    document.body.style.overflow = '';
+    MSSDialog.close(document.getElementById('sfFilterOverlay'));
     stagedFilter = null;
   }
   function rangeRow(idMin, idMax, vMin, vMax, phMin, phMax, attrs = '') {
