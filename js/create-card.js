@@ -3,10 +3,10 @@ function _injectCreateCardOverlay() {
   const el = document.createElement('div');
   el.id = 'createCardOverlay';
   el.innerHTML = `
-    <div id="createCardModal">
+    <div id="createCardModal" role="dialog" aria-modal="true" aria-labelledby="createCardHeaderTitle">
       <div id="createCardHeader">
         <div id="createCardHeaderTitle">Create Card</div>
-        <button onclick="closeCreateCard()" id="createCardClose">&#x2715;</button>
+        <button type="button" onclick="closeCreateCard()" id="createCardClose" aria-label="Close">&#x2715;</button>
       </div>
       <div id="createCardBody">
         <div id="createCardPageRow">
@@ -39,7 +39,7 @@ function _injectCreateCardOverlay() {
         </button>
       </div>
     </div>`;
-  el.addEventListener('click', ev => { if (ev.target === el) closeCreateCard(); });
+  MSSDialog.bind(el, closeCreateCard);
   document.body.appendChild(el);
 }
 
@@ -65,9 +65,7 @@ async function createShareCard(id, startPage, restrictToStartPage) {
     b.style.display = restrictToStartPage && b.dataset.page !== String(_cardPage) ? 'none' : '';
   });
   if (pageRow) pageRow.style.display = restrictToStartPage ? 'none' : '';
-  const ov = document.getElementById('createCardOverlay');
-  ov.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  MSSDialog.open(document.getElementById('createCardOverlay'));
   _resetCanvas();
   await _drawCard();
 }
@@ -82,9 +80,7 @@ function _resetCanvas() {
 }
 
 function closeCreateCard() {
-  const ov = document.getElementById('createCardOverlay');
-  if (ov) ov.classList.remove('open');
-  document.body.style.overflow = '';
+  MSSDialog.close(document.getElementById('createCardOverlay'));
   _cardEntry = null;
 }
 
@@ -848,17 +844,17 @@ function _injectCardLinkPicker() {
   if (document.getElementById('cardLinkOverlay')) return;
   const el = document.createElement('div');
   el.id = 'cardLinkOverlay';
-  el.innerHTML = `<div id="cardLinkCard">
+  el.innerHTML = `<div id="cardLinkCard" role="dialog" aria-modal="true" aria-labelledby="cardLinkTitle">
     <div class="rf-header">
-      <div class="rf-title">Link to TMDB</div>
-      <button class="rf-close" onclick="_closeCardLinkPicker()">${typeof icon === 'function' ? icon('x', 18) : '✕'}</button>
+      <div class="rf-title" id="cardLinkTitle">Link to TMDB</div>
+      <button type="button" class="rf-close" onclick="_closeCardLinkPicker()" aria-label="Close">${icon('x', 18)}</button>
     </div>
     <div class="card-link-input-wrap">
-      <input class="card-link-input" id="cardLinkSearchInput" placeholder="Search movies & TV shows…" oninput="_onCardLinkSearchInput(this.value)">
+      <input class="card-link-input" id="cardLinkSearchInput" placeholder="Search movies & TV shows…" aria-label="Search TMDB" oninput="_onCardLinkSearchInput(this.value)">
     </div>
     <div class="rf-list" id="cardLinkResultsList"></div>
   </div>`;
-  el.addEventListener('click', ev => { if (ev.target === el) _closeCardLinkPicker(); });
+  MSSDialog.bind(el, _closeCardLinkPicker);
   document.body.appendChild(el);
 }
 
@@ -868,18 +864,11 @@ function _linkCardEntryToTMDB() {
   input.value = '';
   document.getElementById('cardLinkResultsList').innerHTML = '';
   _cardLinkResults = [];
-  document.getElementById('cardLinkOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (!isMobile) setTimeout(() => input.focus(), 150);
+  MSSDialog.open(document.getElementById('cardLinkOverlay'), { focus: isMobile ? null : input });
 }
 
-function _closeCardLinkPicker() {
-  const ov = document.getElementById('cardLinkOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
+function _closeCardLinkPicker() { MSSDialog.close(document.getElementById('cardLinkOverlay')); }
 
 function _onCardLinkSearchInput(query) {
   clearTimeout(_cardLinkSearchTimer);
@@ -890,7 +879,7 @@ function _onCardLinkSearchInput(query) {
     const results = await _tmdbSearch(q, 8);
     _cardLinkResults = results;
     if (!results.length) {
-      listEl.innerHTML = `<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">No matches found.</div>`;
+      listEl.innerHTML = `<div class="card-link-msg">No matches found.</div>`;
       return;
     }
     listEl.innerHTML = results.map((r, i) => {
@@ -899,15 +888,15 @@ function _onCardLinkSearchInput(query) {
       const year = date ? date.slice(0, 4) : '';
       const typeLabel = r.media_type === 'movie' ? 'Movie' : 'TV Show';
       const posterEl = r.poster_path
-        ? `<img src="${TMDB_FULL}${r.poster_path}" loading="lazy">`
-        : (title[0] || '?').toUpperCase();
-      return `<div class="card-link-result" onclick="_pickCardLinkMatch(${i})">
-        <div class="card-link-result-poster">${posterEl}</div>
-        <div>
-          <div class="card-link-result-title">${escHTML(title)}</div>
-          <div class="card-link-result-meta">${typeLabel}${year ? ' · ' + year : ''}</div>
-        </div>
-      </div>`;
+        ? `<img src="${escHTML(TMDB_FULL + r.poster_path)}" alt="" loading="lazy">`
+        : escHTML((title[0] || '?').toUpperCase());
+      return `<button type="button" class="card-link-result" onclick="_pickCardLinkMatch(${i})">
+        <span class="card-link-result-poster">${posterEl}</span>
+        <span>
+          <span class="card-link-result-title">${escHTML(title)}</span>
+          <span class="card-link-result-meta">${typeLabel}${year ? ' · ' + escHTML(year) : ''}</span>
+        </span>
+      </button>`;
     }).join('');
   }, 350);
 }
@@ -931,11 +920,6 @@ async function _pickCardLinkMatch(i) {
   }
 }
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && document.getElementById('cardLinkOverlay')?.classList.contains('open')) {
-    _closeCardLinkPicker();
-  }
-});
 
 /* ══════════════════════════════════════════════════════════════
    PAGE 3 — Discover Card
