@@ -2,7 +2,16 @@
    export.js — Pure jsPDF
    Fonts: times (serif) + helvetica (sans)
    Colors: exact site design system values
+
+   MSSExport.open({ title, desc, iconName, categories, run(cat) })
+     → THE export popup (Profile exports, Completed): icon, title, text,
+       an optional category picker (All / TV Shows / Movies / Anime /
+       Cartoons → run(cat)), Dark / Light theme, Cancel · Download PDF.
+       run() builds the PDF (buildAndExportPDF) and returns false when
+       there's nothing to export.
 ══════════════════════════════════════════ */
+
+let _exportTheme = 'dark';   // PDF theme — set by the export popup
 
 function _pdfStats(entries, exportCat, isWatchLater) {
   const stats = [];
@@ -256,3 +265,75 @@ async function buildAndExportPDF({ subtitle, titleLine, statItems, entries, useR
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
+
+/* ══ Export popup — MSSExport (on the shared MSSDialog shell) ══ */
+const MSSExport = (() => {
+  const CATS = [['', 'All'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
+  const $ = id => document.getElementById(id);
+  let cur = null, cat = '';
+
+  function inject() {
+    if ($('exportOverlay')) return;
+    const el = document.createElement('div');
+    el.id = 'exportOverlay';
+    el.className = 'export-overlay';
+    el.innerHTML = `<div class="export-popup" role="dialog" aria-modal="true" aria-labelledby="exportPopupTitle" aria-describedby="exportPopupDesc">
+        <div class="export-popup-icon" id="exportPopupIcon" aria-hidden="true"></div>
+        <div class="export-popup-title" id="exportPopupTitle"></div>
+        <div class="export-popup-desc" id="exportPopupDesc"></div>
+        <div class="export-theme-row export-cat-row" id="exportCatRow">
+          <span class="export-theme-label" id="exportCatLabel">Category</span>
+          <div class="export-theme-btns" role="group" aria-labelledby="exportCatLabel">
+            ${CATS.map(([k, l]) => `<button type="button" class="eth-btn" data-cat="${k}" onclick="MSSExport._cat('${k}')">${l}</button>`).join('')}
+          </div>
+        </div>
+        <div class="export-theme-row">
+          <span class="export-theme-label" id="exportThemeLabel">Theme</span>
+          <div class="export-theme-btns" role="group" aria-labelledby="exportThemeLabel">
+            <button type="button" class="eth-btn" data-pdf-theme="dark" onclick="MSSExport._theme('dark')">Dark</button>
+            <button type="button" class="eth-btn" data-pdf-theme="light" onclick="MSSExport._theme('light')">Light</button>
+          </div>
+        </div>
+        <div class="export-popup-actions">
+          <button type="button" class="export-popup-cancel" onclick="MSSExport.close()">Cancel</button>
+          <button type="button" class="export-popup-confirm" id="exportPopupBtn" onclick="MSSExport._run()">${icon('download', 15)} Download PDF</button>
+        </div>
+      </div>`;
+    MSSDialog.bind(el, close);
+    document.body.appendChild(el);
+  }
+  const press = (sel, on) => document.querySelectorAll(sel).forEach(b => { const v = on(b); b.classList.toggle('active', v); b.setAttribute('aria-pressed', v); });
+  function setTheme(t) { _exportTheme = t; press('#exportOverlay [data-pdf-theme]', b => b.dataset.pdfTheme === t); }
+  function setCat(c) { cat = c; press('#exportOverlay [data-cat]', b => b.dataset.cat === c); }
+
+  function open(o) {
+    inject();
+    cur = o;
+    $('exportPopupIcon').innerHTML = icon(o.iconName || 'download', 44);
+    $('exportPopupTitle').textContent = o.title || 'Export PDF';
+    $('exportPopupDesc').textContent = o.desc || '';
+    $('exportCatRow').hidden = !o.categories;
+    setCat(''); setTheme(_exportTheme);
+    resetBtn();
+    MSSDialog.open($('exportOverlay'), { focus: '#exportPopupBtn' });
+  }
+  function close() { MSSDialog.close($('exportOverlay')); cur = null; }
+  function resetBtn() { const b = $('exportPopupBtn'); b.disabled = false; b.innerHTML = `${icon('download', 15)} Download PDF`; }
+
+  async function run() {
+    if (!cur) return;
+    const b = $('exportPopupBtn');
+    b.disabled = true; b.textContent = 'Generating…';
+    try {
+      const made = await cur.run(cat);
+      if (made === false) { showToast('Nothing to export.', 'err'); resetBtn(); return; }
+      showToast('PDF exported!');
+      close();
+    } catch (err) {
+      console.error('Export failed:', err);
+      showToast('Export failed. Try again.', 'err');
+      resetBtn();
+    }
+  }
+  return { open, close, _theme: setTheme, _cat: setCat, _run: run };
+})();
