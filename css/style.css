@@ -1045,7 +1045,7 @@ nav {
 @media(min-width:1600px) { .inline-search-grid { grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); } }
 @media(max-width:640px)  { .inline-search-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; } }
 .inline-search-grid .q-card { width:100%; box-sizing:border-box; text-decoration:none; color:inherit; }
-.inline-search-grid .q-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
+.q-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }   /* every poster card (MSSCard) is keyboard-usable */
 .inline-search-grid .type-label.inline-search-person-tag { background:var(--olive); color:#fff; }
 /* Discover-style cards (index, Discover, Discover lists, search results):
    no-poster letter, year, TMDB score row — one copy for every page */
@@ -4925,14 +4925,57 @@ body { font-size:15px; }
 html[data-theme="light"].mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av):has(> img:not(.is-loaded)) {
   background-image:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.55) 40%, transparent 60%);
 }
-/* Page loaders: three skeleton blocks with the same shimmer (no spinner) */
+/* ── Page loaders: skeletons shaped like the page (mssSkeleton, config.js) ──
+   The boxes use the page's own card / grid / stat classes, so they size and
+   scale exactly like the loaded page; everything inside is relative (%, em,
+   clamp) so it shrinks cleanly on small phones. */
 .page-loading { flex-direction:column; align-items:stretch; gap:14px; padding:1.5rem 0; }
 .page-loading .spinner { display:none; }
-.page-loading::before, .page-loading::after { content:''; display:block; border-radius:var(--radius); background-color:var(--bg-3);
+.page-loading:not(.has-skel)::before, .page-loading:not(.has-skel)::after { content:''; display:block; border-radius:var(--radius); background-color:var(--bg-3);
   background-image:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.12) 40%, transparent 60%); background-size:220% 100%; background-repeat:no-repeat;
   animation:mssShimmer 1.3s ease-in-out infinite; }
-.page-loading::before { height:120px; }
-.page-loading::after { height:72px; width:70%; }
-html[data-theme="light"] .page-loading::before, html[data-theme="light"] .page-loading::after { background-image:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.5) 40%, transparent 60%); }
+.page-loading:not(.has-skel)::before { height:120px; }
+.page-loading:not(.has-skel)::after { height:72px; width:70%; }
+.page-loading.has-skel { display:block; padding:0; pointer-events:none; }
+.has-skel > * + * { margin-top:clamp(12px, 3vw, 18px); }
+.has-skel .q-card:hover, .has-skel .nc-card:hover { transform:none; box-shadow:none; border-color:var(--border); }
+.skel {
+  display:block; border-radius:var(--radius-xs, 4px); background-color:rgba(255,255,255,.075);
+  background-image:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.12) 40%, transparent 60%);
+  background-size:220% 100%; background-repeat:no-repeat; animation:mssShimmer 1.3s ease-in-out infinite;
+}
+html[data-theme="light"] .skel { background-color:var(--bg-3); }
+html[data-theme="light"] .skel, html[data-theme="light"] .page-loading:not(.has-skel)::before, html[data-theme="light"] .page-loading:not(.has-skel)::after {
+  background-image:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.5) 40%, transparent 60%);
+}
+.skel-line { height:.8em; max-width:100%; margin:0 0 .55em; font-size:clamp(11px, 2.6vw, 14px); }
+.skel-xs { height:.6em; margin:.5em 0 0; }
+.skel-sm { height:.65em; }
+.skel-title { height:1.15em; font-size:clamp(13px, 3.4vw, 18px); }
+.skel-h1 { height:1.4em; font-size:clamp(16px, 4.8vw, 28px); margin-bottom:.4em; }
+.skel-head { height:1em; font-size:clamp(12px, 3vw, 15px); margin:0; }
+.skel-gap { margin-top:clamp(18px, 4vw, 28px) !important; }
+.skel-badge { height:1.5em; border-radius:var(--radius-xs, 4px); }
+.skel-num { width:42%; height:clamp(18px, 5vw, 30px); border-radius:4px; }
+.skel-field { height:clamp(36px, 9vw, 44px); border-radius:var(--radius-sm); margin:0 0 12px; font-size:inherit; }
+.skel-tabs { height:clamp(34px, 8vw, 42px); border-radius:var(--radius-sm); }
+.skel-col { flex:1; min-width:0; }
+.skel-stack { display:flex; flex-direction:column; gap:clamp(10px, 2.6vw, 14px); }
+.skel-section-body { display:flex; flex-direction:column; gap:10px; padding:clamp(10px, 2.6vw, 16px); }
+.has-skel .w-card { cursor:default; }
+.has-skel .q-poster.skel, .has-skel .w-poster.skel, .has-skel .nc-poster.skel { border-radius:0; }
+.has-skel .w-poster.skel, .has-skel .nc-poster.skel { border-radius:var(--radius-sm); }
+.has-skel .q-info .skel-line:last-child, .has-skel .w-body .skel-line:last-child { margin-bottom:0; }
+.skel-row { display:flex; align-items:center; gap:clamp(10px, 3vw, 14px); padding:clamp(10px, 2.8vw, 14px); background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); }
+.skel-avatar { width:clamp(34px, 9vw, 44px); aspect-ratio:1; border-radius:50%; flex-shrink:0; }
+.skel-head-row .skel-line:last-child { margin-bottom:0; }
+.skel-media { display:flex; gap:clamp(14px, 4vw, 28px); align-items:flex-start; }
+.skel-cover { width:clamp(92px, 26vw, 200px); aspect-ratio:2/3; flex-shrink:0; border-radius:var(--radius); }
+.skel-cover.skel-round { width:clamp(72px, 20vw, 140px); aspect-ratio:1; border-radius:50%; }
+.skel-hero { width:100%; aspect-ratio:16/6; border-radius:var(--radius-lg); }
+.skel-tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap:clamp(10px, 3vw, 16px); }
+.skel-tile { aspect-ratio:16/10; border-radius:var(--radius-lg); }
+@media(max-width:640px) { .skel-hero { aspect-ratio:16/9; } }
+.sr-only { position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 @keyframes mssShimmer { from { background-position:120% 0; } to { background-position:-120% 0; } }
-@media(prefers-reduced-motion:reduce) { .mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av), .page-loading::before, .page-loading::after { animation:none; } }
+@media(prefers-reduced-motion:reduce) { .mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av), .page-loading::before, .page-loading::after, .skel { animation:none; } }
