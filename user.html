@@ -56,7 +56,6 @@
 .pub-poster-fallback { font-family:var(--serif); font-size:22px; color:var(--olive-light); }
 .pub-title-row { display:flex; align-items:baseline; gap:8px; min-width:0; }
 .pub-title { font-family:var(--serif); font-weight:500; font-size:clamp(14px, 3.4vw, 16px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
-.pub-year { font-family:var(--bebas); font-size:clamp(14px, 3.2vw, 16px); color:var(--text-3); flex-shrink:0; letter-spacing:.5px; }
 .pub-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
 .pub-score-wrap { text-align:right; }
 .pub-score { font-family:var(--bebas); font-size:clamp(22px, 5.5vw, 30px); color:var(--olive-light); line-height:1; letter-spacing:.5px; }
@@ -180,7 +179,7 @@ function _pubTags(e) {
 }
 
 function _pubTitle(e) {
-  return `<div class="pub-title-row"><div class="pub-title">${_pubEsc(e.title)}</div>${e.year ? `<span class="pub-year">${_pubEsc(e.year)}</span>` : ''}</div>`;
+  return `<div class="pub-title-row"><div class="pub-title">${_pubEsc(e.title)}</div>${e.year ? `<span class="title-year-inline">${_pubEsc(e.year)}</span>` : ''}</div>`;
 }
 
 function _pubRankRow(e, i) {
