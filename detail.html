@@ -1930,7 +1930,7 @@ function _favOverlay(id, cardId, title, closeFn, extra = '') {
 const _favSeasonBlock = (s, onclick, picked) => `<button type="button" class="td-season-block${picked ? ' picked' : ''}" onclick="${onclick}">
     <div class="td-season-block-poster">${s.poster_path ? `<img src="${_favImg(s.poster_path, 'w342')}" alt="" loading="lazy">` : ''}</div>
     <div class="td-season-block-info">
-      <div class="td-season-block-name">${escHTML(s.name || 'Season ' + s.number)}</div>
+      <div class="td-season-block-name">${escHTML(mssSeasonLabel(s.number, s.name))}</div>
       <div class="td-season-block-sub">${s.episode_count ? `${s.episode_count} ep${s.episode_count !== 1 ? 's' : ''}` : ''}${s.air_date ? ` · ${s.air_date.split('-')[0]}` : ''}</div>
     </div>
   </button>`;
