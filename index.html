@@ -364,15 +364,7 @@ function _homeHScrollSection(containerId, gridId, eyebrow, title, cardsHTML) {
 // these aren't local library entries, so they use their own light card
 // instead of posterHTML()/genreHTML() which expect the local entry shape.
 function _tmdbCardHTML(posterUrl, title, year, onclick) {
-  const posterInner = safeURL(posterUrl)
-    ? `<img src="${safeURL(posterUrl)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
-    : `<div class="home-tmdb-poster-fallback">${_homeEsc((title||'?')[0].toUpperCase())}</div>`;
-  return `<div class="q-card" onclick="${onclick}">
-    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div></div>
-    <div class="q-info">
-      <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${_homeEsc(title)}</div>${year ? `<span class="title-year-inline">${_homeEsc(year)}</span>` : ''}</div>
-    </div>
-  </div>`;
+  return MSSCard.poster({ poster: posterUrl, title, year, onclick });
 }
 
 /* Currently Watching — in progress first, then Up Next */
@@ -434,10 +426,7 @@ function renderHomeWatchlist(entries) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   const queue = shuffled.slice(0, 12);
-  const cards = queue.map(e => `<div class="q-card" onclick="_homeOpenInfo('${e.id}')">
-    <div class="q-poster" style="position:relative">${posterHTML(e,'big')}<div class="q-poster-overlay"></div>${getTypeBadgeOverlay(e,'latest')}</div>
-    <div class="q-info"><div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${escHTML(e.title)}</div>${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}</div></div>
-  </div>`).join('');
+  const cards = queue.map(e => MSSCard.poster({ onclick: `_homeOpenInfo('${e.id}')`, title: e.title, year: e.year, posterHTML: posterHTML(e, 'big'), typeHTML: getTypeBadgeOverlay(e, 'latest') })).join('');
   _homeHScrollSection('homeWatchlist', 'homeWatchlistGrid', 'Saved', 'From Your Watchlist', cards);
 }
 function renderHomeRecentlyViewed(rows) {
