@@ -105,21 +105,16 @@ const MSSEp = (() => {
     const ov = document.createElement('div');
     ov.id = 'mssEpOverlay';
     ov.innerHTML = `<div id="mssEpCard" role="dialog" aria-modal="true" aria-labelledby="mssEpTitle"></div>`;
-    ov.addEventListener('click', ev => { if (ev.target === ov) close(); });
-    document.addEventListener('keydown', ev => {
-      if (ev.key === 'Escape' && ov.classList.contains('open') && !document.getElementById('confirmOverlay')?.classList.contains('open')) close();
-    });
+    MSSDialog.bind(ov, close);
     document.body.appendChild(ov);
   }
   function show(html) {
     inject();
     document.getElementById('mssEpCard').innerHTML = html;
-    document.getElementById('mssEpOverlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    MSSDialog.open(document.getElementById('mssEpOverlay'));
   }
   function close() {
-    document.getElementById('mssEpOverlay')?.classList.remove('open');
-    document.body.style.overflow = '';
+    MSSDialog.close(document.getElementById('mssEpOverlay'));
     st = null;
   }
 
