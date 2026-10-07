@@ -172,27 +172,8 @@ function _dlRankCls(rank) {
 }
 
 function _dlCardHTML(it, rank) {
-  const posterInner = safeURL(it.poster_url)
-    ? `<img src="${safeURL(it.poster_url)}" loading="lazy" data-letter="${escHTML((it.title||'?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">`
-    : `<div class="home-tmdb-poster-fallback">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
-  const rankBadge = _dlIsRanked
-    ? `<div class="cg-rank-badge ${_dlRankCls(it._rank || rank)}">${it._rank || rank}</div>`
-    : '';
-  const scoreStr = _discFloorScore(it.score);
-  const typeLabel = _dlTypeLabel(it);
-  const typeCls = it.media_type === 'movie' ? 'type-label' : 'type-label type-label-tv';
-  return `<div class="q-card dl-card" ${_discClickAttr(it)}>
-    <div class="q-poster" style="position:relative">
-      ${posterInner}
-      <div class="q-poster-overlay"></div>
-      ${rankBadge}
-      ${typeLabel ? `<span class="${typeCls} type-label-overlay-bottom">${typeLabel}</span>` : ''}
-    </div>
-    <div class="q-info">
-      <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${_dlEsc(it.title)}</div>${it.year ? `<span class="title-year-inline">${_dlEsc(it.year)}</span>` : ''}</div>
-      ${scoreStr ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${scoreStr}</span></div>` : ''}
-    </div>
-  </div>`;
+  return MSSCard.poster({ cls: 'dl-card', attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url,
+    rank: _dlIsRanked ? (it._rank || rank) : 0, type: _dlTypeLabel(it) ? it.media_type : null, score: _discFloorScore(it.score) });
 }
 
 function _dlListRowHTML(it, rank) {
