@@ -53,7 +53,6 @@
 <script>
 /* ── State ── */
 var _pUser = null, _pProfile = null, _pEntries = [];
-var _profEntryMap = {};
 
 /* ── Init ── */
 // Returning via browser back/forward can restore this page from the
@@ -72,7 +71,6 @@ document.addEventListener('DOMContentLoaded', function() {
     _pUser = user;
     _pProfile = profile;
     _pEntries = await getEntries(user.id);
-    _profEntryMap = Object.fromEntries(_pEntries.map(function(e){return [e.id,e];}));
 
     var _libSt = computeStats(_pEntries);
     var subEl = document.getElementById('libPageSub');
@@ -87,10 +85,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-function profOpenPopup(id) {
-  var e = _profEntryMap[id] || _pEntries.find(function(x){ return x.id===id; });
-  if (e) _profViews(e);
-}
 
 
 
@@ -104,26 +98,10 @@ function profOpenPopup(id) {
 
 
 // After a delete from either popup: drop it from this page and re-render
-function _profRemoveEntry(x) {
-  _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
-  delete _profEntryMap[x.id];
-  renderLibrary();
-}
 
-function openProfInfoPopup(id) {
-  var e = _profEntryMap[id] || _pEntries.find(function(en){ return en.id===id; });
-  if (e) _profViews(e);
-}
 
 // Your title: Info · Ratings · Note in one popup (MSSViews, info-popup.js). Opens on
 // Ratings once it's rated/watched, otherwise on Info.
-function _profViews(e) {
-  var rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
-  MSSViews.open(e, {
-    start: rated ? 'rate' : 'info', own: true, from: 'library.html',
-    onChange: function(){ renderLibrary(); }, onNoteSaved: function(){ renderLibrary(); }, onDelete: _profRemoveEntry
-  });
-}
 
 </script>
 <script>
