@@ -1783,11 +1783,11 @@ function _favOverlay(id, cardId, title, closeFn, extra = '') {
   el.innerHTML = `<div id="${cardId}" role="dialog" aria-modal="true" aria-label="${title}">
       <div class="sf-header">
         <div class="sf-title">${title}</div>
-        <button class="sf-close" onclick="${closeFn}()" aria-label="Close">${icon('x', 18)}</button>
+        <button type="button" class="sf-close" onclick="${closeFn}()" aria-label="Close">${icon('x', 18)}</button>
       </div>${extra}
       <div class="sf-body" id="${id}Body"></div>
     </div>`;
-  el.addEventListener('click', ev => { if (ev.target === el) window[closeFn](); });
+  MSSDialog.bind(el, () => window[closeFn]());
   document.body.appendChild(el);
 }
 const _favSeasonBlock = (s, onclick, picked) => `<button type="button" class="td-season-block${picked ? ' picked' : ''}" onclick="${onclick}">
@@ -1807,15 +1807,9 @@ function _favOpenSeasonPicker(which) {
   document.getElementById('favSeasonOverlayBody').innerHTML = seasons.length
     ? `<div class="fav-season-grid">${seasons.map(s => _favSeasonBlock(s, `_favPickSeason(${s.number})`, current === `Season ${s.number}`)).join('')}</div>`
     : `<div class="sf-empty">No season data available — link this title to TMDB first.</div>`;
-  document.getElementById('favSeasonOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  MSSDialog.open(document.getElementById('favSeasonOverlay'));
 }
-function _favCloseSeasonPicker() {
-  const ov = document.getElementById('favSeasonOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
+function _favCloseSeasonPicker() { MSSDialog.close(document.getElementById('favSeasonOverlay')); }
 function _favPickSeason(seasonNumber) {
   const which = _favPersonTarget;
   const label = `Season ${seasonNumber}`;
@@ -1852,8 +1846,7 @@ async function _favOpenEpisodePicker(which) {
         <input type="text" id="favEpisodeSearch" placeholder="Search every episode…" autocomplete="off" aria-label="Search episodes" oninput="_favFilterEpisodes(this.value)">
       </div>`);
   document.getElementById('favEpisodeSearch').value = '';
-  document.getElementById('favEpisodeOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  MSSDialog.open(document.getElementById('favEpisodeOverlay'), { focus: window.matchMedia('(max-width:640px)').matches ? null : '#favEpisodeSearch' });
   const body = document.getElementById('favEpisodeOverlayBody');
   if (!_favData?.seasons?.length) {
     document.getElementById('favEpSeasons').innerHTML = '';
@@ -1947,12 +1940,7 @@ async function _favFilterEpisodes(query) {
   _favRenderEpisodes(hits, true);
 }
 
-function _favCloseEpisodePicker() {
-  const ov = document.getElementById('favEpisodeOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
+function _favCloseEpisodePicker() { MSSDialog.close(document.getElementById('favEpisodeOverlay')); }
 
 function _favPickEpisode(name) {
   const which = _favPersonTarget;
@@ -1968,25 +1956,24 @@ function _favOpenPersonPicker(which) {
   if (!document.getElementById('favPersonOverlay')) {
     const el = document.createElement('div');
     el.id = 'favPersonOverlay';
-    el.innerHTML = `<div id="favPersonCard">
+    el.innerHTML = `<div id="favPersonCard" role="dialog" aria-modal="true" aria-labelledby="favPersonTitle">
       <div class="sf-header">
-        <div class="sf-title">Choose a Character</div>
-        <button class="sf-close" onclick="_favClosePersonPicker()">${typeof icon === 'function' ? icon('x',18) : '✕'}</button>
+        <div class="sf-title" id="favPersonTitle">Choose a Character</div>
+        <button type="button" class="sf-close" onclick="_favClosePersonPicker()" aria-label="Close">${icon('x', 18)}</button>
       </div>
       <div class="search-wrap fav-picker-search">
-        <span class="search-icon-wrap">${typeof icon === 'function' ? icon('search',14) : '🔍'}</span>
-        <input type="text" id="favPersonSearch" placeholder="Search characters…" autocomplete="off" oninput="_favFilterPersonGrid(this.value)">
+        <span class="search-icon-wrap">${icon('search', 14)}</span>
+        <input type="text" id="favPersonSearch" placeholder="Search characters…" autocomplete="off" aria-label="Search characters" oninput="_favFilterPersonGrid(this.value)">
       </div>
       <div class="sf-body" id="favPersonGrid"></div>
     </div>`;
-    el.addEventListener('click', ev => { if (ev.target === el) _favClosePersonPicker(); });
+    MSSDialog.bind(el, _favClosePersonPicker);
     document.body.appendChild(el);
   }
   document.getElementById('favPersonSearch').value = '';
   _favCastFiltered = (_favData?.cast || []).filter(c => c.character);
   _favRenderPersonGrid(_favCastFiltered, '');
-  document.getElementById('favPersonOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  MSSDialog.open(document.getElementById('favPersonOverlay'));
 }
 
 let _favCastFiltered = [];
@@ -2014,12 +2001,7 @@ function _favFilterPersonGrid(query) {
   _favRenderPersonGrid(matches, query);
 }
 
-function _favClosePersonPicker() {
-  const ov = document.getElementById('favPersonOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
+function _favClosePersonPicker() { MSSDialog.close(document.getElementById('favPersonOverlay')); }
 
 function _favPickPerson(name) {
   const which = _favPersonTarget;
