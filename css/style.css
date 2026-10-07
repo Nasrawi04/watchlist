@@ -2154,7 +2154,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .fav-clear-btn:hover { background:#b91c1c; color:#fff; }
 
 #favPersonOverlay {
-  position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
+  position:fixed; inset:0; z-index:1300; background:var(--popup-backdrop);
   display:flex; align-items:center; justify-content:center; padding:16px;
   padding-top:max(16px, env(safe-area-inset-top)); box-sizing:border-box;
   opacity:0; transition:opacity 220ms var(--ease); pointer-events:none; overflow-y:auto;
@@ -2220,7 +2220,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
    and episode cards (still, number badge, rating · date · runtime,
    description), in a wide popup. */
 #favSeasonOverlay, #favEpisodeOverlay {
-  position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
+  position:fixed; inset:0; z-index:1300; background:var(--popup-backdrop);
   display:flex; align-items:center; justify-content:center; padding:16px;
   padding-top:max(16px, env(safe-area-inset-top)); box-sizing:border-box;
   opacity:0; transition:opacity 220ms var(--ease); pointer-events:none; overflow-y:auto;
