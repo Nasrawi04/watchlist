@@ -788,227 +788,9 @@ function _cgRatingBadge(e, key) {
 function openGridPopup(id) {
   const e = _catAll.find(en => en.id === id);
   if (!e) return;
-  MSSRate.forOwnEntry(e, { onChange: renderSections, onDelete: _catRemoveEntry, onComments: x => openCommentsPopup(x.id) });
+  MSSRate.forOwnEntry(e, { onChange: renderSections, onDelete: _catRemoveEntry, onComments: x => MSSComments.open(x) });
 }
 
-
-/* ════════ COMMENTS POPUP (dedicated modal) ════════ */
-function _injectCommentsPopup() {
-  if (document.getElementById('commentsPopupOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'commentsPopupOverlay';
-  el.style.cssText = `
-    position:fixed;inset:0;z-index:901;
-    background:rgba(0,0,0,0.72);
-    display:flex;align-items:center;justify-content:center;
-    padding:16px;box-sizing:border-box;
-    opacity:0;transition:opacity 220ms var(--ease);
-    pointer-events:none;
-  `;
-  el.innerHTML = `
-    <div id="commentsPopupCard" style="
-      background:var(--bg-2);border:1.5px solid var(--olive-light);
-      box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-      width:100%;max-width:640px;max-height:90dvh;overflow-y:auto;overscroll-behavior-y:contain;
-      position:relative;box-sizing:border-box;
-      display:flex;flex-direction:column;
-      transform:translateY(18px);transition:transform 260ms var(--ease);
-    ">
-      <!-- header -->
-      <div id="commentsPopupHeader" style="
-        display:flex;align-items:flex-start;gap:16px;
-        padding:20px;border-bottom:0.5px solid var(--border);
-        flex-shrink:0;
-      ">
-        <div id="commentsPopupPoster" style="
-          width:56px;height:76px;flex-shrink:0;border-radius:var(--radius-sm);
-          overflow:hidden;background:var(--bg-3);
-          display:flex;align-items:center;justify-content:center;
-          box-shadow:var(--shadow);
-        "></div>
-        <div style="flex:1;min-width:0;">
-          <div id="commentsPopupTitle" style="font-family:var(--serif);font-size:18px;font-weight:500;line-height:1.2;margin-bottom:4px;color:var(--text)"></div>
-          <div id="commentsPopupMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px;"></div>
-          <div id="commentsPopupCount" style="font-size:12px;color:var(--olive-light);font-weight:500;"></div>
-        </div>
-        <button onclick="closeCommentsPopup()" style="
-          background:none;border:none;color:var(--text-3);cursor:pointer;
-          font-size:22px;line-height:1;padding:0;flex-shrink:0;
-          transition:color .15s;
-        " onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-3)'">✕</button>
-      </div>
-      <!-- comments body -->
-      <div id="commentsPopupBody" style="flex:1;overflow-y:auto;overscroll-behavior-y:contain;padding:16px 20px;min-height:0;">
-        <div style="font-size:12px;color:var(--text-3);text-align:center;padding:20px 0;">Loading…</div>
-      </div>
-      <!-- comment input -->
-      <div style="padding:16px 20px;border-top:0.5px solid var(--border);flex-shrink:0;">
-        <div class="cc-form">
-          <input class="cc-input" id="commentsPopupInput" placeholder="Write a comment…"
-                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();postCommentToPopup()}">
-          <button class="cc-send" onclick="postCommentToPopup()">Send</button>
-        </div>
-      </div>
-    </div>`;
-  el.addEventListener('click', e => { if (e.target === el) closeCommentsPopup(); });
-  document.body.appendChild(el);
-}
-
-let _commentsPopupEntryId = null;
-
-function openCommentsPopup(entryId) {
-  _injectCommentsPopup();
-  _commentsPopupEntryId = entryId;
-  const e = _catAll.find(en => en.id === entryId);
-  if (!e) return;
-
-  // Header info
-  document.getElementById('commentsPopupPoster').innerHTML = posterHTML(e);
-  document.getElementById('commentsPopupTitle').textContent = e.title;
-  const meta = [CAT_META[e.cat]?.label, ...(e.genres||[]).slice(0,2)].filter(Boolean);
-  document.getElementById('commentsPopupMeta').innerHTML = meta.map(m =>
-    `<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:12px;padding:1px 6px;font-size:9px;letter-spacing:.3px">${m}</span>`
-  ).join('');
-
-  // Input reset
-  document.getElementById('commentsPopupInput').value = '';
-
-  // Load comments
-  loadCommentsPopupComments(entryId);
-
-  // Show overlay
-  const ov = document.getElementById('commentsPopupOverlay');
-  ov.style.pointerEvents = 'auto';
-  ov.style.opacity = '1';
-  document.getElementById('commentsPopupCard').style.transform = 'translateY(0)';
-  document.body.style.overflow = 'hidden';
-}
-
-function closeCommentsPopup() {
-  const ov = document.getElementById('commentsPopupOverlay');
-  if (!ov) return;
-  ov.style.opacity = '0';
-  document.getElementById('commentsPopupCard').style.transform = 'translateY(18px)';
-  ov.style.pointerEvents = 'none';
-  document.body.style.overflow = '';
-  _commentsPopupEntryId = null;
-}
-
-async function loadCommentsPopupComments(entryId) {
-  const body = document.getElementById('commentsPopupBody');
-  const count = document.getElementById('commentsPopupCount');
-  if (!body) return;
-
-  try {
-    const comments = await getComments(entryId);
-    const me = (await getCurrentUser())?.id;
-
-    if (!comments.length) {
-      body.innerHTML = '<div style="font-size:12px;color:var(--text-3);text-align:center;padding:20px 0;">No comments yet.</div>';
-      if (count) count.textContent = 'Comments';
-      return;
-    }
-
-    const topLevel2 = comments.filter(c => !c.reply_to);
-    const replies2  = comments.filter(c => c.reply_to);
-    body.innerHTML = topLevel2.map(c => {
-      const uname2 = _ccEsc(c.profiles?.username || 'Unknown');
-      const date = new Date(c.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
-      const reps2 = replies2.filter(r => r.reply_to === c.id);
-      const repHTML2 = reps2.map(r => {
-        const runame2 = _ccEsc(r.profiles?.username || 'Unknown');
-        const rdate2  = new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-        return `<div class="det-reply-item" id="cmpop-${r.id}">
-          <div class="det-reply-author" style="color:var(--olive-light);">${mssProfileLinkHTML({ id: r.author_id, username: r.profiles?.username }, `@${runame2}`)}</div>
-          <div class="det-reply-text">${_ccMention(r.content)}</div>
-          <div class="det-reply-meta"><span>${rdate2}</span>
-            ${r.author_id === me ? `<button class="cc-del" onclick="deleteCommentFromPopup('${r.id}','${entryId}')">delete</button>` : ''}
-          </div>
-        </div>`;
-      }).join('');
-      return `<div class="cc-comment" id="cmpop-${c.id}">
-        <div class="cc-comment-body">
-          <div class="cc-author">${mssProfileLinkHTML({ id: c.author_id, username: c.profiles?.username }, `@${uname2}`)}</div>
-          <div class="cc-text">${_ccMention(c.content)}</div>
-          <div class="cc-meta">
-            <span>${date}</span>
-            <button class="cc-reply-btn" onclick="popReply('${c.id}','${uname2}','${entryId}')">Reply</button>
-            ${c.author_id === me ? `<button class="cc-del" onclick="deleteCommentFromPopup('${c.id}','${entryId}')">delete</button>` : ''}
-          </div>
-          ${repHTML2}
-          <div id="pop-reply-form-${c.id}"></div>
-        </div>
-      </div>`;
-    }).join('');
-
-    if (count) count.textContent = `${comments.length} comment${comments.length!==1?'s':''}`;
-  } catch(e) {
-    showToast('Could not load comments.', 'err');
-  }
-}
-
-async function postCommentToPopup() {
-  const input = document.getElementById('commentsPopupInput');
-  const content = input.value.trim();
-  if (!content || !_commentsPopupEntryId) return;
-
-  try {
-    input.disabled = true;
-    await addComment(_commentsPopupEntryId, content);
-    input.value = '';
-    await loadCommentsPopupComments(_commentsPopupEntryId);
-  } catch(e) {
-    showToast('Could not post comment.', 'err');
-  } finally {
-    input.disabled = false;
-    input.focus();
-  }
-}
-
-let _popReplyFor = null;
-function popReply(commentId, username, entryId) {
-  if (_popReplyFor) { const _prEl = document.getElementById('pop-reply-form-' + _popReplyFor); if(_prEl) _prEl.innerHTML = ''; }
-  if (_popReplyFor === commentId) { _popReplyFor = null; return; }
-  _popReplyFor = commentId;
-  const box = document.getElementById('pop-reply-form-' + commentId);
-  if (!box) return;
-  box.innerHTML = `<div class="det-reply-form">
-    <input class="det-reply-input" id="pop-ri-${commentId}" value="@${escHTML(username)} " placeholder="Reply…"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();popPostReply('${commentId}','${entryId}')}">
-    <button class="det-reply-send" onclick="popPostReply('${commentId}','${entryId}')">Send</button>
-    <button class="det-comment-del" onclick="document.getElementById('pop-reply-form-${commentId}').innerHTML='';_popReplyFor=null" style="margin-left:4px;">✕</button>
-  </div>`;
-  setTimeout(() => document.getElementById('pop-ri-' + commentId)?.focus(), 50);
-}
-async function popPostReply(commentId, entryId) {
-  const input = document.getElementById('pop-ri-' + commentId);
-  const content = input?.value?.trim();
-  if (!content) return;
-  input.disabled = true;
-  try {
-    await addComment(entryId, content, commentId);
-    document.getElementById('pop-reply-form-' + commentId).innerHTML = '';
-    _popReplyFor = null;
-    await loadCommentsPopupComments(entryId);
-  } catch(e) { showToast('Could not post reply.', 'err'); if (input) input.disabled = false; }
-}
-
-async function deleteCommentFromPopup(commentId, entryId) {
-  if (!(await showConfirm({ title: 'Delete comment?', message: 'This comment will be permanently removed.', confirmText: 'Delete', iconName: 'x' }))) return;
-  try {
-    await deleteComment(commentId);
-    await loadCommentsPopupComments(entryId);
-  } catch(e) {
-    showToast('Could not delete comment.', 'err');
-  }
-}
-
-/* Old inline comment functions removed — comments now use dedicated popup modal */
-
-// Close the comments popup on Escape
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && document.getElementById('commentsPopupOverlay')?.style.opacity === '1') closeCommentsPopup();
-});
 
 /* Grid-mode completed detail toggle (legacy inline panels — no longer used in grid, kept for safety) */
 let _cgDetailId = null;
@@ -1044,10 +826,7 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
       </div>
       <div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">
         ${e.status === 'ongoing' ? `<button class="continue-btn" onclick="continueWatching('${e.id}')">Continue</button>` : ''}
-        <button class="cc-strip" style="margin-top:0;" onclick="openGridPopupToComments('${e.id}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <span>Comments</span>
-        </button>
+        ${MSSComments.buttonHTML(`_catComments('${e.id}')`)}
       </div>
     </div>`;
   }).join('');
@@ -1055,9 +834,10 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
   return _navWrap(gid, `<div class="watching-grid" id="${gid}">${cards}</div>`);
 }
 
-/* Open comments popup directly */
-function openGridPopupToComments(id) {
-  openCommentsPopup(id);
+/* Comments on one of your titles — the shared MSSComments popup (comments.js) */
+function _catComments(id) {
+  const e = _catAll.find(en => en.id === id);
+  if (e) MSSComments.open(e);
 }
 
 async function adjustEp(id, delta) {
@@ -1355,10 +1135,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
           ${e.status === 'ongoing' ? `<button class="w-list-action-btn w-list-play-btn" onclick="continueWatching('${e.id}')" title="Continue">${icon('play',14)}</button>` : ''}
         </div>
       </div>
-      <button class="cc-strip" style="margin-top:0;" onclick="event.stopPropagation();openGridPopupToComments('${e.id}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>Comments</span>
-      </button>
+      ${MSSComments.buttonHTML(`event.stopPropagation();_catComments('${e.id}')`)}
     </div>`;
   }).join('')}</div>`;
 }
@@ -1488,131 +1265,6 @@ function renderFavChips(ratings, cat) {
   ].filter(Boolean).join('');
 
   return chips ? `<div class="fav-chips" style="margin-top:8px;">${chips}</div>` : '';
-}
-
-/* ════════ Completed entry comments ════════ */
-const _ccLoaded = new Set();
-
-function _ccEsc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function _ccMention(s) { return _ccEsc(s).replace(/(@[\w]+)/g,'<span style="color:var(--olive-light);font-weight:600">$1</span>'); }
-
-async function ccToggle(entryId, btn) {
-  const panel = document.getElementById('cp-' + entryId);
-  if (!panel) return;
-  const isOpen = panel.style.display === 'block';
-  panel.style.display = isOpen ? 'none' : 'block';
-  btn.classList.toggle('open', !isOpen);
-  if (!isOpen && !_ccLoaded.has(entryId)) await ccLoad(entryId);
-}
-
-async function ccLoad(entryId) {
-  const list    = document.getElementById('cl-' + entryId);
-  const counter = document.getElementById('cc-' + entryId);
-  if (!list) return;
-  _ccLoaded.add(entryId);
-  const comments = await getComments(entryId);
-  const me = _catUser?.id;
-
-  if (!comments.length) {
-    list.innerHTML = '<div class="cc-none">No comments yet.</div>';
-    if (counter) counter.textContent = 'Comments';
-    return;
-  }
-
-  const topLevel = comments.filter(c => !c.reply_to);
-  const replies  = comments.filter(c => c.reply_to);
-  list.innerHTML = topLevel.map(c => {
-    const uname  = _ccEsc(c.profiles?.username || 'Unknown');
-
-    const reps = replies.filter(r => r.reply_to === c.id);
-    const repHTML = reps.map(r => {
-      const runame = _ccEsc(r.profiles?.username || 'Unknown');
-      const rdate  = new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-      return `<div class="det-reply-item" id="cm-${r.id}">
-        <div class="det-reply-author" style="color:var(--olive-light);">${mssProfileLinkHTML({ id: r.author_id, username: r.profiles?.username }, `@${runame}`)}</div>
-        <div class="det-reply-text">${_ccMention(r.content)}</div>
-        <div class="det-reply-meta"><span>${rdate}</span>
-          ${r.author_id === me ? `<button class="cc-del" onclick="ccDel('${r.id}','${entryId}')">delete</button>` : ''}
-        </div>
-      </div>`;
-    }).join('');
-    return `<div class="cc-comment" id="cm-${c.id}">
-      <div class="cc-comment-body">
-        <div class="cc-author">${mssProfileLinkHTML({ id: c.author_id, username: c.profiles?.username }, `@${uname}`)}</div>
-        <div class="cc-text">${_ccMention(c.content)}</div>
-        <div class="cc-meta">
-          ${new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
-          <button class="cc-reply-btn" onclick="ccReply('${c.id}','${entryId}','${uname}')">Reply</button>
-          ${c.author_id === me ? `<button class="cc-del" onclick="ccDel('${c.id}','${entryId}')">delete</button>` : ''}
-        </div>
-        ${repHTML}
-        <div id="cc-reply-${c.id}"></div>
-      </div>
-    </div>`;
-  }).join('');
-
-  if (counter) counter.textContent = `${comments.length} comment${comments.length !== 1 ? 's' : ''}`;
-}
-
-async function ccPost(entryId) {
-  const input   = document.getElementById('ci-' + entryId);
-  const content = input?.value?.trim();
-  if (!content) return;
-  input.disabled = true;
-  try {
-    await addComment(entryId, content);
-    input.value = '';
-    _ccLoaded.delete(entryId);
-    await ccLoad(entryId);
-  } catch(e) {
-    showToast('Could not post comment.', 'err');
-    console.error(e);
-  }
-  input.disabled = false;
-  input.focus();
-}
-
-async function ccDel(commentId, entryId) {
-  try {
-    await deleteComment(commentId);
-    _ccLoaded.delete(entryId);
-    await ccLoad(entryId);
-  } catch(e) {
-    showToast('Could not delete comment.', 'err');
-  }
-}
-
-let _ccReplyFor = null;
-function ccReply(commentId, entryId, username) {
-  if (_ccReplyFor === commentId) {
-    document.getElementById('cc-reply-' + commentId).innerHTML = '';
-    _ccReplyFor = null; return;
-  }
-  if (_ccReplyFor) document.getElementById('cc-reply-' + _ccReplyFor).innerHTML = '';
-  _ccReplyFor = commentId;
-  const box = document.getElementById('cc-reply-' + commentId);
-  if (!box) return;
-  box.innerHTML = `<div class="cc-reply-form">
-    <input id="cc-ri-${commentId}" value="@${escHTML(username)} " placeholder="Reply to @${escHTML(username)}…"
-           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ccPostReply('${entryId}','${commentId}')}">
-    <button class="cc-send" onclick="ccPostReply('${entryId}','${commentId}')">Reply</button>
-  </div>`;
-  document.getElementById('cc-ri-' + commentId)?.focus();
-}
-async function ccPostReply(entryId, commentId) {
-  const input = document.getElementById('cc-ri-' + commentId);
-  const content = input?.value?.trim();
-  if (!content) return;
-  input.disabled = true;
-  try {
-    await addComment(entryId, content, commentId);
-    document.getElementById('cc-reply-' + commentId).innerHTML = '';
-    _ccReplyFor = null;
-    _ccLoaded.delete(entryId);
-    await ccLoad(entryId);
-  } catch(e) { showToast('Could not post reply.', 'err'); if (input) input.disabled = false; }
 }
 
 /* ════════ Loading ════════ */
