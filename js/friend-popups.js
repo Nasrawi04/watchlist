@@ -1,14 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════
-   friend-popups.js — popups for a FRIEND's entry (read-only) (v642)
+   friend-popups.js — a friend's note card (Friends page)
 
-   (Their ratings popup is the shared MSSRate.forFriend — rating-popup.js.)
-   MSSFriendPop.note(entry, profile)     — the Notes-page popup (backdrop header,
-                                            poster, badges, full note, spoilers)
    MSSFriendPop.noteCardHTML(entry, profile, onclick)
                                          — the Notes-page community card
+   Their note itself opens in the shared note popup (MSSNote, through
+   MSSViews) with their avatar, 👍 / 👎 and See Ratings.
 
-   Styles: the note card and note popup use the nc- / np- classes in
-   style.css (shared with Notes).
+   Styles: nc-* in style.css (shared with Notes).
 ═══════════════════════════════════════════════════════════════ */
 const MSSFriendPop = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));
@@ -16,26 +14,7 @@ const MSSFriendPop = (() => {
   const fmtDate = d => d ? new Date(String(d).length <= 10 ? d + 'T12:00:00' : d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
   const words = t => (t || '').trim().split(/\s+/).filter(Boolean).length;
 
-  /* ══ Note card + note popup (Notes-page design) ══ */
-  let noteCur = null, noteReact = null;
-  const rated = e => e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
-  function footerHTML(e, st) {
-    return mssReactButtonsHTML(st, 'MSSFriendPop._react(true)', 'MSSFriendPop._react(false)')
-      + (rated(e) ? `<button class="popup-action-btn np-grow" onclick="MSSFriendPop._ratings()">${icon('ratingStar', 14)} See Ratings</button>` : '')
-      + `<button class="popup-action-btn np-ghost${rated(e) ? '' : ' np-grow'}" onclick="MSSFriendPop.closeNote()">Close</button>`;
-  }
-  async function react(isLike) {
-    if (!noteCur || !noteReact) return;
-    const e = noteCur;
-    noteReact = await mssReact('note', e.id, isLike, noteReact);
-    if (noteCur === e) document.getElementById('frNotePopupActions').innerHTML = footerHTML(e, noteReact);
-  }
-  // Ratings: the switcher's Ratings tab when it's open there, else the ratings popup
-  function seeRatings() {
-    const e = noteCur; if (!e) return;
-    if (typeof MSSViews !== 'undefined' && MSSViews.has('rate')) { MSSViews.show('rate'); return; }
-    closeNote(); MSSRate.forFriend(e);
-  }
+  /* ══ Note card (Notes-page design) ══ */
   function profileAv(p, size) {
     const u = safeURL(p?.avatar_url);
     return `<div class="snote-avatar" style="width:${size}px;height:${size}px">${u ? `<img src="${u}" alt="">` : esc((p?.username || '?')[0].toUpperCase())}</div>`;
@@ -66,72 +45,5 @@ const MSSFriendPop = (() => {
     </article>`;
   }
 
-  function injectNote() {
-    if (document.getElementById('snPopupOverlay')) return;
-    const el = document.createElement('div');
-    el.id = 'snPopupOverlay';
-    el.style.cssText = 'position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;padding:16px;';
-    el.innerHTML = `<div id="snPopupCard" class="np-card"></div>`;
-    el.addEventListener('click', ev => { if (ev.target === el) closeNote(); });
-    document.body.appendChild(el);
-  }
-  const backdropCache = {};
-  async function loadHero(elHero, e) {
-    if (!elHero) return;
-    if (safeURL(e.poster_url)) elHero.style.backgroundImage = cssURL(e.poster_url);
-    if (!e.tmdb_id || !e.tmdb_type || typeof tmdbFetch !== 'function') return;
-    const key = e.tmdb_type + ':' + e.tmdb_id;
-    let path = backdropCache[key];
-    if (path === undefined) {
-      try { const r = await tmdbFetch(`${TMDB_BASE}/${e.tmdb_type}/${e.tmdb_id}?api_key=${TMDB_KEY}&language=en-US`); path = r.ok ? ((await r.json()).backdrop_path || null) : null; }
-      catch { path = null; }
-      backdropCache[key] = path;
-    }
-    if (!path || !elHero.isConnected) return;
-    const url = `https://image.tmdb.org/t/p/w1280${path}`, img = new Image();
-    img.onload = () => { elHero.style.backgroundImage = cssURL(url); elHero.classList.add('is-backdrop'); };
-    img.src = url;
-  }
-  function note(e, p) {
-    if (!e) return;
-    injectNote();
-    const n = words(e.notes);
-    const body = `<blockquote class="np-quote">&ldquo;${esc(e.notes.trim())}&rdquo;</blockquote>`;
-    const card = document.getElementById('snPopupCard');
-    card.innerHTML = `${MSSViews.barFor('note', e.id)}
-      <div class="np-hero"><div class="np-hero-blur" id="frNoteHero"></div>
-        <button class="np-close" onclick="MSSFriendPop.closeNote()" aria-label="Close">&#x2715;</button></div>
-      <div class="np-head">
-        ${poster(e, 'np-poster')}
-        <div class="np-head-info">
-          <div class="np-eyebrow">${mssProfileLinkHTML(p, `${profileAv(p, 20)}<span class="np-user">@${esc(p?.username || 'friend')}</span>`)}</div>
-          <div class="np-title">${mssTitleLinkHTML(e, esc(e.title))}</div>
-          <div class="np-meta-row"><div class="np-meta">${typeBadge(e)}${e.completed_date ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">Watched On: ${fmtDate(e.completed_date)}</span>` : ''}</div><span class="np-score-slot">${scorePill(e)}</span></div>
-        </div>
-      </div>
-      <div class="np-stats"><span><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span></div>
-      <div class="np-body">${mssIsSpoiler(e) ? mssSpoilerHTML(body, { id: e.id }) : body}</div>
-      <div class="np-footer"><div class="np-actions" id="frNotePopupActions">${footerHTML(e, null)}</div></div>`;
-    card.classList.toggle('np-long', n > 120);
-    noteCur = e;
-    mssReactions('note', e.id).then(st => { if (noteCur === e) { noteReact = st; document.getElementById('frNotePopupActions').innerHTML = footerHTML(e, st); } }).catch(() => {});
-    const ov = document.getElementById('snPopupOverlay');
-    ov.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    loadHero(document.getElementById('frNoteHero'), e);
-    card.scrollTop = 0;
-  }
-  function closeNote() {
-    const ov = document.getElementById('snPopupOverlay');
-    if (ov) ov.style.display = 'none';
-    document.body.style.overflow = '';
-  }
-
-  document.addEventListener('keydown', ev => {
-    if (ev.key !== 'Escape') return;
-    if (document.getElementById('confirmOverlay')?.classList.contains('open')) return;
-    if (document.getElementById('snPopupOverlay')?.style.display === 'flex') closeNote();
-  });
-
-  return { note, closeNote, noteCardHTML, _react: react, _ratings: seeRatings };
+  return { noteCardHTML };
 })();
