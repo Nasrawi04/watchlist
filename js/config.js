@@ -650,6 +650,129 @@ function mssToolbarHTML(label, count, barHTML = '', noun = 'item') {
 }
 
 /* ══════════════════════════════════════════
+   POSTER CARD — MSSCard.poster (.q-card)
+   One poster card for every poster row / grid: Home, Discover + its lists,
+   search results, the title page's "You might also like", person credits,
+   shared lists, the Episodes search and the dashboard picks.
+     MSSCard.poster({
+       title, year,
+       poster: url  |  posterHTML: '<img…>'   (e.g. posterHTML(entry, 'big'))
+       onclick: 'js…' | href: 'page.html' | attrs: 'onclick="…" data-…'
+       type: 'movie' | 'tv' | 'Label'   (bottom-left tag; typeHTML for a custom one)
+       rank,                            (1, 2, 3… badge)
+       score: '8.5' | scoreHTML,        (★ row under the title)
+       below, overPoster, cls, infoCls  (extra HTML / classes)
+     })
+   Cards are keyboard-usable: links, or role="button" + Enter / Space.
+══════════════════════════════════════════ */
+const MSSCard = (() => {
+  const RANK = r => r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other';
+  const KEYS = `onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"`;
+  function img(url, title) {
+    const u = safeURL(url), letter = escHTML((title || '?')[0].toUpperCase());
+    return u ? `<img src="${u}" alt="" loading="lazy" data-letter="${letter}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">`
+      : `<div class="home-tmdb-poster-fallback">${letter}</div>`;
+  }
+  function typeTag(t) {
+    if (!t) return '';
+    const movie = t === 'movie', label = movie ? 'Movie' : t === 'tv' ? 'TV Show' : t;
+    return `<span class="${movie ? 'type-label' : t === 'tv' ? 'type-label type-label-tv' : 'type-label'} type-label-overlay-bottom">${escHTML(label)}</span>`;
+  }
+  function poster(o) {
+    const cls = 'q-card' + (o.cls ? ' ' + o.cls : '');
+    const inner = `
+      <div class="q-poster" style="position:relative">${o.posterHTML != null ? o.posterHTML : img(o.poster, o.title)}<div class="q-poster-overlay"></div>${o.rank ? `<div class="cg-rank-badge ${RANK(o.rank)}">${o.rank}</div>` : ''}${o.typeHTML != null ? o.typeHTML : typeTag(o.type)}${o.overPoster || ''}</div>
+      <div class="q-info${o.infoCls ? ' ' + o.infoCls : ''}">
+        <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${escHTML(o.title || '')}</div>${o.year ? `<span class="title-year-inline">${escHTML(String(o.year).slice(0, 4))}</span>` : ''}</div>
+        ${o.below || ''}${o.score ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${escHTML(o.score)}</span></div>` : o.scoreHTML ? `<div class="home-tmdb-meta-row">${o.scoreHTML}</div>` : ''}
+      </div>`;
+    if (o.href) return `<a class="${cls}" href="${escHTML(o.href)}" style="text-decoration:none;color:inherit">${inner}</a>`;
+    const click = o.attrs || (o.onclick ? `onclick="${o.onclick}"` : '');
+    return `<div class="${cls}" ${click} role="button" tabindex="0" ${KEYS}>${inner}</div>`;
+  }
+  return { poster, img, typeTag };
+})();
+
+/* ══════════════════════════════════════════
+   LOADING SKELETONS — mssSkeleton(kind)
+   While a page loads, every .page-loading box is filled with a shimmering
+   copy of what the page will look like. The placeholders are built from the
+   page's REAL classes (.page-stats, .section-block, .w-card, .q-card,
+   .queue-grid, .nc-card…), so they take the same sizes as the finished page
+   at every screen width — phones included — and follow its media queries.
+
+   Which layout a box gets: data-skel="kind" on the .page-loading, else its
+   container (SKEL_BY_PARENT), else the page (SKEL_BY_PAGE), else 'grid'.
+   Kinds: library, category, sections, completed, grid, row, notes, lists, title,
+   person, profile, overview, detail, rows, episodes.
+   Boxes added later (tab switches, re-renders) are filled automatically.
+══════════════════════════════════════════ */
+const mssSkeleton = (() => {
+  const rep = (n, f) => Array.from({ length: n }, (_, i) => f(i)).join('');
+  const line = (w, cls = '') => `<span class="skel skel-line ${cls}" style="width:${w}"></span>`;
+  const stats = n => `<div class="page-stats">${rep(n, () => `<div class="page-stat"><span class="skel skel-num"></span>${line('62%', 'skel-xs')}</div>`)}</div>`;
+  const wcard = i => `<div class="w-card"><div class="w-poster skel"></div><div class="w-body">${line(['48%', '38%', '56%'][i % 3], 'skel-title')}${line('26%', 'skel-badge')}${line('72%', 'skel-sm')}</div></div>`;
+  const section = rows => `<div class="section-block"><div class="section-block-header">${line('min(34%, 180px)', 'skel-head')}</div><div class="skel-section-body">${rep(rows, wcard)}</div></div>`;
+  const qcard = () => `<div class="q-card"><div class="q-poster skel"></div><div class="q-info">${line('78%', 'skel-title')}${line('38%', 'skel-sm')}</div></div>`;
+  const grid = n => `<div class="queue-grid">${rep(n, qcard)}</div>`;
+  const ncard = () => `<div class="nc-card"><div class="nc-poster skel"></div><div class="nc-main skel-col">${line('52%', 'skel-title')}${line('34%', 'skel-badge')}${line('96%')}${line('88%')}${line('58%')}</div></div>`;
+  const row = () => `<div class="skel-row"><span class="skel skel-avatar"></span><div class="skel-col">${line('min(58%, 320px)')}${line('min(34%, 180px)', 'skel-sm')}</div></div>`;
+  const head = () => `<div class="skel-head-row">${line('min(40%, 240px)', 'skel-h1')}${line('min(26%, 160px)', 'skel-sm')}</div>`;
+  const media = (round) => `<div class="skel-media"><span class="skel skel-cover${round ? ' skel-round' : ''}"></span><div class="skel-col">${line('min(60%, 380px)', 'skel-h1')}${line('min(42%, 260px)')}${line('90%', 'skel-sm')}${line('84%', 'skel-sm')}${line('64%', 'skel-sm')}</div></div>`;
+  const KINDS = {
+    library:   () => stats(5) + section(2) + section(2) + section(2),
+    category:  () => stats(6) + KINDS.sections(),
+    sections:  () => section(2) + section(2) + section(2),
+    completed: () => head() + stats(6) + section(4),
+    grid:      () => grid(8),
+    row:       () => rep(6, qcard),
+    notes:     () => `<div class="skel-stack">${rep(3, ncard)}</div>`,
+    lists:     () => `<div class="skel-tiles">${rep(4, () => `<span class="skel skel-tile"></span>`)}</div>`,
+    title:     () => `<span class="skel skel-hero"></span>` + media(false) + line('min(30%, 160px)', 'skel-head skel-gap') + grid(6),
+    person:    () => media(true) + line('min(30%, 160px)', 'skel-head skel-gap') + grid(8),
+    profile:   () => media(true) + stats(6) + line('100%', 'skel-tabs') + grid(6),
+    overview:  () => line('min(30%, 160px)', 'skel-head') + grid(4) + line('min(30%, 160px)', 'skel-head skel-gap') + grid(4),
+    detail:    () => media(false) + rep(5, () => line('100%', 'skel-field')),
+    rows:      () => `<div class="skel-stack">${rep(6, row)}</div>`,
+    episodes:  () => head() + grid(8),
+  };
+  const SKEL_BY_PARENT = [
+    ['#libraryLoading', 'library'], ['.queue-grid', 'row'],
+    ['#overviewContent, #pvOverviewContent', 'overview'], ['#listsTabContent', 'lists'], ['#notesTabContent', 'notes'],
+    ['#episodesTabContent', 'grid'], ['#npList, #frContent', 'rows'], ['#collabList', 'rows'],
+  ];
+  const SKEL_BY_PAGE = {
+    'completed.html': 'completed', 'notes.html': 'notes', 'lists.html': 'lists', 'episodes.html': 'episodes',
+    'title.html': 'title', 'person.html': 'person', 'detail.html': 'detail', 'list-view.html': 'grid',
+    'user.html': 'profile', 'profile-view.html': 'profile', 'friends.html': 'rows', 'notifications.html': 'rows',
+  };
+  const page = location.pathname.split('/').pop() || 'index.html';
+  function kindFor(el) {
+    if (el.dataset.skel) return el.dataset.skel;
+    for (const [sel, k] of SKEL_BY_PARENT) if (el.parentElement?.closest(sel)) return k;
+    return SKEL_BY_PAGE[page] || 'grid';
+  }
+  function fill(el) {
+    if (el.dataset.skelDone) return;
+    const k = kindFor(el), f = KINDS[k] || KINDS.grid;
+    el.dataset.skelDone = k;
+    el.classList.add('has-skel');
+    el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); el.setAttribute('aria-busy', 'true');
+    el.innerHTML = `<span class="sr-only">Loading…</span>` + f();
+  }
+  const scan = root => root.querySelectorAll?.('.page-loading:not([data-skel-done])').forEach(fill);
+  function start() {
+    scan(document);
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => {
+      if (n.nodeType !== 1) return;
+      if (n.matches('.page-loading')) fill(n); else scan(n);
+    }))).observe(document.body, { childList: true, subtree: true });
+  }
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  return kind => (KINDS[kind] || KINDS.grid)();
+})();
+
+/* ══════════════════════════════════════════
    DIALOG SHELL — MSSDialog
    One open/close behaviour for every popup:
      • backdrop click + Esc close the TOP popup only (popups stack)
