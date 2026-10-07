@@ -294,6 +294,34 @@
 .td-fan-list li:first-child .td-fan-rank { background:#c9a227; color:#1a1a1a; }
 .td-fan-pick { flex:1; min-width:0; font-size:14px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .td-fan-count { font-size:11.5px; color:var(--text-3); white-space:nowrap; }
+
+/* ── Replies popup (someone's note) — shell: MSSDialog, header: .rf-* ── */
+#replyPopupOverlay {
+  position:fixed; inset:0; z-index:1150; background:var(--popup-backdrop);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity 220ms var(--ease);
+}
+#replyPopupOverlay.open { opacity:1; pointer-events:auto; }
+#replyPopupCard {
+  background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
+  border-radius:var(--radius-lg); width:100%; max-width:560px; max-height:88dvh;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.rp-head { flex-shrink:0; padding-bottom:.5rem; }
+.rp-sub { font-size:12.5px; color:var(--text-3); padding:0 1.25rem .75rem; }
+.rp-sub:empty { display:none; }
+.rp-sorts { display:flex; gap:6px; padding:0 1.25rem; }
+.rp-list { flex:1; min-height:0; overflow-y:auto; overscroll-behavior-y:contain; padding:0 1.25rem; }
+.rp-item { display:flex; gap:12px; padding:14px 0; border-bottom:0.5px solid var(--border); }
+.rp-main { flex:1; min-width:0; }
+.rp-by { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.rp-text { font-size:13.5px; line-height:1.6; color:var(--text-2); white-space:pre-line; margin-bottom:8px; word-break:break-word; }
+.rp-reacts { display:flex; gap:14px; }
+.rp-composer { flex-shrink:0; padding:1rem 1.25rem 1.25rem; border-top:0.5px solid var(--border); }
+.rp-composer[hidden] { display:none; }
+.rp-input { width:100%; min-height:60px; resize:vertical; box-sizing:border-box; margin-bottom:8px; }
+.rp-post { width:100%; justify-content:center; }
+@media(prefers-reduced-motion:reduce) { #replyPopupOverlay { transition:none; } }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -947,25 +975,6 @@ document.addEventListener('keydown', e => {
    signature: a unique key, a "do the like" callback, and an
    "already liked?" check so a second tap never accidentally
    un-likes something. */
-let _dtLastTap = {};
-function _dtHandleTouch(e, key, likeFn, isAlreadyLiked) {
-  const now = Date.now();
-  const last = _dtLastTap[key] || 0;
-  _dtLastTap[key] = now;
-  if (now - last < 350 && now - last > 0) {
-    _dtLastTap[key] = 0;
-    if (!isAlreadyLiked()) likeFn();
-    _dtShowHeart(e.currentTarget);
-  }
-}
-function _dtShowHeart(el) {
-  if (!el) return;
-  const heart = document.createElement('div');
-  heart.className = 'dt-heart-pop';
-  heart.textContent = '♥';
-  el.appendChild(heart);
-  setTimeout(() => heart.remove(), 700);
-}
 
 /* ── Community Notes ── */
 let _tdNotesRaw = [];
@@ -1028,7 +1037,7 @@ function _tdRenderNotes() {
     const myReaction = _tdNotesReactions[n.entry_id];
     const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const initial = (n.username || '?')[0].toUpperCase();
-    return `<div class="td-note-card" ontouchend="_dtHandleTouch(event, 'td-${n.entry_id}', () => _tdReactToNote('${n.entry_id}', true), () => _tdNotesReactions['${n.entry_id}'] === 'like')">
+    return `<div class="td-note-card" ontouchend="mssDoubleTap(event, 'td-${n.entry_id}', () => _tdReactToNote('${n.entry_id}', true), () => _tdNotesReactions['${n.entry_id}'] === 'like')">
       <div class="td-note-avatar">${n.avatar_url ? `<img src="${esc(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
       <div class="td-note-body">
         <div class="td-note-head">
@@ -1052,10 +1061,10 @@ function _tdRenderNotes() {
   }).join('');
 }
 
-/* ── Replies popup — same shared component used on notes.html/lists.html ── */
+/* ── Replies popup (someone's note on this title) ── */
 const REPLY_CONFIG = {
-  note: { table: 'note_replies', reactionTable: 'note_reply_reactions', rpc: 'get_note_replies', rpcParam: 'p_entry_id', col: 'entry_id' },
-  list: { table: 'list_replies', reactionTable: 'list_reply_reactions', rpc: 'get_list_replies', rpcParam: 'p_list_id', col: 'list_id' },
+  note: { table: 'note_replies', reactKind: 'noteReply', reactionTable: 'note_reply_reactions', rpc: 'get_note_replies', rpcParam: 'p_entry_id', col: 'entry_id' },
+  list: { table: 'list_replies', reactKind: 'listReply', reactionTable: 'list_reply_reactions', rpc: 'get_list_replies', rpcParam: 'p_list_id', col: 'list_id' },
 };
 
 let _replyKind = null;
@@ -1064,31 +1073,33 @@ let _replyRaw = [];
 let _replySort = 'popular';
 let _replyMyReactions = {};
 
+
+
+
 function _injectReplyPopupOverlay() {
   if (document.getElementById('replyPopupOverlay')) return;
   const el = document.createElement('div');
   el.id = 'replyPopupOverlay';
-  el.style.cssText = 'position:fixed;inset:0;z-index:920;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
   el.innerHTML = `
-    <div id="replyPopupCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:520px;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;">
-      <div style="padding:1.5rem 1.5rem 1rem;flex-shrink:0;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
-          <div style="font-family:var(--serif);font-size:20px;font-weight:400;">Replies</div>
-          <button onclick="closeReplyPopup()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;line-height:1;">&#x2715;</button>
+    <div id="replyPopupCard" role="dialog" aria-modal="true" aria-labelledby="replyPopupTitle">
+      <div class="rp-head">
+        <div class="rf-header rp-titlebar">
+          <div class="rf-title" id="replyPopupTitle">Replies</div>
+          <button type="button" class="rf-close" onclick="closeReplyPopup()" aria-label="Close">${icon('x', 18)}</button>
         </div>
-        <div id="replyPopupSubtitle" style="font-size:12.5px;color:var(--text-3);margin-bottom:1rem;"></div>
-        <div style="display:flex;gap:6px;margin-bottom:.75rem;">
-          <button class="td-notes-sort-btn active" data-sort="popular" onclick="_replySetSort('popular')">Popular</button>
-          <button class="td-notes-sort-btn" data-sort="latest" onclick="_replySetSort('latest')">Latest</button>
+        <div class="rp-sub" id="replyPopupSubtitle"></div>
+        <div class="rp-sorts" role="group" aria-label="Sort replies">
+          <button type="button" class="td-notes-sort-btn active" data-sort="popular" onclick="_replySetSort('popular')">Popular</button>
+          <button type="button" class="td-notes-sort-btn" data-sort="latest" onclick="_replySetSort('latest')">Latest</button>
         </div>
       </div>
-      <div id="replyList" style="flex:1;overflow-y:auto;padding:0 1.5rem;"></div>
-      <div id="replyComposer" style="padding:1rem 1.5rem 1.5rem;flex-shrink:0;border-top:0.5px solid var(--border);margin-top:.5rem;">
-        <textarea id="replyInput" class="field-input" maxlength="1000" placeholder="Add a reply…" style="width:100%;min-height:60px;resize:vertical;box-sizing:border-box;margin-bottom:8px;"></textarea>
-        <button class="td-note-react-btn" style="width:100%;justify-content:center;border:0.5px solid var(--border-2);border-radius:var(--radius-sm);padding:9px;" onclick="_replySubmit()">Post Reply</button>
+      <div id="replyList" class="rp-list" aria-live="polite"></div>
+      <div id="replyComposer" class="rp-composer">
+        <textarea id="replyInput" class="field-input rp-input" maxlength="1000" placeholder="Add a reply…" aria-label="Add a reply"></textarea>
+        <button type="button" class="popup-action-btn rp-post" onclick="_replySubmit()">Post Reply</button>
       </div>
     </div>`;
-  el.addEventListener('click', e => { if (e.target === el) closeReplyPopup(); });
+  MSSDialog.bind(el, closeReplyPopup);
   document.body.appendChild(el);
 }
 
@@ -1096,24 +1107,41 @@ async function openReplyPopup(kind, targetId, title) {
   _replyKind = kind;
   _replyTargetId = targetId;
   _injectReplyPopupOverlay();
-  document.getElementById('replyPopupSubtitle').textContent = title ? `On "${title}"` : '';
+  document.getElementById('replyPopupSubtitle').textContent = title ? `On @${title}’s note` : '';
   document.getElementById('replyList').innerHTML = '<div class="td-notes-loading">Loading replies…</div>';
-  const composer = document.getElementById('replyComposer');
-  composer.style.display = _currentUserForReplies() ? '' : 'none';
-
-  const ov = document.getElementById('replyPopupOverlay');
-  ov.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-
+  document.getElementById('replyComposer').hidden = !_currentUserForReplies();
+  MSSDialog.open(document.getElementById('replyPopupOverlay'));
   await _replyLoad();
 }
 
 function closeReplyPopup() {
-  const ov = document.getElementById('replyPopupOverlay');
-  if (ov) ov.style.display = 'none';
-  document.body.style.overflow = '';
+  MSSDialog.close(document.getElementById('replyPopupOverlay'));
   _replyKind = null;
   _replyTargetId = null;
+}
+
+function _replyReact(replyId, isLike) {
+  const r = _replyRaw.find(x => x.id === replyId);
+  if (!r) return;
+  mssReactFeed(REPLY_CONFIG[_replyKind].reactKind, replyId, isLike,
+    () => ({ like: r.like_count, dislike: r.dislike_count, mine: _replyMyReactions[replyId] || null }),
+    st => {
+      r.like_count = st.like; r.dislike_count = st.dislike;
+      if (st.mine) _replyMyReactions[replyId] = st.mine; else delete _replyMyReactions[replyId];
+      _replyRenderList();
+    });
+}
+
+function _tdReactToNote(entryId, isLike) {
+  const n = _tdNotesRaw.find(x => x.entry_id === entryId);
+  if (!n) return;
+  mssReactFeed('note', entryId, isLike,
+    () => ({ like: n.like_count, dislike: n.dislike_count, mine: _tdNotesReactions[entryId] || null }),
+    st => {
+      n.like_count = st.like; n.dislike_count = st.dislike;
+      if (st.mine) _tdNotesReactions[entryId] = st.mine; else delete _tdNotesReactions[entryId];
+      _tdRenderNotes();
+    });
 }
 
 function _replySetSort(mode) {
@@ -1169,19 +1197,19 @@ function _replyRenderList() {
     const myReaction = _replyMyReactions[r.id];
     const initial = (r.username || '?')[0].toUpperCase();
     const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-    return `<div style="display:flex;gap:12px;padding:14px 0;border-bottom:0.5px solid var(--border);">
-      <div class="td-note-avatar">${r.avatar_url ? `<img src="${esc(r.avatar_url)}" loading="lazy">` : esc(initial)}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+    return `<div class="rp-item">
+      <div class="td-note-avatar">${r.avatar_url ? `<img src="${esc(r.avatar_url)}" alt="" loading="lazy">` : esc(initial)}</div>
+      <div class="rp-main">
+        <div class="rp-by">
           <span class="td-note-username">@${esc(r.username || 'user')}</span>
           <span class="td-note-date">${dateStr}</span>
         </div>
-        <div style="font-size:13.5px;line-height:1.6;color:var(--text-2);white-space:pre-line;margin-bottom:8px;">${esc(r.content)}</div>
-        <div style="display:flex;gap:14px;">
-          <button class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="_replyReact('${r.id}', true)">
+        <div class="rp-text">${esc(r.content)}</div>
+        <div class="rp-reacts">
+          <button type="button" class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="_replyReact('${r.id}', true)">
             ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 13)} <span>${r.like_count || 0}</span>
           </button>
-          <button class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="_replyReact('${r.id}', false)">
+          <button type="button" class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="_replyReact('${r.id}', false)">
             ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 13)} <span>${r.dislike_count || 0}</span>
           </button>
         </div>
@@ -1190,51 +1218,6 @@ function _replyRenderList() {
   }).join('');
 }
 
-async function _replyReact(replyId, isLike) {
-  const user = _currentUserForReplies();
-  if (!user) { showToast('Sign in to react to replies.', 'err'); return; }
-  const cfg = REPLY_CONFIG[_replyKind];
-  const r = _replyRaw.find(x => x.id === replyId);
-  if (!r) return;
-  const current = _replyMyReactions[replyId];
-  const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
-
-  // Optimistic: update + render immediately, roll back on failure.
-  const prevReaction = current;
-  const prevLike = r.like_count;
-  const prevDislike = r.dislike_count;
-
-  if (wantsSame) {
-    delete _replyMyReactions[replyId];
-    if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
-    else r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
-  } else {
-    if (current === 'like') r.like_count = Math.max(0, Number(r.like_count) - 1);
-    if (current === 'dislike') r.dislike_count = Math.max(0, Number(r.dislike_count) - 1);
-    if (isLike) r.like_count = Number(r.like_count) + 1;
-    else r.dislike_count = Number(r.dislike_count) + 1;
-    _replyMyReactions[replyId] = isLike ? 'like' : 'dislike';
-  }
-  _replyRenderList();
-
-  try {
-    if (wantsSame) {
-      const { error } = await sb.from(cfg.reactionTable).delete().eq('reply_id', replyId).eq('user_id', user.id);
-      if (error) throw error;
-    } else {
-      const { error } = await sb.from(cfg.reactionTable)
-        .upsert({ reply_id: replyId, user_id: user.id, is_like: isLike }, { onConflict: 'reply_id,user_id' });
-      if (error) throw error;
-    }
-  } catch (err) {
-    console.error('React to reply error:', err);
-    if (prevReaction) _replyMyReactions[replyId] = prevReaction; else delete _replyMyReactions[replyId];
-    r.like_count = prevLike;
-    r.dislike_count = prevDislike;
-    _replyRenderList();
-    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
-  }
-}
 
 async function _replySubmit() {
   const user = _currentUserForReplies();
@@ -1256,49 +1239,6 @@ async function _replySubmit() {
   }
 }
 
-async function _tdReactToNote(entryId, isLike) {
-  if (!_tdUser) { showToast('Sign in to react to notes.', 'err'); return; }
-  const note = _tdNotesRaw.find(n => n.entry_id === entryId);
-  if (!note) return;
-  const current = _tdNotesReactions[entryId]; // 'like' | 'dislike' | undefined
-  const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
-
-  const prevReaction = current;
-  const prevLike = note.like_count;
-  const prevDislike = note.dislike_count;
-
-  if (wantsSame) {
-    // Clicking the same reaction again removes it
-    delete _tdNotesReactions[entryId];
-    if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
-    else note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
-  } else {
-    if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
-    if (current === 'dislike') note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
-    if (isLike) note.like_count = Number(note.like_count) + 1;
-    else note.dislike_count = Number(note.dislike_count) + 1;
-    _tdNotesReactions[entryId] = isLike ? 'like' : 'dislike';
-  }
-  _tdRenderNotes();
-
-  try {
-    if (wantsSame) {
-      const { error } = await sb.from('note_reactions').delete().eq('entry_id', entryId).eq('user_id', _tdUser.id);
-      if (error) throw error;
-    } else {
-      const { error } = await sb.from('note_reactions')
-        .upsert({ entry_id: entryId, user_id: _tdUser.id, is_like: isLike }, { onConflict: 'entry_id,user_id' });
-      if (error) throw error;
-    }
-  } catch (err) {
-    console.error('React to note error:', err);
-    if (prevReaction) _tdNotesReactions[entryId] = prevReaction; else delete _tdNotesReactions[entryId];
-    note.like_count = prevLike;
-    note.dislike_count = prevDislike;
-    _tdRenderNotes();
-    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
-  }
-}
 </script>
 <script>
 if ('serviceWorker' in navigator) {
