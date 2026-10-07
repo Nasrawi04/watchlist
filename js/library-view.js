@@ -51,19 +51,9 @@ function _libQueueScope(e) {
   if (e.total_eps) return e.total_eps+' eps';
   return '';
 }
-function _libEnjoymentVal(e){
-  var v=e.ratings&&e.ratings.enjoyment;
-  return (v!==undefined&&v!==null&&v!=='')?Number(v):null;
-}
 function _ratingVal(e,key){
   var v=e.ratings&&e.ratings[key];
   return (v!==undefined&&v!==null&&v!=='')?Number(v):null;
-}
-function _libEnjoymentBadge(e){
-  var val=_libEnjoymentVal(e);
-  if(val==null)return '<div class="cg-score-badge cg-score-none">-</div>';
-  var cls=val>=10?'cg-score-10':val>=9?'cg-score-9':val>=8?'cg-score-8':val>=7?'cg-score-7':val>=6?'cg-score-6':val>=3?'cg-score-3-5':'cg-score-0-2';
-  return '<div class="cg-score-badge '+cls+'">★ '+val.toFixed(2)+'</div>';
 }
 function _libRatingBadge(e,key){
   var val=_ratingVal(e,key);
@@ -94,9 +84,6 @@ function _ratingFilterLabelAll(key){
   var opt=_ratingFilterOptionsAll().filter(function(o){return o.key===key;})[0];
   return opt?opt.label:key;
 }
-function _ratingShortLabel(label){
-  return label.length>14?label.slice(0,13)+'…':label;
-}
 
 function _libCatFilterBar() {
   return '<div class="sf-trigger-row" style="margin-bottom:10px;justify-content:flex-start;">'
@@ -118,13 +105,13 @@ function _libInjectTypeFilterOverlay() {
   if (document.getElementById('sfTypeFilterOverlay')) return;
   var el = document.createElement('div');
   el.id = 'sfTypeFilterOverlay';
-  el.innerHTML = '<div id="sfTypeFilterCard">'
-    + '<div class="sf-header"><div class="sf-title">Filter</div>'
-    + '<button class="sf-close" onclick="closeLibTypeFilterPopup()">' + (typeof icon === 'function' ? icon('x',18) : '\u2715') + '</button></div>'
+  el.innerHTML = '<div id="sfTypeFilterCard" role="dialog" aria-modal="true" aria-labelledby="sfTypeFilterTitle">'
+    + '<div class="sf-header"><div class="sf-title" id="sfTypeFilterTitle">Filter</div>'
+    + '<button type="button" class="sf-close" onclick="closeLibTypeFilterPopup()" aria-label="Close">' + icon('x',18) + '</button></div>'
     + '<div class="sf-body" id="libTypeFilterBody"></div>'
     + '<div class="sf-footer"><button class="sf-clear-btn" onclick="_libClearStagedType()">Clear</button><button class="sf-apply-btn" onclick="_libApplyTypeFilter()">Apply</button></div>'
     + '</div>';
-  el.addEventListener('click', function(ev) { if (ev.target === el) closeLibTypeFilterPopup(); });
+  MSSDialog.bind(el, closeLibTypeFilterPopup);
   document.body.appendChild(el);
 }
 
@@ -133,15 +120,11 @@ function openLibTypeFilterPopup() {
   _libStagedCat = _libCatFilter;
   _libStagedFormat = _libFormat;
   document.getElementById('libTypeFilterBody').innerHTML = _libTypeFilterBodyHTML();
-  document.getElementById('sfTypeFilterOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  MSSDialog.open(document.getElementById('sfTypeFilterOverlay'));
 }
 
 function closeLibTypeFilterPopup() {
-  var ov = document.getElementById('sfTypeFilterOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
+  MSSDialog.close(document.getElementById('sfTypeFilterOverlay'));
 }
 
 function _libStageCat(v) {
@@ -222,49 +205,6 @@ function _libSortBar(sec){ return SF.bar(LIB_SCOPE, sec); }
 function setLibSort(sec,val){ SF.setSort(LIB_SCOPE, sec, val); }
 function setLibCat(c){_libCatFilter=c;_libFormat='';SF.invalidate(_sfScope());renderLibrary();}
 
-/* ── Rating filter popup (shared markup/CSS pattern with category.js) ── */
-var _ratingFilterSection=null;
-function _injectRatingFilterOverlay(){
-  if(document.getElementById('ratingFilterOverlay'))return;
-  var el=document.createElement('div');
-  el.id='ratingFilterOverlay';
-  el.innerHTML='<div id="ratingFilterCard">'
-    + '<div class="rf-header"><div class="rf-title">Sort by Rating</div>'
-    + '<button class="rf-close" onclick="closeRatingFilter()">'+icon('x',18)+'</button></div>'
-    + '<div class="rf-list" id="ratingFilterList"></div></div>';
-  el.addEventListener('click',function(ev){if(ev.target===el)closeRatingFilter();});
-  document.body.appendChild(el);
-}
-function openRatingFilter(sec){
-  _injectRatingFilterOverlay();
-  _ratingFilterSection=sec;
-  var cur=_libSort[sec]||'newest';
-  var curKey=cur.indexOf('rating:')===0?cur.slice(7):null;
-  var opts=_ratingFilterOptionsAll();
-  var html='<div class="rf-item'+(!curKey?' active':'')+'" onclick="_pickRatingFilter(null)">'
-    + '<span>Overall Score (default)</span><span class="rf-item-check">'+icon('check',15)+'</span></div>';
-  var lastGroup=null;
-  opts.forEach(function(o){
-    if(o.group!==lastGroup){html+='<div class="rf-group-label">'+o.group+'</div>';lastGroup=o.group;}
-    html+='<div class="rf-item'+(curKey===o.key?' active':'')+'" onclick="_pickRatingFilter(\''+o.key+'\')">'
-      + '<span>'+o.label+'</span><span class="rf-item-check">'+icon('check',15)+'</span></div>';
-  });
-  document.getElementById('ratingFilterList').innerHTML=html;
-  document.getElementById('ratingFilterOverlay').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-function closeRatingFilter(){
-  var ov=document.getElementById('ratingFilterOverlay');
-  if(!ov)return;
-  ov.classList.remove('open');
-  document.body.style.overflow='';
-}
-function _pickRatingFilter(key){
-  var sec=_ratingFilterSection;
-  closeRatingFilter();
-  if(!sec)return;
-  setLibSort(sec, key?'rating:'+key:'highest');
-}
 function _libToggleSec(key){
   _libCollapsed[key]=!_libCollapsed[key];
   var el=document.getElementById('libbody-'+key);
