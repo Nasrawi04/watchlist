@@ -91,7 +91,7 @@ const MSSDash = (() => {
     if (document.getElementById('dashPickOverlay')) return;
     const ov = document.createElement('div');
     ov.id = 'dashPickOverlay';
-    ov.innerHTML = `<div id="dashPickCard" role="dialog" aria-modal="true">
+    ov.innerHTML = `<div id="dashPickCard" role="dialog" aria-modal="true" aria-labelledby="dpTitle">
         <div class="dp-head"><div><div class="dp-eyebrow" id="dpEyebrow"></div><div class="dp-title" id="dpTitle"></div></div>
           <button class="dp-close" onclick="MSSDash._closePick()" aria-label="Close">${icon('x', 18)}</button></div>
         <div class="dp-search fused-search-wrap">
@@ -100,9 +100,8 @@ const MSSDash = (() => {
         </div>
         <div class="dp-grid" id="dpGrid"></div>
       </div>`;
-    ov.addEventListener('click', e => { if (e.target === ov) closePick(); });
+    MSSDialog.bind(ov, closePick);
     document.body.appendChild(ov);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && ov.classList.contains('open')) closePick(); });
   }
   let pickState = null;
   function openPick(key, idx) {
@@ -114,13 +113,11 @@ const MSSDash = (() => {
     document.getElementById('dpSearch').value = '';
     renderPick();
     document.getElementById('dpGrid').scrollTop = 0;
-    document.getElementById('dashPickOverlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
-    if (!window.matchMedia('(max-width:640px)').matches) setTimeout(() => document.getElementById('dpSearch').focus(), 80);
+    MSSDialog.open(document.getElementById('dashPickOverlay'),
+      { focus: window.matchMedia('(max-width:640px)').matches ? null : '#dpSearch' });
   }
   function closePick() {
-    document.getElementById('dashPickOverlay')?.classList.remove('open');
-    document.body.style.overflow = '';
+    MSSDialog.close(document.getElementById('dashPickOverlay'));
     pickState = null;
   }
   function renderPick() {
