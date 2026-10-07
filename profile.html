@@ -675,11 +675,7 @@ function profOpenPopup(id) {
   if (e) _profViews(e);
 }
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){
-    if(document.getElementById('ratingFilterOverlay')?.classList.contains('open')) closeRatingFilter();
-    else if(document.getElementById('createCardOverlay')?.classList.contains('open')) closeCreateCard();
-    else if(document.getElementById('exportOverlay')?.classList.contains('open')) closeExportPopup();
-  }
+  if(e.key==='Escape' && document.getElementById('exportOverlay')?.classList.contains('open')) closeExportPopup();
 });
 
 /* ── Tab 0: Overview ── */
