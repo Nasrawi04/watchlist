@@ -501,9 +501,7 @@ const MSSInfo = (() => {
        profile,                // their profile, for "Sam's rating"
        counts,                 // note 👍/👎, if the page already has them
        onChange(entry), onDelete(entry), onNoteSaved(entry), from,
-       note: { open(entry), close() },   // optional: a page's own note popup (e.g. Community
-                                         // notes with reactions + replies). It puts
-                                         // MSSViews.barFor('note', id) at the top of its card.
+       onReact(state, entry),  // someone else's note: after you like / dislike it
      })
 
    Lives in info-popup.js (always loaded with the popups — no extra file
@@ -525,7 +523,7 @@ const MSSViews = (() => {
   const available = (e, o) => ORDER.filter(v => v === 'info' || (v === 'rate' && isRated(e)) || (v === 'note' && (hasNote(e) || (o.own && o.writeNote))));
   const cardOf = v => v === 'note' ? document.querySelector('#mssNoteOverlay .note-popup2') : document.getElementById(VIEWS[v].card);
 
-  function closeAll() { MSSInfo.close(); MSSRate.close(); MSSNote.close(); st?.o.note?.close(); }
+  function closeAll() { MSSInfo.close(); MSSRate.close(); MSSNote.close(); }
 
   function barHTML() {
     return `<div class="pn-toggle" role="tablist" aria-label="Views">${st.views.map(v => {
@@ -549,16 +547,13 @@ const MSSViews = (() => {
       // Ratings view: no Notes block when there's a Note tab right beside it
       const hideNotes = st.views.includes('note');
       if (v === 'rate') o.own ? MSSRate.forOwnEntry(e, { ...cbs, hideNotes }) : MSSRate.forFriend(e, o.profile, { hideNotes });
-      if (v === 'note' && o.note) o.note.open(e);
-      else if (v === 'note') MSSNote.open(e, {
-        counts: st.counts, editable: !!o.own,
-        eyebrow: o.own ? 'Your Note' : `${o.profile?.display_name || o.profile?.username ? (o.profile.display_name || o.profile.username) + '’s' : 'Their'} Note`,
-        onSaved: x => { o.onNoteSaved?.(x); },
-      });
+      if (v === 'note') MSSNote.open(e, o.own
+        ? { counts: st.counts, editable: true, eyebrow: 'Your Note', onSaved: x => { o.onNoteSaved?.(x); } }
+        : { counts: st.counts, profile: o.profile, react: true, onReact: o.onReact,
+            eyebrow: `${o.profile?.display_name || o.profile?.username ? (o.profile.display_name || o.profile.username) + '’s' : 'Their'} Note` });
       st.refreshed = true;
       if (st.views.length > 1) {
-        if (v === 'note' && o.note) bindSwipe(document.querySelector('#snPopupCard'));   // custom popup renders its own bar
-        else {
+        {
           // The popup files carry an empty slot for the switcher; if an older
           // copy without it is loaded, add the slot to the top of its card.
           let slot = document.getElementById(VIEWS[v].slot);
@@ -574,14 +569,6 @@ const MSSViews = (() => {
     } finally {
       requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('mss-switching')));
     }
-  }
-
-  // For a page's own note popup: the switcher markup for the top of its card
-  // ('' when this entry wasn't opened through MSSViews)
-  function barFor(view, id) {
-    if (!st || st.cur !== view || st.views.length < 2) return '';
-    if (id != null && String(st.e.id) !== String(id) && String(st.e.entry_id) !== String(id)) return '';
-    return `<div class="mss-views">${barHTML()}</div>`;
   }
 
   function step(dir) {
@@ -610,7 +597,7 @@ const MSSViews = (() => {
   document.addEventListener('keydown', ev => {
     if (!st || (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight')) return;
     if (ev.target.closest?.('input, textarea, select, [contenteditable]')) return;
-    const anyOpen = document.querySelector('#mssInfoOverlay.open, #mssRateOverlay.open, #mssNoteOverlay.open') || document.getElementById('snPopupOverlay')?.style.display === 'flex';
+    const anyOpen = document.querySelector('#mssInfoOverlay.open, #mssRateOverlay.open, #mssNoteOverlay.open');
     if (!anyOpen || ![...document.querySelectorAll('.mss-views .pn-toggle')].some(b => b.offsetParent)) return;
     step(ev.key === 'ArrowRight' ? 1 : -1);
   });
@@ -642,5 +629,5 @@ const MSSViews = (() => {
 
   const has = v => !!st && st.views.includes(v);   // e.g. a note popup's "See Ratings" button
 
-  return { open, show, close, barFor, has };
+  return { open, show, close, has };
 })();
