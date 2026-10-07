@@ -451,25 +451,6 @@ function _notesOpen(id) {
 }
 
 /* ── Double-tap-to-like (touch screens) ── */
-let _dtLastTap = {};
-function _dtHandleTouch(e, key, likeFn, isAlreadyLiked) {
-  const now = Date.now();
-  const last = _dtLastTap[key] || 0;
-  _dtLastTap[key] = now;
-  if (now - last < 350 && now - last > 0) {
-    _dtLastTap[key] = 0;
-    if (!isAlreadyLiked()) likeFn();
-    _dtShowHeart(e.currentTarget);
-  }
-}
-function _dtShowHeart(el) {
-  if (!el) return;
-  const heart = document.createElement('div');
-  heart.className = 'dt-heart-pop';
-  heart.textContent = '♥';
-  el.appendChild(heart);
-  setTimeout(() => heart.remove(), 700);
-}
 
 function setNotesSort(order) { SF.setSort('notesMine', 'all', { latest: 'newest', earliest: 'oldest', az: 'alpha', za: 'zalpha', longest: 'note_long' }[order] || order); }
 
@@ -844,7 +825,7 @@ function renderSocialNotes() {
     const id = attrJSON(n.entry_id);
     const initial = (n.username || '?')[0].toUpperCase();
     const words = MSSNote.words(n.notes);
-    return `<article class="nc-card" onclick="_notesOpenSocial(${id})" ontouchend="_dtHandleTouch(event, 'snote-${escHTML(n.entry_id)}', () => reactToSocialNote(${id}, true), () => _socialNotesMyReactions[${id}] === 'like')">
+    return `<article class="nc-card" onclick="_notesOpenSocial(${id})" ontouchend="mssDoubleTap(event, 'snote-${escHTML(n.entry_id)}', () => reactToSocialNote(${id}, true), () => _socialNotesMyReactions[${id}] === 'like')">
       ${MSSNote.poster(n.poster_url, n.title, 'nc-poster')}
       <div class="nc-main">
         <div class="nc-top">
@@ -875,17 +856,7 @@ function renderSocialNotes() {
 }
 
 /* ── Social note expand popup ── */
-function _injectSocialNotePopupOverlay() {
-  if (document.getElementById('snPopupOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'snPopupOverlay';
-  el.style.cssText = 'position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;padding:16px;';
-  el.innerHTML = `<div id="snPopupCard" class="np-card"></div>`;
-  el.addEventListener('click', e => { if (e.target === el) closeSocialNotePopup(); });
-  document.body.appendChild(el);
-}
 
-let _snPopupEntryId = null;
 
 // Someone's note (with its reactions + replies) in the Info · Ratings · Note popup, opening on the note
 function _notesOpenSocial(entryId) {
@@ -894,132 +865,39 @@ function _notesOpenSocial(entryId) {
   MSSViews.open({ ...n, id: n.entry_id }, {
     start: 'note', own: !!_notesUser && n.user_id === _notesUser.id, from: 'notes.html',
     profile: { id: n.user_id, username: n.username, avatar_url: n.avatar_url },
-    note: { open: () => openSocialNotePopup(entryId), close: closeSocialNotePopup },
+    onReact: st => _notesSetReact(n, st),
   });
 }
 
-function openSocialNotePopup(entryId) {
-  const n = _socialNotesRaw.find(x => x.entry_id === entryId);
-  if (!n) return;
-  _injectSocialNotePopupOverlay();
-  _snPopupEntryId = entryId;
-  _renderSocialNotePopup(n);
-  const ov = document.getElementById('snPopupOverlay');
-  ov.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-}
-
-function closeSocialNotePopup() {
-  const ov = document.getElementById('snPopupOverlay');
-  if (ov) ov.style.display = 'none';
-  document.body.style.overflow = '';
-  _snPopupEntryId = null;
-}
-
-function _renderSocialNotePopup(n) {
-  if (!n) return;
-  const myReaction = _socialNotesMyReactions[n.entry_id];
-  const id = attrJSON(n.entry_id);
-  const initial = (n.username || '?')[0].toUpperCase();
-  const words = MSSNote.words(n.notes);
-  const rerender = `.then(() => _renderSocialNotePopup(_socialNotesRaw.find(x => x.entry_id === ${escHTML(JSON.stringify(n.entry_id))})))`;
-  document.getElementById('snPopupCard').innerHTML = `${MSSViews.barFor('note', n.entry_id)}
-    <div class="np-hero">
-      <div class="np-hero-blur" id="snHeroImg"></div>
-      
-      <button class="np-close" onclick="closeSocialNotePopup()" aria-label="Close">&#x2715;</button>
-    </div>
-    <div class="np-head">
-      ${MSSNote.poster(n.poster_url, n.title, 'np-poster')}
-      <div class="np-head-info">
-        <div class="np-eyebrow">${mssProfileLinkHTML({ id: n.user_id, username: n.username }, `
-          <div class="snote-avatar">${safeURL(n.avatar_url) ? `<img src="${safeURL(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
-          <span class="np-user">@${esc(n.username || 'user')}</span>`)}
-        </div>
-        <div class="np-title">${mssTitleLinkHTML(n, esc(n.title))}</div>
-        <div class="np-meta-row"><div class="np-meta">${MSSNote.badges(n, { dateLabel: n.completed_date ? 'Watched On:' : 'Added On:', date: MSSNote.date(MSSNote.watchedDate(n), true) })}</div><span class="np-score-slot">${MSSNote.scorePill(n.final_score)}</span></div>
-      </div>
-    </div>
-    <div class="np-stats"><span><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span></div>
-    <div class="np-body">${mssIsSpoiler(n) && n.user_id !== _notesUser?.id
-      ? mssSpoilerHTML(`<blockquote class="np-quote">&ldquo;${esc(n.notes)}&rdquo;</blockquote>`, { id: n.entry_id })
-      : `<blockquote class="np-quote">&ldquo;${esc(n.notes)}&rdquo;</blockquote>`}</div>
-    <div class="np-footer">
-      <div class="np-actions" id="snPopupActions">
-        <button class="popup-action-btn np-react ${myReaction === 'like' ? 'is-on' : ''}" onclick="reactToSocialNote(${id}, true)${rerender}" aria-label="Like">
-          ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)}<span>${n.like_count || 0}</span>
-        </button>
-        <button class="popup-action-btn np-react np-react-down ${myReaction === 'dislike' ? 'is-on' : ''}" onclick="reactToSocialNote(${id}, false)${rerender}" aria-label="Dislike">
-          ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)}<span>${n.dislike_count || 0}</span>
-        </button>
-        ${MSSViews.has('rate') ? `<button class="popup-action-btn np-grow" onclick="MSSViews.show('rate')">${icon('ratingStar', 14)} See Ratings</button>` : ''}
-        <button class="popup-action-btn np-ghost${MSSViews.has('rate') ? '' : ' np-grow'}" onclick="MSSViews.close()">Close</button>
-      </div>
-    </div>
-  `;
-  MSSNote.loadHero(document.getElementById('snHeroImg'), n);
-  MSSNote.fitLong(document.getElementById('snPopupCard'), words);
-}
-
-/* ── Replies popup — shared for notes and lists via `kind` ── */
-const REPLY_CONFIG = {
-  note: { table: 'note_replies', reactionTable: 'note_reply_reactions', rpc: 'get_note_replies', rpcParam: 'p_entry_id', col: 'entry_id' },
-  list: { table: 'list_replies', reactionTable: 'list_reply_reactions', rpc: 'get_list_replies', rpcParam: 'p_list_id', col: 'list_id' },
-};
-
-
-
-
-
-
-
-
-
-
-
-
-async function reactToSocialNote(entryId, isLike) {
-  if (!_notesUser) { showToast('Sign in to react to notes.', 'err'); return; }
-  const note = _socialNotesRaw.find(n => n.entry_id === entryId);
-  if (!note) return;
-  const current = _socialNotesMyReactions[entryId];
-  const wantsSame = (current === 'like' && isLike) || (current === 'dislike' && !isLike);
-
-  const prevReaction = current;
-  const prevLike = note.like_count;
-  const prevDislike = note.dislike_count;
-
-  if (wantsSame) {
-    delete _socialNotesMyReactions[entryId];
-    if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
-    else note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
-  } else {
-    if (current === 'like') note.like_count = Math.max(0, Number(note.like_count) - 1);
-    if (current === 'dislike') note.dislike_count = Math.max(0, Number(note.dislike_count) - 1);
-    if (isLike) note.like_count = Number(note.like_count) + 1;
-    else note.dislike_count = Number(note.dislike_count) + 1;
-    _socialNotesMyReactions[entryId] = isLike ? 'like' : 'dislike';
-  }
+// Like / dislike someone's note: from the card (double-tap) or the note popup
+function _notesSetReact(n, st) {
+  n.like_count = st.like; n.dislike_count = st.dislike;
+  if (st.mine) _socialNotesMyReactions[n.entry_id] = st.mine; else delete _socialNotesMyReactions[n.entry_id];
   renderSocialNotes();
-
-  try {
-    if (wantsSame) {
-      const { error } = await sb.from('note_reactions').delete().eq('entry_id', entryId).eq('user_id', _notesUser.id);
-      if (error) throw error;
-    } else {
-      const { error } = await sb.from('note_reactions')
-        .upsert({ entry_id: entryId, user_id: _notesUser.id, is_like: isLike }, { onConflict: 'entry_id,user_id' });
-      if (error) throw error;
-    }
-  } catch (err) {
-    console.error('React to note error:', err);
-    if (prevReaction) _socialNotesMyReactions[entryId] = prevReaction; else delete _socialNotesMyReactions[entryId];
-    note.like_count = prevLike;
-    note.dislike_count = prevDislike;
-    renderSocialNotes();
-    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to save your reaction.', 'err');
-  }
 }
+function reactToSocialNote(entryId, isLike) {
+  const n = _socialNotesRaw.find(x => x.entry_id === entryId);
+  if (!n) return Promise.resolve();
+  return mssReactFeed('note', entryId, isLike,
+    () => ({ like: n.like_count, dislike: n.dislike_count, mine: _socialNotesMyReactions[entryId] || null }),
+    st => _notesSetReact(n, st));
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ── Search popup (opened via + Add Note / Edit Note) ── */
 let _notesSearchMode = 'add';
@@ -1143,15 +1021,8 @@ function _notesPageSearchPick(i) {
   _notesOpen(e.id);
 }
 
-/* ── Note popup — editable ── */
-
-
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
-  if (document.getElementById('confirmOverlay')?.classList.contains('open')) return;   // the confirm handles its own Esc
-  // Community note popup (it had no Esc at all)
-  if (document.getElementById('snPopupOverlay')?.style.display === 'flex') { closeSocialNotePopup(); return; }
-  if (document.getElementById('notesSearchOverlay')?.classList.contains('open')) { closeNotesSearchPopup(); return; }
+  if (e.key === 'Escape' && document.getElementById('notesSearchOverlay')?.classList.contains('open')) closeNotesSearchPopup();
 });
 </script>
 <script>
