@@ -307,18 +307,9 @@ function _ppCreditGrid(list) {
       score: cr.vote_average, origin_country: cr.origin_country, original_language: cr.original_language,
     };
     const sc = cr.vote_count && cr.vote_average ? (Math.floor(cr.vote_average * 10) / 10).toFixed(1) : null;
-    return `<div class="q-card pp-card" role="button" tabindex="0" onclick="MSSInfo.fromDiscover(window._ppItems['${key}'])" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
-      <div class="q-poster" style="position:relative">
-        <img src="${TMDB_IMG.replace('w185','w500')}${cr.poster_path}" loading="lazy" alt="" data-letter="${esc((title || '?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">
-        <div class="q-poster-overlay"></div>
-        <span class="${isMovie ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${isMovie ? 'Movie' : 'TV Show'}</span>
-      </div>
-      <div class="q-info">
-        <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${esc(title)}</div>${year ? `<span class="title-year-inline">${esc(year)}</span>` : ''}</div>
-        ${roleLabel ? `<div class="pp-credit-role">${esc(roleLabel)}</div>` : ''}
-        ${sc ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${sc}</span></div>` : ''}
-      </div>
-    </div>`;
+    return MSSCard.poster({ cls: 'pp-card', onclick: `MSSInfo.fromDiscover(window._ppItems['${key}'])`, title, year,
+      poster: TMDB_IMG.replace('w185', 'w500') + cr.poster_path, type: isMovie ? 'movie' : 'tv', score: sc,
+      below: roleLabel ? `<div class="pp-credit-role">${esc(roleLabel)}</div>` : '' });
   }).join('');
 }
 
