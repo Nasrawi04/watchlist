@@ -10,13 +10,34 @@
      window.LIB_SCOPE    = 'lib' | 'prof' | 'pv'   Sort & Filter scope
      window.LIB_READONLY = true                    someone else's library
      window.LIB_ENTRIES  = () => entries           (default: _pEntries)
-   The page provides: #libraryContent / #libraryLoading, openProfInfoPopup(id),
-   profOpenPopup(id). Comments open in the shared MSSComments popup (comments.js).
+     window.LIB_PROFILE  = () => profile           whose library (read-only)
+   The page provides #libraryContent / #libraryLoading.
+   _libOpen(id) opens a title in Info · Ratings · Note (MSSViews) — the
+   pages use it too (favorites, Notes / Lists tabs). Comments open in the
+   shared MSSComments popup (comments.js).
 ═══════════════════════════════════════════════════════════════ */
 
 var LIB_SCOPE    = window.LIB_SCOPE || 'lib';
 var LIB_READONLY = !!window.LIB_READONLY;
 var LIB_ENTRIES  = window.LIB_ENTRIES || function(){ return _pEntries; };
+
+// A title → Info · Ratings · Note (opens on Ratings once it's rated)
+function _libOpen(id) {
+  var e = LIB_ENTRIES().filter(function(x){ return x.id === id; })[0];
+  if (!e) return;
+  var rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
+  if (LIB_READONLY) { MSSViews.open(e, { start: rated ? 'rate' : 'info', profile: (window.LIB_PROFILE && window.LIB_PROFILE()) || {} }); return; }
+  MSSViews.open(e, {
+    start: rated ? 'rate' : 'info', own: true, from: location.pathname.split('/').pop() || 'library.html',
+    onChange: function(){ renderLibrary(); }, onNoteSaved: function(){ renderLibrary(); },
+    onDelete: _libRemove
+  });
+}
+// Your own title was deleted → drop it and redraw
+function _libRemove(x) {
+  _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
+  renderLibrary();
+}
 var LIB_KEY      = LIB_SCOPE === 'pv' ? 'pv_' : 'prof_';    // remembered list / grid choice
 var _LIB_ARROW_L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
 var _LIB_ARROW_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -98,80 +119,33 @@ function _ratingFilterLabelAll(key){
 
 function _libCatFilterBar() {
   return '<div class="sf-trigger-row" style="margin-bottom:10px;justify-content:flex-start;">'
-    + '<button class="sf-icon-btn' + (_libCatFilter ? ' active' : '') + '" id="libTypeTriggerBtn" onclick="openLibTypeFilterPopup()" aria-label="Filter">'
-    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>'
-    + '<span class="sf-icon-btn-label">' + (_libCatFilter ? _libCatLabels[_libCatFilter] + (_libFormat ? ' · ' + _libFormatLabels[_libFormat] : '') : 'Filter') + '</span>'
-    + '</button></div>';
+    + SF.typeFilterButton('openLibTypeFilterPopup()', _libCatFilter ? _libCatLabels[_libCatFilter] + (_libFormat ? ' · ' + _libFormatLabels[_libFormat] : '') : 'Filter', !!_libCatFilter)
+    + '</div>';
 }
 
 var _libCatLabels = { '':'All Types', tv:'TV Shows', movies:'Movies', anime:'Anime', cartoons:'Cartoons' };
-var _libStagedCat = '';
 // Anime & Cartoons mix series and films — a second "Format" choice
 // (Shows / Movies) appears under Type when one of them is picked.
-var _libFormat = '', _libStagedFormat = '';
+var _libFormat = '';
 var _libFormatLabels = { '':'All Formats', show:'Shows', movie:'Movies' };
 function _libHasFormats(cat) { return cat === 'anime' || cat === 'cartoons'; }
-
-function _libInjectTypeFilterOverlay() {
-  if (document.getElementById('sfTypeFilterOverlay')) return;
-  var el = document.createElement('div');
-  el.id = 'sfTypeFilterOverlay';
-  el.innerHTML = '<div id="sfTypeFilterCard" role="dialog" aria-modal="true" aria-labelledby="sfTypeFilterTitle">'
-    + '<div class="sf-header"><div class="sf-title" id="sfTypeFilterTitle">Filter</div>'
-    + '<button type="button" class="sf-close" onclick="closeLibTypeFilterPopup()" aria-label="Close">' + icon('x',18) + '</button></div>'
-    + '<div class="sf-body" id="libTypeFilterBody"></div>'
-    + '<div class="sf-footer"><button class="sf-clear-btn" onclick="_libClearStagedType()">Clear</button><button class="sf-apply-btn" onclick="_libApplyTypeFilter()">Apply</button></div>'
-    + '</div>';
-  MSSDialog.bind(el, closeLibTypeFilterPopup);
-  document.body.appendChild(el);
-}
-
+// Type (+ Format for Anime / Cartoons) — the shared Type filter popup (SF.typeFilter)
 function openLibTypeFilterPopup() {
-  _libInjectTypeFilterOverlay();
-  _libStagedCat = _libCatFilter;
-  _libStagedFormat = _libFormat;
-  document.getElementById('libTypeFilterBody').innerHTML = _libTypeFilterBodyHTML();
-  MSSDialog.open(document.getElementById('sfTypeFilterOverlay'));
-}
-
-function closeLibTypeFilterPopup() {
-  MSSDialog.close(document.getElementById('sfTypeFilterOverlay'));
-}
-
-function _libStageCat(v) {
-  _libStagedCat = v;
-  if (!_libHasFormats(v)) _libStagedFormat = '';
-  document.getElementById('libTypeFilterBody').innerHTML = _libTypeFilterBodyHTML();
-}
-function _libStageFormat(v) {
-  _libStagedFormat = v;
-  document.getElementById('libTypeFilterBody').innerHTML = _libTypeFilterBodyHTML();
-}
-function _libTypeFilterBodyHTML() {
-  var row = function(checked, fn, v, label) {
-    return '<label class="sf-check-row"><input type="checkbox" ' + (checked?'checked':'') + ' onchange="' + fn + '(\'' + v + '\')">'
-      + '<span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>' + '<span>' + label + '</span></label>';
-  };
-  var html = '<div class="sf-section-label">Type</div><div class="sf-check-list">'
-    + Object.keys(_libCatLabels).map(function(v){ return row(_libStagedCat===v, '_libStageCat', v, _libCatLabels[v]); }).join('') + '</div>';
-  if (_libHasFormats(_libStagedCat)) {
-    html += '<div class="sf-section-label">Format <span class="sf-section-hint">(' + _libCatLabels[_libStagedCat] + ' has both)</span></div><div class="sf-check-list">'
-      + Object.keys(_libFormatLabels).map(function(v){ return row(_libStagedFormat===v, '_libStageFormat', v, _libFormatLabels[v]); }).join('') + '</div>';
-  }
-  return html;
-}
-
-function _libClearStagedType() {
-  _libStagedCat = ''; _libStagedFormat = '';
-  document.getElementById('libTypeFilterBody').innerHTML = _libTypeFilterBodyHTML();
-}
-
-function _libApplyTypeFilter() {
-  _libCatFilter = _libStagedCat;
-  _libFormat = _libHasFormats(_libStagedCat) ? _libStagedFormat : '';
-  SF.invalidate(_sfScope()); // actor names depend on which types are shown
-  closeLibTypeFilterPopup();
-  renderLibrary();
+  var opts = function(o){ return Object.keys(o).map(function(k){ return [k, o[k]]; }); };
+  SF.typeFilter({
+    groups: [
+      { key:'cat', label:'Type', options: opts(_libCatLabels) },
+      { key:'format', label:'Format', options: opts(_libFormatLabels), when: function(st){ return _libHasFormats(st.cat); },
+        hint: function(st){ return '(' + _libCatLabels[st.cat] + ' has both)'; } },
+    ],
+    value: { cat:_libCatFilter, format:_libFormat },
+    onApply: function(v) {
+      _libCatFilter = v.cat;
+      _libFormat = _libHasFormats(v.cat) ? v.format : '';
+      SF.invalidate(_sfScope()); // actor names depend on which types are shown
+      renderLibrary();
+    }
+  });
 }
 
 /* ══ Sort & Filter — shared js/sort-filter.js module ══
@@ -214,7 +188,6 @@ SF.register(LIB_SCOPE, {
 function _sfScope(){ return LIB_SCOPE; }
 function _libSortBar(sec){ return SF.bar(LIB_SCOPE, sec); }
 function setLibSort(sec,val){ SF.setSort(LIB_SCOPE, sec, val); }
-function setLibCat(c){_libCatFilter=c;_libFormat='';SF.invalidate(_sfScope());renderLibrary();}
 
 function _libToggleSec(key){
   _libCollapsed[key]=!_libCollapsed[key];
@@ -300,7 +273,7 @@ function _libRender(){
       var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
       var ep=isM?rt:(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
       var _typeCls=(isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
-      return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
+      return '<div class="wg-card" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
         +(ip?mssHoldHTML(e):'')
         +'<span class="'+_typeCls+'">'+(isM?'Movie':'TV Show')+'</span>'
         +'</div><div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
@@ -321,9 +294,9 @@ function _libRender(){
       var rtH=Number(e.runtime_h)||0,rtM=Number(e.runtime_m)||0;
       var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
       var cs=ip?'background:var(--olive-faint);border-color:var(--border-olive);':'';
-      return '<div class="fv-w-card" style="cursor:pointer;'+cs+'" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'">'
+      return '<div class="fv-w-card" style="cursor:pointer;'+cs+'" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="fv-w-poster">'+posterHTML(e)+(ip?mssHoldHTML(e):'')+'</div>'
-        +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);flex-shrink:0;">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+'</div>'
+        +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+'</div>'
         +(ep?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+ep+'</span></div>':'')
         +(rt?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')
         +(!ep&&!rt?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'</div>':'')
@@ -337,10 +310,10 @@ function _libRender(){
   if(!queue.length){qc='<div class="fv-empty">Nothing on '+(LIB_READONLY?'their':'your')+' watchlist.</div>';}
   else if(_libQueueView==='grid'){
     var qg='libqg';
-    var qcs=queue.map(function(e){var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeClsQ=(isMq?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';return '<div class="wg-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsQ+'">'+(isMq?'Movie':'TV Show')+'</span>'+'</div><div class="wg-info"><div class="title-year-row" style="margin-bottom:6px;"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'+(scope?'<div class="wg-genre"><span class="w-ep-badge">'+scope+'</span></div>':'')+'</div></div>';}).join('');
+    var qcs=queue.map(function(e){var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeClsQ=(isMq?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';return '<div class="wg-card" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsQ+'">'+(isMq?'Movie':'TV Show')+'</span>'+'</div><div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'+(scope?'<div class="wg-genre"><span class="w-ep-badge">'+scope+'</span></div>':'')+'</div></div>';}).join('');
     qc=_libGridWrap(qg,'<div class="watching-grid" id="'+qg+'">'+qcs+'</div>');
   } else {
-    qc='<div class="watch-list">'+queue.map(function(e){var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeBadgeQ='<span class="'+(isMq?'type-label':'type-label type-label-tv')+'">'+(isMq?'Movie':'TV Show')+'</span>';return '<div class="w-card" style="cursor:pointer;" onclick="openProfInfoPopup(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e)+'</div><div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+(e.year?'<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:8px;">'+escHTML(e.year)+'</span>':'')+'</div></div><div class="w-ep-row">'+typeBadgeQ+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div></div>';}).join('')+'</div>';
+    qc='<div class="watch-list">'+queue.map(function(e){var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeBadgeQ='<span class="'+(isMq?'type-label':'type-label type-label-tv')+'">'+(isMq?'Movie':'TV Show')+'</span>';return '<div class="w-card" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e)+'</div><div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+(e.year?'<span class="title-year-inline" style="margin-left:8px;">'+escHTML(e.year)+'</span>':'')+'</div></div><div class="w-ep-row">'+typeBadgeQ+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div></div>';}).join('')+'</div>';
   }
 
   // Completed
@@ -371,8 +344,8 @@ function _libRender(){
       var isMovieG=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var typeClsG=(isMovieG?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card cg-card-wrap" style="cursor:pointer;">'
-        +'<div class="wg-poster" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsG+'">'+(isMovieG?'Movie':'TV Show')+'</span>'+' </div>'
-        +'<div class="cg-grid-info" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
+        +'<div class="wg-poster" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsG+'">'+(isMovieG?'Movie':'TV Show')+'</span>'+' </div>'
+        +'<div class="cg-grid-info" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
         +metaHtml
         +'<div class="cg-score-row"><span class="cg-score">'+(sc!=null?'★ '+sc:'—')+'</span></div>'
@@ -388,9 +361,9 @@ function _libRender(){
       var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}):'';
       var isMc=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       return '<div class="fv-entry-block">'
-        +'<div class="fv-rank-row" onclick="profOpenPopup(this.dataset.id)" data-id="'+e.id+'">'
+        +'<div class="fv-rank-row" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+(i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other')+'">'+(i+1)+'</div>':''))+'</div>'
-        +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
+        +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
         +'<div class="fv-rank-meta">'+_libTypeBadge(isMc)+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
         +renderFavChips(e.ratings,e.cat)
