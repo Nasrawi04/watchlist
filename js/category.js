@@ -1222,7 +1222,7 @@ function renderFavChips(ratings, cat) {
 /* ════════ Loading ════════ */
 function showLoading() {
   const sw = document.getElementById('sectionsWrap');
-  if (sw) sw.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
+  if (sw) sw.innerHTML = `<div class="page-loading" data-skel="sections"></div>`;
 }
 function hideLoading() {}
 
