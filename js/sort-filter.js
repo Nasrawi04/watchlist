@@ -296,17 +296,55 @@ const SF = (() => {
     const hasFilters = filtersFor(s, section).length > 0 || choicesFor(s, section).length > 0;
     const sec = escHTML(section);
     return `<div class="sort-bar sf-trigger-row">
-      <button class="sf-icon-btn${!isDefault ? ' active' : ''}" onclick="SF.openSort('${scope}','${sec}')" aria-label="Sort">
-        ${icon('sort', 15)}<span class="sf-icon-btn-label">${!isDefault ? escHTML(sortLabel(s, value)) : 'Sort'}</span>
-      </button>
-      ${hasFilters ? `<button class="sf-icon-btn${count ? ' active' : ''}" onclick="SF.openFilter('${scope}','${sec}')" aria-label="Filter">
-        ${icon('filter', 15)}<span class="sf-icon-btn-label">${count ? `Filter (${count})` : 'Filter'}</span>
-      </button>` : ''}
+      ${buttonHTML('sort', !isDefault ? sortLabel(s, value) : 'Sort', !isDefault, `SF.openSort('${scope}','${sec}')`, 'Sort')}
+      ${hasFilters ? buttonHTML('filter', count ? `Filter (${count})` : 'Filter', count > 0, `SF.openFilter('${scope}','${sec}')`, 'Filter') : ''}
     </div>`;
   }
 
+  /* A single-pick list (Status, Type, Format…): check rows, one ticked */
+  function choiceHTML(label, hint, options, curV, onchange) {
+    return `<div class="sf-section-label">${escHTML(label)}${hint ? ` <span class="sf-section-hint">${escHTML(hint)}</span>` : ''}</div><div class="sf-check-list">` +
+      options.map(([v, l]) => `
+        <label class="sf-check-row">
+          <input type="checkbox" ${curV === v ? 'checked' : ''} onchange="${onchange(v)}">
+          <span class="sf-check-mark">${CHECK_SVG}</span>
+          <span>${escHTML(l)}</span>
+        </label>`).join('') + `</div>`;
+  }
+  // The Sort / Filter trigger button (also used for the page-wide Type filter)
+  function buttonHTML(ico, label, active, onclick, aria) {
+    return `<button type="button" class="sf-icon-btn${active ? ' active' : ''}" onclick="${onclick}" aria-label="${aria}">
+        ${icon(ico, 15)}<span class="sf-icon-btn-label">${escHTML(label)}</span>
+      </button>`;
+  }
+
+  /* ── Page-wide Type filter popup — Library (Type + Format) and the
+     Anime / Cartoons pages (Movies vs TV Shows). Same look as Filter.
+       SF.typeFilter({ groups: [{ key, label, options: [[value, label]],
+                                  hint: staged => '', when: staged => bool }],
+                       value: { key: value }, onApply(value) })
+       SF.typeFilterButton(onclick, label, active) → its trigger button ── */
+  let tf = null;
+  function typeFilter(o) {
+    inject('sfTypeFilterOverlay', 'sfTypeFilterCard', 'Filter', 'sfTypeFilterBody', 'Clear', 'SF._typeClear()', 'SF._typeApply()', 'SF.closeTypeFilter()', closeTypeFilter);
+    tf = { o, staged: { ...o.value } };
+    typeBody();
+    MSSDialog.open(document.getElementById('sfTypeFilterOverlay'));
+  }
+  function typeBody() {
+    const st = tf.staged;
+    document.getElementById('sfTypeFilterBody').innerHTML = tf.o.groups.map(g => {
+      if (g.when && !g.when(st)) { st[g.key] = g.options[0][0]; return ''; }   // e.g. Format only for Anime / Cartoons
+      return choiceHTML(g.label, g.hint ? g.hint(st) : '', g.options, st[g.key], v => `SF._typeStage(${attrJSON(g.key)}, ${attrJSON(v)})`);
+    }).join('');
+  }
+  function closeTypeFilter() { MSSDialog.close(document.getElementById('sfTypeFilterOverlay')); }
+  const typeStage = (k, v) => { tf.staged[k] = v; typeBody(); };
+  const typeClear = () => { tf.o.groups.forEach(g => { tf.staged[g.key] = g.options[0][0]; }); typeBody(); };
+  function typeApply() { const v = { ...tf.staged }, o = tf.o; closeTypeFilter(); o.onApply(v); }
+
   /* ── overlays (one shared pair for every scope) ── */
-  function inject(id, cardId, title, bodyId, clearLabel, clearFn, applyFn, closeFn) {
+  function inject(id, cardId, title, bodyId, clearLabel, clearFn, applyFn, closeFn, close) {
     if (document.getElementById(id)) return;
     const el = document.createElement('div');
     el.id = id;
@@ -317,11 +355,11 @@ const SF = (() => {
       </div>
       <div class="sf-body" id="${bodyId}"></div>
       <div class="sf-footer">
-        <button class="sf-clear-btn" onclick="${clearFn}">${clearLabel}</button>
-        <button class="sf-apply-btn" onclick="${applyFn}">Apply</button>
+        <button type="button" class="sf-clear-btn" onclick="${clearFn}">${clearLabel}</button>
+        <button type="button" class="sf-apply-btn" onclick="${applyFn}">Apply</button>
       </div>
     </div>`;
-    MSSDialog.bind(el, closeFn === 'SF.closeSort()' ? closeSort : closeFilter);
+    MSSDialog.bind(el, close);
     document.body.appendChild(el);
   }
 
@@ -336,7 +374,7 @@ const SF = (() => {
 
   /* ── Sort popup ── */
   function openSort(scope, section) {
-    inject('sfSortOverlay', 'sfSortCard', 'Sort', 'sfSortBody', 'Reset', 'SF._resetSort()', 'SF._applySort()', 'SF.closeSort()');
+    inject('sfSortOverlay', 'sfSortCard', 'Sort', 'sfSortBody', 'Reset', 'SF._resetSort()', 'SF._applySort()', 'SF.closeSort()', closeSort);
     cur = { scope, section };
     stagedSort = getSort(scope, section);
     document.getElementById('sfSortBody').innerHTML = sortBodyHTML();
@@ -394,7 +432,7 @@ const SF = (() => {
 
   /* ── Filter popup ── */
   function openFilter(scope, section) {
-    inject('sfFilterOverlay', 'sfFilterCard', 'Filter', 'sfFilterBody', 'Clear', 'SF._clearFilter()', 'SF._applyFilter()', 'SF.closeFilter()');
+    inject('sfFilterOverlay', 'sfFilterCard', 'Filter', 'sfFilterBody', 'Clear', 'SF._clearFilter()', 'SF._applyFilter()', 'SF.closeFilter()', closeFilter);
     cur = { scope, section };
     const f = getFilter(scope, section);
     stagedFilter = { ...EMPTY_FILTER(), ...f, genres: [...(f.genres || [])], choice: { ...(f.choice || {}) } };
@@ -419,14 +457,7 @@ const SF = (() => {
     let html = '';
     choicesFor(s, section).forEach(c => {
       if (c.when && !c.when(f.choice)) { f.choice[c.key] = ''; return; }   // e.g. Format only for Anime/Cartoons
-      const curV = f.choice[c.key] || '';
-      html += `<div class="sf-section-label">${escHTML(c.label)}</div><div class="sf-check-list">` +
-        c.options.map(([v, l]) => `
-        <label class="sf-check-row">
-          <input type="checkbox" ${curV === v ? 'checked' : ''} onchange="SF._stageChoice(${attrJSON(c.key)}, ${attrJSON(v)})">
-          <span class="sf-check-mark">${CHECK_SVG}</span>
-          <span>${escHTML(l)}</span>
-        </label>`).join('') + `</div>`;
+      html += choiceHTML(c.label, '', c.options, f.choice[c.key] || '', v => `SF._stageChoice(${attrJSON(c.key)}, ${attrJSON(v)})`);
     });
     if (on.has('genre')) {
       const menu = GENRES.map(g => `
@@ -616,12 +647,14 @@ const SF = (() => {
 
   return {
     register, list, refresh, bar, setSort, getSort, invalidate, clearFilters, restoreState,
-    openSort, closeSort, openFilter, closeFilter,
+    openSort, closeSort, openFilter, closeFilter, typeFilter, closeTypeFilter,
+    typeFilterButton: (onclick, label, active) => buttonHTML('filter', label, active, onclick, 'Filter'),
     filterCount: (scope, section) => filterCount(getFilter(scope, section)),
     filterState: (scope, section) => getFilter(scope, section),
     isMovie, lengthOf, GENRES,
     // internal — used by the popup markup's inline handlers
     _stageSort, _resetSort, _applySort, _stageGenre, _stageChoice, _stageRanges, _clearFilter, _applyFilter,
     _openPersonDD, _personInput, _pickPerson, _toggleDD,
+    _typeStage: typeStage, _typeClear: typeClear, _typeApply: typeApply,
   };
 })();
