@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'mss-v710';
+const CACHE_VERSION = 'mss-v712';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -56,6 +56,7 @@ const STATIC_ASSETS = [
   'js/export.js',
   'js/info-popup.js',
   'js/rating-popup.js',
+  'js/comments.js',
   'js/note-popup.js',
   'js/list-popup.js',
   'js/profile-tabs.js',
