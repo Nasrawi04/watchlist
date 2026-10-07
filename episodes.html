@@ -232,10 +232,8 @@ async function renderHome() {
         // Searching covers every show — including ones not in your Watching / To Be Continued / Watched
         const res = await tmdbFetch(`${TMDB_BASE}/search/tv?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`);
         const results = res.ok ? ((await res.json()).results || []).filter(r => r.poster_path).slice(0, 16) : [];
-        box.innerHTML = results.map(r => `<a class="q-card" href="episodes.html?show=${r.id}" style="text-decoration:none;color:inherit">
-          <div class="q-poster"><img src="${TMDB_IMG}${r.poster_path}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover"></div>
-          <div class="q-info"><div class="title-year-row"><div class="q-title" style="margin-bottom:0">${esc(r.name)}</div><span class="title-year-inline">${esc((r.first_air_date || '').slice(0, 4))}</span></div>
-          ${r.vote_average ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${(Math.floor(r.vote_average * 10) / 10).toFixed(1)}</span></div>` : ''}</div></a>`).join('') || `<div class="mss-empty">No shows match “${esc(q)}”.</div>`;
+        box.innerHTML = results.map(r => MSSCard.poster({ href: `episodes.html?show=${r.id}`, title: r.name, year: (r.first_air_date || '').slice(0, 4), poster: TMDB_IMG + r.poster_path,
+          score: r.vote_average ? (Math.floor(r.vote_average * 10) / 10).toFixed(1) : '' })).join('') || `<div class="mss-empty">No shows match “${esc(q)}”.</div>`;
       } catch { box.innerHTML = ''; }
     }, 300);
   });
