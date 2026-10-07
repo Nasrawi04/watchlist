@@ -555,14 +555,18 @@ function mssOpenTitle(src, btn) {
   // close whichever popup it came from — the search picker opens on its own
   if (typeof MSSRate !== 'undefined') MSSRate.close();
   if (typeof MSSNote !== 'undefined') MSSNote.close();
-  if (typeof MSSFriendPop !== 'undefined') MSSFriendPop.closeNote();
-  if (typeof closeSocialNotePopup === 'function') closeSocialNotePopup();
   MSSInfo.discover(src, btn);
 }
-/* ── Like / dislike on someone's note or list (note_reactions / list_reactions) ──
-   mssReactions → { like, dislike, mine:'like'|'dislike'|null }; mssReact toggles
-   your reaction and returns the new state; mssReactButtonsHTML draws the pair. */
-const _MSS_REACT = { note: ['note_reactions', 'entry_id'], list: ['list_reactions', 'list_id'] };
+/* ── Like / dislike on someone's note, list or reply ──
+   mssReactions → { like, dislike, mine:'like'|'dislike'|null }
+   mssReact     → toggles your reaction, returns the new state (popups)
+   mssReactFeed → same, but shows the change at once and rolls it back if
+                  saving fails (feeds: Notes, Lists, title page notes/replies)
+   mssReactButtonsHTML draws the 👍 / 👎 pair. */
+const _MSS_REACT = {
+  note: ['note_reactions', 'entry_id'], list: ['list_reactions', 'list_id'],
+  noteReply: ['note_reply_reactions', 'reply_id'], listReply: ['list_reply_reactions', 'reply_id'],
+};
 async function mssReactions(kind, id) {
   const [t, c] = _MSS_REACT[kind], me = window._navUser?.id;
   const { data } = await sb.from(t).select('user_id, is_like').eq(c, id);
@@ -570,16 +574,49 @@ async function mssReactions(kind, id) {
   (data || []).forEach(r => { r.is_like ? st.like++ : st.dislike++; if (r.user_id === me) st.mine = r.is_like ? 'like' : 'dislike'; });
   return st;
 }
+function _mssNextReact(st, isLike) {
+  const want = isLike ? 'like' : 'dislike', next = { like: Number(st.like) || 0, dislike: Number(st.dislike) || 0, mine: st.mine || null };
+  if (next.mine) next[next.mine] = Math.max(0, next[next.mine] - 1);
+  if (next.mine === want) next.mine = null; else { next.mine = want; next[want]++; }
+  return next;
+}
+async function _mssSaveReact(kind, id, mine) {
+  const [t, c] = _MSS_REACT[kind], me = window._navUser?.id;
+  const { error } = mine
+    ? await sb.from(t).upsert({ [c]: id, user_id: me, is_like: mine === 'like' }, { onConflict: c + ',user_id' })
+    : await sb.from(t).delete().eq(c, id).eq('user_id', me);
+  if (error) throw error;
+}
+const _mssReactFail = err => { console.error(err); showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save that — try again.', 'err'); };
 async function mssReact(kind, id, isLike, state) {
-  const me = window._navUser?.id;
-  if (!me) { showToast('Sign in to react.', 'err'); return state; }
-  const [t, c] = _MSS_REACT[kind], want = isLike ? 'like' : 'dislike', next = { ...state };
-  if (state.mine) next[state.mine] = Math.max(0, next[state.mine] - 1);
-  try {
-    if (state.mine === want) { next.mine = null; await sb.from(t).delete().eq(c, id).eq('user_id', me); }
-    else { next.mine = want; next[want]++; const { error } = await sb.from(t).upsert({ [c]: id, user_id: me, is_like: isLike }, { onConflict: c + ',user_id' }); if (error) throw error; }
-    return next;
-  } catch (err) { console.error(err); showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save that — try again.', 'err'); return state; }
+  if (!window._navUser?.id) { showToast('Sign in to react.', 'err'); return state; }
+  const next = _mssNextReact(state, isLike);
+  try { await _mssSaveReact(kind, id, next.mine); return next; }
+  catch (err) { _mssReactFail(err); return state; }
+}
+async function mssReactFeed(kind, id, isLike, get, set) {
+  if (!window._navUser?.id) { showToast('Sign in to react.', 'err'); return; }
+  const prev = get(), next = _mssNextReact(prev, isLike);
+  set(next);
+  try { await _mssSaveReact(kind, id, next.mine); }
+  catch (err) { set(prev); _mssReactFail(err); }
+}
+/* Double-tap a card → like it (with a heart pop). Use as ontouchend. */
+const _mssTaps = {};
+function mssDoubleTap(ev, key, likeFn, isLiked) {
+  const now = Date.now(), last = _mssTaps[key] || 0;
+  _mssTaps[key] = now;
+  if (now - last >= 350 || now === last) return;
+  _mssTaps[key] = 0;
+  if (!isLiked()) likeFn();
+  const el = ev.currentTarget;
+  if (!el) return;
+  const heart = document.createElement('div');
+  heart.className = 'dt-heart-pop';
+  heart.textContent = '♥';
+  heart.setAttribute('aria-hidden', 'true');
+  el.appendChild(heart);
+  setTimeout(() => heart.remove(), 700);
 }
 function mssReactButtonsHTML(state, onLike, onDislike) {
   const st = state || { like: 0, dislike: 0, mine: null };
