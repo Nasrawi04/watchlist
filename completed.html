@@ -190,11 +190,6 @@ function _cgBadgeHTML(rank) {
   return `<div class="cg-rank-badge ${cls}">${rank}</div>`;
 }
 
-function _enjoymentValComp(e) {
-  const v = e.ratings?.enjoyment;
-  return (v !== undefined && v !== null && v !== '') ? Number(v) : null;
-}
-
 /* Generic version — this page mixes every category together, so ratings
    are looked up directly by key on whatever the entry actually has. */
 function _ratingVal(e, key) {
@@ -202,19 +197,6 @@ function _ratingVal(e, key) {
   return (v !== undefined && v !== null && v !== '') ? Number(v) : null;
 }
 
-function _cgEnjoymentBadgeHTML(e) {
-  const val = _enjoymentValComp(e);
-  if (val == null) return `<div class="cg-score-badge cg-score-none">-</div>`;
-  let cls;
-  if (val >= 10) cls = 'cg-score-10';
-  else if (val >= 9) cls = 'cg-score-9';
-  else if (val >= 8) cls = 'cg-score-8';
-  else if (val >= 7) cls = 'cg-score-7';
-  else if (val >= 6) cls = 'cg-score-6';
-  else if (val >= 3) cls = 'cg-score-3-5';
-  else cls = 'cg-score-0-2';
-  return `<div class="cg-score-badge ${cls}">${val.toFixed(2)}</div>`;
-}
 function _cgRatingBadgeHTML(e, key) {
   const val = _ratingVal(e, key);
   if (val == null) return `<div class="cg-score-badge cg-score-none">-</div>`;
@@ -255,61 +237,6 @@ function _ratingFilterLabelAll(key) {
   const opt = _ratingFilterOptionsAll().find(o => o.key === key);
   return opt ? opt.label : key;
 }
-function _ratingShortLabel(label) {
-  return label.length > 14 ? label.slice(0, 13) + '…' : label;
-}
-
-/* ── Rating filter popup (shared markup/CSS with category.js's version) ── */
-let _ratingFilterCallback = null;
-
-function _injectRatingFilterOverlay() {
-  if (document.getElementById('ratingFilterOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'ratingFilterOverlay';
-  el.innerHTML = `<div id="ratingFilterCard">
-    <div class="rf-header">
-      <div class="rf-title">Sort by Rating</div>
-      <button class="rf-close" onclick="closeRatingFilter()">${icon('x', 18)}</button>
-    </div>
-    <div class="rf-list" id="ratingFilterList"></div>
-  </div>`;
-  el.addEventListener('click', ev => { if (ev.target === el) closeRatingFilter(); });
-  document.body.appendChild(el);
-}
-
-function openRatingFilter() {
-  _injectRatingFilterOverlay();
-  const curKey = (_compSort||'').startsWith('rating:') ? _compSort.slice(7) : null;
-  const opts = _ratingFilterOptionsAll();
-
-  let html = `<div class="rf-item${!curKey ? ' active' : ''}" onclick="_pickRatingFilter(null)">
-    <span>Overall Score (default)</span><span class="rf-item-check">${icon('check', 15)}</span>
-  </div>`;
-  let lastGroup = null;
-  opts.forEach(o => {
-    if (o.group !== lastGroup) { html += `<div class="rf-group-label">${o.group}</div>`; lastGroup = o.group; }
-    html += `<div class="rf-item${curKey===o.key?' active':''}" onclick="_pickRatingFilter('${o.key}')">
-      <span>${o.label}</span><span class="rf-item-check">${icon('check', 15)}</span>
-    </div>`;
-  });
-  document.getElementById('ratingFilterList').innerHTML = html;
-
-  document.getElementById('ratingFilterOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeRatingFilter() {
-  const ov = document.getElementById('ratingFilterOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-function _pickRatingFilter(key) {
-  closeRatingFilter();
-  setCompSort(key ? 'rating:' + key : 'highest');
-}
-
 const _CLEFT  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const _CRIGHT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
 
@@ -552,15 +479,7 @@ async function deleteCommentFromPopupCompleted(commentId, entryId) {
 /* Old inline comment functions removed — comments now use dedicated popup modal */
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (document.getElementById('ratingFilterOverlay')?.classList.contains('open')) {
-      closeRatingFilter();
-    } else if (document.getElementById('createCardOverlay')?.classList.contains('open')) {
-      closeCreateCard();
-    } else if (document.getElementById('commentsPopupCompletedOverlay')?.style.opacity === '1') {
-      closeCommentsPopupCompleted();
-    }
-  }
+  if (e.key === 'Escape' && document.getElementById('commentsPopupCompletedOverlay')?.style.opacity === '1') closeCommentsPopupCompleted();
 });
 
 /* Grid comment toggle (item 10) — uses same ccToggle/ccPost from list mode via shared IDs */
