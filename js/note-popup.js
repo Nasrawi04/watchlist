@@ -160,14 +160,9 @@ const MSSNote = (() => {
           </div>
         </div>
       </div>`;
-    el.addEventListener('click', ev => { if (ev.target === el) close(); });
+    MSSDialog.bind(el, close);
     document.body.appendChild(el);
     guardLimit(document.getElementById('mssNoteTextarea'));
-    document.addEventListener('keydown', ev => {
-      if (ev.key !== 'Escape' || !el.classList.contains('open')) return;
-      if (document.getElementById('confirmOverlay')?.classList.contains('open')) return;
-      close();
-    });
   }
 
   function showView() {
@@ -212,14 +207,12 @@ const MSSNote = (() => {
     $('mssNoteScore').innerHTML = scorePill(liveScore(e));
     $('mssNoteTags').innerHTML = badges(e, { genres: 3, dateLabel: e.completed_date ? 'Completed On:' : 'Added On:', date: date(watchedDate(e), true) });
     stats();
-    $('mssNoteOverlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    MSSDialog.open($('mssNoteOverlay'));
     // An existing note opens read-only; a brand-new one goes straight to the editor
     if (e.notes && e.notes.trim()) showView(); else if (o.editable) showEdit(); else showView();
   }
   function close() {
-    document.getElementById('mssNoteOverlay')?.classList.remove('open');
-    document.body.style.overflow = '';
+    MSSDialog.close(document.getElementById('mssNoteOverlay'));
     current = null;
   }
   function cancel() {
