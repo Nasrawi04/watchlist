@@ -220,29 +220,29 @@ function _discClickAttr(it) {
   return `onclick='_discOpenLinkPopup(${_discAttrJSON(it.title || '')}, ${_discAttrJSON(it.derived_type || 'tv')})'`;
 }
 
-/* ── Link-to-TMDB popup for unlinked MyScreenScore titles ── */
+/* ── Link-to-TMDB popup for unlinked MyScreenScore titles ──
+   Same picker design as Create Card's "Link to TMDB" (#cardLinkCard / .card-link-* in style.css). */
 function _discInjectLinkOverlay() {
   if (document.getElementById('discLinkOverlay')) return;
   const el = document.createElement('div');
   el.id = 'discLinkOverlay';
-  el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
-  el.innerHTML = `
-    <div id="discLinkCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:460px;width:100%;max-height:85vh;overflow-y:auto;padding:1.5rem;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-        <div style="font-family:var(--serif);font-size:20px;font-weight:400;">Link to TMDB</div>
-        <button onclick="_discCloseLinkPopup()" style="background:none;border:none;color:var(--text-3);font-size:18px;cursor:pointer;line-height:1;">&#x2715;</button>
+  el.innerHTML = `<div id="discLinkCard" role="dialog" aria-modal="true" aria-labelledby="discLinkTitle">
+      <div class="rf-header">
+        <div class="rf-title" id="discLinkTitle">Link to TMDB</div>
+        <button type="button" class="rf-close" onclick="_discCloseLinkPopup()" aria-label="Close">${icon('x', 18)}</button>
       </div>
-      <div id="discLinkSubtitle" style="font-size:13px;color:var(--text-3);margin-bottom:1rem;"></div>
-      <input type="text" id="discLinkSearchInput" class="field-input" placeholder="Search TMDB…" style="width:100%;margin-bottom:1rem;box-sizing:border-box;">
-      <div id="discLinkResults"></div>
+      <div class="card-link-sub" id="discLinkSubtitle"></div>
+      <div class="card-link-input-wrap">
+        <input class="card-link-input" id="discLinkSearchInput" placeholder="Search TMDB…" aria-label="Search TMDB" autocomplete="off">
+      </div>
+      <div class="rf-list" id="discLinkResults"></div>
     </div>`;
-  el.addEventListener('click', e => { if (e.target === el) _discCloseLinkPopup(); });
+  MSSDialog.bind(el, _discCloseLinkPopup);
   document.body.appendChild(el);
   document.getElementById('discLinkSearchInput').addEventListener('input', () => {
     clearTimeout(_discLinkSearchTimer);
     _discLinkSearchTimer = setTimeout(_discRunLinkSearch, 350);
   });
-  attachClearButton('discLinkSearchInput');
 }
 
 let _discLinkSearchTimer = null;
@@ -255,54 +255,38 @@ function _discOpenLinkPopup(title, derivedType) {
   const input = document.getElementById('discLinkSearchInput');
   input.value = title;
   document.getElementById('discLinkResults').innerHTML = '';
-  const ov = document.getElementById('discLinkOverlay');
-  ov.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
+  MSSDialog.open(document.getElementById('discLinkOverlay'));
   _discRunLinkSearch();
 }
 
-function _discCloseLinkPopup() {
-  const ov = document.getElementById('discLinkOverlay');
-  if (ov) ov.style.display = 'none';
-  document.body.style.overflow = '';
-}
+function _discCloseLinkPopup() { MSSDialog.close(document.getElementById('discLinkOverlay')); }
 
 async function _discRunLinkSearch() {
   const input = document.getElementById('discLinkSearchInput');
   const resultsEl = document.getElementById('discLinkResults');
   const query = input.value.trim();
   if (query.length < 2) { resultsEl.innerHTML = ''; return; }
-  resultsEl.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-3);font-size:13px;">Searching…</div>';
+  resultsEl.innerHTML = '<div class="card-link-msg">Searching…</div>';
 
   const mediaType = _discLinkContext?.derivedType === 'movie' ? 'movie' : 'tv';
   try {
     const data = await _discFetchJSON(`${TMDB_BASE}/search/${mediaType}?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(query)}`);
     const results = (data.results || []).slice(0, 8);
-    if (!results.length) {
-      resultsEl.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-3);font-size:13px;">No results found.</div>';
-      return;
-    }
+    if (!results.length) { resultsEl.innerHTML = '<div class="card-link-msg">No matches found.</div>'; return; }
     resultsEl.innerHTML = results.map(r => {
-      const title = mediaType === 'movie' ? r.title : r.name;
+      const title = (mediaType === 'movie' ? r.title : r.name) || 'Untitled';
       const year = ((mediaType === 'movie' ? r.release_date : r.first_air_date) || '').split('-')[0];
-      const poster = r.poster_path ? TMDB_IMG + r.poster_path : null;
-      return `<div class="disc-link-result" onclick='_discSelectLinkResult(${r.id}, ${JSON.stringify(mediaType)})' style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s;">
-        <div style="width:40px;height:58px;border-radius:4px;overflow:hidden;background:var(--bg-2);flex-shrink:0;">
-          ${poster ? `<img src="${escHTML(poster)}" style="width:100%;height:100%;object-fit:cover;">` : ''}
-        </div>
-        <div style="min-width:0;">
-          <div style="font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHTML(title)}</div>
-          <div style="font-size:12px;color:var(--text-3);">${escHTML(year || '')}</div>
-        </div>
-      </div>`;
+      return `<button type="button" class="card-link-result" onclick='_discSelectLinkResult(${Number(r.id)}, ${JSON.stringify(mediaType)})'>
+        <span class="card-link-result-poster">${r.poster_path ? `<img src="${escHTML(TMDB_IMG + r.poster_path)}" alt="" loading="lazy">` : escHTML((title[0] || '?').toUpperCase())}</span>
+        <span>
+          <span class="card-link-result-title">${escHTML(title)}</span>
+          <span class="card-link-result-meta">${mediaType === 'movie' ? 'Movie' : 'TV Show'}${year ? ' · ' + escHTML(year) : ''}</span>
+        </span>
+      </button>`;
     }).join('');
-    resultsEl.querySelectorAll('.disc-link-result').forEach(el => {
-      el.addEventListener('mouseenter', () => el.style.background = 'var(--card)');
-      el.addEventListener('mouseleave', () => el.style.background = 'none');
-    });
   } catch (err) {
     console.error('Discover link search error:', err);
-    resultsEl.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-3);font-size:13px;">Search failed — try again.</div>';
+    resultsEl.innerHTML = '<div class="card-link-msg">Search failed — try again.</div>';
   }
 }
 
