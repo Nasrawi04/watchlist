@@ -108,10 +108,6 @@ function _ratingFilterLabel(cat, key) {
   return opt ? opt.label : key;
 }
 
-function _ratingShortLabel(label) {
-  return label.length > 14 ? label.slice(0, 13) + '…' : label;
-}
-
 // Sorting now lives in js/sort-filter.js (SF.list / SF.setSort).
 
 /* ══════════════════════════════════════════════════════════════════
@@ -161,63 +157,6 @@ SF.register('cat', {
 function sortBar(section)          { return SF.bar('cat', section); }
 function setSort(section, value)   { SF.setSort('cat', section, value); }
 function _applySortFilter(section) { SF.refresh('cat', section); }
-
-/* ── Rating filter popup — lets the person sort a section by any specific
-   rating instead of just overall score. See openRatingFilter(). ── */
-let _ratingFilterSection = null;
-
-function _injectRatingFilterOverlay() {
-  if (document.getElementById('ratingFilterOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'ratingFilterOverlay';
-  el.innerHTML = `<div id="ratingFilterCard">
-    <div class="rf-header">
-      <div class="rf-title">Sort by Rating</div>
-      <button class="rf-close" onclick="closeRatingFilter()">${icon('x', 18)}</button>
-    </div>
-    <div class="rf-list" id="ratingFilterList"></div>
-  </div>`;
-  el.addEventListener('click', ev => { if (ev.target === el) closeRatingFilter(); });
-  document.body.appendChild(el);
-}
-
-function openRatingFilter(section) {
-  _injectRatingFilterOverlay();
-  _ratingFilterSection = section;
-  const cur = _sort[section] || 'newest';
-  const curKey = cur.startsWith('rating:') ? cur.slice(7) : null;
-  const opts = _ratingFilterOptions(window.PAGE_CAT);
-
-  let html = `<div class="rf-item${!curKey ? ' active' : ''}" onclick="_pickRatingFilter(null)">
-    <span>Overall Score (default)</span><span class="rf-item-check">${icon('check', 15)}</span>
-  </div>`;
-  let lastGroup = null;
-  opts.forEach(o => {
-    if (o.group !== lastGroup) { html += `<div class="rf-group-label">${o.group}</div>`; lastGroup = o.group; }
-    html += `<div class="rf-item${curKey===o.key?' active':''}" onclick="_pickRatingFilter('${o.key}')">
-      <span>${o.label}</span><span class="rf-item-check">${icon('check', 15)}</span>
-    </div>`;
-  });
-  document.getElementById('ratingFilterList').innerHTML = html;
-
-  document.getElementById('ratingFilterOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeRatingFilter() {
-  const ov = document.getElementById('ratingFilterOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-function _pickRatingFilter(key) {
-  const section = _ratingFilterSection;
-  closeRatingFilter();
-  if (!section) return;
-  setSort(section, key ? 'rating:' + key : 'highest');
-}
-
 
 const IS_MOVIE_CAT = () => window.PAGE_CAT === 'movies';
 // Type tag (Movie/TV Show label on cards) is redundant on the Movies/TV
@@ -325,10 +264,10 @@ function _injectCatTypeFilterOverlay() {
   if (document.getElementById('sfTypeFilterOverlay')) return;
   const el = document.createElement('div');
   el.id = 'sfTypeFilterOverlay';
-  el.innerHTML = `<div id="sfTypeFilterCard">
+  el.innerHTML = `<div id="sfTypeFilterCard" role="dialog" aria-modal="true" aria-labelledby="sfTypeFilterTitle">
     <div class="sf-header">
-      <div class="sf-title">Filter</div>
-      <button class="sf-close" onclick="closeCatTypeFilterPopup()">${icon('x', 18)}</button>
+      <div class="sf-title" id="sfTypeFilterTitle">Filter</div>
+      <button type="button" class="sf-close" onclick="closeCatTypeFilterPopup()" aria-label="Close">${icon('x', 18)}</button>
     </div>
     <div class="sf-body" id="catTypeFilterBody"></div>
     <div class="sf-footer">
@@ -336,7 +275,7 @@ function _injectCatTypeFilterOverlay() {
       <button class="sf-apply-btn" onclick="_catApplyTypeFilterPopup()">Apply</button>
     </div>
   </div>`;
-  el.addEventListener('click', ev => { if (ev.target === el) closeCatTypeFilterPopup(); });
+  MSSDialog.bind(el, closeCatTypeFilterPopup);
   document.body.appendChild(el);
 }
 
@@ -344,15 +283,11 @@ function openCatTypeFilterPopup() {
   _injectCatTypeFilterOverlay();
   _catStagedTypeFilter = _catTypeFilter;
   document.getElementById('catTypeFilterBody').innerHTML = _catTypeFilterBodyHTML();
-  document.getElementById('sfTypeFilterOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  MSSDialog.open(document.getElementById('sfTypeFilterOverlay'));
 }
 
 function closeCatTypeFilterPopup() {
-  const ov = document.getElementById('sfTypeFilterOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
+  MSSDialog.close(document.getElementById('sfTypeFilterOverlay'));
 }
 
 function _catTypeFilterBodyHTML() {
@@ -1070,17 +1005,9 @@ async function deleteCommentFromPopup(commentId, entryId) {
 
 /* Old inline comment functions removed — comments now use dedicated popup modal */
 
-// Close popup on Escape
+// Close the comments popup on Escape
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (document.getElementById('ratingFilterOverlay')?.classList.contains('open')) {
-      closeRatingFilter();
-    } else if (document.getElementById('createCardOverlay')?.classList.contains('open')) {
-      closeCreateCard();
-    } else if (document.getElementById('commentsPopupOverlay')?.style.opacity === '1') {
-      closeCommentsPopup();
-    }
-  }
+  if (e.key === 'Escape' && document.getElementById('commentsPopupOverlay')?.style.opacity === '1') closeCommentsPopup();
 });
 
 /* Grid-mode completed detail toggle (legacy inline panels — no longer used in grid, kept for safety) */
