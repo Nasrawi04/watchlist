@@ -91,14 +91,8 @@ const MSSInfo = (() => {
         </div>
         <div class="mss-info-actions" id="mssInfoPopupActions"></div>
       </div>`;
-    el.addEventListener('click', ev => { if (ev.target === el) close(); });
+    MSSDialog.bind(el, close);
     document.body.appendChild(el);
-    document.addEventListener('keydown', ev => {
-      if (ev.key !== 'Escape') return;
-      if (document.getElementById('confirmOverlay')?.classList.contains('open')) return;
-      if (document.getElementById('catDiscoverOverlay')?.classList.contains('open')) { closePicker(); return; }
-      if (el.classList.contains('open')) close();
-    });
   }
 
   /* ── Pieces ── */
@@ -313,9 +307,8 @@ const MSSInfo = (() => {
     // Your own entry is already "yours" — no library lookup needed
     const ownKnown = opts.owner ? it.entry : undefined;
     render(it, null, ownKnown, user, !!it.tmdb_id);
-    document.getElementById('mssInfoOverlay').classList.add('open');
+    MSSDialog.open(document.getElementById('mssInfoOverlay'));
     document.getElementById('mssInfoCard').style.transform = 'translateY(0)';
-    document.body.style.overflow = 'hidden';
 
     const [d, own] = await Promise.all([
       it.tmdb_id ? fetchDetails(it).catch(() => null) : Promise.resolve(null),
@@ -331,10 +324,9 @@ const MSSInfo = (() => {
 
   function close() {
     const ov = document.getElementById('mssInfoOverlay');
-    if (!ov || !ov.classList.contains('open')) return;
-    ov.classList.remove('open');
+    if (!MSSDialog.isOpen(ov)) return;
+    MSSDialog.close(ov);
     document.getElementById('mssInfoCard').style.transform = '';
-    document.body.style.overflow = '';
     token++;
   }
 
@@ -440,9 +432,8 @@ const MSSInfo = (() => {
           <div class="cat-disc-sub" id="catDiscoverSub"></div>
           <div id="catDiscoverList"></div>
         </div>`;
-      ov.addEventListener('click', ev => { if (ev.target === ov) closePicker(); });
+      MSSDialog.bind(ov, closePicker);
       document.body.appendChild(ov);
-      inject();                                // registers the Esc handler
     }
     document.getElementById('catDiscoverSub').textContent = `Matches for "${entryTitle}" — pick the right one`;
     const list = document.getElementById('catDiscoverList');
@@ -457,15 +448,9 @@ const MSSInfo = (() => {
         </span>
       </button>`;
     }).join('') : `<div class="cat-disc-none">No matches found on TMDB.</div>`;
-    ov.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    MSSDialog.open(ov);
   }
-  function closePicker() {
-    const ov = document.getElementById('catDiscoverOverlay');
-    if (!ov) return;
-    ov.classList.remove('open');
-    document.body.style.overflow = '';
-  }
+  function closePicker() { MSSDialog.close(document.getElementById('catDiscoverOverlay')); }
 
   /* ── Shape adapters ── */
   function fromDiscover(x) {
