@@ -85,7 +85,6 @@
 .lv-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .lv-list-title-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; min-width:0; }
 .lv-list-title { font-family:var(--serif); font-size:18px; font-weight:500; color:var(--text); }
-.lv-list-year { font-family:var(--bebas); font-size:16px; letter-spacing:.3px; color:var(--text-3); font-weight:400; flex-shrink:0; }
 .lv-list-badges-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 /* Own MSS score's dedicated column — a real standout element, not a
    line sharing space with year/genre text the way it used to. */
@@ -112,7 +111,6 @@
   .lv-list-row { grid-template-columns:64px 1fr auto; gap:14px; padding:10px 16px 10px 10px; }
   .lv-list-poster { width:64px; height:92px; }
   .lv-list-title { font-size:15px; }
-  .lv-list-year { font-size:12px; }
 }
 /* ── v572: plain page layout (like Discover's See All) ── */
 .lv-owner-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:.9rem; }
@@ -353,7 +351,7 @@ function _lvListRowHTML(e, rank) {
     <div style="min-width:0">
       <div class="lv-list-title-row">
         <div class="lv-list-title">${_lvEsc(e.title)}</div>
-        ${e.year ? `<span class="lv-list-year">${_lvEsc(e.year)}</span>` : ''}
+        ${e.year ? `<span class="title-year-inline">${_lvEsc(e.year)}</span>` : ''}
       </div>
       ${typeLabel ? `<div class="lv-list-badges-row"><span class="${_lvTypeCls(e)}">${typeLabel}</span></div>` : ''}
     </div>
