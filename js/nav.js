@@ -280,11 +280,10 @@ function injectChrome() {
   const modalEl = document.createElement('div');
   modalEl.className = 'modal-overlay';
   modalEl.id = 'addModal';
-  modalEl.onclick = closeModalIfBg;
   modalEl.innerHTML = `
-    <div class="modal">
-      <div class="modal-title">Add New Entry</div>
-      <div class="modal-row"><div class="modal-label">Title</div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
+      <div class="modal-title" id="addModalTitle">Add New Entry</div>
+      <div class="modal-row"><label class="modal-label" for="mTitle">Title</label>
         <div style="position:relative">
           <input class="modal-input" id="mTitle" placeholder="Enter title…" autocomplete="off">
         </div></div>
@@ -308,8 +307,8 @@ function injectChrome() {
         <input class="modal-input" id="mYear" type="number" min="1900" max="2030" placeholder="e.g. 2024"></div>
       <div id="mValidationMsg" style="display:none;font-size:12px;color:#e0a45c;background:rgba(224,164,92,0.1);border:0.5px solid rgba(224,164,92,0.3);border-radius:var(--radius-sm);padding:8px 12px;margin-top:4px;">Please select a category and status before adding.</div>
       <div class="modal-actions">
-        <button class="btn-modal-cancel" onclick="closeModal()">Cancel</button>
-        <button class="btn-modal-save" id="mSaveBtn" onclick="modalQuickCreate()" disabled>Add &amp; Edit →</button>
+        <button type="button" class="btn-modal-cancel" onclick="closeModal()">Cancel</button>
+        <button type="button" class="btn-modal-save" id="mSaveBtn" onclick="modalQuickCreate()" disabled>Add &amp; Edit →</button>
       </div>
     </div>`;
 
@@ -338,6 +337,7 @@ function injectChrome() {
   document.body.insertBefore(toastEl,    first);
   document.body.insertBefore(confirmEl,  first);
   document.body.insertBefore(modalEl,    first);
+  MSSDialog.bind(modalEl, closeModal);
 
   // Init TMDB search now that #mTitle exists in DOM
   setTimeout(_initTMDBOnModal, 300);
@@ -614,23 +614,16 @@ function _resetAddModalDropdowns() {
   _updateAddModalValidation();
 }
 
-let _scrollY = 0;
 function openAddModal(cat) {
   getCurrentUser().then(user => {
     if (!user) { window.location.href = 'login.html'; return; }
+    const modal = document.getElementById('addModal');
+    if (!modal) return;
     _resetAddModalDropdowns();
     const m = document.getElementById('mCat');
     if (cat && m) _selSelectDD('mCat', cat);
-    document.getElementById('addModal')?.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    _scrollY = window.scrollY;
-    document.body.style.top = '-' + _scrollY + 'px';
-    setTimeout(() => {
-      document.getElementById('mTitle')?.focus();
-    }, 150);
     document.getElementById('mobileNav')?.classList.remove('open');
+    MSSDialog.open(modal, { focus: '#mTitle' });
   });
 }
 
@@ -649,18 +642,7 @@ function _initTMDBOnModal() {
   }, { connected: true });
 }
 
-function closeModal() {
-  document.getElementById('addModal')?.classList.remove('open');
-  document.body.style.overflow = '';
-  document.body.style.position = '';
-  document.body.style.width = '';
-  document.body.style.top = '';
-  window.scrollTo(0, _scrollY || 0);
-}
-
-function closeModalIfBg(e) {
-  if (e.target === document.getElementById('addModal')) closeModal();
-}
+function closeModal() { MSSDialog.close(document.getElementById('addModal')); }
 
 /* ── Quick create from modal ── */
 async function modalQuickCreate() {
@@ -731,7 +713,11 @@ async function modalQuickCreate() {
     if (e.message && e.message.startsWith('DUPLICATE:')) {
       const dupe = JSON.parse(e.message.slice(10));
       const catLabel = (CAT_META[dupe.cat] && CAT_META[dupe.cat].label) || dupe.cat;
-      _showDuplicateWarning(title, catLabel);
+      showConfirm({
+        title: 'This Entry Already Exists',
+        message: `"${title}" is already in your library as a ${catLabel}. Close this to update your existing entry instead.`,
+        confirmText: 'Got it', cancelText: null, danger: false,
+      });
     } else {
       showToast('Error creating entry.', 'err');
       console.error(e);
@@ -742,7 +728,6 @@ async function modalQuickCreate() {
 /* Keyboard shortcuts */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    if (document.getElementById('addModal')?.classList.contains('open')) closeModal();
     document.getElementById('mobileNav')?.classList.remove('open');
     document.getElementById('mobileSearchBar')?.classList.remove('open');
   }
@@ -1737,36 +1722,6 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
       _closeDrop();
     }
   });
-}
-function _showDuplicateWarning(title, catLabel) {
-  const old = document.getElementById('dupWarnOverlay');
-  if (old) old.remove();
-  const el = document.createElement('div');
-  el.id = 'dupWarnOverlay';
-  el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity .2s;pointer-events:none;';
-  el.innerHTML = '<div id="dupWarnCard" style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:97%;max-width:440px;padding:28px 28px 24px;box-sizing:border-box;transform:translateY(16px);transition:transform .25s cubic-bezier(.4,0,.2,1);text-align:center;">'
-    + '<div style="color:var(--olive-light);margin-bottom:14px;opacity:.7;">' + icon('x', 32) + '</div>'
-    + '<h2 style="font-family:var(--serif);font-size:22px;font-weight:500;margin-bottom:10px;color:var(--text);">This Entry Already Exists</h2>'
-    + '<p style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:6px;"><strong style="color:var(--text);">' + title + '</strong> is already in your library as a <strong style="color:var(--text);">' + catLabel + '</strong>.</p>'
-    + '<p style="font-size:13px;color:var(--text-3);margin-bottom:24px;">Close this to update your existing entry instead.</p>'
-    + '<button onclick="_closeDupWarn()" style="padding:10px 28px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">Got it</button>'
-    + '</div>';
-  el.addEventListener('click', function(ev) { if (ev.target === el) _closeDupWarn(); });
-  document.body.appendChild(el);
-  document.body.style.overflow = 'hidden';
-  requestAnimationFrame(function() {
-    el.style.opacity = '1'; el.style.pointerEvents = 'auto';
-    document.getElementById('dupWarnCard').style.transform = 'translateY(0)';
-  });
-  document.addEventListener('keydown', function esc(e) {
-    if (e.key === 'Escape') { _closeDupWarn(); document.removeEventListener('keydown', esc); }
-  }, { once: true });
-}
-
-function _closeDupWarn() {
-  const el = document.getElementById('dupWarnOverlay');
-  if (el) el.remove();
-  document.body.style.overflow = '';
 }
 /*
  * fitTitleYear — measures every ".title-year-row" on the page (or
