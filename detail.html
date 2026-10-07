@@ -170,124 +170,6 @@
 .btn-comments:hover{border-color:var(--olive-light);color:var(--text);}
 .btn-comments:active{transform:translate(2px,2px);box-shadow:none;}
 
-/* ── Comments modal overlay ── */
-.det-comments-overlay{
-  position:fixed;inset:0;z-index:1100;
-  background:rgba(0,0,0,0.55);
-  display:flex;align-items:flex-end;justify-content:center;
-  opacity:0;pointer-events:none;
-  transition:opacity .22s ease;
-}
-@media(min-width:600px){
-  .det-comments-overlay{align-items:center;}
-}
-.det-comments-overlay.open{opacity:1;pointer-events:auto;}
-
-/* ── Comments modal card ── */
-.det-comments-card{
-  width:100%;max-width:520px;
-  background:var(--bg-2);
-  border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);
-  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
-  display:flex;flex-direction:column;
-  max-height:80vh;
-  transform:translateY(24px);
-  transition:transform .25s cubic-bezier(0.4,0,0.2,1);
-}
-@media(min-width:600px){
-  .det-comments-card{border-radius:var(--radius-lg);transform:scale(.96);}
-  .det-comments-overlay.open .det-comments-card{transform:scale(1);}
-}
-.det-comments-overlay.open .det-comments-card{transform:translateY(0);}
-
-/* Header */
-.det-comments-header{
-  display:flex;align-items:flex-start;flex-wrap:wrap;gap:6px;
-  padding:18px 20px 14px;
-  border-bottom:0.5px solid var(--border);
-  flex-shrink:0;
-}
-.det-comments-title{
-  display:flex;align-items:center;gap:8px;
-  font-family:var(--serif);font-size:20px;font-weight:500;color:var(--text);
-  flex:1;min-width:0;
-}
-.det-comments-count{
-  font-family:var(--sans);font-size:11px;color:var(--text-3);
-  background:var(--bg-3);border:0.5px solid var(--border);
-  border-radius:20px;padding:2px 8px;margin-left:2px;
-}
-.det-comments-entry-name{
-  width:100%;font-size:12px;color:var(--text-3);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  padding-top:2px;
-}
-.det-comments-close{
-  background:none;border:none;color:var(--text-3);cursor:pointer;
-  font-size:18px;line-height:1;padding:0 0 0 8px;flex-shrink:0;
-  transition:color .15s;
-}
-.det-comments-close:hover{color:var(--text);}
-
-/* List */
-.det-comments-list{
-  flex:1;overflow-y:auto;overscroll-behavior-y:contain;
-  padding:14px 20px;
-  display:flex;flex-direction:column;gap:10px;
-}
-.det-comment-item{
-  background:var(--card);
-  border:0.5px solid var(--border);
-  border-radius:var(--radius-sm);
-  padding:12px 14px;
-}
-.det-comment-author{font-size:11px;font-weight:600;color:var(--olive-light);margin-bottom:4px;}
-.det-comment-text{font-size:13px;color:var(--text);line-height:1.55;word-break:break-word;}
-.det-comment-meta{font-size:10px;color:var(--text-3);margin-top:6px;display:flex;align-items:center;gap:10px;}
-.det-comment-del{
-  background:none;border:none;color:var(--text-3);cursor:pointer;
-  font-size:10px;padding:0;font-family:var(--sans);transition:color .15s;
-}
-.det-comment-del:hover{color:#f87171;}
-.det-comments-empty{font-size:13px;color:var(--text-3);text-align:center;padding:2rem 0;}
-
-/* Form */
-.det-comments-form{
-  display:flex;gap:8px;
-  padding:12px 20px 16px;
-  border-top:0.5px solid var(--border);
-  flex-shrink:0;
-}
-.det-comments-input{
-  flex:1;height:40px;
-  border-radius:var(--radius-sm);
-  border:1.5px solid var(--border-2);
-  background:var(--bg-3);
-  color:var(--text);font-size:13px;
-  padding:0 12px;outline:none;
-  transition:border-color .18s,box-shadow .18s;
-}
-.det-comments-input::placeholder{color:var(--text-3);}
-.det-comments-input:focus{border-color:var(--olive-light);box-shadow:0 0 0 2px rgba(126,184,108,.15);}
-.det-comments-send{
-  height:40px;padding:0 16px;
-  border-radius:var(--radius-sm);
-  border:1.5px solid var(--olive-light);
-  background:var(--olive);
-  color:#fff;font-size:13px;font-weight:600;font-family:var(--sans);
-  cursor:pointer;white-space:nowrap;
-  transition:background .15s,transform .12s,box-shadow .12s;
-  box-shadow:2px 2px 0 var(--olive-2);
-}
-.det-comments-send:hover{background:var(--olive-2);}
-.det-comments-send:active{transform:translate(2px,2px);box-shadow:none;}
-
-/* Light mode tweaks */
-[data-theme="light"] .det-comments-card{background:var(--card);}
-[data-theme="light"] .det-comments-input{background:var(--bg-2);}
-[data-theme="light"] .det-comment-item{background:var(--bg-2);}
-
 /* ── Rating steppers ── */
 .rating-stepper-grid{display:flex;flex-direction:column;gap:8px}
 .rating-stepper-item{
@@ -1055,26 +937,6 @@
 
   </div><!-- /detailLayout -->
 
-  <!-- ═══ COMMENTS MODAL ═══ -->
-  <div class="det-comments-overlay" id="detCommentsOverlay" onclick="if(event.target===this)closeCommentsModal()">
-    <div class="det-comments-card" id="detCommentsCard">
-      <div class="det-comments-header">
-        <div class="det-comments-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:var(--olive-light);flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <span>Comments</span>
-          <span class="det-comments-count" id="detCommentsCount"></span>
-        </div>
-        <div class="det-comments-entry-name" id="detCommentsEntryName"></div>
-        <button class="det-comments-close" onclick="closeCommentsModal()">✕</button>
-      </div>
-      <div class="det-comments-list" id="detCommentList"></div>
-      <div class="det-comments-form">
-        <input class="det-comments-input" id="detCommentInput" placeholder="Write a comment…"
-               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitDetComment()}">
-        <button class="det-comments-send" onclick="submitDetComment()">Send</button>
-      </div>
-    </div>
-  </div>
 
 </div>
 
@@ -1101,6 +963,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
+<script src="js/comments.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
 <script src="js/nav.js"></script>
@@ -2411,165 +2274,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (_detId) {
       const btn = document.getElementById('dCommentsBtn');
       if (btn) btn.style.display = 'inline-flex';
-      _refreshCommentsBtnCount();
+      MSSComments.count(_detId).then(_setCommentsBtnCount);
     }
   });
 });
 
-/* ── Comments modal ── */
-function _escHTML(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
+/* ── Comments: the shared MSSComments popup (comments.js) ── */
 function openCommentsModal() {
-  const overlay = document.getElementById('detCommentsOverlay');
-  if (!overlay) return;
-  // Set entry name in header
-  const title = document.getElementById('dTitle')?.value?.trim() || 'this entry';
-  document.getElementById('detCommentsEntryName').textContent = title;
-  overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
-  loadDetComments();
-  setTimeout(() => document.getElementById('detCommentInput')?.focus(), 300);
+  if (!_detId) return;
+  const title = document.getElementById('dTitle')?.value?.trim();
+  MSSComments.open({ ...(_detEntry || {}), id: _detId, title: title || _detEntry?.title || 'this entry' },
+    { onChange: _setCommentsBtnCount });
+}
+function _setCommentsBtnCount(n) {
+  const label = document.getElementById('dCommentsBtnLabel');
+  if (label) label.textContent = n ? `Comments (${n})` : 'Comments';
 }
 
-function closeCommentsModal() {
-  const overlay = document.getElementById('detCommentsOverlay');
-  if (!overlay) return;
-  overlay.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-// Close on Escape — whichever overlay is actually open, not just Comments
+// Close the completion popup on Escape
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  const commentsOv = document.getElementById('detCommentsOverlay');
-  if (commentsOv && commentsOv.classList.contains('open')) { closeCommentsModal(); return; }
   const completionOv = document.getElementById('completionOverlay');
-  if (completionOv && completionOv.classList.contains('open')) { closeCompletionPopup(); return; }
+  if (completionOv && completionOv.classList.contains('open')) closeCompletionPopup();
 });
-
-async function loadDetComments() {
-  const list = document.getElementById('detCommentList');
-  const countEl = document.getElementById('detCommentsCount');
-  if (!list || !_detId) return;
-
-  list.innerHTML = '<div class="det-comments-empty">Loading…</div>';
-
-  const comments = await getComments(_detId);
-
-  if (!comments.length) {
-    list.innerHTML = '<div class="det-comments-empty">No comments yet — be the first!</div>';
-    if (countEl) countEl.textContent = '';
-    return;
-  }
-
-  const me = _detUser?.id;
-  const topLevel = comments.filter(c => !c.reply_to);
-  const replies  = comments.filter(c => c.reply_to);
-  if (countEl) countEl.textContent = `${comments.length}`;
-  list.innerHTML = topLevel.map(c => {
-    const uname = _escHTML(c.profiles?.username || 'Unknown');
-    const date  = new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    const reps  = replies.filter(r => r.reply_to === c.id);
-    const repHTML = reps.map(r => {
-      const runame = _escHTML(r.profiles?.username || 'Unknown');
-      const rdate  = new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-      return `<div class="det-reply-item" id="cm-${r.id}">
-        <div class="det-reply-author">@${runame}</div>
-        <div class="det-reply-text">${_escHTML(r.content)}</div>
-        <div class="det-reply-meta">
-          <span>${rdate}</span>
-          ${r.author_id === me ? `<button class="det-comment-del" onclick="removeDetComment('${r.id}')">delete</button>` : ''}
-        </div>
-      </div>`;
-    }).join('');
-    return `<div class="det-comment-item" id="cm-${c.id}">
-      <div class="det-comment-author">@${uname}</div>
-      <div class="det-comment-text">${_escHTML(c.content)}</div>
-      <div class="det-comment-meta">
-        <span>${date}</span>
-        <button class="det-comment-reply-btn" onclick="detReply('${c.id}','${uname}')">Reply</button>
-        ${c.author_id === me ? `<button class="det-comment-del" onclick="removeDetComment('${c.id}')">delete</button>` : ''}
-      </div>
-      ${repHTML}
-      <div id="det-reply-form-${c.id}"></div>
-    </div>`;
-  }).join('');
-}
-
-let _detReplyFor = null;
-
-function detReply(commentId, username) {
-  if (_detReplyFor) { const el = document.getElementById('det-reply-form-' + _detReplyFor); if(el) el.innerHTML = ''; }
-  if (_detReplyFor === commentId) { _detReplyFor = null; return; }
-  _detReplyFor = commentId;
-  const box = document.getElementById('det-reply-form-' + commentId);
-  if (!box) return;
-  box.innerHTML = `<div class="det-reply-form">
-    <input class="det-reply-input" id="det-ri-${commentId}" maxlength="1000" value="@${escHTML(username)} " placeholder="Reply to @${escHTML(username)}…"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();detPostReply('${commentId}')}">
-    <button class="det-reply-send" onclick="detPostReply('${commentId}')">Send</button>
-    <button class="det-comment-del" onclick="(function(){const el=document.getElementById('det-reply-form-${commentId}');if(el)el.innerHTML='';_detReplyFor=null;})()" style="margin-left:4px;">✕</button>
-  </div>`;
-  setTimeout(() => document.getElementById('det-ri-' + commentId)?.focus(), 50);
-}
-
-async function detPostReply(commentId) {
-  const input = document.getElementById('det-ri-' + commentId);
-  const content = input?.value?.trim();
-  if (!content) return;
-  input.disabled = true;
-  try {
-    await addComment(_detId, content, commentId);
-    const box = document.getElementById('det-reply-form-' + commentId);
-    if (box) box.innerHTML = '';
-    _detReplyFor = null;
-    await loadDetComments();
-    _refreshCommentsBtnCount();
-  } catch(e) {
-    showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Could not post reply.', 'err');
-    if (input) input.disabled = false;
-  }
-}
-
-async function submitDetComment() {
-  const input   = document.getElementById('detCommentInput');
-  const content = input?.value?.trim();
-  if (!content || !_detId) return;
-  input.disabled = true;
-  try {
-    await addComment(_detId, content);
-    input.value = '';
-    await loadDetComments();
-    // Update button label count
-    _refreshCommentsBtnCount();
-  } catch(e) {
-    showToast('Could not post comment.', 'err');
-    console.error(e);
-  }
-  input.disabled = false;
-  input.focus();
-}
-
-async function removeDetComment(commentId) {
-  try {
-    await deleteComment(commentId);
-    await loadDetComments();
-    _refreshCommentsBtnCount();
-  } catch(e) {
-    showToast('Could not delete comment.', 'err');
-  }
-}
-
-async function _refreshCommentsBtnCount() {
-  if (!_detId) return;
-  const comments = await getComments(_detId);
-  const label = document.getElementById('dCommentsBtnLabel');
-  if (label) label.textContent = comments.length ? `Comments (${comments.length})` : 'Comments';
-  const countEl = document.getElementById('detCommentsCount');
-  if (countEl) countEl.textContent = comments.length ? `${comments.length}` : '';
-}
 
 // Reads an integer from an input and clamps it into [min, max] — guards
 // against negative episode/season numbers, an out-of-range runtime
