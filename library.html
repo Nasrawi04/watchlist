@@ -37,13 +37,6 @@
 
 </div>
 
-<script>
-function _trimNotes(text) {
-  if (!text) return '';
-  var words = text.trim().split(/\s+/);
-  return words.length > 150 ? words.slice(0, 150).join(' ') + '…' : text;
-}
-</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
@@ -55,6 +48,7 @@ function _trimNotes(text) {
 <script src="js/info-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
 <script src="js/rating-popup.js"></script>
+<script src="js/comments.js"></script>
 <script src="js/note-popup.js"></script>
 <script>
 /* ── State ── */
@@ -98,159 +92,15 @@ function profOpenPopup(id) {
   if (e) _profViews(e);
 }
 
-/* ══════════════════════════════════════════
-   COMMENTS SYSTEM — same as completed page
-════════════════════════════════════════════ */
-function _injectLibCommentsPopup(prefix) {
-  var id = prefix+'LccOverlay';
-  if (document.getElementById(id)) return;
-  var el = document.createElement('div');
-  el.className = 'lcc-overlay';
-  el.id = id;
-  el.innerHTML = '<div class="lcc-card" id="'+prefix+'LccCard">'    +'<div style="display:flex;align-items:flex-start;gap:16px;padding:20px;border-bottom:0.5px solid var(--border);flex-shrink:0;">'+'<div id="'+prefix+'LccPoster" style="width:56px;height:76px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);"></div>'+'<div style="flex:1;min-width:0;">'+'<div id="'+prefix+'LccName" style="font-family:var(--serif);font-size:18px;font-weight:500;line-height:1.2;margin-bottom:4px;color:var(--text);"></div>'+'<div id="'+prefix+'LccMeta" style="font-size:11px;color:var(--text-3);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px;"></div>'+'<div id="'+prefix+'LccCount" style="font-size:12px;color:var(--olive-light);font-weight:500;display:none;"></div>'+'</div>'+'<button class="lcc-close" onclick="closeLibComments(\''+prefix+'\')">✕</button>'+'</div>'    +'<div class="lcc-list" id="'+prefix+'LccList"><div class="lcc-empty">Loading…</div></div>'    +'<div class="lcc-form"><input class="lcc-input" id="'+prefix+'LccInput" placeholder="Write a comment…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();postLibComment(\''+prefix+'\')}"><button class="lcc-send" onclick="postLibComment(\''+prefix+'\')">Send</button></div>'    +'</div>';
-  el.addEventListener('click', function(e){if(e.target===el)closeLibComments(prefix);});
-  document.body.appendChild(el);
-}
 
 
-function _libCcBtn(prefix, entryId) {
-  var emap = prefix==='prof' ? '_profEntryMap' : '_pvEntryMapPv';
-  return '<button class="cc-strip" style="margin-top:0;display:inline-flex;width:auto;align-self:flex-start;" '
-    + 'onclick="event.stopPropagation();openLibComments(\'' + prefix + '\',\'' + entryId + '\',' + emap + ')">'
-    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' + ' <span>Comments</span></button>';
-}
-var _libCmtEntryId = {};
-var _libCmtEntryMap = {};
-var _libReplyFor = {};
 
-function openLibComments(prefix, entryId, entryMap) {
-  _injectLibCommentsPopup(prefix);
-  _libCmtEntryId[prefix] = entryId;
-  if (entryMap) _libCmtEntryMap[prefix] = entryMap;
-  var e = _libCmtEntryMap[prefix] && _libCmtEntryMap[prefix][entryId];
-  var nameEl = document.getElementById(prefix+'LccName');
-  if (e && nameEl) nameEl.textContent = e.title;
-  var posterEl = document.getElementById(prefix+'LccPoster');
-  if (e && posterEl) posterEl.innerHTML = posterHTML(e,'big');
-  var metaEl = document.getElementById(prefix+'LccMeta');
-  if (e && metaEl) {
-    var chips = [];
-    if (CAT_META && CAT_META[e.cat] && CAT_META[e.cat].label) chips.push(CAT_META[e.cat].label);
-    if (e.genres) e.genres.slice(0,3).forEach(function(g){chips.push(g);});
-    metaEl.innerHTML = chips.map(function(m){
-      return '<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:12px;padding:1px 6px;font-size:9px;letter-spacing:.3px">'+m+'</span>';
-    }).join('');
-  }
-  var inp = document.getElementById(prefix+'LccInput');
-  if (inp) inp.value = '';
-  loadLibComments(prefix, entryId);
-  var ov = document.getElementById(prefix+'LccOverlay');
-  if (ov) { ov.classList.add('open'); document.body.style.overflow = 'hidden'; }
-}
 
-function closeLibComments(prefix) {
-  var ov = document.getElementById(prefix+'LccOverlay');
-  if (!ov) return;
-  ov.classList.remove('open');
-  document.body.style.overflow = '';
-  _libCmtEntryId[prefix] = null;
-}
 
-async function loadLibComments(prefix, entryId) {
-  var body = document.getElementById(prefix+'LccList');
-  var count = document.getElementById(prefix+'LccCount');
-  if (!body) return;
-  try {
-    var comments = await getComments(entryId);
-    var u = await getCurrentUser();
-    var me = u && u.id;
-    var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-    if (!comments.length) {
-      body.innerHTML = '<div class="lcc-empty">No comments yet — be the first!</div>';
-      if (count) count.style.display = 'none';
-      return;
-    }
-    var topC  = comments.filter(function(c){return !c.reply_to;});
-    var repsC = comments.filter(function(c){return c.reply_to;});
-    body.innerHTML = topC.map(function(c) {
-      var uname = esc((c.profiles&&c.profiles.username)||'Unknown');
-      var date  = new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-      var reps  = repsC.filter(function(r){return r.reply_to===c.id;});
-      var repHTML = reps.map(function(r){
-        var runame = esc((r.profiles&&r.profiles.username)||'Unknown');
-        var rdate  = new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-        return '<div class="det-reply-item" id="lcm-'+r.id+'">'
-          +'<div class="det-reply-author" style="color:var(--olive-light);">@'+runame+'</div>'
-          +'<div class="det-reply-text">'+esc(r.content).replace(/(@[\w]+)/g,'<span style="color:var(--olive-light);font-weight:600">$1</span>')+'</div>'
-          +'<div class="det-reply-meta"><span>'+rdate+'</span>'
-          +(r.author_id===me?'<button class="cc-del" onclick="deleteLibComment(\''+prefix+'\',\''+r.id+'\',\''+entryId+'\')">delete</button>':'')
-          +'</div></div>';
-      }).join('');
-      return '<div class="lcc-comment" id="lcm-'+c.id+'">'
-        
-        +'<div class="lcc-comment-body">'
-        +'<div class="lcc-author" style="color:var(--olive-light);">@'+uname+'</div>'
-        +'<div class="lcc-text">'+esc(c.content)+'</div>'
-        +'<div class="lcc-meta"><span>'+date+'</span>'
-        +'<button class="det-comment-reply-btn" onclick="libReply(\''+prefix+'\',\''+c.id+'\',\''+uname+'\',\''+entryId+'\')">Reply</button>'
-        +(c.author_id===me?'<button class="cc-del" onclick="deleteLibComment(\''+prefix+'\',\''+c.id+'\',\''+entryId+'\')">delete</button>':'')
-        +'</div>'+repHTML+'<div id="lcrep-'+c.id+'"></div>'
-        +'</div></div>';
-    }).join('');
-    if (count) { count.textContent = comments.length + ' comment' + (comments.length !== 1 ? 's' : ''); count.style.display = 'block'; }
-  } catch(err) { showToast('Could not load comments.','err'); }
-}
 
-async function postLibComment(prefix) {
-  var input = document.getElementById(prefix+'LccInput');
-  var content = input && input.value.trim();
-  var entryId = _libCmtEntryId[prefix];
-  if (!content || !entryId) return;
-  try {
-    input.disabled = true;
-    await addComment(entryId, content);
-    input.value = '';
-    await loadLibComments(prefix, entryId);
-  } catch(err) { showToast('Could not post comment.','err'); }
-  finally { if(input){input.disabled=false;input.focus();} }
-}
 
-async function deleteLibComment(prefix, commentId, entryId) {
-  try {
-    await deleteComment(commentId);
-    await loadLibComments(prefix, entryId);
-  } catch(err) { showToast('Could not delete.','err'); }
-}
 
-function libReply(prefix, commentId, username, entryId) {
-  var prev = _libReplyFor[prefix];
-  if (prev) { var pe=document.getElementById('lcrep-'+prev); if(pe) pe.innerHTML=''; }
-  if (prev===commentId) { _libReplyFor[prefix]=null; return; }
-  _libReplyFor[prefix] = commentId;
-  var box = document.getElementById('lcrep-'+commentId);
-  if (!box) return;
-  box.innerHTML = '<div class="det-reply-form">'
-    +'<input class="det-reply-input" id="lri-'+commentId+'" value="@'+username+' " placeholder="Reply..."'
-    +' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();postLibReply(\''+prefix+'\',\''+entryId+'\',\''+commentId+'\')}">'
-    +'<button class="det-reply-send" onclick="postLibReply(\''+prefix+'\',\''+entryId+'\',\''+commentId+'\')">Reply</button>'
-    +'<button class="det-comment-del" onclick="document.getElementById(\'lcrep-'+commentId+'\').innerHTML=\'\';_libReplyFor[\''+prefix+'\']=null" style="margin-left:4px;">&#x2715;</button>'
-    +'</div>';
-  var ri = document.getElementById('lri-'+commentId);
-  if (ri) ri.focus();
-}
 
-async function postLibReply(prefix, entryId, commentId) {
-  var input = document.getElementById('lri-'+commentId);
-  var content = input && input.value.trim();
-  if (!content) return;
-  input.disabled = true;
-  try {
-    await addComment(entryId, content, commentId);
-    document.getElementById('lcrep-'+commentId).innerHTML = '';
-    _libReplyFor[prefix] = null;
-    await loadLibComments(prefix, entryId);
-  } catch(err) { showToast('Could not post reply.','err'); if(input) input.disabled=false; }
-}
 
 
 // After a delete from either popup: drop it from this page and re-render
