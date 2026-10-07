@@ -37,19 +37,13 @@ const MSSDash = (() => {
   function cardHTML(e, sec, i) {
     const score = liveScore(e) != null ? Number(liveScore(e)) : null;
     const edit = editing === sec.key;
-    const rankCls = i === 0 ? 'cg-rank-1' : i === 1 ? 'cg-rank-2' : i === 2 ? 'cg-rank-3' : 'cg-rank-other';
-    return `<div class="q-card dash-card${edit ? ' dash-editing' : ''}" data-key="${sec.key}" data-idx="${i}" data-id="${esc(e.id)}"
-        ${edit ? `onpointerdown="MSSDash._down(event, this)"` : ''}
-        onclick="MSSDash._tap(event, ${attrJSON(sec.key)}, ${i})">
-      <div class="q-poster" style="position:relative">${posterHTML(e, 'big')}<div class="q-poster-overlay"></div>
-        <div class="cg-rank-badge ${rankCls}">${i + 1}</div>
-        ${edit ? `<button class="dash-remove" onclick="event.stopPropagation();MSSDash._remove(${attrJSON(sec.key)}, ${i})" onpointerdown="event.stopPropagation()" aria-label="Remove">${icon('x', 13)}</button>` : ''}
-      </div>
-      <div class="q-info dash-info">
-        <div class="title-year-row"><div class="q-title">${esc(e.title)}</div>${e.year ? `<span class="title-year-inline">${esc(String(e.year).slice(0, 4))}</span>` : ''}</div>
-        ${score != null ? `<div class="dash-score">★ ${score.toFixed(2)}</div>` : ''}
-      </div>
-    </div>`;
+    return MSSCard.poster({
+      cls: 'dash-card' + (edit ? ' dash-editing' : ''), infoCls: 'dash-info',
+      attrs: `data-key="${sec.key}" data-idx="${i}" data-id="${esc(e.id)}" ${edit ? `onpointerdown="MSSDash._down(event, this)"` : ''} onclick="MSSDash._tap(event, ${attrJSON(sec.key)}, ${i})"`,
+      title: e.title, year: e.year, posterHTML: posterHTML(e, 'big'), rank: i + 1,
+      overPoster: edit ? `<button type="button" class="dash-remove" onclick="event.stopPropagation();MSSDash._remove(${attrJSON(sec.key)}, ${i})" onpointerdown="event.stopPropagation()" aria-label="Remove">${icon('x', 13)}</button>` : '',
+      below: score != null ? `<div class="dash-score">★ ${score.toFixed(2)}</div>` : '',
+    });
   }
   function emptyHTML(sec, i) {
     return `<button type="button" class="dash-empty" onclick="MSSDash._pickFor(${attrJSON(sec.key)}, ${i})" aria-label="Add a title to ${esc(sec.title)}">
