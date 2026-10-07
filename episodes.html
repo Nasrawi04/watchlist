@@ -81,7 +81,7 @@
 .eg-panel-ep { cursor:pointer; text-align:right; }
 .eg-panel-ep:hover b { color:var(--olive-light); }
 /* episode popup */
-#egEpOverlay { position:fixed; inset:0; z-index:904; background:rgba(0,0,0,0.72); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
+#egEpOverlay { position:fixed; inset:0; z-index:904; background:var(--popup-backdrop); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
 #egEpOverlay.open { opacity:1; pointer-events:auto; }
 #egEpCard { width:100%; max-width:min(97vw, 560px); max-height:90dvh; overflow-y:auto; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg); position:relative; }
 .eg-pop-scores { display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:8px; margin:14px 0; }
@@ -120,7 +120,7 @@
 .eg-cmp-table th { font-family:var(--serif); font-size:13px; color:var(--text); }
 .eg-cmp-table td:not(:first-child) { font-family:var(--bebas); font-size:18px; color:var(--text); }
 .eg-cmp-table small { font-family:'Manrope',var(--sans); font-size:11px; color:var(--text-3); }
-.eg-overlay { position:fixed; inset:0; z-index:906; background:rgba(0,0,0,0.72); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
+.eg-overlay { position:fixed; inset:0; z-index:906; background:var(--popup-backdrop); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
 .eg-overlay.open { opacity:1; pointer-events:auto; }
 .eg-dialog { width:100%; max-width:440px; max-height:90dvh; display:flex; flex-direction:column; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg); }
 .eg-dialog .sf-body { overflow-y:auto; }
@@ -515,8 +515,9 @@ function egOpen(sn, n) {
   if (!ov) {
     ov = document.createElement('div'); ov.id = 'egEpOverlay';
     ov.innerHTML = '<div id="egEpCard" role="dialog" aria-modal="true" aria-labelledby="egEpTitle"></div>';
-    ov.addEventListener('click', ev => { if (ev.target === ov) egClose(); });
-    document.addEventListener('keydown', ev => { if (ov.classList.contains('open')) { if (ev.key === 'Escape') egClose(); if (ev.key === 'ArrowRight') egStep(1); if (ev.key === 'ArrowLeft') egStep(-1); } });
+    MSSDialog.bind(ov, egClose);
+    // ← / → step through episodes while this popup is the top one (Esc: MSSDialog)
+    document.addEventListener('keydown', ev => { if (MSSDialog.top() !== ov) return; if (ev.key === 'ArrowRight') egStep(1); if (ev.key === 'ArrowLeft') egStep(-1); });
     document.body.appendChild(ov);
   }
   ov.dataset.s = sn; ov.dataset.n = n;
@@ -543,9 +544,9 @@ function egOpen(sn, n) {
       <button type="button" class="popup-action-btn np-ghost" onclick="egClose()">Close</button>
       ${S.entry && !S.readOnly ? `<button type="button" class="popup-action-btn ep-save" onclick="egRate(${sn},${n})">${mine ? 'Edit Rating' : 'Rate'}</button>` : ''}
     </div>`;
-  ov.classList.add('open'); document.body.style.overflow = 'hidden';
+  MSSDialog.open(ov);
 }
-function egClose() { document.getElementById('egEpOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
+function egClose() { MSSDialog.close(document.getElementById('egEpOverlay')); }
 function egStep(d) {
   const ov = document.getElementById('egEpOverlay'); let sn = +ov.dataset.s, n = +ov.dataset.n + d;
   if (n < 1) { const i = vis().indexOf(sn); if (i > 0) { sn = vis()[i - 1]; n = (S.eps[sn] || []).length; } else return; }
@@ -563,8 +564,7 @@ function egSeasonPick() {
   let ov = document.getElementById('egSeasonOverlay');
   if (!ov) {
     ov = document.createElement('div'); ov.id = 'egSeasonOverlay'; ov.className = 'eg-overlay';
-    ov.addEventListener('click', ev => { if (ev.target === ov) egSeasonClose(); });
-    document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && ov.classList.contains('open')) egSeasonClose(); });
+    MSSDialog.bind(ov, egSeasonClose);
     document.body.appendChild(ov);
   }
   const all = !S.sel || !S.sel.size;
@@ -582,7 +582,7 @@ function egSeasonPick() {
       </div>
       <div class="sf-footer"><button type="button" class="sf-clear-btn" onclick="egSeasonSet(null)">Show all</button><button type="button" class="sf-apply-btn" onclick="egSeasonClose()">Done</button></div>
     </div>`;
-  ov.classList.add('open'); document.body.style.overflow = 'hidden';
+  MSSDialog.open(ov);
 }
 // Tap seasons to add / remove them; "All" clears the filter
 function egSeasonSet(sn) {
@@ -592,7 +592,7 @@ function egSeasonSet(sn) {
   draw(); egSeasonPick();
   const b = document.querySelector('#egSeasonOverlay .sf-body'); if (b) b.scrollTop = scroll;
 }
-function egSeasonClose() { document.getElementById('egSeasonOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
+function egSeasonClose() { MSSDialog.close(document.getElementById('egSeasonOverlay')); }
 
 /* ══ Compare two shows ══ */
 function showStats(X) {
@@ -660,7 +660,7 @@ function egComparePick() {
           <div class="sf-section-label" style="margin-top:1rem">Or compare this show with a friend</div>
           <div class="eg-pick-list" id="egPickFriends"><div class="sf-empty">Loading friends…</div></div>
         </div></div>`;
-    ov.addEventListener('click', ev => { if (ev.target === ov) egPickClose(); });
+    MSSDialog.bind(ov, egPickClose);
     document.body.appendChild(ov);
     let t = null;
     document.getElementById('egPickInput').addEventListener('input', ev => {
@@ -676,7 +676,7 @@ function egComparePick() {
       }, 300);
     });
   }
-  ov.classList.add('open'); document.body.style.overflow = 'hidden';
+  MSSDialog.open(ov);
   setTimeout(() => document.getElementById('egPickInput').focus(), 50);
   getFriendships(_egUser.id).then(async fs => {
     const box = document.getElementById('egPickFriends');
@@ -690,7 +690,7 @@ function egComparePick() {
         <span><b>${esc(p.display_name || p.username || 'Friend')}</b><small>@${esc(p.username || '')}</small></span></a>`; }).join('') : '<div class="sf-empty">None of your friends have rated an episode of this show yet.</div>';
   }).catch(() => { document.getElementById('egPickFriends').innerHTML = ''; });
 }
-function egPickClose() { document.getElementById('egPickOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
+function egPickClose() { MSSDialog.close(document.getElementById('egPickOverlay')); }
 
 /* ══ Export: SeriesGraph-style image (Square / Story / Wide · Light / Dark) + CSV ══ */
 const EX = { size: 'square', theme: 'dark', source: null };
@@ -699,7 +699,7 @@ function egExport() {
   let ov = document.getElementById('egExportOverlay');
   if (!ov) {
     ov = document.createElement('div'); ov.id = 'egExportOverlay'; ov.className = 'eg-overlay';
-    ov.addEventListener('click', ev => { if (ev.target === ov) egExportClose(); });
+    MSSDialog.bind(ov, egExportClose);
     document.body.appendChild(ov);
   }
   const seg = (k, opts) => `<div class="pn-toggle eg-ex-seg">${opts.map(([v, l]) => `<button type="button" class="pn-toggle-btn${EX[k] === v ? ' active' : ''}" onclick="EX.${k}='${v}';egExport()">${l}</button>`).join('')}</div>`;
@@ -715,9 +715,9 @@ function egExport() {
         ${Object.keys(S.mine).length ? `<button type="button" class="sf-clear-btn" onclick="egCSV()">${icon('download', 14)} Download CSV</button>` : ''}
         <button type="button" class="sf-apply-btn" onclick="egImage(this)">${icon('download', 14)} Download Image</button>
       </div></div>`;
-  ov.classList.add('open'); document.body.style.overflow = 'hidden';
+  MSSDialog.open(ov);
 }
-function egExportClose() { document.getElementById('egExportOverlay')?.classList.remove('open'); document.body.style.overflow = ''; }
+function egExportClose() { MSSDialog.close(document.getElementById('egExportOverlay')); }
 async function egImage(btn) {
   btn.disabled = true; btn.innerHTML = 'Drawing…';
   const viewSource = S.source;
