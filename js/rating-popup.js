@@ -70,19 +70,12 @@ const MSSRate = (() => {
         <div class="mr-cc" id="mssRateCc"></div>
         <div id="mssRatePopupActions"></div>
       </div>`;
-    el.addEventListener('click', ev => { if (ev.target === el) close(); });
+    MSSDialog.bind(el, close);
     document.body.appendChild(el);
     // Score box moves under the description once the card itself gets narrow
     const card = document.getElementById('mssRateCard');
     const apply = () => card.classList.toggle('cg-narrow', card.getBoundingClientRect().width <= 600);
     if (typeof ResizeObserver !== 'undefined') new ResizeObserver(apply).observe(card); else window.addEventListener('resize', apply);
-    document.addEventListener('keydown', ev => {
-      if (ev.key !== 'Escape' || !el.classList.contains('open')) return;
-      // Anything opened on top (confirm, card maker, comments) closes first
-      if (document.querySelector('#confirmOverlay.open, #createCardOverlay.open, #mssInfoOverlay.open, #cardLinkOverlay.open')) return;
-      if ([...document.querySelectorAll('[id$="ommentsOverlay"], #commentsPopupOverlay, #commentsPopupCompletedOverlay')].some(o => o.style.opacity === '1' || o.classList.contains('open'))) return;
-      close();
-    });
   }
 
   /* ── Body: breakdown, ratings, highlights, notes ── */
@@ -197,16 +190,14 @@ const MSSRate = (() => {
     $('mssRateCc').innerHTML = o.onComments
       ? `<button type="button" class="cc-strip" onclick="MSSRate._comments()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Comments</span></button>` : '';
     $('mssRatePopupActions').innerHTML = actionsHTML(e);
-    $('mssRateOverlay').classList.add('open');
+    MSSDialog.open($('mssRateOverlay'));
     $('mssRateCard').scrollTop = 0;
-    document.body.style.overflow = 'hidden';
   }
 
   function close() {
     const ov = document.getElementById('mssRateOverlay');
-    if (!ov || !ov.classList.contains('open')) return;
-    ov.classList.remove('open');
-    document.body.style.overflow = '';
+    if (!MSSDialog.isOpen(ov)) return;
+    MSSDialog.close(ov);
     current = null;
   }
 
