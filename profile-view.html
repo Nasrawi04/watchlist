@@ -485,13 +485,7 @@ function pvBuildEntryMap() {
 }
 
 
-/* ── Favorite Sections (profile-view) ── */
 
-document.addEventListener('keydown', function(e) {
-  if (e.key !== 'Escape') return;
-  if (document.getElementById('ratingFilterOverlay')?.classList.contains('open')) { closeRatingFilter(); return; }
-  // Notes tab popups (these didn't close on Esc)
-});
 // Their title: Info · Ratings · Note in one popup (MSSViews, info-popup.js) — opens on
 // Ratings once it's rated/watched, otherwise on Info. Add to Watchlist · Discover.
 function pvOpenPopup(id) {
