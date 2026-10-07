@@ -134,7 +134,7 @@ const MSSSchedule = (() => {
   async function renderDiscover(el) {
     const uid = window._navUser?.id;
     if (!el || !uid) return;
-    el.innerHTML = `<div class="ys-loading"><div class="spinner"></div></div>`;
+    el.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
     let items = [];
     try { items = await load(uid); } catch { el.innerHTML = ''; return; }
     if (!items.length) { el.innerHTML = ''; return; }
