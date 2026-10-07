@@ -216,10 +216,12 @@
 
 /* ── Episode detail popup ── */
 #epPopupOverlay {
-  position:fixed; inset:0; z-index:900; background:rgba(0,0,0,0.75); backdrop-filter:blur(10px);
-  display:none; align-items:center; justify-content:center; padding:24px; overflow-y:auto;
+  position:fixed; inset:0; z-index:900; background:var(--popup-backdrop);
+  display:flex; align-items:center; justify-content:center; padding:24px; overflow-y:auto;
+  opacity:0; pointer-events:none; transition:opacity 220ms var(--ease);
 }
-#epPopupOverlay.open { display:flex; animation:fadeIn .2s var(--ease); }
+#epPopupOverlay.open { opacity:1; pointer-events:auto; }
+@media(prefers-reduced-motion:reduce) { #epPopupOverlay { transition:none; } }
 .ep-popup-card {
   background:var(--bg-3); border:0.5px solid var(--border); border-radius:var(--radius-lg);
   max-width:640px; width:100%; overflow:hidden; animation:slideUp .25s var(--ease);
@@ -923,8 +925,8 @@ function _injectEpPopupOverlay() {
   if (document.getElementById('epPopupOverlay')) return;
   const el = document.createElement('div');
   el.id = 'epPopupOverlay';
-  el.innerHTML = `<div class="ep-popup-card" id="epPopupCard"></div>`;
-  el.addEventListener('click', e => { if (e.target === el) _closeEpisodePopup(); });
+  el.innerHTML = `<div class="ep-popup-card" id="epPopupCard" role="dialog" aria-modal="true" aria-labelledby="epPopupTitle"></div>`;
+  MSSDialog.bind(el, _closeEpisodePopup);
   document.body.appendChild(el);
 }
 
@@ -943,10 +945,10 @@ function _openEpisodePopup(index) {
     <div class="ep-popup-still">
       ${ep.still_path ? `<img src="${TMDB_IMG.replace('w185', 'w780')}${ep.still_path}" loading="lazy">` : ''}
       <span class="ep-popup-num-badge">Episode ${ep.episode_number}</span>
-      <button class="ep-popup-close" onclick="_closeEpisodePopup()">&#x2715;</button>
+      <button type="button" class="ep-popup-close" onclick="_closeEpisodePopup()" aria-label="Close">&#x2715;</button>
     </div>
     <div class="ep-popup-body">
-      <div class="ep-popup-title">${esc(ep.name)}</div>
+      <div class="ep-popup-title" id="epPopupTitle">${esc(ep.name)}</div>
       <div class="ep-popup-meta-row">
         ${rating ? `<span class="ep-popup-rating">★ ${rating}</span>` : ''}
         ${date ? `<span>${date}</span>` : ''}
@@ -955,20 +957,10 @@ function _openEpisodePopup(index) {
       <div class="ep-popup-overview">${esc(ep.overview) || 'No description available.'}</div>
     </div>`;
 
-  const ov = document.getElementById('epPopupOverlay');
-  ov.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  MSSDialog.open(document.getElementById('epPopupOverlay'));
 }
 
-function _closeEpisodePopup() {
-  const ov = document.getElementById('epPopupOverlay');
-  if (ov) ov.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') _closeEpisodePopup();
-});
+function _closeEpisodePopup() { MSSDialog.close(document.getElementById('epPopupOverlay')); }
 
 /* ── Double-tap-to-like (touch screens) ──
    Reused across title.html/lists.html/notes.html with the same
