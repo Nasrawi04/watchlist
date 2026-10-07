@@ -2380,7 +2380,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 /* ── Completed entry comment blocks ── */
 .cc-block { position:relative; margin-bottom:10px; }
 .cc-strip {
-  display:inline-flex; align-items:center; gap:5px;
+  display:inline-flex; align-items:center; gap:5px; align-self:flex-start;
   padding:5px 16px; cursor:pointer;
   border:none !important; background:transparent !important;
   outline:none; box-shadow:none !important;
@@ -2388,29 +2388,14 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   transition:color var(--trans) var(--ease);
 }
 .cc-strip:hover, .cc-strip.open { color:var(--olive-light); }
-.cc-panel {
-  display:none; padding:10px 16px 14px;
-}
-.cc-list { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; max-height:300px; overflow-y:auto;overscroll-behavior-y:contain; }
 .cc-comment { display:flex; gap:9px; align-items:flex-start; padding:9px 13px; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--radius-xs); }
 .cc-comment-body { flex:1; min-width:0; }
-.cc-avatar {
-  width:28px; height:28px; border-radius:50%; flex-shrink:0;
-  background:var(--olive-faint); border:1px solid var(--border-olive);
-  font-family:var(--serif); font-size:12px; color:var(--olive-light);
-  display:flex; align-items:center; justify-content:center; overflow:hidden;
-}
-.cc-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
 .cc-author { font-size:11px; font-weight:600; color:var(--olive-light); margin-bottom:3px; }
 .cc-text { font-size:13px; color:var(--text); line-height:1.5; word-break:break-word; }
 .cc-meta { font-size:10px; color:var(--text-3); margin-top:5px; display:flex; align-items:center; gap:10px; }
-.cc-del,
-.cc-reply-btn,
-.det-comment-reply-btn { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:10px; padding:0; font-family:var(--sans); transition:color var(--trans) var(--ease); }
+.cc-del, .cc-reply-btn { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:10px; padding:0; font-family:var(--sans); transition:color var(--trans) var(--ease); }
 .cc-del:hover { color:#f87171; }
-.cc-reply-btn:hover,
-.det-comment-reply-btn:hover { color:var(--olive-light); }
-.cc-reply-form { display:flex; gap:6px; margin-top:8px; }
+.cc-reply-btn:hover { color:var(--olive-light); }
 
 /* ── Reply thread styles (shared across all pages) ── */
 .det-reply-item {
@@ -2450,8 +2435,6 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   .det-reply-input { height:30px; font-size:11px; }
   .det-reply-send  { height:30px; padding:0 8px; font-size:10px; }
 }
-.cc-reply-form input { flex:1; background:var(--bg-3); border:0.5px solid var(--border-olive); border-radius:var(--radius-xs); color:var(--text); font-size:12px; padding:5px 10px; outline:none; font-family:var(--sans); }
-.cc-reply-form input:focus { border-color:var(--olive-light); }
 
 .cc-form { display:flex; gap:8px; border-top:0.5px solid var(--border); padding-top:12px; }
 .cc-input {
@@ -2471,7 +2454,51 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .cc-send:hover { background:var(--olive-2); }
 .det-comment-del { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:10px; padding:0; font-family:var(--sans); transition:color .15s; }
 .det-comment-del:hover { color:#f87171; }
-.cc-loading, .cc-none { font-size:12px; color:var(--text-3); text-align:center; padding:6px 0; }
+.cc-none { font-size:12px; color:var(--text-3); text-align:center; padding:6px 0; }
+
+/* ── Comments popup (comments.js → MSSComments) — the one comments popup,
+   used on category pages, Completed, Library, Profile, profile-view and Edit ── */
+#mssCommentsOverlay {
+  position:fixed; inset:0; z-index:1150; background:var(--popup-backdrop);
+  display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;
+  opacity:0; transition:opacity 220ms var(--ease); pointer-events:none;
+}
+#mssCommentsOverlay.open { opacity:1; pointer-events:auto; }
+#mssCommentsCard {
+  background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
+  border-radius:var(--radius-lg); width:100%; max-width:640px; max-height:90dvh;
+  display:flex; flex-direction:column; box-sizing:border-box; position:relative;
+  transform:translateY(18px); transition:transform 260ms var(--ease);
+}
+#mssCommentsOverlay.open #mssCommentsCard { transform:translateY(0); }
+.mcm-head { display:flex; align-items:flex-start; gap:16px; padding:20px; border-bottom:0.5px solid var(--border); flex-shrink:0; }
+.mcm-poster {
+  width:56px; height:76px; flex-shrink:0; border-radius:var(--radius-sm); overflow:hidden;
+  background:var(--bg-3); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow);
+}
+.mcm-poster img { width:100%; height:100%; object-fit:cover; }
+.mcm-info { flex:1; min-width:0; }
+.mcm-title { font-family:var(--serif); font-size:18px; font-weight:500; line-height:1.2; margin-bottom:6px; color:var(--text); }
+.mcm-tags { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; }
+.mcm-count { font-size:12px; color:var(--olive-light); font-weight:500; }
+.mcm-count:empty { display:none; }
+.mcm-close { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:20px; line-height:1; padding:2px 4px; flex-shrink:0; transition:color .15s; }
+.mcm-close:hover { color:var(--text); }
+.mcm-list { flex:1; min-height:0; overflow-y:auto; overscroll-behavior-y:contain; padding:16px 20px; display:flex; flex-direction:column; gap:8px; }
+.mcm-empty { padding:20px 0; }
+.mcm-form.cc-form { padding:14px 20px; flex-shrink:0; }
+.mcm-mention { color:var(--olive-light); font-weight:600; }
+.mcm-close:focus-visible, .cc-del:focus-visible, .cc-reply-btn:focus-visible, .cc-send:focus-visible,
+.det-reply-send:focus-visible, .det-comment-del:focus-visible, .cc-strip:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+@media(max-width:640px) {
+  .mcm-head { padding:16px; gap:12px; }
+  .mcm-poster { width:46px; height:64px; }
+  .mcm-title { font-size:16px; }
+  .mcm-list { padding:12px 16px; }
+  .mcm-form.cc-form { padding:12px 16px; }
+  .mcm-form .cc-input { font-size:16px; }   /* no iOS zoom on focus */
+}
+@media(prefers-reduced-motion:reduce) { #mssCommentsOverlay, #mssCommentsCard { transition:none; } }
 
 /* ── Friend comments inbox ── */
 
@@ -3885,18 +3912,12 @@ body { font-size:15px; }
 
   /* Comments strip — tighter on mobile */
   .cc-strip { padding:4px 10px; font-size:10px; }
-
-  /* Comments panel — compact sizing */
-  .cc-panel { padding:8px 10px 12px; }
   .cc-comment { padding:7px 10px; gap:7px; }
-  .cc-avatar { width:24px; height:24px; font-size:10px; }
   .cc-text { font-size:12px; }
   .cc-author { font-size:10px; }
   .cc-meta { font-size:9px; gap:7px; }
   .cc-input { font-size:12px; padding:6px 10px; }
   .cc-send { font-size:11px; padding:6px 10px; }
-  .cc-list { max-height:220px; gap:6px; margin-bottom:8px; }
-  .cc-reply-form input { font-size:11px; padding:4px 8px; }
 
   .comp-row    { padding:10px 12px; height:auto !important; min-height:100px; gap:12px; }
   .comp-poster { width:72px; height:102px; }
@@ -4300,64 +4321,6 @@ body { font-size:15px; }
 @container (max-width:72px) { .mss-hold-label { padding:0 .35em .5em; border-radius:.6em; letter-spacing:.02em; } }
 .up-next-tag { display:inline-flex; align-items:center; padding:3px 9px; border-radius:var(--radius-xs, 4px); background:#264e78; color:#fff;
   font-family:'Manrope',var(--sans); font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; }
-
-/* ── fv-entry-block: list view wrapper for completed cards ── */
-
-/* ── Library comments popup (index-style) ── */
-.lcc-overlay {
-  position:fixed; inset:0; z-index:1100;
-  background:rgba(0,0,0,0.55);
-  display:flex; align-items:center; justify-content:center;
-  padding:16px; box-sizing:border-box;
-  opacity:0; pointer-events:none;
-  transition:opacity .22s ease;
-}
-.lcc-overlay.open { opacity:1; pointer-events:auto; }
-.lcc-card {
-  width:100%; max-width:520px;
-  background:var(--bg-2);
-  border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);
-  border-radius:var(--radius-lg);
-  display:flex; flex-direction:column;
-  max-height:82dvh;
-  transform:scale(.96);
-  transition:transform .25s cubic-bezier(0.4,0,0.2,1);
-}
-.lcc-overlay.open .lcc-card { transform:scale(1); }
-
-.lcc-close { background:none; border:none; cursor:pointer; color:var(--text-3); font-size:18px; line-height:1; padding:2px 4px; transition:color .15s; }
-.lcc-close:hover { color:var(--text); }
-.lcc-list { flex:1; overflow-y:auto;overscroll-behavior-y:contain; padding:12px 20px; display:flex; flex-direction:column; gap:10px; }
-.lcc-comment { background:var(--bg-3); border:0.5px solid var(--border); border-radius:var(--radius); padding:10px 14px; }
-.lcc-author { font-size:11px; font-weight:600; color:var(--olive-light); margin-bottom:4px; }
-.lcc-text { font-size:13px; color:var(--text); line-height:1.55; word-break:break-word; }
-.lcc-meta { font-size:10px; color:var(--text-3); margin-top:6px; display:flex; align-items:center; gap:10px; }
-.lcc-empty { font-size:13px; color:var(--text-3); text-align:center; padding:2rem 0; }
-.lcc-form { display:flex; gap:10px; padding:14px 20px; border-top:0.5px solid var(--border); }
-.lcc-input {
-  flex:1; background:var(--bg-3); border:0.5px solid var(--border-2);
-  border-radius:var(--radius); padding:10px 14px;
-  color:var(--text); font-size:13px; font-family:inherit;
-  transition:border-color .15s; outline:none;
-}
-.lcc-input::placeholder { color:var(--text-3); }
-.lcc-input:focus { border-color:var(--olive-light); box-shadow:0 0 0 2px rgba(126,184,108,.15); }
-.lcc-send {
-  background:var(--olive); color:#fff; border:none;
-  border-radius:var(--radius); padding:10px 18px;
-  font-size:13px; font-weight:600; cursor:pointer;
-  transition:background .15s; white-space:nowrap;
-}
-.lcc-send:hover { background:var(--olive-2); }
-@media(max-width:640px) {
-  .lcc-card { max-height:88dvh; }
-
-  .lcc-list { padding:10px 14px; }
-  .lcc-form { padding:10px 14px; gap:8px; }
-  .lcc-input { font-size:14px; padding:9px 12px; }
-  .lcc-send { padding:9px 14px; font-size:12px; }
-}
 
 /* ── Comments popup mobile fix ── */
 @media(max-width:640px) {
