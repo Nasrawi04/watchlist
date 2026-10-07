@@ -163,7 +163,7 @@
      episodes.html               your shows (mini heatmaps), search, stats
      episodes.html?show=<tmdb>   one show: SeriesGraph-style grid / graph /
                                  list · source: TMDB (default) · Mine ·
-                                 Community (3+ ratings) · Mine vs TMDB
+                                 Community (2+ ratings) · Mine vs TMDB
 ═══════════════════════════════════════════════════════════════ */
 const esc = s => escHTML(s == null ? '' : String(s));
 let _egUser = null;
@@ -380,7 +380,7 @@ function draw() {
       </div>
     </div>
     ${S.source === 'mine' && !S.entry ? `<div class="mss-empty" style="margin-bottom:1rem">${S.readOnly ? 'No episode ratings for this show yet.' : 'Add this show to your library to rate its episodes.'}</div>` : ''}
-    ${S.source === 'community' && !Object.keys(S.comm).length ? `<div class="mss-empty" style="margin-bottom:1rem">Community scores appear once an episode has 3+ ratings on MyScreenScore.</div>` : ''}`}
+    ${S.source === 'community' && !Object.keys(S.comm).length ? `<div class="mss-empty" style="margin-bottom:1rem">Community scores appear once an episode has 2+ ratings on MyScreenScore.</div>` : ''}`}
     ${S2 ? compareHTML() : `<div class="eg-layout">
       <div>${S.view === 'grid' ? gridHTML() : S.view === 'graph' ? graphHTML() : listHTML()}</div>
       ${panelHTML()}
@@ -476,7 +476,7 @@ function listHTML() {
         ${ep.overview ? `<div class="eg-row-desc">${esc(ep.overview)}</div>` : ''}
         ${mine?.tags?.length ? `<div class="eg-row-tags">${mine.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
       </div>
-      ${chip(mine ? Number(mine.score) : null, 'You')}${chip(comm ? Number(comm.avg_score) : null, 'MSS')}${chip(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}
+      ${chip(mine ? Number(mine.score) : null, S.readOnly ? esc(S.whoName) : 'You')}${chip(comm ? Number(comm.avg_score) : null, 'MSS')}${chip(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}
     </div>`);
   }));
   return `<div class="eg-list">${rows.join('')}</div>`;
@@ -497,7 +497,7 @@ function panelHTML() {
   const great = Math.round(100 * sc.filter(x => x.v >= 8.5).length / sc.length);
   const sd = Math.sqrt(avg(sc.map(x => (x.v - a) ** 2)));
   const epLink = x => `<span class="eg-panel-ep" role="button" tabindex="0" onclick="egOpen(${x.s},${x.ep.n})"><b>${x.v.toFixed(1)}</b><br><small>S${x.s} · E${x.ep.n}</small></span>`;
-  return `<aside class="eg-panel"><div class="section-eyebrow">${S.source === 'tmdb' ? 'TMDB' : S.source === 'mine' ? 'Your' : 'Community'} stats</div>
+  return `<aside class="eg-panel"><div class="section-eyebrow">${S.source === 'tmdb' ? 'TMDB' : S.source === 'mine' ? (S.readOnly ? esc(S.whoName) + '’s' : 'Your') : 'Community'} stats</div>
     <div class="eg-panel-row"><span>Series average</span><b>★ ${a.toFixed(2)}</b></div>
     <div class="eg-panel-row"><span>Best episode</span>${epLink(best)}</div>
     <div class="eg-panel-row"><span>Lowest episode</span>${epLink(worst)}</div>
@@ -529,7 +529,7 @@ function egOpen(sn, n) {
       <div class="ep-eyebrow">${esc(S.show.name)}</div>
       <div class="ep-title" id="egEpTitle">${esc(ep.name || 'Episode ' + n)}</div>
       <div class="ep-meta">${esc([ep.air ? new Date(ep.air + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '', ep.rt ? ep.rt + 'm' : ''].filter(Boolean).join(' · '))}</div>
-      <div class="eg-pop-scores">${box(mine ? Number(mine.score) : null, 'Yours')}${box(comm ? Number(comm.avg_score) : null, comm ? `MSS · ${comm.rating_count}` : 'MSS')}${box(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}</div>
+      <div class="eg-pop-scores">${box(mine ? Number(mine.score) : null, S.readOnly ? esc(S.whoName) + '’s' : 'Yours')}${box(comm ? Number(comm.avg_score) : null, comm ? `MSS · ${comm.rating_count}` : 'MSS')}${box(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}</div>
       ${mine?.tags?.length ? `<div class="eg-row-tags">${mine.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
       ${mine?.note ? `<div class="eg-pop-note">“${esc(mine.note)}”</div>` : ''}
       ${ep.overview ? `<p class="eg-pop-over">${esc(ep.overview)}</p>` : ''}
@@ -576,7 +576,7 @@ function egSeasonPick() {
         <div class="fav-season-grid eg-season-grid">${S.seasons.map(sn => { const m = meta(sn), on = !all && S.sel.has(sn); return `
           <button type="button" class="td-season-block${on ? ' picked' : ''}" onclick="egSeasonSet(${sn})" aria-pressed="${on}">
             <div class="td-season-block-poster">${m.poster_path ? `<img src="https://image.tmdb.org/t/p/w342${m.poster_path}" alt="" loading="lazy">` : ''}${on ? `<span class="eg-season-check">${icon('check', 14)}</span>` : ''}</div>
-            <div class="td-season-block-info"><div class="td-season-block-name">${esc(m.name || 'Season ' + sn)}</div>
+            <div class="td-season-block-info"><div class="td-season-block-name">${esc(mssSeasonLabel(sn, m.name))}</div>
               <div class="td-season-block-sub">${m.episode_count ? m.episode_count + ' eps' : ''}${m.air_date ? ' · ' + m.air_date.slice(0, 4) : ''}</div></div>
           </button>`; }).join('')}</div>
       </div>
@@ -726,11 +726,30 @@ async function egImage(btn) {
     await document.fonts.ready;
     const [W, H] = { square: [1080, 1080], story: [1080, 1920], wide: [1600, 900] }[EX.size];
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const U = Math.min(W, H);   // type + spacing scale with the short side (Wide stays balanced)
     const g = cv.getContext('2d'), dark = EX.theme === 'dark';
     const css = getComputedStyle(document.documentElement), band = k => css.getPropertyValue('--band-' + k).trim();
     const C = dark ? { bg: '#111613', card: '#1a211c', text: '#f0ede8', sub: '#9aa39c', line: '#2a312c', empty: '#26302a', olive: '#7fbf6a' }
                    : { bg: '#f3eee6', card: '#ebe4d8', text: '#1a1d1b', sub: '#5f665f', line: '#d6cebf', empty: '#e0d8ca', olive: '#1e5c26' };
-    const load = (src, cors = true) => new Promise(ok => { if (!src) return ok(null); const im = new Image(); if (cors) im.crossOrigin = 'anonymous'; im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src; setTimeout(() => ok(null), 7000); });
+    // A poster already on the page is cached without CORS headers, so ask with a
+    // cache-busting query first (same approach as the share cards).
+    // Load an image the canvas is allowed to export. A picture without CORS
+    // headers would "taint" the canvas (no download), so each one is checked
+    // and, if needed, fetched through wsrv.nl — a free image proxy that adds them.
+    const usable = im => { try { const c = document.createElement('canvas'); c.width = c.height = 1; const x = c.getContext('2d'); x.drawImage(im, 0, 0, 1, 1); x.getImageData(0, 0, 1, 1); return true; } catch { return false; } };
+    const tryLoad = (src, cors) => new Promise(ok => {
+      const im = new Image(); if (cors) im.crossOrigin = 'anonymous';
+      const t = setTimeout(() => ok(null), 8000);
+      im.onload = () => { clearTimeout(t); ok(usable(im) ? im : null); };
+      im.onerror = () => { clearTimeout(t); ok(null); };
+      im.src = src;
+    });
+    const load = async (src, cors = true) => {
+      if (!src) return null;
+      if (!cors) return tryLoad(src, false);
+      return (await tryLoad(src + (src.includes('?') ? '&' : '?') + '_cb=' + Date.now(), true))
+          || tryLoad('https://wsrv.nl/?url=' + encodeURIComponent(src.replace(/^https?:\/\//, '')), true);
+    };
     // who: the ratings' owner for "Mine", else you (the exporter)
     const whoId = S.readOnly && (S.source === 'mine' || S.source === 'diff') ? (_egUserQ || _egUser.id) : _egUser.id;
     const { data: who } = await sb.from('profiles').select('username,avatar_url').eq('id', whoId).maybeSingle();
@@ -740,17 +759,18 @@ async function egImage(btn) {
       load('icons/icon-192.png', false),   // same site — no CORS needed
       load(safeURL(who?.avatar_url)),
     ]);
-    const pad = Math.round(W * 0.055);
+    const pad = Math.round(U * 0.055);
     g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
 
     // ── Header: backdrop band (sharp, darkened), poster overlapping, title ──
-    const bandH = Math.round(H * (EX.size === 'story' ? 0.2 : EX.size === 'wide' ? 0.3 : 0.26));
+    const bandH = Math.round(H * (EX.size === 'story' ? 0.17 : EX.size === 'wide' ? 0.26 : 0.22));
     if (backdrop) {
       const r = Math.max(W / backdrop.width, bandH / backdrop.height), dw = backdrop.width * r, dh = backdrop.height * r;
-      g.drawImage(backdrop, (W - dw) / 2, (bandH - dh) * 0.35, dw, dh);
+      g.save(); g.beginPath(); g.rect(0, 0, W, bandH); g.clip();
+      g.drawImage(backdrop, (W - dw) / 2, (bandH - dh) * 0.35, dw, dh); g.restore();
     } else { g.fillStyle = band('masterpiece'); g.fillRect(0, 0, W, bandH); }
     g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(0, 0, W, bandH);
-    const pH = Math.round(bandH * 0.92), pW = Math.round(pH * 2 / 3), pY = Math.round(bandH * 0.38);
+    const pH = Math.round(bandH * 0.88), pW = Math.round(pH * 2 / 3), pY = Math.round(bandH * 0.4);
     if (poster) {
       g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 24; g.shadowOffsetY = 8;
       g.beginPath(); g.roundRect(pad, pY, pW, pH, 14); g.fillStyle = C.card; g.fill(); g.restore();
@@ -759,18 +779,21 @@ async function egImage(btn) {
     const tx = poster ? pad + pW + 30 : pad;
     const srcName = { tmdb: 'TMDB scores', mine: S.readOnly ? `${S.whoName}’s ratings` : 'My ratings', community: 'MSS community', diff: 'vs TMDB' }[S.source];
     g.textBaseline = 'alphabetic'; g.textAlign = 'left';
-    g.fillStyle = '#ffffff'; g.font = `600 ${Math.round(W * 0.017)}px Oswald, sans-serif`;
-    g.fillText(('EPISODE RATINGS · ' + srcName).toUpperCase(), tx, bandH - Math.round(W * 0.03));
-    g.fillStyle = C.text; g.font = `600 ${Math.round(W * 0.052)}px Oswald, sans-serif`;
-    let title = S.show.name; while (g.measureText(title).width > W - tx - pad && title.length > 3) title = title.slice(0, -2) + '…';
-    const ty = bandH + Math.round(W * 0.06);
+    g.fillStyle = '#ffffff'; g.font = `600 ${Math.round(U * 0.017)}px Oswald, sans-serif`;
+    g.fillText(('EPISODE RATINGS · ' + srcName).toUpperCase(), tx, bandH - Math.round(U * 0.03));
+    const badgeRoom = vis().length > 1 ? Math.round(U * 0.12) + 24 : 0;   // keep the title clear of the average badge
+    let tSize = Math.round(U * 0.052);                // long titles shrink (to 70%) before they're cut
+    g.fillStyle = C.text; g.font = `600 ${tSize}px Oswald, sans-serif`;
+    while (g.measureText(S.show.name).width > W - tx - pad - badgeRoom && tSize > U * 0.036) { tSize -= 2; g.font = `600 ${tSize}px Oswald, sans-serif`; }
+    let title = S.show.name; while (g.measureText(title).width > W - tx - pad - badgeRoom && title.length > 3) title = title.slice(0, -2) + '…';
+    const ty = bandH + Math.round(U * 0.06);
     g.fillText(title, tx, ty);
     const seasons = vis(), sc = allScored(), sa = sc.length ? avg(sc.map(x => x.v)) : null;
     const years = [(S.show.first_air_date || '').slice(0, 4), S.show.status === 'Ended' ? (S.show.last_air_date || '').slice(0, 4) : 'Present'].filter(Boolean).join('–');
-    g.fillStyle = C.sub; g.font = `500 ${Math.round(W * 0.02)}px Manrope, sans-serif`;
-    g.fillText(`${years} · ${selLabel()}`, tx, ty + Math.round(W * 0.035));
-    if (sa != null && S.source !== 'diff') {                 // average badge
-      const b = MSSEp.band(sa), bw = Math.round(W * 0.12), bh = Math.round(W * 0.07), bx = W - pad - bw, by = bandH + Math.round(W * 0.012);
+    g.fillStyle = C.sub; g.font = `500 ${Math.round(U * 0.02)}px Manrope, sans-serif`;
+    g.fillText(`${years} · ${selLabel()}`, tx, ty + Math.round(U * 0.035));
+    if (sa != null && S.source !== 'diff' && seasons.length > 1) {   // average badge (one season → same as its AVG row)
+      const b = MSSEp.band(sa), bw = Math.round(U * 0.12), bh = Math.round(U * 0.07), bx = W - pad - bw, by = bandH + Math.round(U * 0.012);
       g.fillStyle = band(b.key); g.beginPath(); g.roundRect(bx, by, bw, bh, 12); g.fill();
       g.fillStyle = ['good', 'decent', 'meh'].includes(b.key) ? '#1a1a1a' : '#fff'; g.textAlign = 'center';
       g.font = `400 ${Math.round(bh * 0.55)}px "Bebas Neue", sans-serif`; g.fillText(sa.toFixed(1), bx + bw / 2, by + bh * 0.62);
@@ -778,19 +801,23 @@ async function egImage(btn) {
     }
 
     // ── Grid: seasons across, episodes down (+ AVG row); numbers only when boxes are big enough ──
-    const gridTop = Math.max(pY + pH, ty + Math.round(W * 0.05)) + Math.round(W * 0.04);
-    const legendH = Math.round(W * 0.05), footH = Math.round(W * 0.08);
+    const headBottom = Math.max(pY + pH, ty + Math.round(U * 0.05)) + Math.round(U * 0.025);
+    g.fillStyle = C.line; g.fillRect(pad, headBottom, W - pad * 2, 2);                       // divider: header | grid
+    const gridTop = headBottom + Math.round(U * 0.025);
+    const legendH = Math.round(U * 0.045), footH = Math.round(U * 0.055);
     const maxEp = Math.max(1, ...seasons.map(sn => (S.eps[sn] || []).length));
-    const labW = Math.round(W * (maxEp >= 100 ? 0.06 : 0.045));
+    const labW = Math.round(W * (maxEp >= 100 ? 0.05 : 0.038));
     const availW = W - pad * 2 - labW, availH = H - gridTop - legendH - footH - pad;
-    const cell = Math.max(4, Math.min(Math.floor(availW / Math.max(1, seasons.length)), Math.floor(availH / (maxEp + 2)), 84));
-    const gap = Math.max(1, Math.round(cell * 0.1)), box = cell - gap;
+    const cell = Math.max(4, Math.min(Math.floor(availW / Math.max(1, seasons.length)), Math.floor(availH / (maxEp + 2.6)), 92));
+    const gap = Math.max(1, Math.round(cell * (cell >= 24 ? 0.09 : 0.07))), box = cell - gap;
     const gx = pad + labW + Math.max(0, (availW - cell * seasons.length) / 2);
     const colorFor = v => S.source === 'diff' ? (Math.abs(v) < 0.3 ? C.empty : v > 0 ? '#2f6e3a' : '#a8433b') : band(MSSEp.band(v).key);
     const textFor = v => S.source === 'diff' ? (Math.abs(v) < 0.3 ? C.text : '#fff') : (['good', 'decent', 'meh'].includes(MSSEp.band(v).key) ? '#1a1a1a' : '#fff');
-    const showNums = box >= 22, labelEvery = cell >= 14 ? 1 : Math.ceil(14 / cell) * 5;
+    // numbers stay readable: Bebas at ~50% of the box (min 11px); hidden only on tiny boxes
+    const numPx = Math.max(11, Math.round(Math.min(box, 46) * 0.5)), showNums = box >= 17;
+    const labelEvery = cell >= 15 ? 1 : Math.ceil(15 / cell) * 5;
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = `400 ${Math.max(9, Math.round(Math.min(box, 40) * 0.42))}px "Bebas Neue", sans-serif`;
+    g.font = `400 ${numPx}px "Bebas Neue", sans-serif`;
     seasons.forEach((sn, ci) => { if (cell >= 14 || ci % Math.ceil(14 / cell) === 0) { g.fillStyle = C.sub; g.fillText('S' + sn, gx + ci * cell + box / 2, gridTop + box / 2); } });
     const drawBox = (x, yy, v) => {
       g.fillStyle = v == null ? C.empty : colorFor(v);
@@ -802,33 +829,35 @@ async function egImage(btn) {
       if (n === 1 || n % labelEvery === 0) { g.fillStyle = C.sub; g.textAlign = 'right'; g.fillText('E' + n, gx - 8, yy + box / 2); g.textAlign = 'center'; }
       seasons.forEach((sn, ci) => { const ep = (S.eps[sn] || []).find(x => x.n === n); if (ep) drawBox(gx + ci * cell, yy, scoreOf(sn, ep)); });
     }
-    const ay = gridTop + (maxEp + 1) * cell + gap * 2;
+    const ay = gridTop + (maxEp + 1.6) * cell;
+    g.fillStyle = C.line; g.fillRect(gx - labW * 0.6, ay - cell * 0.32, cell * seasons.length + labW * 0.6, 1.5);   // divider above AVG
     g.fillStyle = C.olive; g.textAlign = 'right'; g.fillText('AVG', gx - 8, ay + box / 2); g.textAlign = 'center';
     seasons.forEach((sn, ci) => drawBox(gx + ci * cell, ay, avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep)))));
 
     // ── Legend ──
     const ly = H - pad - footH - legendH / 2;
-    g.font = `600 ${Math.round(W * 0.0145)}px Manrope, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillStyle = C.line; g.fillRect(pad, ly - legendH / 2 - 4, W - pad * 2, 1.5);            // divider: grid | legend
+    g.font = `600 ${Math.round(U * 0.0125)}px Manrope, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
     const items = S.source === 'diff' ? [['#2f6e3a', 'Higher than TMDB'], [C.empty, 'Same'], ['#a8433b', 'Lower than TMDB']] : MSSEp.BANDS.map(b => [band(b.key), b.name]);
     const iw = (W - pad * 2) / items.length;
-    items.forEach(([c, l], i) => { const x = pad + i * iw; g.fillStyle = c; g.beginPath(); g.roundRect(x, ly - 11, 22, 22, 5); g.fill(); g.fillStyle = C.text; g.fillText(l, x + 30, ly + 1); });
+    items.forEach(([c, l], i) => { const x = pad + i * iw; g.fillStyle = c; g.beginPath(); g.roundRect(x, ly - 8, 16, 16, 4); g.fill(); g.fillStyle = C.text; g.fillText(l, x + 22, ly + 1); });
 
     // ── Footer: user (left) · MyScreenScore logo + name (right) ──
     const fy = H - pad - footH / 2 + 6;
     g.fillStyle = C.line; g.fillRect(pad, H - pad - footH + 6, W - pad * 2, 1.5);
-    const av = Math.round(footH * 0.62);
+    const av = Math.round(footH * 0.5);
     g.save(); g.beginPath(); g.arc(pad + av / 2, fy, av / 2, 0, Math.PI * 2); g.closePath();
     if (avatar) { g.clip(); g.drawImage(avatar, pad, fy - av / 2, av, av); }
     else { g.fillStyle = band('great'); g.fill(); g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = `600 ${Math.round(av * 0.48)}px Oswald, sans-serif`; g.fillText((who?.username || '?')[0].toUpperCase(), pad + av / 2, fy + 1); }
     g.restore();
-    g.textAlign = 'left'; g.fillStyle = C.text; g.font = `600 ${Math.round(W * 0.019)}px Manrope, sans-serif`;
+    g.textAlign = 'left'; g.fillStyle = C.text; g.font = `600 ${Math.round(U * 0.014)}px Manrope, sans-serif`;
     g.fillText('@' + (who?.username || 'myscreenscore'), pad + av + 14, fy);
-    const lg = Math.round(footH * 0.6);
-    g.textAlign = 'right'; g.fillStyle = C.olive; g.font = `600 ${Math.round(W * 0.022)}px Oswald, sans-serif`;
+    const lg = Math.round(footH * 0.5);
+    g.textAlign = 'right'; g.fillStyle = C.olive; g.font = `600 ${Math.round(U * 0.016)}px Oswald, sans-serif`;
     const brand = 'MYSCREENSCORE', bw = g.measureText(brand).width;
     g.fillText(brand, W - pad, fy);
     if (logo) { g.save(); g.beginPath(); g.roundRect(W - pad - bw - lg - 12, fy - lg / 2, lg, lg, lg * 0.22); g.clip(); g.drawImage(logo, W - pad - bw - lg - 12, fy - lg / 2, lg, lg); g.restore(); }
-    g.fillStyle = C.sub; g.font = `500 ${Math.round(W * 0.012)}px Manrope, sans-serif`; g.textAlign = 'center';
+    g.fillStyle = C.sub; g.font = `500 ${Math.round(U * 0.012)}px Manrope, sans-serif`; g.textAlign = 'center';
     g.fillText('Episode data: TMDB', W / 2, H - Math.round(pad * 0.45));
 
     const a = document.createElement('a');
