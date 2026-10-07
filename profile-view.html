@@ -335,7 +335,7 @@
 <script src="js/nav.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/sort-filter.js"></script>
-<script>window.LIB_SCOPE = 'pv'; window.LIB_READONLY = true; window.LIB_ENTRIES = function(){ return _pvEntries; };</script>
+<script>window.LIB_SCOPE = 'pv'; window.LIB_READONLY = true; window.LIB_ENTRIES = function(){ return _pvEntries; }; window.LIB_PROFILE = function(){ return _pvProfile; };</script>
 <script src="js/library-view.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/info-popup.js"></script>
@@ -424,8 +424,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   _pvEntries = early[0];
   _pvFavLists = early[1];
 
-  pvBuildEntryMap();
-  _libCmtEntryMap["pv"] = _pvEntryMapPv;
   _pvCmtUser = _pvMe;
   renderProfile();
 });
@@ -472,22 +470,12 @@ async function pvToggleNotify() {
 }
 
 
-let _pvEntryMapPv = {};
 
-function pvBuildEntryMap() {
-  _pvEntryMapPv = Object.fromEntries(_pvEntries.map(function(e) { return [e.id, e]; }));
-}
 
 
 
 // Their title: Info · Ratings · Note in one popup (MSSViews, info-popup.js) — opens on
 // Ratings once it's rated/watched, otherwise on Info. Add to Watchlist · Discover.
-function pvOpenPopup(id) {
-  const e = _pvEntryMapPv[id] || _pvEntries.find(function(en) { return en.id === id; });
-  if (!e) return;
-  const rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
-  MSSViews.open(e, { start: rated ? 'rate' : 'info', profile: _pvProfile || {} });
-}
 
 
 function pvTabSwitch(n) { var t=document.getElementById("pvTab"+n); if(t) pvTab(n,t); var s=document.getElementById("pvTabsSelect"); if(s) s.value=n; }
@@ -497,43 +485,10 @@ function renderProfile() {
   if (!p) return;
   var un = p.username || _pvUsername || '';
   var st = computeStats(_pvEntries);
-  var pst = computeProfileStats(_pvEntries);
   var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
 
 /* ── Profile stats (5 boxes) ── */
-function computeProfileStats(entries) {
-  var done = entries.filter(function(e){ return e.status === 'completed' || e.status === 'ongoing'; });
-  var rated = done.filter(function(e){ return liveScore(e) != null; });
-  var avgScore = rated.length
-    ? (rated.reduce(function(s,e){ return s + Number(liveScore(e)); }, 0) / rated.length).toFixed(1)
-    : null;
-  var tvCount = done.filter(function(e){
-    if (e.cat === 'tv') return true;
-    if (e.cat === 'anime' || e.cat === 'cartoons') return (e.ratings && e.ratings._media_type) ? e.ratings._media_type !== 'movie' : true;
-    return false;
-  }).length;
-  var movieCount = done.filter(function(e){
-    if (e.cat === 'movies') return true;
-    if (e.cat === 'anime' || e.cat === 'cartoons') return e.ratings && e.ratings._media_type === 'movie';
-    return false;
-  }).length;
-  var totalEps = entries
-    .filter(function(e){ return e.status !== 'queue' && e.cat !== 'movies' && !(e.ratings && e.ratings._media_type === 'movie'); })
-    .reduce(function(sum,e){
-      if (e.status === 'completed' || e.status === 'ongoing') return sum + (Number(e.total_eps) || Number(e.watched) || 0);
-      return sum + (Number(e.watched) || 0);
-    }, 0);
-  var movieMins = done
-    .filter(function(e){ return e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie'); })
-    .reduce(function(sum,e){ return sum + (Number(e.runtime_h)||0)*60 + (Number(e.runtime_m)||0); }, 0);
-  var rtH = Math.floor(movieMins/60), rtM = movieMins%60;
-  var runtime = movieMins ? (rtH ? rtH+'h '+rtM+'m' : rtM+'m') : null;
-  return { avgScore: avgScore, tvCount: tvCount, movieCount: movieCount, totalEps: totalEps, runtime: runtime };
-}
 
-function _profStatBox(num, label) {
-  return '<div class="prof-stat-box"><div class="prof-stat-box-num">'+(num||'—')+'</div><div class="prof-stat-box-label">'+label+'</div></div>';
-}
 
   var friendBtnHTML = _friendBtnHTML();
   var avHTML = safeURL(p.avatar_url)
@@ -550,12 +505,7 @@ function _profStatBox(num, label) {
     +(p.quote?'<div class="prof-quote">'+esc(p.quote)+'</div>':'')
     +'</div></div>'
     +'<div class="prof-stat-boxes">'
-    +_profStatBox(pst.avgScore,'Avg Score')
-    +_profStatBox(pst.tvCount,'TV Shows')
-    +_profStatBox(pst.movieCount,'Movies')
-    +_profStatBox(_pvEntries.filter(function(e){return e.status==='queue'||e.status==='up_next';}).length||'0','Watchlist')
-    +_profStatBox(pst.totalEps||'0','Episodes')
-    +_profStatBox(pst.runtime,'Runtime')
+    +MSSTabs.statsHTML(_pvEntries)
     +'</div>'
     +'<div class="prof-header-actions"><div id="pvBtns">'+friendBtnHTML+'</div></div>'
     +'</div>';
@@ -639,15 +589,11 @@ function _pvStatsBoxHTML() {
 
   var chevronSvg = '<span class="stats-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>';
   return '<div class="stats-box fade-up" id="statsBoxPv">' + rows.map(function(r,i){
-    return '<div class="stats-row"' + (i===0 ? ' onclick="toggleStatsBox(\'statsBoxPv\')"' : '') + '>'
+    return '<div class="stats-row"' + (i===0 ? ' onclick="MSSTabs.toggleStats(\'statsBoxPv\')"' : '') + '>'
       + '<span class="stats-label">' + r.label + '</span>'
       + '<span class="stats-value">' + r.value.toLocaleString() + (i===0 ? chevronSvg : '') + '</span>'
       + '</div>';
   }).join('') + '</div>';
-}
-function toggleStatsBox(id) {
-  var box = document.getElementById(id);
-  if (box) box.classList.toggle('open');
 }
 
 function renderPvOverview() {
@@ -662,15 +608,13 @@ function renderPvOverview() {
   // Their picks: Top Favorites, Would Recommend, Top 5 per type (read-only)
   MSSDash.render(document.getElementById('pvDashMain'), {
     entries: _pvEntries, profile: _pvProfile || {}, editable: false,
-    openEntry: function(id){ pvOpenPopup(id); },
+    openEntry: _libOpen,
     save: function(){ return Promise.resolve(); }
   });
 }
 
 /* ── Tab 1: Library — the same Library as library.html / your profile
    (js/library-view.js), read-only. Its cards open this page's popups. ── */
-function openProfInfoPopup(id) { pvOpenPopup(id); }
-function profOpenPopup(id) { pvOpenPopup(id); }
 
 /* ── Friend request actions ── */
 async function pvSendRequest() {
@@ -733,7 +677,6 @@ async function pvDecline() {
 
 var _pvFavLists = [];
 
-function openInfoPopup(id) { pvOpenPopup(id); }
 </script>
 
 <script>
