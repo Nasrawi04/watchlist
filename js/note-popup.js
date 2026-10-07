@@ -7,11 +7,13 @@
      MSSNote.cardHTML(entry, { counts, onclick, blurSpoiler })
        → the nc-card: poster, title + score, type/genre/date tags,
          a 60-word preview, 👍/👎 counts and the word count
-     MSSNote.open(entry, { counts, editable, eyebrow, onSaved })
+     MSSNote.open(entry, { counts, editable, eyebrow, onSaved, profile, react, onReact })
        → the note popup: backdrop header, poster, tags, reactions and the
          full note. editable → "Edit Note" with the 500-word editor and
          the spoiler toggle; read-only → spoiler notes stay blurred until
-         revealed.
+         revealed. Someone else's note: profile → their avatar + @username
+         on top; react → 👍 / 👎 buttons (onReact(state) after a change) and
+         "See Ratings" when the Info · Ratings · Note switcher has Ratings.
      MSSNote.reactionCounts(entryIds) → { entryId: { like, dislike } }
 
    Small helpers the Notes page also uses for its Community notes:
@@ -23,7 +25,7 @@
 
 const MSSNote = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));
-  let current = null, opts = {};
+  let current = null, opts = {}, reactState = null;
 
   /* ── Helpers ── */
   const words = t => (t || '').trim().split(/\s+/).filter(Boolean).length;
@@ -169,12 +171,31 @@ const MSSNote = (() => {
     const e = current, $ = id => document.getElementById(id);
     const q = `<blockquote class="np-quote">&ldquo;${esc((e.notes || '').trim())}&rdquo;</blockquote>`;
     $('mssNoteText').innerHTML = !opts.editable && mssIsSpoiler(e) ? mssSpoilerHTML(q, { id: e.id }) : q;
-    $('mssNoteViewPopupActions').innerHTML = (opts.editable
-      ? `<button type="button" class="popup-action-btn np-grow" onclick="MSSNote._edit()">${PEN}Edit Note</button>` : '')
-      + `<button type="button" class="popup-action-btn np-ghost${opts.editable ? '' : ' np-grow'}" onclick="MSSNote.close()">Close</button>`;
+    viewFooter();
     ['mssNoteViewBody', 'mssNoteViewFooter'].forEach(id => { $(id).style.display = ''; });
     ['mssNoteEditBody', 'mssNoteEditFooter'].forEach(id => { $(id).style.display = 'none'; });
     fitLong(document.querySelector('#mssNoteOverlay .np-card'), words(e.notes));
+  }
+  // Your note: Edit · Close. Someone else's: 👍 / 👎 · See Ratings · Close
+  function viewFooter() {
+    const el = document.getElementById('mssNoteViewPopupActions');
+    if (opts.editable) {
+      el.innerHTML = `<button type="button" class="popup-action-btn np-grow" onclick="MSSNote._edit()">${PEN}Edit Note</button>`
+        + `<button type="button" class="popup-action-btn np-ghost" onclick="MSSNote.close()">Close</button>`;
+      return;
+    }
+    const rate = typeof MSSViews !== 'undefined' && MSSViews.has('rate');
+    el.innerHTML = (opts.react ? mssReactButtonsHTML(reactState, 'MSSNote._react(true)', 'MSSNote._react(false)') : '')
+      + (rate ? `<button type="button" class="popup-action-btn np-grow" onclick="MSSViews.show('rate')">${icon('ratingStar', 14)} See Ratings</button>` : '')
+      + `<button type="button" class="popup-action-btn np-ghost${rate ? '' : ' np-grow'}" onclick="MSSViews.has('note') ? MSSViews.close() : MSSNote.close()">Close</button>`;
+  }
+  async function react(isLike) {
+    const e = current;
+    if (!e || !reactState) return;
+    reactState = await mssReact('note', e.id, isLike, reactState);
+    if (current !== e) return;
+    viewFooter(); stats();
+    opts.onReact?.(reactState, e);
   }
   function showEdit() {
     const e = current, $ = id => document.getElementById(id);
@@ -190,7 +211,8 @@ const MSSNote = (() => {
   function stats() {
     const e = current, c = opts.counts || { like: 0, dislike: 0 }, n = words(e.notes);
     const el = document.getElementById('mssNoteStats');
-    el.innerHTML = `<span>${icon('thumbsUp', 14)} <b>${c.like}</b></span><span>${icon('thumbsDown', 14)} <b>${c.dislike}</b></span><span><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span>${mssIsSpoiler(e) ? mssSpoilerTag() : ''}`;
+    el.innerHTML = (opts.react ? '' : `<span>${icon('thumbsUp', 14)} <b>${c.like}</b></span><span>${icon('thumbsDown', 14)} <b>${c.dislike}</b></span>`)
+      + `<span><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span>${mssIsSpoiler(e) ? mssSpoilerTag() : ''}`;
     el.style.display = (e.notes && e.notes.trim()) ? 'flex' : 'none';
   }
 
@@ -198,11 +220,16 @@ const MSSNote = (() => {
     if (!e) return;
     inject();
     current = e; opts = o;
+    reactState = o.react ? { like: o.counts?.like || 0, dislike: o.counts?.dislike || 0, mine: null } : null;
     const $ = id => document.getElementById(id);
     $('mssNoteViews').innerHTML = '';   // MSSViews fills it when switching views
     loadHero($('mssNoteBlur'), e);
     $('mssNotePoster').innerHTML = safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" loading="lazy" alt="">` : esc(((e.title || '?')[0]).toUpperCase());
-    $('mssNoteEyebrow').textContent = o.eyebrow || 'Your Note';
+    const p = o.profile;
+    if (p) {
+      const av = safeURL(p.avatar_url);
+      $('mssNoteEyebrow').innerHTML = mssProfileLinkHTML(p, `<div class="snote-avatar">${av ? `<img src="${av}" alt="" loading="lazy">` : esc((p.username || '?')[0].toUpperCase())}</div><span class="np-user">@${esc(p.username || 'user')}</span>`);
+    } else $('mssNoteEyebrow').textContent = o.eyebrow || 'Your Note';
     $('mssNoteTitle').innerHTML = mssTitleLinkHTML(e, esc(e.title || ''));
     $('mssNoteScore').innerHTML = scorePill(liveScore(e));
     $('mssNoteTags').innerHTML = badges(e, { genres: 3, dateLabel: e.completed_date ? 'Completed On:' : 'Added On:', date: date(watchedDate(e), true) });
@@ -210,6 +237,10 @@ const MSSNote = (() => {
     MSSDialog.open($('mssNoteOverlay'));
     // An existing note opens read-only; a brand-new one goes straight to the editor
     if (e.notes && e.notes.trim()) showView(); else if (o.editable) showEdit(); else showView();
+    if (o.react) mssReactions('note', e.id).then(st => {
+      if (current !== e) return;
+      reactState = st; viewFooter();
+    }).catch(() => {});
   }
   function close() {
     MSSDialog.close(document.getElementById('mssNoteOverlay'));
@@ -275,6 +306,6 @@ const MSSNote = (() => {
   return {
     cardHTML, open, close, reactionCounts,
     words, date, watchedDate, trim, badges, scorePill, poster, loadHero, fitLong,
-    _edit: showEdit, _cancel: cancel, _save: save, _count: updateCount,
+    _edit: showEdit, _cancel: cancel, _save: save, _count: updateCount, _react: react,
   };
 })();
