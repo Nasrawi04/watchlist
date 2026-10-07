@@ -147,9 +147,31 @@ const MSSEp = (() => {
   function answerAsk(a) { const r = askResolve; askResolve = null; close(); r?.(a); }
 
   /* ── 2) Quick-rate popup ── */
+  // The number is a text box: type a score (1–10) or use − / + and the slider
   function scoreHTML() {
     const b = band(st.score);
-    return `<div class="ep-score ep-band-${b.key}" id="mssEpScore"><b>${st.score.toFixed(1)}</b><span>${b.name}</span></div>`;
+    return `<div class="ep-score ep-band-${b.key}" id="mssEpScore">
+      <input type="text" inputmode="decimal" class="ep-score-input" id="mssEpScoreInput" value="${st.score.toFixed(1)}" maxlength="4"
+             aria-label="Episode score, 1 to 10" oninput="MSSEp._typed(this.value)" onchange="MSSEp._typedDone(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+      <span id="mssEpBand">${b.name}</span></div>`;
+  }
+  // Update colour + band name + slider without rewriting what's being typed
+  function paintScore() {
+    const b = band(st.score), box = document.getElementById('mssEpScore');
+    if (box) box.className = `ep-score ep-band-${b.key}`;
+    const nm = document.getElementById('mssEpBand'); if (nm) nm.textContent = b.name;
+    const sl = document.getElementById('mssEpSlider'); if (sl && Number(sl.value) !== st.score) sl.value = st.score;
+  }
+  function typed(v) {
+    const n = parseFloat(String(v).replace(',', '.'));
+    if (!isNaN(n) && n >= 1 && n <= 10) { st.score = Math.round(n * 10) / 10; paintScore(); }
+  }
+  function typedDone(el) {
+    let n = parseFloat(String(el.value).replace(',', '.'));
+    if (isNaN(n)) n = st.score;
+    st.score = Math.min(10, Math.max(1, Math.round(n * 10) / 10));
+    el.value = st.score.toFixed(1);
+    paintScore();
   }
   function render(meta) {
     const e = st.e, m = meta || {};
@@ -216,9 +238,8 @@ const MSSEp = (() => {
 
   function setScore(v) {
     st.score = Math.min(10, Math.max(1, Math.round(Number(v) * 10) / 10));
-    const box = document.getElementById('mssEpScore');
-    if (box) box.outerHTML = scoreHTML();
-    const sl = document.getElementById('mssEpSlider'); if (sl && Number(sl.value) !== st.score) sl.value = st.score;
+    const inp = document.getElementById('mssEpScoreInput'); if (inp) inp.value = st.score.toFixed(1);
+    paintScore();
   }
   function toggleTag(t) {
     if (st.tags.has(t)) st.tags.delete(t);
@@ -245,6 +266,7 @@ const MSSEp = (() => {
   }
   async function save(btn) {
     if (!st) return;
+    const inp = document.getElementById('mssEpScoreInput'); if (inp) typedDone(inp);
     const { e, s, n, prev } = st;
     btn.disabled = true; btn.textContent = 'Saving…';
     const row = {
@@ -427,7 +449,7 @@ const MSSEp = (() => {
   return {
     afterWatch, rate: (e, s, n, o = {}) => open(e, s, n, { ...o, rewatch: typeof isRewatching === 'function' && isRewatching(e) }),
     close, band, BANDS, TAGS, mode, setMode, isShow, seasonEpisodes, showPopup, showCardHTML, _card: openCard,
-    _ask: answerAsk, _slide: setScore, _step: d => st && setScore(st.score + d), _tag: toggleTag, _note: onNote,
+    _ask: answerAsk, _slide: setScore, _typed: typed, _typedDone: typedDone, _step: d => st && setScore(st.score + d), _tag: toggleTag, _note: onNote,
     _toggle: k => { if (!st) return; st[k === 'tags' ? 'showTags' : 'showNote'] = !st[k === 'tags' ? 'showTags' : 'showNote']; render(st.eps?.find(x => x.n === st.n)); },
     _go: go, _save: save, _stop: stop, _skip: skip,
     _rateSeason: sn => { const e = lastEntry; close(); if (e) open(e, sn, 0); },
