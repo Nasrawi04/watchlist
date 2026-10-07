@@ -799,7 +799,7 @@ document.addEventListener('keydown', e => {
 
   document.addEventListener('touchstart', e => {
     if (window.scrollY > 0) return;
-    if (e.target.closest('.hc-card, .det-comments-card, .modal-wrap, [class*="overlay"], .mobile-nav')) return;
+    if (MSSDialog.top() || e.target.closest('.hc-card, .modal-wrap, [class*="overlay"], .mobile-nav')) return;
     startY = e.touches[0].clientY;
     pulling = false;
     triggered = false;
