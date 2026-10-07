@@ -109,8 +109,7 @@ const MSSList = (() => {
 
   /* ── Read-only popup ── */
   function close() {
-    document.getElementById('mssListOverlay')?.classList.remove('open');
-    document.body.style.overflow = '';
+    MSSDialog.close(document.getElementById('mssListOverlay'));
   }
   function open(list, o = {}) {
     let ov = document.getElementById('mssListOverlay');
@@ -118,8 +117,7 @@ const MSSList = (() => {
       ov = document.createElement('div');
       ov.id = 'mssListOverlay';
       ov.innerHTML = `<div id="mssListCard" role="dialog" aria-modal="true" aria-label="List"></div>`;
-      ov.addEventListener('click', e => { if (e.target === ov) close(); });
-      document.addEventListener('keydown', e => { if (e.key === 'Escape' && ov.classList.contains('open')) close(); });
+      MSSDialog.bind(ov, close);
       document.body.appendChild(ov);
     }
     const items = list.items || [];
@@ -136,8 +134,7 @@ const MSSList = (() => {
       ${o.collabLine || ''}
       ${posters.length ? `<div class="lp-posters">${posters.map(e => `<div class="lp-poster">${posterHTML(e, 'big')}</div>`).join('')}${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}</div>` : ''}
       <div id="lpNavPopupActions" class="lp-footer${o.social ? ' np-actions' : ''}">${footerHTML(list, o, null, null)}</div>`;
-    ov.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    MSSDialog.open(ov);
     cur = { list, o, react: null, imported: null };
     if (o.social) {
       const me = window._navUser?.id, c = cur;
