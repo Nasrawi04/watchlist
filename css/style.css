@@ -41,7 +41,7 @@
           · Info popup (info-popup.js → MSSInfo) — the one info popup used
           · Discover confirmation picker — lets the person pick the right 
           · Ratings popup (rating-popup.js → MSSRate) — the one ratings po
-          · Rating filter picker — lets the person sort/filter a section b
+          · Picker header + list (.rf-*) — Link to TMDB pickers
           · Sort & Filter — two separate popups (Sort, Filter), each with 
           · Ranked / Unranked badges (lists, list view)
           · Notifications (bell in the top bar)
@@ -144,6 +144,8 @@
 :root {
   /* one width for the Info, Ratings and Note popups (with or without the switcher) */
   --popup-w: 920px;
+  /* one dimmed backdrop (no blur) behind every popup */
+  --popup-backdrop: rgba(0,0,0,0.72);
   --bg:           #0A0A0E;
   --bg-2:         #111117;
   --bg-3:         #19191F;
@@ -1132,7 +1134,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 /* ── Info popup (info-popup.js → MSSInfo) — the one info popup used on every page ── */
 #mssInfoOverlay {
   position:fixed;inset:0;z-index:902;
-  background:rgba(0,0,0,0.72);
+  background:var(--popup-backdrop);
   display:flex;align-items:center;justify-content:center;
   padding:16px;box-sizing:border-box;
   opacity:0;transition:opacity 220ms var(--ease);pointer-events:none;
@@ -1181,7 +1183,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 
 /* ── Discover confirmation picker — lets the person pick the right TMDB match instead of auto-navigating to a possibly-wrong title. Can be triggered from inside other modals now (Create Card's "Link to TMDB" prompt), so this needs to sit above every other modal z-index in the app (highest otherwise is 1200), not just the page content behind it. ── */
 #catDiscoverOverlay {
-  position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
+  position:fixed; inset:0; z-index:1300; background:var(--popup-backdrop);
   display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;
   opacity:0; transition:opacity 220ms var(--ease); pointer-events:none;
 }
@@ -1251,7 +1253,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 
 /* ── Ratings popup (rating-popup.js → MSSRate) — the one ratings popup on every page ── */
 #mssRateOverlay {
-  position:fixed; inset:0; z-index:900; background:rgba(0,0,0,0.72);
+  position:fixed; inset:0; z-index:900; background:var(--popup-backdrop);
   display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;
   opacity:0; transition:opacity 220ms var(--ease); pointer-events:none;
 }
@@ -1288,34 +1290,12 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 .mr-cc .cc-strip { margin-top:4px; }
 #mssRatePopupActions { display:flex; gap:8px; padding:4px 24px 24px; flex-wrap:wrap; }
 
-/* ── Rating filter picker — lets the person sort/filter a section by any specific rating (core or bonus) instead of just overall score. A full popup rather than a small anchored dropdown, since a category can have up to 18 options with long labels (e.g. "Main Character vs Villain Dynamics") that wouldn't fit comfortably in a compact menu, especially on mobile. Same z-index as the Discover picker (1300, the highest in the app) since this can also be reached from within other contexts. ── */
-#ratingFilterOverlay {
-  position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
-  display:flex; align-items:center; justify-content:center; padding:16px;
-  padding-top:max(16px, env(safe-area-inset-top)); box-sizing:border-box;
-  opacity:0; transition:opacity 220ms var(--ease); pointer-events:none; overflow-y:auto;
-}
-#ratingFilterOverlay.open { opacity:1; pointer-events:auto; }
-#ratingFilterCard {
-  background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
-  border-radius:var(--radius-lg); width:100%; max-width:440px; max-height:calc(100dvh - 32px);
-  display:flex; flex-direction:column; box-sizing:border-box; position:relative;
-}
+/* ── Picker header + list (.rf-*) — the "Link to TMDB" pickers (Create Card, Discover) and detail.html pickers ── */
 .rf-header { display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.25rem 0.75rem; flex-shrink:0; }
 .rf-title { font-family:var(--serif); font-size:20px; font-weight:500; color:var(--text); }
 .rf-close { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:18px; line-height:1; padding:0; transition:color .15s; }
 .rf-close:hover { color:var(--text); }
 .rf-list { overflow-y:auto; overscroll-behavior-y:contain; padding:0 0.75rem 1rem; flex:1; min-height:0; }
-.rf-group-label { font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--olive-light); padding:10px 12px 6px; }
-.rf-item {
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  padding:11px 12px; border-radius:var(--radius-sm); cursor:pointer;
-  font-size:14px; color:var(--text-2); transition:background .15s;
-}
-.rf-item:hover { background:var(--olive-faint); }
-.rf-item.active { background:var(--olive-faint); color:var(--olive-light); font-weight:600; }
-.rf-item-check { color:var(--olive-light); flex-shrink:0; opacity:0; display:flex; }
-.rf-item.active .rf-item-check { opacity:1; }
 
 /* ── Sort & Filter — two separate popups (Sort, Filter), each with its own staged state and Apply/Cancel footer, so nothing takes effect until Apply is pressed. Filter criteria (Genre, Decade) use the same dropdown component as title.html's .td-dd, reimplemented here since that component's structural CSS lives only in title.html's own <style> block. ── */
 .sf-trigger-row { display:flex; align-items:center; gap:8px; justify-content:flex-end; margin-bottom:8px; }
@@ -1332,7 +1312,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 @media(max-width:520px) { .sf-icon-btn-label { display:none; } .sf-icon-btn { padding:8px; } }
 
 #sfSortOverlay, #sfFilterOverlay, #sfTypeFilterOverlay {
-  position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
+  position:fixed; inset:0; z-index:1300; background:var(--popup-backdrop);
   display:flex; align-items:center; justify-content:center; padding:16px;
   padding-top:max(16px, env(safe-area-inset-top)); box-sizing:border-box;
   opacity:0; transition:opacity 220ms var(--ease); pointer-events:none; overflow-y:auto;
@@ -1726,7 +1706,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .dash-empty-lbl { font-family:var(--sans); font-size:11.5px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; }
 /* Picker */
 #dashPickOverlay {
-  position:fixed; inset:0; z-index:1250; background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  position:fixed; inset:0; z-index:1250; background:var(--popup-backdrop);
   display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity .2s;
 }
 #dashPickOverlay.open { opacity:1; pointer-events:auto; }
@@ -1848,7 +1828,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .note-popup-overlay2.open .note-popup2 { transform:scale(1); }
 
 /* Same backdrop as the Info + Ratings popups: dimmed, not blurred */
-.note-popup-overlay2, #snPopupOverlay { background:rgba(0,0,0,0.72) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+.note-popup-overlay2, #snPopupOverlay { background:var(--popup-backdrop) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .np-card { max-width:min(97vw, var(--popup-w)) !important; background:var(--bg-2) !important; border:0.5px solid var(--border) !important; box-shadow:0 28px 70px rgba(0,0,0,.4) !important; display:flex; flex-direction:column; max-height:90dvh; }
 #snPopupCard.np-card { border-radius:var(--radius-lg); width:100%; }
 /* The whole card scrolls (header, note and buttons together), so long notes
@@ -2010,7 +1990,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 /* ── List popup (Personal + Community) ── */
 .lp-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:1.1rem; }
 /* Read-only list popup (list-popup.js → MSSList.open) */
-#mssListOverlay { position:fixed; inset:0; z-index:900; background:rgba(0,0,0,0.75); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); display:none; align-items:center; justify-content:center; padding:24px; }
+#mssListOverlay { position:fixed; inset:0; z-index:900; background:var(--popup-backdrop); display:none; align-items:center; justify-content:center; padding:24px; }
 #mssListOverlay.open { display:flex; }
 #mssListCard { background:var(--bg-3); border:0.5px solid var(--border); border-radius:var(--radius-lg); max-width:560px; width:100%; max-height:88vh; overflow-y:auto; padding:clamp(1.1rem, 4vw, 1.6rem); box-shadow:0 24px 60px rgba(0,0,0,.35); }
 @media(max-width:640px) { #mssListOverlay { padding:14px; } }
@@ -2337,18 +2317,17 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   .rf-header { padding:1rem 1rem 0.6rem; }
   .rf-title { font-size:18px; }
   .rf-list { padding:0 0.6rem 0.85rem; }
-  .rf-item { padding:10px 10px; font-size:13px; }
-  .rf-group-label { padding:9px 10px 5px; font-size:10px; }
 }
 
-#cardLinkOverlay {
-  position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,0.72);
+/* "Link to TMDB" picker — Create Card (#cardLink*) and Discover (#discLink*) */
+#cardLinkOverlay, #discLinkOverlay {
+  position:fixed; inset:0; z-index:1300; background:var(--popup-backdrop);
   display:flex; align-items:center; justify-content:center; padding:16px;
   padding-top:max(16px, env(safe-area-inset-top)); box-sizing:border-box;
   opacity:0; transition:opacity 220ms var(--ease); pointer-events:none; overflow-y:auto;
 }
-#cardLinkOverlay.open { opacity:1; pointer-events:auto; }
-#cardLinkCard {
+#cardLinkOverlay.open, #discLinkOverlay.open { opacity:1; pointer-events:auto; }
+#cardLinkCard, #discLinkCard {
   background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
   border-radius:var(--radius-lg); width:100%; max-width:440px; max-height:calc(100dvh - 32px);
   display:flex; flex-direction:column; box-sizing:border-box; position:relative;
@@ -2361,19 +2340,23 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   font-size:16px; outline:none; transition:border-color .15s;
 }
 .card-link-input:focus { border-color:var(--border-olive); }
+.card-link-sub { font-size:13px; color:var(--text-3); line-height:1.5; padding:0 1.25rem 0.75rem; }
+.card-link-msg { padding:24px 14px; text-align:center; font-size:13px; color:var(--text-3); }
 .card-link-result {
-  display:flex; align-items:center; gap:10px; padding:8px 12px;
+  display:flex; align-items:center; gap:10px; padding:8px 12px; width:100%;
+  background:none; border:0; text-align:left; font:inherit; color:inherit;
   border-radius:var(--radius-sm); cursor:pointer; transition:background .15s;
 }
 .card-link-result:hover { background:var(--olive-faint); }
+.card-link-result:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
 .card-link-result-poster {
   width:32px; height:46px; flex-shrink:0; border-radius:4px; overflow:hidden;
   background:var(--bg-3); display:flex; align-items:center; justify-content:center;
   font-family:var(--serif); font-size:13px; color:var(--text-3);
 }
 .card-link-result-poster img { width:100%; height:100%; object-fit:cover; }
-.card-link-result-title { font-size:13px; color:var(--text); }
-.card-link-result-meta { font-size:10px; color:var(--text-3); margin-top:2px; }
+.card-link-result-title { display:block; font-size:13px; color:var(--text); }
+.card-link-result-meta { display:block; font-size:10px; color:var(--text-3); margin-top:2px; }
 
 /* ═════════════════════════════════════════════════════════════
    §09  Favorite Chips
@@ -2896,7 +2879,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
    ═════════════════════════════════════════════════════════════ */
 .modal-overlay {
   position:fixed; inset:0; z-index:700;
-  background:rgba(11,11,15,0.82); backdrop-filter:blur(10px);
+  background:var(--popup-backdrop);
   display:none; align-items:flex-start; justify-content:center; padding:20px;
   padding-top:8vh; padding-bottom:8vh;
   overflow-y:auto;overscroll-behavior-y:contain;
@@ -2915,7 +2898,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 }
 .modal-title { font-family:var(--serif); font-size:26px; font-weight:500; margin-bottom:1.5rem; }
 .modal-row { margin-bottom:1.15rem; }
-.modal-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:6px; }
+.modal-label { display:block; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:6px; }
 .modal-input {
   width:100%; background:var(--bg-2);
   border:1.5px solid var(--border-2);
@@ -2965,12 +2948,16 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   box-shadow:2px 2px 0 var(--olive-light);
 }
 
+/* Popup cards get focus when they open (MSSDialog, config.js) so keyboard
+   users start inside the popup — no ring on the card itself. */
+[role="dialog"][tabindex="-1"]:focus { outline:none; }
+
 /* ═════════════════════════════════════════════════════════════
    §14  Confirm Dialog
    ═════════════════════════════════════════════════════════════ */
 .confirm-overlay {
   position:fixed; inset:0; z-index:2100;   /* above every popup, so it always shows on top */
-  background:rgba(0,0,0,0.78); backdrop-filter:blur(10px);
+  background:var(--popup-backdrop);
   display:none; align-items:center; justify-content:center; padding:20px;
 }
 .confirm-overlay.open { display:flex; animation:fadeIn .2s var(--ease); }
@@ -3261,7 +3248,6 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 @media(min-width:1381px) { [data-theme="light"] nav { border-bottom-color:rgba(0,0,0,0.12); } }
 [data-theme="light"] .bottom-nav { background:rgba(226,218,208,0.97); border-top-color:rgba(0,0,0,0.12); }
 [data-theme="light"] .mobile-nav { background:rgba(226,218,208,0.97); border-bottom-color:rgba(0,0,0,0.12); }
-[data-theme="light"] .modal-overlay  { background:rgba(20,18,14,0.5); }
 [data-theme="light"] .modal          { background:#F3EDE4; border-color:rgba(0,0,0,0.14); }
 [data-theme="light"] .nav-user-dropdown { background:#EDE7DE; border-color:rgba(0,0,0,0.14); }
 [data-theme="light"] .toast          { background:rgba(25,22,18,0.96); color:#F0EDE8; border-color:rgba(0,0,0,0.15); }
@@ -4616,7 +4602,7 @@ body { font-size:15px; }
    ═════════════════════════════════════════════════════════════ */
 #createCardOverlay {
   position:fixed;inset:0;z-index:1150;
-  background:rgba(0,0,0,0.82);backdrop-filter:blur(8px);
+  background:var(--popup-backdrop);
   display:flex;align-items:center;justify-content:center;
   padding:16px;box-sizing:border-box;
   opacity:0;pointer-events:none;transition:opacity .2s;
@@ -4773,7 +4759,7 @@ body { font-size:15px; }
 .ep-band-meh         { background:var(--band-meh); color:#2a1606; }
 .ep-band-bad         { background:var(--band-bad); color:#fff; }
 #mssEpOverlay {
-  position:fixed; inset:0; z-index:905; background:rgba(0,0,0,0.72);
+  position:fixed; inset:0; z-index:905; background:var(--popup-backdrop);
   display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;
   opacity:0; pointer-events:none; transition:opacity 200ms var(--ease);
 }
