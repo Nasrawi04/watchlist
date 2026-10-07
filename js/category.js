@@ -50,10 +50,6 @@ function _entryMeta(e) {
   return `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>`;
 }
 
-// Same content as _entryMeta() but without the wrapping <div class="w-ep-row">
-// (which adds its own margin-bottom, meant for stacking it above other
-// card content) — used where the badge needs to sit inline alongside
-// other badges/tags instead of as its own standalone row.
 /* ── Ongoing badge: shows last watched position (S3 E10) ── */
 function _ongoingMeta(e) {
   const isMovie = e.ratings?._media_type === 'movie';
@@ -245,71 +241,29 @@ function _applyCatTypeFilter(arr) {
   return arr.filter(e => _catEntryIsMovie(e) === wantMovie);
 }
 
+const _CAT_TYPES = [['all', 'All Types'], ['movie', 'Movies'], ['tv', 'TV Shows']];
+// Movies vs TV Shows (Anime / Cartoons) — the shared Type filter popup (SF.typeFilter)
+function openCatTypeFilterPopup() {
+  SF.typeFilter({ groups: [{ key: 'type', label: 'Type', options: _CAT_TYPES }], value: { type: _catTypeFilter }, onApply: v => setCatTypeFilter(v.type) });
+}
+
 function _catTypeFilterBar() {
   const wrap = document.getElementById('catTypeFilterWrap');
   if (!wrap) return;
   const isAnimated = window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
   if (!isAnimated) { wrap.innerHTML = ''; return; }
-  const labels = { all: 'All Types', movie: 'Movies', tv: 'TV Shows' };
+  const label = _CAT_TYPES.find(t => t[0] === _catTypeFilter)[1];
   wrap.innerHTML = `<div class="sf-trigger-row" style="margin:0 0 18px;justify-content:flex-start;">
-    <button class="sf-icon-btn${_catTypeFilter!=='all'?' active':''}" onclick="openCatTypeFilterPopup()" aria-label="Filter">
-      ${icon('filter', 15)}<span class="sf-icon-btn-label">${_catTypeFilter!=='all'?labels[_catTypeFilter]:'Filter'}</span>
-    </button>
+    ${SF.typeFilterButton('openCatTypeFilterPopup()', _catTypeFilter !== 'all' ? label : 'Filter', _catTypeFilter !== 'all')}
   </div>`;
 }
 
-let _catStagedTypeFilter = 'all';
 
-function _injectCatTypeFilterOverlay() {
-  if (document.getElementById('sfTypeFilterOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'sfTypeFilterOverlay';
-  el.innerHTML = `<div id="sfTypeFilterCard" role="dialog" aria-modal="true" aria-labelledby="sfTypeFilterTitle">
-    <div class="sf-header">
-      <div class="sf-title" id="sfTypeFilterTitle">Filter</div>
-      <button type="button" class="sf-close" onclick="closeCatTypeFilterPopup()" aria-label="Close">${icon('x', 18)}</button>
-    </div>
-    <div class="sf-body" id="catTypeFilterBody"></div>
-    <div class="sf-footer">
-      <button class="sf-clear-btn" onclick="_catClearStagedTypeFilter()">Clear</button>
-      <button class="sf-apply-btn" onclick="_catApplyTypeFilterPopup()">Apply</button>
-    </div>
-  </div>`;
-  MSSDialog.bind(el, closeCatTypeFilterPopup);
-  document.body.appendChild(el);
-}
 
-function openCatTypeFilterPopup() {
-  _injectCatTypeFilterOverlay();
-  _catStagedTypeFilter = _catTypeFilter;
-  document.getElementById('catTypeFilterBody').innerHTML = _catTypeFilterBodyHTML();
-  MSSDialog.open(document.getElementById('sfTypeFilterOverlay'));
-}
 
-function closeCatTypeFilterPopup() {
-  MSSDialog.close(document.getElementById('sfTypeFilterOverlay'));
-}
 
-function _catTypeFilterBodyHTML() {
-  const labels = { all: 'All Types', movie: 'Movies', tv: 'TV Shows' };
-  const rows = Object.entries(labels).map(([v, l]) => `
-    <label class="sf-check-row">
-      <input type="checkbox" name="catTypeStaged" ${_catStagedTypeFilter===v?'checked':''} onchange="_catStagedTypeFilter='${v}';document.getElementById('catTypeFilterBody').innerHTML=_catTypeFilterBodyHTML();">
-      <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-      <span>${l}</span>
-    </label>`).join('');
-  return `<div class="sf-section-label">Type</div><div class="sf-check-list">${rows}</div>`;
-}
 
-function _catClearStagedTypeFilter() {
-  _catStagedTypeFilter = 'all';
-  document.getElementById('catTypeFilterBody').innerHTML = _catTypeFilterBodyHTML();
-}
 
-function _catApplyTypeFilterPopup() {
-  setCatTypeFilter(_catStagedTypeFilter);
-  closeCatTypeFilterPopup();
-}
 
 function setCatTypeFilter(value) {
   _catTypeFilter = value;
@@ -558,7 +512,7 @@ function renderMoviesWatchingList(items) {
         ${isPaused ? mssHoldHTML(e) : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
         <div class="w-genre">${_badge}${rtStr ? `<span class="w-ep-badge">${rtStr}</span>` : ''}</div>
       </div>
       <div class="w-ep-controls" onclick="event.stopPropagation()">
@@ -626,7 +580,7 @@ function renderWatchingList(items) {
         ${isPaused ? mssHoldHTML(e) : ''}
       </div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
         <div class="w-ep-row">
           ${_badge}
           ${upNext ? `<span class="up-next-tag">Up Next</span>` : `<span class="w-ep-badge">${epStr}</span>`}
@@ -693,11 +647,9 @@ function renderWatchingGrid(items) {
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
       </div>
       <div class="wg-info">
-        <div style="margin-bottom:6px;">
-          <div class="title-year-row" style="margin-bottom:4px;">
-            <div class="wg-title">${escHTML(e.title)}</div>
-            ${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}
-          </div>
+        <div class="title-year-row">
+          <div class="wg-title">${escHTML(e.title)}</div>
+          ${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}
         </div>
         ${epStr ? `<div class="wg-genre"><span class="w-ep-badge">${epStr}</span></div>` : ''}
         ${upNext ? `<div class="wg-genre"><span class="up-next-tag">Up Next</span></div>` : ''}
@@ -734,15 +686,15 @@ function renderQueueGrid(items) {
       <div class="wg-info" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
         <div style="margin-bottom:6px;">
           <div class="title-year-row">
-            <div class="wg-title" style="margin-bottom:4px;">${escHTML(e.title)}</div>
+            <div class="wg-title" style="margin-bottom:0;">${escHTML(e.title)}</div>
             ${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}
           </div>
           ${scope ? `<div class="w-ep-row"><span class="w-ep-badge">${scope}</span></div>` : ''}
         </div>
       </div>
       <div class="start-watching-wrap" onclick="event.stopPropagation()">
-        <button onclick="startWatching('${e.id}')" class="continue-btn">Start</button>
-        <button onclick="markUpNext('${e.id}')" class="ep-btn up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="14" y2="6"/><line x1="3" y1="12" x2="11" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="16 14 20 18 16 22"/><line x1="14" y1="18" x2="20" y2="18"/></svg></button>
+        <button type="button" onclick="startWatching('${e.id}')" class="continue-btn">Start</button>
+        <button type="button" onclick="markUpNext('${e.id}')" class="up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="14" y2="6"/><line x1="3" y1="12" x2="11" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="16 14 20 18 16 22"/><line x1="14" y1="18" x2="20" y2="18"/></svg></button>
       </div>
     </div>`;
   }).join('');
@@ -1021,7 +973,7 @@ function renderPausedList(items) {
     return `<div class="w-card" onclick="openCatInfoPopup('${e.id}')">
       <div class="w-poster">${posterHTML(e)}</div>
       <div class="w-body">
-        <div class="w-top"><div class="w-title">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:8px;">${escHTML(e.year)}</span>` : ''}</div></div>
+        <div class="w-top"><div class="w-title">${escHTML(e.title)}${e.year ? `<span class="title-year-inline" style="margin-left:8px;">${escHTML(e.year)}</span>` : ''}</div></div>
         <div class="w-ep-row">
           ${_badge}
           <span class="w-ep-badge" style="background:rgba(168,168,168,0.12);color:var(--text-2);border-color:var(--border-2)">On Pause</span>
@@ -1092,12 +1044,12 @@ function renderQueueList(items) {
     return `<div class="w-card" style="cursor:default;">
       <div class="w-poster" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">${posterHTML(e)}</div>
       <div class="w-body" onclick="openCatInfoPopup('${e.id}')" style="cursor:pointer;">
-        <div class="w-top"><div class="w-title">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);margin-left:8px;">${escHTML(e.year)}</span>` : ''}</div></div>
+        <div class="w-top"><div class="w-title">${escHTML(e.title)}${e.year ? `<span class="title-year-inline" style="margin-left:8px;">${escHTML(e.year)}</span>` : ''}</div></div>
         <div class="w-ep-row">${_badge}${scope ? `<span class="w-ep-badge">${scope}</span>` : ''}</div>
       </div>
-      <div style="display:flex;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">
-        <button onclick="markUpNext('${e.id}')" class="w-list-action-btn up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="14" y2="6"/><line x1="3" y1="12" x2="11" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="16 14 20 18 16 22"/><line x1="14" y1="18" x2="20" y2="18"/></svg></button>
-        <button onclick="startWatching('${e.id}')" class="w-list-action-btn w-list-play-btn" title="Start Watching">${icon('play',14)}</button>
+      <div class="w-queue-actions" onclick="event.stopPropagation()">
+        <button type="button" onclick="startWatching('${e.id}')" class="w-list-action-btn w-list-play-btn" title="Start Watching" aria-label="Start Watching">${icon('play',14)}</button>
+        <button type="button" onclick="markUpNext('${e.id}')" class="w-list-action-btn up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="14" y2="6"/><line x1="3" y1="12" x2="11" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="16 14 20 18 16 22"/><line x1="14" y1="18" x2="20" y2="18"/></svg></button>
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -1124,7 +1076,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
       <div class="comp-row" style="cursor:pointer;" onclick="openGridPopup('${e.id}')">
         <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(i+1) : '')}</div>
         <div class="comp-info">
-          <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span style="font-family:var(--bebas);font-size:18px;font-weight:400;color:var(--text-3);">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+          <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
           <div class="comp-meta">${_badge}</div>
           ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
           ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">"${escHTML(e.notes)}"</div>` : ''}
