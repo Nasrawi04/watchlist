@@ -593,70 +593,6 @@ function mssProfileLinkHTML(p, innerHTML) {
   return `<a class="mss-user-link" href="profile-view.html?${q}">${innerHTML}</a>`;
 }
 
-function openAddModal(cat) {
-  const m = document.getElementById('mCat');
-  if (cat && m) { if (typeof _selSelectDD === 'function') _selSelectDD('mCat', cat); else m.value = cat; }
-  const modal = document.getElementById('addModal');
-  if (modal) {
-    modal.classList.add('open');
-    setTimeout(() => { const ti = document.getElementById('mTitle'); if (ti) ti.focus(); }, 200);
-  }
-}
-
-function closeModal() {
-  const modal = document.getElementById('addModal');
-  if (modal) modal.classList.remove('open');
-}
-
-function closeModalIfBg(e) {
-  if (e.target === document.getElementById('addModal')) closeModal();
-}
-
-/* markActiveNav() lives in nav.js — it runs right after the nav is rendered. */
-
-/* (Top-bar toggles — menu, search, profile menu — live in nav.js.) */
-
-/* ── Rating dropdown helpers ── */
-function toggleRDrop(key) {
-  const list = document.getElementById('rd-' + key);
-  if (!list) return;
-  const isOpen = list.classList.contains('open');
-  // Close all
-  document.querySelectorAll('.rdrop-list.open').forEach(el => el.classList.remove('open'));
-  if (!isOpen) list.classList.add('open');
-}
-
-/* ── Global event listeners ── */
-document.addEventListener('click', e => {
-  // Close rating dropdowns
-  if (!e.target.closest('.rdrop-wrap')) {
-    document.querySelectorAll('.rdrop-list.open').forEach(el => el.classList.remove('open'));
-  }
-  // Close user menus
-  if (!e.target.closest('.nav-user-wrap') && !e.target.closest('.nav-top-user')) {
-    document.getElementById('userMenuDropdown')?.classList?.remove('open');
-    document.getElementById('userMenuDropdownMobile')?.classList?.remove('open');
-  }
-});
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (document.getElementById('addModal')?.classList.contains('open')) closeModal();
-    document.getElementById('mobileNav')?.classList?.remove('open');
-    document.querySelectorAll('.rdrop-list.open').forEach(el => el.classList.remove('open'));
-    document.getElementById('userMenuDropdown')?.classList?.remove('open');
-  }
-  if (e.key === 'n' && !e.target.closest('input,textarea,select')) openAddModal();
-  if (e.key === '/' && !e.target.closest('input,textarea,select')) {
-    e.preventDefault();
-    document.getElementById('globalSearch')?.focus();
-  }
-});
-
-
-/* ══════════════════════════════════════════
-   CONFIRM DIALOG
-══════════════════════════════════════════ */
 // "Up Next" / "Taking a Break" cover on a poster: the poster softly
 // blurred + dimmed, with a big label pill that scales with the poster
 // (style.css .mss-hold). Use inside a position:relative poster box.
@@ -675,49 +611,146 @@ function mssToolbarHTML(label, count, barHTML = '', noun = 'item') {
     </div>${barHTML}`;
 }
 
+/* ══════════════════════════════════════════
+   DIALOG SHELL — MSSDialog
+   One open/close behaviour for every popup:
+     • backdrop click + Esc close the TOP popup only (popups stack)
+     • page scroll locks while any popup is open
+     • focus moves into the popup, Tab stays inside it, and focus
+       returns to the button that opened it when it closes
+     • role="dialog" + aria-modal on the card
+   A popup = an overlay element (shown with .open, styled in style.css)
+   holding one card. Usage:
+     MSSDialog.bind(overlay, closeFn)       // once, when injected (backdrop + Esc call closeFn)
+     MSSDialog.open(overlay, { focus })     // in the popup's open(); focus = element / selector
+     MSSDialog.close(overlay)               // in the popup's close()
+     MSSDialog.isOpen(overlay) / MSSDialog.top()
+══════════════════════════════════════════ */
+const MSSDialog = (() => {
+  const stack = [];                 // [{ ov, returnTo }] — last = top
+  let handoff = null;               // focus target kept for a popup that replaces the one just closed
+  const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  // Page popups not on the shell yet (moved over in later steps): while one is
+  // open on top, Esc and Tab are left to it.
+  const LEGACY_ON_TOP = '[id$="ommentsOverlay"], #commentsPopupOverlay, #commentsPopupCompletedOverlay';
+
+  const cardOf = ov => ov.querySelector('[role="dialog"]') || ov.firstElementChild || ov;
+  const find = ov => stack.findIndex(d => d.ov === ov);
+  const visible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+  const legacyOpen = () => [...document.querySelectorAll(LEGACY_ON_TOP)].some(o => o.classList.contains('open') || o.style.opacity === '1');
+  const focusEl = el => { try { el.focus({ preventScroll: true }); } catch {} };
+
+  function bind(ov, close) {
+    if (!ov || ov._mssClose) return;
+    ov._mssClose = close;
+    ov.addEventListener('click', ev => { if (ev.target === ov) close(); });
+  }
+
+  function open(ov, o = {}) {
+    if (!ov) return;
+    const card = cardOf(ov);
+    if (!card.getAttribute('role')) card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    if (!card.hasAttribute('tabindex')) card.setAttribute('tabindex', '-1');
+    const i = find(ov);
+    if (i === -1) {
+      const active = document.activeElement;
+      stack.push({ ov, returnTo: handoff || (active && active !== document.body && !ov.contains(active) ? active : null) });
+    } else stack.push(stack.splice(i, 1)[0]);            // already open → bring to the top
+    handoff = null;
+    ov.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    const target = typeof o.focus === 'string' ? ov.querySelector(o.focus) : o.focus;
+    if (target) focusEl(target);
+    else if (!ov.contains(document.activeElement)) focusEl(card);
+  }
+
+  function close(ov) {
+    if (!ov) return;
+    ov.classList.remove('open');
+    const i = find(ov);
+    if (i === -1) return;
+    const [d] = stack.splice(i, 1);
+    if (stack.length) {
+      if (i === stack.length) {                            // it was the top one
+        const under = stack[stack.length - 1].ov;
+        focusEl(d.returnTo && under.contains(d.returnTo) ? d.returnTo : cardOf(under));
+      }
+      return;
+    }
+    document.body.style.overflow = '';
+    // Another popup opened straight away (Info → Ratings switch) keeps the
+    // original opener; otherwise focus goes back to it.
+    handoff = d.returnTo;
+    setTimeout(() => {
+      if (stack.length || handoff !== d.returnTo) return;
+      handoff = null;
+      if (d.returnTo?.isConnected) focusEl(d.returnTo);
+    }, 0);
+  }
+
+  const isOpen = ov => !!ov && find(ov) !== -1;
+  const top = () => stack[stack.length - 1]?.ov || null;
+
+  document.addEventListener('keydown', ev => {
+    if (!stack.length || legacyOpen()) return;
+    const ov = top();
+    if (ev.key === 'Escape') {
+      // Capture phase + stop: only the top popup closes, not page popups underneath
+      ev.preventDefault(); ev.stopImmediatePropagation();
+      (ov._mssClose || (() => close(ov)))();
+      return;
+    }
+    if (ev.key !== 'Tab') return;
+    const card = cardOf(ov), active = document.activeElement;
+    if (active && active !== document.body && !card.contains(active)) return;   // focus is somewhere else on purpose
+    const items = [...card.querySelectorAll(FOCUSABLE)].filter(visible);
+    if (!items.length) { ev.preventDefault(); focusEl(card); return; }
+    const first = items[0], last = items[items.length - 1];
+    const outside = !card.contains(active);              // nothing focused yet (body)
+    if (ev.shiftKey && (outside || active === first || active === card)) { ev.preventDefault(); focusEl(last); }
+    else if (!ev.shiftKey && (outside || active === last)) { ev.preventDefault(); focusEl(first); }
+  }, true);
+
+  return { bind, open, close, isOpen, top };
+})();
+
+/* ══════════════════════════════════════════
+   CONFIRM DIALOG
+══════════════════════════════════════════ */
 // danger (default true) → solid red confirm button; danger:false → solid olive
 // (for non-destructive actions like signing out or starting a rewatch).
-function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', iconName = 'x', danger = true } = {}) {
+// cancelText:null → a single-button notice (resolves true when dismissed).
+function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', cancelText = 'Cancel', iconName = 'x', danger = true } = {}) {
   return new Promise((resolve) => {
     const overlay  = document.getElementById('confirmOverlay');
     if (!overlay) { resolve(window.confirm(message || title)); return; }
-
-    document.getElementById('confirmTitle').textContent  = title;
-    document.getElementById('confirmMsg').textContent    = message;
-    document.getElementById('confirmOk').textContent     = confirmText;
-    document.getElementById('confirmOk').classList.toggle('is-safe', !danger);
-    document.getElementById('confirmIcon').innerHTML     = icon(iconName, 36);
-
-    // Remember the page's scroll lock + focus, so cancelling a confirm
-    // opened from inside a popup leaves that popup exactly as it was.
-    const prevOverflow = document.body.style.overflow;
-    const prevFocus    = document.activeElement;
-    overlay.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    const notice = cancelText == null;
 
     const btnOk     = document.getElementById('confirmOk');
     const btnCancel = document.getElementById('confirmCancel');
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').textContent   = message;
+    document.getElementById('confirmIcon').innerHTML    = icon(iconName, 36);
+    btnOk.textContent = confirmText;
+    btnOk.classList.toggle('is-safe', !danger);
+    btnCancel.textContent = notice ? '' : cancelText;
+    btnCancel.hidden = notice;
+
     function done(val) {
-      overlay.classList.remove('open');
-      document.body.style.overflow = prevOverflow;
+      MSSDialog.close(overlay);
+      overlay._mssClose = null;
       btnOk.removeEventListener('click', onOk);
       btnCancel.removeEventListener('click', onCancel);
-      overlay.removeEventListener('click', onBg);
-      document.removeEventListener('keydown', onKey, true);
-      prevFocus?.focus?.({ preventScroll: true });
       resolve(val);
     }
     const onOk     = () => done(true);
-    const onCancel = () => done(false);
-    const onBg     = (e) => { if (e.target === overlay) done(false); };
-    // Esc cancels (popups underneath already skip their own Esc while this is open)
-    const onKey    = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } };
-
+    const onCancel = () => done(notice);
     btnOk.addEventListener('click', onOk);
     btnCancel.addEventListener('click', onCancel);
-    overlay.addEventListener('click', onBg);
-    document.addEventListener('keydown', onKey, true);
-    btnCancel.focus({ preventScroll: true });
+    if (!overlay._mssBound) { overlay._mssBound = true; overlay.addEventListener('click', ev => { if (ev.target === overlay) overlay._mssClose?.(); }); }
+    overlay._mssClose = onCancel;          // backdrop + Esc
+    MSSDialog.open(overlay, { focus: notice ? btnOk : btnCancel });
   });
 }
 
