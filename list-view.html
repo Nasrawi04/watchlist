@@ -324,19 +324,10 @@ function _lvOpenInfo(id) {
 }
 
 function _lvCardHTML(e, rank) {
-  const posterInner = safeURL(e.poster_url)
-    ? `<img src="${safeURL(e.poster_url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
-    : `<div class="home-tmdb-poster-fallback">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
-  const clickAttr = `onclick="_lvOpenInfo(${attrJSON(e.id)})"`;
   const scoreStr = _lvOwnScoreHTML(e);
-  const typeLabel = _lvTypeLabel(e);
-  return `<div class="q-card lv-card" ${clickAttr}>
-    <div class="q-poster" style="position:relative">${posterInner}<div class="q-poster-overlay"></div>${_lvRankBadgeHTML(rank)}${typeLabel ? `<span class="${_lvTypeCls(e)} type-label-overlay-bottom">${typeLabel}</span>` : ''}</div>
-    <div class="q-info">
-      <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${_lvEsc(e.title)}</div>${e.year ? `<span class="title-year-inline">${_lvEsc(e.year)}</span>` : ''}</div>
-      ${scoreStr ? `<div class="home-tmdb-meta-row">${scoreStr}</div>` : ''}
-    </div>
-  </div>`;
+  return MSSCard.poster({ cls: 'lv-card', onclick: `_lvOpenInfo(${attrJSON(e.id)})`, title: e.title, year: e.year, poster: e.poster_url,
+    rank: rank == null ? 0 : rank + 1, typeHTML: _lvTypeLabel(e) ? `<span class="${_lvTypeCls(e)} type-label-overlay-bottom">${_lvTypeLabel(e)}</span>` : '',
+    scoreHTML: scoreStr });
 }
 
 function _lvListRowHTML(e, rank) {
