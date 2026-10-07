@@ -324,6 +324,21 @@
 .rp-input { width:100%; min-height:60px; resize:vertical; box-sizing:border-box; margin-bottom:8px; }
 .rp-post { width:100%; justify-content:center; }
 @media(prefers-reduced-motion:reduce) { #replyPopupOverlay { transition:none; } }
+
+/* ── Friends & This Title (Watched By · Currently Watching · Want to Watch) — same card as Fan Favorites ── */
+.td-friend-count { font-family:var(--bebas); font-size:14px; letter-spacing:.5px; color:var(--text-3); margin-left:4px; }
+.td-friend-card .td-fan-list { gap:2px; }
+.td-fan-list li[hidden] { display:none; }
+.td-friend-row { display:flex; align-items:center; gap:10px; width:100%; padding:5px 6px; background:none; border:0; border-radius:var(--radius-sm);
+  font:inherit; color:inherit; text-align:left; cursor:pointer; transition:background .15s; box-sizing:border-box; }
+.td-friend-row:hover { background:var(--olive-faint); }
+.td-friend-row:focus-visible { outline:2px solid var(--olive-light); outline-offset:1px; }
+.td-friend-av { width:26px; height:26px; font-size:11px; flex-shrink:0; }
+.td-friend-score { font-family:var(--bebas); font-size:17px; letter-spacing:.3px; color:var(--olive-light); white-space:nowrap; }
+.td-friend-row .w-ep-badge, .td-friend-row .up-next-tag { flex-shrink:0; }
+.td-friend-more { margin-top:12px; background:none; border:0; padding:0; font:inherit; font-size:12px; font-weight:600; color:var(--olive-light); cursor:pointer; }
+.td-friend-more:hover { text-decoration:underline; }
+@media(max-width:640px) { .td-friend-score { font-size:16px; } .td-friend-av { width:24px; height:24px; } }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -351,6 +366,8 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/rating-popup.js"></script>
+<script src="js/note-popup.js"></script>
 <script src="js/info-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
 <script src="js/discover-categories.js"></script>
@@ -466,9 +483,84 @@ async function loadTitle() {
   if (firstSeason) _selectSeason(firstSeason);
 
   _tdLoadNotes();
+  _tdLoadFriends(titleForMatch);
   _tdLoadRelated(detail);
   _tdLoadFans();
   if (_tdType === 'tv') _tdLoadEpScores();
+}
+
+/* ── Your friends and this title: Watched By (with their score) · Currently
+   Watching (where they are) · Want to Watch. Accepted friends only; groups
+   with nobody are left out, and the whole section hides when no friend has
+   it. Tap a friend → their Ratings / Info (MSSViews, read-only). ── */
+let _tdFriendEntries = {};
+const _TD_FRIEND_MAX = 6;
+async function _tdLoadFriends(title) {
+  if (!_tdUser) return;
+  let rows = [], profiles = {};
+  try {
+    const friends = (await getFriendships(_tdUser.id)).filter(f => f.status === 'accepted');
+    if (!friends.length) return;
+    friends.forEach(f => { if (f.friendProfile) profiles[f.friendId] = f.friendProfile; });
+    const ids = friends.map(f => f.friendId);
+    const cols = 'id,user_id,title,year,cat,status,ratings,final_score,season,episode,watched,total_eps,total_seasons,completed_date,created_at,updated_at,poster_url,genres,notes,tmdb_id,tmdb_type,description';
+    const like = String(title || '').replace(/[\\%_]/g, m => '\\' + m);
+    const [linked, unlinked] = await Promise.all([
+      sb.from('entries').select(cols).in('user_id', ids).eq('tmdb_id', Number(_tdId)).eq('tmdb_type', _tdType),
+      like ? sb.from('entries').select(cols).in('user_id', ids).is('tmdb_id', null).ilike('title', like) : { data: [] },
+    ]);
+    const seen = new Set();
+    rows = [...(linked.data || []), ...(unlinked.data || [])].filter(e => !seen.has(e.user_id) && seen.add(e.user_id));
+  } catch (err) { console.error('Friends on this title:', err); return; }
+  if (!rows.length) return;
+  _tdFriendEntries = {};
+  rows.forEach(e => { e._profile = profiles[e.user_id] || { id: e.user_id }; _tdFriendEntries[e.id] = e; });
+  const by = (a, b) => (b || '').localeCompare(a || '');
+  const groups = [
+    { key: 'watched', label: 'Watched By', items: rows.filter(e => e.status === 'completed' || e.status === 'ongoing')
+        .sort((a, b) => (liveScore(b) ?? -1) - (liveScore(a) ?? -1)) },
+    { key: 'watching', label: 'Currently Watching', items: rows.filter(e => ['watching', 'up_next', 'paused'].includes(e.status))
+        .sort((a, b) => by(a.updated_at, b.updated_at)) },
+    { key: 'want', label: 'Want to Watch', items: rows.filter(e => e.status === 'queue').sort((a, b) => by(a.created_at, b.created_at)) },
+  ].filter(g => g.items.length);
+  if (!groups.length) return;
+  document.getElementById('tdFriends').innerHTML = `<div class="td-related">
+      <div class="section-eyebrow">Your Friends</div>
+      <div class="section-title">Friends &amp; This Title</div>
+      <div class="td-fans">${groups.map(g => `<div class="td-fan-card td-friend-card">
+          <div class="td-fan-label">${esc(g.label)} <span class="td-friend-count">${g.items.length}</span></div>
+          <ul class="td-fan-list" id="tdFriends-${g.key}">${g.items.map((e, i) => _tdFriendRow(e, g.key, i >= _TD_FRIEND_MAX)).join('')}</ul>
+          ${g.items.length > _TD_FRIEND_MAX ? `<button type="button" class="td-friend-more" onclick="_tdFriendsMore(this, '${g.key}')" aria-expanded="false">Show all ${g.items.length}</button>` : ''}
+        </div>`).join('')}</div>
+    </div>`;
+}
+function _tdFriendRow(e, key, hidden) {
+  const p = e._profile, av = safeURL(p.avatar_url), name = p.username || 'friend';
+  const sc = liveScore(e);
+  const right = key === 'watched'
+    ? (sc != null ? `<span class="td-friend-score">★ ${Number(sc).toFixed(2)}</span>` : `<span class="td-fan-count">Not rated</span>`)
+    : key === 'watching'
+      ? (e.status === 'up_next' ? `<span class="up-next-tag">Up Next</span>`
+        : e.status === 'paused' ? `<span class="td-fan-count">Taking a break</span>`
+        : e.season || e.episode ? `<span class="w-ep-badge">S${Number(e.season) || 1} · E${Number(e.episode) || 0}</span>`
+        : e.watched ? `<span class="w-ep-badge">${Number(e.watched)} eps</span>` : '')
+      : `<span class="td-fan-count">${e.created_at ? MSSNote.date(e.created_at, true) : ''}</span>`;
+  return `<li${hidden ? ' hidden' : ''}><button type="button" class="td-friend-row" onclick="_tdOpenFriend(${attrJSON(e.id)})" aria-label="@${esc(name)} — open their ${key === 'watched' ? 'ratings' : 'entry'}">
+      <span class="snote-avatar td-friend-av">${av ? `<img src="${av}" alt="" loading="lazy">` : esc(name[0].toUpperCase())}</span>
+      <span class="td-fan-pick">@${esc(name)}</span>${right}
+    </button></li>`;
+}
+function _tdFriendsMore(btn, key) {
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  document.querySelectorAll(`#tdFriends-${key} li`).forEach((li, i) => { if (i >= _TD_FRIEND_MAX) li.hidden = !open; });
+  btn.setAttribute('aria-expanded', open);
+  btn.textContent = open ? 'Show less' : `Show all ${document.querySelectorAll(`#tdFriends-${key} li`).length}`;
+}
+function _tdOpenFriend(id) {
+  const e = _tdFriendEntries[id];
+  if (!e) return;
+  const rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
+  MSSViews.open(e, { start: rated ? 'rate' : 'info', profile: e._profile });
 }
 
 /* ── Fan favorites: the 3 most picked Favorite Episode / Season / Character
@@ -509,17 +601,8 @@ function _tdRowHTML(id, eyebrow, title, items) {
 }
 function _tdRelCardHTML(r) {
   const it = _discNormalize(r, r.media_type || _tdType);
-  const sc = _discFloorScore(it.score);
-  const movie = it.media_type === 'movie';
-  return `<div class="q-card" ${_discClickAttr(it)} role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
-    <div class="q-poster" style="position:relative"><img src="${safeURL(it.poster_url)}" alt="" loading="lazy" data-letter="${esc((it.title || '?')[0])}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">
-      <div class="q-poster-overlay"></div>
-      <span class="${movie ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${movie ? 'Movie' : 'TV Show'}</span></div>
-    <div class="q-info">
-      <div class="title-year-row"><div class="q-title" style="margin-bottom:0;">${esc(it.title)}</div>${it.year ? `<span class="title-year-inline">${esc(it.year)}</span>` : ''}</div>
-      ${sc ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${sc}</span></div>` : ''}
-    </div>
-  </div>`;
+  return MSSCard.poster({ attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url,
+    type: it.media_type === 'movie' ? 'movie' : 'tv', score: _discFloorScore(it.score) });
 }
 async function _tdLoadRelated(d) {
   const withPoster = r => r && r.poster_path && String(r.id) !== String(_tdId);
@@ -651,6 +734,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
 
     ${!isMovie ? _tdSeasonsHTML(d) : ''}
 
+    <div id="tdFriends"></div>
     <div id="tdFans"></div>
     <div id="tdCollection"></div>
     <div id="tdRecs"></div>
