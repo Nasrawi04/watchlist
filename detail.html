@@ -2100,6 +2100,7 @@ async function handlePosterUpload(event) {
     document.getElementById('dPosterLetter').style.display = 'none';
     showToast('Poster uploaded.');
   } catch(e) {
+    if (e?.refused) return;                    // picture check said no (and told them) — keep the old poster
     console.warn('Cloudinary upload failed:', e);
     showToast('Poster upload failed. Please try again.', 'err');
     _posterUrl = null;
