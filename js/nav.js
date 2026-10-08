@@ -14,7 +14,7 @@ async function _fillNavUser(user) {
   // The account's content language (set on another device) → this device, once
   MSSLang.adopt(profile).then(r => { if (r) location.reload(); });
   _navAdminCheck();
-  _navUsernameCheck(profile);
+  _navAccountCheck(profile);
   const username = profile?.username || user.email?.split('@')[0] || 'You';
   const initial  = username[0].toUpperCase();
 
@@ -54,15 +54,38 @@ async function _navAdminCheck() {
   document.querySelectorAll('.nav-admin-link').forEach(a => { a.hidden = on !== '1'; });
 }
 
-// Word filter (038 / 039): an account whose username breaks the filter
-// (made before it existed, or a word added since) must pick a new one.
-// Checked once per session per username; the popup can't be dismissed.
-async function _navUsernameCheck(profile) {
+// Account check, once per session (migrations 038–040):
+//  • suspended by an admin → a popup that only signs out;
+//  • username breaks the word filter (made before it existed, or a word
+//    added since) → must pick a new one. Neither popup can be dismissed.
+async function _navAccountCheck(profile) {
   const uid = window._navUser?.id, name = profile?.username;
   if (!uid || !name || document.getElementById('mssRenameOverlay')) return;
   const key = uid + ':' + name;
-  try { if (sessionStorage.getItem('mss_uname_ok') === key) return; } catch {}
-  if (await isUsernameAllowed(name)) { try { sessionStorage.setItem('mss_uname_ok', key); } catch {} return; }
+  try { if (sessionStorage.getItem('mss_account_ok') === key) return; } catch {}
+  let st = null;
+  try { const { data, error } = await sb.rpc('mss_my_status'); if (!error && data && typeof data.banned === 'boolean') st = data; } catch {}
+  if (!st) st = { banned: false, username_ok: await isUsernameAllowed(name) };   // before migration 040
+  if (st.banned === true) return _navSuspended();
+  if (st.username_ok !== false) { try { sessionStorage.setItem('mss_account_ok', key); } catch {} return; }
+  _navRenamePopup(uid, name);
+}
+function _navSuspended() {
+  if (document.getElementById('mssSuspendedOverlay')) return;
+  const el = document.createElement('div');
+  el.className = 'confirm-overlay';
+  el.id = 'mssSuspendedOverlay';
+  el.innerHTML = `<div class="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="mssSuspTitle" aria-describedby="mssSuspMsg">
+      <div class="confirm-icon" aria-hidden="true">${icon('lock', 36)}</div>
+      <div class="confirm-title" id="mssSuspTitle">Your account is suspended</div>
+      <div class="confirm-msg" id="mssSuspMsg">This account broke MyScreenScore’s community rules, so it can’t be used anymore. If you think this is a mistake, contact the site’s owners.</div>
+      <div class="confirm-actions"><button type="button" class="confirm-ok is-safe" onclick="handleLogout()">Sign out</button></div>
+    </div>`;
+  MSSDialog.bind(el, () => {});
+  document.body.appendChild(el);
+  MSSDialog.open(el, { focus: el.querySelector('button') });
+}
+function _navRenamePopup(uid, name) {
   const el = document.createElement('div');
   el.className = 'confirm-overlay';
   el.id = 'mssRenameOverlay';
@@ -100,7 +123,7 @@ async function _navUsernameCheck(profile) {
       const p = await updateProfile(uid, { username: okName });
       window._navUserProfile = p;
       document.querySelectorAll('#navUserName').forEach(n => { n.textContent = p.username; });
-      try { sessionStorage.setItem('mss_uname_ok', uid + ':' + p.username); } catch {}
+      try { sessionStorage.setItem('mss_account_ok', uid + ':' + p.username); } catch {}
       MSSDialog.close(el);
       setTimeout(() => el.remove(), 300);
       showToast(`You’re now @${p.username}.`);
