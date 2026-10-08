@@ -14,6 +14,7 @@ async function _fillNavUser(user) {
   // The account's content language (set on another device) → this device, once
   MSSLang.adopt(profile).then(r => { if (r) location.reload(); });
   _navAdminCheck();
+  _navUsernameCheck(profile);
   const username = profile?.username || user.email?.split('@')[0] || 'You';
   const initial  = username[0].toUpperCase();
 
@@ -51,6 +52,65 @@ async function _navAdminCheck() {
     try { sessionStorage.setItem('mss_admin', uid + ':' + on); } catch {}
   }
   document.querySelectorAll('.nav-admin-link').forEach(a => { a.hidden = on !== '1'; });
+}
+
+// Word filter (038 / 039): an account whose username breaks the filter
+// (made before it existed, or a word added since) must pick a new one.
+// Checked once per session per username; the popup can't be dismissed.
+async function _navUsernameCheck(profile) {
+  const uid = window._navUser?.id, name = profile?.username;
+  if (!uid || !name || document.getElementById('mssRenameOverlay')) return;
+  const key = uid + ':' + name;
+  try { if (sessionStorage.getItem('mss_uname_ok') === key) return; } catch {}
+  if (await isUsernameAllowed(name)) { try { sessionStorage.setItem('mss_uname_ok', key); } catch {} return; }
+  const el = document.createElement('div');
+  el.className = 'confirm-overlay';
+  el.id = 'mssRenameOverlay';
+  el.innerHTML = `<form class="confirm-card mss-rename" role="dialog" aria-modal="true" aria-labelledby="mssRenameTitle" aria-describedby="mssRenameMsg" novalidate>
+      <div class="confirm-icon" aria-hidden="true">${icon('user', 36)}</div>
+      <div class="confirm-title" id="mssRenameTitle">Choose a new username</div>
+      <div class="confirm-msg" id="mssRenameMsg">Your username <b translate="no">@${escHTML(name)}</b> isn’t allowed on MyScreenScore. Pick a new one to keep going — your library, ratings and friends stay the same.</div>
+      <input class="field-input" id="mssRenameInput" maxlength="20" placeholder="new_username" aria-label="New username" aria-describedby="mssRenameHint" autocomplete="off" spellcheck="false" autocapitalize="none">
+      <div class="mss-rename-hint" id="mssRenameHint" aria-live="polite">Letters, numbers and _ only — at least 3.</div>
+      <div class="confirm-actions"><button type="submit" class="confirm-ok is-safe" id="mssRenameSave" disabled>Save username</button></div>
+    </form>`;
+  MSSDialog.bind(el, () => {});                    // can't be closed until a username is picked
+  document.body.appendChild(el);
+  const input = el.querySelector('input'), hint = el.querySelector('#mssRenameHint'), save = el.querySelector('#mssRenameSave');
+  let timer = null, okName = null;
+  const say = (t, cls = '') => { hint.textContent = t; hint.className = 'mss-rename-hint ' + cls; };
+  input.addEventListener('input', () => {
+    input.value = input.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+    const v = input.value; okName = null; save.disabled = true; clearTimeout(timer);
+    if (v.length < 3) { say('Letters, numbers and _ only — at least 3.'); return; }
+    say('Checking…');
+    timer = setTimeout(async () => {
+      const [free, allowed] = await Promise.all([checkUsernameAvailable(v, uid), isUsernameAllowed(v)]);
+      if (input.value !== v) return;
+      if (!allowed) say('That username isn’t allowed.', 'bad');
+      else if (!free) say('That username is taken.', 'bad');
+      else { say('Available', 'ok'); okName = v; save.disabled = false; }
+    }, 350);
+  });
+  el.querySelector('form').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    if (!okName) return;
+    save.disabled = true; save.textContent = 'Saving…';
+    try {
+      const p = await updateProfile(uid, { username: okName });
+      window._navUserProfile = p;
+      document.querySelectorAll('#navUserName').forEach(n => { n.textContent = p.username; });
+      try { sessionStorage.setItem('mss_uname_ok', uid + ':' + p.username); } catch {}
+      MSSDialog.close(el);
+      setTimeout(() => el.remove(), 300);
+      showToast(`You’re now @${p.username}.`);
+    } catch (err) {
+      console.error(err);
+      say(isUsernameBlockedError(err) ? 'That username isn’t allowed.' : /duplicate|unique/i.test(err?.message || '') ? 'That username is taken.' : 'Couldn’t save — try again.', 'bad');
+      save.disabled = false; save.textContent = 'Save username';
+    }
+  });
+  MSSDialog.open(el, { focus: input });
 }
 
 function _updateMobileNavForGuest() {
