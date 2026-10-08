@@ -116,7 +116,7 @@ const MSSList = (() => {
     if (!ov) {
       ov = document.createElement('div');
       ov.id = 'mssListOverlay';
-      ov.innerHTML = `<div id="mssListCard" role="dialog" aria-modal="true" aria-label="List"></div>`;
+      ov.innerHTML = `<div id="mssListCard" role="dialog" aria-modal="true" aria-label="List" data-dbl-like></div>`;   // double-tap → Like (when the list has one)
       MSSDialog.bind(ov, close);
       document.body.appendChild(ov);
     }
