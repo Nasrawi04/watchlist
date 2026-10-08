@@ -319,9 +319,10 @@ const isUsernameBlockedError = e => /USERNAME_NOT_ALLOWED/.test(e?.message || ''
    Before a profile photo or poster is uploaded, an image-safety model
    (nsfwjs, runs on the device — the picture never goes anywhere to be
    checked) looks at it. Clearly sexual pictures are refused, the person is
-   told, and a flag is logged for the admins (migration 040). The model
-   (~4 MB) only downloads the first time someone picks a picture. If it
-   can't load, the upload goes ahead — admins can still review pictures. */
+   told, and a flag is logged for the admins (migration 040). Pictures it
+   isn't sure about are uploaded, then sent to the admins' review queue
+   (migration 041). The model (~4 MB) only downloads the first time someone
+   picks a picture. If it can't load, the upload goes ahead. */
 const MSSImageCheck = (() => {
   const TF = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js';
   const NSFW = 'https://cdn.jsdelivr.net/npm/nsfwjs@4.4.0/dist/browser/nsfwjs.min.js';
@@ -345,14 +346,16 @@ const MSSImageCheck = (() => {
       return img;
     } finally { setTimeout(() => URL.revokeObjectURL(url), 0); }
   }
-  // true = fine to upload. where: 'profile photo' / 'poster' (for the admins' flag)
+  // false = refused. Anything else = fine to upload; { review: score } = upload, then pass it to review().
+  // where: 'profile photo' / 'poster' (for the admins' flag)
   async function allowed(blob, where) {
     let scores;
     try {
       const [m, img] = await Promise.all([model(), image(blob)]);
       scores = Object.fromEntries((await m.classify(img)).map(p => [p.className, p.probability]));
     } catch (err) { console.warn('Picture check unavailable:', err); return true; }
-    if ((scores.Porn || 0) + (scores.Hentai || 0) < 0.6) return true;
+    const explicit = (scores.Porn || 0) + (scores.Hentai || 0);
+    if (explicit < 0.6) return explicit >= 0.15 || (scores.Sexy || 0) >= 0.4 ? { review: Math.max(explicit, scores.Sexy || 0) } : true;
     sb.rpc('mss_report_image', { p_where: where }).then(() => {}, () => {});
     await showConfirm({
       title: 'This picture can’t be used',
@@ -361,7 +364,12 @@ const MSSImageCheck = (() => {
     });
     return false;
   }
-  return { allowed, preload: () => model().catch(() => {}) };
+  // after the upload: borderline pictures go to the admins' queue (kind: 'avatar' / 'poster')
+  function review(verdict, kind, url) {
+    if (verdict?.review == null || !url) return;
+    sb.rpc('mss_flag_picture', { p_kind: kind, p_url: url, p_score: Number(verdict.review.toFixed(3)) }).then(() => {}, () => {});
+  }
+  return { allowed, review, preload: () => model().catch(() => {}) };
 })();
 
 /* ── Toast ── */
