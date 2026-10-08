@@ -89,9 +89,8 @@
 .share-copy-btn.copied { border-color:var(--olive-light); color:var(--olive-light); }
 
 /* ── Sessions + Delete Account — same card as every other section ── */
-.field-input.lang-select { cursor:pointer; padding-inline-end:38px; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; }
-.field-input.lang-select:disabled { opacity:.6; cursor:progress; }
-[dir="rtl"] .field-input.lang-select { background-position:left 14px center; }
+/* the open language list sits above the cards that follow */
+.settings-section:has(.mss-pick.open) { position:relative; z-index:50; }
 .lang-req { margin-top:14px; padding:12px 14px; border-radius:var(--radius-sm); background:var(--bg-3); border:0.5px solid var(--border-2); }
 .lang-req-text { margin:0 0 10px; font-size:13px; color:var(--text-2); line-height:1.5; }
 .lang-req-btn { width:100%; }
@@ -224,8 +223,8 @@
         <div class="settings-section fade-up fade-up-1">
           <div class="settings-title">Language</div>
           <p class="settings-desc" id="langHint">MyScreenScore and everything from TMDB — titles, posters, descriptions, seasons and episodes — show in this language. Anything not translated yet stays in English.</p>
-          <label class="field-label" for="setLanguage">Language</label>
-          <select class="field-input lang-select" id="setLanguage" aria-describedby="langHint" onchange="setLanguage(this.value)"></select>
+          <div class="field-label" id="setLanguageLabel">Language</div>
+          <div id="setLanguagePick"></div>
           <div class="lang-req" id="langReq" hidden>
             <p class="lang-req-text" id="langReqText"></p>
             <button type="button" class="set-btn lang-req-btn" id="langReqBtn" onclick="requestLanguage()"></button>
@@ -731,13 +730,18 @@ document.addEventListener('DOMContentLoaded', refreshNotifPopupsSetting);
 /* ── Language (MSSLang, config.js + MSSI18n, i18n.js) ──
    Languages with a full site translation first; every other TMDB language
    translates titles & descriptions, and can be requested for the site. */
+let _langPicker = null;
 function _paintLanguage() {
-  const sel = document.getElementById('setLanguage');
-  const opt = l => `<option value="${l.code}" lang="${l.code}"${l.code === MSSLang.code ? ' selected' : ''} translate="no">${escHTML(l.name)}</option>`;
   const full = l => l.code.startsWith('en-') || MSSI18n.has(l.code);
+  const name = (c, loc) => { try { return new Intl.DisplayNames([loc], { type: 'language' }).of(c); } catch { return ''; } };
+  const item = l => ({ value: l.code, label: l.name, lang: l.code, keys: [l.code, name(l.code, 'en'), name(l.code, MSSI18n.locale.split('-u-')[0])] });
   const all = MSSLang.list();
-  sel.innerHTML = `<optgroup label="Full site translation">${all.filter(full).map(opt).join('')}</optgroup>`
-    + `<optgroup label="Titles & descriptions only">${all.filter(l => !full(l)).map(opt).join('')}</optgroup>`;
+  _langPicker = MSSPicker.mount(document.getElementById('setLanguagePick'), {
+    id: 'setLanguage', label: 'Language', describedBy: 'langHint', value: MSSLang.code, search: 'Type a language…',
+    groups: [{ label: 'Full site translation', items: all.filter(full).map(item) },
+             { label: 'Titles & descriptions only', items: all.filter(l => !full(l)).map(item) }],
+    onChange: setLanguage,
+  });
   _paintLanguageRequest();
 }
 let _langRequested = false;
@@ -787,7 +791,7 @@ async function setLanguage(c) {
       setTimeout(() => location.reload(), 2500);
       return;
     }
-    sel.value = MSSLang.code;
+    _langPicker.value = MSSLang.code;
     sel.disabled = false;
     showToast(mssT('Couldn’t switch language — check your connection and try again.'), 'err');
   }
