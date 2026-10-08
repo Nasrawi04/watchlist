@@ -232,11 +232,12 @@ const MSSNote = (() => {
     } else $('mssNoteEyebrow').textContent = o.eyebrow || 'Your Note';
     $('mssNoteTitle').innerHTML = mssTitleLinkHTML(e, esc(e.title || ''));
     $('mssNoteScore').innerHTML = scorePill(liveScore(e));
-    $('mssNoteTags').innerHTML = badges(e, { genres: 3, dateLabel: e.completed_date ? 'Completed On:' : 'Added On:', date: date(watchedDate(e), true) });
+    $('mssNoteTags').innerHTML = badges(e, { genres: 3, dateLabel: e.completed_date ? MSS_WATCHED_ON : 'Added On:', date: date(watchedDate(e), true) });
     stats();
     MSSDialog.open($('mssNoteOverlay'));
     // An existing note opens read-only; a brand-new one goes straight to the editor
     if (e.notes && e.notes.trim()) showView(); else if (o.editable) showEdit(); else showView();
+    $('mssNoteViewBody').toggleAttribute('data-dbl-like', !!o.react);   // double-tap their note → Like
     if (o.react) mssReactions('note', e.id).then(st => {
       if (current !== e) return;
       reactState = st; viewFooter();
