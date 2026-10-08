@@ -523,6 +523,7 @@ const _AVATAR_VIEWPORT = 240; // matches #avatarCropViewport width/height
 const _AVATAR_OUTPUT = 500;   // exported image size in px
 
 function _avatarCropStart(event) {
+  MSSImageCheck.preload();          // start loading the picture check while they crop
   const file = event.target.files[0];
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) { showToast('Image must be under 5MB.', 'err'); return; }
@@ -636,6 +637,8 @@ async function _avatarCropConfirm() {
     document.getElementById('avatarCropOverlay').style.display = 'none';
     mssUnlockScroll('avatarCrop');
 
+    showToast('Checking photo…');
+    if (!(await MSSImageCheck.allowed(blob, 'profile photo'))) return;
     const previewUrl = URL.createObjectURL(blob);
     document.getElementById('settingsAvatar').innerHTML = `<img src="${previewUrl}" alt="">`;
     showToast('Uploading photo…');
