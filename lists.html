@@ -141,17 +141,6 @@
 .social-list-add-btn:hover { background:var(--olive-light); color:var(--bg); }
 .social-list-add-btn:disabled { opacity:.5; cursor:default; }
 .social-list-row { position:relative; }
-.dt-heart-pop {
-  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.4);
-  font-size:56px; color:var(--olive-light); text-shadow:0 2px 14px rgba(0,0,0,.35);
-  pointer-events:none; opacity:0; animation:dtHeartPop .7s ease forwards; z-index:5;
-}
-@keyframes dtHeartPop {
-  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.4); }
-  25%  { opacity:1; transform:translate(-50%,-50%) scale(1.15); }
-  40%  { transform:translate(-50%,-50%) scale(0.95); }
-  100% { opacity:0; transform:translate(-50%,-50%) scale(1); }
-}
 
 /* Picker */
 #favListPickerOverlay {
@@ -752,7 +741,7 @@ async function openCollabPicker(listId, then) {
   document.getElementById('collabSearch').value = '';
   document.getElementById('collabList').innerHTML = '<div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>';
   document.getElementById('collabOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('collab');
   if (!_listsFriends) {
     try {
       const all = await getFriendships(_listsUser.id);
@@ -799,7 +788,7 @@ function closeCollabPicker() {
   const ov = document.getElementById('collabOverlay');
   if (!ov || !ov.classList.contains('open')) return;
   ov.classList.remove('open');
-  document.body.style.overflow = '';
+  mssUnlockScroll('collab');
   renderListsPage();
   const then = _collabPickerThen; _collabPickerThen = null; _collabPickerList = null;
   if (then) setTimeout(then, 250);
@@ -1129,8 +1118,6 @@ function _updateGridNavVisibility() {
 }
 window.addEventListener('resize', () => { if (typeof _updateGridNavVisibility === 'function') _updateGridNavVisibility(); });
 
-/* ── Double-tap-to-like (touch screens) ── */
-
 function setListsOrder(val) {
   SF.setSort('listsOrder', 'all', { default: 'rank', az: 'alpha', za: 'zalpha' }[val] || val);
 }
@@ -1224,7 +1211,6 @@ function setListsMode(mode) {
 let _llTimer = null;
 let _llActive = -1;
 let _llResults = [];
-let _llScrollY = 0;
 
 function _llPosition() {
   const wrap = document.getElementById('listsSearchWrapInner');
@@ -1237,22 +1223,6 @@ function _llPosition() {
   drop.style.position = 'fixed';
 }
 
-function _llLockScroll() {
-  _llScrollY = window.scrollY;
-  document.body.style.overflow = 'hidden';
-  document.body.style.position = 'fixed';
-  document.body.style.width = '100%';
-  document.body.style.top = '-' + _llScrollY + 'px';
-}
-
-function _llUnlockScroll() {
-  document.body.style.overflow = '';
-  document.body.style.position = '';
-  document.body.style.width = '';
-  document.body.style.top = '';
-  window.scrollTo(0, _llScrollY || 0);
-}
-
 async function _llSearch(val) {
   const q = val.trim().toLowerCase();
   const drop = document.getElementById('llDropdown');
@@ -1261,14 +1231,14 @@ async function _llSearch(val) {
   if (q.length < 2) {
     drop.classList.remove('open');
     document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
-    _llUnlockScroll();
+    mssUnlockScroll('llDropdown');
     return;
   }
   _llPosition();
   drop.innerHTML = '<div class="ud-loading">Searching…</div>';
   drop.classList.add('open');
   document.getElementById('listsSearchWrapInner')?.classList.add('dd-connected-active');
-  _llLockScroll();
+  mssLockScroll('llDropdown');
 
   _llTimer = setTimeout(async () => {
     try {
@@ -1368,7 +1338,7 @@ function _llKeydown(e) {
   } else if (e.key === 'Escape') {
     drop.classList.remove('open'); _llActive = -1;
     document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
-    _llUnlockScroll();
+    mssUnlockScroll('llDropdown');
   }
 }
 
@@ -1377,7 +1347,7 @@ document.addEventListener('click', e => {
   if (dd && dd.classList.contains('open') && !e.target.closest('#listsSearchWrap') && !e.target.closest('#llDropdown')) {
     dd.classList.remove('open');
     document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
-    _llUnlockScroll();
+    mssUnlockScroll('llDropdown');
     _llActive = -1;
   }
 });
@@ -1385,7 +1355,7 @@ document.addEventListener('click', e => {
 function _llCloseDropdown() {
   document.getElementById('llDropdown').classList.remove('open');
   document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
-  _llUnlockScroll();
+  mssUnlockScroll('llDropdown');
   _llResults = []; _llActive = -1;
 }
 
@@ -1518,7 +1488,7 @@ function renderSocialLists() {
     const initial = (l.username || '?')[0].toUpperCase();
     const myReaction = _socialListsMyReactions[l.id];
     const id = attrJSON(l.id);
-    return `<div class="lc-card" onclick="openSocialListPopup(${id})" ontouchend="mssDoubleTap(event, 'list-${escHTML(l.id)}', () => reactToSocialList(${id}, true), () => _socialListsMyReactions[${id}] === 'like')">
+    return `<div class="lc-card" onclick="openSocialListPopup(${id})" data-dbl-like>
       <div class="social-list-owner">
         <div class="social-list-avatar">${safeURL(l.avatar_url) ? `<img src="${safeURL(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
         <div class="social-list-username">@${esc(l.username || 'user')}</div>
@@ -1527,10 +1497,10 @@ function renderSocialLists() {
       <div class="lc-meta">${MSSList.countHTML(items.length)}</div>
       ${MSSList.postersHTML(items, _resolveSocialItem)}
       <div class="social-list-reactions">
-        <button class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialList(${id}, true)">
+        <button type="button" class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="event.stopPropagation();reactToSocialList(${id}, true)">
           ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${l.like_count || 0}</span>
         </button>
-        <button class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="event.stopPropagation();reactToSocialList(${id}, false)">
+        <button type="button" class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="event.stopPropagation();reactToSocialList(${id}, false)">
           ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${l.dislike_count || 0}</span>
         </button>
       </div>
@@ -1544,7 +1514,7 @@ function _injectSocialListPopupOverlay() {
   const el = document.createElement('div');
   el.id = 'slPopupOverlay';
   el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
-  el.innerHTML = `<div id="slPopupCard" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:560px;width:100%;max-height:88vh;overflow-y:auto;padding:clamp(1.1rem, 4vw, 1.6rem);box-shadow:0 24px 60px rgba(0,0,0,.35);"></div>`;
+  el.innerHTML = `<div id="slPopupCard" data-dbl-like role="dialog" aria-modal="true" aria-label="List" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:560px;width:100%;max-height:88vh;overflow-y:auto;padding:clamp(1.1rem, 4vw, 1.6rem);box-shadow:0 24px 60px rgba(0,0,0,.35);"></div>`;
   el.addEventListener('click', e => { if (e.target === el) closeSocialListPopup(); });
   document.body.appendChild(el);
 }
@@ -1555,7 +1525,7 @@ let _slPopupKind = null;   // 'mine' (Personal) or 'social' (Community)
 function _showListPopup() {
   _renderListPopup();
   document.getElementById('slPopupOverlay').style.display = 'flex';
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('slPopup');
 }
 function openSocialListPopup(listId) {
   if (!_socialListsRaw.find(x => x.id === listId)) return;
@@ -1572,7 +1542,7 @@ function openMyListPopup(listId) {
 function closeSocialListPopup() {
   const ov = document.getElementById('slPopupOverlay');
   if (ov) ov.style.display = 'none';
-  document.body.style.overflow = '';
+  mssUnlockScroll('slPopup');
   _slPopupListId = null; _slPopupKind = null;
 }
 // Closes the popup, then runs an owner action (its own modal opens on top)
@@ -1623,10 +1593,10 @@ function _renderListPopup() {
     const rerender = `.then(() => _renderListPopup())`;
     actions = `<div id="lpPopupActions" class="lp-actions lp-actions-social">
       <div class="lp-react-pair">
-        <button class="popup-action-btn lp-react ${myReaction === 'like' ? 'is-on' : ''}" onclick="reactToSocialList(${id}, true)${rerender}" aria-label="Like">
+        <button type="button" class="popup-action-btn lp-react ${myReaction === 'like' ? 'is-on' : ''}" onclick="reactToSocialList(${id}, true)${rerender}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}">
           ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)}<span>${l.like_count || 0}</span>
         </button>
-        <button class="popup-action-btn lp-react lp-react-down ${myReaction === 'dislike' ? 'is-on' : ''}" onclick="reactToSocialList(${id}, false)${rerender}" aria-label="Dislike">
+        <button type="button" class="popup-action-btn lp-react lp-react-down ${myReaction === 'dislike' ? 'is-on' : ''}" onclick="reactToSocialList(${id}, false)${rerender}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}">
           ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)}<span>${l.dislike_count || 0}</span>
         </button>
       </div>
@@ -1789,7 +1759,7 @@ function openFavListPicker(listId) {
   _favRenderPickerList();
 
   document.getElementById('favListPickerOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('favListPicker');
 }
 
 function _favRankCls(i) {
@@ -2111,13 +2081,13 @@ function _openRankOrderPrompt(listId) {
     `<button class="fav-edit-btn" style="justify-content:flex-start;padding:11px 16px;" onclick="_applyRankOrder('${listId}','${val}')">${label}</button>`
   ).join('');
   document.getElementById('rankOrderOverlay').style.display = 'flex';
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('rankOrder');
 }
 
 function _closeRankOrderPrompt() {
   const ov = document.getElementById('rankOrderOverlay');
   if (ov) ov.style.display = 'none';
-  document.body.style.overflow = '';
+  mssUnlockScroll('rankOrder');
 }
 
 // Actually reorders list.items in place according to `mode` — shared by
@@ -2164,7 +2134,7 @@ async function _applyRankOrder(listId, mode) {
 
 function closeFavListPicker() {
   document.getElementById('favListPickerOverlay').classList.remove('open');
-  document.body.style.overflow = '';
+  mssUnlockScroll('favListPicker');
 }
 
 // ══════════════════════════════════════════
@@ -2213,12 +2183,12 @@ function openFavCustomListModal(editId) {
   document.getElementById('favCustomListModalTitle').textContent = editId ? 'Edit List' : 'New List';
   document.getElementById('favCustomListCreate').textContent = editId ? 'Save' : 'Create List';
   document.getElementById('favCustomListModal').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('favCustomList');
   setTimeout(() => inp.focus(), 100);
 }
 function closeFavCustomListModal() {
   document.getElementById('favCustomListModal').classList.remove('open');
-  document.body.style.overflow = '';
+  mssUnlockScroll('favCustomList');
   _favCustomListEditId = null;
 }
 async function createFavCustomList() {
