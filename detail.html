@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -108,7 +109,7 @@
 .score-breakdown-row label{color:var(--text-3);width:80px;flex-shrink:0}
 .score-mini-bar{flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
 .score-mini-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .5s ease}
-.score-mini-val{color:var(--olive-light);font-family:var(--bebas);font-weight:400;font-size:16px;letter-spacing:.3px;min-width:28px;text-align:right}
+.score-mini-val{color:var(--olive-light);font-family:var(--bebas);font-weight:400;font-size:16px;letter-spacing:.3px;min-width:28px;text-align:end}
 
 /* ── Rating dropdown ── */
 .ratings-section-label{
@@ -121,7 +122,7 @@
 .rdrop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .rdrop-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--bg-3);border-radius:var(--radius-sm);border:0.5px solid var(--border)}
 .rdrop-label{font-size:12px;color:var(--text-2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rdrop-label .icon{margin-right:5px;font-size:13px}
+.rdrop-label .icon{margin-inline-end:5px;font-size:13px}
 .rdrop-wrap{position:relative;flex-shrink:0}
 .rdrop-btn{
   background:var(--bg);border:0.5px solid var(--border-2);border-radius:6px;
@@ -132,7 +133,7 @@
 .rdrop-btn:hover{border-color:var(--border-olive);color:var(--text)}
 .rdrop-btn.rated{color:var(--olive-light);border-color:var(--border-olive);background:var(--olive-faint)}
 .rdrop-list{
-  position:absolute;right:0;top:calc(100% + 4px);
+  position:absolute;inset-inline-end:0;top:calc(100% + 4px);
   width:68px;max-height:220px;overflow-y:auto;overscroll-behavior-y:contain;
   background:var(--card-2);border:0.5px solid var(--border-2);border-radius:10px;
   z-index:200;display:none;flex-direction:column;
@@ -178,8 +179,8 @@
   background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-sm);
 }
 /* thin meter along the bottom of each rating — fills with the value */
-.rating-meter{position:absolute;left:0;right:0;bottom:0;height:3px;background:transparent;pointer-events:none}
-.rating-meter i{display:block;height:100%;width:0;background:var(--olive-light);border-radius:0 3px 3px 0;transition:width .3s cubic-bezier(.4,0,.2,1)}
+.rating-meter{position:absolute;inset-inline-start:0;inset-inline-end:0;bottom:0;height:3px;background:transparent;pointer-events:none}
+.rating-meter i{display:block;height:100%;width:0;background:var(--olive-light);border-start-start-radius:0;border-start-end-radius:3px;border-end-end-radius:3px;border-end-start-radius:0;transition:width .3s cubic-bezier(.4,0,.2,1)}
 .rating-stepper-label{
   font-size:13px;color:var(--text-2);flex:1;min-width:0;
   display:flex;align-items:center;
@@ -333,13 +334,13 @@
 
 /* Month: type or pick (same look as the site dropdowns) */
 .mcombo { position:relative; flex:1; min-width:7.5em; }
-.mcombo-input { width:100%; padding-right:30px !important; }
-.mcombo-chev { position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--text-3); pointer-events:none; transition:transform .15s; }
+.mcombo-input { width:100%; padding-inline-end:30px !important; }
+.mcombo-chev { position:absolute; inset-inline-end:10px; top:50%; transform:translateY(-50%); color:var(--text-3); pointer-events:none; transition:transform .15s; }
 .mcombo.open .mcombo-chev { transform:translateY(-50%) rotate(180deg); color:var(--olive-light); }
 .mcombo-menu {
-  display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:60;
+  display:none; position:absolute; top:calc(100% + 4px); inset-inline-start:0; inset-inline-end:0; z-index:60;
   background:var(--bg-3); border:0.5px solid var(--olive-light); border-radius:var(--radius-sm);
-  box-shadow:var(--shadow-lg); max-height:230px; overflow-y:auto; overscroll-behavior-y:contain; text-align:left;
+  box-shadow:var(--shadow-lg); max-height:230px; overflow-y:auto; overscroll-behavior-y:contain; text-align:start;
 }
 .mcombo.open .mcombo-menu { display:block; }
 .mcombo-menu .sel-dd-opt.hl { background:var(--bg-2); }
@@ -396,7 +397,7 @@
 .det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem; }
 .det-eyebrow-row .sel-dd { width:auto; min-width:120px; }
 .det-eyebrow-row .sel-dd-trigger { height:34px; padding:0 12px; border-radius:var(--radius-sm); font-size:12.5px; }
-.det-eyebrow-row .sel-dd.open .sel-dd-trigger { border-bottom-left-radius:0; border-bottom-right-radius:0; }
+.det-eyebrow-row .sel-dd.open .sel-dd-trigger { border-end-start-radius:0; border-end-end-radius:0; }
 
 .det-title-input {
   display:block; width:100%; background:transparent; border:none; border-bottom:1.5px solid var(--border);
@@ -435,10 +436,10 @@
   .det-header { flex-direction:column; align-items:center; text-align:center; padding:1.25rem; }
   .det-header .detail-poster-wrap { width:clamp(110px, 38vw, 150px); height:auto; aspect-ratio:2/3; }
   .det-header-main { flex-basis:100%; width:100%; }
-  .det-header-details { border-left:none; border-top:0.5px solid var(--border); padding-left:0; padding-top:1.5rem; }
+  .det-header-details { border-inline-start:none; border-top:0.5px solid var(--border); padding-inline-start:0; padding-top:1.5rem; }
   .det-title-input { text-align:center; }
   /* section titles + field labels stay left-aligned like the rest of the page */
-  .det-header .det-card-title, .det-header .field-label { text-align:left; }
+  .det-header .det-card-title, .det-header .field-label { text-align:start; }
   .det-eyebrow-row { justify-content:center; }
   .det-year-box { margin:0 auto; }
   .det-year-field { padding:8px 10px; gap:5px; }
@@ -487,15 +488,15 @@
    stack them there too, Details under the title. */
 @media(max-width:1180px) {
   .det-header-main .det-header-info, .det-header-main .det-header-details { flex:1 1 100%; min-width:0; }
-  .det-header .det-header-main .det-header-details { border-left:none; border-top:0.5px solid var(--border); padding-left:0; padding-right:0; padding-top:1.5rem; margin-top:.5rem; }
-  .det-header-main .det-header-info { padding-left:0; padding-right:0; }
+  .det-header .det-header-main .det-header-details { border-inline-start:none; border-top:0.5px solid var(--border); padding-inline-start:0; padding-inline-end:0; padding-top:1.5rem; margin-top:.5rem; }
+  .det-header-main .det-header-info { padding-inline-start:0; padding-inline-end:0; }
 }
-.det-row-2col-half:last-child { border-left:0.5px solid var(--border); }
+.det-row-2col-half:last-child { border-inline-start:0.5px solid var(--border); }
 /* Same width-safety lock as .det-header-notes above — genres previously
    caused exactly this "pushes its column wider than its share" issue. */
 #dGenres { width:100%; box-sizing:border-box; }
 @media(max-width:760px) {
-  .det-row-2col-half:last-child { border-left:none; border-top:0.5px solid var(--border); }
+  .det-row-2col-half:last-child { border-inline-start:none; border-top:0.5px solid var(--border); }
 }
 .det-card {
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
@@ -567,7 +568,7 @@
   .det-actions-bar .popup-action-btn,
   .det-actions-bar .btn-comments { width:100%; max-width:none; flex:1 1 auto; }
 }
-.list-desc-count { font-size:10.5px; color:var(--text-3); text-align:right; margin-top:4px; }
+.list-desc-count { font-size:10.5px; color:var(--text-3); text-align:end; margin-top:4px; }
 .list-desc-count.over { color:#c0564a; }
 </style>
   <!-- PWA -->
@@ -689,44 +690,44 @@
           <div class="field-group">
             <div class="field-label">Genres <button class="tmdb-lock-btn" id="tmdbLockBtn-genres" onclick="_toggleTmdbFieldLock('genres')" title="Synced from TMDB — click to edit manually"></button></div>
             <div class="genre-picker" id="dGenres" style="justify-content:space-between;">
-              <span class="genre-opt" onclick="toggleGenre(this)">Action</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Adventure</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Animation</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Biography</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Comedy</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Crime</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Documentary</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Drama</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Family</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Fantasy</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Heist</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Historical</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Horror</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Medical</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Musical</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Mystery</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Political</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Psychological</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Romance</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Sci-Fi</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Slice of Life</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Space</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Sports</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Superhero</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Supernatural</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Thriller</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">War</span>
-              <span class="genre-opt" onclick="toggleGenre(this)">Western</span>
+              <span class="genre-opt" data-genre="Action" onclick="toggleGenre(this)">Action</span>
+              <span class="genre-opt" data-genre="Adventure" onclick="toggleGenre(this)">Adventure</span>
+              <span class="genre-opt" data-genre="Animation" onclick="toggleGenre(this)">Animation</span>
+              <span class="genre-opt" data-genre="Biography" onclick="toggleGenre(this)">Biography</span>
+              <span class="genre-opt" data-genre="Comedy" onclick="toggleGenre(this)">Comedy</span>
+              <span class="genre-opt" data-genre="Crime" onclick="toggleGenre(this)">Crime</span>
+              <span class="genre-opt" data-genre="Documentary" onclick="toggleGenre(this)">Documentary</span>
+              <span class="genre-opt" data-genre="Drama" onclick="toggleGenre(this)">Drama</span>
+              <span class="genre-opt" data-genre="Family" onclick="toggleGenre(this)">Family</span>
+              <span class="genre-opt" data-genre="Fantasy" onclick="toggleGenre(this)">Fantasy</span>
+              <span class="genre-opt" data-genre="Heist" onclick="toggleGenre(this)">Heist</span>
+              <span class="genre-opt" data-genre="Historical" onclick="toggleGenre(this)">Historical</span>
+              <span class="genre-opt" data-genre="Horror" onclick="toggleGenre(this)">Horror</span>
+              <span class="genre-opt" data-genre="Medical" onclick="toggleGenre(this)">Medical</span>
+              <span class="genre-opt" data-genre="Musical" onclick="toggleGenre(this)">Musical</span>
+              <span class="genre-opt" data-genre="Mystery" onclick="toggleGenre(this)">Mystery</span>
+              <span class="genre-opt" data-genre="Political" onclick="toggleGenre(this)">Political</span>
+              <span class="genre-opt" data-genre="Psychological" onclick="toggleGenre(this)">Psychological</span>
+              <span class="genre-opt" data-genre="Romance" onclick="toggleGenre(this)">Romance</span>
+              <span class="genre-opt" data-genre="Sci-Fi" onclick="toggleGenre(this)">Sci-Fi</span>
+              <span class="genre-opt" data-genre="Slice of Life" onclick="toggleGenre(this)">Slice of Life</span>
+              <span class="genre-opt" data-genre="Space" onclick="toggleGenre(this)">Space</span>
+              <span class="genre-opt" data-genre="Sports" onclick="toggleGenre(this)">Sports</span>
+              <span class="genre-opt" data-genre="Superhero" onclick="toggleGenre(this)">Superhero</span>
+              <span class="genre-opt" data-genre="Supernatural" onclick="toggleGenre(this)">Supernatural</span>
+              <span class="genre-opt" data-genre="Thriller" onclick="toggleGenre(this)">Thriller</span>
+              <span class="genre-opt" data-genre="War" onclick="toggleGenre(this)">War</span>
+              <span class="genre-opt" data-genre="Western" onclick="toggleGenre(this)">Western</span>
             </div>
             <div id="animeGenreSection" style="display:none;margin-top:12px;">
               <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;padding-top:10px;border-top:0.5px solid var(--border);">Anime-Specific Genres</div>
               <div class="genre-picker" style="justify-content:flex-start;">
-                <span class="genre-opt" onclick="toggleGenre(this)">Isekai</span>
-                <span class="genre-opt" onclick="toggleGenre(this)">Josei</span>
-                <span class="genre-opt" onclick="toggleGenre(this)">Mecha</span>
-                <span class="genre-opt" onclick="toggleGenre(this)">Seinen</span>
-                <span class="genre-opt" onclick="toggleGenre(this)">Shoujo</span>
-                <span class="genre-opt" onclick="toggleGenre(this)">Shounen</span>
+                <span class="genre-opt" data-genre="Isekai" onclick="toggleGenre(this)">Isekai</span>
+                <span class="genre-opt" data-genre="Josei" onclick="toggleGenre(this)">Josei</span>
+                <span class="genre-opt" data-genre="Mecha" onclick="toggleGenre(this)">Mecha</span>
+                <span class="genre-opt" data-genre="Seinen" onclick="toggleGenre(this)">Seinen</span>
+                <span class="genre-opt" data-genre="Shoujo" onclick="toggleGenre(this)">Shoujo</span>
+                <span class="genre-opt" data-genre="Shounen" onclick="toggleGenre(this)">Shounen</span>
               </div>
             </div>
           </div>
@@ -1425,7 +1426,7 @@ function _onUpdateDetailsSearchInput(query) {
       return `<div class="card-link-result" onclick="_pickUpdateDetailsMatch(${i})">
         <div class="card-link-result-poster">${posterEl}</div>
         <div>
-          <div class="card-link-result-title">${escHTML(title)}</div>
+          <div class="card-link-result-title" translate="no">${escHTML(title)}</div>
           <div class="card-link-result-meta">${typeLabel}${year ? ' · ' + year : ''}</div>
         </div>
       </div>`;
@@ -1793,7 +1794,7 @@ function _favOverlay(id, cardId, title, closeFn, extra = '') {
 const _favSeasonBlock = (s, onclick, picked) => `<button type="button" class="td-season-block${picked ? ' picked' : ''}" onclick="${onclick}">
     <div class="td-season-block-poster">${s.poster_path ? `<img src="${_favImg(s.poster_path, 'w342')}" alt="" loading="lazy">` : ''}</div>
     <div class="td-season-block-info">
-      <div class="td-season-block-name">${escHTML(mssSeasonLabel(s.number, s.name))}</div>
+      <div class="td-season-block-name" translate="no">${escHTML(mssSeasonLabel(s.number, s.name))}</div>
       <div class="td-season-block-sub">${s.episode_count ? `${s.episode_count} ep${s.episode_count !== 1 ? 's' : ''}` : ''}${s.air_date ? ` · ${s.air_date.split('-')[0]}` : ''}</div>
     </div>
   </button>`;
@@ -1900,13 +1901,13 @@ function _favEpCardHTML(seasonNumber, ep) {
       <span class="td-ep-num-badge">S${seasonNumber} · E${ep.number}</span>
     </div>
     <div class="td-ep-body">
-      <div class="td-ep-title">${escHTML(ep.name)}</div>
+      <div class="td-ep-title" translate="no">${escHTML(ep.name)}</div>
       <div class="td-ep-meta-row">
         ${rating ? `<span class="td-ep-rating">★ ${rating}</span>` : ''}
         ${ep.air_date ? `<span>${escHTML(ep.air_date)}</span>` : ''}
         ${ep.runtime ? `<span>${ep.runtime}m</span>` : ''}
       </div>
-      <div class="td-ep-overview">${escHTML(ep.overview || 'No description available.')}</div>
+      <div class="td-ep-overview" translate="no">${(ep.overview ? escHTML(ep.overview) : mssT('No description available.'))}</div>
     </div>
   </button>`;
 }
@@ -1988,8 +1989,8 @@ function _favRenderPersonGrid(cast, query) {
   grid.innerHTML = useTyped + (cast.length ? `<div class="fav-person-grid">${cast.map(c => `
     <button type="button" class="fav-person-card" onclick="_favPickPerson(${attrJSON(String(c.character || ''))})">
       <div class="fav-person-photo">${c.profile_path ? `<img src="https://image.tmdb.org/t/p/w185${c.profile_path}" loading="lazy">` : (c.name[0]||'?')}</div>
-      <div class="fav-person-name">${escHTML(c.character)}</div>
-      <div class="fav-person-actor">${escHTML(c.name)}</div>
+      <div class="fav-person-name" translate="no">${escHTML(c.character)}</div>
+      <div class="fav-person-actor" translate="no">${escHTML(c.name)}</div>
     </button>`).join('')}</div>`
     : `<div class="sf-empty">No matching characters.</div>`);
 }
@@ -2173,7 +2174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.querySelectorAll('.genre-opt').forEach(opt => {
-      opt.classList.toggle('selected', e && e.genres && e.genres.includes(opt.textContent));
+      opt.classList.toggle('selected', !!(e && e.genres && e.genres.includes(opt.dataset.genre)));
     });
 
     // Lock TMDB-sourced fields once this entry is actually linked —
@@ -2299,7 +2300,7 @@ async function doSave() {
   const cat     = document.getElementById('dCat').value;
   const mediaType = getMediaType();
   const isMovie = mediaType === 'movie';
-  const genres  = [...document.querySelectorAll('.genre-opt.selected')].map(o => o.textContent);
+  const genres  = [...document.querySelectorAll('.genre-opt.selected')].map(o => o.dataset.genre);
 
   // ── Musts validation ──
   if (!genres.length) {
@@ -2455,7 +2456,7 @@ function _applyTMDBPrefill(p) {
   if (p.description) { const el = document.getElementById('dDesc'); if(el && !el.value) el.value = p.description; }
   if (p.genres && p.genres.length) {
     document.querySelectorAll('.genre-opt').forEach(el => {
-      el.classList.toggle('selected', p.genres.includes(el.textContent.trim()));
+      el.classList.toggle('selected', p.genres.includes(el.dataset.genre));
     });
   }
   if (p.poster_url && !_posterUrl) {
@@ -2565,7 +2566,7 @@ function _showDuplicatePopup(title, existing) {
       <div style="color:var(--olive-light);margin-bottom:14px;opacity:.7;">${icon('x', 32)}</div>
       <h2 style="font-family:var(--serif);font-size:22px;font-weight:500;margin-bottom:10px;color:var(--text);">Already in your library</h2>
       <p style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:6px;">
-        <strong style="color:var(--text);">${escHTML(title)}</strong> is already saved as a <strong style="color:var(--text);">${catLabel}</strong>.
+        <strong style="color:var(--text);" translate="no">${escHTML(title)}</strong> is already saved as a <strong style="color:var(--text);">${catLabel}</strong>.
       </p>
       <p style="font-size:13px;color:var(--text-3);margin-bottom:24px;">Close this and update your existing entry instead.</p>
       <div style="display:flex;gap:10px;justify-content:center;">
