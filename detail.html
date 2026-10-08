@@ -655,7 +655,7 @@
         <div class="det-field-hint" id="yearHint" role="status" aria-live="polite"></div>
 
         <div class="field-group" id="completedOnGroup" style="display:none;margin-top:1.25rem;margin-bottom:0;">
-          <div class="field-label">Completed On</div>
+          <div class="field-label">Watched On</div>
           <div class="date-3box" id="completedDateWrap">
             <input class="field-input date-3box-input" id="dDay" type="text" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="Day" style="width:64px;text-align:center">
             <select id="dMonth" style="display:none" aria-hidden="true" tabindex="-1">
@@ -998,7 +998,7 @@ function _setCompletedDate(iso) {
   document.getElementById('dMonth')._ddSync?.();
   document.getElementById('dCYear').value  = dt.getFullYear();
 }
-/* ── Completed On: month combobox + checks ── */
+/* ── Watched On: month combobox + checks ── */
 const _MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 let _mcHl = -1;
 function _mcEls() { return { wrap: document.getElementById('dMonthCombo'), input: document.getElementById('dMonthInput'), list: document.getElementById('dMonthList'), sel: document.getElementById('dMonth') }; }
@@ -1366,7 +1366,7 @@ function _openUpdateDetailsPicker() {
   document.getElementById('updateDetailsResultsList').innerHTML = '';
   _updateDetailsResults = [];
   document.getElementById('updateDetailsOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('updateDetails');
   // Kick off a search immediately using the current title, same as
   // picking a result from a fresh add — saves having to retype it.
   _onUpdateDetailsSearchInput(input.value);
@@ -1396,7 +1396,7 @@ function _closeUpdateDetailsPicker() {
   const ov = document.getElementById('updateDetailsOverlay');
   if (!ov) return;
   ov.classList.remove('open');
-  document.body.style.overflow = '';
+  mssUnlockScroll('updateDetails');
 }
 
 let _updateDetailsResults = [];
@@ -1630,7 +1630,7 @@ function updateStatusUI() {
   const curPos = document.getElementById('dCurrentPosSection');
   if (curPos) curPos.style.display = (showProgress && (status === 'watching' || status === 'paused')) ? 'block' : 'none';
 
-  // Show/hide "Completed On" date field
+  // Show/hide "Watched On" date field
   const completedOnGroup = document.getElementById('completedOnGroup');
   if (completedOnGroup) completedOnGroup.style.display = (status === 'completed' || status === 'ongoing') ? '' : 'none';
   const _rwSec = document.getElementById('dRewatchSection');
@@ -1664,7 +1664,7 @@ function toggleGenre(el) { el.classList.toggle('selected'); }
 function _openPosterPicker() {
   _injectPosterPickerOverlay();
   document.getElementById('posterPickerOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('posterPicker');
   const grid = document.getElementById('posterPickerGrid');
   // Uses the pending tmdb_id/type (kept current by Update Details the
   // moment a match is picked) rather than _detEntry's, which only
@@ -1704,7 +1704,7 @@ function _closePosterPicker() {
   const ov = document.getElementById('posterPickerOverlay');
   if (!ov) return;
   ov.classList.remove('open');
-  document.body.style.overflow = '';
+  mssUnlockScroll('posterPicker');
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2412,12 +2412,12 @@ function showCompletionPopup(title) {
   document.getElementById('completionSub').textContent =
     'Add your ratings to rank it in your collection.';
   document.getElementById('completionOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('completion');
 }
 
 function closeCompletionPopup() {
   document.getElementById('completionOverlay').classList.remove('open');
-  document.body.style.overflow = '';
+  mssUnlockScroll('completion');
   // Scroll to ratings section
   document.querySelector('.ratings-wrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
 }
