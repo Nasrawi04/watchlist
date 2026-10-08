@@ -449,9 +449,9 @@ function checkUsernameLive() {
   if (val.length < 3) { hint.textContent = 'Too short'; hint.className = 'field-hint bad'; return; }
   hint.textContent = 'Checking…'; hint.className = 'field-hint';
   _usernameCheckTimer = setTimeout(async () => {
-    const available = await checkUsernameAvailable(val, _sUser.id);
-    hint.textContent = available ? 'Available' : 'Taken';
-    hint.className = 'field-hint ' + (available ? 'ok' : 'bad');
+    const [available, allowed] = await Promise.all([checkUsernameAvailable(val, _sUser.id), isUsernameAllowed(val)]);
+    hint.textContent = !allowed ? 'Not allowed' : available ? 'Available' : 'Taken';
+    hint.className = 'field-hint ' + (available && allowed ? 'ok' : 'bad');
   }, 400);
 }
 
@@ -474,6 +474,9 @@ async function saveSettings() {
   }
   const available = await checkUsernameAvailable(username, _sUser.id);
   if (!available) { showToast('That username is taken. Try another.', 'err'); return; }
+  if (username !== _sProfile?.username && !(await isUsernameAllowed(username))) {
+    showToast('That username isn’t allowed. Try another.', 'err'); return;
+  }
   try {
     _sProfile = await updateProfile(_sUser.id, {
       username,
@@ -481,9 +484,15 @@ async function saveSettings() {
       bio:          document.getElementById('setBio').value.trim(),
       quote:        document.getElementById('setQuote').value.trim(),
     });
+    // The word filter may have starred something out — show what was saved
+    if (_sProfile) {
+      document.getElementById('setDisplayName').value = _sProfile.display_name || '';
+      document.getElementById('setBio').value = _sProfile.bio || '';
+      document.getElementById('setQuote').value = _sProfile.quote || '';
+    }
     showToast('Settings saved!');
   } catch(e) {
-    showToast('Error saving settings.', 'err');
+    showToast(isUsernameBlockedError(e) ? 'That username isn’t allowed. Try another.' : 'Error saving settings.', 'err');
     console.error(e);
   }
 }
