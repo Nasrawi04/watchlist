@@ -315,6 +315,55 @@ async function isUsernameAllowed(username) {
 }
 const isUsernameBlockedError = e => /USERNAME_NOT_ALLOWED/.test(e?.message || '');
 
+/* ── Picture check (MSSImageCheck) ──
+   Before a profile photo or poster is uploaded, an image-safety model
+   (nsfwjs, runs on the device — the picture never goes anywhere to be
+   checked) looks at it. Clearly sexual pictures are refused, the person is
+   told, and a flag is logged for the admins (migration 040). The model
+   (~4 MB) only downloads the first time someone picks a picture. If it
+   can't load, the upload goes ahead — admins can still review pictures. */
+const MSSImageCheck = (() => {
+  const TF = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js';
+  const NSFW = 'https://cdn.jsdelivr.net/npm/nsfwjs@4.4.0/dist/browser/nsfwjs.min.js';
+  let modelP = null;
+  const script = src => new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.async = true; s.crossOrigin = 'anonymous'; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  const model = () => (modelP ||= (async () => {
+    if (!window.tf) await script(TF);
+    if (!window.nsfwjs) await script(NSFW);
+    return window.nsfwjs.load();
+  })().catch(err => { modelP = null; throw err; }));
+  async function image(blob) {
+    const url = URL.createObjectURL(blob);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      return img;
+    } finally { setTimeout(() => URL.revokeObjectURL(url), 0); }
+  }
+  // true = fine to upload. where: 'profile photo' / 'poster' (for the admins' flag)
+  async function allowed(blob, where) {
+    let scores;
+    try {
+      const [m, img] = await Promise.all([model(), image(blob)]);
+      scores = Object.fromEntries((await m.classify(img)).map(p => [p.className, p.probability]));
+    } catch (err) { console.warn('Picture check unavailable:', err); return true; }
+    if ((scores.Porn || 0) + (scores.Hentai || 0) < 0.6) return true;
+    sb.rpc('mss_report_image', { p_where: where }).then(() => {}, () => {});
+    await showConfirm({
+      title: 'This picture can’t be used',
+      message: 'It looks like it doesn’t follow MyScreenScore’s community rules. Please choose a different picture.',
+      confirmText: 'Choose another', cancelText: null, iconName: 'image', danger: false,
+    });
+    return false;
+  }
+  return { allowed, preload: () => model().catch(() => {}) };
+})();
+
 /* ── Toast ── */
 function showToast(msg, type = 'ok') {
   let t = document.getElementById('toast');
