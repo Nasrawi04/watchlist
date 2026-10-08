@@ -2,7 +2,7 @@
    rating-popup.js — THE ratings popup, used on every page (v629)
 
    One popup for a rated entry anywhere on the site: poster, title/years,
-   type + genre tags, Completed On / Left off, description, Overall Score
+   type + genre tags, Watched On / Left off, description, Overall Score
    box, TV Show Breakdown / Movie Runtime, Core + Bonus ratings,
    Highlights and Notes. Only the buttons change, depending on whose
    entry it is:
@@ -177,7 +177,7 @@ const MSSRate = (() => {
       (label ? `<span class="${isMovie(e) ? 'type-label' : 'type-label type-label-tv'}">${esc(label)}</span>` : '') +
       (e.genres || []).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('') +
       (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
-    const dateRow = (e.completed_date ? `<span class="w-ep-badge">Completed On: ${fmtDate(e.completed_date)}</span>` : '') +
+    const dateRow = (e.completed_date ? `<span class="w-ep-badge">${MSS_WATCHED_ON} ${fmtDate(e.completed_date)}</span>` : '') +
       (e.status === 'ongoing' && e.season != null && e.episode != null && !isMovie(e) ? `<span class="w-ep-badge">Left off: S${e.season} · E${e.episode}</span>` : '');
     $('mssRatePopupDateRow').innerHTML = dateRow;
     $('mssRatePopupDateRow').style.display = dateRow ? '' : 'none';
