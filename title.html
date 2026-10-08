@@ -182,17 +182,6 @@
 .td-note-react-btn svg { transition:transform .3s, fill .3s; }
 .td-note-react-btn:hover svg { transform:scale(1.15) rotate(-8deg); }
 .td-note-card { position:relative; }
-.dt-heart-pop {
-  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.4);
-  font-size:56px; color:var(--olive-light); text-shadow:0 2px 14px rgba(0,0,0,.35);
-  pointer-events:none; opacity:0; animation:dtHeartPop .7s ease forwards; z-index:5;
-}
-@keyframes dtHeartPop {
-  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.4); }
-  25%  { opacity:1; transform:translate(-50%,-50%) scale(1.15); }
-  40%  { transform:translate(-50%,-50%) scale(0.95); }
-  100% { opacity:0; transform:translate(-50%,-50%) scale(1); }
-}
 
 /* ── Cast ── */
 .td-cast-scroll { display:flex; flex-wrap:wrap; gap:20px 18px; }
@@ -325,20 +314,34 @@
 .rp-post { width:100%; justify-content:center; }
 @media(prefers-reduced-motion:reduce) { #replyPopupOverlay { transition:none; } }
 
-/* ── Friends & This Title (Watched By · Currently Watching · Want to Watch) — same card as Fan Favorites ── */
-.td-friend-count { font-family:var(--bebas); font-size:14px; letter-spacing:.5px; color:var(--text-3); margin-left:4px; }
-.td-friend-card .td-fan-list { gap:2px; }
-.td-fan-list li[hidden] { display:none; }
-.td-friend-row { display:flex; align-items:center; gap:10px; width:100%; padding:5px 6px; background:none; border:0; border-radius:var(--radius-sm);
-  font:inherit; color:inherit; text-align:left; cursor:pointer; transition:background .15s; box-sizing:border-box; }
-.td-friend-row:hover { background:var(--olive-faint); }
-.td-friend-row:focus-visible { outline:2px solid var(--olive-light); outline-offset:1px; }
-.td-friend-av { width:26px; height:26px; font-size:11px; flex-shrink:0; }
-.td-friend-score { font-family:var(--bebas); font-size:17px; letter-spacing:.3px; color:var(--olive-light); white-space:nowrap; }
-.td-friend-row .w-ep-badge, .td-friend-row .up-next-tag { flex-shrink:0; }
-.td-friend-more { margin-top:12px; background:none; border:0; padding:0; font:inherit; font-size:12px; font-weight:600; color:var(--olive-light); cursor:pointer; }
-.td-friend-more:hover { text-decoration:underline; }
-@media(max-width:640px) { .td-friend-score { font-size:16px; } .td-friend-av { width:24px; height:24px; } }
+/* ── Friends & This Title — the shared tab toggle (.pn-toggle) over a row of
+   cast-style friend cards (.td-cast-card / .td-cast-photo) ── */
+.td-friends-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px 24px; flex-wrap:wrap; margin-bottom:1rem; }
+.td-friends-head .section-title { margin-bottom:0; }
+.td-friends-avg { display:flex; flex-direction:column; align-items:flex-end; text-align:right; }
+.td-friends-avg-num { font-family:var(--bebas); font-size:clamp(26px, 5vw, 34px); line-height:1; letter-spacing:.5px; color:var(--olive-light); }
+.td-friends-avg-label { font-size:11px; letter-spacing:.4px; color:var(--text-3); margin-top:4px; }
+.td-friends-tabs { margin:0 0 1.25rem; max-width:100%; }
+.td-friends-tabs .pn-toggle-btn { padding:9px clamp(12px, 3vw, 26px); display:flex; align-items:center; gap:7px; white-space:nowrap; }
+.td-friends-tab-count { font-family:var(--bebas); font-size:15px; letter-spacing:.5px; line-height:1; opacity:.75; }
+.td-friends-row { display:flex; gap:clamp(14px, 3vw, 22px); overflow-x:auto; padding:4px 2px 10px; scroll-snap-type:x proximity; scrollbar-width:thin; }
+.td-friend-card { background:none; border:0; padding:0; font:inherit; cursor:pointer; scroll-snap-align:start; width:clamp(84px, 11vw, 120px); }
+.td-friend-card .td-friend-photo { width:clamp(84px, 11vw, 120px); height:clamp(84px, 11vw, 120px); transition:border-color .15s, box-shadow .15s; }
+.td-friend-card:hover { opacity:1; }
+.td-friend-card:hover .td-friend-photo { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.td-friend-card:focus-visible { outline:none; }
+.td-friend-card:focus-visible .td-friend-photo { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-light); }
+.td-friend-card .td-cast-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.td-friend-info { display:flex; justify-content:center; margin-top:6px; min-height:22px; }
+.td-friend-score { font-family:var(--bebas); font-size:clamp(17px, 2.2vw, 20px); letter-spacing:.4px; color:var(--olive-light); line-height:1.1; }
+.td-friend-sub { font-size:clamp(10.5px, 1.5vw, 12.5px); color:var(--text-3); line-height:1.3; }
+.td-friend-info .w-ep-badge, .td-friend-info .up-next-tag { font-size:11px; }
+@media(max-width:640px) {
+  .td-friends-tabs { width:100%; }
+  .td-friends-tabs .pn-toggle-btn { flex:1; justify-content:center; font-size:12.5px; padding:9px 6px; }
+  .td-friends-avg { align-items:flex-start; text-align:left; }
+}
+@media(prefers-reduced-motion:reduce) { .td-friend-photo { transition:none; } }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -494,7 +497,6 @@ async function loadTitle() {
    with nobody are left out, and the whole section hides when no friend has
    it. Tap a friend → their Ratings / Info (MSSViews, read-only). ── */
 let _tdFriendEntries = {};
-const _TD_FRIEND_MAX = 6;
 async function _tdLoadFriends(title) {
   if (!_tdUser) return;
   let rows = [], profiles = {};
@@ -516,45 +518,61 @@ async function _tdLoadFriends(title) {
   _tdFriendEntries = {};
   rows.forEach(e => { e._profile = profiles[e.user_id] || { id: e.user_id }; _tdFriendEntries[e.id] = e; });
   const by = (a, b) => (b || '').localeCompare(a || '');
-  const groups = [
+  _tdFriendGroups = [
     { key: 'watched', label: 'Watched By', items: rows.filter(e => e.status === 'completed' || e.status === 'ongoing')
         .sort((a, b) => (liveScore(b) ?? -1) - (liveScore(a) ?? -1)) },
-    { key: 'watching', label: 'Currently Watching', items: rows.filter(e => ['watching', 'up_next', 'paused'].includes(e.status))
+    { key: 'watching', label: 'Watching', items: rows.filter(e => ['watching', 'up_next', 'paused'].includes(e.status))
         .sort((a, b) => by(a.updated_at, b.updated_at)) },
     { key: 'want', label: 'Want to Watch', items: rows.filter(e => e.status === 'queue').sort((a, b) => by(a.created_at, b.created_at)) },
   ].filter(g => g.items.length);
-  if (!groups.length) return;
-  document.getElementById('tdFriends').innerHTML = `<div class="td-related">
-      <div class="section-eyebrow">Your Friends</div>
-      <div class="section-title">Friends &amp; This Title</div>
-      <div class="td-fans">${groups.map(g => `<div class="td-fan-card td-friend-card">
-          <div class="td-fan-label">${esc(g.label)} <span class="td-friend-count">${g.items.length}</span></div>
-          <ul class="td-fan-list" id="tdFriends-${g.key}">${g.items.map((e, i) => _tdFriendRow(e, g.key, i >= _TD_FRIEND_MAX)).join('')}</ul>
-          ${g.items.length > _TD_FRIEND_MAX ? `<button type="button" class="td-friend-more" onclick="_tdFriendsMore(this, '${g.key}')" aria-expanded="false">Show all ${g.items.length}</button>` : ''}
-        </div>`).join('')}</div>
-    </div>`;
+  if (!_tdFriendGroups.length) return;
+  const scores = rows.map(liveScore).filter(v => v != null);
+  const avg = scores.length ? scores.reduce((a, b) => a + Number(b), 0) / scores.length : null;
+  document.getElementById('tdFriends').innerHTML = `<section class="td-related td-friends" aria-labelledby="tdFriendsTitle">
+      <div class="td-friends-head">
+        <div>
+          <div class="section-eyebrow">Your Friends</div>
+          <div class="section-title" id="tdFriendsTitle">Friends &amp; This Title</div>
+        </div>
+        ${avg != null ? `<div class="td-friends-avg"><span class="td-friends-avg-num">★ ${avg.toFixed(2)}</span><span class="td-friends-avg-label">Friends’ average · ${scores.length} rating${scores.length === 1 ? '' : 's'}</span></div>` : ''}
+      </div>
+      <div class="pn-toggle td-friends-tabs" role="tablist" aria-label="Friends">${_tdFriendGroups.map((g, i) =>
+        `<button type="button" role="tab" id="tdFriendsTab-${g.key}" class="pn-toggle-btn${i ? '' : ' active'}" aria-selected="${!i}" aria-controls="tdFriendsPanel" onclick="_tdFriendsTab('${g.key}')">${esc(g.label)}<span class="td-friends-tab-count">${g.items.length}</span></button>`).join('')}</div>
+      <div class="td-friends-row" id="tdFriendsPanel" role="tabpanel" aria-labelledby="tdFriendsTab-${_tdFriendGroups[0].key}"></div>
+    </section>`;
+  _tdFriendsTab(_tdFriendGroups[0].key);
 }
-function _tdFriendRow(e, key, hidden) {
+let _tdFriendGroups = [];
+// Switch Watched By · Watching · Want to Watch (the shared pn-toggle)
+function _tdFriendsTab(key) {
+  const g = _tdFriendGroups.find(x => x.key === key);
+  if (!g) return;
+  document.querySelectorAll('.td-friends-tabs .pn-toggle-btn').forEach(b => {
+    const on = b.id === 'tdFriendsTab-' + key;
+    b.classList.toggle('active', on); b.setAttribute('aria-selected', on);
+  });
+  const panel = document.getElementById('tdFriendsPanel');
+  panel.setAttribute('aria-labelledby', 'tdFriendsTab-' + key);
+  panel.innerHTML = g.items.map(e => _tdFriendCard(e, key)).join('');
+}
+// One friend: round photo (same as the cast cards), @username, then their
+// score / where they're up to / when they added it
+function _tdFriendCard(e, key) {
   const p = e._profile, av = safeURL(p.avatar_url), name = p.username || 'friend';
   const sc = liveScore(e);
-  const right = key === 'watched'
-    ? (sc != null ? `<span class="td-friend-score">★ ${Number(sc).toFixed(2)}</span>` : `<span class="td-fan-count">Not rated</span>`)
+  const info = key === 'watched'
+    ? (sc != null ? `<span class="td-friend-score">★ ${Number(sc).toFixed(2)}</span>` : `<span class="td-friend-sub">Not rated yet</span>`)
     : key === 'watching'
       ? (e.status === 'up_next' ? `<span class="up-next-tag">Up Next</span>`
-        : e.status === 'paused' ? `<span class="td-fan-count">Taking a break</span>`
+        : e.status === 'paused' ? `<span class="td-friend-sub">Taking a break</span>`
         : e.season || e.episode ? `<span class="w-ep-badge">S${Number(e.season) || 1} · E${Number(e.episode) || 0}</span>`
-        : e.watched ? `<span class="w-ep-badge">${Number(e.watched)} eps</span>` : '')
-      : `<span class="td-fan-count">${e.created_at ? MSSNote.date(e.created_at, true) : ''}</span>`;
-  return `<li${hidden ? ' hidden' : ''}><button type="button" class="td-friend-row" onclick="_tdOpenFriend(${attrJSON(e.id)})" aria-label="@${esc(name)} — open their ${key === 'watched' ? 'ratings' : 'entry'}">
-      <span class="snote-avatar td-friend-av">${av ? `<img src="${av}" alt="" loading="lazy">` : esc(name[0].toUpperCase())}</span>
-      <span class="td-fan-pick">@${esc(name)}</span>${right}
-    </button></li>`;
-}
-function _tdFriendsMore(btn, key) {
-  const open = btn.getAttribute('aria-expanded') !== 'true';
-  document.querySelectorAll(`#tdFriends-${key} li`).forEach((li, i) => { if (i >= _TD_FRIEND_MAX) li.hidden = !open; });
-  btn.setAttribute('aria-expanded', open);
-  btn.textContent = open ? 'Show less' : `Show all ${document.querySelectorAll(`#tdFriends-${key} li`).length}`;
+        : e.watched ? `<span class="w-ep-badge">${Number(e.watched)} eps</span>` : `<span class="td-friend-sub">Just started</span>`)
+      : `<span class="td-friend-sub">${e.created_at ? 'Added ' + esc(MSSNote.date(e.created_at, true)) : 'On their list'}</span>`;
+  return `<button type="button" class="td-cast-card td-friend-card" onclick="_tdOpenFriend(${attrJSON(e.id)})" aria-label="@${esc(name)} — open their ${key === 'watched' ? 'ratings' : 'entry'}">
+      <span class="td-cast-photo td-friend-photo">${av ? `<img src="${av}" alt="" loading="lazy">` : esc(name[0].toUpperCase())}</span>
+      <span class="td-cast-name">@${esc(name)}</span>
+      <span class="td-friend-info">${info}</span>
+    </button>`;
 }
 function _tdOpenFriend(id) {
   const e = _tdFriendEntries[id];
@@ -1046,12 +1064,6 @@ function _openEpisodePopup(index) {
 
 function _closeEpisodePopup() { MSSDialog.close(document.getElementById('epPopupOverlay')); }
 
-/* ── Double-tap-to-like (touch screens) ──
-   Reused across title.html/lists.html/notes.html with the same
-   signature: a unique key, a "do the like" callback, and an
-   "already liked?" check so a second tap never accidentally
-   un-likes something. */
-
 /* ── Community Notes ── */
 let _tdNotesRaw = [];
 let _tdNotesReactions = {}; // entry_id -> 'like' | 'dislike' (current user's own reaction)
@@ -1113,7 +1125,7 @@ function _tdRenderNotes() {
     const myReaction = _tdNotesReactions[n.entry_id];
     const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const initial = (n.username || '?')[0].toUpperCase();
-    return `<div class="td-note-card" ontouchend="mssDoubleTap(event, 'td-${n.entry_id}', () => _tdReactToNote('${n.entry_id}', true), () => _tdNotesReactions['${n.entry_id}'] === 'like')">
+    return `<div class="td-note-card" data-dbl-like>
       <div class="td-note-avatar">${n.avatar_url ? `<img src="${esc(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
       <div class="td-note-body">
         <div class="td-note-head">
@@ -1122,10 +1134,10 @@ function _tdRenderNotes() {
         </div>
         ${mssIsSpoiler(n) && n.user_id !== _tdUser?.id ? mssSpoilerHTML(`<div class="td-note-text">${esc(n.notes)}</div>`, { compact: true }) : `<div class="td-note-text">${esc(n.notes)}</div>`}
         <div class="td-note-actions">
-          <button class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="_tdReactToNote('${n.entry_id}', true)">
+          <button type="button" class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="_tdReactToNote('${n.entry_id}', true)">
             ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
           </button>
-          <button class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="_tdReactToNote('${n.entry_id}', false)">
+          <button type="button" class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="_tdReactToNote('${n.entry_id}', false)">
             ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
           </button>
           <button class="td-note-react-btn" onclick='openReplyPopup("note", ${attrJSON(n.entry_id)}, ${attrJSON(n.username || "")})'>
@@ -1273,7 +1285,7 @@ function _replyRenderList() {
     const myReaction = _replyMyReactions[r.id];
     const initial = (r.username || '?')[0].toUpperCase();
     const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-    return `<div class="rp-item">
+    return `<div class="rp-item" data-dbl-like>
       <div class="td-note-avatar">${r.avatar_url ? `<img src="${esc(r.avatar_url)}" alt="" loading="lazy">` : esc(initial)}</div>
       <div class="rp-main">
         <div class="rp-by">
@@ -1282,7 +1294,7 @@ function _replyRenderList() {
         </div>
         <div class="rp-text">${esc(r.content)}</div>
         <div class="rp-reacts">
-          <button type="button" class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="_replyReact('${r.id}', true)">
+          <button type="button" class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="_replyReact('${r.id}', true)">
             ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 13)} <span>${r.like_count || 0}</span>
           </button>
           <button type="button" class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="_replyReact('${r.id}', false)">
