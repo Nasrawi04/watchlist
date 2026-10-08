@@ -184,8 +184,9 @@ function _notifyQueuedFrom(entry) {
 async function uploadPoster(file, userId, entryId) {
   // Compress image before upload — converts PNG/large files to JPEG
   const compressed = await compressImage(file, 800, 0.85);
-  // Picture check (config.js): refused pictures never upload
-  if (!(await MSSImageCheck.allowed(compressed, 'poster'))) throw Object.assign(new Error('PICTURE_REFUSED'), { refused: true });
+  // Picture check (config.js): refused pictures never upload, borderline ones go to the admins' review
+  const verdict = await MSSImageCheck.allowed(compressed, 'poster');
+  if (!verdict) throw Object.assign(new Error('PICTURE_REFUSED'), { refused: true });
 
   const formData = new FormData();
   formData.append('file', compressed);
@@ -203,7 +204,9 @@ async function uploadPoster(file, userId, entryId) {
     clearTimeout(timeout);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Upload failed');
-    return data.secure_url.replace('/upload/', '/upload/w_500,q_auto,f_auto/');
+    const url = data.secure_url.replace('/upload/', '/upload/w_500,q_auto,f_auto/');
+    MSSImageCheck.review(verdict, 'poster', url);
+    return url;
   } catch(e) {
     clearTimeout(timeout);
     if (e.name === 'AbortError') throw new Error('Upload timed out. Check your connection.');
