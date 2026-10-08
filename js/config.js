@@ -465,6 +465,8 @@ function genreHTML(genres, max) {
    Used by every page that shows a "slow down" message. Covers both the
    Supabase triggers/RPCs (message contains "rate_limit_exceeded", see
    013/014 SQL) and TMDB 429s (TmdbRateLimitError from tmdbFetch). */
+// The label in front of the date you finished a title — same word everywhere
+const MSS_WATCHED_ON = 'Watched On:';
 const RATE_LIMIT_MESSAGE = "You're doing that too fast — please wait a minute and try again.";
 class TmdbRateLimitError extends Error {
   constructor(msg) { super(msg); this.name = 'TmdbRateLimitError'; }
@@ -601,26 +603,48 @@ async function mssReactFeed(kind, id, isLike, get, set) {
   try { await _mssSaveReact(kind, id, next.mine); }
   catch (err) { set(prev); _mssReactFail(err); }
 }
-/* Double-tap a card → like it (with a heart pop). Use as ontouchend. */
-const _mssTaps = {};
-function mssDoubleTap(ev, key, likeFn, isLiked) {
-  const now = Date.now(), last = _mssTaps[key] || 0;
-  _mssTaps[key] = now;
-  if (now - last >= 350 || now === last) return;
-  _mssTaps[key] = 0;
-  if (!isLiked()) likeFn();
-  const el = ev.currentTarget;
-  if (!el) return;
-  const heart = document.createElement('div');
-  heart.className = 'dt-heart-pop';
-  heart.textContent = '♥';
-  heart.setAttribute('aria-hidden', 'true');
-  el.appendChild(heart);
-  setTimeout(() => heart.remove(), 700);
-}
+/* ── Double-tap / double-click to like — everywhere there's a Like button ──
+   Mark the area with data-dbl-like and its Like button with data-like
+   (mssReactButtonsHTML does this already). A double tap / double click
+   anywhere in the area presses that Like — only if it isn't liked yet, so
+   it never un-likes and does nothing else. The button is looked for inside
+   the area, then in the popup the area sits in. If the area opens something
+   on a single tap (a card), that waits a moment to see if a second tap comes. ── */
+(() => {
+  const SKIP = 'a, button, input, textarea, select, label, summary, [onclick], [role="button"], [contenteditable]';
+  const likeBtn = el => el.querySelector('[data-like]') || el.closest('[role="dialog"]')?.querySelector('[data-like]');
+  const own = (ev, el) => { const t = ev.target.closest(SKIP); return t && t !== el && el.contains(t); };
+  function like(el) {
+    const b = likeBtn(el);
+    if (b && b.getAttribute('aria-pressed') !== 'true' && !b.disabled) b.click();
+  }
+  document.addEventListener('click', ev => {
+    const el = ev.target.closest('[data-dbl-like]');
+    if (!el || own(ev, el) || ev.detail === 0 || !likeBtn(el)) return;   // inner buttons, keyboard and replayed clicks act normally
+    const opens = el.hasAttribute('onclick') || el.matches('a[href], [role="button"]');
+    const now = Date.now(), second = el._mssTap && now - el._mssTap < 320;
+    if (second) {
+      el._mssTap = 0;
+      clearTimeout(el._mssTapTimer);
+      if (opens) { ev.preventDefault(); ev.stopImmediatePropagation(); }
+      like(el);
+      return;
+    }
+    el._mssTap = now;
+    if (!opens) return;
+    ev.preventDefault(); ev.stopImmediatePropagation();
+    el._mssTapTimer = setTimeout(() => { el._mssTap = 0; el.click(); }, 320);   // a single tap: open as usual
+  }, true);
+  // no word-selection flash when double-clicking to like on desktop
+  document.addEventListener('mousedown', ev => {
+    const el = ev.detail > 1 && ev.target.closest('[data-dbl-like]');
+    if (el && !own(ev, el) && likeBtn(el)) ev.preventDefault();
+  });
+})();
+
 function mssReactButtonsHTML(state, onLike, onDislike) {
   const st = state || { like: 0, dislike: 0, mine: null };
-  return `<button type="button" class="popup-action-btn np-react${st.mine === 'like' ? ' is-on' : ''}" onclick="${onLike}" aria-label="Like" aria-pressed="${st.mine === 'like'}">${icon(st.mine === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)}<span>${st.like}</span></button>
+  return `<button type="button" class="popup-action-btn np-react${st.mine === 'like' ? ' is-on' : ''}" onclick="${onLike}" data-like aria-label="Like" aria-pressed="${st.mine === 'like'}">${icon(st.mine === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)}<span>${st.like}</span></button>
     <button type="button" class="popup-action-btn np-react np-react-down${st.mine === 'dislike' ? ' is-on' : ''}" onclick="${onDislike}" aria-label="Dislike" aria-pressed="${st.mine === 'dislike'}">${icon(st.mine === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)}<span>${st.dislike}</span></button>`;
 }
 
@@ -772,6 +796,26 @@ const mssSkeleton = (() => {
   return kind => (KINDS[kind] || KINDS.grid)();
 })();
 
+/* ── Page scroll lock — every popup, panel and dropdown that stops the page
+   scrolling uses this pair, with its own key (an id or the overlay element).
+   iPhone Safari ignores overflow:hidden on <body>, so the page is pinned
+   where it is (position:fixed) and put back at the same spot once the last
+   key is released. Releasing a key that isn't locked does nothing. ── */
+const _mssLocks = new Set();
+let _mssLockY = 0;
+function mssLockScroll(key = 'page') {
+  if (_mssLocks.has(key)) return;
+  _mssLocks.add(key);
+  if (_mssLocks.size > 1) return;
+  _mssLockY = window.scrollY;
+  Object.assign(document.body.style, { overflow: 'hidden', position: 'fixed', top: `-${_mssLockY}px`, left: '0', right: '0', width: '100%' });
+}
+function mssUnlockScroll(key = 'page') {
+  if (!_mssLocks.delete(key) || _mssLocks.size) return;
+  Object.assign(document.body.style, { overflow: '', position: '', top: '', left: '', right: '', width: '' });
+  window.scrollTo({ top: _mssLockY, behavior: 'instant' });
+}
+
 /* ══════════════════════════════════════════
    DIALOG SHELL — MSSDialog
    One open/close behaviour for every popup:
@@ -816,7 +860,7 @@ const MSSDialog = (() => {
     } else stack.push(stack.splice(i, 1)[0]);            // already open → bring to the top
     handoff = null;
     ov.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    mssLockScroll('mss-dialog');
     const target = typeof o.focus === 'string' ? ov.querySelector(o.focus) : o.focus;
     if (target) focusEl(target);
     else if (!ov.contains(document.activeElement)) focusEl(card);
@@ -835,7 +879,7 @@ const MSSDialog = (() => {
       }
       return;
     }
-    document.body.style.overflow = '';
+    mssUnlockScroll('mss-dialog');
     // Another popup opened straight away (Info → Ratings switch) keeps the
     // original opener; otherwise focus goes back to it.
     handoff = d.returnTo;
