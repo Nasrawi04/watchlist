@@ -661,7 +661,7 @@ function _lvShowJoinPopup() {
     </div>`;
   el.addEventListener('click', e => { if (e.target === el) _lvJoinRespond(false); });
   document.body.appendChild(el);
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('lvJoin');
   requestAnimationFrame(() => el.classList.add('open'));
 }
 
@@ -669,7 +669,7 @@ function _lvCloseJoinPopup() {
   const el = document.getElementById('lvJoinOverlay');
   if (!el) return;
   el.classList.remove('open');
-  document.body.style.overflow = '';
+  mssUnlockScroll('lvJoin');
   setTimeout(() => el.remove(), 220);
 }
 
