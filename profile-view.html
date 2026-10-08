@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="MyScreenScore">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>Profile — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -21,63 +22,6 @@
 .pv-title { font-family:var(--serif); font-size:22px; font-weight:500; margin-bottom:1rem; }
 
 .pv-empty { text-align:center; padding:2rem; color:var(--text-3); font-size:13px; }
-
-
-/* ── Library tab: friend-view styles ── */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* pv-friend-btn styling */
 
 /* ══ Profile Header — Instagram style ══ */
 .prof-header {
@@ -93,7 +37,7 @@
   content:'';
   position:absolute;
   bottom:0;
-  left:calc(-50vw + 50%);
+  inset-inline-start:calc(-50vw + 50%);
   width:100vw;
   height:0.5px;
   background:var(--border);
@@ -141,7 +85,7 @@
 .prof-quote {
   font-family:var(--sans); font-style:italic;
   font-size:14px; font-weight:400; color:var(--text-2);
-  padding-left:14px; border-left:3px solid var(--olive-light);
+  padding-inline-start:14px; border-inline-start:3px solid var(--olive-light);
   margin-bottom:10px; line-height:1.6;
 }
 /* Buttons row */
@@ -164,7 +108,7 @@
 .pv-friend-btn.accept:hover { background:var(--olive-2); }
 .pv-friend-btn.decline { background:transparent; color:#f87171; border:0.5px solid #f87171; }
 .pv-friend-btn.decline:hover { background:#f87171; color:#fff; }
-.pv-friend-btn.pv-notify { display:inline-flex; align-items:center; gap:6px; background:transparent; color:var(--text-2); border:0.5px solid var(--border-2); margin-left:6px; }
+.pv-friend-btn.pv-notify { display:inline-flex; align-items:center; gap:6px; background:transparent; color:var(--text-2); border:0.5px solid var(--border-2); margin-inline-start:6px; }
 .pv-friend-btn.pv-notify:hover { border-color:var(--border-olive); color:var(--olive-light); background:var(--olive-faint); }
 .pv-friend-btn.pv-notify.on { background:var(--olive); color:#fff; border-color:var(--olive); }
 .pv-friend-btn.pv-notify.on:hover { background:var(--olive-2); }
