@@ -28,17 +28,6 @@
 .snote-rect-btn:hover { border-color:var(--border-olive); color:var(--text); }
 .snote-rect-btn.active-like { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
 .snote-rect-btn.active-dislike { background:rgba(192,104,90,0.12); border-color:rgba(192,104,90,0.4); color:#c0685a; }
-.dt-heart-pop {
-  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.4);
-  font-size:56px; color:var(--olive-light); text-shadow:0 2px 14px rgba(0,0,0,.35);
-  pointer-events:none; opacity:0; animation:dtHeartPop .7s ease forwards; z-index:5;
-}
-@keyframes dtHeartPop {
-  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.4); }
-  25%  { opacity:1; transform:translate(-50%,-50%) scale(1.15); }
-  40%  { transform:translate(-50%,-50%) scale(0.95); }
-  100% { opacity:0; transform:translate(-50%,-50%) scale(1); }
-}
 
 /* ── Header buttons ── */
 .notes-header-btns { display:flex; gap:8px; flex-wrap:wrap; }
@@ -450,8 +439,6 @@ function _notesOpen(id) {
   });
 }
 
-/* ── Double-tap-to-like (touch screens) ── */
-
 function setNotesSort(order) { SF.setSort('notesMine', 'all', { latest: 'newest', earliest: 'oldest', az: 'alpha', za: 'zalpha', longest: 'note_long' }[order] || order); }
 
 function setNotesMode(mode) {
@@ -512,7 +499,6 @@ async function loadSocialNotes() {
 let _nuTimer = null;
 let _nuActive = -1;
 let _nuResults = [];
-let _nuScrollY = 0;
 let _nuFilterUser = null; // { id, username, avatar_url }
 
 function _nuPosition() {
@@ -526,22 +512,6 @@ function _nuPosition() {
   drop.style.position = 'fixed';
 }
 
-function _nuLockScroll() {
-  _nuScrollY = window.scrollY;
-  document.body.style.overflow = 'hidden';
-  document.body.style.position = 'fixed';
-  document.body.style.width = '100%';
-  document.body.style.top = '-' + _nuScrollY + 'px';
-}
-
-function _nuUnlockScroll() {
-  document.body.style.overflow = '';
-  document.body.style.position = '';
-  document.body.style.width = '';
-  document.body.style.top = '';
-  window.scrollTo(0, _nuScrollY || 0);
-}
-
 async function _nuSearch(val) {
   const q = val.trim().toLowerCase();
   const drop = document.getElementById('nuDropdown');
@@ -550,14 +520,14 @@ async function _nuSearch(val) {
   if (q.length < 2) {
     drop.classList.remove('open');
     document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
-    _nuUnlockScroll();
+    mssUnlockScroll('nuDropdown');
     return;
   }
   _nuPosition();
   drop.innerHTML = '<div class="ud-loading">Searching…</div>';
   drop.classList.add('open');
   document.getElementById('notesUserSearchWrapInner')?.classList.add('dd-connected-active');
-  _nuLockScroll();
+  mssLockScroll('nuDropdown');
   _nuTimer = setTimeout(async () => {
     try {
       const [{ data: users }, { data: entries }] = await Promise.all([
@@ -639,7 +609,7 @@ function _nuKeydown(e) {
   } else if (e.key === 'Escape') {
     drop.classList.remove('open'); _nuActive = -1;
     document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
-    _nuUnlockScroll();
+    mssUnlockScroll('nuDropdown');
   }
 }
 
@@ -648,7 +618,7 @@ document.addEventListener('click', e => {
   if (dd && dd.classList.contains('open') && !e.target.closest('#notesUserSearchWrap') && !e.target.closest('#nuDropdown')) {
     dd.classList.remove('open');
     document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
-    _nuUnlockScroll();
+    mssUnlockScroll('nuDropdown');
     _nuActive = -1;
   }
 });
@@ -659,7 +629,7 @@ function _nuSelectResult(i) {
   document.getElementById('notesUserSearchInput').value = r.type === 'title' ? r.title : r.username;
   document.getElementById('nuDropdown').classList.remove('open');
   document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
-  _nuUnlockScroll();
+  mssUnlockScroll('nuDropdown');
   _nuResults = []; _nuActive = -1;
 
   if (r.type === 'user') {
@@ -825,7 +795,7 @@ function renderSocialNotes() {
     const id = attrJSON(n.entry_id);
     const initial = (n.username || '?')[0].toUpperCase();
     const words = MSSNote.words(n.notes);
-    return `<article class="nc-card" onclick="_notesOpenSocial(${id})" ontouchend="mssDoubleTap(event, 'snote-${escHTML(n.entry_id)}', () => reactToSocialNote(${id}, true), () => _socialNotesMyReactions[${id}] === 'like')">
+    return `<article class="nc-card" onclick="_notesOpenSocial(${id})" data-dbl-like>
       ${MSSNote.poster(n.poster_url, n.title, 'nc-poster')}
       <div class="nc-main">
         <div class="nc-top">
@@ -841,10 +811,10 @@ function renderSocialNotes() {
           : `<blockquote class="nc-quote">&ldquo;${esc(MSSNote.trim(n.notes))}&rdquo;</blockquote>`}
         <div class="nc-foot">
           <div class="nc-reacts">
-            <button class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" onclick="event.stopPropagation();reactToSocialNote(${id}, true)">
+            <button type="button" class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="event.stopPropagation();reactToSocialNote(${id}, true)">
               ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
             </button>
-            <button class="snote-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" onclick="event.stopPropagation();reactToSocialNote(${id}, false)">
+            <button type="button" class="snote-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="event.stopPropagation();reactToSocialNote(${id}, false)">
               ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
             </button>
           </div>
@@ -902,7 +872,6 @@ function reactToSocialNote(entryId, isLike) {
 /* ── Search popup (opened via + Add Note / Edit Note) ── */
 let _notesSearchMode = 'add';
 
-let _notesSearchScrollY = 0;
 
 function openNotesSearchPopup(mode) {
   _notesSearchMode = mode;
@@ -919,23 +888,17 @@ function openNotesSearchPopup(mode) {
   }
 
   document.getElementById('notesSearchOverlay').classList.add('open');
-  _notesSearchScrollY = window.scrollY;
-  document.body.style.overflow = 'hidden';
-  document.body.style.position = 'fixed';
-  document.body.style.width = '100%';
-  document.body.style.top = '-' + _notesSearchScrollY + 'px';
+  mssLockScroll('notesSearchOverlay');
 
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   if (!isMobile) setTimeout(() => input.focus(), 150);
 }
 
 function closeNotesSearchPopup() {
-  document.getElementById('notesSearchOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-  document.body.style.position = '';
-  document.body.style.width = '';
-  document.body.style.top = '';
-  window.scrollTo(0, _notesSearchScrollY || 0);
+  const ov = document.getElementById('notesSearchOverlay');
+  if (!ov.classList.contains('open')) return;
+  ov.classList.remove('open');
+  mssUnlockScroll('notesSearchOverlay');
 }
 
 /* ── Search (client-side, filters the already-loaded library) ── */
