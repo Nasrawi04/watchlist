@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Admin — MyScreenScore</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ── Admin (site owners only — app_admins, migration 036). Same page head,
+   tabs (.pn-toggle) and cards as Notifications / Settings. ── */
+.adm-head { margin-bottom:1.25rem; }
+.adm-title { font-family:var(--serif); font-size:clamp(28px, 6vw, 44px); font-weight:600; line-height:1.15; margin:0; }
+.adm-sub { font-size:13.5px; color:var(--text-2); margin-top:4px; }
+.adm-tabs { margin-bottom:1.25rem; }
+.adm-tabs .pn-toggle-btn { padding:9px clamp(12px, 3vw, 26px); }
+.adm-list { display:flex; flex-direction:column; gap:8px; }
+.adm-row {
+  display:flex; align-items:center; gap:12px; padding:12px 14px; width:100%; box-sizing:border-box;
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
+  font:inherit; color:inherit; text-align:start;
+}
+button.adm-row { cursor:pointer; transition:border-color .15s; }
+button.adm-row:hover { border-color:var(--border-olive); }
+button.adm-row:focus-visible, .adm-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.adm-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.adm-name { font-size:14.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.adm-meta { font-size:12.5px; color:var(--text-3); display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; }
+.adm-count { font-family:var(--bebas); font-size:26px; letter-spacing:.5px; color:var(--olive-light); line-height:1; min-width:2ch; text-align:center; }
+.adm-actions { display:flex; gap:6px; flex-shrink:0; }
+.adm-btn {
+  padding:7px 12px; border-radius:var(--radius-sm); cursor:pointer; font:600 12.5px 'Manrope',var(--sans);
+  background:transparent; border:1px solid var(--border-2); color:var(--text-2); transition:all .15s;
+}
+.adm-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.adm-btn.on { background:var(--olive); border-color:var(--olive); color:#fff; }
+.adm-status { padding:2px 8px; border-radius:20px; font-size:11.5px; font-weight:600; background:var(--bg-3); color:var(--text-2); }
+.adm-status.added { background:var(--olive-faint); color:var(--olive-light); }
+.adm-poster { width:40px; height:60px; border-radius:6px; overflow:hidden; flex-shrink:0; background:var(--bg-3); }
+.adm-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.adm-av { width:38px; height:38px; border-radius:50%; overflow:hidden; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--olive-light); }
+.adm-av img { width:100%; height:100%; object-fit:cover; }
+.adm-search { margin-bottom:1rem; }
+.adm-group { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin:1.25rem 0 .5rem; }
+.adm-back { display:inline-flex; align-items:center; gap:6px; margin-bottom:12px; padding:0; background:none; border:none; color:var(--text-3); font:500 13px 'Manrope',var(--sans); cursor:pointer; }
+.adm-back:hover { color:var(--text); }
+.adm-empty { padding:3rem 1rem; text-align:center; color:var(--text-3); font-size:14px; }
+@media(max-width:640px) {
+  .adm-tabs .pn-toggle-btn { flex:1; justify-content:center; font-size:12.5px; padding:9px 6px; }
+  .adm-row { flex-wrap:wrap; }
+  .adm-actions { width:100%; }
+  .adm-actions .adm-btn { flex:1; }
+}
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+  <div class="adm-head fade-up">
+    <h1 class="adm-title">Admin</h1>
+    <div class="adm-sub">Only the site’s owners can see this page.</div>
+  </div>
+  <div class="pn-toggle adm-tabs fade-up fade-up-1" role="tablist" aria-label="Admin sections">
+    <button type="button" role="tab" id="admTab-langs" class="pn-toggle-btn active" aria-selected="true" aria-controls="admPanel" onclick="admTab('langs')">Language requests</button>
+    <button type="button" role="tab" id="admTab-titles" class="pn-toggle-btn" aria-selected="false" aria-controls="admPanel" onclick="admTab('titles')">Who has a title</button>
+  </div>
+  <div id="admPanel" role="tabpanel" aria-labelledby="admTab-langs" class="fade-up fade-up-2"><div class="page-loading"><div class="spinner"></div></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script>
+const esc = s => escHTML(s == null ? '' : String(s));
+const ADM_STATUS = [['watching', 'Watching'], ['up_next', 'Up Next'], ['paused', 'Taking a Break'], ['ongoing', 'To Be Continued'], ['completed', 'Watched'], ['queue', 'Watchlist']];
+const _admFmt = d => d ? new Date(d).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+let _admTab = 'langs', _admQuery = '', _admTitles = [], _admTimer = null;
+
+function admTab(key) {
+  _admTab = key;
+  document.querySelectorAll('.adm-tabs .pn-toggle-btn').forEach(b => {
+    const on = b.id === 'admTab-' + key;
+    b.classList.toggle('active', on); b.setAttribute('aria-selected', on);
+  });
+  document.getElementById('admPanel').setAttribute('aria-labelledby', 'admTab-' + key);
+  key === 'langs' ? admLoadLanguages() : admTitlesView();
+}
+function admError(err) {
+  console.error(err);
+  document.getElementById('admPanel').innerHTML = `<div class="adm-empty">${err?.code === '42501' ? 'This page is only for the site’s owners.' : 'Couldn’t load that — try again.'}</div>`;
+}
+
+/* ── Language requests ── */
+async function admLoadLanguages() {
+  const panel = document.getElementById('admPanel');
+  panel.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
+  const { data, error } = await sb.rpc('admin_language_requests');
+  if (error) return admError(error);
+  if (!data.length) { panel.innerHTML = '<div class="adm-empty">No language requests yet.</div>'; return; }
+  panel.innerHTML = `<div class="adm-list">${data.map(r => `
+    <div class="adm-row">
+      <span class="adm-count" aria-label="${r.requests} requests">${r.requests}</span>
+      <span class="adm-main">
+        <span class="adm-name" translate="no">${esc(MSSLang.name(r.language))} <span class="adm-meta">${esc(r.language)}</span></span>
+        <span class="adm-meta"><span class="adm-status ${esc(r.status)}">${r.status === 'added' ? 'Added' : r.status === 'declined' ? 'Declined' : 'Open'}</span>
+          <span>${r.requests === 1 ? '1 request' : `${r.requests} requests`} · last ${_admFmt(r.last_at)}</span></span>
+      </span>
+      <span class="adm-actions">
+        <button type="button" class="adm-btn${r.status === 'added' ? ' on' : ''}" aria-pressed="${r.status === 'added'}" onclick="admSetStatus('${esc(r.language)}', '${r.status === 'added' ? 'open' : 'added'}')">Mark added</button>
+        <button type="button" class="adm-btn${r.status === 'declined' ? ' on' : ''}" aria-pressed="${r.status === 'declined'}" onclick="admSetStatus('${esc(r.language)}', '${r.status === 'declined' ? 'open' : 'declined'}')">Decline</button>
+      </span>
+    </div>`).join('')}</div>`;
+}
+async function admSetStatus(lang, status) {
+  const { error } = await sb.rpc('admin_set_language_status', { p_language: lang, p_status: status });
+  if (error) { console.error(error); showToast('Couldn’t save that — try again.', 'err'); return; }
+  admLoadLanguages();
+}
+
+/* ── Who has a title ── */
+function admTitlesView() {
+  const panel = document.getElementById('admPanel');
+  panel.innerHTML = `<input class="field-input adm-search" id="admSearch" type="search" placeholder="Search a title in everyone’s libraries…" aria-label="Search a title" autocomplete="off" value="${esc(_admQuery)}">
+    <div id="admResults" aria-live="polite"></div>`;
+  const input = document.getElementById('admSearch');
+  input.addEventListener('input', () => { clearTimeout(_admTimer); _admTimer = setTimeout(() => admSearch(input.value), 300); });
+  input.focus();
+  if (_admQuery) admSearch(_admQuery);
+}
+async function admSearch(q) {
+  _admQuery = q.trim();
+  const box = document.getElementById('admResults');
+  if (_admQuery.length < 2) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
+  const { data, error } = await sb.rpc('admin_find_titles', { p_query: _admQuery });
+  if (q.trim() !== _admQuery) return;
+  if (error) return admError(error);
+  _admTitles = data;
+  if (!data.length) { box.innerHTML = '<div class="adm-empty">No one has a title like that.</div>'; return; }
+  box.innerHTML = `<div class="adm-list">${data.map((t, i) => {
+    const counts = ADM_STATUS.filter(([k]) => t[k] > 0).map(([k, l]) => `<span class="w-ep-badge">${l} ${t[k]}</span>`).join('');
+    return `<button type="button" class="adm-row" onclick="admAudience(${i})">
+      <span class="adm-poster">${safeURL(t.poster_url) ? `<img src="${safeURL(t.poster_url)}" alt="" loading="lazy">` : ''}</span>
+      <span class="adm-main">
+        <span class="adm-name" translate="no">${esc(t.title)}${t.year ? ` <span class="adm-meta">${esc(String(t.year).slice(0, 4))}</span>` : ''}</span>
+        <span class="adm-meta">${counts}</span>
+      </span>
+      <span class="adm-count" aria-label="${t.people} people">${t.people}</span>
+    </button>`;
+  }).join('')}</div>`;
+}
+async function admAudience(i) {
+  const t = _admTitles[i];
+  const panel = document.getElementById('admPanel');
+  panel.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
+  const { data, error } = await sb.rpc('admin_title_audience', { p_tmdb_id: t.tmdb_id, p_tmdb_type: t.tmdb_type, p_title: t.title });
+  if (error) return admError(error);
+  const row = r => {
+    const score = liveScore(r);
+    const av = safeURL(r.avatar_url);
+    const progress = r.status !== 'completed' && r.total_eps ? `<span>${r.watched || 0} / ${r.total_eps} episodes</span>` : '';
+    const when = r.completed_date ? `<span>${_admFmt(r.completed_date)}</span>` : r.updated_at ? `<span>${_admFmt(r.updated_at)}</span>` : '';
+    return `<div class="adm-row">
+      <span class="adm-av">${av ? `<img src="${av}" alt="" loading="lazy">` : esc((r.username || '?')[0].toUpperCase())}</span>
+      <span class="adm-main">
+        <span class="adm-name" translate="no">${mssProfileLinkHTML({ id: r.user_id, username: r.username }, esc(r.display_name || '@' + (r.username || '?')))}</span>
+        <span class="adm-meta"><span translate="no">@${esc(r.username || '?')}</span>${progress}${when}</span>
+      </span>
+      ${score != null ? scoreBadge(score, 'md') : ''}
+    </div>`;
+  };
+  panel.innerHTML = `<button type="button" class="adm-back" onclick="admTitlesView()">${icon('back', 14)} Back to results</button>
+    <h2 class="adm-name" translate="no" style="font-size:20px;margin:0 0 4px">${esc(t.title)}</h2>
+    <div class="adm-meta">${data.length === 1 ? '1 person' : `${data.length} people`}</div>
+    ${ADM_STATUS.map(([k, l]) => {
+      const rows = data.filter(r => r.status === k);
+      return rows.length ? `<div class="adm-group">${l} · ${rows.length}</div><div class="adm-list">${rows.map(row).join('')}</div>` : '';
+    }).join('') || '<div class="adm-empty">No one has this title anymore.</div>'}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async () => {
+    const { data, error } = await sb.rpc('is_app_admin');
+    if (error || data !== true) {
+      document.querySelector('.adm-tabs').style.display = 'none';
+      return admError(error || { code: '42501' });
+    }
+    admLoadLanguages();
+  });
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>
