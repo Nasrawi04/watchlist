@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="MyScreenScore">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>Profile — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -35,65 +36,13 @@
 
 .pv-empty { text-align:center; padding:2rem; color:var(--text-3); font-size:13px; }
 
-
-/* ── Library tab: friend-view styles ── */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .fav-edit-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);border:0.5px solid var(--border-olive);background:transparent;color:var(--olive-light);font-size:12px;cursor:pointer;transition:background .15s;}
 
 .fav-edit-btn:hover{background:var(--olive-faint);}
 /* ── Export cards ── */
 .export-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
 
-.export-card{font:inherit;color:inherit;text-align:left;width:100%;background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:1.25rem;cursor:pointer;transition:transform 150ms,box-shadow 150ms,background 200ms;display:flex;flex-direction:column;gap:8px;}
+.export-card{font:inherit;color:inherit;text-align:start;width:100%;background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:1.25rem;cursor:pointer;transition:transform 150ms,box-shadow 150ms,background 200ms;display:flex;flex-direction:column;gap:8px;}
 
 .export-card:hover{background:var(--olive-faint);}
 
@@ -135,7 +84,7 @@
   content:'';
   position:absolute;
   bottom:0;
-  left:calc(-50vw + 50%);
+  inset-inline-start:calc(-50vw + 50%);
   width:100vw;
   height:0.5px;
   background:var(--border);
@@ -169,7 +118,7 @@
 .prof-quote {
   font-family:var(--sans); font-style:italic;
   font-size:14px; font-weight:400; color:var(--text-2);
-  padding-left:14px; border-left:3px solid var(--olive-light);
+  padding-inline-start:14px; border-inline-start:3px solid var(--olive-light);
   margin-bottom:0; line-height:1.6;
 }
 /* Stat boxes — full width below avatar+info */
@@ -392,10 +341,10 @@
       <div class="prof-header-top">
         <div class="prof-avatar" id="profAvatar">?</div>
         <div class="prof-header-info">
-          <div class="prof-username" id="profUsername"></div>
-          <div class="prof-displayname" id="profDisplayName"></div>
-          <div class="prof-bio" id="profBio" style="display:none"></div>
-          <div class="prof-quote" id="profQuote" style="display:none"></div>
+          <div class="prof-username" id="profUsername" translate="no"></div>
+          <div class="prof-displayname" id="profDisplayName" translate="no"></div>
+          <div class="prof-bio" id="profBio" translate="no" style="display:none"></div>
+          <div class="prof-quote" id="profQuote" translate="no" style="display:none"></div>
         </div>
       </div>
       <div class="prof-stat-boxes" id="profStats"></div>
