@@ -916,6 +916,7 @@ const MSSDialog = (() => {
     if (ev.key === 'Escape') {
       // Capture phase + stop: only the top popup closes, not page popups underneath
       ev.preventDefault(); ev.stopImmediatePropagation();
+      if (MSSPicker.closeOpen()) return;              // an open picker in it closes first
       (ov._mssClose || (() => close(ov)))();
       return;
     }
@@ -931,6 +932,114 @@ const MSSDialog = (() => {
   }, true);
 
   return { bind, open, close, isOpen, top };
+})();
+
+/* ══════════════════════════════════════════
+   MSSPicker — the site's dropdown with type-to-search (Settings → Language,
+   Where to watch → Country). Same look as the other dropdowns (.td-dd):
+   a field-style button, a menu joined underneath with an olive edge.
+
+     MSSPicker.mount(el, {
+       id, label, describedBy?,            // ids + aria-label (+ aria-describedby)
+       value,                              // selected value
+       groups: [{ label?, items: [{ value, label, keys?, lang? }] }],
+       search: 'Type to search…',          // placeholder
+       onChange(value),
+     })
+     MSSPicker.closeOpen() → true when one was open (Esc / outside tap)
+
+   Typing matches the label and any extra keys (e.g. a language's English
+   name and code), ignoring case and accents. ↑ ↓ Enter Esc work; the list is
+   an ARIA listbox driven from the search box (combobox). Labels are names
+   (countries / languages in their own words) so they're never translated.
+══════════════════════════════════════════ */
+const MSSPicker = (() => {
+  const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  let openOne = null;
+
+  function mount(el, o) {
+    const id = o.id, listId = id + '-list';
+    const all = o.groups.flatMap(g => g.items);
+    let value = o.value, active = -1, shown = [];
+    const cur = () => all.find(i => i.value === value);
+    el.classList.add('mss-pick');
+    el.innerHTML = `<button type="button" class="mss-pick-trigger" id="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="${escHTML(o.label)}"${o.describedBy ? ` aria-describedby="${o.describedBy}"` : ''}>
+        <span class="mss-pick-value" translate="no"></span>
+        <svg class="mss-pick-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="mss-pick-menu">
+        <div class="mss-pick-search">${icon('search', 14)}<input type="text" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="${listId}" aria-label="${escHTML(o.search || 'Type to search…')}" placeholder="${escHTML(o.search || 'Type to search…')}" autocomplete="off" spellcheck="false"></div>
+        <ul class="mss-pick-list" id="${listId}" role="listbox" aria-label="${escHTML(o.label)}"></ul>
+      </div>`;
+    const btn = el.querySelector('.mss-pick-trigger'), input = el.querySelector('input'), list = el.querySelector('.mss-pick-list');
+    const paintValue = () => { el.querySelector('.mss-pick-value').textContent = cur()?.label || ''; };
+
+    function render() {
+      const q = norm(input.value.trim());
+      shown = [];
+      let html = '';
+      o.groups.forEach(g => {
+        const items = g.items.filter(i => !q || norm(i.label).includes(q) || (i.keys || []).some(k => norm(k).includes(q)));
+        if (!items.length) return;
+        if (g.label && !q) html += `<li class="mss-pick-group" role="presentation">${escHTML(g.label)}</li>`;
+        items.forEach(i => {
+          const n = shown.push(i) - 1;
+          html += `<li class="mss-pick-opt${i.value === value ? ' selected' : ''}" role="option" id="${id}-o${n}" data-n="${n}" aria-selected="${i.value === value}"${i.lang ? ` lang="${escHTML(i.lang)}"` : ''} translate="no">${escHTML(i.label)}</li>`;
+        });
+      });
+      list.innerHTML = html || `<li class="mss-pick-none" role="presentation">No matches</li>`;
+      setActive(shown.findIndex(i => i.value === value) >= 0 && !q ? shown.findIndex(i => i.value === value) : (shown.length ? 0 : -1), !q);
+    }
+    function setActive(n, scroll = true) {
+      active = n;
+      list.querySelectorAll('.mss-pick-opt.active').forEach(x => x.classList.remove('active'));
+      const li = n >= 0 ? list.querySelector(`[data-n="${n}"]`) : null;
+      if (li) { li.classList.add('active'); input.setAttribute('aria-activedescendant', li.id); if (scroll) li.scrollIntoView({ block: 'nearest' }); }
+      else input.removeAttribute('aria-activedescendant');
+    }
+    function open() {
+      if (openOne && openOne !== api) openOne.close();
+      el.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
+      openOne = api;
+      input.value = '';
+      render();
+      input.focus({ preventScroll: true });
+    }
+    function close(refocus) {
+      if (!el.classList.contains('open')) return;
+      el.classList.remove('open'); btn.setAttribute('aria-expanded', 'false');
+      if (openOne === api) openOne = null;
+      if (refocus) btn.focus({ preventScroll: true });
+    }
+    function pick(n) {
+      const i = shown[n];
+      if (!i) return;
+      close(true);
+      if (i.value === value) return;
+      value = i.value; paintValue();
+      o.onChange?.(value);
+    }
+    btn.addEventListener('click', () => (el.classList.contains('open') ? close(true) : open()));
+    btn.addEventListener('keydown', ev => { if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); open(); } });
+    input.addEventListener('input', render);
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); if (shown.length) setActive(Math.min(active + 1, shown.length - 1)); }
+      else if (ev.key === 'ArrowUp') { ev.preventDefault(); if (shown.length) setActive(Math.max(active - 1, 0)); }
+      else if (ev.key === 'Enter') { ev.preventDefault(); pick(active); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(true); }
+      else if (ev.key === 'Tab') close(false);
+    });
+    list.addEventListener('mousedown', ev => ev.preventDefault());         // keep focus in the search box
+    list.addEventListener('click', ev => { const li = ev.target.closest('.mss-pick-opt'); if (li) pick(+li.dataset.n); });
+    paintValue();
+    const api = { close, open, get value() { return value; }, set value(v) { value = v; paintValue(); }, el };
+    el._picker = api;
+    return api;
+  }
+
+  document.addEventListener('pointerdown', ev => { if (openOne && !openOne.el.contains(ev.target)) openOne.close(false); }, true);
+  function closeOpen() { if (!openOne) return false; openOne.close(true); return true; }
+  return { mount, closeOpen };
 })();
 
 /* ══════════════════════════════════════════
