@@ -705,11 +705,11 @@ function openShareProfile() {
   document.getElementById('profShareUrl').textContent = url;
   popup._url = url;
   popup.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('profShare');
 }
 function closeShareProfile() {
   var p = document.getElementById('profSharePopup');
-  if (p) { p.classList.remove('open'); document.body.style.overflow = ''; }
+  if (p) { p.classList.remove('open'); mssUnlockScroll('profShare'); }
 }
 function profCopyLink() {
   var p = document.getElementById('profSharePopup');
