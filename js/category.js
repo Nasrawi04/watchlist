@@ -1305,7 +1305,7 @@ function showQueuePicker() {
   ov.style.pointerEvents = 'auto';
   ov.style.opacity = '1';
   document.getElementById('qpCard').style.transform = 'translateY(0)';
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('qp');
 }
 
 function closeQueuePicker() {
@@ -1314,7 +1314,7 @@ function closeQueuePicker() {
   ov.style.opacity = '0';
   document.getElementById('qpCard').style.transform = 'translateY(18px)';
   ov.style.pointerEvents = 'none';
-  document.body.style.overflow = '';
+  mssUnlockScroll('qp');
   _qpItem = null;
 }
 
