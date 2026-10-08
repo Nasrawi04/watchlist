@@ -112,6 +112,29 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-addword input { flex:1; min-width:150px; padding:8px 12px; font-size:13.5px; }
 .adm-addword .pn-toggle { margin:0; }
 .adm-addword .pn-toggle-btn { padding:7px 12px; font-size:12.5px; }
+/* Flags, bans, pictures */
+.adm-tab-count.warn { background:#b91c1c; }
+.adm-kind.warn { background:rgba(220,38,38,.14); color:#dc2626; }
+.adm-flagged { border-top:0.5px solid var(--border); }
+.adm-flagged:first-of-type { border-top:none; }
+.adm-flagged summary { display:flex; align-items:center; gap:12px; padding:10px 0; cursor:pointer; list-style:none; }
+.adm-flagged summary::-webkit-details-marker { display:none; }
+.adm-flagged summary:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; border-radius:6px; }
+.adm-strikes { min-width:28px; height:28px; padding:0 8px; box-sizing:border-box; border-radius:14px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; background:var(--bg-3); color:var(--text-2); }
+.adm-flagged.hot .adm-strikes { background:#b91c1c; color:#fff; }
+.adm-flagbody { padding:0 0 12px 52px; display:flex; flex-direction:column; gap:8px; }
+.adm-flagline { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; }
+.adm-flagline.done { opacity:.6; }
+.adm-excerpt { flex-basis:100%; padding:6px 10px; border-radius:var(--radius-sm); background:var(--bg-3); font-size:13px; }
+.adm-modcard.banned { border-color:rgba(220,38,38,.5); }
+.adm-pics { display:grid; grid-template-columns:repeat(auto-fill, minmax(118px, 1fr)); gap:12px; }
+.adm-pic { margin:0; display:flex; flex-direction:column; gap:6px; min-width:0; }
+.adm-pic img { width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:8px; background:var(--bg-3); display:block; }
+.adm-pic.round img { aspect-ratio:1; border-radius:50%; }
+.adm-pic figcaption { display:flex; flex-direction:column; font-size:12.5px; font-weight:600; min-width:0; }
+.adm-pic figcaption span, .adm-pic figcaption small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.adm-pic figcaption small { font-weight:500; color:var(--text-3); }
+@media(max-width:640px) { .adm-flagbody { padding-inline-start:0; } .adm-pics { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
 /* Member detail */
 .adm-person { display:flex; align-items:center; gap:16px; margin-bottom:1rem; flex-wrap:wrap; }
 .adm-person .adm-av { width:64px; height:64px; font-size:24px; }
@@ -176,11 +199,11 @@ const _admAv = (p, cls = 'adm-av') => { const u = safeURL(p?.avatar_url); return
 const _admPoster = u => `<span class="adm-poster">${safeURL(u) ? `<img src="${safeURL(u)}" alt="" loading="lazy">` : ''}</span>`;
 const _admTitleHref = t => t.tmdb_id ? `title.html?id=${Number(t.tmdb_id)}&type=${t.tmdb_type === 'movie' ? 'movie' : 'tv'}` : null;
 const _admSpin = () => '<div class="page-loading"><div class="spinner"></div></div>';
-let _admTab = 'overview', _admQuery = '', _admUserQuery = '', _admTitles = [], _admTimer = null, _admLangOpen = 0;
+let _admTab = 'overview', _admQuery = '', _admUserQuery = '', _admTitles = [], _admTimer = null, _admLangOpen = 0, _admFlagOpen = 0;
 
 function _admPaintTabs() {
   document.getElementById('admTabs').innerHTML = ADM_TABS.map(([k, l]) =>
-    `<button type="button" role="tab" id="admTab-${k}" class="pn-toggle-btn${k === _admTab ? ' active' : ''}" aria-selected="${k === _admTab}" aria-controls="admPanel" onclick="admTab('${k}')">${l}${k === 'langs' && _admLangOpen ? `<span class="adm-tab-count" aria-label="${_admLangOpen} open">${_admLangOpen}</span>` : ''}</button>`).join('');
+    `<button type="button" role="tab" id="admTab-${k}" class="pn-toggle-btn${k === _admTab ? ' active' : ''}" aria-selected="${k === _admTab}" aria-controls="admPanel" onclick="admTab('${k}')">${l}${k === 'langs' && _admLangOpen ? `<span class="adm-tab-count" aria-label="${_admLangOpen} open">${_admLangOpen}</span>` : ''}${k === 'activity' && _admFlagOpen ? `<span class="adm-tab-count warn" aria-label="${_admFlagOpen} flagged">${_admFlagOpen}</span>` : ''}</button>`).join('');
 }
 function admTab(key, refresh) {
   _admTab = ADM_TABS.some(([k]) => k === key) ? key : 'overview';
@@ -272,7 +295,7 @@ async function admFindUsers(q) {
   box.innerHTML = data.length ? `${_admUserQuery ? '' : '<div class="adm-group">Newest first</div>'}<div class="adm-list">${data.map(u => `
     <button type="button" class="adm-row" onclick="admUser('${esc(u.id)}')">${_admAv(u)}
       <span class="adm-main"><span class="adm-name" translate="no">${esc(u.display_name || '@' + u.username)}</span>
-        <span class="adm-meta"><span translate="no">@${esc(u.username)}</span><span>joined ${_admFmt(u.created_at)}</span><span>seen ${_admAgo(u.last_sign_in_at)}</span></span></span>
+        <span class="adm-meta"><span translate="no">@${esc(u.username)}</span>${u.banned ? '<span class="adm-kind warn">Banned</span>' : ''}${u.strikes ? `<span class="adm-kind${u.strikes >= ADM_STRIKES ? ' warn' : ''}">${u.strikes} ${u.strikes === 1 ? 'strike' : 'strikes'}</span>` : ''}<span>joined ${_admFmt(u.created_at)}</span><span>seen ${_admAgo(u.last_sign_in_at)}</span></span></span>
       <span class="adm-count" aria-label="${u.entries} titles">${_admNum(u.entries)}</span>
     </button>`).join('')}</div>` : '<div class="adm-empty">No members match that.</div>';
 }
@@ -295,6 +318,15 @@ async function admUser(id) {
       <div><dt>Last signed in</dt><dd>${_admAgo(u.last_sign_in_at)}</dd></div>
       <div><dt>Language</dt><dd translate="no">${esc(lang)}</dd></div>
     </dl>
+    ${u.is_admin ? '' : `<div class="adm-card adm-filter adm-modcard${u.banned ? ' banned' : ''}">
+      <div class="adm-card-h"><span class="adm-card-t">${u.banned ? 'Banned' : 'Moderation'}</span><span class="adm-card-s">${u.banned ? `since ${_admFmt(u.banned.banned_at)}` : `${u.strikes || 0} ${u.strikes === 1 ? 'strike' : 'strikes'}${u.mild ? ` · ${u.mild} mild` : ''}`}</span></div>
+      ${(u.flags || []).length ? (u.flags || []).slice(0, 8).map(_admFlagLine).join('') : '<div class="adm-filter-txt">No flags.</div>'}
+      <div class="adm-actions" style="margin-top:12px">
+        ${u.banned ? `<button type="button" class="adm-btn on" onclick="admUnban('${esc(u.id)}', ${attrJSON(u.username)})">Unban</button>`
+          : `<button type="button" class="adm-btn danger" onclick="admBan('${esc(u.id)}', ${attrJSON(u.username)})">Ban</button>`}
+        ${(u.flags || []).some(f => !f.reviewed) ? `<button type="button" class="adm-btn" onclick="admClearFlags('${esc(u.id)}')">Mark flags reviewed</button>` : ''}
+        <button type="button" class="adm-btn danger" onclick="admDeleteUser('${esc(u.id)}', ${attrJSON(u.username)})">Delete account</button>
+      </div></div>`}
     <div class="adm-tiles">${tile(u.entries, 'Titles')}${tile(u.rated, 'Rated')}${tile(u.episode_ratings, 'Episode ratings')}${tile(u.notes, 'Notes')}${tile(u.lists, 'Lists')}${tile(u.friends, 'Friends')}${tile(u.comments, 'Comments & replies')}</div>
     <div class="adm-grid2">
       <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">By status</span></div>${_admSplit(u.by_status, ADM_STATUS)}</div>
@@ -311,19 +343,23 @@ async function admUser(id) {
 
 /* ── Activity (moderation): word filter + latest comments & replies ── */
 let _admShowWords = false, _admWordKind = 'word', _admWordLevel = 'severe', _admWords = [];
-const ADM_LEVELS = [['severe', 'Severe', 'starred out fully'], ['mild', 'Mild', 'softened, like f*ck'], ['username', 'Usernames only', 'names nobody can pick']];
+const ADM_LEVELS = [['severe', 'Severe', 'starred out fully'], ['mild', 'Mild', 'softened with a *'], ['username', 'Usernames only', 'names nobody can pick']];
 const _admMask = w => _admShowWords ? w : w[0] + '•'.repeat(Math.max(1, w.length - 1));
 async function admActivity() {
   const panel = document.getElementById('admPanel');
   panel.innerHTML = _admSpin();
-  const [act, scan, words] = await Promise.all([
-    sb.rpc('admin_recent_activity', { p_limit: 80 }), sb.rpc('admin_moderation_scan'), sb.rpc('admin_blocked_words')]);
+  const [act, scan, words, flagged, pics] = await Promise.all([
+    sb.rpc('admin_recent_activity', { p_limit: 80 }), sb.rpc('admin_moderation_scan'), sb.rpc('admin_blocked_words'),
+    sb.rpc('admin_flagged_users'), sb.rpc('admin_recent_pictures')]);
   if (_admTab !== 'activity') return;
   if (act.error) return admError(act.error);
   _admWords = words.data || [];
   const filter = scan.error ? `<div class="adm-card adm-filter"><div class="adm-card-s">The word filter needs migration 038 — run it in Supabase, then refresh.</div></div>` : _admFilterHTML(scan.data);
+  const flags = flagged.error ? `<div class="adm-card adm-filter"><div class="adm-card-s">Flags and bans need migration 040 — run it in Supabase, then refresh.</div></div>` : _admFlaggedHTML(flagged.data || []);
+  const pictures = pics.error ? '' : _admPicturesHTML(pics.data || []);
+  _admFlagOpen = (flagged.data || []).filter(u => u.open > 0 && !u.banned).length; _admPaintTabs();
   const data = act.data;
-  panel.innerHTML = filter + `<div class="adm-group">Latest comments & replies</div>` + (data.length ? `<div class="adm-list">${data.map(r => `
+  panel.innerHTML = flags + filter + pictures + `<div class="adm-group">Latest comments & replies</div>` + (data.length ? `<div class="adm-list">${data.map(r => `
     <div class="adm-row top">${_admAv(r)}
       <span class="adm-main">
         <span class="adm-meta"><span class="adm-kind">${ADM_KIND[r.kind] || esc(r.kind)}</span><b translate="no" style="color:var(--text)">@${esc(r.username || '?')}</b><span>on <span translate="no">${esc(r.on_title || '—')}</span></span><span>${_admAgo(r.created_at)}</span></span>
@@ -332,6 +368,72 @@ async function admActivity() {
       <span class="adm-actions"><button type="button" class="adm-btn danger" onclick="admRemove('${esc(r.kind)}', '${esc(r.id)}')">Remove</button></span>
     </div>`).join('')}</div>` : '<div class="adm-empty">No comments or replies yet.</div>');
   _admPaintWords();
+}
+/* Flagged members: strikes = severe words, refused / removed pictures, blocked usernames */
+const ADM_STRIKES = 3;    // from here a member is shown as ready for a decision
+const ADM_FLAG = { severe: 'Severe words', mild: 'Mild language', username: 'Blocked username', image: 'Picture' };
+const _admFlagLine = f => `<div class="adm-flagline${f.reviewed ? ' done' : ''}"><span class="adm-kind${f.level === 'mild' ? '' : ' warn'}">${ADM_FLAG[f.level] || esc(f.level)}</span>
+    <span class="adm-meta"><span>${esc(f.source)}</span><span>${_admAgo(f.created_at)}</span></span>
+    ${f.excerpt ? `<span class="adm-quote adm-excerpt" translate="no">${esc(f.excerpt)}</span>` : ''}</div>`;
+function _admFlaggedHTML(list) {
+  const open = list.filter(u => u.open > 0 && !u.banned);
+  return `<div class="adm-card adm-filter">
+    <div class="adm-card-h"><span class="adm-card-t">Flagged members</span><span class="adm-card-s">${ADM_STRIKES}+ strikes: time to decide</span></div>
+    ${open.length ? open.map(u => `<details class="adm-flagged${u.open >= ADM_STRIKES ? ' hot' : ''}">
+        <summary>${_admAv(u)}<span class="adm-main"><span class="adm-name" translate="no">@${esc(u.username)}</span>
+          <span class="adm-meta"><span>${u.open} new ${u.open === 1 ? 'strike' : 'strikes'}</span><span>${u.strikes} total</span>${u.mild ? `<span>${u.mild} mild</span>` : ''}<span>${_admAgo(u.last_at)}</span></span></span>
+          <span class="adm-strikes" aria-hidden="true">${u.open}</span></summary>
+        <div class="adm-flagbody">${(u.recent || []).map(_admFlagLine).join('')}
+          <div class="adm-actions">
+            <button type="button" class="adm-btn" onclick="admUser('${esc(u.id)}')">View member</button>
+            <button type="button" class="adm-btn" onclick="admClearFlags('${esc(u.id)}')">Looks fine</button>
+            <button type="button" class="adm-btn danger" onclick="admBan('${esc(u.id)}', ${attrJSON(u.username)})">Ban</button>
+          </div></div>
+      </details>`).join('') : '<div class="adm-filter-txt">No one needs looking at right now.</div>'}
+  </div>`;
+}
+async function admClearFlags(id) {
+  const { error } = await sb.rpc('admin_clear_flags', { p_user: id });
+  if (error) { console.error(error); showToast('Couldn’t save that. Try again.', 'err'); return; }
+  showToast('Marked as reviewed.');
+  _admTab === 'activity' ? admActivity() : admUser(id);
+}
+async function admBan(id, username) {
+  if (!(await showConfirm({ title: `Ban @${username}?`, message: 'They’re signed out, can’t sign back in and can’t post anything. You can unban them later from their member page.', confirmText: 'Ban', iconName: 'lock' }))) return;
+  const { error } = await sb.rpc('admin_ban_user', { p_user: id, p_reason: 'Broke the community rules' });
+  if (error) { console.error(error); showToast(/ADMIN/.test(error.message || '') ? 'Admins can’t be banned.' : 'Couldn’t ban. Try again.', 'err'); return; }
+  showToast(`@${username} is banned.`);
+  _admTab === 'activity' ? admActivity() : admUser(id);
+}
+async function admUnban(id, username) {
+  const { error } = await sb.rpc('admin_unban_user', { p_user: id });
+  if (error) { console.error(error); showToast('Couldn’t unban. Try again.', 'err'); return; }
+  showToast(`@${username} can use MyScreenScore again.`);
+  admUser(id);
+}
+async function admDeleteUser(id, username) {
+  if (!(await showConfirm({ title: `Delete @${username}’s account?`, message: 'Their profile, library, ratings, notes, lists and replies are deleted for good. This can’t be undone.', confirmText: 'Delete account', iconName: 'trash' }))) return;
+  const { error } = await sb.rpc('admin_delete_user', { p_user: id });
+  if (error) { console.error(error); showToast(/ADMIN/.test(error.message || '') ? 'Admins can’t be deleted here.' : 'Couldn’t delete. Try again.', 'err'); return; }
+  showToast(`@${username}’s account was deleted.`);
+  admMembers();
+}
+/* Recent pictures: profile photos + uploaded posters, newest first */
+function _admPicturesHTML(list) {
+  if (!list.length) return '';
+  return `<div class="adm-card adm-filter"><div class="adm-card-h"><span class="adm-card-t">Recent pictures</span><span class="adm-card-s">photos and uploaded posters</span></div>
+    <div class="adm-pics">${list.map(p => `<figure class="adm-pic${p.kind === 'avatar' ? ' round' : ''}">
+        <img src="${safeURL(p.url) || ''}" alt="${p.kind === 'avatar' ? 'Profile photo' : 'Poster'} by @${esc(p.username || '?')}" loading="lazy">
+        <figcaption><span translate="no">@${esc(p.username || '?')}</span><small translate="no">${esc(p.kind === 'avatar' ? 'Profile photo' : p.label)}</small></figcaption>
+        <button type="button" class="adm-btn danger" onclick="admRemovePicture('${esc(p.kind)}', '${esc(p.id)}')">Remove</button>
+      </figure>`).join('')}</div></div>`;
+}
+async function admRemovePicture(kind, id) {
+  if (!(await showConfirm({ title: 'Remove this picture?', message: 'It’s taken off their profile or title, and counts as a strike.', confirmText: 'Remove', iconName: 'image' }))) return;
+  const { error } = await sb.rpc('admin_remove_picture', { p_kind: kind, p_id: id });
+  if (error) { console.error(error); showToast('Couldn’t remove it. Try again.', 'err'); return; }
+  showToast('Picture removed.');
+  admActivity();
 }
 function _admFilterHTML(sc) {
   const posts = (sc.profiles || 0) + (sc.notes || 0) + (sc.replies || 0) + (sc.lists || 0) + (sc.episode_notes || 0);
@@ -522,6 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
     admTab(location.hash.slice(1) || 'overview');
     // open language requests on the tab, without opening it
     sb.rpc('admin_language_requests').then(({ data: l }) => { if (l) { _admLangOpen = l.filter(r => r.status === 'open').length; _admPaintTabs(); } });
+    sb.rpc('admin_flagged_users').then(({ data: f }) => { if (f) { _admFlagOpen = f.filter(u => u.open > 0 && !u.banned).length; _admPaintTabs(); } });
   });
 });
 </script>
