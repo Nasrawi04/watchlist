@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>Lists — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -202,7 +203,7 @@
   transition:border-color .15s;
 }
 .list-desc-field:focus{border-color:var(--olive-light);}
-.list-desc-count { font-size:10.5px; color:var(--text-3); text-align:right; margin-top:4px; }
+.list-desc-count { font-size:10.5px; color:var(--text-3); text-align:end; margin-top:4px; }
 .list-desc-count.over { color:#c0564a; }
 .fav-page-list-desc {
   font-size:12.5px; color:var(--text-2); line-height:1.5; margin-top:4px;
@@ -240,9 +241,9 @@
 .cp-divider { display:flex; align-items:center; gap:10px; margin:2px 20px 10px; font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); }
 .cp-divider::before, .cp-divider::after { content:''; flex:1; height:0.5px; background:var(--border); }
 .cp-search { position:relative; margin:0 20px 10px; }
-.cp-search span { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--text-3); display:flex; }
+.cp-search span { position:absolute; inset-inline-start:13px; top:50%; transform:translateY(-50%); color:var(--text-3); display:flex; }
 .cp-search input {
-  width:100%; box-sizing:border-box; padding:11px 14px 11px 38px; border-radius:var(--radius-sm);
+  width:100%; box-sizing:border-box; padding-block:11px; padding-inline:38px 14px; border-radius:var(--radius-sm);
   border:1px solid var(--border); background:var(--bg-3); color:var(--text); font-family:var(--sans); font-size:16px; outline:none;
 }
 .cp-search input:focus { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
@@ -288,7 +289,7 @@
   font-family:var(--bebas); font-size:16px; line-height:1; color:#fff; background:var(--olive);
   min-width:24px; height:24px; padding:0 6px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center;
 }
-.lr-move { margin-left:auto; display:flex; gap:6px; }
+.lr-move { margin-inline-start:auto; display:flex; gap:6px; }
 .lr-arrow {
   width:32px; height:32px; border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
   background:var(--bg-3); border:1px solid var(--border-2); color:var(--text-2); transition:background .15s, color .15s, border-color .15s;
@@ -301,7 +302,7 @@
 .lc-card.lr-dragging > * { visibility:hidden; }
 /* The card following the pointer */
 .lr-ghost {
-  position:fixed !important; top:0; left:0; z-index:2000; pointer-events:none; margin:0 !important;
+  position:fixed !important; top:0; inset-inline-start:0; z-index:2000; pointer-events:none; margin:0 !important;
   box-shadow:0 24px 50px rgba(0,0,0,.28), 0 0 0 2px var(--olive-light) !important; opacity:.97;
   transition:none; will-change:transform;
 }
@@ -813,7 +814,7 @@ function _renderCollabPicker() {
       : `<button class="cp-btn cp-invite" onclick="_collabInvite(this, ${attrJSON(p.id)})">Invite</button>`;
     return `<div class="cp-row">
       ${MSSList.avatarHTML(p, 'cp-av')}
-      <div class="cp-who"><div class="cp-name">${esc(p.display_name || p.username)}</div><div class="cp-user">@${esc(p.username)}</div></div>
+      <div class="cp-who"><div class="cp-name" translate="no">${esc(p.display_name || p.username)}</div><div class="cp-user">@${esc(p.username)}</div></div>
       ${btn}
     </div>`;
   }).join('');
@@ -1493,7 +1494,7 @@ function renderSocialLists() {
         <div class="social-list-avatar">${safeURL(l.avatar_url) ? `<img src="${safeURL(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
         <div class="social-list-username">@${esc(l.username || 'user')}</div>
       </div>
-      <div class="lc-title-row"><div class="lc-title">${esc(l.title)}</div>${MSSList.rankBadge(l.ranked)}</div>
+      <div class="lc-title-row"><div class="lc-title" translate="no">${esc(l.title)}</div>${MSSList.rankBadge(l.ranked)}</div>
       <div class="lc-meta">${MSSList.countHTML(items.length)}</div>
       ${MSSList.postersHTML(items, _resolveSocialItem)}
       <div class="social-list-reactions">
@@ -1606,8 +1607,8 @@ function _renderListPopup() {
 
   card.innerHTML = `
     <div class="lp-head">${head}<button class="lp-close" onclick="closeSocialListPopup()" aria-label="Close">${icon('x', 18)}</button></div>
-    <div class="lp-title-row"><div class="lp-title">${esc(l.title)}</div>${MSSList.rankBadge(l.ranked)}</div>
-    ${l.description ? `<div class="lp-desc">${esc(l.description)}</div>` : ''}
+    <div class="lp-title-row"><div class="lp-title" translate="no">${esc(l.title)}</div>${MSSList.rankBadge(l.ranked)}</div>
+    ${l.description ? `<div class="lp-desc" translate="no">${esc(l.description)}</div>` : ''}
     <div class="lp-meta">${MSSList.countHTML(items.length)}</div>
     ${mine ? MSSList.collabLineHTML(l, _listsCollab[l.id]) : ''}
     ${isOwn && l.ranked == null ? _rankChoiceHTML(l.id) : ''}
@@ -1846,7 +1847,7 @@ async function _favRunDiscoverSearch(q) {
         <div class="fav-picker-poster">${safeURL(m.thumb || m.poster_url) ? `<img src="${safeURL(m.thumb || m.poster_url)}" loading="lazy">` : esc((m.title[0]||'?').toUpperCase())}
           ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
         </div>
-        <div class="fav-picker-info"><div class="fav-picker-name">${esc(m.title)}</div><div class="fav-picker-sub">${m.tmdb_type==='movie'?'Movie':'TV'}${m.year?' · '+m.year:''}</div></div>
+        <div class="fav-picker-info"><div class="fav-picker-name" translate="no">${esc(m.title)}</div><div class="fav-picker-sub">${m.tmdb_type==='movie'?'Movie':'TV'}${m.year?' · '+m.year:''}</div></div>
         <div class="fav-picker-check">${isSel ? '✓' : ''}</div>
       </div>`;
     }).join('');
@@ -1889,7 +1890,7 @@ function _favRenderPickerList() {
       <div class="fav-picker-poster">${safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase())}
         ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
       </div>
-      <div class="fav-picker-info"><div class="fav-picker-name">${esc(e.title)}</div><div class="fav-picker-sub">${(CAT_META[e.cat]?.label)||''}</div></div>
+      <div class="fav-picker-info"><div class="fav-picker-name" translate="no">${esc(e.title)}</div><div class="fav-picker-sub">${(CAT_META[e.cat]?.label)||''}</div></div>
       ${sc ? `<div class="fav-picker-score">${sc}</div>` : ''}
       <div class="fav-picker-check">${isSel ? '✓' : ''}</div>
     </div>`;
