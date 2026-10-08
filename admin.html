@@ -10,49 +10,104 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
-/* ── Admin (site owners only — app_admins, migration 036). Same page head,
-   tabs (.pn-toggle) and cards as Notifications / Settings. ── */
-.adm-head { margin-bottom:1.25rem; }
+/* ── Admin (site owners only — app_admins, migrations 036 / 037).
+   Page head + .pn-toggle tabs like Notifications; cards like Settings. ── */
+.adm-head { margin-bottom:1.25rem; display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .adm-title { font-family:var(--serif); font-size:clamp(28px, 6vw, 44px); font-weight:600; line-height:1.15; margin:0; }
 .adm-sub { font-size:13.5px; color:var(--text-2); margin-top:4px; }
-.adm-tabs { margin-bottom:1.25rem; }
-.adm-tabs .pn-toggle-btn { padding:9px clamp(12px, 3vw, 26px); }
+.adm-refresh { display:inline-flex; align-items:center; gap:7px; padding:8px 14px; border-radius:var(--radius-sm); cursor:pointer; font:600 13px 'Manrope',var(--sans); background:var(--card); border:1px solid var(--border-2); color:var(--text-2); }
+.adm-refresh:hover { border-color:var(--border-olive); color:var(--text); }
+.adm-tabs { margin-bottom:1.5rem; max-width:100%; overflow-x:auto; scrollbar-width:none; }
+.adm-tabs::-webkit-scrollbar { display:none; }
+.adm-tabs .pn-toggle-btn { padding:9px clamp(12px, 2.4vw, 22px); white-space:nowrap; display:flex; align-items:center; gap:7px; }
+.adm-tab-count { font-size:11px; font-weight:700; min-width:18px; padding:1px 6px; border-radius:20px; background:var(--olive); color:#fff; }
+:focus-visible.adm-row, .adm-btn:focus-visible, .adm-refresh:focus-visible, .adm-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+
+/* Overview */
+.adm-tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; margin-bottom:1.25rem; }
+.adm-tile { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+.adm-tile-n { font-family:var(--bebas); font-size:clamp(30px, 4.6vw, 40px); line-height:1; color:var(--text); letter-spacing:.5px; }
+.adm-tile-l { font-size:12.5px; color:var(--text-2); margin-top:4px; }
+.adm-tile-d { font-size:11.5px; color:var(--olive-light); font-weight:600; margin-top:6px; }
+.adm-tile-d.zero { color:var(--text-3); font-weight:500; }
+.adm-grid2 { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; margin-bottom:12px; }
+.adm-card { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:16px 18px; min-width:0; }
+.adm-card-h { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.adm-card-t { font-family:var(--serif); font-size:17px; font-weight:500; }
+.adm-card-s { font-size:12px; color:var(--text-3); }
+/* 30-day bars: one series, one hue, rounded tops on the baseline */
+.adm-bars { position:relative; display:flex; align-items:flex-end; gap:2px; height:120px; padding-top:8px; border-bottom:0.5px solid var(--border-2); }
+.adm-bar { flex:1; min-width:0; height:100%; display:flex; align-items:flex-end; cursor:default; position:relative; }
+.adm-bar i { display:block; width:100%; min-height:2px; border-radius:4px 4px 0 0; background:var(--olive-light); opacity:.85; }
+.adm-bar.zero i { background:var(--border-2); opacity:1; }
+.adm-bar:hover i, .adm-bar:focus-visible i { opacity:1; background:var(--olive); }
+.adm-bar:focus-visible { outline:none; }
+.adm-tip { position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); padding:5px 9px; border-radius:6px; background:var(--text); color:var(--bg); font-size:11.5px; font-weight:600; white-space:nowrap; pointer-events:none; opacity:0; z-index:5; }
+.adm-bar:hover .adm-tip, .adm-bar:focus-visible .adm-tip { opacity:1; }
+.adm-axis { display:flex; justify-content:space-between; font-size:11px; color:var(--text-3); margin-top:6px; }
+/* Splits: label · bar · count */
+.adm-split { display:grid; grid-template-columns:minmax(90px, auto) 1fr auto; gap:9px 12px; align-items:center; font-size:13px; }
+.adm-split-l { color:var(--text-2); white-space:nowrap; }
+.adm-split-b { height:8px; border-radius:4px; background:var(--bg-3); overflow:hidden; }
+.adm-split-b i { display:block; height:100%; border-radius:4px; background:var(--olive-light); }
+.adm-split-n { font-weight:600; font-variant-numeric:tabular-nums; text-align:end; }
+/* Ranked titles */
+.adm-rank { display:flex; flex-direction:column; gap:8px; }
+.adm-rank-row { display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; padding:4px; margin:-4px; border-radius:var(--radius-sm); }
+a.adm-rank-row:hover { background:var(--bg-3); }
+.adm-rank-n { width:20px; text-align:center; font-family:var(--bebas); font-size:20px; color:var(--text-3); flex-shrink:0; }
+.adm-poster { width:34px; height:51px; border-radius:5px; overflow:hidden; flex-shrink:0; background:var(--bg-3); }
+.adm-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.adm-rank-t { flex:1; min-width:0; font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.adm-rank-v { font-size:12.5px; color:var(--text-3); white-space:nowrap; }
+
+/* Rows (members, titles, activity, languages) */
 .adm-list { display:flex; flex-direction:column; gap:8px; }
 .adm-row {
   display:flex; align-items:center; gap:12px; padding:12px 14px; width:100%; box-sizing:border-box;
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
-  font:inherit; color:inherit; text-align:start;
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); font:inherit; color:inherit; text-align:start;
 }
 button.adm-row { cursor:pointer; transition:border-color .15s; }
 button.adm-row:hover { border-color:var(--border-olive); }
-button.adm-row:focus-visible, .adm-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .adm-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
 .adm-name { font-size:14.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.adm-meta { font-size:12.5px; color:var(--text-3); display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; }
+.adm-meta { font-size:12.5px; color:var(--text-3); display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; }
 .adm-count { font-family:var(--bebas); font-size:26px; letter-spacing:.5px; color:var(--olive-light); line-height:1; min-width:2ch; text-align:center; }
 .adm-actions { display:flex; gap:6px; flex-shrink:0; }
-.adm-btn {
-  padding:7px 12px; border-radius:var(--radius-sm); cursor:pointer; font:600 12.5px 'Manrope',var(--sans);
-  background:transparent; border:1px solid var(--border-2); color:var(--text-2); transition:all .15s;
-}
+.adm-btn { padding:7px 12px; border-radius:var(--radius-sm); cursor:pointer; font:600 12.5px 'Manrope',var(--sans); background:transparent; border:1px solid var(--border-2); color:var(--text-2); transition:all .15s; }
 .adm-btn:hover { border-color:var(--border-olive); color:var(--text); }
 .adm-btn.on { background:var(--olive); border-color:var(--olive); color:#fff; }
+.adm-btn.danger:hover { border-color:#dc2626; color:#dc2626; }
 .adm-status { padding:2px 8px; border-radius:20px; font-size:11.5px; font-weight:600; background:var(--bg-3); color:var(--text-2); }
 .adm-status.added { background:var(--olive-faint); color:var(--olive-light); }
-.adm-poster { width:40px; height:60px; border-radius:6px; overflow:hidden; flex-shrink:0; background:var(--bg-3); }
-.adm-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.adm-av { width:38px; height:38px; border-radius:50%; overflow:hidden; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--olive-light); }
+.adm-av { width:40px; height:40px; border-radius:50%; overflow:hidden; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--olive-light); }
 .adm-av img { width:100%; height:100%; object-fit:cover; }
 .adm-search { margin-bottom:1rem; }
 .adm-group { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin:1.25rem 0 .5rem; }
-.adm-back { display:inline-flex; align-items:center; gap:6px; margin-bottom:12px; padding:0; background:none; border:none; color:var(--text-3); font:500 13px 'Manrope',var(--sans); cursor:pointer; }
+.adm-back { display:inline-flex; align-items:center; gap:6px; margin-bottom:14px; padding:0; background:none; border:none; color:var(--text-3); font:500 13px 'Manrope',var(--sans); cursor:pointer; }
 .adm-back:hover { color:var(--text); }
 .adm-empty { padding:3rem 1rem; text-align:center; color:var(--text-3); font-size:14px; }
+.adm-kind { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--bg-3); color:var(--text-2); white-space:nowrap; }
+.adm-quote { font-size:13.5px; color:var(--text); line-height:1.5; white-space:pre-line; word-break:break-word; }
+.adm-row.top { align-items:flex-start; }
+/* Member detail */
+.adm-person { display:flex; align-items:center; gap:16px; margin-bottom:1rem; flex-wrap:wrap; }
+.adm-person .adm-av { width:64px; height:64px; font-size:24px; }
+.adm-person-name { font-family:var(--serif); font-size:clamp(22px, 4vw, 28px); font-weight:500; }
+.adm-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--olive); color:#fff; margin-inline-start:6px; vertical-align:middle; }
+.adm-facts { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px 16px; font-size:13px; margin-bottom:1.25rem; }
+.adm-facts dt { color:var(--text-3); font-size:12px; }
+.adm-facts dd { margin:2px 0 0; font-weight:600; word-break:break-all; }
+.adm-link { color:var(--olive-light); font-weight:600; font-size:13px; text-decoration:none; }
+.adm-link:hover { text-decoration:underline; }
+@media(max-width:760px) { .adm-grid2 { grid-template-columns:1fr; } }
 @media(max-width:640px) {
-  .adm-tabs .pn-toggle-btn { flex:1; justify-content:center; font-size:12.5px; padding:9px 6px; }
+  .adm-tiles { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .adm-tabs .pn-toggle-btn { font-size:12.5px; padding:9px 8px; gap:5px; }
   .adm-row { flex-wrap:wrap; }
   .adm-actions { width:100%; }
   .adm-actions .adm-btn { flex:1; }
+  .adm-bars { height:96px; }
 }
 </style>
   <!-- PWA -->
@@ -68,14 +123,14 @@ button.adm-row:focus-visible, .adm-btn:focus-visible { outline:2px solid var(--o
 <body>
 <div class="page-wrap">
   <div class="adm-head fade-up">
-    <h1 class="adm-title">Admin</h1>
-    <div class="adm-sub">Only the site’s owners can see this page.</div>
+    <div>
+      <h1 class="adm-title">Admin</h1>
+      <div class="adm-sub">Only the site’s owners can see this page.</div>
+    </div>
+    <button type="button" class="adm-refresh" id="admRefresh" onclick="admTab(_admTab, true)">Refresh</button>
   </div>
-  <div class="pn-toggle adm-tabs fade-up fade-up-1" role="tablist" aria-label="Admin sections">
-    <button type="button" role="tab" id="admTab-langs" class="pn-toggle-btn active" aria-selected="true" aria-controls="admPanel" onclick="admTab('langs')">Language requests</button>
-    <button type="button" role="tab" id="admTab-titles" class="pn-toggle-btn" aria-selected="false" aria-controls="admPanel" onclick="admTab('titles')">Who has a title</button>
-  </div>
-  <div id="admPanel" role="tabpanel" aria-labelledby="admTab-langs" class="fade-up fade-up-2"><div class="page-loading"><div class="spinner"></div></div></div>
+  <div class="pn-toggle adm-tabs fade-up fade-up-1" role="tablist" aria-label="Admin sections" id="admTabs"></div>
+  <div id="admPanel" role="tabpanel" class="fade-up fade-up-2"><div class="page-loading"><div class="spinner"></div></div></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -85,29 +140,186 @@ button.adm-row:focus-visible, .adm-btn:focus-visible { outline:2px solid var(--o
 <script>
 const esc = s => escHTML(s == null ? '' : String(s));
 const ADM_STATUS = [['watching', 'Watching'], ['up_next', 'Up Next'], ['paused', 'Taking a Break'], ['ongoing', 'To Be Continued'], ['completed', 'Watched'], ['queue', 'Watchlist']];
-const _admFmt = d => d ? new Date(d).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-let _admTab = 'langs', _admQuery = '', _admTitles = [], _admTimer = null;
+const ADM_TABS = [['overview', 'Overview'], ['members', 'Members'], ['titles', 'Titles'], ['activity', 'Activity'], ['langs', 'Languages']];
+const ADM_KIND = { comment: 'Comment', note_reply: 'Note reply', list_reply: 'List reply' };
+const _admNum = n => Number(n || 0).toLocaleString(MSSI18n.locale);
+const _admFmt = d => d ? new Date(d).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+function _admAgo(d) {
+  if (!d) return 'never';
+  const s = (new Date(d) - Date.now()) / 1000, a = Math.abs(s);
+  const [v, u] = a < 3600 ? [s / 60, 'minute'] : a < 86400 ? [s / 3600, 'hour'] : a < 86400 * 45 ? [s / 86400, 'day'] : a < 86400 * 365 ? [s / 2592000, 'month'] : [s / 31536000, 'year'];
+  try { return new Intl.RelativeTimeFormat(MSSI18n.locale, { numeric: 'auto' }).format(Math.round(v), u); } catch { return _admFmt(d); }
+}
+const _admAv = (p, cls = 'adm-av') => { const u = safeURL(p?.avatar_url); return `<span class="${cls}">${u ? `<img src="${u}" alt="" loading="lazy">` : esc((p?.username || '?')[0].toUpperCase())}</span>`; };
+const _admPoster = u => `<span class="adm-poster">${safeURL(u) ? `<img src="${safeURL(u)}" alt="" loading="lazy">` : ''}</span>`;
+const _admTitleHref = t => t.tmdb_id ? `title.html?id=${Number(t.tmdb_id)}&type=${t.tmdb_type === 'movie' ? 'movie' : 'tv'}` : null;
+const _admSpin = () => '<div class="page-loading"><div class="spinner"></div></div>';
+let _admTab = 'overview', _admQuery = '', _admUserQuery = '', _admTitles = [], _admTimer = null, _admLangOpen = 0;
 
-function admTab(key) {
-  _admTab = key;
-  document.querySelectorAll('.adm-tabs .pn-toggle-btn').forEach(b => {
-    const on = b.id === 'admTab-' + key;
-    b.classList.toggle('active', on); b.setAttribute('aria-selected', on);
-  });
-  document.getElementById('admPanel').setAttribute('aria-labelledby', 'admTab-' + key);
-  key === 'langs' ? admLoadLanguages() : admTitlesView();
+function _admPaintTabs() {
+  document.getElementById('admTabs').innerHTML = ADM_TABS.map(([k, l]) =>
+    `<button type="button" role="tab" id="admTab-${k}" class="pn-toggle-btn${k === _admTab ? ' active' : ''}" aria-selected="${k === _admTab}" aria-controls="admPanel" onclick="admTab('${k}')">${l}${k === 'langs' && _admLangOpen ? `<span class="adm-tab-count" aria-label="${_admLangOpen} open">${_admLangOpen}</span>` : ''}</button>`).join('');
+}
+function admTab(key, refresh) {
+  _admTab = ADM_TABS.some(([k]) => k === key) ? key : 'overview';
+  history.replaceState(null, '', '#' + _admTab);
+  _admPaintTabs();
+  document.getElementById('admPanel').setAttribute('aria-labelledby', 'admTab-' + _admTab);
+  ({ overview: admOverview, members: admMembers, titles: admTitlesView, activity: admActivity, langs: admLoadLanguages })[_admTab](refresh);
 }
 function admError(err) {
   console.error(err);
-  document.getElementById('admPanel').innerHTML = `<div class="adm-empty">${err?.code === '42501' ? 'This page is only for the site’s owners.' : 'Couldn’t load that — try again.'}</div>`;
+  document.getElementById('admPanel').innerHTML = `<div class="adm-empty">${err?.code === '42501' ? 'This page is only for the site’s owners.' : 'Couldn’t load that. Check that migrations 036 and 037 have been run, then refresh.'}</div>`;
+}
+
+/* ── Overview ── */
+function _admBars(days, noun) {
+  const max = Math.max(1, ...days.map(d => d.n));
+  const total = days.reduce((a, d) => a + d.n, 0);
+  const label = d => new Date(d.day + 'T00:00:00').toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' });
+  return `<div class="adm-bars" role="img" aria-label="${total} ${noun} in the last 30 days">${days.map(d =>
+      `<span class="adm-bar${d.n ? '' : ' zero'}" tabindex="0" aria-label="${label(d)}: ${d.n}"><i style="height:${Math.max(2, d.n / max * 100)}%"></i><span class="adm-tip">${label(d)} · ${d.n}</span></span>`).join('')}</div>
+    <div class="adm-axis"><span>${label(days[0])}</span><span>${label(days[days.length - 1])}</span></div>`;
+}
+function _admSplit(obj, labels) {
+  const rows = labels.map(([k, l]) => [l, Number(obj?.[k] || 0)]).filter(r => r[1] > 0);
+  const max = Math.max(1, ...rows.map(r => r[1]));
+  return rows.length ? `<div class="adm-split">${rows.map(([l, n]) => `<span class="adm-split-l">${l}</span><span class="adm-split-b" aria-hidden="true"><i style="width:${n / max * 100}%"></i></span><span class="adm-split-n">${_admNum(n)}</span>`).join('')}</div>`
+    : '<div class="adm-card-s">Nothing yet.</div>';
+}
+function _admRank(rows, value) {
+  return rows.length ? `<div class="adm-rank">${rows.map((t, i) => {
+    const href = _admTitleHref(t), tag = href ? 'a' : 'div';
+    return `<${tag} class="adm-rank-row"${href ? ` href="${href}"` : ''}><span class="adm-rank-n">${i + 1}</span>${_admPoster(t.poster_url)}<span class="adm-rank-t" translate="no">${esc(t.title)}</span><span class="adm-rank-v">${value(t)}</span></${tag}>`;
+  }).join('')}</div>` : '<div class="adm-card-s">Not enough ratings yet.</div>';
+}
+async function admOverview() {
+  const panel = document.getElementById('admPanel');
+  panel.innerHTML = _admSpin();
+  const { data: o, error } = await sb.rpc('admin_overview');
+  if (_admTab !== 'overview') return;
+  if (error) return admError(error);
+  const tile = (n, l, d) => `<div class="adm-tile"><div class="adm-tile-n">${_admNum(n)}</div><div class="adm-tile-l">${l}</div>${d != null ? `<div class="adm-tile-d${d ? '' : ' zero'}">${d ? '+' + _admNum(d) : 'No change'} this week</div>` : ''}</div>`;
+  panel.innerHTML = `
+    <div class="adm-tiles">
+      ${tile(o.users, 'Members', o.users_7d)}
+      ${tile(o.active_7d, 'Active this week')}
+      ${tile(o.signed_in_7d, 'Signed in this week')}
+      ${tile(o.entries, 'Titles in libraries', o.entries_7d)}
+      ${tile(o.rated, 'Rated titles')}
+      ${tile(o.episode_ratings, 'Episode ratings')}
+      ${tile(o.notes, 'Notes')}
+      ${tile(o.comments, 'Comments & replies')}
+      ${tile(o.lists, 'Lists')}
+      ${tile(o.friendships, 'Friendships')}
+    </div>
+    <div class="adm-grid2">
+      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">New members</span><span class="adm-card-s">last 30 days · ${_admNum(o.users_30d)}</span></div>${_admBars(o.signups || [], 'new members')}</div>
+      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Titles added</span><span class="adm-card-s">last 30 days · ${_admNum((o.adds || []).reduce((a, d) => a + d.n, 0))}</span></div>${_admBars(o.adds || [], 'titles added')}</div>
+    </div>
+    <div class="adm-grid2">
+      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Libraries by status</span></div>${_admSplit(o.by_status, ADM_STATUS)}</div>
+      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Libraries by category</span></div>${_admSplit(o.by_cat, Object.entries(CAT_META).map(([k, m]) => [k, m.label]))}</div>
+    </div>
+    <div class="adm-grid2">
+      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Most added</span><span class="adm-card-s">people</span></div>${_admRank(o.top_added || [], t => _admNum(t.people))}</div>
+      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Best rated</span><span class="adm-card-s">2+ ratings</span></div>${_admRank(o.top_rated || [], t => `${scoreBadge(t.avg, 'sm')} <span>${_admNum(t.people)}</span>`)}</div>
+    </div>
+    <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Newest members</span><button type="button" class="adm-link" style="background:none;border:none;cursor:pointer" onclick="admTab('members')">See all</button></div>
+      <div class="adm-list">${(o.newest || []).map(u => `<button type="button" class="adm-row" onclick="admUser('${esc(u.id)}')">${_admAv(u)}<span class="adm-main"><span class="adm-name" translate="no">${esc(u.display_name || '@' + u.username)}</span><span class="adm-meta"><span translate="no">@${esc(u.username)}</span><span>joined ${_admAgo(u.created_at)}</span></span></span></button>`).join('') || '<div class="adm-card-s">No members yet.</div>'}</div></div>`;
+}
+
+/* ── Members ── */
+function admMembers() {
+  const panel = document.getElementById('admPanel');
+  panel.innerHTML = `<input class="field-input adm-search" id="admUserSearch" type="search" placeholder="Search by username or name…" aria-label="Search members" autocomplete="off" value="${esc(_admUserQuery)}">
+    <div id="admUserResults" aria-live="polite"></div>`;
+  const input = document.getElementById('admUserSearch');
+  input.addEventListener('input', () => { clearTimeout(_admTimer); _admTimer = setTimeout(() => admFindUsers(input.value), 300); });
+  if (!matchMedia('(max-width:640px)').matches) input.focus();
+  admFindUsers(_admUserQuery);
+}
+async function admFindUsers(q) {
+  _admUserQuery = q.trim();
+  const box = document.getElementById('admUserResults');
+  if (!box) return;
+  box.innerHTML = _admSpin();
+  const { data, error } = await sb.rpc('admin_find_users', { p_query: _admUserQuery });
+  if (q.trim() !== _admUserQuery || !document.getElementById('admUserResults')) return;
+  if (error) return admError(error);
+  box.innerHTML = data.length ? `${_admUserQuery ? '' : '<div class="adm-group">Newest first</div>'}<div class="adm-list">${data.map(u => `
+    <button type="button" class="adm-row" onclick="admUser('${esc(u.id)}')">${_admAv(u)}
+      <span class="adm-main"><span class="adm-name" translate="no">${esc(u.display_name || '@' + u.username)}</span>
+        <span class="adm-meta"><span translate="no">@${esc(u.username)}</span><span>joined ${_admFmt(u.created_at)}</span><span>seen ${_admAgo(u.last_sign_in_at)}</span></span></span>
+      <span class="adm-count" aria-label="${u.entries} titles">${_admNum(u.entries)}</span>
+    </button>`).join('')}</div>` : '<div class="adm-empty">No members match that.</div>';
+}
+async function admUser(id) {
+  if (_admTab !== 'members') { _admTab = 'members'; history.replaceState(null, '', '#members'); _admPaintTabs(); }
+  const panel = document.getElementById('admPanel');
+  panel.innerHTML = _admSpin();
+  const { data: u, error } = await sb.rpc('admin_user_detail', { p_user: id });
+  if (error || !u) return admError(error);
+  const tile = (n, l) => `<div class="adm-tile"><div class="adm-tile-n">${_admNum(n)}</div><div class="adm-tile-l">${l}</div></div>`;
+  const lang = u.language ? MSSLang.name(u.language) : 'English';
+  panel.innerHTML = `<button type="button" class="adm-back" onclick="admMembers()">${icon('back', 14)} All members</button>
+    <div class="adm-person">${_admAv(u)}<div>
+      <div class="adm-person-name" translate="no">${esc(u.display_name || '@' + u.username)}${u.is_admin ? '<span class="adm-badge">Admin</span>' : ''}</div>
+      <div class="adm-meta"><span translate="no">@${esc(u.username)}</span>${mssProfileLinkHTML({ id: u.id, username: u.username }, '<span class="adm-link">Open profile</span>')}</div></div></div>
+    ${u.bio ? `<p class="adm-quote" translate="no" style="margin:0 0 1rem">${esc(u.bio)}</p>` : ''}
+    <dl class="adm-facts">
+      <div><dt>Email</dt><dd translate="no">${esc(u.email || '—')}</dd></div>
+      <div><dt>Joined</dt><dd>${_admFmt(u.created_at)}</dd></div>
+      <div><dt>Last signed in</dt><dd>${_admAgo(u.last_sign_in_at)}</dd></div>
+      <div><dt>Language</dt><dd translate="no">${esc(lang)}</dd></div>
+    </dl>
+    <div class="adm-tiles">${tile(u.entries, 'Titles')}${tile(u.rated, 'Rated')}${tile(u.episode_ratings, 'Episode ratings')}${tile(u.notes, 'Notes')}${tile(u.lists, 'Lists')}${tile(u.friends, 'Friends')}${tile(u.comments, 'Comments & replies')}</div>
+    <div class="adm-grid2">
+      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">By status</span></div>${_admSplit(u.by_status, ADM_STATUS)}</div>
+      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">By category</span></div>${_admSplit(u.by_cat, Object.entries(CAT_META).map(([k, m]) => [k, m.label]))}</div>
+    </div>
+    <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Latest in their library</span></div>
+      ${(u.recent || []).length ? `<div class="adm-rank">${u.recent.map(t => {
+        const href = _admTitleHref(t), tag = href ? 'a' : 'div';
+        const st = (ADM_STATUS.find(([k]) => k === t.status) || [, t.status])[1];
+        return `<${tag} class="adm-rank-row"${href ? ` href="${href}"` : ''}>${_admPoster(t.poster_url)}<span class="adm-main"><span class="adm-rank-t" translate="no">${esc(t.title)}</span><span class="adm-meta"><span>${esc(st)}</span><span>${_admAgo(t.updated_at)}</span></span></span>${t.final_score != null ? scoreBadge(t.final_score, 'sm') : ''}</${tag}>`;
+      }).join('')}</div>` : '<div class="adm-card-s">Nothing in their library yet.</div>'}</div>`;
+  window.scrollTo({ top: 0 });
+}
+
+/* ── Activity (moderation) ── */
+async function admActivity() {
+  const panel = document.getElementById('admPanel');
+  panel.innerHTML = _admSpin();
+  const { data, error } = await sb.rpc('admin_recent_activity', { p_limit: 80 });
+  if (_admTab !== 'activity') return;
+  if (error) return admError(error);
+  panel.innerHTML = data.length ? `<div class="adm-list">${data.map(r => `
+    <div class="adm-row top">${_admAv(r)}
+      <span class="adm-main">
+        <span class="adm-meta"><span class="adm-kind">${ADM_KIND[r.kind] || esc(r.kind)}</span><b translate="no" style="color:var(--text)">@${esc(r.username || '?')}</b><span>on <span translate="no">${esc(r.on_title || '—')}</span></span><span>${_admAgo(r.created_at)}</span></span>
+        <span class="adm-quote" translate="no">${esc(r.content)}</span>
+      </span>
+      <span class="adm-actions"><button type="button" class="adm-btn danger" onclick="admRemove('${esc(r.kind)}', '${esc(r.id)}')">Remove</button></span>
+    </div>`).join('')}</div>` : '<div class="adm-empty">No comments or replies yet.</div>';
+}
+async function admRemove(kind, id) {
+  const what = (ADM_KIND[kind] || 'Post').toLowerCase();
+  if (!(await showConfirm({ title: `Remove this ${what}?`, message: 'It will be deleted for everyone. This can’t be undone.', confirmText: 'Remove', iconName: 'trash' }))) return;
+  const { error } = await sb.rpc('admin_delete_content', { p_kind: kind, p_id: id });
+  if (error) { console.error(error); showToast('Couldn’t remove it. Try again.', 'err'); return; }
+  showToast('Removed.');
+  admActivity();
 }
 
 /* ── Language requests ── */
 async function admLoadLanguages() {
   const panel = document.getElementById('admPanel');
-  panel.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
+  panel.innerHTML = _admSpin();
   const { data, error } = await sb.rpc('admin_language_requests');
+  if (_admTab !== 'langs') return;
   if (error) return admError(error);
+  _admLangOpen = data.filter(r => r.status === 'open').length; _admPaintTabs();
   if (!data.length) { panel.innerHTML = '<div class="adm-empty">No language requests yet.</div>'; return; }
   panel.innerHTML = `<div class="adm-list">${data.map(r => `
     <div class="adm-row">
@@ -125,7 +337,7 @@ async function admLoadLanguages() {
 }
 async function admSetStatus(lang, status) {
   const { error } = await sb.rpc('admin_set_language_status', { p_language: lang, p_status: status });
-  if (error) { console.error(error); showToast('Couldn’t save that — try again.', 'err'); return; }
+  if (error) { console.error(error); showToast('Couldn’t save that. Try again.', 'err'); return; }
   admLoadLanguages();
 }
 
@@ -136,23 +348,24 @@ function admTitlesView() {
     <div id="admResults" aria-live="polite"></div>`;
   const input = document.getElementById('admSearch');
   input.addEventListener('input', () => { clearTimeout(_admTimer); _admTimer = setTimeout(() => admSearch(input.value), 300); });
-  input.focus();
+  if (!matchMedia('(max-width:640px)').matches) input.focus();
   if (_admQuery) admSearch(_admQuery);
+  else document.getElementById('admResults').innerHTML = '<div class="adm-empty">Type at least 2 letters of a title.</div>';
 }
 async function admSearch(q) {
   _admQuery = q.trim();
   const box = document.getElementById('admResults');
-  if (_admQuery.length < 2) { box.innerHTML = ''; return; }
-  box.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
+  if (!box) return;
+  if (_admQuery.length < 2) { box.innerHTML = '<div class="adm-empty">Type at least 2 letters of a title.</div>'; return; }
+  box.innerHTML = _admSpin();
   const { data, error } = await sb.rpc('admin_find_titles', { p_query: _admQuery });
-  if (q.trim() !== _admQuery) return;
+  if (q.trim() !== _admQuery || !document.getElementById('admResults')) return;
   if (error) return admError(error);
   _admTitles = data;
   if (!data.length) { box.innerHTML = '<div class="adm-empty">No one has a title like that.</div>'; return; }
   box.innerHTML = `<div class="adm-list">${data.map((t, i) => {
     const counts = ADM_STATUS.filter(([k]) => t[k] > 0).map(([k, l]) => `<span class="w-ep-badge">${l} ${t[k]}</span>`).join('');
-    return `<button type="button" class="adm-row" onclick="admAudience(${i})">
-      <span class="adm-poster">${safeURL(t.poster_url) ? `<img src="${safeURL(t.poster_url)}" alt="" loading="lazy">` : ''}</span>
+    return `<button type="button" class="adm-row" onclick="admAudience(${i})">${_admPoster(t.poster_url)}
       <span class="adm-main">
         <span class="adm-name" translate="no">${esc(t.title)}${t.year ? ` <span class="adm-meta">${esc(String(t.year).slice(0, 4))}</span>` : ''}</span>
         <span class="adm-meta">${counts}</span>
@@ -164,26 +377,27 @@ async function admSearch(q) {
 async function admAudience(i) {
   const t = _admTitles[i];
   const panel = document.getElementById('admPanel');
-  panel.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
+  panel.innerHTML = _admSpin();
   const { data, error } = await sb.rpc('admin_title_audience', { p_tmdb_id: t.tmdb_id, p_tmdb_type: t.tmdb_type, p_title: t.title });
   if (error) return admError(error);
+  const scores = data.map(r => liveScore(r)).filter(v => v != null);
+  const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+  const href = _admTitleHref(t);
   const row = r => {
     const score = liveScore(r);
-    const av = safeURL(r.avatar_url);
     const progress = r.status !== 'completed' && r.total_eps ? `<span>${r.watched || 0} / ${r.total_eps} episodes</span>` : '';
-    const when = r.completed_date ? `<span>${_admFmt(r.completed_date)}</span>` : r.updated_at ? `<span>${_admFmt(r.updated_at)}</span>` : '';
-    return `<div class="adm-row">
-      <span class="adm-av">${av ? `<img src="${av}" alt="" loading="lazy">` : esc((r.username || '?')[0].toUpperCase())}</span>
+    return `<button type="button" class="adm-row" onclick="admUser('${esc(r.user_id)}')">${_admAv(r)}
       <span class="adm-main">
-        <span class="adm-name" translate="no">${mssProfileLinkHTML({ id: r.user_id, username: r.username }, esc(r.display_name || '@' + (r.username || '?')))}</span>
-        <span class="adm-meta"><span translate="no">@${esc(r.username || '?')}</span>${progress}${when}</span>
+        <span class="adm-name" translate="no">${esc(r.display_name || '@' + (r.username || '?'))}</span>
+        <span class="adm-meta"><span translate="no">@${esc(r.username || '?')}</span>${progress}<span>${_admFmt(r.completed_date || r.updated_at)}</span></span>
       </span>
       ${score != null ? scoreBadge(score, 'md') : ''}
-    </div>`;
+    </button>`;
   };
   panel.innerHTML = `<button type="button" class="adm-back" onclick="admTitlesView()">${icon('back', 14)} Back to results</button>
-    <h2 class="adm-name" translate="no" style="font-size:20px;margin:0 0 4px">${esc(t.title)}</h2>
-    <div class="adm-meta">${data.length === 1 ? '1 person' : `${data.length} people`}</div>
+    <div class="adm-person">${_admPoster(t.poster_url).replace('adm-poster', 'adm-poster" style="width:56px;height:84px')}<div>
+      <div class="adm-person-name" translate="no">${esc(t.title)}</div>
+      <div class="adm-meta"><span>${data.length === 1 ? '1 person' : `${data.length} people`}</span>${avg != null ? `<span>average ${scoreBadge(avg, 'sm')}</span>` : ''}${href ? `<a class="adm-link" href="${href}">Open title</a>` : ''}</div></div></div>
     ${ADM_STATUS.map(([k, l]) => {
       const rows = data.filter(r => r.status === k);
       return rows.length ? `<div class="adm-group">${l} · ${rows.length}</div><div class="adm-list">${rows.map(row).join('')}</div>` : '';
@@ -194,10 +408,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initPage(async () => {
     const { data, error } = await sb.rpc('is_app_admin');
     if (error || data !== true) {
-      document.querySelector('.adm-tabs').style.display = 'none';
+      document.getElementById('admTabs').style.display = 'none';
+      document.getElementById('admRefresh').style.display = 'none';
       return admError(error || { code: '42501' });
     }
-    admLoadLanguages();
+    admTab(location.hash.slice(1) || 'overview');
+    // open language requests on the tab, without opening it
+    sb.rpc('admin_language_requests').then(({ data: l }) => { if (l) { _admLangOpen = l.filter(r => r.status === 'open').length; _admPaintTabs(); } });
   });
 });
 </script>
