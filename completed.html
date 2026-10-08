@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>Completed — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -51,8 +52,8 @@
 .fv-rank-poster img{width:100%;height:100%;object-fit:cover}
 .fv-rank-info{flex:1;min-width:0}
 .fv-rank-title{font-family:'Oswald',var(--sans);font-size:19px;font-weight:600;color:var(--text);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;overflow:hidden;}
-.fv-rank-score{font-family:var(--bebas);color:var(--olive-light);font-size:clamp(17px, 3.7vw, 19px);font-weight:400;white-space:nowrap;text-align:right;flex-shrink:0}
-.fv-rank-date{font-size:clamp(9px, 2.2vw, 11px);color:var(--text-3);margin-top:4px;text-align:right;}
+.fv-rank-score{font-family:var(--bebas);color:var(--olive-light);font-size:clamp(17px, 3.7vw, 19px);font-weight:400;white-space:nowrap;text-align:end;flex-shrink:0}
+.fv-rank-date{font-size:clamp(9px, 2.2vw, 11px);color:var(--text-3);margin-top:4px;text-align:end;}
 
 .cat-badge{
   font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);
@@ -110,7 +111,7 @@
   </div>
 
   <!-- Stats -->
-  <div class="page-stats fade-up fade-up-1" id="compStats"></div>
+  <div class="page-stats fade-up fade-up-1" id="compStats" data-skel-stats="6"></div>
 
   <!-- Sort + Filter + view toggle, all on one line -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem;" class="fade-up fade-up-2">
@@ -266,7 +267,7 @@ function _renderCompGrid(items) {
   const gid = 'compgrid';
   const cards = items.map((e, i) => {
     const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
-    const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+    const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString(MSSI18n.locale,{day:'numeric',month:'short',year:'numeric'}) : '';
     const _badge = getTypeBadgeOverlay(e, 'completed');
     const _meta = _entryMeta(e);
     return `<div class="wg-card cg-card-wrap" style="cursor:pointer;">
@@ -278,7 +279,7 @@ function _renderCompGrid(items) {
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
       </div>
       <div class="cg-grid-info" onclick="cpOpenPopup('${e.id}')">
-        <div class="title-year-row"><div class="wg-title" style="margin-bottom:0;">${escHTML(e.title)}</div>${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}</div>
+        <div class="title-year-row"><div class="wg-title" style="margin-bottom:0;" translate="no">${escHTML(e.title)}</div>${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}</div>
         ${_meta ? `<div class="wg-genre"><span class="w-ep-badge">${_meta}</span></div>` : ''}
         <div class="cg-score-row"><span class="cg-score">${score ? '★ '+score : '—'}</span></div>
       </div>
@@ -467,13 +468,13 @@ function renderMain() {
     el.innerHTML = `<div class="fv-ranked-list">${sorted.map((e, i) => {
       const score = liveScore(e) != null ? '★ ' + Number(liveScore(e)).toFixed(2) : '—';
       const completedDateStr = e.completed_date
-        ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+        ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' })
         : null;
       return `<div class="fv-entry-block">
         <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
           <div class="fv-rank-poster" style="position:relative;">${posterHTML(e)}${_cgBadgeHTML(i + 1)}</div>
           <div class="fv-rank-info">
-            <div class="fv-rank-title">${escHTML(e.title)}${e.year ? `<span class="title-year-inline" style="margin-left:2px;">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-title" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline" style="margin-left:2px;">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
             <div class="fv-rank-meta">${_compTypeBadgeInline(e)} ${_entryMetaBadge(e)}</div>
             ${completedDateStr ? `<div class="fv-rank-meta"><span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">${MSS_WATCHED_ON} ${completedDateStr}</span></div>` : ''}
             ${renderFavChips(e.ratings, e.cat)}
@@ -488,12 +489,12 @@ function renderMain() {
     const ratingKey = (_compSort||'').startsWith('rating:') ? _compSort.slice(7) : null;
     el.innerHTML = `<div class="fv-ranked-list">${recentSorted.map(e => {
       const score = liveScore(e) != null ? '★ ' + Number(liveScore(e)).toFixed(2) : '—';
-      const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-US',{day:'numeric',month:'short',year:'numeric'}) : '';
+      const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString(MSSI18n.locale,{day:'numeric',month:'short',year:'numeric'}) : '';
       return `<div class="fv-entry-block">
         <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
           <div class="fv-rank-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : ''}</div>
           <div class="fv-rank-info">
-            <div class="fv-rank-title">${escHTML(e.title)}${e.year ? `<span class="title-year-inline" style="margin-left:2px;">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-title" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline" style="margin-left:2px;">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
             <div class="fv-rank-meta">${_compTypeBadgeInline(e)} ${_entryMetaBadge(e)}</div>
             ${date ? `<div class="fv-rank-meta"><span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">${MSS_WATCHED_ON} ${date}</span></div>` : ''}
             ${renderFavChips(e.ratings, e.cat)}
