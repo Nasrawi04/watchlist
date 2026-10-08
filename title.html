@@ -93,6 +93,51 @@
 }
 .td-trailer-link:hover { opacity:1; }
 .td-trailer-mobile { display:none; }
+.td-mobile-links { display:contents; }
+
+/* ── Where to watch — pill in the header (same look as Trailer) + popup.
+   Providers aren't links (TMDB / JustWatch give no deep links), so the tiles
+   in the popup are plain text + logo: no hover, no pointer. ── */
+button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); background:none; cursor:pointer; }
+.td-wtw-btn:focus-visible, .wtw-country:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.td-wtw-logos { display:inline-flex; }
+.td-wtw-logos img { width:20px; height:20px; border-radius:5px; object-fit:cover; box-shadow:0 0 0 1.5px rgba(0,0,0,.45); }
+.td-wtw-logos img + img { margin-inline-start:-6px; }
+#wtwOverlay {
+  position:fixed; inset:0; z-index:1150; background:var(--popup-backdrop);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity 220ms var(--ease);
+}
+#wtwOverlay.open { opacity:1; pointer-events:auto; }
+#wtwCard {
+  background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
+  border-radius:var(--radius-lg); width:100%; max-width:520px; max-height:88dvh;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.wtw-body { flex:1; min-height:0; overflow-y:auto; overscroll-behavior-y:contain; padding:0 1.25rem 1.25rem; }
+.wtw-country-row { display:flex; align-items:center; gap:10px; margin-bottom:1rem; }
+.wtw-country-row label { font-size:11px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-3); }
+.wtw-country { flex:1; min-width:0; padding:8px 12px; font-size:13.5px; cursor:pointer; }
+.wtw-group { margin-bottom:1.1rem; }
+.wtw-group-title { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:.6rem; }
+.wtw-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:12px 10px; }
+.wtw-provider { display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; cursor:default; user-select:none; }
+.wtw-provider img, .wtw-provider-letter { width:52px; height:52px; border-radius:12px; object-fit:cover; background:var(--bg-3); border:0.5px solid var(--border); }
+.wtw-provider-letter { display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--olive-light); }
+.wtw-provider span { font-size:11.5px; line-height:1.3; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.wtw-cinema { display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:1.1rem; border-radius:var(--radius); background:var(--olive-faint); border:0.5px solid var(--border-olive); }
+.wtw-cinema svg { color:var(--olive-light); flex-shrink:0; }
+.wtw-cinema b { display:block; font-size:14px; }
+.wtw-cinema small { font-size:12px; color:var(--text-3); }
+.wtw-empty { padding:1.5rem 0; text-align:center; color:var(--text-3); font-size:13.5px; }
+.wtw-credit { font-size:11.5px; color:var(--text-3); line-height:1.5; margin-top:.25rem; }
+@media(prefers-reduced-motion:reduce) { #wtwOverlay { transition:none; } }
+@media(max-width:640px) {
+  .td-mobile-links { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:1rem; }
+  .td-mobile-links .td-trailer-mobile { margin:0; }
+  .wtw-grid { grid-template-columns:repeat(auto-fill, minmax(72px, 1fr)); }
+  .wtw-provider img, .wtw-provider-letter { width:46px; height:46px; border-radius:11px; }
+}
 
 .td-hero-actions { margin-top:0.75rem; }
 .td-add-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; justify-content:flex-start; }
@@ -440,14 +485,14 @@ function renderTdError(msg) {
    these pull credits + videos on top of the base detail payload) ── */
 async function _tdFetchMovie(id) {
   try {
-    const res = await tmdbFetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,release_dates,recommendations`);
+    const res = await tmdbFetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,release_dates,recommendations,watch/providers`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
 }
 async function _tdFetchTV(id) {
   try {
-    const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits,recommendations,content_ratings`);
+    const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits,recommendations,content_ratings,watch/providers`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
@@ -933,10 +978,14 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
             </div>
             ${metaBits.map(b => `<span>${esc(b)}</span>`).join('')}
             ${trailer ? `<a class="td-trailer-link td-trailer-desktop" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
+            ${_tdWtwPillHTML(d, 'td-trailer-desktop')}
           </div>
           <div class="td-genres">${genres.map(g => `<span class="td-genre-chip">${esc(g)}</span>`).join('')}</div>
           ${uniqueDirectors.length ? `<div class="td-director-row"><span class="td-director-label">${uniqueDirectors.length > 1 ? directorLabelPlural : directorLabel}</span> ${uniqueDirectors.map(p => `<a class="td-director-link" href="person.html?id=${p.id}&mode=directing" translate="no">${esc(p.name)}</a>`).join(', ')}</div>` : ''}
-          ${trailer ? `<a class="td-trailer-link td-trailer-mobile" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
+          ${trailer || _tdWtw(d).any ? `<div class="td-mobile-links">
+            ${trailer ? `<a class="td-trailer-link td-trailer-mobile" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
+            ${_tdWtwPillHTML(d, 'td-trailer-mobile')}
+          </div>` : ''}
           <div class="td-hero-actions fade-up fade-up-1">
             ${_tdAddControlsHTML(ownEntry)}
           </div>
@@ -1228,6 +1277,108 @@ async function _selectSeason(el) {
 
   _tdCurrentEpisodes = eps;
 }
+
+/* ── Where to watch (TMDB watch/providers — data by JustWatch) ──
+   One country at a time: the one picked in the popup (remembered), else
+   the device's time zone / language, else the US. Movies also show their
+   cinema run from that country's release dates. */
+const _WTW_KEY = 'mss_wtw_region';
+const _WTW_TZ = { 'Asia/Dubai':'AE', 'Asia/Muscat':'OM', 'Asia/Riyadh':'SA', 'Asia/Qatar':'QA', 'Asia/Kuwait':'KW', 'Asia/Bahrain':'BH',
+  'Asia/Tehran':'IR', 'Asia/Baghdad':'IQ', 'Asia/Amman':'JO', 'Asia/Beirut':'LB', 'Africa/Cairo':'EG', 'Africa/Casablanca':'MA',
+  'Europe/Zagreb':'HR', 'Europe/Belgrade':'RS', 'Europe/Sarajevo':'BA', 'Europe/London':'GB', 'Europe/Dublin':'IE', 'Europe/Madrid':'ES',
+  'Europe/Lisbon':'PT', 'Europe/Paris':'FR', 'Europe/Brussels':'BE', 'Europe/Amsterdam':'NL', 'Europe/Berlin':'DE', 'Europe/Vienna':'AT',
+  'Europe/Zurich':'CH', 'Europe/Rome':'IT', 'Europe/Stockholm':'SE', 'Europe/Oslo':'NO', 'Europe/Copenhagen':'DK', 'Europe/Helsinki':'FI',
+  'Europe/Warsaw':'PL', 'Europe/Prague':'CZ', 'Europe/Budapest':'HU', 'Europe/Athens':'GR', 'Europe/Istanbul':'TR', 'Europe/Moscow':'RU',
+  'Europe/Kyiv':'UA', 'Europe/Kiev':'UA', 'Asia/Kolkata':'IN', 'Asia/Calcutta':'IN', 'Asia/Karachi':'PK', 'Asia/Dhaka':'BD', 'Asia/Tokyo':'JP',
+  'Asia/Seoul':'KR', 'Asia/Shanghai':'CN', 'Asia/Hong_Kong':'HK', 'Asia/Taipei':'TW', 'Asia/Singapore':'SG', 'Asia/Manila':'PH',
+  'Asia/Jakarta':'ID', 'Asia/Bangkok':'TH', 'Asia/Kuala_Lumpur':'MY', 'Australia/Sydney':'AU', 'Australia/Melbourne':'AU',
+  'Pacific/Auckland':'NZ', 'America/Toronto':'CA', 'America/Vancouver':'CA', 'America/Mexico_City':'MX', 'America/Sao_Paulo':'BR',
+  'America/Argentina/Buenos_Aires':'AR', 'America/Bogota':'CO', 'America/Santiago':'CL', 'America/Lima':'PE', 'Africa/Johannesburg':'ZA',
+  'Africa/Lagos':'NG', 'Africa/Nairobi':'KE' };
+function _wtwGuessRegions() {
+  const out = [];
+  try { const r = localStorage.getItem(_WTW_KEY); if (r) out.push(r); } catch {}
+  try { const tz = Intl.DateTimeFormat().resolvedOptions().timeZone; if (_WTW_TZ[tz]) out.push(_WTW_TZ[tz]); } catch {}
+  (navigator.languages || [navigator.language]).forEach(l => { const m = String(l || '').match(/-([A-Z]{2})$/i); if (m) out.push(m[1].toUpperCase()); });
+  const own = (MSSLang.code.split('-')[1] || '').toUpperCase(); if (own && !MSSLang.isDefault) out.push(own);
+  out.push('US');
+  return out;
+}
+const _wtwCountry = c => { try { return new Intl.DisplayNames([MSSI18n.locale.split('-u-')[0], 'en'], { type: 'region' }).of(c) || c; } catch { return c; } };
+let _wtwRegion = null;
+// What this title has in one country: provider groups + cinema run
+function _tdWtw(d, region) {
+  const all = d['watch/providers']?.results || {};
+  const regions = Object.keys(all);
+  const r = region || _wtwRegion || _wtwGuessRegions().find(x => regions.includes(x)) || regions[0] || _wtwGuessRegions()[0];
+  const p = all[r] || {};
+  const groups = [['flatrate', 'Stream'], ['free', 'Free'], ['ads', 'With ads'], ['rent', 'Rent'], ['buy', 'Buy']]
+    .map(([k, label]) => ({ label, items: (p[k] || []).slice().sort((a, b) => (a.display_priority ?? 99) - (b.display_priority ?? 99)) }))
+    .filter(g => g.items.length);
+  let cinema = null;
+  if (_tdType === 'movie') {
+    const rel = (d.release_dates?.results || []).find(x => x.iso_3166_1 === r)?.release_dates || [];
+    const day = s => new Date(String(s).slice(0, 10) + 'T00:00:00');
+    const theatre = rel.filter(x => x.type === 3 || x.type === 2).map(x => day(x.release_date)).sort((a, b) => a - b)[0];
+    const digital = rel.filter(x => x.type === 4).map(x => day(x.release_date)).sort((a, b) => a - b)[0];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const days = theatre ? (today - theatre) / 864e5 : null;
+    if (theatre && days >= 0 && days <= 75 && !(digital && digital <= today)) cinema = { now: true };
+    else if (theatre && days < 0 && days >= -120) cinema = { now: false, date: theatre };
+  }
+  // logos for the pill: streaming first, then the rest, no repeats
+  const seen = new Set(), logos = [];
+  groups.forEach(g => g.items.forEach(i => { if (i.logo_path && !seen.has(i.provider_id) && logos.length < 3) { seen.add(i.provider_id); logos.push(i.logo_path); } }));
+  return { region: r, regions, groups, cinema, logos, any: regions.length > 0 || !!cinema };
+}
+function _tdWtwPillHTML(d, cls) {
+  const w = _tdWtw(d);
+  if (!w.any) return '';
+  const lead = w.logos.length
+    ? `<span class="td-wtw-logos" aria-hidden="true">${w.logos.map(l => `<img src="${TMDB_IMG.replace('w185', 'w92')}${l}" alt="" loading="lazy">`).join('')}</span>`
+    : icon('film', 13);
+  return `<button type="button" class="td-trailer-link td-wtw-btn ${cls}" onclick="_tdOpenWtw()" aria-haspopup="dialog">${lead} Where to watch</button>`;
+}
+function _injectWtw() {
+  if (document.getElementById('wtwOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'wtwOverlay';
+  el.innerHTML = `<div id="wtwCard" role="dialog" aria-modal="true" aria-labelledby="wtwTitle">
+      <div class="rf-header"><div class="rf-title" id="wtwTitle">Where to watch</div>
+        <button type="button" class="rf-close" onclick="_tdCloseWtw()" aria-label="Close">${icon('x', 18)}</button></div>
+      <div class="rp-sub" id="wtwSub" translate="no"></div>
+      <div class="wtw-body" id="wtwBody"></div>
+    </div>`;
+  MSSDialog.bind(el, _tdCloseWtw);
+  document.body.appendChild(el);
+}
+function _tdRenderWtw(region) {
+  const d = _tdDetail, w = _tdWtw(d, region);
+  const dateFmt = dt => dt.toLocaleDateString(MSSI18n.locale, { month: 'long', day: 'numeric', year: 'numeric' });
+  const opts = [...new Set([...w.regions, w.region])].map(c => ({ c, n: _wtwCountry(c) })).sort((a, b) => a.n.localeCompare(b.n));
+  const tile = i => `<div class="wtw-provider">${i.logo_path ? `<img src="${TMDB_IMG.replace('w185', 'w92')}${i.logo_path}" alt="" loading="lazy">` : `<b class="wtw-provider-letter">${esc((i.provider_name || '?')[0])}</b>`}<span translate="no">${esc(i.provider_name)}</span></div>`;
+  document.getElementById('wtwBody').innerHTML = `
+    <div class="wtw-country-row"><label for="wtwCountry">Country</label>
+      <select class="field-input wtw-country" id="wtwCountry" onchange="_tdSetWtwRegion(this.value)">${opts.map(o => `<option value="${o.c}"${o.c === w.region ? ' selected' : ''} translate="no">${esc(o.n)}</option>`).join('')}</select></div>
+    ${w.cinema ? `<div class="wtw-cinema">${icon('film', 22)}<div><b>${w.cinema.now ? 'In cinemas now' : mssT('In cinemas from {0}', dateFmt(w.cinema.date))}</b><small>${esc(_wtwCountry(w.region))}</small></div></div>` : ''}
+    ${w.groups.map(g => `<div class="wtw-group"><div class="wtw-group-title">${g.label}</div><div class="wtw-grid">${g.items.map(tile).join('')}</div></div>`).join('')
+      || (w.cinema ? '' : `<div class="wtw-empty">${esc(mssT('Not available to stream in {0} right now.', _wtwCountry(w.region)))}</div>`)}
+    <div class="wtw-credit">Streaming info from JustWatch, via TMDB. Availability changes often.</div>`;
+}
+function _tdSetWtwRegion(c) {
+  _wtwRegion = c;
+  try { localStorage.setItem(_WTW_KEY, c); } catch {}
+  _tdRenderWtw(c);
+  document.getElementById('wtwCountry')?.focus();
+}
+function _tdOpenWtw() {
+  if (!_tdDetail) return;
+  _injectWtw();
+  document.getElementById('wtwSub').textContent = _tdType === 'movie' ? _tdDetail.title : _tdDetail.name;
+  _tdRenderWtw();
+  MSSDialog.open(document.getElementById('wtwOverlay'), { focus: window.matchMedia('(max-width:640px)').matches ? null : '#wtwCountry' });
+}
+function _tdCloseWtw() { MSSDialog.close(document.getElementById('wtwOverlay')); }
 
 /* ── Episode detail popup ── */
 let _tdCurrentEpisodes = [];
