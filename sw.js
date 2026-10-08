@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'mss-v724';
+const CACHE_VERSION = 'mss-v727';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
