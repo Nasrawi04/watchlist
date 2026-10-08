@@ -1228,16 +1228,10 @@ function _udPosition() {
   drop.style.position = 'fixed';
 }
 
-let _udScrollY = 0;
-// Undo the dropdown's scroll lock — and only jump back if it was locked
-function _udUnlock() {
-  const wasLocked = document.body.style.position === 'fixed';
-  document.body.style.overflow = '';
-  document.body.style.position = '';
-  document.body.style.width = '';
-  document.body.style.top = '';
-  if (wasLocked) window.scrollTo(0, _udScrollY || 0);
-}
+// The dropdown's scroll lock (shared mssLockScroll / mssUnlockScroll, config.js)
+let _udLocked = false;
+function _udLock() { if (!_udLocked) { _udLocked = true; mssLockScroll('udDropdown'); } }
+function _udUnlock() { if (_udLocked) { _udLocked = false; mssUnlockScroll('udDropdown'); } }
 async function _udSearch(val) {
   const q = val.trim().toLowerCase();
   const drop = document.getElementById('udDropdown');
@@ -1251,11 +1245,7 @@ async function _udSearch(val) {
   drop.innerHTML = '<div class="ud-loading">Searching…</div>';
   drop.classList.add('open');
   document.getElementById('addFriendWrap')?.classList.add('dd-connected-active');
-  _udScrollY = window.scrollY;
-  document.body.style.overflow = 'hidden';
-  document.body.style.position = 'fixed';
-  document.body.style.width = '100%';
-  document.body.style.top = '-' + _udScrollY + 'px';
+  _udLock();
   _udTimer = setTimeout(async () => {
     try {
       const { data } = await sb.from('profiles')
