@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -21,12 +22,12 @@
 .td-hero {
   position:relative; min-height:clamp(480px, 78vw, 860px);
   display:flex; flex-direction:column; justify-content:center;
-  margin-left:calc(-1 * var(--page-px)); margin-right:calc(-1 * var(--page-px));
+  margin-inline-start:calc(-1 * var(--page-px)); margin-inline-end:calc(-1 * var(--page-px));
   margin-top:calc(-1 * var(--page-pt)); padding-top:var(--page-pt);
   margin-bottom:2rem; background:var(--card); border-bottom:0.5px solid var(--border);
 }
 .td-back {
-  position:absolute; top:var(--page-pt); left:calc(var(--page-px) + 1rem); z-index:1;
+  position:absolute; top:var(--page-pt); inset-inline-start:calc(var(--page-px) + 1rem); z-index:1;
   display:inline-flex; align-items:center; gap:6px;
   font-size:13px; color:#EDEDED; text-decoration:none; opacity:.8;
   transition:opacity .15s;
@@ -85,7 +86,7 @@
 .td-rating-num.td-rating-mss { color:#8FD177; }
 .td-rating-label { font-size:clamp(9px, 1.3vw, 12px); opacity:.65; letter-spacing:.5px; text-transform:uppercase; }
 .td-trailer-link {
-  display:inline-flex; align-items:center; gap:7px; margin-left:14px;
+  display:inline-flex; align-items:center; gap:7px; margin-inline-start:14px;
   font-size:clamp(11.5px, 1.8vw, 15px); color:#EDEDED; text-decoration:none; opacity:.85;
   border:0.5px solid rgba(255,255,255,0.25); border-radius:20px; padding:9px 18px;
   transition:opacity .15s;
@@ -106,12 +107,12 @@
 .td-dd-placeholder .td-dd-trigger { color:rgba(237,237,237,0.55); }
 .td-dd.open .td-dd-trigger {
   background:rgba(255,255,255,0.16); border-color:var(--olive-light);
-  border-bottom-left-radius:0; border-bottom-right-radius:0;
+  border-end-start-radius:0; border-end-end-radius:0;
 }
-.td-dd-chevron { transition:transform .15s, color .15s; flex-shrink:0; margin-left:8px; color:#EDEDED; opacity:.7; }
+.td-dd-chevron { transition:transform .15s, color .15s; flex-shrink:0; margin-inline-start:8px; color:#EDEDED; opacity:.7; }
 .td-dd.open .td-dd-chevron { transform:rotate(180deg); opacity:1; }
 .td-dd-menu {
-  display:none; position:absolute; top:100%; left:0; right:0; z-index:20;
+  display:none; position:absolute; top:100%; inset-inline-start:0; inset-inline-end:0; z-index:20;
   background:var(--bg-3); box-shadow:var(--shadow-lg);
   border:0.5px solid var(--olive-light); border-top:none;
   border-radius:0 0 var(--radius-sm) var(--radius-sm);
@@ -148,7 +149,7 @@
 .td-notes-loading, .td-notes-empty { padding:2rem 0; text-align:center; color:var(--text-3); font-size:13.5px; }
 #tdNotesList {
   max-height:560px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;
-  padding-right:6px; scrollbar-width:thin; scrollbar-color:var(--border-olive) var(--bg-3);
+  padding-inline-end:6px; scrollbar-width:thin; scrollbar-color:var(--border-olive) var(--bg-3);
 }
 #tdNotesList::-webkit-scrollbar { width:6px; }
 #tdNotesList::-webkit-scrollbar-track { background:var(--bg-3); border-radius:3px; }
@@ -219,13 +220,13 @@
 .ep-popup-still { width:100%; aspect-ratio:16/9; background:var(--bg-3); position:relative; flex-shrink:0; }
 .ep-popup-still img { width:100%; height:100%; object-fit:cover; display:block; }
 .ep-popup-close {
-  position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%;
+  position:absolute; top:14px; inset-inline-end:14px; width:34px; height:34px; border-radius:50%;
   background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); color:#fff; border:none; cursor:pointer;
   display:flex; align-items:center; justify-content:center; font-size:16px; transition:background .15s;
 }
 .ep-popup-close:hover { background:rgba(0,0,0,0.8); }
 .ep-popup-num-badge {
-  position:absolute; top:14px; left:14px; padding:4px 12px; border-radius:20px;
+  position:absolute; top:14px; inset-inline-start:14px; padding:4px 12px; border-radius:20px;
   font-size:12px; font-weight:600; letter-spacing:.3px;
   background:rgba(0,0,0,0.6); color:#fff; backdrop-filter:blur(4px);
 }
@@ -262,8 +263,8 @@
   .td-meta-row { justify-content:center; margin-bottom:.85rem; gap:10px 14px; }
   .td-trailer-desktop { display:none; }
   .td-genres { justify-content:center; margin-bottom:.85rem; }
-  .td-director-row { display:flex; width:fit-content; margin-left:auto; margin-right:auto; }
-  .td-trailer-mobile { display:inline-flex; margin-left:0; margin-bottom:1rem; }
+  .td-director-row { display:flex; width:fit-content; margin-inline-start:auto; margin-inline-end:auto; }
+  .td-trailer-mobile { display:inline-flex; margin-inline-start:0; margin-bottom:1rem; }
   .td-ratings-row { justify-content:center; }
   .td-rating-badge { padding:8px 14px; }
   .td-hero-actions { width:100%; margin-top:1.1rem; }
@@ -274,17 +275,27 @@
 .td-section-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .td-ep-graph-link { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--olive-light); text-decoration:none; }
 .td-ep-graph-link:hover { text-decoration:underline; text-underline-offset:3px; }
-.td-ep-scores { position:absolute; top:8px; right:8px; display:flex; gap:4px; }
+.td-ep-scores { position:absolute; top:8px; inset-inline-end:8px; display:flex; gap:4px; }
 .td-ep-scores span { padding:2px 7px; border-radius:4px; font-family:var(--bebas); font-size:14px; letter-spacing:.4px; box-shadow:0 1px 4px rgba(0,0,0,.3); }
-.td-fans { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-top:1rem; }
-.td-fan-card { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:16px; }
-.td-fan-label { font-family:var(--serif); font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:10px; }
-.td-fan-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-.td-fan-list li { display:flex; align-items:center; gap:10px; }
-.td-fan-rank { width:24px; height:24px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:var(--bebas); font-size:15px; background:var(--olive); color:#fff; }
-.td-fan-list li:first-child .td-fan-rank { background:#c9a227; color:#1a1a1a; }
-.td-fan-pick { flex:1; min-width:0; font-size:14px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.td-fan-count { font-size:11.5px; color:var(--text-3); white-space:nowrap; }
+/* ── Fan Favorites — same tabs + row as Friends & This Title, with the page's
+   own episode cards, season blocks and cast photos ── */
+.td-fans-row { align-items:flex-start; }
+.td-fans-row .td-episode-card, .td-fans-row .td-season-block { font:inherit; color:inherit; text-align:start; padding:0; scroll-snap-align:start; cursor:pointer; }
+.td-fans-row .td-season-block { border-width:1.5px; }
+.td-fans-row .td-episode-card { width:clamp(220px, 28vw, 280px); }
+.td-fans-row :is(.td-episode-card, .td-season-block):disabled { cursor:default; opacity:1; }
+.td-fans-row :is(.td-episode-card, .td-season-block):focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.td-fans-row .td-ep-still, .td-fans-row .td-season-block-poster { display:block; position:relative; overflow:hidden; }
+.td-fans-row .td-ep-body, .td-fans-row .td-season-block-info { display:flex; flex-direction:column; gap:4px; }
+.td-fans-row .td-season-block-name, .td-fans-row .td-ep-title { display:block; margin:0; }
+.td-fan-num { top:auto; bottom:10px; inset-inline-start:10px; }
+.td-fan-letter { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:clamp(28px, 5vw, 40px); color:var(--olive-light); }
+.td-fan-picks { font-family:var(--bebas); font-size:clamp(15px, 2vw, 17px); letter-spacing:.5px; color:var(--olive-light); line-height:1.1; }
+.td-fans-row .td-fan-char { text-decoration:none; }
+.td-fans-row div.td-fan-char { cursor:default; }
+.td-fans-row .td-fan-char .td-season-block-name { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.td-fan-actor { display:block; font-size:clamp(11px, 1.5vw, 12px); color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media(max-width:640px) { .td-fans-row .td-episode-card { width:min(76vw, 260px); } .td-fans-row .td-season-block { width:clamp(128px, 38vw, 160px); } }
 
 /* ── Replies popup (someone's note) — shell: MSSDialog, header: .rf-* ── */
 #replyPopupOverlay {
@@ -318,7 +329,7 @@
    cast-style friend cards (.td-cast-card / .td-cast-photo) ── */
 .td-friends-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px 24px; flex-wrap:wrap; margin-bottom:1rem; }
 .td-friends-head .section-title { margin-bottom:0; }
-.td-friends-avg { display:flex; flex-direction:column; align-items:flex-end; text-align:right; }
+.td-friends-avg { display:flex; flex-direction:column; align-items:flex-end; text-align:end; }
 .td-friends-avg-num { font-family:var(--bebas); font-size:clamp(26px, 5vw, 34px); line-height:1; letter-spacing:.5px; color:var(--olive-light); }
 .td-friends-avg-label { font-size:11px; letter-spacing:.4px; color:var(--text-3); margin-top:4px; }
 .td-friends-tabs { margin:0 0 1.25rem; max-width:100%; }
@@ -339,7 +350,7 @@
 @media(max-width:640px) {
   .td-friends-tabs { width:100%; }
   .td-friends-tabs .pn-toggle-btn { flex:1; justify-content:center; font-size:12.5px; padding:9px 6px; }
-  .td-friends-avg { align-items:flex-start; text-align:left; }
+  .td-friends-avg { align-items:flex-start; text-align:start; }
 }
 @media(prefers-reduced-motion:reduce) { .td-friend-photo { transition:none; } }
 </style>
@@ -387,7 +398,7 @@ function _tdShowAllCast() {
   scrollEl.innerHTML = shown.map(p => `
     <a class="td-cast-card" href="person.html?id=${p.id}">
       <div class="td-cast-photo">${p.profile_path ? `<img src="${TMDB_IMG}${p.profile_path}" loading="lazy">` : esc((p.name||'?')[0])}</div>
-      <div class="td-cast-name">${esc(p.name)}</div>
+      <div class="td-cast-name" translate="no">${esc(p.name)}</div>
       <div class="td-cast-char">${esc(p.character || p.roles?.[0]?.character || '')}</div>
     </a>`).join('');
   btnEl.textContent = expanded ? `See More (${cast.length - 10} more)` : 'See Less';
@@ -441,12 +452,23 @@ async function _tdFetchTV(id) {
     return await res.json();
   } catch { return null; }
 }
-async function _tdFetchSeason(tvId, seasonNum) {
-  try {
-    const res = await tmdbFetch(`${TMDB_BASE}/tv/${tvId}/season/${seasonNum}?api_key=${TMDB_KEY}&language=en-US`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch { return null; }
+// TMDB seasons, cached (the Episodes row and Fan Favorites share them)
+const _tdSeasonCache = {};
+function _tdFetchSeason(tvId, seasonNum) {
+  const k = tvId + ':' + seasonNum;
+  return _tdSeasonCache[k] ||= tmdbFetch(`${TMDB_BASE}/tv/${tvId}/season/${seasonNum}?api_key=${TMDB_KEY}&language=en-US`)
+    .then(r => r.ok ? r.json() : null).catch(() => null);
+}
+// Many seasons at once: one request per 20 (TMDB append_to_response)
+async function _tdFetchSeasons(tvId, nums) {
+  const missing = nums.filter(n => !_tdSeasonCache[tvId + ':' + n]);
+  for (let i = 0; i < missing.length; i += 20) {
+    const part = missing.slice(i, i + 20);
+    const req = tmdbFetch(`${TMDB_BASE}/tv/${tvId}?api_key=${TMDB_KEY}&language=en-US&append_to_response=${part.map(n => 'season/' + n).join(',')}`)
+      .then(r => r.ok ? r.json() : {}).catch(() => ({}));
+    part.forEach(n => { _tdSeasonCache[tvId + ':' + n] = req.then(d => d['season/' + n] || null); });
+  }
+  return Promise.all(nums.map(n => _tdFetchSeason(tvId, n)));
 }
 
 async function loadTitle() {
@@ -488,7 +510,7 @@ async function loadTitle() {
   _tdLoadNotes();
   _tdLoadFriends(titleForMatch);
   _tdLoadRelated(detail);
-  _tdLoadFans();
+  _tdLoadFans(detail);
   if (_tdType === 'tv') _tdLoadEpScores();
 }
 
@@ -581,23 +603,210 @@ function _tdOpenFriend(id) {
   MSSViews.open(e, { start: rated ? 'rate' : 'info', profile: e._profile });
 }
 
-/* ── Fan favorites: the 3 most picked Favorite Episode / Season / Character
-   across MyScreenScore (get_title_favorites, 2+ picks each). Hidden when
-   nobody has picked any. ── */
-async function _tdLoadFans() {
+/* ── Fan Favorites: the most picked Favorite Episode / Season / Character
+   across MyScreenScore (get_title_favorite_picks). Picks can be chosen from
+   a list or typed freely, so each one is matched to TMDB first:
+     Characters — the cast's character names; a pick counts for a character
+       when it holds a name word only that character has ("Daenerys
+       Stormborn of House Targaryen…" → Daenerys Targaryen) or their whole
+       name. Shared words alone ("Stark") stay as typed.
+     Seasons — "Season 3", "S3", "three", "Season 3: Alabasta" or a season name.
+     Episodes — "S3E9 - …", "3x09", "season 3 episode 9", an episode name, or
+       an absolute number ("Episode 1015") on long anime.
+   Anything that doesn't match is grouped by its text. Shown once 2+ people
+   picked the same thing; top 10 of each, with posters / stills / photos. ── */
+const _FAN_STOP = new Set('the of and a an in on to my house first her his name queen king lord lady ser sir mr mrs ms dr de la le el von van del da di du jr sr aka'.split(' '));
+const _FAN_NUMS = 'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty'.split(' ');
+const _fanNorm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\b[a-z]+\b/g, w => { const i = _FAN_NUMS.indexOf(w); return i > 0 ? String(i) : w; }).trim();
+const _fanTokens = t => _fanNorm(t).split(' ').filter(w => w.length > 1 && !_FAN_STOP.has(w));
+let _tdFanGroups = [];
+
+// Cast → characters with their name words and how many characters share each word
+function _fanCharacters(d) {
+  const cast = _tdType === 'movie' ? (d.credits?.cast || []) : (d.aggregate_credits?.cast || d.credits?.cast || []);
+  const chars = [];
+  cast.forEach((p, order) => {
+    const roles = p.roles ? p.roles.map(r => r.character) : [p.character];
+    roles.forEach(r => String(r || '').split('/').forEach(raw => {
+      const name = raw.replace(/\(.*?\)/g, '').trim();
+      const toks = _fanTokens(name);
+      if (toks.length && !/^(himself|herself|themselves|self|narrator|voice)$/i.test(name)) chars.push({ key: 'c' + p.id + ':' + toks.join(' '), name, toks, actor: p.name, actorId: p.id, photo: p.profile_path, order });
+    }));
+  });
+  const df = {};
+  chars.forEach(c => new Set(c.toks).forEach(t => { df[t] = (df[t] || 0) + 1; }));
+  return { chars, df };
+}
+function _fanMatchCharacter(pick, C) {
+  const P = new Set(_fanTokens(pick));
+  let best = null, bestScore = 0, tie = false;
+  C.chars.forEach(c => {
+    const shared = c.toks.filter(t => P.has(t));
+    if (!shared.length) return;
+    const whole = shared.length === c.toks.length;
+    if (!whole && !shared.some(t => C.df[t] === 1)) return;        // only shared words → not enough
+    const score = shared.reduce((a, t) => a + 1 / C.df[t], 0) + (whole ? 1 : 0);
+    if (score > bestScore + 1e-9) { best = c; bestScore = score; tie = false; }
+    else if (Math.abs(score - bestScore) < 1e-9 && best && best.actorId !== c.actorId && best.name !== c.name) tie = true;
+  });
+  return best && !tie ? best : null;
+}
+const _fanRealSeasons = d => (d.seasons || []).filter(x => x.season_number > 0);
+function _fanMatchSeason(pick, d) {
+  const t = ' ' + _fanNorm(pick) + ' ', seasons = d.seasons || [];
+  const m = t.match(/\b(?:season|series|s|part|book|temporada|saison|staffel)\s*(\d{1,3})\b/) || t.match(/^\s*(\d{1,3})\s*$/);
+  if (m && seasons.some(x => x.season_number === +m[1])) return +m[1];
+  const named = seasons.filter(x => x.name && !/^(season|specials)\b/i.test(x.name.trim()) || (x.name || '').includes(':'))
+    .filter(x => { const n = _fanNorm(String(x.name).split(':').pop()); return n.length >= 4 && (t.includes(' ' + n + ' ') || (n.includes(t.trim()) && t.trim().length >= 4)); });
+  return named.length === 1 ? named[0].season_number : null;
+}
+// Episode → [season, episode] from its numbers; null when only a name was typed
+function _fanEpisodeNumbers(pick, d) {
+  const t = _fanNorm(pick);
+  let m = t.match(/\bs\s*(\d{1,3})\s*e\s*(\d{1,4})\b/) || t.match(/\b(\d{1,2})\s*x\s*(\d{1,4})\b/)
+       || t.match(/\bseason\s*(\d{1,3})\D{0,12}?\b(?:episode|ep|e)\s*(\d{1,4})\b/);
+  if (m) return [+m[1], +m[2]];
+  m = t.match(/\b(?:episode|ep|e)\s*(\d{1,4})\D{0,12}?\bseason\s*(\d{1,3})\b/);
+  if (m) return [+m[2], +m[1]];
+  m = t.match(/^(?:episode|ep|e)?\s*(\d{1,4})$/);
+  const real = _fanRealSeasons(d);
+  if (m && real.length) {                                          // absolute number
+    let n = +m[1];
+    if (real.length === 1) return [real[0].season_number, n];
+    if (n <= (real[0].episode_count || 0)) return null;            // "Episode 5" on a multi-season show: unclear
+    for (const x of real) { if (n <= x.episode_count) return [x.season_number, n]; n -= x.episode_count; }
+  }
+  return null;
+}
+
+async function _tdLoadFans(d) {
   let rows = [];
-  try { const { data } = await sb.rpc('get_title_favorites', { p_tmdb_id: Number(_tdId), p_tmdb_type: _tdType }); rows = data || []; } catch { return; }
-  if (!rows.length) return;
-  const groups = [['episode', 'Favorite Episodes'], ['season', 'Favorite Seasons'], ['character', 'Favorite Characters']]
-    .map(([k, label]) => ({ label, items: rows.filter(r => r.kind === k) })).filter(g => g.items.length);
-  document.getElementById('tdFans').innerHTML = `<div class="td-related">
-      <div class="section-eyebrow">On MyScreenScore</div>
-      <div class="section-title">Fan Favorites</div>
-      <div class="td-fans">${groups.map(g => `<div class="td-fan-card">
-          <div class="td-fan-label">${esc(g.label)}</div>
-          <ol class="td-fan-list">${g.items.map((r, i) => `<li><span class="td-fan-rank">${i + 1}</span><span class="td-fan-pick">${esc(r.pick)}</span><span class="td-fan-count">${r.picks} pick${r.picks === 1 ? '' : 's'}</span></li>`).join('')}</ol>
-        </div>`).join('')}</div>
-    </div>`;
+  try {
+    const { data, error } = await sb.rpc('get_title_favorite_picks', { p_tmdb_id: Number(_tdId), p_tmdb_type: _tdType });
+    if (error) throw error;
+    rows = data || [];
+  } catch (err) { console.error('Fan favorites:', err); return; }
+  if (rows.length < 2) return;
+  const isTV = _tdType === 'tv';
+  const groups = { episode: {}, season: {}, character: {} };
+  const add = (kind, key, item, typed) => {
+    const g = groups[kind][key] ||= { ...item, picks: 0, typed: {} };
+    g.picks++; g.typed[typed] = (g.typed[typed] || 0) + 1;
+  };
+  const raw = (kind, pick) => add(kind, 'raw:' + (_fanNorm(pick) || pick.toLowerCase()), { raw: true }, pick.trim());
+
+  const C = _fanCharacters(d);
+  rows.filter(r => r.kind === 'character').forEach(r => {
+    const c = _fanMatchCharacter(r.pick, C);
+    c ? add('character', c.key, { name: c.name, actor: c.actor, actorId: c.actorId, photo: c.photo }, r.pick) : raw('character', r.pick);
+  });
+  if (isTV) {
+    rows.filter(r => r.kind === 'season').forEach(r => {
+      const n = _fanMatchSeason(r.pick, d);
+      if (n == null) return raw('season', r.pick);
+      const x = d.seasons.find(y => y.season_number === n);
+      add('season', 's' + n, { season: n, name: mssSeasonLabel(n, x?.name), poster: x?.poster_path, sub: x?.episode_count ? `${x.episode_count} episodes` : '' }, r.pick);
+    });
+    const epRows = rows.filter(r => r.kind === 'episode');
+    const numbered = epRows.map(r => ({ r, n: _fanEpisodeNumbers(r.pick, d) }));
+    // Picks typed as a name only: look the name up in every season (one request per 20 seasons)
+    let eps = null;
+    if (numbered.some(x => !x.n)) {
+      const all = await _tdFetchSeasons(_tdId, _fanRealSeasons(d).map(x => x.season_number));
+      eps = all.flatMap(sx => (sx?.episodes || []).map(ep => ({ s: ep.season_number, e: ep.episode_number, norm: _fanNorm(ep.name) })));
+    }
+    numbered.forEach(x => {
+      if (!x.n && eps) {
+        const name = _fanNorm(String(x.r.pick).replace(/^.*?\b\d+\s*[x·.:-]?\s*\d+\s*[-–:·]\s*/i, ''));
+        const hit = eps.filter(ep => ep.norm && (ep.norm === name || (name.length >= 5 && ep.norm.length >= 5 && (name.includes(ep.norm) || ep.norm.includes(name)))));
+        const exact = hit.filter(ep => ep.norm === name);
+        const one = exact.length === 1 ? exact[0] : hit.length === 1 ? hit[0] : null;
+        if (one) x.n = [one.s, one.e];
+      }
+      x.n ? add('episode', `e${x.n[0]}:${x.n[1]}`, { season: x.n[0], episode: x.n[1] }, x.r.pick) : raw('episode', x.r.pick);
+    });
+  }
+  const top = kind => Object.values(groups[kind]).filter(g => g.picks >= 2)
+    .sort((a, b) => b.picks - a.picks || (a.raw ? 1 : 0) - (b.raw ? 1 : 0)).slice(0, 10)
+    .map(g => g.raw ? { ...g, name: Object.entries(g.typed).sort((a, b) => b[1] - a[1])[0][0] } : g);
+  const tabs = [['episode', 'Episodes'], ['season', 'Seasons'], ['character', 'Characters']]
+    .map(([key, label]) => ({ key, label, items: top(key) })).filter(t => t.items.length);
+  if (!tabs.length) return;
+  // Stills + names for the episodes shown
+  const epTab = tabs.find(t => t.key === 'episode');
+  if (epTab) {
+    const seasons = await _tdFetchSeasons(_tdId, [...new Set(epTab.items.filter(g => !g.raw).map(g => g.season))]);
+    epTab.items.forEach(g => {
+      if (g.raw) return;
+      const ep = seasons.flatMap(sx => sx?.episodes || []).find(x => x.season_number === g.season && x.episode_number === g.episode);
+      Object.assign(g, { name: ep?.name || `Episode ${g.episode}`, still: ep?.still_path, ep });
+    });
+  }
+  _tdFanGroups = tabs;
+  document.getElementById('tdFans').innerHTML = `<section class="td-related td-friends" aria-labelledby="tdFansTitle">
+      <div class="td-friends-head"><div>
+        <div class="section-eyebrow">On MyScreenScore</div>
+        <div class="section-title" id="tdFansTitle">Fan Favorites</div>
+      </div></div>
+      <div class="pn-toggle td-friends-tabs" role="tablist" aria-label="Fan favorites">${tabs.map((t, i) =>
+        `<button type="button" role="tab" id="tdFansTab-${t.key}" class="pn-toggle-btn${i ? '' : ' active'}" aria-selected="${!i}" aria-controls="tdFansPanel" onclick="_tdFansTab('${t.key}')">${esc(t.label)}<span class="td-friends-tab-count">${t.items.length}</span></button>`).join('')}</div>
+      <div class="td-friends-row td-fans-row" id="tdFansPanel" role="tabpanel" aria-labelledby="tdFansTab-${tabs[0].key}"></div>
+    </section>`;
+  _tdFansTab(tabs[0].key);
+}
+function _tdFansTab(key) {
+  const t = _tdFanGroups.find(x => x.key === key);
+  if (!t) return;
+  document.querySelectorAll('#tdFans .pn-toggle-btn').forEach(b => {
+    const on = b.id === 'tdFansTab-' + key;
+    b.classList.toggle('active', on); b.setAttribute('aria-selected', on);
+  });
+  const panel = document.getElementById('tdFansPanel');
+  panel.setAttribute('aria-labelledby', 'tdFansTab-' + key);
+  panel.innerHTML = t.items.map((g, i) => _tdFanCard(key, g, i + 1)).join('');
+}
+// Same cards as the rest of the page: episode card, season block, cast photo
+function _tdFanCard(kind, g, rank) {
+  const picks = `<span class="td-fan-picks">${g.picks} pick${g.picks === 1 ? '' : 's'}</span>`;
+  const badge = `<span class="cg-rank-badge ${rank === 1 ? 'cg-rank-1' : rank === 2 ? 'cg-rank-2' : rank === 3 ? 'cg-rank-3' : 'cg-rank-other'}">${rank}</span>`;
+  const letter = esc((g.name || '?').trim()[0]?.toUpperCase() || '?');
+  if (kind === 'episode') {
+    const open = g.raw ? '' : ` onclick="_tdFanOpenEpisode(${g.season}, ${g.episode})"`;
+    return `<button type="button" class="td-episode-card td-fan-ep"${open}${g.raw ? ' disabled' : ''} aria-label="${esc(g.name)} — ${g.picks} picks">
+        <span class="td-ep-still">${g.still ? `<img src="${TMDB_IMG.replace('w185', 'w500')}${g.still}" alt="" loading="lazy">` : `<span class="td-fan-letter">${letter}</span>`}${badge}
+          ${g.raw ? '' : `<span class="td-ep-num-badge td-fan-num">S${g.season} · E${g.episode}</span>`}</span>
+        <span class="td-ep-body"><span class="td-ep-title" translate="no">${esc(g.name)}</span>${picks}</span>
+      </button>`;
+  }
+  if (kind === 'season') {
+    const open = g.raw ? '' : ` onclick="_tdFanOpenSeason(${g.season})"`;
+    return `<button type="button" class="td-season-block td-fan-season"${open}${g.raw ? ' disabled' : ''} aria-label="${esc(g.name)} — ${g.picks} picks">
+        <span class="td-season-block-poster">${g.poster ? `<img src="${TMDB_IMG.replace('w185', 'w342')}${g.poster}" alt="" loading="lazy">` : `<span class="td-fan-letter">${letter}</span>`}${badge}</span>
+        <span class="td-season-block-info"><span class="td-season-block-name" translate="no">${esc(g.name)}</span>${picks}</span>
+      </button>`;
+  }
+  // Character: the same portrait card as the season blocks (a person photo, like the person page) + rank badge
+  const inner = `<span class="td-season-block-poster">${g.photo ? `<img src="${TMDB_IMG.replace('w185', 'w342')}${g.photo}" alt="" loading="lazy">` : `<span class="td-fan-letter">${letter}</span>`}${badge}</span>
+      <span class="td-season-block-info"><span class="td-season-block-name" translate="no">${esc(g.name)}</span>${g.actor ? `<span class="td-fan-actor">${esc(g.actor)}</span>` : ''}${picks}</span>`;
+  return g.raw ? `<div class="td-season-block td-fan-char">${inner}</div>`
+    : `<a class="td-season-block td-fan-char" href="person.html?id=${Number(g.actorId)}" aria-label="${esc(g.name)}, played by ${esc(g.actor)} — ${g.picks} picks">${inner}</a>`;
+}
+// Tap a season → the Episodes section opens on it
+function _tdFanOpenSeason(n) {
+  const el = document.querySelector(`.td-season-block[data-season="${n}"]`);
+  if (!el) return;
+  _selectSeason(el);
+  el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center', inline: 'center' });
+}
+// Tap an episode → its details popup
+function _tdFanOpenEpisode(sn, n) {
+  const g = _tdFanGroups.find(t => t.key === 'episode')?.items.find(x => x.season === sn && x.episode === n);
+  if (!g?.ep) return;
+  const keep = _tdCurrentEpisodes;
+  _tdCurrentEpisodes = [g.ep];
+  _openEpisodePopup(0);
+  _tdCurrentEpisodes = keep;
 }
 
 /* ── Related titles: the movie's collection ("Part of the Avengers
@@ -715,8 +924,8 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
         <div class="td-poster">${poster ? `<img src="${poster}" alt="">` : ''}</div>
         <div class="td-hero-info">
           <div class="td-eyebrow">${isMovie ? 'Movie' : 'TV Show'} ${year ? '· ' + year : ''}${certification ? `<span class="td-certification">${esc(certification)}</span>` : ''}</div>
-          <div class="td-title">${esc(title)}</div>
-          ${d.tagline ? `<div class="td-tagline">"${esc(d.tagline)}"</div>` : ''}
+          <div class="td-title" translate="no">${esc(title)}</div>
+          ${d.tagline ? `<div class="td-tagline" translate="no">"${esc(d.tagline)}"</div>` : ''}
           <div class="td-meta-row">
             <div class="td-ratings-row">
               ${rating ? `<span class="td-rating-badge"><span class="td-rating-num">★ ${rating}</span><span class="td-rating-label">${voteCount ? voteCount + ' votes' : 'TMDB'}</span></span>` : ''}
@@ -726,7 +935,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
             ${trailer ? `<a class="td-trailer-link td-trailer-desktop" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
           </div>
           <div class="td-genres">${genres.map(g => `<span class="td-genre-chip">${esc(g)}</span>`).join('')}</div>
-          ${uniqueDirectors.length ? `<div class="td-director-row"><span class="td-director-label">${uniqueDirectors.length > 1 ? directorLabelPlural : directorLabel}</span> ${uniqueDirectors.map(p => `<a class="td-director-link" href="person.html?id=${p.id}&mode=directing">${esc(p.name)}</a>`).join(', ')}</div>` : ''}
+          ${uniqueDirectors.length ? `<div class="td-director-row"><span class="td-director-label">${uniqueDirectors.length > 1 ? directorLabelPlural : directorLabel}</span> ${uniqueDirectors.map(p => `<a class="td-director-link" href="person.html?id=${p.id}&mode=directing" translate="no">${esc(p.name)}</a>`).join(', ')}</div>` : ''}
           ${trailer ? `<a class="td-trailer-link td-trailer-mobile" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
           <div class="td-hero-actions fade-up fade-up-1">
             ${_tdAddControlsHTML(ownEntry)}
@@ -736,7 +945,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
     </div>
 
     <div class="td-section-title">Overview</div>
-    <div class="td-overview">${esc(d.overview) || 'No description available.'}</div>
+    <div class="td-overview" translate="no">${esc(d.overview) || mssT('No description available.')}</div>
 
     ${cast.length ? `
     <div class="td-section-title">Cast</div>
@@ -744,7 +953,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
       ${cast.slice(0, 10).map(p => `
         <a class="td-cast-card" href="person.html?id=${p.id}">
           <div class="td-cast-photo">${p.profile_path ? `<img src="${TMDB_IMG}${p.profile_path}" loading="lazy">` : esc((p.name||'?')[0])}</div>
-          <div class="td-cast-name">${esc(p.name)}</div>
+          <div class="td-cast-name" translate="no">${esc(p.name)}</div>
           <div class="td-cast-char">${esc(p.character || p.roles?.[0]?.character || '')}</div>
         </a>`).join('')}
     </div>
@@ -881,7 +1090,7 @@ async function _tdAddToLibrary() {
     cat, status,
     year:        ((isMovie ? d.release_date : d.first_air_date) || '').split('-')[0] || null,
     description: d.overview || null,
-    genres:      (d.genres || []).map(g => g.name),
+    genres:      tmdbGenreNames(d.genres),
     poster_url:  d.poster_path ? TMDB_FULL + d.poster_path : null,
     tmdb_id:     Number(_tdId),
     tmdb_type:   _tdType,
@@ -950,7 +1159,7 @@ function _tdSeasonsHTML(d) {
         <div class="td-season-block" data-season="${s.season_number}" data-tv="${_tdId}">
           <div class="td-season-block-poster">${s.poster_path ? `<img src="${TMDB_IMG.replace('w185', 'w342')}${s.poster_path}" loading="lazy">` : ''}</div>
           <div class="td-season-block-info">
-            <div class="td-season-block-name">${esc(mssSeasonLabel(s.season_number, s.name))}</div>
+            <div class="td-season-block-name" translate="no">${esc(mssSeasonLabel(s.season_number, s.name))}</div>
             <div class="td-season-block-sub">${s.episode_count} episode${s.episode_count!==1?'s':''}${s.air_date ? ' · ' + s.air_date.split('-')[0] : ''}</div>
           </div>
         </div>`).join('')}
@@ -1006,13 +1215,13 @@ async function _selectSeason(el) {
         ${mineS != null || commS ? `<span class="td-ep-scores">${mineS != null ? `<span class="ep-band-${MSSEp.band(mineS).key}" title="Your rating">You ${mineS.toFixed(1)}</span>` : ''}${commS ? `<span class="ep-band-${MSSEp.band(commS.avg_score).key}" title="MyScreenScore average · ${commS.rating_count} ratings">MSS ${Number(commS.avg_score).toFixed(1)}</span>` : ''}</span>` : ''}
       </div>
       <div class="td-ep-body">
-        <div class="td-ep-title">${esc(ep.name)}</div>
+        <div class="td-ep-title" translate="no">${esc(ep.name)}</div>
         <div class="td-ep-meta-row">
           ${rating ? `<span class="td-ep-rating">★ ${rating}</span>` : ''}
           ${date ? `<span>${date}</span>` : ''}
           ${runtime ? `<span>${runtime}</span>` : ''}
         </div>
-        <div class="td-ep-overview">${esc(ep.overview) || 'No description available.'}</div>
+        <div class="td-ep-overview" translate="no">${esc(ep.overview) || mssT('No description available.')}</div>
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -1040,7 +1249,7 @@ function _openEpisodePopup(index) {
   const runtime = ep.runtime ? `${ep.runtime} min` : '';
   const rating = ep.vote_average ? _discFloorScore(ep.vote_average) : null;
   const date = ep.air_date
-    ? new Date(ep.air_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(ep.air_date + 'T00:00:00').toLocaleDateString(MSSI18n.locale, { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
 
   document.getElementById('epPopupCard').innerHTML = `
@@ -1050,13 +1259,13 @@ function _openEpisodePopup(index) {
       <button type="button" class="ep-popup-close" onclick="_closeEpisodePopup()" aria-label="Close">&#x2715;</button>
     </div>
     <div class="ep-popup-body">
-      <div class="ep-popup-title" id="epPopupTitle">${esc(ep.name)}</div>
+      <div class="ep-popup-title" id="epPopupTitle" translate="no">${esc(ep.name)}</div>
       <div class="ep-popup-meta-row">
         ${rating ? `<span class="ep-popup-rating">★ ${rating}</span>` : ''}
         ${date ? `<span>${date}</span>` : ''}
         ${runtime ? `<span>${runtime}</span>` : ''}
       </div>
-      <div class="ep-popup-overview">${esc(ep.overview) || 'No description available.'}</div>
+      <div class="ep-popup-overview" translate="no">${esc(ep.overview) || mssT('No description available.')}</div>
     </div>`;
 
   MSSDialog.open(document.getElementById('epPopupOverlay'));
@@ -1123,7 +1332,7 @@ function _tdRenderNotes() {
 
   wrap.innerHTML = sorted.map(n => {
     const myReaction = _tdNotesReactions[n.entry_id];
-    const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const initial = (n.username || '?')[0].toUpperCase();
     return `<div class="td-note-card" data-dbl-like>
       <div class="td-note-avatar">${n.avatar_url ? `<img src="${esc(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
@@ -1132,7 +1341,7 @@ function _tdRenderNotes() {
           <span class="td-note-username">@${esc(n.username || 'user')}</span>
           <span class="td-note-date">${dateStr}</span>
         </div>
-        ${mssIsSpoiler(n) && n.user_id !== _tdUser?.id ? mssSpoilerHTML(`<div class="td-note-text">${esc(n.notes)}</div>`, { compact: true }) : `<div class="td-note-text">${esc(n.notes)}</div>`}
+        ${mssIsSpoiler(n) && n.user_id !== _tdUser?.id ? mssSpoilerHTML(`<div class="td-note-text" translate="no">${esc(n.notes)}</div>`, { compact: true }) : `<div class="td-note-text" translate="no">${esc(n.notes)}</div>`}
         <div class="td-note-actions">
           <button type="button" class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="_tdReactToNote('${n.entry_id}', true)">
             ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
@@ -1284,7 +1493,7 @@ function _replyRenderList() {
   listEl.innerHTML = sorted.map(r => {
     const myReaction = _replyMyReactions[r.id];
     const initial = (r.username || '?')[0].toUpperCase();
-    const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' }) : '';
     return `<div class="rp-item" data-dbl-like>
       <div class="td-note-avatar">${r.avatar_url ? `<img src="${esc(r.avatar_url)}" alt="" loading="lazy">` : esc(initial)}</div>
       <div class="rp-main">
@@ -1292,7 +1501,7 @@ function _replyRenderList() {
           <span class="td-note-username">@${esc(r.username || 'user')}</span>
           <span class="td-note-date">${dateStr}</span>
         </div>
-        <div class="rp-text">${esc(r.content)}</div>
+        <div class="rp-text" translate="no">${esc(r.content)}</div>
         <div class="rp-reacts">
           <button type="button" class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="_replyReact('${r.id}', true)">
             ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 13)} <span>${r.like_count || 0}</span>
