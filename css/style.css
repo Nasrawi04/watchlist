@@ -3053,6 +3053,15 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .confirm-cancel:focus-visible,
 .confirm-ok:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 
+/* Forced username change (nav.js _navUsernameCheck) — the confirm card with a field */
+.mss-rename { max-width:380px; }
+.mss-rename .confirm-msg { max-width:none; }
+.mss-rename .field-input { text-align:center; font-size:16px; margin-top:4px; }
+.mss-rename-hint { font-size:12px; color:var(--text-3); min-height:1.2em; }
+.mss-rename-hint.ok { color:var(--olive-light); font-weight:600; }
+.mss-rename-hint.bad { color:#dc2626; font-weight:600; }
+.mss-rename .confirm-ok:disabled { opacity:.5; cursor:default; }
+
 /* Light mode confirm adjustments */
 [data-theme="light"] .confirm-card { background:var(--bg-2); }
 
