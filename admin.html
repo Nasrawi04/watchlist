@@ -90,6 +90,25 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-kind { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--bg-3); color:var(--text-2); white-space:nowrap; }
 .adm-quote { font-size:13.5px; color:var(--text); line-height:1.5; white-space:pre-line; word-break:break-word; }
 .adm-row.top { align-items:flex-start; }
+/* Word filter */
+.adm-filter { margin-bottom:1.5rem; }
+.adm-filter-row { display:flex; align-items:center; justify-content:space-between; gap:10px 16px; flex-wrap:wrap; padding:10px 0; border-top:0.5px solid var(--border); }
+.adm-filter-row:first-of-type { border-top:none; padding-top:0; }
+.adm-filter-txt { font-size:13.5px; color:var(--text-2); }
+.adm-filter-txt b { color:var(--text); }
+.adm-flag { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 0; border-top:0.5px solid var(--border); }
+.adm-flag .adm-name { flex:1; min-width:120px; }
+.adm-flag input { width:170px; max-width:100%; padding:7px 10px; font-size:13px; }
+.adm-words { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 12px; }
+.adm-word { display:inline-flex; align-items:center; gap:4px; padding:4px 4px 4px 10px; border-radius:20px; background:var(--bg-3); border:0.5px solid var(--border-2); font-size:12.5px; font-weight:600; }
+.adm-word small { font-weight:500; color:var(--text-3); }
+.adm-word button { width:22px; height:22px; border-radius:50%; border:none; background:none; color:var(--text-3); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.adm-word button:hover { background:var(--bg-2); color:#dc2626; }
+.adm-word button:focus-visible { outline:2px solid var(--olive-light); }
+.adm-addword { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.adm-addword input { flex:1; min-width:150px; padding:8px 12px; font-size:13.5px; }
+.adm-addword .pn-toggle { margin:0; }
+.adm-addword .pn-toggle-btn { padding:7px 12px; font-size:12.5px; }
 /* Member detail */
 .adm-person { display:flex; align-items:center; gap:16px; margin-bottom:1rem; flex-wrap:wrap; }
 .adm-person .adm-av { width:64px; height:64px; font-size:24px; }
@@ -287,21 +306,98 @@ async function admUser(id) {
   window.scrollTo({ top: 0 });
 }
 
-/* ── Activity (moderation) ── */
+/* ── Activity (moderation): word filter + latest comments & replies ── */
+let _admShowWords = false, _admWordKind = 'word', _admWords = [];
+const _admMask = w => _admShowWords ? w : w[0] + '•'.repeat(Math.max(1, w.length - 1));
 async function admActivity() {
   const panel = document.getElementById('admPanel');
   panel.innerHTML = _admSpin();
-  const { data, error } = await sb.rpc('admin_recent_activity', { p_limit: 80 });
+  const [act, scan, words] = await Promise.all([
+    sb.rpc('admin_recent_activity', { p_limit: 80 }), sb.rpc('admin_moderation_scan'), sb.rpc('admin_blocked_words')]);
   if (_admTab !== 'activity') return;
-  if (error) return admError(error);
-  panel.innerHTML = data.length ? `<div class="adm-list">${data.map(r => `
+  if (act.error) return admError(act.error);
+  _admWords = words.data || [];
+  const filter = scan.error ? `<div class="adm-card adm-filter"><div class="adm-card-s">The word filter needs migration 038 — run it in Supabase, then refresh.</div></div>` : _admFilterHTML(scan.data);
+  const data = act.data;
+  panel.innerHTML = filter + `<div class="adm-group">Latest comments & replies</div>` + (data.length ? `<div class="adm-list">${data.map(r => `
     <div class="adm-row top">${_admAv(r)}
       <span class="adm-main">
         <span class="adm-meta"><span class="adm-kind">${ADM_KIND[r.kind] || esc(r.kind)}</span><b translate="no" style="color:var(--text)">@${esc(r.username || '?')}</b><span>on <span translate="no">${esc(r.on_title || '—')}</span></span><span>${_admAgo(r.created_at)}</span></span>
         <span class="adm-quote" translate="no">${esc(r.content)}</span>
       </span>
       <span class="adm-actions"><button type="button" class="adm-btn danger" onclick="admRemove('${esc(r.kind)}', '${esc(r.id)}')">Remove</button></span>
-    </div>`).join('')}</div>` : '<div class="adm-empty">No comments or replies yet.</div>';
+    </div>`).join('')}</div>` : '<div class="adm-empty">No comments or replies yet.</div>');
+  _admPaintWords();
+}
+function _admFilterHTML(sc) {
+  const posts = (sc.profiles || 0) + (sc.notes || 0) + (sc.replies || 0) + (sc.lists || 0) + (sc.episode_notes || 0);
+  const users = sc.users || [];
+  return `<div class="adm-card adm-filter">
+    <div class="adm-card-h"><span class="adm-card-t">Word filter</span><span class="adm-card-s">${_admWords.length} blocked words</span></div>
+    <div class="adm-filter-row"><span class="adm-filter-txt">${users.length ? `<b>${users.length}</b> ${users.length === 1 ? 'username breaks' : 'usernames break'} the filter` : 'Every username passes the filter.'}</span></div>
+    ${users.map(u => `<div class="adm-flag">${_admAv(u)}<span class="adm-name" translate="no">@${esc(u.username)}</span>
+        <input class="field-input" id="admRen-${esc(u.id)}" placeholder="New username" aria-label="New username for @${esc(u.username)}" autocomplete="off" spellcheck="false">
+        <button type="button" class="adm-btn on" onclick="admRename('${esc(u.id)}')">Rename</button>
+        <button type="button" class="adm-btn" onclick="admUser('${esc(u.id)}')">View</button></div>`).join('')}
+    <div class="adm-filter-row"><span class="adm-filter-txt">${posts ? `<b>${posts}</b> saved ${posts === 1 ? 'post still has' : 'posts still have'} a blocked word (names, bios, notes, replies, lists).` : 'No saved posts have a blocked word.'}</span>
+      ${posts ? `<button type="button" class="adm-btn on" onclick="admCleanUp()">Star them out now</button>` : ''}</div>
+    <div class="adm-filter-row" style="display:block">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span class="adm-filter-txt">New posts are starred out as they’re saved. Usernames with these words can’t be picked.</span>
+        <button type="button" class="adm-btn" aria-pressed="${_admShowWords}" onclick="_admShowWords=!_admShowWords;_admPaintWords()">${_admShowWords ? 'Hide words' : 'Show words'}</button></div>
+      <div class="adm-words" id="admWords"></div>
+      <form class="adm-addword" onsubmit="event.preventDefault();admAddWord()">
+        <input class="field-input" id="admNewWord" placeholder="Add a word or phrase…" aria-label="Word or phrase to block" maxlength="40" autocomplete="off" spellcheck="false">
+        <div class="pn-toggle" role="radiogroup" aria-label="How it matches">
+          <button type="button" role="radio" class="pn-toggle-btn${_admWordKind === 'word' ? ' active' : ''}" aria-checked="${_admWordKind === 'word'}" onclick="_admSetKind('word')">Whole word</button>
+          <button type="button" role="radio" class="pn-toggle-btn${_admWordKind === 'prefix' ? ' active' : ''}" aria-checked="${_admWordKind === 'prefix'}" onclick="_admSetKind('prefix')">Starts with</button>
+        </div>
+        <button type="submit" class="adm-btn on">Add</button>
+      </form>
+    </div>
+  </div>`;
+}
+function _admPaintWords() {
+  const box = document.getElementById('admWords');
+  if (!box) return;
+  box.innerHTML = _admWords.map(w => `<span class="adm-word" translate="no">${esc(_admMask(w.word))}${w.kind === 'prefix' ? '<small>…</small>' : ''}<button type="button" onclick="admRemoveWord(${attrJSON(w.word)})" aria-label="Unblock ${esc(_admMask(w.word))}">${icon('x', 12)}</button></span>`).join('');
+  const t = box.parentElement.querySelector('[aria-pressed]');
+  if (t) { t.setAttribute('aria-pressed', _admShowWords); t.textContent = _admShowWords ? 'Hide words' : 'Show words'; }
+}
+function _admSetKind(k) {
+  _admWordKind = k;
+  document.querySelectorAll('.adm-addword .pn-toggle-btn').forEach((b, i) => { const on = (i === 0) === (k === 'word'); b.classList.toggle('active', on); b.setAttribute('aria-checked', on); });
+}
+async function admAddWord() {
+  const input = document.getElementById('admNewWord'), w = input.value.trim().toLowerCase();
+  if (w.length < 2) { showToast('Words need at least 2 letters.', 'err'); return; }
+  const { error } = await sb.rpc('admin_add_word', { p_word: w, p_kind: _admWordKind });
+  if (error) { console.error(error); showToast('Couldn’t add that word. Try again.', 'err'); return; }
+  showToast('Word blocked.');
+  admActivity();
+}
+async function admRemoveWord(w) {
+  if (!(await showConfirm({ title: 'Unblock this word?', message: 'New posts with it won’t be starred out anymore.', confirmText: 'Unblock', iconName: 'unlock' }))) return;
+  const { error } = await sb.rpc('admin_remove_word', { p_word: w });
+  if (error) { console.error(error); showToast('Couldn’t unblock it. Try again.', 'err'); return; }
+  admActivity();
+}
+async function admRename(id) {
+  const name = document.getElementById('admRen-' + id)?.value.trim();
+  const { data, error } = await sb.rpc('admin_rename_user', { p_user: id, p_username: name || '' });
+  if (error) {
+    const m = error.message || '';
+    showToast(/TAKEN/.test(m) ? 'That username is taken.' : /NOT_ALLOWED/.test(m) ? 'That username isn’t allowed either.' : /SHORT/.test(m) ? 'Usernames need at least 3 characters.' : 'Couldn’t rename. Try again.', 'err');
+    return;
+  }
+  showToast(`Renamed to @${data}.`);
+  admActivity();
+}
+async function admCleanUp() {
+  if (!(await showConfirm({ title: 'Star out blocked words?', message: 'Every saved name, bio, note, reply and list with a blocked word gets it replaced with stars. This can’t be undone.', confirmText: 'Star them out', iconName: 'eyeOff' }))) return;
+  const { data, error } = await sb.rpc('admin_censor_existing');
+  if (error) { console.error(error); showToast('Couldn’t clean up. Try again.', 'err'); return; }
+  showToast(`Cleaned ${data} ${data === 1 ? 'post' : 'posts'}.`);
+  admActivity();
 }
 async function admRemove(kind, id) {
   const what = (ADM_KIND[kind] || 'Post').toLowerCase();
