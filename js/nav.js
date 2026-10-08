@@ -727,10 +727,8 @@ async function modalQuickCreate() {
 
 /* Keyboard shortcuts */
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    document.getElementById('mobileNav')?.classList.remove('open');
-    document.getElementById('mobileSearchBar')?.classList.remove('open');
-  }
+  // Esc closes whatever top-bar panel is open (mobile menu, search, account menu, notifications)
+  if (e.key === 'Escape') _navCloseAll();
   if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
     e.preventDefault();
     window.location.reload();
