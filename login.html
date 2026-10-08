@@ -511,6 +511,11 @@ async function doSignUp(e) {
 
   const btn = document.getElementById('btnSignUp');
   btn.disabled = true; btn.textContent = 'Creating account…';
+  if (!(await isUsernameAllowed(username))) {
+    showErr('suError', 'That username isn’t allowed. Please pick another.');
+    btn.disabled = false; btn.textContent = 'Create account →';
+    return;
+  }
 
   let data, error;
   try {
