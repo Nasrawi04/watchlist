@@ -32,7 +32,7 @@
      MSSI18n.prepare(code)             → Promise: download + keep a language before switching to it
 ═══════════════════════════════════════════════════════════════ */
 const MSSI18n = (() => {
-  const VERSION = '1';
+  const VERSION = '2';
   const UI_LANGS = ['ar', 'fa', 'hr', 'es', 'fr', 'pt', 'de', 'it', 'tr', 'ru', 'hi', 'ur', 'ja', 'zh'];
   const RTL = new Set(['ar', 'fa', 'ur', 'he']);
   const STORE = 'mss_i18n_';
