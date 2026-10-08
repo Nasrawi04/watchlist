@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -31,7 +32,7 @@
 .lv-username { font-size:13px; color:var(--text-3); }
 .lv-desc {
   font-size:13.5px; color:var(--text-2); line-height:1.6; margin-bottom:14px;
-  padding-left:12px; border-left:2px solid var(--border-olive); white-space:pre-line; overflow-wrap:anywhere;
+  padding-inline-start:12px; border-inline-start:2px solid var(--border-olive); white-space:pre-line; overflow-wrap:anywhere;
 }
 .lv-import-btn {
   font-size:13px; font-weight:600; padding:9px 20px; border-radius:999px; flex-shrink:0;
@@ -73,7 +74,8 @@
 .lv-list-row {
   display:grid; grid-template-columns:96px 1fr auto; align-items:center; gap:22px;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
-  padding:16px 24px 16px 16px; cursor:pointer;
+  padding-block:16px;
+  padding-inline:16px 24px; cursor:pointer;
   opacity:0; transform:translateX(-10px);
   transition:opacity .4s var(--ease), transform .4s var(--ease), border-color .15s, background .15s;
 }
@@ -108,7 +110,7 @@
 
 @media(max-width:560px) {
   .lv-grid { gap:10px; }
-  .lv-list-row { grid-template-columns:64px 1fr auto; gap:14px; padding:10px 16px 10px 10px; }
+  .lv-list-row { grid-template-columns:64px 1fr auto; gap:14px; padding-block:10px; padding-inline:10px 16px; }
   .lv-list-poster { width:64px; height:92px; }
   .lv-list-title { font-size:15px; }
 }
@@ -138,7 +140,7 @@
 }
 .lv-count { font-size:13px; color:var(--text-3); }
 .lv-count b { font-family:var(--bebas); font-weight:400; font-size:18px; color:var(--text-2); letter-spacing:.3px; }
-.lv-controls-right { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.lv-controls-right { display:flex; align-items:center; gap:8px; margin-inline-start:auto; }
 .lv-sf-bar:empty { display:none; }
 .lv-sf-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
 .lv-sf-bar .sort-bar::before { content:none; }
@@ -165,7 +167,7 @@
   font-family:var(--serif); font-weight:600; font-size:26px;
 }
 .lvj-av img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
-.lvj-av-ic { position:absolute; right:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%; background:var(--olive-light); color:#fff; border:2px solid var(--bg-2); display:flex; align-items:center; justify-content:center; }
+.lvj-av-ic { position:absolute; inset-inline-end:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%; background:var(--olive-light); color:#fff; border:2px solid var(--bg-2); display:flex; align-items:center; justify-content:center; }
 .lvj-eyebrow { font-family:var(--serif); font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
 .lvj-title { font-size:14px; color:var(--text-2); line-height:1.5; }
 .lvj-title b { color:var(--text); }
@@ -204,12 +206,12 @@
     <div class="lv-owner-row">
       <div class="lv-owner">
         <div class="lv-avatar" id="lvAvatar"></div>
-        <span class="lv-username" id="lvUsername"></span>
+        <span class="lv-username" id="lvUsername" translate="no"></span>
       </div>
     </div>
 
     <div class="lv-title-row">
-      <h1 class="lv-title" id="lvTitle"></h1>
+      <h1 class="lv-title" id="lvTitle" translate="no"></h1>
       <span id="lvRankedBadgeSlot" class="lv-badge-slot"></span>
     </div>
     <div class="lv-desc" id="lvDesc"></div>
@@ -341,7 +343,7 @@ function _lvListRowHTML(e, rank) {
     <div class="lv-list-poster" style="position:relative">${posterInner}${_lvRankBadgeHTML(rank)}</div>
     <div style="min-width:0">
       <div class="lv-list-title-row">
-        <div class="lv-list-title">${_lvEsc(e.title)}</div>
+        <div class="lv-list-title" translate="no">${_lvEsc(e.title)}</div>
         ${e.year ? `<span class="title-year-inline">${_lvEsc(e.year)}</span>` : ''}
       </div>
       ${typeLabel ? `<div class="lv-list-badges-row"><span class="${_lvTypeCls(e)}">${typeLabel}</span></div>` : ''}
