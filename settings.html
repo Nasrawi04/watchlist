@@ -517,7 +517,7 @@ function _avatarCropStart(event) {
       document.getElementById('avatarCropZoom').value = _avatarCropMinZoom;
       _avatarCropApplyTransform();
       document.getElementById('avatarCropOverlay').style.display = 'flex';
-      document.body.style.overflow = 'hidden';
+      mssLockScroll('avatarCrop');
     };
     img.src = ev.target.result;
   };
@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function _avatarCropCancel() {
   document.getElementById('avatarCropOverlay').style.display = 'none';
-  document.body.style.overflow = '';
+  mssUnlockScroll('avatarCrop');
   _avatarCropFile = null;
 }
 
@@ -607,7 +607,7 @@ async function _avatarCropConfirm() {
   canvas.toBlob(async (blob) => {
     if (!blob) { showToast('Failed to process image.', 'err'); return; }
     document.getElementById('avatarCropOverlay').style.display = 'none';
-    document.body.style.overflow = '';
+    mssUnlockScroll('avatarCrop');
 
     const previewUrl = URL.createObjectURL(blob);
     document.getElementById('settingsAvatar').innerHTML = `<img src="${previewUrl}" alt="">`;
@@ -660,12 +660,12 @@ function openDeleteAccount() {
   document.getElementById('delAccError').textContent = '';
   updateDeleteAccountBtn();
   document.getElementById('delAccOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  mssLockScroll('delAcc');
   setTimeout(() => document.getElementById('delAccUsername').focus(), 60);
 }
 function closeDeleteAccount() {
   document.getElementById('delAccOverlay').classList.remove('open');
-  document.body.style.overflow = '';
+  mssUnlockScroll('delAcc');
 }
 function updateDeleteAccountBtn() {
   const typed = document.getElementById('delAccUsername').value.trim().replace(/^@/, '').toLowerCase();
