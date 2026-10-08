@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>Notifications — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -27,7 +28,7 @@
 .np-page-list { display:flex; flex-direction:column; gap:8px; }
 .np-page-list .notif-item { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:14px; }
 .np-page-list .notif-item.unread { background:var(--olive-faint); border-color:var(--border-olive); }
-.np-page-list .notif-item.unread::after { top:20px; right:48px; }
+.np-page-list .notif-item.unread::after { top:20px; inset-inline-end:48px; }
 .np-page-list .notif-av { width:44px; height:44px; font-size:17px; }
 .np-page-list .notif-text { font-size:14px; }
 .np-page-list .notif-card { max-width:420px; }
