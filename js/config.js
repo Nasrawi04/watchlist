@@ -22,6 +22,47 @@ try {
   console.error('Supabase failed to init — check SUPABASE_URL and SUPABASE_ANON_KEY in js/config.js');
 }
 
+/* ── Word filter notice (filter: migrations 038 / 039) ──
+   The database stars out blocked words as text is saved. Here, every save
+   of people's own words (notes, comments, replies, lists, bio…) is checked
+   with the same filter in the background, and if anything was changed the
+   writer is told — without ever showing which words are on the list. */
+const MSS_FILTERED = {
+  entries: ['notes'], comments: ['content'], note_replies: ['content'], list_replies: ['content'],
+  favorite_lists: ['title', 'description'], profiles: ['display_name', 'bio', 'quote'], episode_ratings: ['note'],
+};
+if (sb) {
+  const from = sb.from.bind(sb);
+  sb.from = table => {
+    const q = from(table), cols = MSS_FILTERED[table];
+    if (!cols) return q;
+    ['insert', 'update', 'upsert'].forEach(m => {
+      const orig = q[m]?.bind(q);
+      if (orig) q[m] = (values, ...rest) => { _mssWordCheck(values, cols); return orig(values, ...rest); };
+    });
+    return q;
+  };
+}
+let _mssWordNoticeAt = 0;
+async function _mssWordCheck(values, cols) {
+  const text = [].concat(values || []).flatMap(v => cols.map(c => v?.[c])).filter(x => typeof x === 'string' && /\p{L}/u.test(x)).join('\n');
+  if (!text) return;
+  let out;
+  try { const { data, error } = await sb.rpc('mss_censor', { t: text }); if (error) return; out = data; } catch { return; }
+  if (typeof out !== 'string' || out === text || Date.now() - _mssWordNoticeAt < 4000) return;
+  _mssWordNoticeAt = Date.now();
+  const severe = /(^|[^*\p{L}\p{N}])\*{2,}(?=[^*\p{L}\p{N}]|$)/u.test(out);
+  // wait for any popup the save itself opened (confirm / undo) to close first
+  for (let i = 0; i < 20 && MSSDialog.isOpen(document.getElementById('confirmOverlay')); i++) await new Promise(r => setTimeout(r, 500));
+  showConfirm({
+    title: severe ? 'Some words were starred out' : 'We softened some language',
+    message: severe
+      ? 'A few words aren’t allowed on MyScreenScore, so they were replaced with stars. Everything else was saved as you wrote it.'
+      : 'A few words were softened to keep MyScreenScore friendly for everyone. Everything else was saved as you wrote it.',
+    confirmText: 'Got it', cancelText: null, iconName: 'eyeOff', danger: false,
+  });
+}
+
 /* ── Inline SVG icon system (Lucide outline, 1.75 stroke) ── */
 const ICONS = {
   sort:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>`,
