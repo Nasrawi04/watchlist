@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>TV Shows — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -28,8 +29,8 @@
       <button class="btn-add-entry" onclick="openAddModal('tv')">+ Add TV Show</button>
     </div>
   </div>
-  <div class="page-stats fade-up fade-up-1" id="pageStats"></div>
-  <div id="sectionsWrap" class="fade-up fade-up-2"><div class="page-loading" data-skel="category"></div></div>
+  <div class="page-stats fade-up fade-up-1" id="pageStats" data-skel-stats="6"></div>
+  <div id="sectionsWrap" class="fade-up fade-up-2"><div class="page-loading" data-skel="sections"></div></div>
 </div>
 <script>window.PAGE_CAT = 'tv';</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
