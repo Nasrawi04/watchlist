@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -29,7 +30,7 @@
 .pp-nav-btn {
   /* same look as the Personal Info rows: label + value, no boxes */
   display:flex; align-items:baseline; justify-content:space-between; gap:10px; width:100%;
-  padding:8px 0; margin:0; cursor:pointer; text-align:left;
+  padding:8px 0; margin:0; cursor:pointer; text-align:start;
   background:none; border:none; border-top:0.5px solid var(--border); color:var(--text);
   font-family:'Manrope',var(--sans); font-size:clamp(12.5px, 3vw, 13.5px); font-weight:500; transition:color .15s;
 }
@@ -79,7 +80,7 @@
 .pp-section-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
 .pp-section-title.pp-mt { margin-top:2.5rem; }
 .pp-mode-toggle-row { margin-top:2.5rem; display:flex; }
-.pp-mode-toggle-row .view-toggle { margin-left:0; }
+.pp-mode-toggle-row .view-toggle { margin-inline-start:0; }
 .pp-mode-toggle-row .vt-btn { width:auto; height:auto; padding:8px 18px; font-size:13px; font-weight:500; font-family:var(--sans); white-space:nowrap; }
 
 .pp-bio { font-size:clamp(13.5px, 3vw, 14.5px); line-height:1.75; color:var(--text-2); white-space:pre-line; }
@@ -250,11 +251,11 @@ function renderPerson(p) {
 
       <div>
         ${p.known_for_department ? `<div class="pp-eyebrow">${esc(p.known_for_department)}</div>` : ''}
-        <div class="pp-name">${esc(p.name)}</div>
+        <div class="pp-name" translate="no">${esc(p.name)}</div>
 
         ${bio ? `
           <div class="pp-section-title">Biography</div>
-          <div class="pp-bio clamped" id="ppBio">${esc(bio)}</div>
+          <div class="pp-bio clamped" id="ppBio" translate="no">${esc(bio)}</div>
           <button class="pp-bio-toggle" id="ppBioToggle" onclick="_ppToggleBio()">Read more</button>
         ` : ''}
 
