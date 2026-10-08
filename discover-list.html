@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -51,7 +52,8 @@
 .dl-list-row {
   display:grid; grid-template-columns:96px 1fr auto; align-items:center; gap:22px;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
-  padding:16px 24px 16px 16px; cursor:pointer;
+  padding-block:16px;
+  padding-inline:16px 24px; cursor:pointer;
   opacity:0; transform:translateX(-10px);
   transition:opacity .4s var(--ease), transform .4s var(--ease), border-color .15s, background .15s;
 }
@@ -74,7 +76,7 @@
   .dl-head { margin-bottom:1.5rem; }
   .dl-grid { gap:10px; }
   .dl-rank-badge { min-width:22px; height:22px; font-size:13px; }
-  .dl-list-row { grid-template-columns:64px 1fr auto; gap:14px; padding:10px 16px 10px 10px; }
+  .dl-list-row { grid-template-columns:64px 1fr auto; gap:14px; padding-block:10px; padding-inline:10px 16px; }
   .dl-list-poster { width:64px; height:92px; }
   .dl-list-rank { font-size:18px; }
   .dl-list-title { font-size:15px; }
@@ -88,7 +90,7 @@
 .dl-score-big { font-family:var(--bebas); font-weight:400; font-size:clamp(17px, 3.7vw, 19px); }
 
 .dl-sentinel { height:1px; }
-.dl-head-right { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.dl-head-right { display:flex; align-items:center; gap:8px; margin-inline-start:auto; }
 .dl-sf-bar:empty { display:none; }
 .dl-sf-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
 .dl-sf-bar .sort-bar::before { content:none; }
@@ -194,11 +196,11 @@ function _dlListRowHTML(it, rank) {
     <div class="dl-list-poster" style="position:relative">${posterInner}${rankBadge}</div>
     <div style="min-width:0">
       <div class="dl-list-title-row">
-        <div class="dl-list-title">${_dlEsc(it.title)}</div>
+        <div class="dl-list-title" translate="no">${_dlEsc(it.title)}</div>
         ${it.year ? `<span class="title-year-inline">${_dlEsc(it.year)}</span>` : ''}
       </div>
       ${typeLabel ? `<div class="dl-list-badges-row"><span class="${typeCls}">${typeLabel}</span></div>` : ''}
-      ${it.overview ? `<div class="dl-list-desc">${_dlEsc(it.overview)}</div>` : ''}
+      ${it.overview ? `<div class="dl-list-desc" translate="no">${_dlEsc(it.overview)}</div>` : ''}
     </div>
     <div class="dl-list-right">
       ${scoreStr ? `<span class="home-tmdb-score dl-score-big">★ ${scoreStr}</span>` : ''}
