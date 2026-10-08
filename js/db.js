@@ -184,6 +184,8 @@ function _notifyQueuedFrom(entry) {
 async function uploadPoster(file, userId, entryId) {
   // Compress image before upload — converts PNG/large files to JPEG
   const compressed = await compressImage(file, 800, 0.85);
+  // Picture check (config.js): refused pictures never upload
+  if (!(await MSSImageCheck.allowed(compressed, 'poster'))) throw Object.assign(new Error('PICTURE_REFUSED'), { refused: true });
 
   const formData = new FormData();
   formData.append('file', compressed);
