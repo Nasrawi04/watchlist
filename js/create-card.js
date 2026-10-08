@@ -1,0 +1,1426 @@
+function _injectCreateCardOverlay() {
+  if (document.getElementById('createCardOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'createCardOverlay';
+  el.innerHTML = `
+    <div id="createCardModal" role="dialog" aria-modal="true" aria-labelledby="createCardHeaderTitle">
+      <div id="createCardHeader">
+        <div id="createCardHeaderTitle">Create Card</div>
+        <button type="button" onclick="closeCreateCard()" id="createCardClose" aria-label="Close">&#x2715;</button>
+      </div>
+      <div id="createCardBody">
+        <div id="createCardPageRow">
+          <button class="card-page-btn active" data-page="1" onclick="setCardPage(1,this)">Card</button>
+          <button class="card-page-btn" data-page="3" onclick="setCardPage(3,this)">Discover Card</button>
+        </div>
+        <div id="createCardThemeRow">
+          <button class="card-theme-btn" data-theme="dark" onclick="setCardTheme('dark',this)">
+            <span class="card-theme-swatch dark"></span> Dark
+          </button>
+          <button class="card-theme-btn active" data-theme="light" onclick="setCardTheme('light',this)">
+            <span class="card-theme-swatch light"></span> Light
+          </button>
+        </div>
+        <div id="createCardPreviewWrap">
+          <canvas id="createCardCanvas"></canvas>
+        </div>
+        <div id="discoverLinkPrompt" style="display:none;text-align:center;padding:14px 10px 4px;">
+          <button id="discoverLinkBtn" onclick="_linkCardEntryToTMDB()" class="popup-action-btn" style="display:inline-flex;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Search &amp; Link to TMDB
+          </button>
+        </div>
+      </div>
+      <div id="createCardFooter">
+        <button onclick="closeCreateCard()" class="create-card-cancel">Cancel</button>
+        <button onclick="downloadCard()" class="create-card-download">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Save Image
+        </button>
+      </div>
+    </div>`;
+  MSSDialog.bind(el, closeCreateCard);
+  document.body.appendChild(el);
+}
+
+let _cardEntry = null;
+let _cardTheme = 'light';
+let _cardPage = 1;
+let _cardDiscoverData = null;
+let _cardDiscoverEntryKey = null;
+
+async function createShareCard(id, startPage, restrictToStartPage) {
+  _injectCreateCardOverlay();
+  const e = _resolveEntryForCard(id);
+  if (!e) { showToast('Entry not found.', 'err'); return; }
+  _cardEntry = e;
+  _cardTheme = 'light';
+  _cardPage = startPage || 1;
+  document.querySelectorAll('.card-theme-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.theme === 'light');
+  });
+  const pageRow = document.getElementById('createCardPageRow');
+  document.querySelectorAll('.card-page-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.page === String(_cardPage));
+    b.style.display = restrictToStartPage && b.dataset.page !== String(_cardPage) ? 'none' : '';
+  });
+  if (pageRow) pageRow.style.display = restrictToStartPage ? 'none' : '';
+  MSSDialog.open(document.getElementById('createCardOverlay'));
+  _resetCanvas();
+  await _drawCard();
+}
+
+function _resetCanvas() {
+  const wrap = document.getElementById('createCardPreviewWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const c = document.createElement('canvas');
+  c.id = 'createCardCanvas';
+  wrap.appendChild(c);
+}
+
+function closeCreateCard() {
+  MSSDialog.close(document.getElementById('createCardOverlay'));
+  _cardEntry = null;
+}
+
+function setCardTheme(theme, btn) {
+  _cardTheme = theme;
+  document.querySelectorAll('.card-theme-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (!document.getElementById('createCardCanvas')) _resetCanvas();
+  _drawCard();
+}
+
+function setCardPage(page, btn) {
+  _cardPage = page;
+  document.querySelectorAll('.card-page-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (!document.getElementById('createCardCanvas')) _resetCanvas();
+  _drawCard();
+}
+
+let _cardRenderToken = 0;
+
+async function _drawCard() {
+  const myToken = ++_cardRenderToken;
+  try {
+    // Canvas text silently falls back to the fallback font if a webfont
+    // hasn't actually finished loading yet, even with the <link> tag
+    // already in the page — a stylesheet reference isn't the same as
+    // the font being ready to paint. Explicitly loading (or waiting on)
+    // all three fonts first avoids an inconsistent first render.
+    if (document.fonts && document.fonts.load) {
+      await Promise.all([
+        document.fonts.load('600 40px "Oswald"'),
+        document.fonts.load('400 40px "Bebas Neue"'),
+        document.fonts.load('500 40px "Manrope"'),
+      ]).catch(() => {});
+    }
+    if (_cardPage === 3) await _drawDiscoverCard(myToken);
+    else await _drawCardPage1(myToken);
+  } catch (err) {
+    console.error('Card render error:', err);
+  }
+}
+
+function _cardUsername() {
+  const un =
+    (typeof _pProfile   !== 'undefined' && _pProfile?.username)   ? _pProfile.username   :
+    (typeof _sProfile   !== 'undefined' && _sProfile?.username)   ? _sProfile.username   :
+    (typeof _favProfile !== 'undefined' && _favProfile?.username)  ? _favProfile.username :
+    (window._navUserProfile?.username)                              ? window._navUserProfile.username :
+    (typeof _catUser !== 'undefined' && _catUser?.email)           ? _catUser.email.split('@')[0] :
+    (typeof _detUser !== 'undefined' && _detUser?.email)           ? _detUser.email.split('@')[0] :
+    (window._navUser?.email)                                        ? window._navUser.email.split('@')[0] :
+    '';
+  return un ? '@' + un : '';
+}
+
+function _cardAvatarUrl() {
+  return (typeof _pProfile   !== 'undefined' && _pProfile?.avatar_url)   ? _pProfile.avatar_url   :
+    (typeof _sProfile   !== 'undefined' && _sProfile?.avatar_url)   ? _sProfile.avatar_url   :
+    (typeof _favProfile !== 'undefined' && _favProfile?.avatar_url) ? _favProfile.avatar_url :
+    (window._navUserProfile?.avatar_url)                            ? window._navUserProfile.avatar_url :
+    null;
+}
+
+function _cardPalette(D) {
+  return {
+    BG:      D ? '#1e2219' : '#f4efe5',
+    BG_POST: D ? '#2a2f24' : '#e6e0d4',
+    BG_DARK: D ? '#12140f' : '#232920',
+    TEXT_ON_DARK:  '#eae6de',
+    TEXT2_ON_DARK: D ? '#9aa392' : '#a8ad9f',
+    TEXT:    D ? '#eae6de' : '#18180f',
+    TEXT2:   D ? '#9a9488' : '#5a5248',
+    OLIVE:   D ? '#7a9262' : '#3e5c35',
+    OLIVEL:  D ? '#aac48c' : '#3e5c35',
+    DIVIDER: D ? 'rgba(170,196,140,0.18)' : 'rgba(62,92,53,0.14)',
+    PILL_BG: D ? 'rgba(122,146,98,0.14)' : 'rgba(62,92,53,0.08)',
+    LOW:     D ? '#e08585' : '#a33333',
+    LOW_BG:  D ? 'rgba(224,133,133,0.14)' : 'rgba(153,27,27,0.08)',
+    BOX_BORDER: D ? 'rgba(170,196,140,0.35)' : 'rgba(62,92,53,0.3)',
+  };
+}
+
+function _loadImage(src) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => res(img);
+    img.onerror = () => {
+      const img2 = new Image();
+      img2.crossOrigin = 'anonymous';
+      img2.onload  = () => res(img2);
+      img2.onerror = () => rej(new Error('Image load failed'));
+      img2.src = src + (src.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+    };
+    img.src = src;
+  });
+}
+
+function _wrap(ctx, text, maxW) {
+  const words = String(text).split(' ');
+  const lines = []; let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function _truncate(ctx, text, maxW) {
+  let str = String(text);
+  if (ctx.measureText(str).width <= maxW) return str;
+  while (str.length > 1 && ctx.measureText(str + '…').width > maxW) {
+    str = str.slice(0, -1);
+  }
+  return str + '…';
+}
+
+function _rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PAGE 1 — Card
+   Plain canvas drawing — poster (with a diagonal year badge) /
+   info / score box header, a bottom-anchored favorites+lowlights
+   block, a dark percentage-breakdown bar (Core/Enjoyment/Bonus =
+   Final Score), a three-column ratings section, and a personal
+   note. All colors and fonts come from the site's own palette.
+══════════════════════════════════════════════════════════════ */
+async function _drawCardPage1(myToken) {
+  const canvas = document.getElementById('createCardCanvas');
+  if (!canvas || !_cardEntry) return;
+  const e = _cardEntry;
+
+  const wrap = document.getElementById('createCardPreviewWrap');
+  const needsFetch = e.tmdb_id && e.tmdb_type && _cardDiscoverEntryKey !== (e.tmdb_type + ':' + e.tmdb_id);
+  if (needsFetch && wrap && !document.getElementById('discoverCardLoading')) {
+    canvas.style.display = 'none';
+    const loadEl = document.createElement('div');
+    loadEl.id = 'discoverCardLoading';
+    loadEl.style.cssText = 'padding:3rem 1rem;text-align:center;color:var(--text-3);font-size:13px;';
+    loadEl.textContent = 'Fetching details from TMDB…';
+    wrap.appendChild(loadEl);
+  }
+  const discoverData = await _fetchDiscoverData(e);
+  const loadEl = document.getElementById('discoverCardLoading');
+  if (loadEl) loadEl.remove();
+  canvas.style.display = '';
+  if (myToken !== _cardRenderToken || _cardPage !== 1 || _cardEntry !== e) return;
+
+  const promptEl = document.getElementById('discoverLinkPrompt');
+  if (promptEl) promptEl.style.display = discoverData ? 'none' : '';
+
+  const D = _cardTheme === 'dark';
+  // Site color palette (matching style.css exactly), applied to the
+  // reference layout's structure. INK-toned panels (breakdown bar,
+  // ratings background, corner badge) are the opposite brightness of
+  // the main card background in each theme — dark panel on the light
+  // card, light panel on the dark card — so they always read as a
+  // distinct, contrasting section rather than blending into whichever
+  // background surrounds them.
+  // Real website theme values (from style.css's :root / [data-theme="light"]
+  // blocks) instead of the previous made-up approximations, so the card
+  // actually matches the site's own olive palette in both modes.
+  const ACCENT = D ? '#7EB86C' : '#1E5C26'; // --olive-light
+  const INK = D ? '#4A6741' : '#1A4520'; // --olive — solid badge/panel fill
+  // Text/accent colors for content sitting on the INK panel — INK is a
+  // solid olive fill in both themes (matching .w-ep-badge elsewhere on
+  // the site), so text on it stays white-based in both modes too,
+  // rather than inverting per theme.
+  const PANEL_ACCENT = '#ffffff';
+  const PANEL_TEXT = 'rgba(255,255,255,0.92)';
+  const PANEL_TEXT2 = 'rgba(255,255,255,0.68)';
+  const BG = D ? '#0A0A0E' : '#E2DAD0'; // --bg
+  const BG_POST = D ? '#19191F' : '#CEC5B8'; // --bg-3
+  const BG_BORDER = D ? 'rgba(74,103,65,0.44)' : 'rgba(26,69,32,0.45)'; // --border-olive
+  const MUTED = D ? '#808080' : '#6A6A6A'; // --text-3
+  const TEXT = D ? '#EDEDED' : '#1A1A1A'; // --text
+  const TEXT2 = D ? '#A8A8A8' : '#4A4A4A'; // --text-2
+  const LOW = D ? '#f87171' : '#c0392b';
+  const TRACK_BG = D ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'; // --border
+
+  const W = 1000, PAD = 28;
+
+  let posterImg = null;
+  if (e.poster_url) { try { posterImg = await _loadImage(e.poster_url); } catch { posterImg = null; } }
+  let avatarImg = null;
+  const avatarUrl = _cardAvatarUrl();
+  if (avatarUrl) { try { avatarImg = await _loadImage(avatarUrl); } catch { avatarImg = null; } }
+  let logoImg = null;
+  try { logoImg = await _loadImage('icons/logo-nav.png'); } catch { logoImg = null; }
+
+  if (myToken !== _cardRenderToken || _cardPage !== 1 || _cardEntry !== e) return;
+
+  const score = (typeof liveScore === 'function' && liveScore(e) != null)
+    ? Number(liveScore(e)).toFixed(2) : null;
+
+  const POSTER_W = 290, GAP = 28, SCORE_W = 220;
+  const INFO_X = PAD + POSTER_W + GAP;
+  const SCORE_X = W - PAD - SCORE_W;
+  const INFO_W = SCORE_X - GAP - INFO_X;
+
+  function layout(ctx, draw) {
+    const pillRow = (items, xx, yy, maxW, textColor, bgColor, borderColor) => {
+      ctx.save();
+      ctx.font = '600 12px \"Manrope\", Arial, sans-serif';
+      const pPX = 12, pPY = 5, pGap = 8, pR = 6;
+      const pillH = 12 + pPY * 2;
+      let gx = xx, rows = 1;
+      items.forEach(it => {
+        const label = it.toUpperCase();
+        const gw = ctx.measureText(label).width + pPX * 2;
+        if (gx + gw > xx + maxW && gx > xx) { gx = xx; rows++; }
+        if (draw) {
+          const ry = yy + (rows - 1) * (pillH + 8);
+          ctx.fillStyle = bgColor;
+          _rrect(ctx, gx, ry, gw, pillH, pR); ctx.fill();
+          ctx.strokeStyle = borderColor; ctx.lineWidth = 1;
+          _rrect(ctx, gx, ry, gw, pillH, pR); ctx.stroke();
+          ctx.fillStyle = textColor;
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, gx + pPX, ry + pillH / 2);
+        }
+        gx += gw + pGap;
+      });
+      ctx.restore();
+      return rows * pillH + (rows - 1) * 8;
+    };
+    const ratingRow = (label, value, xx, yy, colW) => {
+      const nameW = 150, numW = 34, gap = 12;
+      const barX = xx + nameW + gap, barW = colW - nameW - numW - gap * 2;
+      if (draw) {
+        ctx.save();
+        let nameFS = 12.5;
+        ctx.font = `400 ${nameFS}px "Manrope", Arial, sans-serif`;
+        while (ctx.measureText(label).width > nameW && nameFS > 9) {
+          nameFS -= 0.5;
+          ctx.font = `400 ${nameFS}px "Manrope", Arial, sans-serif`;
+        }
+        ctx.fillStyle = TEXT;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(label, xx, yy + 7);
+        ctx.restore();
+        ctx.fillStyle = TRACK_BG;
+        _rrect(ctx, barX, yy + 4, Math.max(barW, 10), 5, 3); ctx.fill();
+        const pct = Math.max(0, Math.min(1, Number(value) / 10));
+        ctx.fillStyle = ACCENT;
+        _rrect(ctx, barX, yy + 4, Math.max(barW * pct, 4), 5, 3); ctx.fill();
+        ctx.save();
+        ctx.font = '400 18px "Bebas Neue", Arial, sans-serif';
+        ctx.fillStyle = ACCENT;
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText(Number(value).toFixed(1), xx + colW, yy + 7);
+        ctx.restore();
+      }
+      return 14 + 14;
+    };
+
+    if (draw) { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, workCanvas.height); }
+
+    // ── Info column content, measured first so the header row's overall
+    // height (and therefore the poster/score column heights) is known ──
+    let iy = PAD;
+    const title = e.title || '';
+    const tFS = title.length > 22 ? 32 : title.length > 14 ? 38 : 42;
+    ctx.save();
+    ctx.font = `600 ${tFS}px "Oswald", Georgia, serif`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    const titleLines = _wrap(ctx, title, INFO_W).slice(0, 2);
+    if (draw) {
+      ctx.fillStyle = TEXT;
+      // Baseline-aligned per line (not 'top') so the year drawn below
+      // can share the exact same baseline as the title's last line —
+      // aligning both texts' bottoms regardless of their size difference.
+      titleLines.forEach((ln, i) => ctx.fillText(ln, INFO_X, iy + (i + 1) * (tFS + 2) - 6));
+      if (e.year) {
+        const lastLineIdx = titleLines.length - 1;
+        const lastLineW = ctx.measureText(titleLines[lastLineIdx]).width;
+        const titleBaselineY = iy + (lastLineIdx + 1) * (tFS + 2) - 6;
+        ctx.save();
+        ctx.font = `400 ${Math.round(tFS * 0.5)}px "Bebas Neue", Georgia, serif`;
+        ctx.fillStyle = TEXT2;
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(String(e.year), INFO_X + lastLineW + 10, titleBaselineY);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+    iy += titleLines.length * (tFS + 2) + 14;
+
+    const genres = (e.genres || []).slice(0, 4);
+    if (genres.length) {
+      const gh = pillRow(genres, INFO_X, iy, INFO_W, '#ffffff', INK, INK);
+      iy += gh + 14;
+    }
+
+    const desc = (e.description || '').trim();
+    let descLines = [];
+    if (desc) {
+      ctx.save();
+      ctx.font = '400 15px "Manrope", Arial, sans-serif';
+      ctx.textBaseline = 'top';
+      const dwords = desc.split(/\s+/);
+      const dshort = dwords.length > 55 ? dwords.slice(0, 55).join(' ') + '…' : desc;
+      descLines = _wrap(ctx, dshort, INFO_W).slice(0, 5);
+      if (draw) { ctx.fillStyle = TEXT; descLines.forEach((ln, i) => ctx.fillText(ln, INFO_X, iy + i * 21)); }
+      ctx.restore();
+      iy += descLines.length * 21;
+    }
+
+    // Favorites/Lowlights block — measured, then anchored to the bottom
+    // of the header row once the overall header height is known.
+    const favs = e.ratings?._favorites || {};
+    const lows = e.ratings?._lowlights || e.ratings?._favorites?._lowlights || {};
+    const favVals = [
+      favs.character ? { label: 'Favorite Character', value: favs.character } : null,
+      favs.episode   ? { label: 'Favorite Episode', value: favs.episode } : null,
+      favs.season    ? { label: 'Favorite Season', value: favs.season } : null,
+    ].filter(Boolean);
+    const lowVals = [
+      lows.character ? { label: 'Lowlight Character', value: lows.character } : null,
+      lows.episode   ? { label: 'Lowlight Episode', value: lows.episode } : null,
+      lows.season    ? { label: 'Lowlight Season', value: lows.season } : null,
+    ].filter(Boolean);
+    const hasLow = lowVals.length > 0;
+    const favRowH = hasLow ? 60 : 72;
+    const favBlockH = (favVals.length ? favRowH : 0) + (hasLow ? favRowH : 0);
+    const favBlockGap = (favVals.length || hasLow) ? 20 : 0;
+
+    const infoContentH = iy + favBlockGap + favBlockH;
+
+    // ── Poster + badge + score column minimums ──
+    const POSTER_H = POSTER_W * 1.5;
+    const SCORE_MIN_H = 168;
+    const headerH = Math.max(POSTER_H, infoContentH, SCORE_MIN_H);
+
+    // Poster column — fixed 2:3 aspect ratio, top-aligned (doesn't
+    // stretch to match the header row's full height, which was forcing
+    // aggressive cover-fit cropping whenever the info column made
+    // headerH much taller than a normal poster's proportions).
+    if (draw) {
+      ctx.save();
+      _rrect(ctx, PAD, PAD, POSTER_W, POSTER_H, 16); ctx.clip();
+      if (posterImg) {
+        const imgRatio = posterImg.width / posterImg.height;
+        const areaRatio = POSTER_W / POSTER_H;
+        let dw, dh, dx, dy;
+        if (imgRatio > areaRatio) { dh = POSTER_H; dw = POSTER_H * imgRatio; dx = PAD - (dw - POSTER_W) / 2; dy = PAD; }
+        else { dw = POSTER_W; dh = POSTER_W / imgRatio; dx = PAD; dy = PAD - (dh - POSTER_H) / 2; }
+        ctx.drawImage(posterImg, dx, dy, dw, dh);
+      } else {
+        ctx.fillStyle = BG_POST;
+        ctx.fillRect(PAD, PAD, POSTER_W, POSTER_H);
+        ctx.save();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = '500 60px "Oswald", Georgia, serif';
+        ctx.fillStyle = ACCENT;
+        ctx.fillText((e.title || '?')[0].toUpperCase(), PAD + POSTER_W / 2, PAD + POSTER_H / 2);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // Score column — height reaches down to just above the
+    // favorites/lowlights box (small gap between), text centered.
+    const SCORE_BOX_H = (favVals.length || hasLow)
+      ? Math.max(140, headerH - favBlockH - 20)
+      : 168;
+    if (draw) {
+      ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+      _rrect(ctx, SCORE_X, PAD, SCORE_W, SCORE_BOX_H, 14); ctx.stroke();
+      const cx = SCORE_X + SCORE_W / 2;
+      const midY = PAD + SCORE_BOX_H / 2;
+      ctx.save();
+      ctx.font = '700 12px "Oswald", Arial, sans-serif';
+      ctx.fillStyle = MUTED;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('OVERALL SCORE', cx, midY - 48);
+      ctx.restore();
+      ctx.save();
+      const scoreLabel = score ? `★ ${score}` : '—';
+      let scoreFS = 66;
+      ctx.font = `400 ${scoreFS}px "Bebas Neue", Georgia, serif`;
+      while (ctx.measureText(scoreLabel).width > SCORE_W - 24 && scoreFS > 40) {
+        scoreFS -= 4;
+        ctx.font = `400 ${scoreFS}px "Bebas Neue", Georgia, serif`;
+      }
+      ctx.fillStyle = ACCENT;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(scoreLabel, cx, midY);
+      ctx.restore();
+      ctx.save();
+      ctx.font = '700 11px "Oswald", Arial, sans-serif';
+      ctx.fillStyle = MUTED;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('OUT OF 10', cx, midY + 48);
+      ctx.restore();
+    }
+
+    // Favorites/Lowlights block — bottom-anchored within the header
+    // row, spanning the info column + score box only (width capped so
+    // it never runs under the poster).
+    if (favVals.length || hasLow) {
+      const blockY = PAD + headerH - favBlockH;
+      const blockX = INFO_X;
+      const fullW = W - PAD - blockX;
+      if (draw) {
+        ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+        _rrect(ctx, blockX, blockY, fullW, favBlockH, 10); ctx.stroke();
+      }
+      const drawFavRow = (items, rowY, rowH, isLow) => {
+        const colW = fullW / items.length;
+        items.forEach((it, i) => {
+          const cx = blockX + colW * i;
+          if (draw) {
+            const barColor = isLow ? LOW : ACCENT;
+            ctx.fillStyle = barColor;
+            ctx.fillRect(cx + 14, rowY + 9, 3, rowH - 18);
+            ctx.save();
+            ctx.font = `600 ${hasLow ? 8.5 : 9.5}px "Manrope", Arial, sans-serif`;
+            ctx.fillStyle = MUTED;
+            ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+            ctx.fillText(it.label.toUpperCase(), cx + 24, rowY + 9);
+            ctx.restore();
+            ctx.save();
+            const valFS = hasLow ? 11 : 12.5;
+            ctx.font = `600 ${valFS}px "Manrope", Arial, sans-serif`;
+            ctx.fillStyle = TEXT;
+            ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+            const maxW = colW - 34;
+            let vLines = _wrap(ctx, it.value, maxW).slice(0, 2);
+            if (vLines.length === 2) {
+              let lastLine = vLines[1];
+              while (ctx.measureText(lastLine + '…').width > maxW && lastLine.length > 1) {
+                lastLine = lastLine.slice(0, -1);
+              }
+              vLines[1] = lastLine.replace(/\s+$/, '') + '…';
+            }
+            vLines.forEach((ln, li) => ctx.fillText(ln, cx + 24, rowY + 22 + li * (valFS + 3)));
+            ctx.restore();
+          }
+        });
+      };
+      if (favVals.length) drawFavRow(favVals, blockY, favRowH, false);
+      if (hasLow) {
+        if (draw && favVals.length) {
+          ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(blockX, blockY + favRowH); ctx.lineTo(blockX + fullW, blockY + favRowH); ctx.stroke();
+        }
+        drawFavRow(lowVals, blockY + (favVals.length ? favRowH : 0), favRowH, true);
+      }
+    }
+
+    let y = PAD + headerH + 30;
+
+    // ── Breakdown bar removed — the ratings grid below already lists
+    // the individual category scores; the CORE/ENJOYMENT/BONUS % math
+    // display was redundant and used non-website colors. ──
+    const ratings = e.ratings || {};
+    const cat = e.cat;
+    const isAnimated = cat === 'anime' || cat === 'cartoons';
+    const { core: coreArr, bonus: bonusArr } = (typeof getRatings === 'function') ? getRatings(cat, cat === 'movies' || ratings._media_type === 'movie') : { core: [], bonus: [] };
+    const hasVal = v => v !== undefined && v !== null && v !== '';
+    const coreItems = coreArr.filter(r => r.key !== 'enjoyment')
+      .map(r => ({ label: r.label, value: ratings[r.key] }))
+      .filter(r => hasVal(r.value));
+    if (!isAnimated && hasVal(ratings.animation)) coreItems.push({ label: 'Animation Quality', value: ratings.animation });
+    const enjoyVal = hasVal(ratings.enjoyment) ? ratings.enjoyment : null;
+    const bonusItems = bonusArr.map(r => ({ label: r.label, value: ratings[r.key] })).filter(r => hasVal(r.value));
+
+    // ── Ratings — three columns (Core | Enjoyment | Bonus), its own box ──
+    if (coreItems.length || enjoyVal != null || bonusItems.length) {
+      const ratPadX = 30, colGap = 28;
+      const boxW = W - PAD * 2;
+      const cols = [];
+      if (coreItems.length) cols.push({ title: 'CORE RATINGS', pct: 70, items: coreItems });
+      if (enjoyVal != null) cols.push({ title: 'ENJOYMENT', pct: 20, items: [{ label: 'Enjoyment', value: enjoyVal }] });
+      if (bonusItems.length) cols.push({ title: 'BONUS', pct: 10, items: bonusItems });
+      const colW = (boxW - ratPadX * 2 - colGap * (cols.length - 1)) / cols.length;
+
+      let maxColH = 0;
+      cols.forEach(col => {
+        let ch = 20;
+        ch += col.items.length * 28;
+        maxColH = Math.max(maxColH, ch);
+      });
+      const secH = maxColH + 24;
+      if (draw) {
+        ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+        _rrect(ctx, PAD, y, boxW, secH, 14); ctx.stroke();
+      }
+
+      cols.forEach((col, ci) => {
+        const cx = PAD + ratPadX + ci * (colW + colGap);
+        let cy = y + 20;
+        if (draw) {
+          ctx.save();
+          ctx.font = '700 14px "Oswald", Arial, sans-serif';
+          ctx.fillStyle = TEXT;
+          ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+          ctx.fillText(col.title, cx, cy);
+          ctx.restore();
+        }
+        cy += 30;
+        col.items.forEach(it => { cy += ratingRow(it.label, it.value, cx, cy, colW); });
+      });
+      y += secH + 24;
+
+      // Small caption line under the ratings box
+      const capParts = [];
+      if (coreItems.length) capParts.push('70% CORE');
+      if (enjoyVal != null) capParts.push('20% ENJOYMENT');
+      if (bonusItems.length) capParts.push('10% BONUS');
+      if (draw) {
+        ctx.save();
+        ctx.font = '600 11px "Manrope", Arial, sans-serif';
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText('SCORE BREAKDOWN: ' + capParts.join(' + '), W / 2, y);
+        ctx.restore();
+      }
+      y += 11 + 20;
+    }
+
+    // ── Personal note ──
+    // Shows the whole note (up to the 500-word limit). Short notes keep the
+    // original single-column look; longer ones switch to two columns with
+    // slightly smaller text so the card grows gently instead of turning
+    // into a long strip. Paragraph breaks from the note are kept.
+    const note = (e.notes || '').trim();
+    if (note) {
+      const boxPadTop = 34, boxPadBottom = 26, boxPadX = 30, colGap = 34;
+      const wordCount = note.split(/\s+/).filter(Boolean).length;
+      const twoCol = wordCount > 170;
+      const FS = wordCount > 350 ? 13.5 : twoCol ? 14 : 15;
+      const LINE_H = Math.round(FS * 1.62);
+      const NOTE_FONT = `italic 400 ${FS}px "Manrope", Georgia, serif`;
+      const innerW = W - PAD * 2 - boxPadX * 2;
+      const colW = twoCol ? (innerW - colGap) / 2 : innerW;
+
+      // Wrap each paragraph; '' marks the small gap between paragraphs
+      ctx.save();
+      ctx.font = NOTE_FONT;
+      const lines = [];
+      note.split(/\n+/).map(p => p.trim()).filter(Boolean).forEach((para, i) => {
+        if (i) lines.push('');
+        lines.push(..._wrap(ctx, para.replace(/\s+/g, ' '), colW));
+      });
+      ctx.restore();
+
+      // Split into two balanced columns (never starting a column on a gap)
+      let cols = [lines];
+      if (twoCol) {
+        let cut = Math.ceil(lines.length / 2);
+        while (cut < lines.length && lines[cut] === '') cut++;
+        cols = [lines.slice(0, cut), lines.slice(cut)];
+        if (cols[1][0] === '') cols[1].shift();
+      }
+      const colH = c => c.reduce((h, ln) => h + (ln === '' ? LINE_H * 0.5 : LINE_H), 0);
+      const textH = Math.max(...cols.map(colH));
+      const boxH = boxPadTop + textH + boxPadBottom;
+      const boxY = y;
+      if (draw) {
+        ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+        _rrect(ctx, PAD, boxY, W - PAD * 2, boxH, 10); ctx.stroke();
+        ctx.fillStyle = ACCENT;
+        ctx.fillRect(PAD, boxY, 4, boxH);
+        ctx.save();
+        ctx.font = '700 12.5px "Oswald", Arial, sans-serif';
+        ctx.fillStyle = TEXT;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillText('PERSONAL NOTE', PAD + boxPadX, boxY + 10);
+        ctx.restore();
+        if (twoCol) {   // hairline between the two columns
+          ctx.save();
+          ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+          const lx = PAD + boxPadX + colW + colGap / 2;
+          ctx.beginPath(); ctx.moveTo(lx, boxY + boxPadTop); ctx.lineTo(lx, boxY + boxPadTop + textH); ctx.stroke();
+          ctx.restore();
+        }
+        ctx.save();
+        ctx.font = NOTE_FONT;
+        ctx.fillStyle = TEXT;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        cols.forEach((col, ci) => {
+          const x = PAD + boxPadX + ci * (colW + colGap);
+          let ty = boxY + boxPadTop;
+          col.forEach(ln => {
+            if (ln === '') { ty += LINE_H * 0.5; return; }
+            ctx.fillText(ln, x, ty); ty += LINE_H;
+          });
+        });
+        ctx.restore();
+      }
+      y = boxY + boxH + 24;
+    }
+
+    return y;
+  }
+
+  const FOOTER_H = 56;
+  let workCanvas = document.createElement('canvas');
+  workCanvas.width = W;
+  workCanvas.height = 2600;
+  const measureCtx = workCanvas.getContext('2d');
+  const contentBottom = layout(measureCtx, false);
+  const totalH = Math.round(contentBottom + FOOTER_H);
+
+  if (myToken !== _cardRenderToken || _cardPage !== 1 || _cardEntry !== e) return;
+
+  // Render the full card at its natural height onto an off-screen buffer
+  workCanvas = document.createElement('canvas');
+  workCanvas.width = W;
+  workCanvas.height = totalH;
+  const ctx = workCanvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  layout(ctx, true);
+
+  // ── Footer ──
+  ctx.fillStyle = BG;
+  ctx.fillRect(-1, totalH - FOOTER_H, W + 2, FOOTER_H);
+  const username = _cardUsername();
+  const footerMidY = totalH - FOOTER_H / 2;
+  if (username) {
+    const avatarR = 14;
+    const avatarCX = PAD + avatarR, avatarCY = footerMidY;
+    ctx.save();
+    if (avatarImg) {
+      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.clip();
+      const ir = avatarImg.width / avatarImg.height;
+      let dw, dh, dx, dy;
+      if (ir > 1) { dh = avatarR * 2; dw = dh * ir; dx = avatarCX - dw / 2; dy = avatarCY - avatarR; }
+      else { dw = avatarR * 2; dh = dw / ir; dx = avatarCX - avatarR; dy = avatarCY - dh / 2; }
+      ctx.drawImage(avatarImg, dx, dy, dw, dh);
+    } else {
+      // Solid olive fill + white initial — same treatment as the site's
+      // own badges, so it reads clearly in both light and dark mode
+      // instead of the previous low-contrast accent-on-accent look.
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.fill();
+      ctx.font = '600 13px \"Manrope\", Arial, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText((username.replace('@', '')[0] || '?').toUpperCase(), avatarCX, avatarCY + 1);
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.font = '600 13.5px \"Manrope\", Arial, sans-serif';
+    ctx.fillStyle = ACCENT;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(username, PAD + avatarR * 2 + 10, footerMidY);
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.font = '700 14px "Oswald", Arial, sans-serif';
+  ctx.fillStyle = ACCENT;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const msLabel = 'MyScreenScore';
+  const msW = ctx.measureText(msLabel).width;
+  ctx.fillText(msLabel, W - PAD, footerMidY);
+  if (logoImg) {
+    const logoH = 20, logoW = logoImg.width * (logoH / logoImg.height);
+    ctx.drawImage(logoImg, W - PAD - msW - 8 - logoW, footerMidY - logoH / 2, logoW, logoH);
+  }
+  ctx.restore();
+
+  // Copy the naturally-rendered content straight across at its own
+  // height — no forced paper-size padding or scaling.
+  canvas.width = W;
+  canvas.height = totalH;
+  const maxW = Math.min(340, window.innerWidth - 64);
+  canvas.style.width = maxW + 'px';
+  canvas.style.height = (maxW * totalH / W) + 'px';
+  const finalCtx = canvas.getContext('2d');
+  finalCtx.imageSmoothingEnabled = true;
+  finalCtx.imageSmoothingQuality = 'high';
+  finalCtx.drawImage(workCanvas, 0, 0);
+}
+
+async function _fetchDiscoverData(e) {
+  const key = (e.tmdb_type || '') + ':' + (e.tmdb_id || '');
+  if (_cardDiscoverEntryKey === key && _cardDiscoverData) return _cardDiscoverData;
+  if (!e.tmdb_id || !e.tmdb_type) { _cardDiscoverData = null; _cardDiscoverEntryKey = key; return null; }
+  try {
+    const extra = e.tmdb_type === 'movie' ? 'credits,release_dates' : 'credits,aggregate_credits,content_ratings';
+    const url = `${TMDB_BASE}/${e.tmdb_type}/${e.tmdb_id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=${extra}`;
+    const res = await tmdbFetch(url);
+    if (!res.ok) throw new Error('TMDB fetch failed: ' + res.status);
+    const data = await res.json();
+
+    let director = '';
+    if (e.tmdb_type === 'movie') {
+      const d = (data.credits?.crew || []).find(c => c.job === 'Director');
+      director = d ? d.name : '';
+    } else {
+      director = (data.created_by || []).map(c => c.name).join(', ');
+    }
+    const writers = [...new Set(
+      (data.credits?.crew || [])
+        .filter(c => ['Writer', 'Screenplay', 'Story'].includes(c.job))
+        .map(c => c.name)
+    )].slice(0, 3).join(', ');
+    // Character-first cast (shared with the info popup, nav.js). Animated
+    // titles get character artwork from AniList when it has the show.
+    const animated = (data.genres || []).some(g => g.id === 16) || e.cat === 'anime' || e.cat === 'cartoons';
+    const cast = (await mssFetchCast({
+      tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, title: e.title || data.title || data.name,
+      year: e.year || (data.release_date || data.first_air_date || '').slice(0, 4), animated,
+      origin_country: data.origin_country, original_language: data.original_language,
+    }).catch(() => []))
+      // The card draws `name` bold and `character` muted underneath — so the
+      // character goes on top and the actor / voice actor underneath.
+      .map(c => ({ name: c.character || c.actor, character: c.character ? c.actor : '', photo: c.photo, isCharacterImage: c.isCharacterImage }));
+    const production = (data.production_companies || []).map(c => c.name).slice(0, 3).filter(Boolean);
+    const overview = (data.overview || '').trim();
+    const releaseDate = e.tmdb_type === 'movie' ? (data.release_date || '') : (data.first_air_date || '');
+    const budget = e.tmdb_type === 'movie' && data.budget ? data.budget : null;
+
+    let certification = '';
+    if (e.tmdb_type === 'movie') {
+      const usRel = (data.release_dates?.results || []).find(r => r.iso_3166_1 === 'US');
+      const withCert = (usRel?.release_dates || []).find(rd => rd.certification);
+      certification = withCert?.certification || '';
+    } else {
+      const usCert = (data.content_ratings?.results || []).find(r => r.iso_3166_1 === 'US');
+      certification = usCert?.rating || '';
+    }
+
+    const result = { director, writers, cast, production, overview, releaseDate, budget, certification };
+    _cardDiscoverData = result;
+    _cardDiscoverEntryKey = key;
+    return result;
+  } catch (err) {
+    console.error('Discover card fetch error:', err);
+    _cardDiscoverData = null;
+    _cardDiscoverEntryKey = key;
+    return null;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Search & Link to TMDB — shown when an entry has no tmdb_id/type
+   yet, letting the person search and link one so Director/Genres/
+   Discover Card data can be fetched for it.
+══════════════════════════════════════════════════════════════ */
+let _cardLinkResults = [];
+let _cardLinkSearchTimer = null;
+
+function _injectCardLinkPicker() {
+  if (document.getElementById('cardLinkOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'cardLinkOverlay';
+  el.innerHTML = `<div id="cardLinkCard" role="dialog" aria-modal="true" aria-labelledby="cardLinkTitle">
+    <div class="rf-header">
+      <div class="rf-title" id="cardLinkTitle">Link to TMDB</div>
+      <button type="button" class="rf-close" onclick="_closeCardLinkPicker()" aria-label="Close">${icon('x', 18)}</button>
+    </div>
+    <div class="card-link-input-wrap">
+      <input class="card-link-input" id="cardLinkSearchInput" placeholder="Search movies & TV shows…" aria-label="Search TMDB" oninput="_onCardLinkSearchInput(this.value)">
+    </div>
+    <div class="rf-list" id="cardLinkResultsList"></div>
+  </div>`;
+  MSSDialog.bind(el, _closeCardLinkPicker);
+  document.body.appendChild(el);
+}
+
+function _linkCardEntryToTMDB() {
+  _injectCardLinkPicker();
+  const input = document.getElementById('cardLinkSearchInput');
+  input.value = '';
+  document.getElementById('cardLinkResultsList').innerHTML = '';
+  _cardLinkResults = [];
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  MSSDialog.open(document.getElementById('cardLinkOverlay'), { focus: isMobile ? null : input });
+}
+
+function _closeCardLinkPicker() { MSSDialog.close(document.getElementById('cardLinkOverlay')); }
+
+function _onCardLinkSearchInput(query) {
+  clearTimeout(_cardLinkSearchTimer);
+  const q = query.trim();
+  const listEl = document.getElementById('cardLinkResultsList');
+  if (!q) { listEl.innerHTML = ''; _cardLinkResults = []; return; }
+  _cardLinkSearchTimer = setTimeout(async () => {
+    const results = await _tmdbSearch(q, 8);
+    _cardLinkResults = results;
+    if (!results.length) {
+      listEl.innerHTML = `<div class="card-link-msg">No matches found.</div>`;
+      return;
+    }
+    listEl.innerHTML = results.map((r, i) => {
+      const title = r.title || r.name || 'Untitled';
+      const date = r.release_date || r.first_air_date || '';
+      const year = date ? date.slice(0, 4) : '';
+      const typeLabel = r.media_type === 'movie' ? 'Movie' : 'TV Show';
+      const posterEl = r.poster_path
+        ? `<img src="${escHTML(TMDB_FULL + r.poster_path)}" alt="" loading="lazy">`
+        : escHTML((title[0] || '?').toUpperCase());
+      return `<button type="button" class="card-link-result" onclick="_pickCardLinkMatch(${i})">
+        <span class="card-link-result-poster">${posterEl}</span>
+        <span>
+          <span class="card-link-result-title" translate="no">${escHTML(title)}</span>
+          <span class="card-link-result-meta">${typeLabel}${year ? ' · ' + escHTML(year) : ''}</span>
+        </span>
+      </button>`;
+    }).join('');
+  }, 350);
+}
+
+async function _pickCardLinkMatch(i) {
+  const r = _cardLinkResults[i];
+  const e = _cardEntry;
+  _closeCardLinkPicker();
+  if (!r || !e) return;
+  const tmdbType = r.media_type === 'movie' ? 'movie' : 'tv';
+  try {
+    const { error } = await sb.from('entries').update({ tmdb_id: r.id, tmdb_type: tmdbType }).eq('id', e.id);
+    if (error) throw error;
+    e.tmdb_id = r.id;
+    e.tmdb_type = tmdbType;
+    showToast('Linked to TMDB!');
+    await _drawCard();
+  } catch (err) {
+    showToast('Error linking to TMDB.', 'err');
+    console.error(err);
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   PAGE 3 — Discover Card
+   TMDB-sourced info card: poster + title header (matching the main
+   card's layout language), genre pills, director, cast headshots,
+   and production — all in the same outlined-box style as page 1.
+══════════════════════════════════════════════════════════════ */
+async function _drawDiscoverCard(myToken) {
+  const canvas = document.getElementById('createCardCanvas');
+  if (!canvas || !_cardEntry) return;
+  const e = _cardEntry;
+
+  const wrap = document.getElementById('createCardPreviewWrap');
+  if (wrap && !document.getElementById('discoverCardLoading')) {
+    canvas.style.display = 'none';
+    const loadEl = document.createElement('div');
+    loadEl.id = 'discoverCardLoading';
+    loadEl.style.cssText = 'padding:3rem 1rem;text-align:center;color:var(--text-3);font-size:13px;';
+    loadEl.textContent = 'Fetching details from TMDB…';
+    wrap.appendChild(loadEl);
+  }
+
+  const data = await _fetchDiscoverData(e);
+
+  const loadEl = document.getElementById('discoverCardLoading');
+  if (loadEl) loadEl.remove();
+  canvas.style.display = '';
+  if (myToken !== _cardRenderToken || _cardPage !== 3 || _cardEntry !== e) return;
+
+  const promptEl = document.getElementById('discoverLinkPrompt');
+  if (promptEl) promptEl.style.display = data ? 'none' : '';
+
+  const D = _cardTheme === 'dark';
+  const BG      = D ? '#0A0A0E' : '#E2DAD0'; // --bg
+  const CARD_BG = D ? '#0A0A0E' : '#E2DAD0'; // --bg
+  const TEXT    = D ? '#EDEDED' : '#1A1A1A'; // --text
+  const TEXT2   = D ? '#A8A8A8' : '#4A4A4A'; // --text-2
+  const MUTED   = D ? '#808080' : '#6A6A6A'; // --text-3
+  const ACCENT  = D ? '#7EB86C' : '#1E5C26'; // --olive-light
+  const INK     = D ? '#4A6741' : '#1A4520'; // --olive
+  const BORDER  = D ? 'rgba(74,103,65,0.44)' : 'rgba(26,69,32,0.45)'; // --border-olive
+  const PILL_BG = D ? 'rgba(74,103,65,0.11)' : 'rgba(26,69,32,0.1)'; // --olive-faint
+  const BG_POST = D ? '#19191F' : '#CEC5B8'; // --bg-3
+
+  const W = 1000, PAD = 40, GAP = 32;
+  const POSTER_W = 280, POSTER_H = 420;
+  const FOOTER_H = 70;
+
+  let posterImg = null;
+  if (e.poster_url) { try { posterImg = await _loadImage(e.poster_url); } catch { posterImg = null; } }
+  let avatarImg = null;
+  const avatarUrl = _cardAvatarUrl();
+  if (avatarUrl) { try { avatarImg = await _loadImage(avatarUrl); } catch { avatarImg = null; } }
+  let logoImg = null;
+  try { logoImg = await _loadImage('icons/logo-nav.png'); } catch { logoImg = null; }
+
+  // Pre-load cast headshots (best-effort — missing photos just fall back to initials)
+  let castPhotos = [];
+  if (data?.cast?.length) {
+    castPhotos = await Promise.all(data.cast.map(async c => {
+      if (!c.photo) return null;
+      try { return await _loadImage(c.photo); } catch { return null; }
+    }));
+  }
+
+  if (myToken !== _cardRenderToken || _cardPage !== 3 || _cardEntry !== e) return;
+
+  function layout(ctx, draw) {
+    const drawBox = (yy, h) => {
+      if (draw) { ctx.strokeStyle = BORDER; ctx.lineWidth = 1; _rrect(ctx, PAD, yy, W - PAD * 2, h, 14); ctx.stroke(); }
+    };
+    const sectionLabel = (label, xx, yy) => {
+      if (draw) {
+        ctx.save();
+        ctx.font = '700 12px "Oswald", Arial, sans-serif';
+        ctx.fillStyle = ACCENT;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.letterSpacing = '2px';
+        ctx.fillText(label.toUpperCase(), xx, yy);
+        ctx.letterSpacing = '0px';
+        ctx.restore();
+      }
+      return yy + 12 + 14;
+    };
+    const pillRow = (items, xx, yy, maxW) => {
+      ctx.save();
+      ctx.font = '600 12px "Manrope", Arial, sans-serif';
+      const pPX = 12, pPY = 5, pGap = 8, pR = 6;
+      const pillH = 12 + pPY * 2;
+      let gx = xx, rows = 1;
+      items.forEach(it => {
+        const label = it.toUpperCase();
+        const gw = ctx.measureText(label).width + pPX * 2;
+        if (gx + gw > xx + maxW && gx > xx) { gx = xx; rows++; }
+        if (draw) {
+          const ry = yy + (rows - 1) * (pillH + 8);
+          // Solid olive fill + white text — same treatment as the
+          // site's own genre badges (.w-ep-badge), for real contrast
+          // in both themes instead of a translucent tinted pill.
+          ctx.fillStyle = INK;
+          _rrect(ctx, gx, ry, gw, pillH, pR); ctx.fill();
+          ctx.strokeStyle = INK; ctx.lineWidth = 1;
+          _rrect(ctx, gx, ry, gw, pillH, pR); ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, gx + pPX, ry + pillH / 2);
+        }
+        gx += gw + pGap;
+      });
+      ctx.restore();
+      return rows * pillH + (rows - 1) * 8;
+    };
+
+    if (draw) { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, workCanvas.height); }
+
+    // ── Header: poster (left) + title/meta (right), like the main card ──
+    if (draw) {
+      ctx.save();
+      _rrect(ctx, PAD, PAD, POSTER_W, POSTER_H, 16); ctx.clip();
+      ctx.fillStyle = BG_POST;
+      ctx.fillRect(PAD, PAD, POSTER_W, POSTER_H);
+      if (posterImg) {
+        const imgRatio = posterImg.width / posterImg.height;
+        const areaRatio = POSTER_W / POSTER_H;
+        let dw, dh, dx, dy;
+        if (imgRatio > areaRatio) { dh = POSTER_H; dw = POSTER_H * imgRatio; dx = PAD - (dw - POSTER_W) / 2; dy = PAD; }
+        else { dw = POSTER_W; dh = POSTER_W / imgRatio; dx = PAD; dy = PAD - (dh - POSTER_H) / 2; }
+        ctx.drawImage(posterImg, dx, dy, dw, dh);
+      } else {
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = '500 64px "Oswald", Georgia, serif';
+        ctx.fillStyle = ACCENT;
+        ctx.fillText((e.title || '?')[0].toUpperCase(), PAD + POSTER_W / 2, PAD + POSTER_H / 2);
+      }
+      ctx.restore();
+      ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
+      _rrect(ctx, PAD, PAD, POSTER_W, POSTER_H, 16); ctx.stroke();
+    }
+
+    const infoX = PAD + POSTER_W + GAP;
+    const infoW = W - PAD - infoX;
+    let hy = PAD;
+
+    if (draw) {
+      ctx.save();
+      ctx.font = '700 11px "Oswald", Arial, sans-serif';
+      ctx.fillStyle = ACCENT;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.letterSpacing = '2.5px';
+      ctx.fillText('DISCOVER', infoX, hy);
+      ctx.letterSpacing = '0px';
+      ctx.restore();
+    }
+    hy += 11 + 18;
+
+    const title = e.title || '';
+    const titleFS = title.length > 26 ? 32 : title.length > 16 ? 38 : 44;
+    ctx.save();
+    ctx.font = `600 ${titleFS}px "Oswald", Georgia, serif`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    const titleLines = _wrap(ctx, title, infoW).slice(0, 3);
+    if (draw) { ctx.fillStyle = TEXT; titleLines.forEach((ln, i) => ctx.fillText(ln, infoX, hy + i * (titleFS + 4))); }
+    ctx.restore();
+    hy += titleLines.length * (titleFS + 4) + 10;
+
+    const metaBits = [];
+    if (data?.releaseDate) {
+      metaBits.push(new Date(data.releaseDate + 'T00:00:00').toLocaleDateString(MSSI18n.locale, { year: 'numeric', month: 'long', day: 'numeric' }));
+    } else if (e.year) {
+      metaBits.push(String(e.year));
+    }
+    metaBits.push(e.tmdb_type === 'tv' ? 'TV Series' : 'Movie');
+    if (data?.certification) metaBits.push(data.certification);
+    if (draw) {
+      ctx.save();
+      ctx.font = '400 15px "Manrope", Arial, sans-serif';
+      ctx.fillStyle = TEXT2;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText(_truncate(ctx, metaBits.join('  ·  '), infoW), infoX, hy);
+      ctx.restore();
+    }
+    hy += 15 + 22;
+
+    if (e.genres?.length && infoW > 0) {
+      hy += pillRow(e.genres.slice(0, 4), infoX, hy, infoW) + 12;
+    }
+
+    if (data?.budget) {
+      if (draw) {
+        ctx.save();
+        ctx.font = '700 11px "Oswald", Arial, sans-serif';
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.letterSpacing = '1.5px';
+        ctx.fillText('BUDGET', infoX, hy);
+        ctx.letterSpacing = '0px';
+        ctx.restore();
+      }
+      hy += 11 + 6;
+      if (draw) {
+        ctx.save();
+        ctx.font = '400 20px "Bebas Neue", Georgia, serif';
+        ctx.fillStyle = ACCENT;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillText(_truncate(ctx, '$' + data.budget.toLocaleString('en-US'), infoW), infoX, hy);
+        ctx.restore();
+      }
+      hy += 20 + 16;
+    }
+
+    // ── Credits — Director, Writers, and Production together ──
+    const creditRow = (label, value) => {
+      if (!value) return;
+      if (draw) {
+        ctx.save();
+        ctx.font = '700 11px "Oswald", Arial, sans-serif';
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.letterSpacing = '1.5px';
+        ctx.fillText(label, infoX, hy);
+        ctx.letterSpacing = '0px';
+        ctx.restore();
+      }
+      hy += 11 + 6;
+      ctx.save();
+      ctx.font = '500 15.5px "Manrope", Arial, sans-serif';
+      const allLines = _wrap(ctx, value, infoW);
+      const lines = allLines.slice(0, 2);
+      const truncated = allLines.length > 2;
+      if (draw) {
+        ctx.fillStyle = TEXT; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        lines.forEach((ln, i) => {
+          const isLast = i === lines.length - 1;
+          ctx.fillText(isLast && truncated ? _truncate(ctx, ln + '…', infoW) : ln, infoX, hy + i * 20);
+        });
+      }
+      ctx.restore();
+      hy += lines.length * 20 + 14;
+    };
+    creditRow(e.tmdb_type === 'tv' ? 'CREATED BY' : 'DIRECTED BY', data?.director);
+    creditRow('WRITTEN BY', data?.writers);
+    creditRow('PRODUCTION', data?.production?.join(', '));
+
+    let y = Math.max(PAD + POSTER_H, hy) + 36;
+
+    // ── Description ──
+    const description = (data?.overview || e.description || '').trim();
+    if (description) {
+      const boxPadX = 30, boxPadY = 24;
+      const maxTextW = W - PAD * 2 - boxPadX * 2;
+      ctx.save();
+      ctx.font = '400 15.5px "Manrope", Arial, sans-serif';
+      const allDescLines = _wrap(ctx, description, maxTextW);
+      const descLines = allDescLines.slice(0, 5);
+      if (allDescLines.length > 5 && descLines.length) {
+        descLines[descLines.length - 1] = _truncate(ctx, descLines[descLines.length - 1] + '…', maxTextW);
+      }
+      ctx.restore();
+      const lineH = 24;
+      const boxH = boxPadY * 2 + 14 + 10 + descLines.length * lineH;
+      drawBox(y, boxH);
+      let dy = sectionLabel('Description', PAD + boxPadX, y + boxPadY - 6) + 4;
+      ctx.save();
+      ctx.font = '400 15.5px "Manrope", Arial, sans-serif';
+      ctx.fillStyle = TEXT2;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      if (draw) descLines.forEach((ln, i) => ctx.fillText(ln, PAD + boxPadX, dy + i * lineH));
+      ctx.restore();
+      y += boxH + 24;
+    }
+
+    // ── Starring — cast headshots in a row ──
+    if (data?.cast?.length) {
+      const capH = 34;
+      const boxInnerPad = 24;
+      const avatarD = 84, castGap = 20;
+      const nCols = Math.min(data.cast.length, 6);
+      const cellW = (W - PAD * 2 - boxInnerPad * 2 - castGap * (nCols - 1)) / nCols;
+      const textW = Math.min(cellW, avatarD + 40);
+      const castRow = data.cast.slice(0, nCols);
+
+      // Pre-wrap each character name (max 2 lines) so the box can grow to
+      // fit the tallest one instead of letting long names spill out.
+      ctx.save();
+      ctx.font = '400 11.5px "Manrope", Arial, sans-serif';
+      const charLinesList = castRow.map(c => {
+        if (!c.character) return [];
+        const allLines = _wrap(ctx, c.character, textW);
+        const lines = allLines.slice(0, 2);
+        if (allLines.length > 2 && lines.length) {
+          lines[lines.length - 1] = _truncate(ctx, lines[lines.length - 1] + '…', textW);
+        }
+        return lines;
+      });
+      ctx.restore();
+      const maxCharLines = Math.max(1, ...charLinesList.map(l => l.length));
+      const charLineH = 15;
+
+      const rowH = avatarD + 14 + 16 + (maxCharLines * charLineH) + 6;
+      const boxH = capH + rowH + 40;
+      drawBox(y, boxH);
+      let cy = y + 22;
+      cy = sectionLabel('Starring', PAD + boxInnerPad, cy) + 10;
+      castRow.forEach((c, i) => {
+        const ccx = PAD + boxInnerPad + i * (cellW + castGap) + cellW / 2;
+        const img = castPhotos[i];
+        if (draw) {
+          ctx.save();
+          ctx.beginPath(); ctx.arc(ccx, cy + avatarD / 2, avatarD / 2, 0, Math.PI * 2); ctx.clip();
+          if (img) {
+            const ir = img.width / img.height;
+            let dw, dh, dx, dy;
+            if (ir > 1) { dh = avatarD; dw = avatarD * ir; dx = ccx - dw / 2; dy = cy; }
+            else { dw = avatarD; dh = avatarD / ir; dx = ccx - avatarD / 2; dy = cy + avatarD / 2 - dh / 2; }
+            ctx.drawImage(img, dx, dy, dw, dh);
+          } else {
+            ctx.fillStyle = PILL_BG; ctx.fillRect(ccx - avatarD / 2, cy, avatarD, avatarD);
+            ctx.fillStyle = ACCENT; ctx.font = '600 28px "Oswald", Georgia, serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText((c.name || '?')[0].toUpperCase(), ccx, cy + avatarD / 2);
+          }
+          ctx.restore();
+          ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(ccx, cy + avatarD / 2, avatarD / 2, 0, Math.PI * 2); ctx.stroke();
+
+          ctx.save();
+          ctx.font = '600 13px "Manrope", Arial, sans-serif';
+          ctx.fillStyle = TEXT;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+          ctx.fillText(_truncate(ctx, c.name, textW), ccx, cy + avatarD + 12);
+          ctx.restore();
+
+          const charLines = charLinesList[i];
+          if (charLines.length) {
+            ctx.save();
+            ctx.font = '400 11.5px "Manrope", Arial, sans-serif';
+            ctx.fillStyle = MUTED;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            charLines.forEach((ln, li) => ctx.fillText(ln, ccx, cy + avatarD + 30 + li * charLineH));
+            ctx.restore();
+          }
+        }
+      });
+      y += boxH + 24;
+    }
+
+    if (!data) {
+      ctx.save();
+      ctx.font = '400 15px "Manrope", Arial, sans-serif';
+      ctx.fillStyle = MUTED;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      if (draw) ctx.fillText("This title isn't linked to TMDB — showing available details only.", W / 2, y);
+      ctx.restore();
+      y += 24;
+    }
+
+    return y;
+  }
+
+  let workCanvas = document.createElement('canvas');
+  workCanvas.width = W;
+  workCanvas.height = PAD + POSTER_H + 900;
+  const measureCtx = workCanvas.getContext('2d');
+  const contentBottom = layout(measureCtx, false);
+  const totalH = Math.round(contentBottom + FOOTER_H);
+
+  if (myToken !== _cardRenderToken || _cardPage !== 3 || _cardEntry !== e) return;
+
+  workCanvas = document.createElement('canvas');
+  workCanvas.width = W;
+  workCanvas.height = totalH;
+  const ctx = workCanvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  layout(ctx, true);
+
+  // ── Footer — theme-matched, consistent with page 1 ──
+  ctx.fillStyle = CARD_BG;
+  ctx.fillRect(-1, totalH - FOOTER_H, W + 2, FOOTER_H);
+  const username = _cardUsername();
+  const footerMidY = totalH - FOOTER_H / 2;
+  if (username) {
+    const avatarR = 14;
+    const avatarCX = PAD + avatarR, avatarCY = footerMidY;
+    ctx.save();
+    if (avatarImg) {
+      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.clip();
+      const ir = avatarImg.width / avatarImg.height;
+      let dw, dh, dx, dy;
+      if (ir > 1) { dh = avatarR * 2; dw = dh * ir; dx = avatarCX - dw / 2; dy = avatarCY - avatarR; }
+      else { dw = avatarR * 2; dh = dw / ir; dx = avatarCX - avatarR; dy = avatarCY - dh / 2; }
+      ctx.drawImage(avatarImg, dx, dy, dw, dh);
+    } else {
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.fill();
+      ctx.font = '600 13px \"Manrope\", Arial, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText((username.replace('@', '')[0] || '?').toUpperCase(), avatarCX, avatarCY + 1);
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.font = '600 13.5px \"Manrope\", Arial, sans-serif';
+    ctx.fillStyle = ACCENT;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(username, PAD + avatarR * 2 + 10, footerMidY);
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.font = '700 14px "Oswald", Arial, sans-serif';
+  ctx.fillStyle = ACCENT;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const msLabel = 'MyScreenScore';
+  const msW = ctx.measureText(msLabel).width;
+  ctx.fillText(msLabel, W - PAD, footerMidY);
+  if (logoImg) {
+    const logoH = 20, logoW = logoImg.width * (logoH / logoImg.height);
+    ctx.drawImage(logoImg, W - PAD - msW - 8 - logoW, footerMidY - logoH / 2, logoW, logoH);
+  }
+  ctx.restore();
+
+  canvas.width = W;
+  canvas.height = totalH;
+  const maxW = Math.min(340, window.innerWidth - 64);
+  canvas.style.width = maxW + 'px';
+  canvas.style.height = (maxW * totalH / W) + 'px';
+  const finalCtx = canvas.getContext('2d');
+  finalCtx.imageSmoothingEnabled = true;
+  finalCtx.imageSmoothingQuality = 'high';
+  finalCtx.drawImage(workCanvas, 0, 0);
+}
+
+async function downloadCard() {
+  const canvas = document.getElementById('createCardCanvas');
+  if (!canvas) return;
+  const title = (_cardEntry?.title || 'card').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  const filename = _cardPage === 3 ? `mss_${title}_discover.png` : `mss_${title}.png`;
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const attemptSave = async () => {
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('toBlob returned null (likely a tainted canvas)');
+
+    const file = new File([blob], filename, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'MyScreenScore' });
+        return;
+      } catch(shareErr) {
+        if (shareErr && shareErr.name === 'AbortError') return;
+      }
+    }
+
+    if (isMobile) {
+      const url = URL.createObjectURL(blob);
+      const wrap = document.getElementById('createCardPreviewWrap');
+      if (wrap) {
+        wrap.innerHTML = `
+          <img src="${url}" alt="${filename}" style="width:100%;height:auto;border-radius:8px;display:block;">
+          <a href="${url}" download="${filename}" target="_blank" rel="noopener"
+             style="display:block;text-align:center;margin-top:10px;font-size:13px;color:var(--olive-light);">
+            Tap here to open the full image →
+          </a>`;
+      }
+      showToast('Long-press the image above to save it.');
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = url;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
+  };
+
+  try {
+    await attemptSave();
+  } catch(e) {
+    const _saved = _cardEntry;
+    const _savedUrl = _saved.poster_url;
+    _saved.poster_url = null;
+    await _drawCard();
+    try {
+      await attemptSave();
+    } catch(e2) {
+      showToast('Save blocked by browser. Try a different browser.', 'err');
+      console.error(e2);
+    } finally {
+      _saved.poster_url = _savedUrl;
+      await _drawCard();
+    }
+  }
+}
+
+function _resolveEntryForCard(id) {
+  if (typeof _catAll       !== 'undefined') { const e = _catAll.find(x => x.id === id);       if (e) return e; }
+  if (typeof _allCompleted !== 'undefined') { const e = _allCompleted.find(x => x.id === id); if (e) return e; }
+  if (typeof _pEntries     !== 'undefined') { const e = _pEntries.find(x => x.id === id);     if (e) return e; }
+  return null;
+}
