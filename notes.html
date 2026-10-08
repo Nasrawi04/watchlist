@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>Notes — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -61,14 +62,14 @@
 .notes-search-card-close:hover { color:var(--text); }
 .notes-search-input-wrap { position:relative; padding:16px 20px 12px; flex-shrink:0; }
 .notes-search-input {
-  width:100%; box-sizing:border-box; padding:11px 14px 11px 40px;
+  width:100%; box-sizing:border-box; padding-block:11px; padding-inline:40px 14px;
   border-radius:var(--radius-sm); border:1px solid var(--border);
   background:var(--bg-3); color:var(--text); font-family:var(--sans);
   font-size:16px; outline:none; transition:border-color .15s;
 }
 .notes-search-input:focus { border-color:var(--olive-light); }
 .notes-search-icon {
-  position:absolute; left:33px; top:50%; transform:translateY(-50%);
+  position:absolute; inset-inline-start:33px; top:50%; transform:translateY(-50%);
   color:var(--text-3); pointer-events:none;
 }
 .notes-search-results {
@@ -169,8 +170,8 @@
   .notes-search-card-header { padding:14px 16px; }
   .notes-search-card-title { font-size:18px; }
   .notes-search-input-wrap { padding:14px 16px 10px; }
-  .notes-search-input { padding:11px 14px 11px 38px; font-size:16px; }
-  .notes-search-icon { left:29px; }
+  .notes-search-input { padding-block:11px; padding-inline:38px 14px; font-size:16px; }
+  .notes-search-icon { inset-inline-start:29px; }
   .notes-search-item { padding:9px 8px; gap:10px; }
   .notes-search-item-poster { width:32px; height:46px; font-size:13px; }
   .notes-search-item-title { font-size:13px; }
@@ -181,8 +182,8 @@
   .notes-search-card-header { padding:12px 14px; }
   .notes-search-card-title { font-size:16px; }
   .notes-search-input-wrap { padding:12px 14px 8px; }
-  .notes-search-input { padding:10px 12px 10px 34px; }
-  .notes-search-icon { left:25px; width:14px; height:14px; }
+  .notes-search-input { padding-block:10px; padding-inline:34px 12px; }
+  .notes-search-icon { inset-inline-start:25px; width:14px; height:14px; }
   .notes-search-results { max-height:280px; }
   .notes-search-item { padding:8px 10px; gap:8px; }
   .notes-search-item-poster { width:28px; height:40px; font-size:12px; }
@@ -804,11 +805,11 @@ function renderSocialNotes() {
             <span>@${esc(n.username || 'user')}</span>
           </div>
         </div>
-        <div class="nc-top"><div class="nc-title">${esc(n.title)}</div>${MSSNote.scorePill(n.final_score)}</div>
+        <div class="nc-top"><div class="nc-title" translate="no">${esc(n.title)}</div>${MSSNote.scorePill(n.final_score)}</div>
         <div class="nc-tags">${MSSNote.badges(n, { date: MSSNote.date(MSSNote.watchedDate(n), true) })}</div>
         ${mssIsSpoiler(n) && n.user_id !== _notesUser?.id
-          ? mssSpoilerHTML(`<blockquote class="nc-quote">&ldquo;${esc(MSSNote.trim(n.notes))}&rdquo;</blockquote>`, { compact: true, id: n.entry_id })
-          : `<blockquote class="nc-quote">&ldquo;${esc(MSSNote.trim(n.notes))}&rdquo;</blockquote>`}
+          ? mssSpoilerHTML(`<blockquote class="nc-quote" translate="no">&ldquo;${esc(MSSNote.trim(n.notes))}&rdquo;</blockquote>`, { compact: true, id: n.entry_id })
+          : `<blockquote class="nc-quote" translate="no">&ldquo;${esc(MSSNote.trim(n.notes))}&rdquo;</blockquote>`}
         <div class="nc-foot">
           <div class="nc-reacts">
             <button type="button" class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="event.stopPropagation();reactToSocialNote(${id}, true)">
@@ -947,7 +948,7 @@ function _renderNotesSearchResults() {
     return `<div class="notes-search-item" data-i="${i}" onclick="_notesPageSearchPick(${i})">
       <div class="notes-search-item-poster">${posterEl}</div>
       <div class="notes-search-item-info">
-        <div class="notes-search-item-title">${esc(e.title)}</div>
+        <div class="notes-search-item-title" translate="no">${esc(e.title)}</div>
         <div class="notes-search-item-meta">${CAT_META[e.cat]?.label || ''}${e.year ? ' · ' + e.year : ''}</div>
       </div>
       ${hasNote ? `<span class="notes-search-item-has-note">Has Note</span>` : ''}
