@@ -99,7 +99,7 @@
    Providers aren't links (TMDB / JustWatch give no deep links), so the tiles
    in the popup are plain text + logo: no hover, no pointer. ── */
 button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); background:none; cursor:pointer; }
-.td-wtw-btn:focus-visible, .wtw-country:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.td-wtw-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .td-wtw-logos { display:inline-flex; }
 .td-wtw-logos img { width:20px; height:20px; border-radius:5px; object-fit:cover; box-shadow:0 0 0 1.5px rgba(0,0,0,.45); }
 .td-wtw-logos img + img { margin-inline-start:-6px; }
@@ -110,33 +110,82 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
 }
 #wtwOverlay.open { opacity:1; pointer-events:auto; }
 #wtwCard {
-  background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
-  border-radius:var(--radius-lg); width:100%; max-width:520px; max-height:88dvh;
-  display:flex; flex-direction:column; overflow:hidden;
+  position:relative; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
+  border-radius:var(--radius-lg); width:100%; max-width:540px; max-height:90dvh;
+  display:flex; flex-direction:column; overflow:hidden; animation:slideUp .25s var(--ease);
 }
-.wtw-body { flex:1; min-height:0; overflow-y:auto; overscroll-behavior-y:contain; padding:0 1.25rem 1.25rem; }
-.wtw-country-row { display:flex; align-items:center; gap:10px; margin-bottom:1rem; }
-.wtw-country-row label { font-size:11px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-3); }
-.wtw-country { flex:1; min-width:0; padding:8px 12px; font-size:13.5px; cursor:pointer; }
-.wtw-group { margin-bottom:1.1rem; }
-.wtw-group-title { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:.6rem; }
-.wtw-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:12px 10px; }
-.wtw-provider { display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; cursor:default; user-select:none; }
-.wtw-provider img, .wtw-provider-letter { width:52px; height:52px; border-radius:12px; object-fit:cover; background:var(--bg-3); border:0.5px solid var(--border); }
-.wtw-provider-letter { display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--olive-light); }
-.wtw-provider span { font-size:11.5px; line-height:1.3; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.wtw-cinema { display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:1.1rem; border-radius:var(--radius); background:var(--olive-faint); border:0.5px solid var(--border-olive); }
-.wtw-cinema svg { color:var(--olive-light); flex-shrink:0; }
-.wtw-cinema b { display:block; font-size:14px; }
-.wtw-cinema small { font-size:12px; color:var(--text-3); }
-.wtw-empty { padding:1.5rem 0; text-align:center; color:var(--text-3); font-size:13.5px; }
-.wtw-credit { font-size:11.5px; color:var(--text-3); line-height:1.5; margin-top:.25rem; }
-@media(prefers-reduced-motion:reduce) { #wtwOverlay { transition:none; } }
+/* Header: the title's own backdrop, darkened — always light text, like the title page hero */
+.wtw-head { position:relative; z-index:2; flex-shrink:0; padding:22px 22px 20px; color:#F2F2EE; background:#151913; isolation:isolate; }
+.wtw-head-bg { position:absolute; inset:0; z-index:-1; overflow:hidden; }
+.wtw-head-art { position:absolute; inset:-12px; background-size:cover; background-position:center 30%; filter:blur(6px) saturate(1.1); transform:scale(1.06); }
+.wtw-head-bg::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(14,18,12,.55) 0%, rgba(14,18,12,.82) 60%, rgba(14,18,12,.95) 100%); }
+.wtw-head-row { display:flex; align-items:flex-end; gap:16px; }
+.wtw-poster { width:64px; aspect-ratio:2/3; border-radius:8px; overflow:hidden; flex-shrink:0; background:rgba(255,255,255,.08); box-shadow:0 8px 24px rgba(0,0,0,.5); }
+.wtw-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.wtw-head-text { min-width:0; flex:1; padding-bottom:2px; }
+.wtw-kicker { font-family:var(--sans); font-size:13px; font-weight:600; color:#A9D88F; margin-bottom:4px; }
+.wtw-name { font-family:var(--serif); font-size:clamp(22px, 5vw, 28px); font-weight:500; line-height:1.15; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.wtw-year { font-size:13px; opacity:.7; margin-top:4px; }
+.wtw-close {
+  position:absolute; top:14px; inset-inline-end:14px; width:34px; height:34px; border-radius:50%; border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); color:#fff; backdrop-filter:blur(4px);
+}
+.wtw-close:hover { background:rgba(0,0,0,.7); }
+.wtw-close:focus-visible { outline:2px solid #A9D88F; outline-offset:2px; }
+/* Country: a pill on the header's bottom edge (the shared MSSPicker, pill-shaped) */
+.wtw-where { margin-top:16px; display:flex; }
+.wtw-where .mss-pick { width:auto; max-width:100%; }
+.wtw-where .mss-pick-trigger {
+  min-height:38px; border-radius:999px; padding:0 14px 0 12px; gap:8px; font-size:14px; font-weight:600;
+  background:rgba(255,255,255,.12); border:0.5px solid rgba(255,255,255,.3); color:#F2F2EE;
+}
+.wtw-where .mss-pick-trigger:hover { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.45); }
+.wtw-where .mss-pick-chevron { color:#F2F2EE; }
+.wtw-where .mss-pick.open .mss-pick-trigger { border-radius:999px; border-color:#A9D88F; }
+.wtw-where .mss-pick-menu { width:min(300px, calc(100vw - 72px)); inset-inline-end:auto; top:calc(100% + 6px); border-top:0.5px solid var(--olive-light); border-radius:var(--radius-sm); }
+.wtw-flag { font-size:17px; line-height:1; }
+.wtw-body { flex:1; min-height:0; overflow-y:auto; overscroll-behavior-y:contain; padding:20px 22px 18px; }
+#wtwCard:has(.mss-pick.open) .wtw-body { min-height:min(320px, 50dvh); }
+/* Cinema: a ticket stub — date on the stub, the run on the ticket */
+.wtw-ticket { display:flex; margin-bottom:20px; border-radius:14px; background:var(--olive); color:#fff; position:relative; overflow:hidden; }
+.wtw-ticket.past { background:var(--bg-3); color:var(--text); }
+.wtw-stub { flex-shrink:0; width:84px; padding:14px 0; text-align:center; position:relative; border-inline-end:2px dashed rgba(255,255,255,.35); }
+.wtw-ticket.past .wtw-stub { border-color:var(--border-2); }
+.wtw-stub::before, .wtw-stub::after { content:''; position:absolute; inset-inline-end:-9px; width:16px; height:16px; border-radius:50%; background:var(--bg-2); }
+.wtw-stub::before { top:-8px; } .wtw-stub::after { bottom:-8px; }
+.wtw-stub-month { font-size:12px; font-weight:700; letter-spacing:.5px; opacity:.85; }
+.wtw-stub-day { font-family:var(--bebas); font-size:44px; line-height:.95; margin:2px 0; }
+.wtw-stub-year { font-size:12px; opacity:.75; }
+.wtw-ticket-main { flex:1; min-width:0; padding:14px 16px; display:flex; flex-direction:column; justify-content:center; gap:4px; }
+.wtw-ticket-title { font-family:var(--serif); font-size:19px; font-weight:500; display:flex; align-items:center; gap:8px; }
+.wtw-ticket-sub { font-size:13px; opacity:.8; }
+.wtw-live { width:8px; height:8px; border-radius:50%; background:#B8F09A; box-shadow:0 0 0 0 rgba(184,240,154,.7); animation:wtwPulse 2s infinite; }
+@keyframes wtwPulse { 70% { box-shadow:0 0 0 8px rgba(184,240,154,0); } 100% { box-shadow:0 0 0 0 rgba(184,240,154,0); } }
+/* Services: one row per way to watch; logos are info, not buttons */
+.wtw-group + .wtw-group { margin-top:18px; }
+.wtw-group-title { font-size:13.5px; font-weight:600; color:var(--text); margin-bottom:10px; display:flex; align-items:baseline; gap:8px; }
+.wtw-group-title small { font-size:12px; font-weight:500; color:var(--text-3); }
+.wtw-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(76px, 1fr)); gap:14px 10px; }
+.wtw-provider { display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; cursor:default; user-select:none; }
+.wtw-provider img, .wtw-provider-letter { width:56px; height:56px; border-radius:14px; object-fit:cover; background:var(--bg-3); box-shadow:0 2px 8px rgba(0,0,0,.18), inset 0 0 0 0.5px rgba(255,255,255,.08); }
+.wtw-provider-letter { display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; color:var(--olive-light); }
+.wtw-provider span { font-size:12px; line-height:1.3; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.wtw-empty { display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px 8px 6px; text-align:center; }
+.wtw-empty svg { color:var(--text-3); }
+.wtw-empty b { font-size:14.5px; font-weight:600; }
+.wtw-empty span { font-size:13px; color:var(--text-3); max-width:34ch; line-height:1.5; }
+.wtw-credit { flex-shrink:0; padding:12px 22px 14px; border-top:0.5px solid var(--border); font-size:11.5px; color:var(--text-3); }
+@media(prefers-reduced-motion:reduce) { #wtwOverlay { transition:none; } #wtwCard { animation:none; } .wtw-live { animation:none; } }
 @media(max-width:640px) {
   .td-mobile-links { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:1rem; }
   .td-mobile-links .td-trailer-mobile { margin:0; }
-  .wtw-grid { grid-template-columns:repeat(auto-fill, minmax(72px, 1fr)); }
-  .wtw-provider img, .wtw-provider-letter { width:46px; height:46px; border-radius:11px; }
+  #wtwCard { max-height:92dvh; }
+  .wtw-head { padding:18px 18px 16px; }
+  .wtw-poster { width:54px; }
+  .wtw-body { padding:18px 18px 16px; }
+  .wtw-credit { padding:11px 18px 13px; }
+  .wtw-grid { grid-template-columns:repeat(auto-fill, minmax(68px, 1fr)); }
+  .wtw-provider img, .wtw-provider-letter { width:50px; height:50px; border-radius:13px; }
 }
 
 .td-hero-actions { margin-top:0.75rem; }
@@ -1309,27 +1358,30 @@ let _wtwRegion = null;
 // What this title has in one country: provider groups + cinema run
 function _tdWtw(d, region) {
   const all = d['watch/providers']?.results || {};
-  const regions = Object.keys(all);
+  const isMovie = _tdType === 'movie';
+  const rels = isMovie ? (d.release_dates?.results || []) : [];
+  const day = v => new Date(String(v).slice(0, 10) + 'T00:00:00');
+  const theatreOf = c => (rels.find(x => x.iso_3166_1 === c)?.release_dates || []).filter(x => x.type === 3 || x.type === 2).map(x => day(x.release_date)).sort((a, b) => a - b)[0];
+  // countries with something to show: streaming offers, or (movies) a cinema date
+  const regions = [...new Set([...Object.keys(all), ...rels.filter(x => theatreOf(x.iso_3166_1)).map(x => x.iso_3166_1)])];
   const r = region || _wtwRegion || _wtwGuessRegions().find(x => regions.includes(x)) || regions[0] || _wtwGuessRegions()[0];
   const p = all[r] || {};
   const groups = [['flatrate', 'Stream'], ['free', 'Free'], ['ads', 'With ads'], ['rent', 'Rent'], ['buy', 'Buy']]
     .map(([k, label]) => ({ label, items: (p[k] || []).slice().sort((a, b) => (a.display_priority ?? 99) - (b.display_priority ?? 99)) }))
     .filter(g => g.items.length);
+  // Cinema run in that country (TMDB release dates: 3 = theatrical, 2 = limited, 4 = digital)
   let cinema = null;
-  if (_tdType === 'movie') {
-    const rel = (d.release_dates?.results || []).find(x => x.iso_3166_1 === r)?.release_dates || [];
-    const day = s => new Date(String(s).slice(0, 10) + 'T00:00:00');
-    const theatre = rel.filter(x => x.type === 3 || x.type === 2).map(x => day(x.release_date)).sort((a, b) => a - b)[0];
-    const digital = rel.filter(x => x.type === 4).map(x => day(x.release_date)).sort((a, b) => a - b)[0];
+  const theatre = isMovie ? theatreOf(r) : null;
+  if (theatre) {
+    const digital = (rels.find(x => x.iso_3166_1 === r)?.release_dates || []).filter(x => x.type === 4).map(x => day(x.release_date)).sort((a, b) => a - b)[0];
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const days = theatre ? (today - theatre) / 864e5 : null;
-    if (theatre && days >= 0 && days <= 75 && !(digital && digital <= today)) cinema = { now: true };
-    else if (theatre && days < 0 && days >= -120) cinema = { now: false, date: theatre };
+    const days = (today - theatre) / 864e5;
+    cinema = { date: theatre, state: days < 0 ? 'soon' : (days <= 75 && !(digital && digital <= today)) ? 'now' : 'past' };
   }
   // logos for the pill: streaming first, then the rest, no repeats
   const seen = new Set(), logos = [];
   groups.forEach(g => g.items.forEach(i => { if (i.logo_path && !seen.has(i.provider_id) && logos.length < 3) { seen.add(i.provider_id); logos.push(i.logo_path); } }));
-  return { region: r, regions, groups, cinema, logos, any: regions.length > 0 || !!cinema };
+  return { region: r, regions, groups, cinema, logos, any: regions.length > 0 };
 }
 function _tdWtwPillHTML(d, cls) {
   const w = _tdWtw(d);
@@ -1344,37 +1396,86 @@ function _injectWtw() {
   const el = document.createElement('div');
   el.id = 'wtwOverlay';
   el.innerHTML = `<div id="wtwCard" role="dialog" aria-modal="true" aria-labelledby="wtwTitle">
-      <div class="rf-header"><div class="rf-title" id="wtwTitle">Where to watch</div>
-        <button type="button" class="rf-close" onclick="_tdCloseWtw()" aria-label="Close">${icon('x', 18)}</button></div>
-      <div class="rp-sub" id="wtwSub" translate="no"></div>
+      <div class="wtw-head" id="wtwHead"></div>
       <div class="wtw-body" id="wtwBody"></div>
+      <div class="wtw-credit">Streaming info from JustWatch, via TMDB. It changes often.</div>
     </div>`;
   MSSDialog.bind(el, _tdCloseWtw);
   document.body.appendChild(el);
 }
+const _wtwFlag = c => /^[A-Z]{2}$/.test(c) ? String.fromCodePoint(...[...c].map(ch => 0x1F1A5 + ch.charCodeAt(0))) : '';
 function _tdRenderWtw(region) {
-  const d = _tdDetail, w = _tdWtw(d, region);
-  const dateFmt = dt => dt.toLocaleDateString(MSSI18n.locale, { month: 'long', day: 'numeric', year: 'numeric' });
-  const opts = [...new Set([...w.regions, w.region])].map(c => ({ c, n: _wtwCountry(c) })).sort((a, b) => a.n.localeCompare(b.n));
-  const tile = i => `<div class="wtw-provider">${i.logo_path ? `<img src="${TMDB_IMG.replace('w185', 'w92')}${i.logo_path}" alt="" loading="lazy">` : `<b class="wtw-provider-letter">${esc((i.provider_name || '?')[0])}</b>`}<span translate="no">${esc(i.provider_name)}</span></div>`;
-  document.getElementById('wtwBody').innerHTML = `
-    <div class="wtw-country-row"><label for="wtwCountry">Country</label>
-      <select class="field-input wtw-country" id="wtwCountry" onchange="_tdSetWtwRegion(this.value)">${opts.map(o => `<option value="${o.c}"${o.c === w.region ? ' selected' : ''} translate="no">${esc(o.n)}</option>`).join('')}</select></div>
-    ${w.cinema ? `<div class="wtw-cinema">${icon('film', 22)}<div><b>${w.cinema.now ? 'In cinemas now' : mssT('In cinemas from {0}', dateFmt(w.cinema.date))}</b><small>${esc(_wtwCountry(w.region))}</small></div></div>` : ''}
-    ${w.groups.map(g => `<div class="wtw-group"><div class="wtw-group-title">${g.label}</div><div class="wtw-grid">${g.items.map(tile).join('')}</div></div>`).join('')
-      || (w.cinema ? '' : `<div class="wtw-empty">${esc(mssT('Not available to stream in {0} right now.', _wtwCountry(w.region)))}</div>`)}
-    <div class="wtw-credit">Streaming info from JustWatch, via TMDB. Availability changes often.</div>`;
+  const d = _tdDetail, w = _tdWtw(d, region), isMovie = _tdType === 'movie';
+  const loc = MSSI18n.locale;
+  const en = c => { try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(c); } catch { return c; } };
+  const title = isMovie ? d.title : d.name;
+  const year = ((isMovie ? d.release_date : d.first_air_date) || '').slice(0, 4);
+  const art = d.backdrop_path || d.poster_path;
+  document.getElementById('wtwHead').innerHTML = `
+    <div class="wtw-head-bg" aria-hidden="true">${art ? `<div class="wtw-head-art" style="background-image:url('https://image.tmdb.org/t/p/w780${art}')"></div>` : ''}</div>
+    <button type="button" class="wtw-close" onclick="_tdCloseWtw()" aria-label="Close">${icon('x', 16)}</button>
+    <div class="wtw-head-row">
+      <div class="wtw-poster">${d.poster_path ? `<img src="${TMDB_IMG}${d.poster_path}" alt="">` : ''}</div>
+      <div class="wtw-head-text">
+        <div class="wtw-kicker" id="wtwTitle">Where to watch</div>
+        <div class="wtw-name" translate="no">${esc(title)}</div>
+        ${year ? `<div class="wtw-year">${esc(year)} · ${isMovie ? 'Movie' : 'TV Show'}</div>` : ''}
+      </div>
+    </div>
+    <div class="wtw-where"><div id="wtwCountryPick"></div></div>`;
+
+  const c = w.cinema;
+  let ticket = '';
+  if (c) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const days = Math.round((c.date - today) / 864e5);
+    let rel = '';
+    try { rel = new Intl.RelativeTimeFormat(loc, { numeric: 'auto' }).format(days, 'day'); } catch {}
+    const weekday = c.date.toLocaleDateString(loc, { weekday: 'long' });
+    const head = c.state === 'now' ? `<span class="wtw-live" aria-hidden="true"></span>${esc(mssT('Now in cinemas'))}`
+      : c.state === 'soon' ? esc(mssT('Coming to cinemas'))
+      : esc(mssT('Was in cinemas'));
+    const sub = c.state === 'soon' ? `${weekday}${days <= 60 && rel ? ' · ' + rel : ''}`
+      : c.state === 'now' ? mssT('Opened {0}', rel || c.date.toLocaleDateString(loc, { month: 'long', day: 'numeric' }))
+      : c.date.toLocaleDateString(loc, { month: 'long', day: 'numeric', year: 'numeric' });
+    ticket = `<div class="wtw-ticket${c.state === 'past' ? ' past' : ''}">
+        <div class="wtw-stub" aria-hidden="true">
+          <div class="wtw-stub-month">${esc(c.date.toLocaleDateString(loc, { month: 'short' }))}</div>
+          <div class="wtw-stub-day">${c.date.getDate()}</div>
+          <div class="wtw-stub-year">${c.date.getFullYear()}</div>
+        </div>
+        <div class="wtw-ticket-main">
+          <div class="wtw-ticket-title">${head}</div>
+          <div class="wtw-ticket-sub">${esc(sub)}</div>
+          <span class="sr-only">${esc(c.date.toLocaleDateString(loc, { month: 'long', day: 'numeric', year: 'numeric' }))}</span>
+        </div>
+      </div>`;
+  }
+  const tile = i => `<div class="wtw-provider">${i.logo_path ? `<img src="${TMDB_IMG.replace('w185', 'w154')}${i.logo_path}" alt="" loading="lazy">` : `<b class="wtw-provider-letter">${esc((i.provider_name || '?')[0])}</b>`}<span translate="no">${esc(i.provider_name)}</span></div>`;
+  const NOTE = { Stream: 'with a subscription', Free: 'no account needed', 'With ads': 'free with ads', Rent: 'pay per view', Buy: 'yours to keep' };
+  const groups = w.groups.map(g => `<section class="wtw-group" aria-label="${g.label}">
+      <div class="wtw-group-title">${g.label}<small>${NOTE[g.label] || ''}</small></div>
+      <div class="wtw-grid">${g.items.map(tile).join('')}</div></section>`).join('');
+  const country = _wtwCountry(w.region);
+  document.getElementById('wtwBody').innerHTML = ticket + (groups || `<div class="wtw-empty">${icon('tv', 26)}
+      <b>${esc(c && c.state !== 'past' ? mssT('Not streaming yet') : mssT('Not streaming in {0}', country))}</b>
+      <span>${esc(c && c.state !== 'past' ? mssT('Streaming services usually add it a few weeks after the cinema run.') : mssT('Try another country, or check back later.'))}</span></div>`);
+
+  const items = [...new Set([...w.regions, w.region])].map(code => ({ value: code, label: `${_wtwFlag(code)}  ${_wtwCountry(code)}`, keys: [code, en(code), _wtwCountry(code)] }))
+    .sort((a, b) => _wtwCountry(a.value).localeCompare(_wtwCountry(b.value)));
+  MSSPicker.mount(document.getElementById('wtwCountryPick'), {
+    id: 'wtwCountry', label: 'Country', value: w.region, search: 'Type a country…', groups: [{ items }], onChange: _tdSetWtwRegion,
+  });
 }
 function _tdSetWtwRegion(c) {
   _wtwRegion = c;
   try { localStorage.setItem(_WTW_KEY, c); } catch {}
   _tdRenderWtw(c);
-  document.getElementById('wtwCountry')?.focus();
+  document.getElementById('wtwCountry')?.focus({ preventScroll: true });
 }
 function _tdOpenWtw() {
   if (!_tdDetail) return;
   _injectWtw();
-  document.getElementById('wtwSub').textContent = _tdType === 'movie' ? _tdDetail.title : _tdDetail.name;
   _tdRenderWtw();
   MSSDialog.open(document.getElementById('wtwOverlay'), { focus: window.matchMedia('(max-width:640px)').matches ? null : '#wtwCountry' });
 }
