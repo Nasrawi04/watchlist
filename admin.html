@@ -99,7 +99,10 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-flag { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 0; border-top:0.5px solid var(--border); }
 .adm-flag .adm-name { flex:1; min-width:120px; }
 .adm-flag input { width:170px; max-width:100%; padding:7px 10px; font-size:13px; }
-.adm-words { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 12px; }
+.adm-level { margin:12px 0; }
+.adm-level-h { font-size:13px; font-weight:600; margin-bottom:6px; }
+.adm-level-h small { font-weight:500; color:var(--text-3); margin-inline-start:4px; }
+.adm-words { display:flex; flex-wrap:wrap; gap:6px; }
 .adm-word { display:inline-flex; align-items:center; gap:4px; padding:4px 4px 4px 10px; border-radius:20px; background:var(--bg-3); border:0.5px solid var(--border-2); font-size:12.5px; font-weight:600; }
 .adm-word small { font-weight:500; color:var(--text-3); }
 .adm-word button { width:22px; height:22px; border-radius:50%; border:none; background:none; color:var(--text-3); cursor:pointer; display:flex; align-items:center; justify-content:center; }
@@ -307,7 +310,8 @@ async function admUser(id) {
 }
 
 /* ── Activity (moderation): word filter + latest comments & replies ── */
-let _admShowWords = false, _admWordKind = 'word', _admWords = [];
+let _admShowWords = false, _admWordKind = 'word', _admWordLevel = 'severe', _admWords = [];
+const ADM_LEVELS = [['severe', 'Severe', 'starred out fully'], ['mild', 'Mild', 'softened, like f*ck'], ['username', 'Usernames only', 'names nobody can pick']];
 const _admMask = w => _admShowWords ? w : w[0] + '•'.repeat(Math.max(1, w.length - 1));
 async function admActivity() {
   const panel = document.getElementById('admPanel');
@@ -342,14 +346,17 @@ function _admFilterHTML(sc) {
     <div class="adm-filter-row"><span class="adm-filter-txt">${posts ? `<b>${posts}</b> saved ${posts === 1 ? 'post still has' : 'posts still have'} a blocked word (names, bios, notes, replies, lists).` : 'No saved posts have a blocked word.'}</span>
       ${posts ? `<button type="button" class="adm-btn on" onclick="admCleanUp()">Star them out now</button>` : ''}</div>
     <div class="adm-filter-row" style="display:block">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span class="adm-filter-txt">New posts are starred out as they’re saved. Usernames with these words can’t be picked.</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span class="adm-filter-txt">Usernames can’t use any of these. In posts, severe words are starred out and mild ones softened as they’re saved.</span>
         <button type="button" class="adm-btn" aria-pressed="${_admShowWords}" onclick="_admShowWords=!_admShowWords;_admPaintWords()">${_admShowWords ? 'Hide words' : 'Show words'}</button></div>
-      <div class="adm-words" id="admWords"></div>
+      <div id="admWords"></div>
       <form class="adm-addword" onsubmit="event.preventDefault();admAddWord()">
         <input class="field-input" id="admNewWord" placeholder="Add a word or phrase…" aria-label="Word or phrase to block" maxlength="40" autocomplete="off" spellcheck="false">
-        <div class="pn-toggle" role="radiogroup" aria-label="How it matches">
-          <button type="button" role="radio" class="pn-toggle-btn${_admWordKind === 'word' ? ' active' : ''}" aria-checked="${_admWordKind === 'word'}" onclick="_admSetKind('word')">Whole word</button>
-          <button type="button" role="radio" class="pn-toggle-btn${_admWordKind === 'prefix' ? ' active' : ''}" aria-checked="${_admWordKind === 'prefix'}" onclick="_admSetKind('prefix')">Starts with</button>
+        <div class="pn-toggle" role="radiogroup" aria-label="How strict" data-set="level">
+          ${ADM_LEVELS.map(([k, l]) => `<button type="button" role="radio" class="pn-toggle-btn${_admWordLevel === k ? ' active' : ''}" aria-checked="${_admWordLevel === k}" data-v="${k}" onclick="_admSetOpt('level','${k}')">${l}</button>`).join('')}
+        </div>
+        <div class="pn-toggle" role="radiogroup" aria-label="How it matches" data-set="kind">
+          <button type="button" role="radio" class="pn-toggle-btn${_admWordKind === 'word' ? ' active' : ''}" aria-checked="${_admWordKind === 'word'}" data-v="word" onclick="_admSetOpt('kind','word')">Whole word</button>
+          <button type="button" role="radio" class="pn-toggle-btn${_admWordKind === 'prefix' ? ' active' : ''}" aria-checked="${_admWordKind === 'prefix'}" data-v="prefix" onclick="_admSetOpt('kind','prefix')">Starts with</button>
         </div>
         <button type="submit" class="adm-btn on">Add</button>
       </form>
@@ -359,18 +366,22 @@ function _admFilterHTML(sc) {
 function _admPaintWords() {
   const box = document.getElementById('admWords');
   if (!box) return;
-  box.innerHTML = _admWords.map(w => `<span class="adm-word" translate="no">${esc(_admMask(w.word))}${w.kind === 'prefix' ? '<small>…</small>' : ''}<button type="button" onclick="admRemoveWord(${attrJSON(w.word)})" aria-label="Unblock ${esc(_admMask(w.word))}">${icon('x', 12)}</button></span>`).join('');
-  const t = box.parentElement.querySelector('[aria-pressed]');
+  const chip = w => `<span class="adm-word" translate="no">${esc(_admMask(w.word))}${w.kind === 'prefix' ? '<small>…</small>' : ''}<button type="button" onclick="admRemoveWord(${attrJSON(w.word)})" aria-label="Unblock ${esc(_admMask(w.word))}">${icon('x', 12)}</button></span>`;
+  box.innerHTML = ADM_LEVELS.map(([k, l, note]) => {
+    const ws = _admWords.filter(w => (w.level || 'severe') === k);
+    return ws.length ? `<div class="adm-level"><div class="adm-level-h">${l} <small>${ws.length} · ${note}</small></div><div class="adm-words">${ws.map(chip).join('')}</div></div>` : '';
+  }).join('');
+  const t = document.querySelector('.adm-filter [aria-pressed]');
   if (t) { t.setAttribute('aria-pressed', _admShowWords); t.textContent = _admShowWords ? 'Hide words' : 'Show words'; }
 }
-function _admSetKind(k) {
-  _admWordKind = k;
-  document.querySelectorAll('.adm-addword .pn-toggle-btn').forEach((b, i) => { const on = (i === 0) === (k === 'word'); b.classList.toggle('active', on); b.setAttribute('aria-checked', on); });
+function _admSetOpt(set, v) {
+  if (set === 'kind') _admWordKind = v; else _admWordLevel = v;
+  document.querySelectorAll(`.adm-addword [data-set="${set}"] .pn-toggle-btn`).forEach(b => { const on = b.dataset.v === v; b.classList.toggle('active', on); b.setAttribute('aria-checked', on); });
 }
 async function admAddWord() {
   const input = document.getElementById('admNewWord'), w = input.value.trim().toLowerCase();
   if (w.length < 2) { showToast('Words need at least 2 letters.', 'err'); return; }
-  const { error } = await sb.rpc('admin_add_word', { p_word: w, p_kind: _admWordKind });
+  const { error } = await sb.rpc('admin_add_word', { p_word: w, p_kind: _admWordKind, p_level: _admWordLevel });
   if (error) { console.error(error); showToast('Couldn’t add that word. Try again.', 'err'); return; }
   showToast('Word blocked.');
   admActivity();
