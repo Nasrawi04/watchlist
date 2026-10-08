@@ -638,7 +638,8 @@ async function _avatarCropConfirm() {
     mssUnlockScroll('avatarCrop');
 
     showToast('Checking photo…');
-    if (!(await MSSImageCheck.allowed(blob, 'profile photo'))) return;
+    const verdict = await MSSImageCheck.allowed(blob, 'profile photo');
+    if (!verdict) return;
     const previewUrl = URL.createObjectURL(blob);
     document.getElementById('settingsAvatar').innerHTML = `<img src="${previewUrl}" alt="">`;
     showToast('Uploading photo…');
@@ -650,6 +651,7 @@ async function _avatarCropConfirm() {
       const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
       const bustedUrl = publicUrl + '?t=' + Date.now();
       await updateProfile(_sUser.id, { avatar_url: bustedUrl });
+      MSSImageCheck.review(verdict, 'avatar', bustedUrl);
       if (_sProfile) _sProfile.avatar_url = bustedUrl;
       ['navUserInitial','navUserInitialMobile'].forEach(id => {
         const el = document.getElementById(id);
