@@ -2379,7 +2379,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 /* ── Completed entry comment blocks ── */
 .cc-block { position:relative; margin-bottom:10px; }
 .cc-strip {
-  display:inline-flex; align-items:center; gap:5px; align-self:flex-start;
+  display:flex; align-items:center; gap:5px; width:100%; box-sizing:border-box;   /* full card width = big tap target */
   padding:5px 16px; cursor:pointer;
   border:none !important; background:transparent !important;
   outline:none; box-shadow:none !important;
