@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
 <title>Friends — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -94,7 +95,7 @@
 .fr-tab svg { width:15px; height:15px; opacity:.85; }
 .fr-tab:hover { color:var(--text); }
 .fr-tab.active { color:var(--text); }
-.fr-tab.active::after { content:''; position:absolute; left:10px; right:10px; bottom:-0.5px; height:2.5px; border-radius:2px; background:var(--olive-light); }
+.fr-tab.active::after { content:''; position:absolute; inset-inline-start:10px; inset-inline-end:10px; bottom:-0.5px; height:2.5px; border-radius:2px; background:var(--olive-light); }
 .fr-tab-count { font-family:var(--bebas); font-size:14px; font-weight:400; color:var(--text-3); letter-spacing:.3px; }
 .fr-tab-dot { min-width:18px; height:18px; padding:0 5px; box-sizing:border-box; border-radius:999px; background:#c0392b; color:#fff; font-size:10px; font-weight:700; line-height:18px; text-align:center; }
 /* Phones: five equal tabs, icon over label, all visible without scrolling */
@@ -103,8 +104,8 @@
   .fr-tab { flex-direction:column; gap:4px; padding:10px 2px 12px; font-size:11px; }
   .fr-tab svg { width:17px; height:17px; }
   .fr-tab-count { display:none; }
-  .fr-tab-dot { position:absolute; top:5px; left:calc(50% + 6px); min-width:16px; height:16px; line-height:16px; font-size:9px; }
-  .fr-tab.active::after { left:18%; right:18%; }
+  .fr-tab-dot { position:absolute; top:5px; inset-inline-start:calc(50% + 6px); min-width:16px; height:16px; line-height:16px; font-size:9px; }
+  .fr-tab.active::after { inset-inline-start:18%; inset-inline-end:18%; }
 }
 
 /* Toolbar */
@@ -140,7 +141,7 @@
 .fr-req-title { display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:13.5px; color:var(--text); }
 .fr-req-title svg { width:14px; height:14px; color:var(--olive-light); }
 .fr-req-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:0.5px solid var(--border); }
-.fr-req-who { display:flex; align-items:center; gap:12px; min-width:0; background:none; border:none; padding:0; cursor:pointer; text-align:left; color:var(--text); }
+.fr-req-who { display:flex; align-items:center; gap:12px; min-width:0; background:none; border:none; padding:0; cursor:pointer; text-align:start; color:var(--text); }
 .fr-req-who span { display:flex; flex-direction:column; min-width:0; }
 .fr-req-who b { font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .fr-req-who small { font-size:12px; color:var(--text-3); }
@@ -170,10 +171,10 @@
 .fm-user { font-size:12.5px; color:var(--text-3); margin-top:2px; }
 .fm-stats { display:grid; grid-template-columns:repeat(3, 1fr); width:100%; margin:14px 0 12px; padding:10px 0; border-top:0.5px solid var(--border); border-bottom:0.5px solid var(--border); }
 .fm-stats div { display:flex; flex-direction:column; align-items:center; gap:2px; }
-.fm-stats div + div { border-left:0.5px solid var(--border); }
+.fm-stats div + div { border-inline-start:0.5px solid var(--border); }
 .fm-stats b { font-family:var(--bebas); font-weight:400; font-size:22px; color:var(--olive-light); line-height:1; }
 .fm-stats span { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); font-weight:600; }
-.fm-now { display:flex; align-items:center; gap:10px; width:100%; padding:8px; border-radius:var(--radius-sm); background:var(--bg-3); border:none; cursor:pointer; text-align:left; color:var(--text); margin-bottom:12px; transition:background .15s; }
+.fm-now { display:flex; align-items:center; gap:10px; width:100%; padding:8px; border-radius:var(--radius-sm); background:var(--bg-3); border:none; cursor:pointer; text-align:start; color:var(--text); margin-bottom:12px; transition:background .15s; }
 .fm-now:hover { background:var(--olive-faint); }
 .fm-now-poster { width:30px; height:45px; border-radius:4px; flex-shrink:0; }
 .fm-now span { display:flex; flex-direction:column; min-width:0; font-size:13px; font-weight:600; }
@@ -196,7 +197,7 @@
 .fa-item { display:flex; align-items:center; gap:14px; padding:12px 14px; cursor:pointer; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); transition:border-color .15s, transform .15s; }
 .fa-item:hover { border-color:var(--border-olive); transform:translateX(2px); }
 .fa-who { position:relative; flex-shrink:0; align-self:flex-start; }
-.fa-ic { position:absolute; right:-3px; bottom:-3px; width:19px; height:19px; border-radius:50%; border:2px solid var(--card); display:flex; align-items:center; justify-content:center; color:#fff; }
+.fa-ic { position:absolute; inset-inline-end:-3px; bottom:-3px; width:19px; height:19px; border-radius:50%; border:2px solid var(--card); display:flex; align-items:center; justify-content:center; color:#fff; }
 .fa-ic svg { width:9px; height:9px; }
 .fa-body { flex:1; min-width:0; }
 .fa-text { font-size:13px; color:var(--text-3); }
@@ -205,7 +206,7 @@
 .fa-title span, .cp-hero-title span { font-family:var(--bebas); font-weight:400; color:var(--text-3); font-size:.85em; letter-spacing:.3px; }
 .fa-meta { display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:11.5px; color:var(--text-3); }
 .fa-meta .type-label { font-size:10.5px; padding:2px 7px; }
-.fa-note { margin-top:8px; padding-left:10px; border-left:2px solid var(--border-olive); font-size:13px; font-style:italic; color:var(--text-2); line-height:1.55; }
+.fa-note { margin-top:8px; padding-inline-start:10px; border-inline-start:2px solid var(--border-olive); font-size:13px; font-style:italic; color:var(--text-2); line-height:1.55; }
 .fa-score { font-family:var(--bebas); font-size:22px; color:var(--olive-light); flex-shrink:0; letter-spacing:.3px; }
 .fa-poster { width:54px; height:81px; border-radius:7px; flex-shrink:0; box-shadow:0 3px 10px rgba(0,0,0,.14); }
 @media(max-width:560px) { .fa-item { gap:11px; padding:11px 12px; } .fa-poster { width:44px; height:66px; } .fa-title { font-size:15.5px; } .fa-score { font-size:18px; } }
@@ -216,11 +217,11 @@
 @media(max-width:560px) { .fn-grid { grid-template-columns:1fr; } }
 .fn-card { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0; }
 .fn-by { display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--text-2); }
-.fn-text { margin:0; padding:2px 0 2px 14px; border-left:3px solid var(--olive-light); font-size:14px; line-height:1.7; color:var(--text); font-style:italic; white-space:pre-line; overflow-wrap:anywhere; }
+.fn-text { margin:0; padding-block:2px; padding-inline:14px 0; border-inline-start:3px solid var(--olive-light); font-size:14px; line-height:1.7; color:var(--text); font-style:italic; white-space:pre-line; overflow-wrap:anywhere; }
 .fn-text.clamp { display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
 
 /* v621: pin icon on the cover */
-.fm-pin { position:absolute; top:10px; right:10px; z-index:2; width:34px; height:34px; border-radius:50%; cursor:pointer;
+.fm-pin { position:absolute; top:10px; inset-inline-end:10px; z-index:2; width:34px; height:34px; border-radius:50%; cursor:pointer;
   display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.35);
   background:rgba(0,0,0,.45); color:#fff; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); opacity:0; transition:opacity .15s, background .15s; }
 .fm-pin svg { width:15px; height:15px; }
@@ -272,7 +273,7 @@
 .cp-person.on .fr-av { outline-color:var(--olive-light); }
 .cp-person.on { color:var(--text); }
 .cp-person span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.cp-person i { position:absolute; top:34px; right:6px; width:20px; height:20px; border-radius:50%; background:var(--olive-light); color:#fff; border:2px solid var(--card); display:flex; align-items:center; justify-content:center; }
+.cp-person i { position:absolute; top:34px; inset-inline-end:6px; width:20px; height:20px; border-radius:50%; background:var(--olive-light); color:#fff; border:2px solid var(--card); display:flex; align-items:center; justify-content:center; }
 .cp-person i svg { width:10px; height:10px; }
 .cp-matches { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:var(--fr-gap); margin-bottom:1.25rem; }
 @media(max-width:560px) { .cp-matches { grid-template-columns:1fr; } }
@@ -287,7 +288,7 @@
 .cp-match-stats { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; color:var(--text-3); }
 .cp-match-stats b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); }
 .cp-match-line { font-size:12.5px; color:var(--text-2); line-height:1.45; }
-.cp-match-line svg { width:12px; height:12px; color:var(--olive-light); vertical-align:-1px; margin-right:5px; }
+.cp-match-line svg { width:12px; height:12px; color:var(--olive-light); vertical-align:-1px; margin-inline-end:5px; }
 .cp-match-line b { color:var(--text); }
 .cp-search { display:flex; align-items:stretch; border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-3); margin-bottom:12px; }
 .cp-search:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
@@ -303,7 +304,7 @@
 .cp-row .cp-cell { min-width:0; padding:8px 6px; }
 .cp-row .cp-cell b { font-size:18px; white-space:nowrap; }
 .cp-hero-line { margin-top:12px; font-size:12.5px; color:rgba(255,255,255,.82); }
-.cp-hero-line svg { width:12px; height:12px; vertical-align:-1px; margin-right:4px; }
+.cp-hero-line svg { width:12px; height:12px; vertical-align:-1px; margin-inline-end:4px; }
 .cp-hero-line b { color:#fff; }
 .cp-table .cp-total td { font-weight:400; color:var(--olive-light); border-top:1px solid var(--border-olive); }
 .cp-table .cp-total td:first-child { font-weight:700; color:var(--text); }
@@ -318,7 +319,7 @@
 @media(max-width:760px) {
   .cp-row.fv-rank-row { flex-wrap:wrap; }
   .cp-row .cp-cells { width:100%; grid-template-columns:repeat(var(--cp-n, 2), minmax(0, 1fr)); }
-  .cp-hero { flex-direction:column; align-items:flex-start; text-align:left; }
+  .cp-hero { flex-direction:column; align-items:flex-start; text-align:start; }
   .cp-hero-stats { gap:14px 20px; }
   .cp-hero-stats b { font-size:22px; }
 }
@@ -351,7 +352,7 @@
 .cp-table { width:100%; border-collapse:collapse; font-size:13px; }
 .cp-table th, .cp-table td { padding:11px 16px; text-align:center; border-bottom:0.5px solid var(--border); white-space:nowrap; }
 .cp-table th { font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-3); font-weight:700; }
-.cp-table th:first-child, .cp-table td:first-child { text-align:left; position:sticky; left:0; background:var(--card); color:var(--text-2); font-family:var(--sans); font-size:13px; }
+.cp-table th:first-child, .cp-table td:first-child { text-align:start; position:sticky; inset-inline-start:0; background:var(--card); color:var(--text-2); font-family:var(--sans); font-size:13px; }
 .cp-table td { font-family:var(--bebas); font-size:18px; color:var(--text-2); }
 .cp-table td.best { color:var(--olive-light); }
 .cp-table tr:last-child td { border-bottom:none; }
@@ -363,7 +364,7 @@
   .fr-page { --fr-gap:12px; }
   .fr-hero { gap:14px; margin-bottom:1rem; }
   .fr-toolbar { flex-wrap:wrap; row-gap:8px; }
-  .fr-toolbar .sort-bar { margin-left:auto; }
+  .fr-toolbar .sort-bar { margin-inline-start:auto; }
   /* friend cards: two per row */
   .fm-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .fm-cover { height:124px; }
@@ -687,7 +688,7 @@ function _frRequestsHTML() {
       <div class="fr-req-head"><span class="fr-req-title">${icon('bell', 14)} Friend requests</span><span class="fr-tab-dot">${_frIncoming.length}</span></div>
       ${_frIncoming.map(f => { const p = f.friendProfile || {}; const un = p.username || 'unknown';
         return `<div class="fr-req-row" id="pc-${f.id}">
-          <button type="button" class="fr-req-who" onclick="viewFriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">${_frAvHTML(p, 42)}<span><b>${escHTML(p.display_name || '@' + un)}</b>${p.display_name ? `<small>@${escHTML(un)}</small>` : '<small>wants to be friends</small>'}</span></button>
+          <button type="button" class="fr-req-who" onclick="viewFriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">${_frAvHTML(p, 42)}<span><b translate="no">${escHTML(p.display_name || '@' + un)}</b>${p.display_name ? `<small>@${escHTML(un)}</small>` : '<small>wants to be friends</small>'}</span></button>
           <div class="fr-req-actions"><button class="fm-btn fm-btn-primary" onclick="doAccept(${attrJSON(f.id)})">Accept</button><button class="fm-btn" onclick="doDecline(${attrJSON(f.id)})">Decline</button></div>
         </div>`; }).join('')}
     </section>` : '';
@@ -766,8 +767,8 @@ function _frDayLabel(dt) {
   const diff = Math.round((today - d0) / 86400000);
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Yesterday';
-  if (diff > 0 && diff < 7) return d0.toLocaleDateString('en-US', { weekday: 'long' });
-  return d0.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: d0.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+  if (diff > 0 && diff < 7) return d0.toLocaleDateString(MSSI18n.locale, { weekday: 'long' });
+  return d0.toLocaleDateString(MSSI18n.locale, { month: 'long', day: 'numeric', year: d0.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 let _frActShown = 40;
 function _frRenderActivity() {
@@ -785,9 +786,9 @@ function _frRenderActivity() {
       html += `<article class="fa-item" onclick="location.href='episodes.html?show=${encodeURIComponent(x.tmdb_id)}&user=${encodeURIComponent(r.user_id)}'">
         <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
         <div class="fa-body">
-          <div class="fa-text"><b>${escHTML(_frName(x.user_id))}</b> rated ${what} of</div>
-          <div class="fa-title">${escHTML(x.title)}</div>
-          <div class="fa-meta">${_frTypeBadge(x)}<span>${x._at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+          <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> rated ${what} of</div>
+          <div class="fa-title" translate="no">${escHTML(x.title)}</div>
+          <div class="fa-meta">${_frTypeBadge(x)}<span>${x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
         </div>
         <div class="fa-score ep-score-chip ep-band-${MSSEp.band(r.score).key}">${Number(r.score).toFixed(1)}</div>
         ${_frPosterHTML(x, 'fa-poster')}
@@ -799,9 +800,9 @@ function _frRenderActivity() {
       html += `<article class="fa-item" onclick="_frOpenList(${attrJSON(x._list.id)})">
         <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
         <div class="fa-body">
-          <div class="fa-text"><b>${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
-          <div class="fa-title">${escHTML(x.title)}</div>
-          <div class="fa-meta"><span class="w-ep-badge">${n} ${n === 1 ? 'title' : 'titles'}</span><span>${x._at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+          <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
+          <div class="fa-title" translate="no">${escHTML(x.title)}</div>
+          <div class="fa-meta"><span class="w-ep-badge">${n} ${n === 1 ? 'title' : 'titles'}</span><span>${x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
         </div>
         ${(() => { const first = (x._list.items || []).map(_frListItem).find(Boolean); return first ? _frPosterHTML(first, 'fa-poster') : ''; })()}
       </article>`;
@@ -810,9 +811,9 @@ function _frRenderActivity() {
     html += `<article class="fa-item" onclick="_frOpenEvent(${attrJSON(x.id.split(':')[0])}, '${x._ev}')">
       <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
       <div class="fa-body">
-        <div class="fa-text"><b>${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
-        <div class="fa-title">${escHTML(x.title)}${x.year ? ` <span>${escHTML(String(x.year).slice(0, 4))}</span>` : ''}</div>
-        <div class="fa-meta">${_frTypeBadge(x)}<span>${x._ev === 'finished' || x._ev === 'logged' ? x._at.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+        <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
+        <div class="fa-title" translate="no">${escHTML(x.title)}${x.year ? ` <span>${escHTML(String(x.year).slice(0, 4))}</span>` : ''}</div>
+        <div class="fa-meta">${_frTypeBadge(x)}<span>${x._ev === 'finished' || x._ev === 'logged' ? x._at.toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
         ${x._ev === 'note' ? `<div class="fa-note">${mssIsSpoiler(x) ? mssSpoilerTag() : `&ldquo;${escHTML(x.notes.trim().split(/\s+/).slice(0, 30).join(' '))}${x.notes.trim().split(/\s+/).length > 30 ? '…' : ''}&rdquo;`}</div>` : ''}
       </div>
       ${(x._ev === 'finished' || x._ev === 'logged' || x._ev === 'caught_up') && sc != null ? `<div class="fa-score">★ ${sc.toFixed(2)}</div>` : ''}
@@ -975,7 +976,7 @@ async function _frRenderCompare() {
   const picker = `<section class="cp-pick">
       <div class="cp-pick-head"><div class="fr-toolbar-title">Compare with</div><div class="cp-pick-hint">${_cmpWith.length ? `${_cmpWith.length} selected · tap to change` : 'Pick one or more friends'}</div></div>
       <div class="cp-pick-row">${_frAccepted.map(f => { const on = _cmpWith.includes(f.friendId);
-        return `<button type="button" class="cp-person${on ? ' on' : ''}" aria-pressed="${on}" onclick="_cmpToggle(${attrJSON(f.friendId)})">${_frAvHTML(f.friendProfile, 52)}<span>${escHTML(_frName(f.friendId))}</span>${on ? `<i>${icon('check', 11)}</i>` : ''}</button>`; }).join('')}</div>
+        return `<button type="button" class="cp-person${on ? ' on' : ''}" aria-pressed="${on}" onclick="_cmpToggle(${attrJSON(f.friendId)})">${_frAvHTML(f.friendProfile, 52)}<span translate="no">${escHTML(_frName(f.friendId))}</span>${on ? `<i>${icon('check', 11)}</i>` : ''}</button>`; }).join('')}</div>
     </section>`;
   if (!_cmpWith.length) {
     document.getElementById('frToolbar').style.display = 'none';
@@ -991,8 +992,8 @@ async function _frRenderCompare() {
       <div class="cp-match-info">
         <div class="cp-match-name">You & ${escHTML(_frName(uid))}</div>
         <div class="cp-match-stats"><span><b>${m.shared}</b> shared</span><span><b>${m.rated}</b> rated by both</span>${m.avgDiff != null ? `<span><b>±${m.avgDiff.toFixed(1)}</b> avg difference</span>` : ''}</div>
-        ${m.loved ? `<div class="cp-match-line">${icon('heart', 12)} You both love <b>${escHTML(m.loved.m.title)}</b></div>` : ''}
-        ${m.split ? `<div class="cp-match-line">${icon('zap', 12)} Split on <b>${escHTML(m.split.m.title)}</b> — you ${m.split.a.toFixed(1)}, them ${m.split.b.toFixed(1)}</div>` : ''}
+        ${m.loved ? `<div class="cp-match-line">${icon('heart', 12)} You both love <b translate="no">${escHTML(m.loved.m.title)}</b></div>` : ''}
+        ${m.split ? `<div class="cp-match-line">${icon('zap', 12)} Split on <b translate="no">${escHTML(m.split.m.title)}</b> — you ${m.split.a.toFixed(1)}, them ${m.split.b.toFixed(1)}</div>` : ''}
       </div>
     </div>`; }).join('')}</div>`;
   // 3) Shared titles
@@ -1018,7 +1019,7 @@ function _cmpRenderList() {
     return `<div class="fv-rank-row cp-row" role="button" tabindex="0" onclick="_cmpOpen(${attrJSON(g.key)})" onkeydown="if(event.key==='Enter')this.click()" style="--cp-n:${_cmpWith.length + 1}">
       <div class="fv-rank-poster">${posterHTML(g)}</div>
       <div class="fv-rank-info">
-        <div class="fv-rank-title">${escHTML(g.title)}${g.year ? `<span class="title-year-inline">${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
+        <div class="fv-rank-title" translate="no">${escHTML(g.title)}${g.year ? `<span class="title-year-inline">${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
         <div class="fv-rank-meta">${_frTypeBadge(g)}${d != null ? `<span class="cp-delta ${Math.abs(d) < .5 ? 'same' : d > 0 ? 'up' : 'down'}">${Math.abs(d) < .5 ? 'In sync' : (d > 0 ? '+' : '') + d.toFixed(1) + ' vs you'}</span>` : ''}</div>
       </div>
       <div class="cp-cells">${cols}</div>
@@ -1080,10 +1081,10 @@ function _cmpShowTitle(picker) {
     const diff = u !== me && sc != null && myScore != null ? sc - myScore : null;
     const fav = _cmpFavTags(u, e), lists = _cmpListsFor(u, e);
     return `<div class="cp-pcard${u === me ? ' me' : ''}">
-      <div class="cp-pcard-head">${_frAvHTML(prof(u), 34)}<b>${escHTML(name(u))}</b></div>
+      <div class="cp-pcard-head">${_frAvHTML(prof(u), 34)}<b translate="no">${escHTML(name(u))}</b></div>
       <div class="cp-pcard-score">${sc != null ? sc.toFixed(2) : '—'}</div>
       <div class="cp-delta ${diff == null ? 'none' : Math.abs(diff) < .5 ? 'same' : diff > 0 ? 'up' : 'down'}">${diff == null ? (u === me ? 'Your score' : '&nbsp;') : Math.abs(diff) < .5 ? 'In sync with you' : (diff > 0 ? '+' : '') + diff.toFixed(2) + ' vs you'}</div>
-      <div class="cp-pcard-status">${escHTML(_CMP_STATUS[e.status] || e.status)}${e.completed_date ? ` · ${_frDate(e.completed_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</div>
+      <div class="cp-pcard-status">${escHTML(_CMP_STATUS[e.status] || e.status)}${e.completed_date ? ` · ${_frDate(e.completed_date).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</div>
       <div class="cp-tags">${fav.map(t => `<span class="cp-tag fav">${escHTML(t)}</span>`).join('')}${lists.map(t => `<span class="cp-tag">${icon('layers', 10)} ${escHTML(t)}</span>`).join('')}${!fav.length && !lists.length ? '<span class="cp-tag-none">Not in favorites or lists</span>' : ''}</div>
     </div>`;
   };
@@ -1093,7 +1094,7 @@ function _cmpShowTitle(picker) {
       <div class="cp-hero-bg" style="background-image:${cssURL(g.poster_url)}"></div>
       ${_frPosterHTML(g, 'cp-hero-poster')}
       <div class="cp-hero-info">
-        <div class="cp-hero-title">${escHTML(g.title)}${g.year ? ` <span>${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
+        <div class="cp-hero-title" translate="no">${escHTML(g.title)}${g.year ? ` <span>${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
         <div class="fa-meta">${_frTypeBadge(g)}</div>
         <div class="cp-hero-stats">
           <div><b>${avg != null ? '★ ' + avg.toFixed(2) : '—'}</b><span>Group avg</span></div>
@@ -1108,14 +1109,14 @@ function _cmpShowTitle(picker) {
     </div>
     <div class="cp-pcards">${people.map(card).join('')}</div>
     ${rows.length ? `<div class="fr-toolbar-title cp-sec">Ratings breakdown</div>
-    <div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Category</th>${people.map(u => `<th>${escHTML(name(u))}</th>`).join('')}</tr></thead>
+    <div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Category</th>${people.map(u => `<th translate="no">${escHTML(name(u))}</th>`).join('')}</tr></thead>
       <tbody>${rows.map(r => { const vals = people.map(u => rv(g.byUser[u], r.key)); const nums = vals.filter(v => v != null); const top = nums.length > 1 ? Math.max(...nums) : null;
         return `<tr><td>${escHTML(r.label)}</td>${vals.map(v => `<td class="${v != null && v === top ? 'best' : ''}">${v != null ? v.toFixed(1) : '—'}</td>`).join('')}</tr>`; }).join('')}
         <tr class="cp-total"><td>Final score</td>${people.map(u => { const v = _frScore(g.byUser[u]); return `<td>${v != null ? '★ ' + v.toFixed(2) : '—'}</td>`; }).join('')}</tr></tbody></table></div>` : ''}
     ${people.some(u => g.byUser[u].notes && g.byUser[u].notes.trim()) ? `<div class="fr-toolbar-title cp-sec">Notes</div>
     <div class="fn-grid">${people.filter(u => g.byUser[u].notes && g.byUser[u].notes.trim()).map(u => { const e = g.byUser[u];
-      const text = `<blockquote class="fn-text">${escHTML(e.notes.trim())}</blockquote>`;
-      return `<article class="fn-card"><div class="fn-by">${_frAvHTML(prof(u), 22)}<span>${escHTML(name(u))}</span></div>${mssIsSpoiler(e) && u !== me ? mssSpoilerHTML(text, { compact: true, id: e.id }) : text}</article>`; }).join('')}</div>` : ''}`;
+      const text = `<blockquote class="fn-text" translate="no">${escHTML(e.notes.trim())}</blockquote>`;
+      return `<article class="fn-card"><div class="fn-by">${_frAvHTML(prof(u), 22)}<span translate="no">${escHTML(name(u))}</span></div>${mssIsSpoiler(e) && u !== me ? mssSpoilerHTML(text, { compact: true, id: e.id }) : text}</article>`; }).join('')}</div>` : ''}`;
 }
 
 /* ── Start ── */
