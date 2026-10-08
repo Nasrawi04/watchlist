@@ -264,6 +264,16 @@ async function handleLogout() {
   window.location.href = 'login.html';
 }
 
+// Word filter (migration 038): false when the name has a blocked word. If the
+// check can't run it says yes — the database still enforces it on save.
+async function isUsernameAllowed(username) {
+  try {
+    const { data, error } = await sb.rpc('mss_username_allowed', { p_name: username });
+    return error ? true : data !== false;
+  } catch { return true; }
+}
+const isUsernameBlockedError = e => /USERNAME_NOT_ALLOWED/.test(e?.message || '');
+
 /* ── Toast ── */
 function showToast(msg, type = 'ok') {
   let t = document.getElementById('toast');
