@@ -381,7 +381,7 @@ const MSSEp = (() => {
     const rs = (rows || []).filter(r => r.episode_number > 0).sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
     const avg = rs.length ? rs.reduce((x, r) => x + Number(r.score), 0) / rs.length : null;
     const total = totalOf(e), b = avg != null ? band(avg) : null;
-    const poster = safeURL(e.poster_url);
+    const poster = safeURL(mssSharpPoster(e.poster_url));
     return `<button type="button" class="eg-show" onclick="MSSEp._card(${attrJSON(e.id)})" aria-label="${esc(e.title)} — episode ratings">
       <span class="eg-show-poster">${poster ? `<img src="${poster}" alt="" loading="lazy">` : ''}</span>
       <span class="eg-show-info">
@@ -395,7 +395,7 @@ const MSSEp = (() => {
   }
   function openCard(id) {
     const c = cards[id]; if (!c) return;
-    showPopup({ title: c.e.title, poster: c.e.poster_url, tmdbId: c.e.tmdb_id, status: c.e.status, rows: c.rows, total: totalOf(c.e), userId: c.o.userId, whoName: c.o.whoName });
+    showPopup({ title: c.e.title, poster: mssSharpPoster(c.e.poster_url), tmdbId: c.e.tmdb_id, status: c.e.status, rows: c.rows, total: totalOf(c.e), userId: c.o.userId, whoName: c.o.whoName });
   }
 
   /* ── After "+" ── */
@@ -444,6 +444,7 @@ const MSSEp = (() => {
   return {
     afterWatch, rate: (e, s, n, o = {}) => open(e, s, n, { ...o, rewatch: typeof isRewatching === 'function' && isRewatching(e) }),
     close, band, BANDS, TAGS, mode, setMode, isShow, seasonEpisodes, showPopup, showCardHTML, _card: openCard,
+    statusLabel: st => STATUS_LABEL[st] || st,
     _ask: answerAsk, _slide: setScore, _typed: typed, _typedDone: typedDone, _step: d => st && setScore(st.score + d), _tag: toggleTag, _note: onNote,
     _toggle: k => { if (!st) return; st[k === 'tags' ? 'showTags' : 'showNote'] = !st[k === 'tags' ? 'showTags' : 'showNote']; render(st.eps?.find(x => x.n === st.n)); },
     _go: go, _save: save, _stop: stop, _skip: skip,
