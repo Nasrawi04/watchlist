@@ -848,7 +848,7 @@ document.addEventListener('keydown', e => {
 ══════════════════════════════════════════ */
 (function() {
   const MAX_PULL  = 85;
-  let startY = 0, currentY = 0, pulling = false, triggered = false;
+  let startY = null, currentY = 0, pulling = false, triggered = false;
 
   // Loading bar at top
   const bar = document.createElement('div');
@@ -898,16 +898,18 @@ document.addEventListener('keydown', e => {
   }
 
   document.addEventListener('touchstart', e => {
+    startY = null;                          // only a touch that starts on the page itself can pull
     if (window.scrollY > 0) return;
-    if (MSSDialog.top() || e.target.closest('.hc-card, .modal-wrap, [class*="overlay"], .mobile-nav')) return;
+    if (_mssLocks.size || MSSDialog.top() || e.target.closest('.hc-card, .modal-wrap, [class*="overlay"], .mobile-nav')) return;
     startY = e.touches[0].clientY;
     pulling = false;
     triggered = false;
   }, { passive: true });
 
   document.addEventListener('touchmove', e => {
-    if (triggered) return;
-    if (window.scrollY > 0) return;
+    if (triggered || startY == null) return;
+    // A popup pins the page (scrollY reads 0 then) — its swipes are never a pull-to-refresh
+    if (_mssLocks.size || window.scrollY > 0) return;
     currentY = e.touches[0].clientY;
     const diff = currentY - startY;
     // Only claim the gesture once it's confirmed as a genuine downward
