@@ -36,6 +36,7 @@
 .eg-hero-info { flex:1; min-width:0; padding-bottom:clamp(3rem, 6vw, 4.5rem); }
 .eg-hero-eyebrow { font-size:clamp(10.5px, 1.4vw, 13px); font-weight:600; letter-spacing:2.6px; text-transform:uppercase; color:#8FD177; margin-bottom:.6rem; }
 .eg-hero-title { font-family:var(--bebas); font-weight:400; font-size:clamp(40px, 7vw, 84px); line-height:.95; letter-spacing:.5px; margin:0 0 .7rem; color:#fff; overflow-wrap:anywhere; }
+.eg-hero-title.mss-logo-title:not(.mss-logo-failed) { margin-bottom:1rem; }
 .eg-hero-sub { font-size:clamp(13px, 1.6vw, 16px); color:rgba(237,237,237,.82); display:flex; flex-wrap:wrap; gap:4px 10px; }
 .eg-hero-sub span + span::before { content:'·'; margin-inline-end:10px; opacity:.6; }
 .eg-hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:1.2rem; }
@@ -193,6 +194,7 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
   .eg-hero-poster { width:clamp(130px, 44vw, 180px); margin-bottom:0; }
   .eg-hero-info { width:100%; padding-bottom:2.6rem; }
   .eg-hero-sub, .eg-hero-actions { justify-content:center; }
+  .eg-hero-title .mss-logo { margin-inline:auto; }
   .eg-sheet { padding-top:1.4rem; margin-top:-20px; border-radius:22px 22px 0 0; }
   .eg-controls { padding:14px; gap:14px; }
   .eg-ctl { width:100%; }
@@ -353,7 +355,7 @@ const selLabel = () => {
 
 async function loadState(tmdbId, userId) {
   const X = blankState();
-  const res = await tmdbFetch(`${TMDB_BASE}/tv/${tmdbId}?api_key=${TMDB_KEY}&language=en-US`);
+  const res = await tmdbFetch(`${TMDB_BASE}/tv/${tmdbId}?api_key=${TMDB_KEY}&language=en-US&append_to_response=images&include_image_language=en,null`);
   if (!res.ok) return null;
   X.show = await res.json();
   X.seasons = (X.show.seasons || []).filter(x => x.season_number > 0 && x.episode_count > 0).map(x => x.season_number);
@@ -434,7 +436,7 @@ function draw() {
         <div class="eg-hero-poster">${poster ? `<img src="${poster}" alt="">` : ''}</div>
         <div class="eg-hero-info">
           <div class="eg-hero-eyebrow">${S.readOnly ? esc(S.whoName) + '’s episode ratings' : 'Episode ratings'}</div>
-          <h1 class="eg-hero-title" translate="no">${esc(sh.name)}</h1>
+          ${tmdbTitleHTML(sh, sh.name, 'eg-hero-title', 'h1')}
           <div class="eg-hero-sub">${years ? `<span>${esc(years)}</span>` : ''}<span>${S.seasons.length} season${S.seasons.length === 1 ? '' : 's'}</span>${mineCount ? `<span>${mineCount} rated${S.readOnly ? '' : ' by you'}</span>` : ''}</div>
           <div class="eg-hero-actions">
             <a class="eg-hero-btn" href="title.html?id=${sh.id}&type=tv">${icon('info', 15)} Title page</a>
