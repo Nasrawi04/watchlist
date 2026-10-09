@@ -247,7 +247,7 @@ const avg = arr => { const v = arr.filter(x => x != null); return v.length ? v.r
 /* ══ Home: shows you've rated (latest rating first), then the rest of your shows ══ */
 const HOME_STATUSES = ['watching', 'paused', 'ongoing', 'completed'];   // Watching · Taking a Break · To Be Continued · Watched
 const PAGE = 20;
-let _egHome = { rated: [], rest: [], by: {}, shown: { rated: PAGE, rest: PAGE } };
+let _egHome = { rated: [], rest: [], by: {}, byTmdb: {}, shown: { rated: PAGE, rest: PAGE } };
 async function renderHome() {
   const page = document.getElementById('egPage');
   const [{ data: ratings }, { data: entries }] = await Promise.all([
@@ -265,7 +265,7 @@ async function renderHome() {
   const epRows = ownRatings.filter(r => r.episode_number > 0);
   const top = epRows.length ? epRows.reduce((a, b) => (Number(b.score) > Number(a.score) ? b : a)) : null;
   const topShow = top && shows.find(e => e.id === top.entry_id);
-  _egHome = { rated, rest, by, shown: { rated: PAGE, rest: PAGE } };
+  _egHome = { rated, rest, by, byTmdb: Object.fromEntries(shows.map(e => [e.tmdb_id, e])), shown: { rated: PAGE, rest: PAGE } };
   page.innerHTML = `
     <div class="cat-page-header fade-up">
       <div>
@@ -300,11 +300,22 @@ async function renderHome() {
         // Searching covers every show — including ones not in your Watching / To Be Continued / Watched
         const res = await tmdbFetch(`${TMDB_BASE}/search/tv?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`);
         const results = res.ok ? ((await res.json()).results || []).filter(r => r.poster_path).slice(0, 16) : [];
-        box.innerHTML = results.map(r => MSSCard.poster({ href: `episodes.html?show=${r.id}`, title: r.name, year: (r.first_air_date || '').slice(0, 4), poster: TMDB_IMG + r.poster_path,
-          score: r.vote_average ? (Math.floor(r.vote_average * 10) / 10).toFixed(1) : '' })).join('') || `<div class="mss-empty">No shows match “${esc(q)}”.</div>`;
+        box.innerHTML = results.length ? `<div class="eg-shows">${results.map(searchCardHTML).join('')}</div>` : `<div class="mss-empty">No shows match “${esc(q)}”.</div>`;
       } catch { box.innerHTML = ''; }
     }, 300);
   });
+}
+// Search results: the same card as your shows (poster, title, tags, line of text) — TMDB score, and your status if it's in your library
+function searchCardHTML(r) {
+  const mine = _egHome.byTmdb[r.id], v = r.vote_average ? Math.floor(r.vote_average * 10) / 10 : null;
+  return `<a class="eg-show" href="episodes.html?show=${r.id}">
+    <span class="eg-show-poster"><img src="https://image.tmdb.org/t/p/w342${r.poster_path}" alt="" loading="lazy"></span>
+    <span class="eg-show-info">
+      <span class="eg-show-title" translate="no">${esc(r.name)}</span>
+      <span class="eg-show-tags">${mine ? `<span class="ep-status">${esc(MSSEp.statusLabel(mine.status))}</span>` : ''}${v ? `<span class="eg-show-avg ep-band-${MSSEp.band(v).key}" title="TMDB score">${v.toFixed(1)}</span>` : ''}</span>
+      <span class="eg-show-sub">${esc([(r.first_air_date || '').slice(0, 4), v ? 'TMDB' : ''].filter(Boolean).join(' · '))}</span>
+      ${r.overview ? `<span class="eg-show-desc" translate="no">${esc(r.overview)}</span>` : ''}
+    </span></a>`;
 }
 function drawHomeShows() {
   const H = _egHome, box = document.getElementById('egHomeShows');
