@@ -1489,6 +1489,27 @@ const TMDB_GENRE_EN = {
 };
 const tmdbGenreNames = genres => (genres || []).map(g => TMDB_GENRE_EN[g.id] || g.name).filter(Boolean);
 
+/* Title logos — TMDB's name artwork (images.logos), shown instead of the written
+   title where a title has one. Fetch details with append_to_response=…,images and
+   include_image_language=en,null (MSSLang.localize puts the content language first).
+   Pick: content language → English → no-text logo; best voted first.
+   The written name stays in the heading for screen readers, and shows if the image fails. */
+function tmdbLogo(d) {
+  const base = (MSSLang.code || 'en-US').split('-')[0];
+  const rank = l => l.iso_639_1 === base ? 0 : l.iso_639_1 === 'en' ? 1 : l.iso_639_1 == null ? 2 : 3;
+  const best = (d?.images?.logos || []).filter(l => l.file_path && rank(l) < 3)
+    .sort((a, b) => rank(a) - rank(b) || (b.vote_average || 0) - (a.vote_average || 0))[0];
+  if (!best) return null;
+  const svg = /\.svg$/i.test(best.file_path);
+  return { src: `https://image.tmdb.org/t/p/${svg ? 'original' : 'w500'}${best.file_path}`, ratio: best.aspect_ratio || (best.width && best.height ? best.width / best.height : 3) };
+}
+function tmdbTitleHTML(d, name, cls, tag = 'div') {
+  const logo = tmdbLogo(d);
+  if (!logo) return `<${tag} class="${cls}" translate="no">${escHTML(name)}</${tag}>`;
+  const shape = logo.ratio < 1.8 ? ' mss-logo-tall' : logo.ratio > 5 ? ' mss-logo-wide' : '';
+  return `<${tag} class="${cls} mss-logo-title${shape}" translate="no"><img class="mss-logo" src="${logo.src}" alt="" onerror="this.parentNode.classList.add('mss-logo-failed')"><span class="mss-logo-name">${escHTML(name)}</span></${tag}>`;
+}
+
 function initDiscoverSearch(inputId, opts = {}) {
   const input = document.getElementById(inputId);
   if (!input) return;
