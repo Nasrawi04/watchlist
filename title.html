@@ -59,6 +59,7 @@
   background:rgba(255,255,255,0.12); border:0.5px solid rgba(255,255,255,0.25); color:#fff;
   white-space:nowrap;
 }
+.td-title.mss-logo-title:not(.mss-logo-failed) { margin-bottom:1.1rem; }
 .td-title { font-family:var(--serif); font-size:clamp(26px, 5.5vw, 52px); font-weight:500; margin-bottom:.75rem; line-height:1.1; }
 .td-tagline { font-style:italic; opacity:.65; font-size:clamp(12.5px, 2vw, 17px); margin-bottom:1.25rem; }
 .td-meta-row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; font-size:clamp(11.5px, 1.8vw, 15px); opacity:.85; }
@@ -353,6 +354,7 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
   .td-hero-info { width:100%; }
   .td-eyebrow { justify-content:center; margin-bottom:.5rem; }
   .td-title { font-size:clamp(24px, 7vw, 32px); margin-bottom:.5rem; }
+  .td-title .mss-logo { margin-inline:auto; }
   .td-tagline { font-size:13px; margin-bottom:.85rem; }
   .td-meta-row { justify-content:center; margin-bottom:.85rem; gap:10px 14px; }
   .td-trailer-desktop { display:none; }
@@ -534,14 +536,14 @@ function renderTdError(msg) {
    these pull credits + videos on top of the base detail payload) ── */
 async function _tdFetchMovie(id) {
   try {
-    const res = await tmdbFetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,release_dates,recommendations,watch/providers`);
+    const res = await tmdbFetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,release_dates,recommendations,watch/providers,images&include_image_language=en,null`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
 }
 async function _tdFetchTV(id) {
   try {
-    const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits,recommendations,content_ratings,watch/providers`);
+    const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=credits,videos,aggregate_credits,recommendations,content_ratings,watch/providers,images&include_image_language=en,null`);
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
@@ -1018,7 +1020,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
         <div class="td-poster">${poster ? `<img src="${poster}" alt="">` : ''}</div>
         <div class="td-hero-info">
           <div class="td-eyebrow">${isMovie ? 'Movie' : 'TV Show'} ${year ? '· ' + year : ''}${certification ? `<span class="td-certification">${esc(certification)}</span>` : ''}</div>
-          <div class="td-title" translate="no">${esc(title)}</div>
+          ${tmdbTitleHTML(d, title, 'td-title')}
           ${d.tagline ? `<div class="td-tagline" translate="no">"${esc(d.tagline)}"</div>` : ''}
           <div class="td-meta-row">
             <div class="td-ratings-row">
