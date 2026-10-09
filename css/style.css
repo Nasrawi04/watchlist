@@ -5055,3 +5055,8 @@ html[data-theme="light"] .skel, html[data-theme="light"] .page-loading:not(.has-
 .mss-logo-failed .mss-logo { display:none; }
 .mss-logo-failed .mss-logo-name { position:static; width:auto; height:auto; margin:0; overflow:visible; clip:auto; white-space:normal; }
 @media(max-width:640px) { .mss-logo { max-width:min(100%, 300px); max-height:84px; } .mss-logo-tall .mss-logo { max-width:200px; max-height:120px; } .mss-logo-wide .mss-logo { max-height:60px; } }
+
+/* ── Page scroll lock (mssLockScroll, config.js): no bounce / pull-to-refresh behind a popup,
+   and a popup that reaches its end doesn't hand the swipe on to the page ── */
+html.mss-scroll-locked, html.mss-scroll-locked body { overscroll-behavior:none; }
+html.mss-scroll-locked [role="dialog"], html.mss-scroll-locked [role="dialog"] * { overscroll-behavior:contain; }
