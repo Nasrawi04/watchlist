@@ -926,18 +926,52 @@ const mssSkeleton = (() => {
    scrolling uses this pair, with its own key (an id or the overlay element).
    iPhone Safari ignores overflow:hidden on <body>, so the page is pinned
    where it is (position:fixed) and put back at the same spot once the last
-   key is released. Releasing a key that isn't locked does nothing. ── */
+   key is released. Releasing a key that isn't locked does nothing.
+   Touch screens: while locked, a swipe only moves something that can still
+   scroll that way (a long popup, a list inside it, a sideways row). Anything
+   else — the backdrop, the end of a list, a short popup — is held still, so
+   the page behind never drags or bounces along with your finger. ── */
 const _mssLocks = new Set();
-let _mssLockY = 0;
+let _mssLockY = 0, _mssTouch = null;
+function _mssCanScroll(el, dx, dy) {
+  const vertical = Math.abs(dy) >= Math.abs(dx);
+  for (; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
+    const cs = getComputedStyle(el);
+    if (vertical) {
+      if (!/(auto|scroll)/.test(cs.overflowY) || el.scrollHeight <= el.clientHeight + 1) continue;
+      if (dy > 0 ? el.scrollTop > 0 : el.scrollTop + el.clientHeight < el.scrollHeight - 1) return true;
+    } else {
+      if (!/(auto|scroll)/.test(cs.overflowX) || el.scrollWidth <= el.clientWidth + 1) continue;
+      const max = el.scrollWidth - el.clientWidth, at = Math.abs(el.scrollLeft), rtl = cs.direction === 'rtl';
+      const revealLeft = dx > 0;                          // finger moving right shows what's on the left
+      if (revealLeft ? (rtl ? at < max - 1 : at > 0) : (rtl ? at > 0 : at < max - 1)) return true;
+    }
+  }
+  return false;
+}
+function _mssTouchStart(ev) { const t = ev.touches[0]; _mssTouch = t ? { x: t.clientX, y: t.clientY } : null; }
+function _mssTouchMove(ev) {
+  if (!_mssTouch || ev.touches.length !== 1 || !ev.cancelable) return;
+  if (ev.target.closest?.('input[type="range"]')) return;       // sliders drag sideways themselves
+  const t = ev.touches[0], dx = t.clientX - _mssTouch.x, dy = t.clientY - _mssTouch.y;
+  if (!_mssCanScroll(ev.target, dx, dy)) ev.preventDefault();
+}
 function mssLockScroll(key = 'page') {
   if (_mssLocks.has(key)) return;
   _mssLocks.add(key);
   if (_mssLocks.size > 1) return;
   _mssLockY = window.scrollY;
   Object.assign(document.body.style, { overflow: 'hidden', position: 'fixed', top: `-${_mssLockY}px`, left: '0', right: '0', width: '100%' });
+  document.documentElement.classList.add('mss-scroll-locked');
+  document.addEventListener('touchstart', _mssTouchStart, { passive: true });
+  document.addEventListener('touchmove', _mssTouchMove, { passive: false });
 }
 function mssUnlockScroll(key = 'page') {
   if (!_mssLocks.delete(key) || _mssLocks.size) return;
+  document.removeEventListener('touchstart', _mssTouchStart);
+  document.removeEventListener('touchmove', _mssTouchMove);
+  _mssTouch = null;
+  document.documentElement.classList.remove('mss-scroll-locked');
   Object.assign(document.body.style, { overflow: '', position: '', top: '', left: '', right: '', width: '' });
   window.scrollTo({ top: _mssLockY, behavior: 'instant' });
 }
