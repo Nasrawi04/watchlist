@@ -980,6 +980,8 @@ document.addEventListener('keydown', e => {
 const TMDB_KEY  = '76cd214d703cd01341549206b8a3b57e'; // replace with your key from themoviedb.org
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TMDB_IMG  = 'https://image.tmdb.org/t/p/w185';
+// Small TMDB posters (w92 / w154 / w185) look soft on phone screens: ask for w342 instead
+const mssSharpPoster = url => typeof url === 'string' ? url.replace(/(image\.tmdb\.org\/t\/p\/)w(92|154|185)\//, '$1w342/') : url;
 const TMDB_FULL = 'https://image.tmdb.org/t/p/w500';
 
 /* ── "Release Date" sort support ──
