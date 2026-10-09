@@ -39,11 +39,11 @@
 .eg-hero-sub { font-size:clamp(13px, 1.6vw, 16px); color:rgba(237,237,237,.82); display:flex; flex-wrap:wrap; gap:4px 10px; }
 .eg-hero-sub span + span::before { content:'·'; margin-inline-end:10px; opacity:.6; }
 .eg-hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:1.2rem; }
-.eg-hero-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:24px; font:600 13.5px 'Manrope',var(--sans); text-decoration:none;
+.eg-hero-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:var(--radius-sm); font:600 13.5px 'Manrope',var(--sans); text-decoration:none;
   color:#fff; background:rgba(255,255,255,.1); border:0.5px solid rgba(255,255,255,.28); backdrop-filter:blur(6px); transition:background-color .15s, border-color .15s; }
 .eg-hero-btn:hover { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.45); }
 .eg-hero-btn:focus-visible, .eg-back:focus-visible { outline:2px solid #8FD177; outline-offset:3px; }
-.eg-hero-tag { display:inline-flex; align-items:center; gap:7px; padding:10px 16px; border-radius:24px; font:600 13px 'Manrope',var(--sans); color:#B8E0A8; background:rgba(126,184,108,.14); border:0.5px solid rgba(126,184,108,.4); }
+.eg-hero-tag { display:inline-flex; align-items:center; gap:7px; padding:10px 16px; border-radius:var(--radius-sm); font:600 13px 'Manrope',var(--sans); color:#B8E0A8; background:rgba(126,184,108,.14); border:0.5px solid rgba(126,184,108,.4); }
 [dir=rtl] .eg-hero-img::after { background:linear-gradient(270deg, rgba(8,12,10,.94) 0%, rgba(8,12,10,.72) 38%, rgba(8,12,10,.18) 75%, rgba(8,12,10,.05) 100%), linear-gradient(0deg, rgba(8,12,10,.55) 0%, transparent 40%); }
 /* the page "sheet" rises over the hero with rounded top corners */
 .eg-sheet { position:relative; z-index:1; margin:-26px calc(-1 * var(--page-px)) 0; padding:calc(56px + 26px + 1.25rem) var(--page-px) 0; background:var(--bg); border-radius:28px 28px 0 0; }
@@ -142,11 +142,14 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
 .eg-pop-over { font-size:13.5px; color:var(--text-2); line-height:1.6; }
 .eg-pop-note { margin-top:10px; padding-inline-start:12px; border-inline-start:2px solid var(--olive-light); font-style:italic; color:var(--text); font-size:14px; }
 .eg-season-btn svg:last-child { margin-inline-start:2px; opacity:.7; }
-.eg-season-dialog { max-width:720px; }
+/* season picker: wide and short — one row of season posters that scrolls sideways */
+.eg-dialog.eg-season-dialog { max-width:min(96vw, 1180px); }
+.eg-season-grid.fav-season-grid { flex-wrap:nowrap; justify-content:flex-start; gap:14px; overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x proximity; padding:4px 2px 12px; scrollbar-width:thin; }
+.eg-season-grid .td-season-block { flex:0 0 auto; scroll-snap-align:start; }
 .eg-season-all { display:inline-flex; align-items:center; gap:6px; margin-bottom:14px; padding:8px 14px; border-radius:var(--radius-sm); cursor:pointer; font-family:'Manrope',var(--sans); font-size:13px; font-weight:600; background:transparent; border:1px solid var(--border-2); color:var(--text-2); }
 .eg-season-all.on { background:var(--olive); border-color:var(--olive); color:#fff; }
 .eg-season-all svg { display:none; } .eg-season-all.on svg { display:inline; }
-.eg-season-grid .td-season-block { width:clamp(110px, 18vw, 140px); }
+.eg-season-grid .td-season-block { width:clamp(108px, 13vw, 140px); }
 .td-season-block-poster { position:relative; }
 .eg-season-check { position:absolute; top:6px; inset-inline-end:6px; width:24px; height:24px; border-radius:50%; background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.3); }
 .eg-cmp-bar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:1.25rem auto 1.5rem; max-width:860px; padding:14px 16px; border-radius:var(--radius); background:var(--olive-faint); border:0.5px solid var(--border-olive); }
@@ -682,15 +685,20 @@ function egSeasonPick() {
       </div>
       <div class="sf-footer"><button type="button" class="sf-clear-btn" onclick="egSeasonSet(null)">Show all</button><button type="button" class="sf-apply-btn" onclick="egSeasonClose()">Done</button></div>
     </div>`;
+  const row = ov.querySelector('.eg-season-grid');
+  row.addEventListener('wheel', ev => {      // a mouse wheel moves the row sideways
+    if (Math.abs(ev.deltaY) <= Math.abs(ev.deltaX) || row.scrollWidth <= row.clientWidth) return;
+    ev.preventDefault(); row.scrollLeft += (getComputedStyle(row).direction === 'rtl' ? -1 : 1) * ev.deltaY;
+  }, { passive: false });
   MSSDialog.open(ov);
 }
 // Tap seasons to add / remove them; "All" clears the filter
 function egSeasonSet(sn) {
   if (sn == null) S.sel = null;
   else { S.sel = new Set(S.sel || []); S.sel.has(sn) ? S.sel.delete(sn) : S.sel.add(sn); if (!S.sel.size || S.sel.size === S.seasons.length) S.sel = null; }
-  const scroll = document.querySelector('#egSeasonOverlay .sf-body')?.scrollTop || 0;
+  const scroll = document.querySelector('#egSeasonOverlay .eg-season-grid')?.scrollLeft || 0;
   draw(); egSeasonPick();
-  const b = document.querySelector('#egSeasonOverlay .sf-body'); if (b) b.scrollTop = scroll;
+  const b = document.querySelector('#egSeasonOverlay .eg-season-grid'); if (b) b.scrollLeft = scroll;
 }
 function egSeasonClose() { MSSDialog.close(document.getElementById('egSeasonOverlay')); }
 
