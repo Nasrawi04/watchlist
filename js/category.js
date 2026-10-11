@@ -740,7 +740,7 @@ function _cgRatingBadge(e, key) {
 function openGridPopup(id) {
   const e = _catAll.find(en => en.id === id);
   if (!e) return;
-  MSSRate.forOwnEntry(e, { onChange: renderSections, onDelete: _catRemoveEntry, onComments: x => MSSComments.open(x) });
+  MSSRate.forOwnEntry(e, { onChange: renderSections, onDelete: _catRemoveEntry, onComments: x => MSSComments.open(x), addToList: true });
 }
 
 
