@@ -2055,24 +2055,6 @@ const _RANK_ORDER_OPTS = [
   ['za',        'Title Z → A'],
 ];
 
-// Reads a specific rating dimension off an entry, accounting for the
-// fact that anime/cartoons use slightly different rating keys than
-// movies/shows for the same concept (e.g. "voice_acting" vs "acting").
-// Discover-only items with no personal entry never have sub-ratings.
-function _getSubRating(entry, concept) {
-  if (!entry || !entry.ratings) return null;
-  const isAnimated = entry.cat === 'anime' || entry.cat === 'cartoons';
-  const keyMap = {
-    story: 'story',
-    enjoyment: 'enjoyment',
-    acting: isAnimated ? 'voice_acting' : 'acting',
-    ending: 'ending',
-  };
-  const key = keyMap[concept];
-  const val = key ? entry.ratings[key] : null;
-  return typeof val === 'number' ? val : null;
-}
-
 function _openRankOrderPrompt(listId) {
   _injectRankOrderOverlay();
   const list = _listsAll.find(l => l.id === listId);
@@ -2095,27 +2077,7 @@ function _closeRankOrderPrompt() {
 // the first-time ordering prompt and by automatic re-application on
 // later edits. Mutates list.items directly; caller is responsible for
 // saving.
-function _reorderListItems(list, mode) {
-  if (mode === 'picked') return; // leave items in whatever order they're already in
-  const resolved = (list.items || []).map(id => ({ id, item: _resolveListItem(id) })).filter(x => x.item);
-  resolved.sort((a, b) => {
-    if (mode === 'az') return (a.item.title||'').localeCompare(b.item.title||'');
-    if (mode === 'za') return (b.item.title||'').localeCompare(a.item.title||'');
-    if (mode === 'enjoyment' || mode === 'story' || mode === 'acting' || mode === 'ending') {
-      const subA = _getSubRating(a.item, mode) ?? -Infinity;
-      const subB = _getSubRating(b.item, mode) ?? -Infinity;
-      return subB - subA; // best first, always high-to-low for named dimensions
-    }
-    const scoreA = liveScore(a.item) ?? -Infinity;
-    const scoreB = liveScore(b.item) ?? -Infinity;
-    return mode === 'highest' ? scoreB - scoreA : scoreA - scoreB;
-  });
-  // Items that failed to resolve (shouldn't normally happen) get kept,
-  // appended after the sorted ones, rather than silently dropped.
-  const resolvedIds = new Set(resolved.map(x => x.id));
-  const unresolved = (list.items || []).filter(id => !resolvedIds.has(id));
-  list.items = [...resolved.map(x => x.id), ...unresolved];
-}
+function _reorderListItems(list, mode) { MSSList.reorder(list, mode, _resolveListItem); }   // list-popup.js
 
 async function _applyRankOrder(listId, mode) {
   const list = _listsAll.find(l => l.id === listId);
