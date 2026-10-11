@@ -976,6 +976,36 @@ function mssUnlockScroll(key = 'page') {
   window.scrollTo({ top: _mssLockY, behavior: 'instant' });
 }
 
+/* ── Your country (MSSRegion) — Where to Watch (title.html) and release
+   notifications (tv-schedule.js). guess() → country codes, best first: the
+   one you picked in Where to Watch, then your time zone, your browser's
+   languages, the site language, and finally US. ── */
+const MSSRegion = (() => {
+  const KEY = 'mss_wtw_region';
+  const TZ = { 'Asia/Dubai':'AE', 'Asia/Muscat':'OM', 'Asia/Riyadh':'SA', 'Asia/Qatar':'QA', 'Asia/Kuwait':'KW', 'Asia/Bahrain':'BH',
+    'Asia/Tehran':'IR', 'Asia/Baghdad':'IQ', 'Asia/Amman':'JO', 'Asia/Beirut':'LB', 'Africa/Cairo':'EG', 'Africa/Casablanca':'MA',
+    'Europe/Zagreb':'HR', 'Europe/Belgrade':'RS', 'Europe/Sarajevo':'BA', 'Europe/London':'GB', 'Europe/Dublin':'IE', 'Europe/Madrid':'ES',
+    'Europe/Lisbon':'PT', 'Europe/Paris':'FR', 'Europe/Brussels':'BE', 'Europe/Amsterdam':'NL', 'Europe/Berlin':'DE', 'Europe/Vienna':'AT',
+    'Europe/Zurich':'CH', 'Europe/Rome':'IT', 'Europe/Stockholm':'SE', 'Europe/Oslo':'NO', 'Europe/Copenhagen':'DK', 'Europe/Helsinki':'FI',
+    'Europe/Warsaw':'PL', 'Europe/Prague':'CZ', 'Europe/Budapest':'HU', 'Europe/Athens':'GR', 'Europe/Istanbul':'TR', 'Europe/Moscow':'RU',
+    'Europe/Kyiv':'UA', 'Europe/Kiev':'UA', 'Asia/Kolkata':'IN', 'Asia/Calcutta':'IN', 'Asia/Karachi':'PK', 'Asia/Dhaka':'BD', 'Asia/Tokyo':'JP',
+    'Asia/Seoul':'KR', 'Asia/Shanghai':'CN', 'Asia/Hong_Kong':'HK', 'Asia/Taipei':'TW', 'Asia/Singapore':'SG', 'Asia/Manila':'PH',
+    'Asia/Jakarta':'ID', 'Asia/Bangkok':'TH', 'Asia/Kuala_Lumpur':'MY', 'Australia/Sydney':'AU', 'Australia/Melbourne':'AU',
+    'Pacific/Auckland':'NZ', 'America/Toronto':'CA', 'America/Vancouver':'CA', 'America/Mexico_City':'MX', 'America/Sao_Paulo':'BR',
+    'America/Argentina/Buenos_Aires':'AR', 'America/Bogota':'CO', 'America/Santiago':'CL', 'America/Lima':'PE', 'Africa/Johannesburg':'ZA',
+    'Africa/Lagos':'NG', 'Africa/Nairobi':'KE' };
+  function guess() {
+    const out = [];
+    try { const r = localStorage.getItem(KEY); if (r) out.push(r); } catch {}
+    try { const tz = Intl.DateTimeFormat().resolvedOptions().timeZone; if (TZ[tz]) out.push(TZ[tz]); } catch {}
+    (navigator.languages || [navigator.language]).forEach(l => { const m = String(l || '').match(/-([A-Z]{2})$/i); if (m) out.push(m[1].toUpperCase()); });
+    const own = (MSSLang.code.split('-')[1] || '').toUpperCase(); if (own && !MSSLang.isDefault) out.push(own);
+    out.push('US');
+    return out;
+  }
+  return { KEY, guess };
+})();
+
 /* ══════════════════════════════════════════
    DIALOG SHELL — MSSDialog
    One open/close behaviour for every popup:
