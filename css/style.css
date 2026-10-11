@@ -5060,3 +5060,22 @@ html[data-theme="light"] .skel, html[data-theme="light"] .page-loading:not(.has-
    and a popup that reaches its end doesn't hand the swipe on to the page ── */
 html.mss-scroll-locked, html.mss-scroll-locked body { overscroll-behavior:none; }
 html.mss-scroll-locked [role="dialog"], html.mss-scroll-locked [role="dialog"] * { overscroll-behavior:contain; }
+
+/* ── "Add to List" picker (list-popup.js → MSSList.addTo): your lists, one under another ── */
+#mssListAddOverlay { position:fixed; inset:0; z-index:1350; background:var(--popup-backdrop); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
+#mssListAddOverlay.open { opacity:1; pointer-events:auto; }
+#mssListAddCard { width:100%; max-width:520px; max-height:88dvh; display:flex; flex-direction:column; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg); }
+#mssListAddCard .sf-header .lp-eyebrow { margin-bottom:3px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+.la-list { display:flex; flex-direction:column; gap:12px; padding:8px 0 12px; }
+.la-card { position:relative; display:flex; flex-direction:column; width:100%; text-align:start; font:inherit; color:inherit; cursor:pointer; }
+.la-card .lc-title-row { padding-inline-end:84px; }
+.la-card.in { border-color:var(--olive-light); box-shadow:0 0 0 1px var(--olive-light) inset; }
+.la-card:disabled { opacity:.6; cursor:progress; }
+.la-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.la-state { position:absolute; top:12px; inset-inline-end:12px; display:inline-flex; align-items:center; gap:5px; padding:5px 11px; border-radius:var(--radius-sm); font-size:12px; font-weight:700; border:1px solid var(--border-olive); color:var(--olive-light); background:var(--card); }
+.la-card.in .la-state { background:var(--olive); border-color:var(--olive); color:#fff; }
+.la-shared { font-size:12px; color:var(--text-3); margin:-4px 0 8px; }
+.la-empty { display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; padding:2rem 1rem; color:var(--text-3); font-size:13px; }
+.la-empty b { color:var(--text); font-size:15px; }
+.la-new { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+@media(max-width:640px) { #mssListAddOverlay { padding:10px; } .la-card .lc-posters { gap:5px; } }
