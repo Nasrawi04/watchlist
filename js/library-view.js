@@ -29,6 +29,7 @@ function _libOpen(id) {
   if (LIB_READONLY) { MSSViews.open(e, { start: rated ? 'rate' : 'info', profile: (window.LIB_PROFILE && window.LIB_PROFILE()) || {} }); return; }
   MSSViews.open(e, {
     start: rated ? 'rate' : 'info', own: true, from: location.pathname.split('/').pop() || 'library.html',
+    addToList: (location.pathname.split('/').pop() || 'library.html') === 'library.html',   // only on the Library page
     onChange: function(){ renderLibrary(); }, onNoteSaved: function(){ renderLibrary(); },
     onDelete: _libRemove
   });
