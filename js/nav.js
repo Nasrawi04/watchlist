@@ -2,6 +2,20 @@
    nav.js — Chrome injection + auth guard
 ══════════════════════════════════════════ */
 
+/* New episodes + movie releases → notifications, on whatever page you open
+   (tv-schedule.js, loaded here when the page doesn't have it; it waits 3 hours
+   between checks). Runs once the page has settled so it never slows it down. */
+function _navReleaseCheck(user) {
+  const run = () => {
+    if (typeof MSSSchedule !== 'undefined') { MSSSchedule.checkReleases(user.id); return; }
+    const sc = document.createElement('script');
+    sc.src = 'js/tv-schedule.js'; sc.async = true;
+    sc.onload = () => { if (typeof MSSSchedule !== 'undefined') MSSSchedule.checkReleases(user.id); };
+    document.head.appendChild(sc);
+  };
+  ('requestIdleCallback' in window) ? requestIdleCallback(() => setTimeout(run, 1500), { timeout: 6000 }) : setTimeout(run, 3000);
+}
+
 async function _fillNavUser(user) {
   // Profile + friend-request badge fetched in parallel (was one after the other)
   const [profile, pending] = await Promise.all([
@@ -15,6 +29,7 @@ async function _fillNavUser(user) {
   MSSLang.adopt(profile).then(r => { if (r) location.reload(); });
   _navAdminCheck();
   _navAccountCheck(profile);
+  _navReleaseCheck(user);
   const username = profile?.username || user.email?.split('@')[0] || 'You';
   const initial  = username[0].toUpperCase();
 
@@ -1931,7 +1946,8 @@ function fitTitleYear(root) {
 /* ══════════════════════════════════════════
    Notifications — bell panel + notifications.html
    Sections:
-     episodes  — new_episode (tv-schedule.js → add_new_episode_notifications, 033)
+     episodes  — new_episode, new_release (tv-schedule.js → add_new_episode_notifications /
+                 add_release_notifications, 033 / 042)
      activity  — friend_started, friend_queued
      lists     — list_invite, list_invite_accepted
      requests  — friend_request
@@ -1942,11 +1958,11 @@ let _notifUser = null;
 let _notifItems = [];
 let _notifTab = 'all';
 const NOTIF_SECTIONS = [
-  ['all', 'All'], ['episodes', 'New Episodes'], ['activity', 'Friend Activity'], ['lists', 'Lists'], ['requests', 'Friend Requests'],
+  ['all', 'All'], ['episodes', 'New Releases'], ['activity', 'Friend Activity'], ['lists', 'Lists'], ['requests', 'Friend Requests'],
 ];
 function _notifSection(n) {
   if (n.type === 'friend_request') return 'requests';
-  if (n.type === 'new_episode') return 'episodes';
+  if (n.type === 'new_episode' || n.type === 'new_release') return 'episodes';
   if (n.type === 'list_invite' || n.type === 'list_invite_accepted' || n.type === 'list_invite_declined') return 'lists';
   return 'activity';
 }
@@ -2065,7 +2081,7 @@ function _notifItemHTML(n, opts = {}) {
   const name = n.actor ? escHTML(n.actor.display_name || n.actor.username) : 'Someone';
   const who = `<b>${name}</b>`;
   const title = n.list ? `<b>&ldquo;${escHTML(n.list.title)}&rdquo;</b>` : 'a list';
-  const av = n.type === 'new_episode' && safeURL(n.meta?.poster_url)
+  const av = (n.type === 'new_episode' || n.type === 'new_release') && safeURL(n.meta?.poster_url)
     ? `<img src="${safeURL(n.meta.poster_url)}" alt="">`
     : n.actor && safeURL(n.actor.avatar_url)
     ? `<img src="${safeURL(n.actor.avatar_url)}" alt="">`
@@ -2101,6 +2117,10 @@ function _notifItemHTML(n, opts = {}) {
     const m = n.meta || {};
     text = `New episode of <b translate="no">${escHTML(m.title || 'a show')}</b> — S${escHTML(m.season)} · E${escHTML(m.episode)}${m.episode_name ? ` “${escHTML(m.episode_name)}”` : ''}`; icon2 = 'tv';
     href = m.tmdb_id ? `episodes.html?show=${encodeURIComponent(m.tmdb_id)}` : '';
+  } else if (n.type === 'new_release') {
+    const m = n.meta || {};
+    text = `<b translate="no">${escHTML(m.title || 'A movie')}</b> ${m.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`; icon2 = 'film';
+    href = m.tmdb_id ? `title.html?type=movie&id=${encodeURIComponent(m.tmdb_id)}` : '';
   } else if (n.type === 'friend_queued') {
     text = `${who} added something from your library to their watchlist`; icon2 = 'plus';
     extra = _notifTitleCard(n.meta);
@@ -2318,6 +2338,7 @@ function _notifShortText(n) {
     case 'friend_started':       return `${who} started watching ${t}`;
     case 'friend_queued':        return `${who} added ${t} from your library`;
     case 'new_episode':          return `New episode of ${t} — S${escHTML(n.meta?.season)} · E${escHTML(n.meta?.episode)}`;
+    case 'new_release':          return `${t} ${n.meta?.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`;
   }
   return 'New notification';
 }
