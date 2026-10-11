@@ -542,7 +542,7 @@ const MSSViews = (() => {
     try {
       closeAll();
       Object.values(VIEWS).forEach(x => { const el = document.getElementById(x.slot); if (el) el.innerHTML = ''; });
-      const cbs = { from: o.from, onChange: o.onChange, onDelete: o.onDelete, noRefresh: st.refreshed };
+      const cbs = { from: o.from, onChange: o.onChange, onDelete: o.onDelete, noRefresh: st.refreshed, addToList: o.addToList };
       if (v === 'info') o.own ? MSSInfo.forOwnEntry(e, cbs) : MSSInfo.fromEntry(e);
       // Ratings view: no Notes block when there's a Note tab right beside it
       const hideNotes = st.views.includes('note');
