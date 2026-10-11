@@ -140,6 +140,7 @@
 <script src="js/sort-filter.js"></script>
 <script src="js/export.js"></script>
 <script src="js/rating-popup.js"></script>
+<script src="js/list-popup.js"></script>
 <script src="js/comments.js"></script>
 <script>
 let _compUser = null;
@@ -251,6 +252,7 @@ function cpOpenPopup(id) {
     onChange: renderMain,
     onComments: x => MSSComments.open(x),
     onDelete: x => { _allCompleted = _allCompleted.filter(y => y.id !== x.id); renderStats(); renderMain(); },
+    addToList: true,
   });
 }
 
