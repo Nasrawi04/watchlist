@@ -7,7 +7,9 @@
    Highlights and Notes. Only the buttons change, depending on whose
    entry it is:
 
-     Your own entry   → Edit · Rewatch · Create Card · Discover Card · Delete
+     Your own entry   → Edit · Add to List · Rewatch · Create Card · Discover Card · Delete
+                        (Add to List only where the page asks for it — addToList:
+                        true on Library + the category pages; needs list-popup.js)
                         (Rewatch hides while you're watching it; Discover
                         Card shows for titles that aren't finished)
      Someone else's   → Add to Watchlist · Discover
@@ -19,6 +21,7 @@
        onChange(entry),          // re-render (e.g. new seasons found on TMDB)
        onComments(entry),        // optional: shows the Comments strip
        from: 'library.html',     // where Edit returns to (defaults to this page)
+       addToList: true,          // show "Add to List" (MSSList.addTo, list-popup.js)
      })
      MSSRate.forFriend(entry, profile?, { hideNotes })
      (hideNotes: true leaves out the Notes block — used when the switcher has a Note tab)
@@ -31,7 +34,7 @@
 ═══════════════════════════════════════════════════════════════ */
 
 const RATING_POPUP_CONFIG = {
-  ownerActions:  ['edit', 'rewatch', 'card', 'discoverCard', 'delete'],
+  ownerActions:  ['edit', 'lists', 'rewatch', 'card', 'discoverCard', 'delete'],
   friendActions: ['queue', 'discover'],
 };
 
@@ -127,6 +130,7 @@ const MSSRate = (() => {
     const finished = e.status === 'completed' || e.status === 'ongoing';
     const B = {
       edit:         () => btn('edit', 'edit', 'Edit'),
+      lists:        () => opts.addToList && typeof MSSList !== 'undefined' ? btn('lists', 'layers', 'Add to List') : '',
       rewatch:      () => !watchingNow && typeof rewatchEntry === 'function' ? btn('rewatch', 'refresh', 'Rewatch') : '',
       card:         () => typeof createShareCard === 'function' ? btn('card', 'image', 'Create Card') : '',
       discoverCard: () => !finished && typeof createShareCard === 'function' ? btn('discoverCard', 'idCard', 'Discover Card') : '',
@@ -143,6 +147,7 @@ const MSSRate = (() => {
     if (!e) return;
     if (key === 'edit')         { goToDetail(e.id, opts.from || thisFile()); return; }
     if (key === 'rewatch')      { rewatchEntry(e.id); return; }        // closes this popup itself
+    if (key === 'lists')        { MSSList.addTo(e); return; }      // opens on top of this popup
     if (key === 'card')         { createShareCard(e.id); return; }
     if (key === 'discoverCard') { createShareCard(e.id, 3, true); return; }
     if (key === 'queue')        { close(); MSSInfo.fromEntry(e); return; }
