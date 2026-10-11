@@ -11,6 +11,12 @@
        (social: someone else's list → like / dislike + "Add to My Lists")
        → the lp-* popup, read-only: posters (+N), View List, and on your
          own profile "Manage in Lists"
+     MSSList.addTo(entry)
+       → "Add to List" picker (ratings popup on Library / category pages):
+         your lists — and lists shared with you — one under another as list
+         cards; tap one to add the title (tap again to take it out). Ranked
+         lists with a set order (Highest, A–Z…) re-sort themselves.
+     MSSList.reorder(list, mode, resolve) → puts a ranked list in its saved order
      MSSList.rankBadge(ranked) · countHTML(n) · postersHTML(items, resolve) ·
      collabLineHTML(list, collaborators) · avatarHTML(profile)
 
@@ -133,7 +139,8 @@ const MSSList = (() => {
       <div class="lp-meta">${countHTML(items.length)}</div>
       ${o.collabLine || ''}
       ${posters.length ? `<div class="lp-posters">${posters.map(e => `<div class="lp-poster">${posterHTML(e, 'big')}</div>`).join('')}${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}</div>` : ''}
-      <div id="lpNavPopupActions" class="lp-footer${o.social ? ' np-actions' : ''}">${footerHTML(list, o, null, null)}</div>`;
+      ${o.social ? `<div id="lpPopupActions" class="lp-actions lp-actions-social">${socialHTML(null, null)}</div>` : ''}
+      <div id="lpNavPopupActions" class="lp-footer">${footerHTML(list, o)}</div>`;
     MSSDialog.open(ov);
     cur = { list, o, react: null, imported: null };
     if (o.social) {
@@ -145,24 +152,28 @@ const MSSList = (() => {
     }
   }
 
-  /* Footer: View List + Close / Manage — and on someone else's list (o.social)
-     like / dislike and "Add to My Lists" (a copy in your Lists) */
+  /* Same layout as the Lists page popup (lists.html): on someone else's list
+     (o.social) a row with like / dislike + "Add to My Lists" (a copy in your
+     Lists), then the footer — View List + Close, or Manage on your own profile */
   let cur = null;
-  function footerHTML(list, o, react, imported) {
+  function socialHTML(react, imported) {
+    const st = react || { like: 0, dislike: 0, mine: null };
+    return `<div class="lp-react-pair">
+        <button type="button" class="popup-action-btn lp-react${st.mine === 'like' ? ' is-on' : ''}" onclick="MSSList._react(true)" data-like aria-label="Like" aria-pressed="${st.mine === 'like'}" ${react ? '' : 'disabled'}>${icon(st.mine === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)}<span>${st.like}</span></button>
+        <button type="button" class="popup-action-btn lp-react lp-react-down${st.mine === 'dislike' ? ' is-on' : ''}" onclick="MSSList._react(false)" aria-label="Dislike" aria-pressed="${st.mine === 'dislike'}" ${react ? '' : 'disabled'}>${icon(st.mine === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)}<span>${st.dislike}</span></button>
+      </div>
+      <button type="button" class="popup-action-btn lp-add" ${imported ? 'disabled' : ''} onclick="MSSList._import(this)">${imported ? 'Added to My Lists ✓' : '+ Add to My Lists'}</button>`;
+  }
+  function footerHTML(list, o) {
     const url = `list-view.html?list=${encodeURIComponent(list.id)}`;
-    const view = `<button type="button" class="popup-action-btn lp-view" onclick="location.href=${escHTML(JSON.stringify(url))}">${icon('list', 14)} View List</button>`;
-    if (o.social) {
-      return mssReactButtonsHTML(react, 'MSSList._react(true)', 'MSSList._react(false)') + view
-        + (imported ? `<button type="button" class="popup-action-btn lp-replies" disabled>${icon('check', 14)} In My Lists</button>`
-          : `<button type="button" class="popup-action-btn lp-replies" onclick="MSSList._import(this)">${icon('plus', 14)} Add to My Lists</button>`);
-    }
-    return view + (o.manage
-      ? `<button type="button" class="popup-action-btn lp-replies" onclick="location.href='lists.html'">${icon('edit', 14)} Manage in Lists</button>`
-      : `<button type="button" class="popup-action-btn lp-replies" onclick="MSSList.close()">Close</button>`);
+    return `<button type="button" class="popup-action-btn lp-view" onclick="MSSList.close();location.href=${escHTML(JSON.stringify(url))}">${icon('list', 14)} View List</button>`
+      + (o.manage
+        ? `<button type="button" class="popup-action-btn lp-replies" onclick="location.href='lists.html'">${icon('edit', 14)} Manage in Lists</button>`
+        : `<button type="button" class="popup-action-btn lp-replies" onclick="MSSList.close()">Close</button>`);
   }
   function drawFooter() {
-    const el = document.getElementById('lpNavPopupActions');
-    if (el && cur) el.innerHTML = footerHTML(cur.list, cur.o, cur.react, cur.imported);
+    const el = document.getElementById('lpPopupActions');
+    if (el && cur) el.innerHTML = socialHTML(cur.react, cur.imported);
   }
   async function react(isLike) {
     if (!cur || !cur.react) return;
@@ -202,5 +213,113 @@ const MSSList = (() => {
     }
   }
 
-  return { _react: react, _import: importList, cardHTML, cardInnerHTML, open, close, rankBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
+  /* ── Ranked list order (sort_mode): Highest / Lowest score, A–Z / Z–A or a
+     rating (story, enjoyment, acting, ending); 'picked' keeps the order as is ── */
+  function subRating(e, concept) {
+    if (!e || !e.ratings) return null;
+    const animated = e.cat === 'anime' || e.cat === 'cartoons';
+    const key = { story: 'story', enjoyment: 'enjoyment', acting: animated ? 'voice_acting' : 'acting', ending: 'ending' }[concept];
+    const v = key ? e.ratings[key] : null;
+    return typeof v === 'number' ? v : null;
+  }
+  function reorder(list, mode, resolve) {
+    if (!mode || mode === 'picked') return;
+    const resolved = (list.items || []).map(id => ({ id, item: resolve(id) })).filter(x => x.item);
+    resolved.sort((a, b) => {
+      if (mode === 'az') return (a.item.title || '').localeCompare(b.item.title || '');
+      if (mode === 'za') return (b.item.title || '').localeCompare(a.item.title || '');
+      if (['enjoyment', 'story', 'acting', 'ending'].includes(mode)) return (subRating(b.item, mode) ?? -Infinity) - (subRating(a.item, mode) ?? -Infinity);
+      const sa = liveScore(a.item) ?? -Infinity, sb_ = liveScore(b.item) ?? -Infinity;
+      return mode === 'highest' ? sb_ - sa : sa - sb_;
+    });
+    const known = new Set(resolved.map(x => x.id));
+    list.items = [...resolved.map(x => x.id), ...(list.items || []).filter(id => !known.has(id))];   // unresolved ones stay, at the end
+  }
+
+  /* ── "Add to List" picker ── */
+  let add = null;     // { entry, lists, map }
+  const tmdbKey = e => e.tmdb_id && e.tmdb_type ? `tmdb:${e.tmdb_type}:${e.tmdb_id}` : null;
+  const holds = (l, e) => (l.items || []).some(id => id === e.id || (tmdbKey(e) && id === tmdbKey(e)));
+  const addResolve = id => isTmdbId(id) ? tmdb(id) : add?.map[id] || null;
+  function addClose() { MSSDialog.close(document.getElementById('mssListAddOverlay')); }
+  async function addTo(entry) {
+    const me = window._navUser?.id;
+    if (!entry || !me) return;
+    let ov = document.getElementById('mssListAddOverlay');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'mssListAddOverlay';
+      ov.innerHTML = `<div id="mssListAddCard" role="dialog" aria-modal="true" aria-labelledby="mssListAddTitle">
+          <div class="sf-header"><div><div class="lp-eyebrow" id="mssListAddFor"></div><div class="sf-title" id="mssListAddTitle">Add to List</div></div>
+            <button type="button" class="sf-close" onclick="MSSList._addClose()" aria-label="Close">${icon('x', 18)}</button></div>
+          <div class="sf-body" id="mssListAddBody"></div>
+          <div class="sf-footer"><a class="sf-clear-btn la-new" href="lists.html">${icon('plus', 14)} New list</a><button type="button" class="sf-apply-btn" onclick="MSSList._addClose()">Done</button></div>
+        </div>`;
+      MSSDialog.bind(ov, addClose);
+      document.body.appendChild(ov);
+    }
+    add = { entry, lists: null, map: { [entry.id]: entry } };
+    document.getElementById('mssListAddFor').innerHTML = `<span translate="no">${esc(entry.title)}</span>`;
+    document.getElementById('mssListAddBody').innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
+    MSSDialog.open(ov);
+    const cur = add;
+    try {
+      const [own, shared, entries] = await Promise.all([
+        sb.from('favorite_lists').select('*').eq('user_id', me).eq('cat', 'custom').order('sort_order', { ascending: true }),
+        sb.from('list_collaborators').select('list_id, sort_order').eq('user_id', me).eq('status', 'accepted').then(r => r, () => ({ data: [] })),
+        sb.from('entries').select('*').eq('user_id', me),
+      ]);
+      const ids = (shared.data || []).map(r => r.list_id);
+      const theirs = ids.length ? ((await sb.from('favorite_lists').select('*').in('id', ids)).data || []) : [];
+      const pos = Object.fromEntries((shared.data || []).map(r => [r.list_id, r.sort_order ?? -1]));
+      theirs.forEach(l => { l._collab = true; l.sort_order = pos[l.id]; });
+      (entries.data || []).forEach(e => { cur.map[e.id] = e; });
+      const lists = [...(own.data || []), ...theirs.sort((a, b) => a.sort_order - b.sort_order)];
+      // titles of shared lists that aren't yours (their posters on the cards)
+      const foreign = [...new Set(lists.flatMap(l => (l.items || []).slice(0, 5)))].filter(id => !isTmdbId(id) && !cur.map[id]);
+      if (foreign.length) ((await sb.from('entries').select('*').in('id', foreign)).data || []).forEach(e => { cur.map[e.id] = e; });
+      if (add !== cur) return;
+      cur.lists = lists;
+      drawAdd();
+      if (await hydrate(lists, 5) && add === cur) drawAdd();
+    } catch (err) {
+      console.error('Add to list:', err);
+      if (add === cur) document.getElementById('mssListAddBody').innerHTML = '<div class="sf-empty">Couldn’t load your lists — try again.</div>';
+    }
+  }
+  function drawAdd() {
+    const box = document.getElementById('mssListAddBody');
+    if (!box || !add?.lists) return;
+    const { entry, lists } = add;
+    if (!lists.length) { box.innerHTML = `<div class="la-empty">${icon('layers', 30)}<b>No lists yet</b><span>Make one on the Lists page, then add titles to it from here.</span></div>`; return; }
+    box.innerHTML = `<div class="la-list">${lists.map((l, i) => {
+      const inIt = holds(l, entry);
+      return `<button type="button" class="lc-card la-card${inIt ? ' in' : ''}" aria-pressed="${inIt}" onclick="MSSList._addToggle(${i}, this)">
+          <span class="la-state">${inIt ? `${icon('check', 13)} Added` : `${icon('plus', 13)} Add`}</span>
+          ${cardInnerHTML(l, { resolve: addResolve, collabLine: l._collab ? '<div class="la-shared">Shared with you</div>' : '' })}
+        </button>`;
+    }).join('')}</div>`;
+  }
+  async function addToggle(i, btn) {
+    const c = add, l = c?.lists?.[i];
+    if (!l || btn.disabled) return;
+    const e = c.entry, had = holds(l, e), before = (l.items || []).slice();
+    l.items = had ? before.filter(id => id !== e.id && id !== tmdbKey(e)) : [...before, e.id];
+    if (!had && l.ranked === true) reorder(l, l.sort_mode, addResolve);
+    btn.disabled = true;
+    try {
+      const { error } = l._collab
+        ? await sb.rpc('update_list_items', { p_list_id: l.id, p_items: l.items })
+        : await sb.from('favorite_lists').update({ items: l.items }).eq('id', l.id).eq('user_id', window._navUser?.id);
+      if (error) throw error;
+      showToast(had ? `Removed from “${l.title}”.` : `Added to “${l.title}”.`);
+    } catch (err) {
+      console.error('Add to list:', err);
+      l.items = before;
+      showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save that — try again.', 'err');
+    }
+    if (add === c) drawAdd();
+  }
+
+  return { _react: react, _import: importList, addTo, reorder, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, open, close, rankBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
 })();
