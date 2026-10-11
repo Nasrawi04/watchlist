@@ -8,10 +8,17 @@
                            and whether it's out yet
      • Release Calendar  — the next 60 days, grouped by day
      • Upcoming Seasons  — announced / dated new seasons
-   …and records a "new episode" notification once per episode
-   (add_new_episode_notifications, 033).
+   
+   Release notifications (nav.js runs this on every page, at most every
+   3 hours per person — the database skips ones already sent, 042):
+     • every episode that aired in the last 14 days of a show you track
+       (and after you added it) → add_new_episode_notifications
+     • a movie on your Watchlist / Up Next coming out in your country —
+       in cinemas, then to stream / buy (TMDB release dates; MSSRegion)
+       → add_release_notifications
 
      MSSSchedule.renderDiscover(el)   draws the four sections into el
+     MSSSchedule.checkReleases(uid)   records release notifications
    TMDB show details are cached for 12 hours on the device.
    Requires config.js, db.js, nav.js (tmdbFetch).
 ═══════════════════════════════════════════════════════════════ */
@@ -79,16 +86,6 @@ const MSSSchedule = (() => {
       && dateOf(d.last.air) >= new Date(new Date(e.created_at).toDateString()) - DAY)
       .sort((a, b) => dateOf(b.d.last.air) - dateOf(a.d.last.air));
   }
-  // Record notifications (the database skips ones already sent)
-  async function notify(fresh) {
-    if (!fresh.length) return;
-    const items = fresh.slice(0, 25).map(({ e, d }) => ({
-      entry_id: e.id, title: e.title, poster_url: e.poster_url || (d.poster ? TMDB_IMG + d.poster : null), tmdb_id: String(e.tmdb_id),
-      season: String(d.last.s), episode: String(d.last.n), episode_name: d.last.name || '', air_date: d.last.air,
-    }));
-    try { await sb.rpc('add_new_episode_notifications', { items }); } catch {}
-  }
-
   /* Your next episode, from your progress (S · E is the last one you watched) */
   function guide(items) {
     return items.filter(({ e }) => ['watching', 'up_next', 'paused'].includes(e.status)).map(({ e, d }) => {
@@ -139,7 +136,7 @@ const MSSSchedule = (() => {
     try { items = await load(uid); } catch { el.innerHTML = ''; return; }
     if (!items.length) { el.innerHTML = ''; return; }
     const fresh = newEpisodes(items), g = guide(items), cal = calendar(items), ups = upcomingSeasons(items);
-    notify(fresh);
+    checkReleases(uid);
     const parts = [];
     if (fresh.length) parts.push(section('ysNew', 'Your TV', 'New Episodes', `<div class="ys-row">${fresh.map(({ e, d }) => `
       <a class="ys-ep" href="${showLink(e)}">
@@ -167,5 +164,113 @@ const MSSSchedule = (() => {
     el.innerHTML = parts.join('');
   }
 
-  return { renderDiscover, load, details };
+  /* ── Release notifications ── */
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  // Small device caches for the extra TMDB lookups (episode lists 6 h, movie release dates 12 h)
+  function store(key, ttl, max = 150) {
+    let m = {};
+    try { m = JSON.parse(localStorage.getItem(key) || '{}'); } catch {}
+    return {
+      get: k => (m[k] && Date.now() - m[k].t < ttl ? m[k].d : undefined),
+      set(k, d) {
+        m[k] = { t: Date.now(), d };
+        const ks = Object.keys(m);
+        if (ks.length > max) ks.sort((a, b) => m[a].t - m[b].t).slice(0, ks.length - max).forEach(x => delete m[x]);
+        try { localStorage.setItem(key, JSON.stringify(m)); } catch {}
+      },
+    };
+  }
+  const seasonStore = store('mss_tv_season_v1', 6 * 36e5), movieStore = store('mss_movie_release_v1', TTL);
+  async function seasonEps(id, s) {
+    const k = id + ':' + s, hit = seasonStore.get(k);
+    if (hit) return hit;
+    try {
+      const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}/season/${s}?api_key=${TMDB_KEY}&language=en-US`);
+      if (!res.ok) return [];
+      const eps = ((await res.json()).episodes || []).map(e => ({ n: e.episode_number, name: e.name || '', air: e.air_date || null }));
+      seasonStore.set(k, eps);
+      return eps;
+    } catch { return []; }
+  }
+  // Release dates in a country: in cinemas (TMDB types 2 / 3) and to stream / buy (type 4)
+  async function movieDates(id) {
+    let d = movieStore.get(String(id));
+    if (d === undefined) {
+      try {
+        const res = await tmdbFetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US&append_to_response=release_dates`);
+        if (!res.ok) return null;
+        const x = await res.json();
+        d = { poster: x.poster_path, primary: x.release_date || null,
+              byRegion: Object.fromEntries((x.release_dates?.results || []).map(r => [r.iso_3166_1, (r.release_dates || []).map(z => [z.type, (z.release_date || '').slice(0, 10)])])) };
+        movieStore.set(String(id), d);
+      } catch { return null; }
+    }
+    const first = (region, types) => ((d.byRegion[region] || []).filter(([t, day]) => types.includes(t) && day).map(([, day]) => day).sort()[0]) || null;
+    const region = MSSRegion.guess().find(r => d.byRegion[r]) || null;
+    return {
+      poster: d.poster, region,
+      cinema: (region && first(region, [2, 3])) || first('US', [2, 3]) || d.primary,
+      digital: (region && first(region, [4])) || first('US', [4]),
+    };
+  }
+  async function send(fn, items) {
+    let added = 0;
+    for (let i = 0; i < items.length; i += 50) {
+      try { const { data } = await sb.rpc(fn, { items: items.slice(i, i + 50) }); added += Number(data) || 0; } catch {}
+    }
+    return added;
+  }
+  const CHECK_EVERY = 3 * 36e5;
+  let checking = null;
+  function checkReleases(uid) {
+    if (!uid || checking) return checking || Promise.resolve(0);
+    const KEY = 'mss_release_check_' + uid;
+    try { if (Date.now() - Number(localStorage.getItem(KEY) || 0) < CHECK_EVERY) return Promise.resolve(0); localStorage.setItem(KEY, String(Date.now())); } catch {}
+    return (checking = runCheck(uid).catch(err => { console.warn('Release check:', err); return 0; }).finally(() => { checking = null; }));
+  }
+  async function runCheck(uid) {
+    const todayS = ymd(new Date());
+    // From: N days back, and never before the day before you added the title
+    const from = (days, created) => ymd(new Date(Math.max(+today() - days * DAY, created ? +new Date(new Date(created).toDateString()) - DAY : 0)));
+
+    // TV: every episode out in the last 14 days (several can drop at once)
+    const episodes = [];
+    for (const { e, d } of await load(uid)) {
+      const since = from(14, e.created_at), seasons = new Set();
+      if (d.last?.air && d.last.air >= since) seasons.add(d.last.s);
+      if (d.next?.air && d.next.air <= todayS) seasons.add(d.next.s);      // aired since TMDB details were cached
+      for (const s of seasons) {
+        const size = d.seasons.find(x => x.s === s)?.eps || 0;
+        const before = d.seasons.filter(x => x.s < s).reduce((a, x) => a + (x.eps || 0), 0);
+        (await seasonEps(e.tmdb_id, s)).filter(x => x.air && x.air >= since && x.air <= todayS).forEach(x => {
+          const n = size && x.n > size ? x.n - before : x.n;         // series-wide numbering (One Piece) → place in season
+          episodes.push({ entry_id: e.id, title: e.title, poster_url: e.poster_url || (d.poster ? TMDB_IMG + d.poster : null), tmdb_id: String(e.tmdb_id),
+            season: String(s), episode: String(n > 0 ? n : x.n), episode_name: x.name, air_date: x.air });
+        });
+      }
+    }
+
+    // Movies on your Watchlist / Up Next: out in cinemas, then to stream / buy
+    const { data: movies } = await sb.from('entries').select('id,title,poster_url,tmdb_id,created_at,status')
+      .eq('user_id', uid).eq('tmdb_type', 'movie').not('tmdb_id', 'is', null).in('status', ['queue', 'up_next']);
+    const releases = [];
+    const list = movies || [];
+    for (let i = 0; i < list.length; i += 4) {
+      const chunk = list.slice(i, i + 4);
+      const ds = await Promise.all(chunk.map(m => movieDates(m.tmdb_id)));
+      chunk.forEach((m, j) => {
+        const r = ds[j]; if (!r) return;
+        const since = from(30, m.created_at);
+        ['cinema', 'digital'].forEach(kind => {
+          if (r[kind] && r[kind] >= since && r[kind] <= todayS) releases.push({ entry_id: m.id, title: m.title, poster_url: m.poster_url || (r.poster ? TMDB_IMG + r.poster : null),
+            tmdb_id: String(m.tmdb_id), kind, release_date: r[kind], region: r.region || '' });
+        });
+      });
+    }
+    const added = (await send('add_new_episode_notifications', episodes)) + (await send('add_release_notifications', releases));
+    if (added && typeof _notifLoad === 'function') _notifLoad();       // show them in the bell straight away
+    return added;
+  }
+
+  return { renderDiscover, checkReleases, load, details };
 })();
