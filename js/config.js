@@ -563,30 +563,47 @@ function clampWords(text, max) {
      → B · I · U · S · Quote buttons over a box where styles show as you
        type (+ Ctrl/⌘ B, I, U). The textarea keeps the marker text. ── */
 const MSSRich = (() => {
-  const INLINE = [
-    [/\*\*(?=\S)([^\n]*?\S)\*\*/g, '<strong>$1</strong>'],
-    [/__(?=\S)([^\n]*?\S)__/g, '<u>$1</u>'],
-    [/~~(?=\S)([^\n]*?\S)~~/g, '<s>$1</s>'],
-    [/(^|[^*\w])\*(?=[^\s*])([^\n*]*?[^\s*])\*(?![*\w])/g, '$1<em>$2</em>'],
-  ];
+  // A line → runs of text, each with its styles. Markers switch a style on, the
+  // same marker switches it off ("***both** italic*" works); a marker without
+  // its partner stays plain text, and so does * between numbers (2*3*4).
+  const KINDS = ['b', 'i', 'u', 's'], TAG = { b: 'strong', i: 'em', u: 'u', s: 's' };
   const QUOTE = /^\s*>\s?/;
-  const inline = line => INLINE.reduce((t, [re, to]) => t.replace(re, to), line);
+  function runs(line) {
+    const toks = [];
+    for (let p = 0; p < line.length;) {
+      const two = line.slice(p, p + 2);
+      const k = two === '**' ? 'b' : two === '__' ? 'u' : two === '~~' ? 's' : line[p] === '*' ? 'i' : null;
+      if (k) { toks.push({ p, n: k === 'i' ? 1 : 2, k }); p += k === 'i' ? 1 : 2; } else p++;
+    }
+    const open = {}, used = new Set(), digit = c => !!c && /\d/.test(c);
+    toks.forEach((t, x) => {
+      const before = line[t.p - 1], after = line[t.p + t.n];
+      if (open[t.k] == null) { if (after && !/\s/.test(after) && !(t.k === 'i' && digit(before) && digit(after))) open[t.k] = x; }   // 2*3 is maths
+      else if (before && !/\s/.test(before)) { used.add(open[t.k]); used.add(x); open[t.k] = null; }
+    });
+    const out = [], on = new Set();
+    let at = 0;
+    const push = to => { if (to > at) { const f = [...on].sort().join(''), last = out[out.length - 1]; last && last.f === f ? last.t += line.slice(at, to) : out.push({ t: line.slice(at, to), f }); } };
+    toks.forEach((t, x) => { if (!used.has(x)) return; push(t.p); on.has(t.k) ? on.delete(t.k) : on.add(t.k); at = t.p + t.n; });
+    push(line.length);
+    return out;
+  }
+  const runHTML = r => KINDS.filter(k => r.f.includes(k)).reduce((h, k) => `<${TAG[k]}>${h}</${TAG[k]}>`, escHTML(r.t));
+  const inline = line => runs(line).map(runHTML).join('');
   function html(text) {
     const lines = String(text || '').trim().split(/\r?\n/);
     const out = [];
     let quote = null;
     const flush = () => { if (quote) { out.push(`<blockquote class="mss-rq">${quote.join('<br>')}</blockquote>`); quote = null; } };
     lines.forEach(raw => {
-      if (QUOTE.test(raw)) { (quote ||= []).push(inline(escHTML(raw.replace(QUOTE, '')))); return; }
+      if (QUOTE.test(raw)) { (quote ||= []).push(inline(raw.replace(QUOTE, ''))); return; }
       flush();
-      out.push(inline(escHTML(raw)) + '<br>');
+      out.push(inline(raw) + '<br>');
     });
     flush();
     return out.join('').replace(/(<br>)+$/, '').replace(/<br>(<blockquote)/g, '$1');
   }
-  const plain = text => String(text || '').split(/\r?\n/).map(l => l.replace(QUOTE, '')).join('\n')
-    .replace(/\*\*(?=\S)([^\n]*?\S)\*\*/g, '$1').replace(/__(?=\S)([^\n]*?\S)__/g, '$1').replace(/~~(?=\S)([^\n]*?\S)~~/g, '$1')
-    .replace(/(^|[^*\w])\*(?=[^\s*])([^\n*]*?[^\s*])\*(?![*\w])/g, '$1$2');
+  const plain = text => String(text || '').split(/\r?\n/).map(l => runs(l.replace(QUOTE, '')).map(r => r.t).join('')).join('\n');
 
   /* ── Editor: what you type shows styled (bold looks bold) — a contenteditable
      box over the original <textarea>, which stays in the page (hidden) and keeps
@@ -595,38 +612,93 @@ const MSSRich = (() => {
   const BTNS = [['b', '<b>B</b>', 'Bold', 'Ctrl+B'], ['i', '<i style="font-family:Georgia,serif">I</i>', 'Italic', 'Ctrl+I'], ['u', '<u>U</u>', 'Underline', 'Ctrl+U'], ['s', '<s>S</s>', 'Strikethrough', ''],
     ['q', '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M4 18h5l2-4V6H4v8h3zM13 18h5l2-4V6h-7v8h3z"/></svg>', 'Quote', '']];
   const EXEC = { b: 'bold', i: 'italic', u: 'underline', s: 'strikeThrough' };
+  const MARK = { b: '**', i: '*', u: '__', s: '~~' };
   function toolbarHTML(id) {
     return `<div class="mss-rt" role="toolbar" aria-label="Text style" data-for="${id}">${BTNS.map(([k, label, name, key]) =>
       `<button type="button" class="mss-rt-btn" data-k="${k}" aria-pressed="false" onpointerdown="event.preventDefault()" onclick="MSSRich.cmd('${id}','${k}')" aria-label="${name}${key ? ` (${key})` : ''}" title="${name}${key ? ` (${key})` : ''}">${label}</button>`).join('')}</div>`;
   }
-  // Styled box → text with markers. Markers hug the words ("**word** ", never "**word **")
-  // and never cross a line break, so html() always reads them back.
-  const wrap = (t, mk) => t.split('\n').map(part => { const m = part.match(/^(\s*)([\s\S]*?)(\s*)$/); return m[2] ? m[1] + mk + m[2] + mk + m[3] : part; }).join('\n');
+  // Styled box → text with markers: the letters with their styles, line by line,
+  // then markers only where a style starts or stops. Spaces at the edge of a
+  // style stay outside it ("**word** ", never "**word **").
   const BLOCK = new Set(['DIV', 'P', 'BLOCKQUOTE', 'LI']);
   function toMarkup(root) {
-    function inl(node) {
-      let out = '';
+    const lines = [{ q: false, c: [] }];
+    const cur = () => lines[lines.length - 1];
+    const newLine = q => lines.push({ q, c: [] });
+    function walk(node, set, q) {
       node.childNodes.forEach(n => {
-        if (n.nodeType === 3) { out += n.nodeValue.replace(/ /g, ' '); return; }
+        if (n.nodeType === 3) { [...n.nodeValue.replace(/\u00a0/g, ' ')].forEach(ch => ch === '\n' ? newLine(q) : cur().c.push([ch, set])); return; }
         if (n.nodeType !== 1) return;
-        const tag = n.tagName, st = n.style || {};
-        if (tag === 'BR') { out += '\n'; return; }
-        if (BLOCK.has(tag)) {
-          let t = inl(n).replace(/\n$/, '');
-          if (tag === 'BLOCKQUOTE') t = t.split('\n').map(l => '> ' + l).join('\n');
-          out += (out && !out.endsWith('\n') ? '\n' : '') + t + '\n';
+        if (n.tagName === 'BR') { newLine(q); return; }
+        if (BLOCK.has(n.tagName)) {
+          const bq = q || n.tagName === 'BLOCKQUOTE';
+          if (cur().c.length) newLine(bq); else cur().q = bq;
+          walk(n, set, bq);
+          if (cur().c.length) newLine(q); else cur().q = q;
           return;
         }
-        let t = inl(n);
-        if (tag === 'B' || tag === 'STRONG' || st.fontWeight === 'bold' || Number(st.fontWeight) >= 600) t = wrap(t, '**');
-        if (tag === 'I' || tag === 'EM' || st.fontStyle === 'italic') t = wrap(t, '*');
-        if (tag === 'U' || /underline/.test(st.textDecorationLine || st.textDecoration || '')) t = wrap(t, '__');
-        if (tag === 'S' || tag === 'STRIKE' || tag === 'DEL' || /line-through/.test(st.textDecorationLine || st.textDecoration || '')) t = wrap(t, '~~');
-        out += t;
+        const f = FLAGS(n), next = new Set(set);
+        KINDS.forEach(k => { if (f[k]) next.add(k); });
+        walk(n, next, q);
       });
-      return out;
     }
-    return inl(root).replace(/\n+$/, '');
+    walk(root, new Set(), false);
+    const text = lines.map(({ q, c }) => {
+      // a space keeps a style only if the letters on both sides have it
+      const flags = c.map(([ch, set], x) => {
+        if (!/\s/.test(ch)) return set;
+        let a = x - 1, b = x + 1;
+        while (a >= 0 && /\s/.test(c[a][0])) a--;
+        while (b < c.length && /\s/.test(c[b][0])) b++;
+        return a < 0 || b >= c.length ? new Set() : new Set([...c[a][1]].filter(k => c[b][1].has(k)));
+      });
+      let out = '', on = new Set();
+      const close = keep => ['s', 'u', 'i', 'b'].forEach(k => { if (on.has(k) && !keep.has(k)) { out += MARK[k]; on.delete(k); } });
+      c.forEach(([ch], x) => {
+        close(flags[x]);
+        KINDS.forEach(k => { if (flags[x].has(k) && !on.has(k)) { out += MARK[k]; on.add(k); } });
+        out += ch;
+      });
+      close(new Set());
+      return (q ? '> ' : '') + out;
+    });
+    while (text.length && !text[text.length - 1].replace(/^> /, '').trim()) text.pop();   // no empty lines at the end
+    return text.join('\n');
+  }
+  // Which styles a spot in the box has (from the tags around it)
+  const FLAGS = el => {
+    const t = el.tagName, st = el.style || {}, deco = st.textDecorationLine || st.textDecoration || '';
+    return { b: t === 'B' || t === 'STRONG' || st.fontWeight === 'bold' || Number(st.fontWeight) >= 600, i: t === 'I' || t === 'EM' || st.fontStyle === 'italic',
+             u: t === 'U' || /underline/.test(deco), s: t === 'S' || t === 'STRIKE' || t === 'DEL' || /line-through/.test(deco) };
+  };
+  function stylesAt(node, ed) {
+    const out = new Set();
+    for (let el = node && (node.nodeType === 1 ? node : node.parentElement); el && el !== ed; el = el.parentElement) {
+      const f = FLAGS(el); Object.keys(f).forEach(k => { if (f[k]) out.add(k); });
+    }
+    return out;
+  }
+  // Type with exactly these styles at the cursor: step out of the style tags around
+  // it (splitting them there) and put the text in fresh ones
+  function insertStyled(ed, text, set) {
+    const sel = getSelection(), r = sel.getRangeAt(0);
+    let top = null;
+    for (let el = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement; el && el !== ed && !BLOCK.has(el.tagName); el = el.parentElement) top = el;
+    const txt = document.createTextNode(text);
+    let node = txt;
+    ['s', 'u', 'i', 'b'].forEach(k => { if (set.has(k)) { const w = document.createElement(k); w.appendChild(node); node = w; } });
+    if (top) {
+      const tail = document.createRange();
+      tail.setStart(r.startContainer, r.startOffset); tail.setEndAfter(top);
+      const rest = tail.extractContents();
+      top.after(rest);
+      const clone = top.nextSibling;
+      if (clone && clone.nodeType === 1 && !clone.textContent && !clone.querySelector('br')) clone.remove();
+      top.after(node);
+      if (!top.textContent && !top.querySelector('br')) top.remove();
+    } else r.insertNode(node);
+    const c = document.createRange(); c.setStart(txt, txt.length); c.collapse(true);
+    sel.removeAllRanges(); sel.addRange(c);
   }
   const native = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
   const boxes = new Map();          // textarea id → { ta, ed }
@@ -643,7 +715,10 @@ const MSSRich = (() => {
     ta.after(ed);
     ta.hidden = true;
     ta._mssRich = { ed };
-    boxes.set(ta.id, { ta, ed });
+    // pending: the styles the next letters get when the cursor is just sitting
+    // somewhere (B / I / U / S switch them on and off), tied to that cursor spot
+    const box = { ta, ed, pending: null };
+    boxes.set(ta.id, box);
     const draw = v => { ed.innerHTML = v ? html(v) : ''; };
     const sync = () => {
       if (!ed.textContent.trim() && !ed.querySelector('blockquote')) ed.innerHTML = '';     // shows the placeholder again
@@ -665,6 +740,18 @@ const MSSRich = (() => {
       if (sel && !sel.isCollapsed) return;                                  // typing over a selection is fine
       if (plain(native.get.call(ta)).trim().split(/\s+/).filter(Boolean).length >= o.maxWords) { ev.preventDefault(); o.onLimit?.(); }
     });
+    // Typing where the switched-on styles differ from the text around → our own styled text
+    ed.addEventListener('beforeinput', ev => {
+      if (ev.defaultPrevented || ev.inputType !== 'insertText' || !ev.data || ev.isComposing) return;
+      const sel = getSelection();
+      if (!sel || !sel.rangeCount || !sel.isCollapsed) return;
+      const want = pendingFor(box), have = stylesAt(sel.anchorNode, ed);
+      if (['b', 'i', 'u', 's'].every(k => want.has(k) === have.has(k))) return;      // the browser's own typing is right
+      ev.preventDefault();
+      insertStyled(ed, ev.data, want);
+      box.pending = { node: sel.anchorNode, offset: sel.anchorOffset, set: want };
+      sync();
+    });
     ed.addEventListener('paste', ev => {                                    // pasted text comes in plain
       ev.preventDefault();
       document.execCommand('insertText', false, (ev.clipboardData || window.clipboardData).getData('text/plain'));
@@ -674,15 +761,27 @@ const MSSRich = (() => {
       if ((ev.ctrlKey || ev.metaKey) && !ev.altKey && !ev.shiftKey && 'biu'.includes(k) && k.length === 1) { ev.preventDefault(); cmd(ta.id, k); }
     });
   }
+  // The styles for the next letters: what you switched on / off here, else the text around the cursor
+  function pendingFor(box) {
+    const sel = getSelection(), p = box.pending;
+    if (p && sel && sel.anchorNode === p.node && sel.anchorOffset === p.offset) return p.set;
+    return stylesAt(sel && sel.anchorNode, box.ed);
+  }
   function cmd(id, k) {
     const box = boxes.get(id);
     if (!box) return;
     const { ed } = box;
     if (document.activeElement !== ed) ed.focus();
+    const sel = getSelection();
     if (k === 'q') {
-      const n = getSelection().anchorNode, inQuote = n && (n.nodeType === 1 ? n : n.parentElement)?.closest('blockquote');
+      const n = sel.anchorNode, inQuote = n && (n.nodeType === 1 ? n : n.parentElement)?.closest('blockquote');
       document.execCommand('formatBlock', false, inQuote && ed.contains(inQuote) ? 'div' : 'blockquote');
-    } else document.execCommand(EXEC[k]);
+    } else if (sel.rangeCount && sel.isCollapsed) {
+      // nothing selected: switch the style on / off for what you type next
+      const set = new Set(pendingFor(box));
+      set.has(k) ? set.delete(k) : set.add(k);
+      box.pending = { node: sel.anchorNode, offset: sel.anchorOffset, set };
+    } else document.execCommand(EXEC[k]);       // selected text: style it / take it off
     pressed();
   }
   // Toolbar buttons light up for the style under the cursor
@@ -694,7 +793,7 @@ const MSSRich = (() => {
       document.querySelectorAll(`.mss-rt[data-for="${id}"] .mss-rt-btn`).forEach(b => {
         const k = b.dataset.k;
         let on = false;
-        try { on = k === 'q' ? !!(q && ed.contains(q)) : document.queryCommandState(EXEC[k]); } catch {}
+        try { on = k === 'q' ? !!(q && ed.contains(q)) : sel.isCollapsed ? pendingFor(boxes.get(id)).has(k) : document.queryCommandState(EXEC[k]); } catch {}
         b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
       });
     });
