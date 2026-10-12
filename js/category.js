@@ -1079,7 +1079,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
           <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
           <div class="comp-meta">${_badge}</div>
           ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
-          ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">"${escHTML(e.notes)}"</div>` : ''}
+          ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">"${escHTML(MSSRich.plain(e.notes))}"</div>` : ''}
           ${renderFavChips(e.ratings, e.cat)}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;" onclick="event.stopPropagation()">
