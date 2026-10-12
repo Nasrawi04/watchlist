@@ -12,7 +12,7 @@ const MSSFriendPop = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));
   const isMovie = e => e.cat === 'movies' || e.ratings?._media_type === 'movie' || e.tmdb_type === 'movie';
   const fmtDate = d => d ? new Date(String(d).length <= 10 ? d + 'T12:00:00' : d).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-  const words = t => (t || '').trim().split(/\s+/).filter(Boolean).length;
+  const words = t => MSSRich.plain(t).trim().split(/\s+/).filter(Boolean).length;
 
   /* ══ Note card (Notes-page design) ══ */
   function profileAv(p, size) {
@@ -31,7 +31,7 @@ const MSSFriendPop = (() => {
   const trim = t => { const w = (t || '').trim().split(/\s+/); return w.length > 60 ? w.slice(0, 60).join(' ') + '…' : (t || '').trim(); };
 
   function noteCardHTML(e, p, onclick) {
-    const quote = `<blockquote class="nc-quote" translate="no">&ldquo;${esc(trim(e.notes))}&rdquo;</blockquote>`;
+    const quote = `<blockquote class="nc-quote" translate="no">&ldquo;${esc(trim(MSSRich.plain(e.notes)))}&rdquo;</blockquote>`;
     const n = words(e.notes);
     return `<article class="nc-card" onclick="${onclick}">
       ${poster(e, 'nc-poster')}
