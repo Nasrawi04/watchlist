@@ -2151,7 +2151,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dNotesSpoilerWrap').innerHTML = mssSpoilerToggleHTML('dNotesSpoiler');
     document.getElementById('dNotesSpoiler').checked = mssIsSpoiler(e);
     _notesUpdateWordCount();
-    _notesGuardWordLimit();
     _notesRichTools();
     // Rewatch count
     const _rewatchEl = document.getElementById('dRewatchCount');
@@ -2644,21 +2643,11 @@ function _notesRichTools() {
   const box = document.getElementById('dNotesTools');
   if (!box || box.childElementCount) return;
   box.innerHTML = MSSRich.toolbarHTML('dNotes');
-  MSSRich.bind(document.getElementById('dNotes'));
-}
-function _notesGuardWordLimit() {
-  const el = document.getElementById('dNotes');
-  if (!el || el.dataset.wordLimitGuarded) return;
-  el.dataset.wordLimitGuarded = '1';
-  el.addEventListener('beforeinput', e => {
-    if (e.inputType && e.inputType.startsWith('delete')) return;
-    if (el.selectionStart !== el.selectionEnd) return;
-    if (_notesCountWords(el.value) >= NOTE_WORD_LIMIT) {
-      e.preventDefault();
-      const countEl = document.getElementById('dNotesCount');
-      if (countEl) { countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`; countEl.classList.add('over'); }
-    }
-  });
+  // styles show as you type; typing stops at the word limit (deleting still works)
+  MSSRich.attach(document.getElementById('dNotes'), { maxWords: NOTE_WORD_LIMIT, onLimit: () => {
+    const c = document.getElementById('dNotesCount');
+    if (c) { c.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`; c.classList.add('over'); }
+  } });
 }
 </script>
 </html>
