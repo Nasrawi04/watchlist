@@ -165,8 +165,11 @@ const MSSNote = (() => {
       </div>`;
     MSSDialog.bind(el, close);
     document.body.appendChild(el);
-    guardLimit(document.getElementById('mssNoteTextarea'));
-    MSSRich.bind(document.getElementById('mssNoteTextarea'));
+    MSSRich.attach(document.getElementById('mssNoteTextarea'), { maxWords: NOTE_WORD_LIMIT, onLimit: () => {
+      const c = document.getElementById('mssNoteCount');
+      c.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`;
+      c.classList.add('over');
+    } });
   }
 
   function showView() {
@@ -183,6 +186,7 @@ const MSSNote = (() => {
     const el = document.getElementById('mssNoteViewPopupActions');
     if (opts.editable) {
       el.innerHTML = `<button type="button" class="popup-action-btn np-grow" onclick="MSSNote._edit()">${PEN}Edit Note</button>`
+        + (current?.notes?.trim() ? `<button type="button" class="popup-action-btn popup-action-danger np-del" onclick="MSSNote._delete()" aria-label="Delete note" title="Delete note">${icon('trash', 15)}</button>` : '')
         + `<button type="button" class="popup-action-btn np-ghost" onclick="MSSNote.close()">Close</button>`;
       return;
     }
@@ -279,6 +283,26 @@ const MSSNote = (() => {
     }
   }
 
+  // Your note → gone (the title stays in your library; only the note and its spoiler mark go)
+  async function remove() {
+    const e = current;
+    if (!e) return;
+    if (!(await showConfirm({ title: 'Delete this note?', message: `Your note on “${e.title || 'this title'}” will be removed. Its likes and replies go with it.`, confirmText: 'Delete', iconName: 'trash' }))) return;
+    try {
+      const ratings = { ...(e.ratings || {}), _notes_spoiler: false };
+      const uid = window._navUser?.id || (await getCurrentUser()).id;
+      const { error } = await sb.from('entries').update({ notes: '', ratings }).eq('id', e.id).eq('user_id', uid);
+      if (error) throw error;
+      e.notes = ''; e.ratings = ratings;
+      if (typeof MSSViews !== 'undefined' && MSSViews.has('note')) MSSViews.close(); else close();
+      opts.onSaved?.(e);
+      showToast('Note deleted.');
+    } catch (err) {
+      console.error('MSSNote delete:', err);
+      showToast('Couldn’t delete the note — try again.', 'err');
+    }
+  }
+
   /* NOTE_WORD_LIMIT cap — blocks further typing at the limit instead of
      trimming after the fact, with a clear message when you hit it. */
   function updateCount() {
@@ -293,22 +317,11 @@ const MSSNote = (() => {
     countEl.textContent = `${n} / ${NOTE_WORD_LIMIT} words`;
     countEl.classList.toggle('over', n >= NOTE_WORD_LIMIT);
   }
-  function guardLimit(el) {
-    el.addEventListener('beforeinput', ev => {
-      if (ev.inputType && ev.inputType.startsWith('delete')) return;
-      if (el.selectionStart !== el.selectionEnd) return;
-      if (words(el.value) >= NOTE_WORD_LIMIT) {
-        ev.preventDefault();
-        const c = document.getElementById('mssNoteCount');
-        c.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`;
-        c.classList.add('over');
-      }
-    });
-  }
+
 
   return {
     cardHTML, open, close, reactionCounts,
     words, date, watchedDate, trim, badges, scorePill, poster, loadHero, fitLong,
-    _edit: showEdit, _cancel: cancel, _save: save, _count: updateCount, _react: react,
+    _edit: showEdit, _cancel: cancel, _save: save, _delete: remove, _count: updateCount, _react: react,
   };
 })();
