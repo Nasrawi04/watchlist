@@ -28,7 +28,7 @@ const MSSNote = (() => {
   let current = null, opts = {}, reactState = null;
 
   /* ── Helpers ── */
-  const words = t => (t || '').trim().split(/\s+/).filter(Boolean).length;
+  const words = t => MSSRich.plain(t).trim().split(/\s+/).filter(Boolean).length;     // markers (**, > …) aren't words
   // Date the title was watched (finished), falling back to when it was added
   const watchedDate = e => e.completed_date || e.created_at;
   function date(d, withDay) {
@@ -106,7 +106,7 @@ const MSSNote = (() => {
   function cardHTML(e, { counts, onclick, blurSpoiler } = {}) {
     const c = counts || { like: 0, dislike: 0 };
     const n = words(e.notes);
-    const quote = `<blockquote class="nc-quote" translate="no">&ldquo;${esc(trim(e.notes))}&rdquo;</blockquote>`;
+    const quote = `<blockquote class="nc-quote" translate="no">&ldquo;${esc(trim(MSSRich.plain(e.notes)))}&rdquo;</blockquote>`;
     return `<article class="nc-card" onclick="${onclick}">
       ${poster(e.poster_url, e.title, 'nc-poster')}
       <div class="nc-main">
@@ -151,6 +151,7 @@ const MSSNote = (() => {
           <div class="np-actions" id="mssNoteViewPopupActions"></div>
         </div>
         <div class="np-body" id="mssNoteEditBody" style="display:none">
+          ${MSSRich.toolbarHTML('mssNoteTextarea')}
           <textarea class="np-textarea" id="mssNoteTextarea" aria-label="Your note" placeholder="What did you think? Favorite moments, hot takes, anything…" oninput="MSSNote._count()"></textarea>
           <div class="np-count" id="mssNoteCount">0 / ${NOTE_WORD_LIMIT} words</div>
         </div>
@@ -165,11 +166,12 @@ const MSSNote = (() => {
     MSSDialog.bind(el, close);
     document.body.appendChild(el);
     guardLimit(document.getElementById('mssNoteTextarea'));
+    MSSRich.bind(document.getElementById('mssNoteTextarea'));
   }
 
   function showView() {
     const e = current, $ = id => document.getElementById(id);
-    const q = `<blockquote class="np-quote">&ldquo;${esc((e.notes || '').trim())}&rdquo;</blockquote>`;
+    const q = `<blockquote class="np-quote mss-rich" translate="no">${MSSRich.html(e.notes)}</blockquote>`;
     $('mssNoteText').innerHTML = !opts.editable && mssIsSpoiler(e) ? mssSpoilerHTML(q, { id: e.id }) : q;
     viewFooter();
     ['mssNoteViewBody', 'mssNoteViewFooter'].forEach(id => { $(id).style.display = ''; });
