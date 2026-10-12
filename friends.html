@@ -562,7 +562,11 @@ async function loadFriends() {
   // Each friend's most recent activity (shown when they aren't watching anything)
   // (what they watched counts first; a note only if that's all they've done)
   const events = _frEvents().sort((a, b) => (a._ev === 'note') - (b._ev === 'note') || b._at - a._at);
-  events.forEach(x => { const st = _frStats[x.user_id]; if (st && !st.latest) st.latest = { e: window._frEntryMap[x.id.split(':')[0]], type: x._ev }; });
+  // (title events only — a new list or an episode rating has no single title to show here)
+  events.forEach(x => {
+    const st = _frStats[x.user_id], e = window._frEntryMap[x.id.split(':')[0]];
+    if (st && !st.latest && e) st.latest = { e, type: x._ev };
+  });
   _frLoaded = true;
   const sub = document.getElementById('friendsPageSub');
   if (sub) sub.textContent = `${_frAccepted.length} friend${_frAccepted.length === 1 ? '' : 's'}${_frIncoming.length ? ` · ${_frIncoming.length} request${_frIncoming.length === 1 ? '' : 's'}` : ''}`;
@@ -814,7 +818,7 @@ function _frRenderActivity() {
         <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
         <div class="fa-title" translate="no">${escHTML(x.title)}${x.year ? ` <span>${escHTML(String(x.year).slice(0, 4))}</span>` : ''}</div>
         <div class="fa-meta">${_frTypeBadge(x)}<span>${x._ev === 'finished' || x._ev === 'logged' ? x._at.toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
-        ${x._ev === 'note' ? `<div class="fa-note">${mssIsSpoiler(x) ? mssSpoilerTag() : `&ldquo;${escHTML(x.notes.trim().split(/\s+/).slice(0, 30).join(' '))}${x.notes.trim().split(/\s+/).length > 30 ? '…' : ''}&rdquo;`}</div>` : ''}
+        ${x._ev === 'note' ? `<div class="fa-note">${mssIsSpoiler(x) ? mssSpoilerTag() : `&ldquo;${escHTML(MSSRich.plain(x.notes).trim().split(/\s+/).slice(0, 30).join(' '))}${MSSRich.plain(x.notes).trim().split(/\s+/).length > 30 ? '…' : ''}&rdquo;`}</div>` : ''}
       </div>
       ${(x._ev === 'finished' || x._ev === 'logged' || x._ev === 'caught_up') && sc != null ? `<div class="fa-score">★ ${sc.toFixed(2)}</div>` : ''}
       ${_frPosterHTML(x, 'fa-poster')}
@@ -1115,7 +1119,7 @@ function _cmpShowTitle(picker) {
         <tr class="cp-total"><td>Final score</td>${people.map(u => { const v = _frScore(g.byUser[u]); return `<td>${v != null ? '★ ' + v.toFixed(2) : '—'}</td>`; }).join('')}</tr></tbody></table></div>` : ''}
     ${people.some(u => g.byUser[u].notes && g.byUser[u].notes.trim()) ? `<div class="fr-toolbar-title cp-sec">Notes</div>
     <div class="fn-grid">${people.filter(u => g.byUser[u].notes && g.byUser[u].notes.trim()).map(u => { const e = g.byUser[u];
-      const text = `<blockquote class="fn-text" translate="no">${escHTML(e.notes.trim())}</blockquote>`;
+      const text = `<blockquote class="fn-text mss-rich" translate="no">${MSSRich.html(e.notes)}</blockquote>`;
       return `<article class="fn-card"><div class="fn-by">${_frAvHTML(prof(u), 22)}<span translate="no">${escHTML(name(u))}</span></div>${mssIsSpoiler(e) && u !== me ? mssSpoilerHTML(text, { compact: true, id: e.id }) : text}</article>`; }).join('')}</div>` : ''}`;
 }
 
