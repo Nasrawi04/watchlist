@@ -5079,3 +5079,18 @@ html.mss-scroll-locked [role="dialog"], html.mss-scroll-locked [role="dialog"] *
 .la-empty b { color:var(--text); font-size:15px; }
 .la-new { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
 @media(max-width:640px) { #mssListAddOverlay { padding:10px; } .la-card .lc-posters { gap:5px; } }
+
+/* ── Rich notes (MSSRich, config.js): toolbar + styled text ── */
+.mss-rt { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 8px; }
+.mss-rt-btn { width:34px; height:32px; display:inline-flex; align-items:center; justify-content:center; padding:0; border-radius:var(--radius-sm); border:0.5px solid var(--border-2); background:var(--card); color:var(--text-2); font:600 15px 'Manrope',var(--sans); cursor:pointer; transition:border-color .15s, color .15s, background-color .15s; }
+.mss-rt-btn:hover { border-color:var(--border-olive); color:var(--text); background:var(--olive-faint); }
+.mss-rt-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.mss-rt-btn:active { transform:translateY(1px); }
+:is(div, blockquote).mss-rich { font-style:normal; white-space:normal; }   /* beats the italic note styles, so *italic* shows */
+.mss-rich strong { font-weight:700; color:var(--text); }
+.mss-rich em { font-style:italic; }
+.mss-rich s { opacity:.75; }
+.mss-rq { margin:10px 0; padding:4px 0; padding-inline-start:14px; border-inline-start:3px solid var(--border-olive); font-style:italic; color:var(--text-2); }
+.mss-rq::before { content:'“'; } .mss-rq::after { content:'”'; }
+.mss-rq:first-child { margin-top:2px; } .mss-rq:last-child { margin-bottom:2px; }
+.mss-rq em { font-style:normal; }
