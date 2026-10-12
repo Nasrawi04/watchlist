@@ -366,7 +366,7 @@ function _libRender(){
         +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+(i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other')+'">'+(i+1)+'</div>':''))+'</div>'
         +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
         +'<div class="fv-rank-meta">'+_libTypeBadge(isMc)+'</div>'
-        +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(e.notes))+'&rdquo;</div>':'')
+        +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(MSSRich.plain(e.notes)))+'&rdquo;</div>':'')
         +renderFavChips(e.ratings,e.cat)
         +'</div><div class="fv-rank-score">'+(sc!=null?'★ '+sc:'—')+'</div></div>'
         +_libCcBtn(e.id)
