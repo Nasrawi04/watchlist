@@ -559,8 +559,9 @@ function clampWords(text, max) {
      **bold**   *italic*   __underline__   ~~strike~~   > a quoted line
    MSSRich.html(text)   → safe HTML for a full note (quotes become blocks)
    MSSRich.plain(text)  → the text without markers (previews, cards, images)
-   MSSRich.toolbarHTML(textareaId) / MSSRich.bind(textarea)
-     → B · I · U · S · Quote buttons above a note box (+ Ctrl/⌘ B, I, U) ── */
+   MSSRich.toolbarHTML(textareaId) + MSSRich.attach(textarea, { maxWords, onLimit })
+     → B · I · U · S · Quote buttons over a box where styles show as you
+       type (+ Ctrl/⌘ B, I, U). The textarea keeps the marker text. ── */
 const MSSRich = (() => {
   const INLINE = [
     [/\*\*(?=\S)([^\n]*?\S)\*\*/g, '<strong>$1</strong>'],
@@ -587,53 +588,120 @@ const MSSRich = (() => {
     .replace(/\*\*(?=\S)([^\n]*?\S)\*\*/g, '$1').replace(/__(?=\S)([^\n]*?\S)__/g, '$1').replace(/~~(?=\S)([^\n]*?\S)~~/g, '$1')
     .replace(/(^|[^*\w])\*(?=[^\s*])([^\n*]*?[^\s*])\*(?![*\w])/g, '$1$2');
 
-  const MARK = { b: '**', i: '*', u: '__', s: '~~' };
+  /* ── Editor: what you type shows styled (bold looks bold) — a contenteditable
+     box over the original <textarea>, which stays in the page (hidden) and keeps
+     the note as text with markers. Pages keep using textarea.value / focus() /
+     its oninput as before; setting .value redraws the box. ── */
   const BTNS = [['b', '<b>B</b>', 'Bold', 'Ctrl+B'], ['i', '<i style="font-family:Georgia,serif">I</i>', 'Italic', 'Ctrl+I'], ['u', '<u>U</u>', 'Underline', 'Ctrl+U'], ['s', '<s>S</s>', 'Strikethrough', ''],
     ['q', '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M4 18h5l2-4V6H4v8h3zM13 18h5l2-4V6h-7v8h3z"/></svg>', 'Quote', '']];
+  const EXEC = { b: 'bold', i: 'italic', u: 'underline', s: 'strikeThrough' };
   function toolbarHTML(id) {
-    return `<div class="mss-rt" role="toolbar" aria-label="Text style" aria-controls="${id}">${BTNS.map(([k, label, name, key]) =>
-      `<button type="button" class="mss-rt-btn" onpointerdown="event.preventDefault()" onclick="MSSRich.apply('${id}','${k}')" aria-label="${name}${key ? ` (${key})` : ''}" title="${name}${key ? ` (${key})` : ''}">${label}</button>`).join('')}</div>`;
+    return `<div class="mss-rt" role="toolbar" aria-label="Text style" data-for="${id}">${BTNS.map(([k, label, name, key]) =>
+      `<button type="button" class="mss-rt-btn" data-k="${k}" aria-pressed="false" onpointerdown="event.preventDefault()" onclick="MSSRich.cmd('${id}','${k}')" aria-label="${name}${key ? ` (${key})` : ''}" title="${name}${key ? ` (${key})` : ''}">${label}</button>`).join('')}</div>`;
   }
-  function apply(id, kind) {
-    const ta = typeof id === 'string' ? document.getElementById(id) : id;
-    if (!ta) return;
-    let v = ta.value, a = ta.selectionStart, z = ta.selectionEnd;
-    if (kind === 'q') {
-      // every line touched by the selection becomes a quote (or stops being one)
-      const from = v.lastIndexOf('\n', a - 1) + 1, toNl = v.indexOf('\n', z), to = toNl === -1 ? v.length : toNl;
-      const lines = v.slice(from, to).split('\n');
-      const all = lines.every(l => QUOTE.test(l) || !l.trim());
-      const next = lines.map(l => all ? l.replace(QUOTE, '') : (l.trim() && !QUOTE.test(l) ? '> ' + l : l)).join('\n');
-      ta.value = v.slice(0, from) + next + v.slice(to);
-      ta.setSelectionRange(from, from + next.length);
-    } else {
-      const m = MARK[kind];
-      // trim the selection to its words, so "**word **" never happens
-      while (a < z && /\s/.test(v[a])) a++;
-      while (z > a && /\s/.test(v[z - 1])) z--;
-      const wrapped = v.slice(a - m.length, a) === m && v.slice(z, z + m.length) === m
-        && !(kind === 'i' && (v[a - 2] === '*' || v[z + 1] === '*'));            // *x* inside **x** is bold, not italic
-      if (wrapped) {
-        ta.value = v.slice(0, a - m.length) + v.slice(a, z) + v.slice(z + m.length);
-        ta.setSelectionRange(a - m.length, z - m.length);
-      } else {
-        ta.value = v.slice(0, a) + m + v.slice(a, z) + m + v.slice(z);
-        ta.setSelectionRange(a + m.length, z + m.length);
-      }
+  // Styled box → text with markers. Markers hug the words ("**word** ", never "**word **")
+  // and never cross a line break, so html() always reads them back.
+  const wrap = (t, mk) => t.split('\n').map(part => { const m = part.match(/^(\s*)([\s\S]*?)(\s*)$/); return m[2] ? m[1] + mk + m[2] + mk + m[3] : part; }).join('\n');
+  const BLOCK = new Set(['DIV', 'P', 'BLOCKQUOTE', 'LI']);
+  function toMarkup(root) {
+    function inl(node) {
+      let out = '';
+      node.childNodes.forEach(n => {
+        if (n.nodeType === 3) { out += n.nodeValue.replace(/ /g, ' '); return; }
+        if (n.nodeType !== 1) return;
+        const tag = n.tagName, st = n.style || {};
+        if (tag === 'BR') { out += '\n'; return; }
+        if (BLOCK.has(tag)) {
+          let t = inl(n).replace(/\n$/, '');
+          if (tag === 'BLOCKQUOTE') t = t.split('\n').map(l => '> ' + l).join('\n');
+          out += (out && !out.endsWith('\n') ? '\n' : '') + t + '\n';
+          return;
+        }
+        let t = inl(n);
+        if (tag === 'B' || tag === 'STRONG' || st.fontWeight === 'bold' || Number(st.fontWeight) >= 600) t = wrap(t, '**');
+        if (tag === 'I' || tag === 'EM' || st.fontStyle === 'italic') t = wrap(t, '*');
+        if (tag === 'U' || /underline/.test(st.textDecorationLine || st.textDecoration || '')) t = wrap(t, '__');
+        if (tag === 'S' || tag === 'STRIKE' || tag === 'DEL' || /line-through/.test(st.textDecorationLine || st.textDecoration || '')) t = wrap(t, '~~');
+        out += t;
+      });
+      return out;
     }
-    ta.focus();
-    ta.dispatchEvent(new Event('input', { bubbles: true }));      // word counts, drafts…
+    return inl(root).replace(/\n+$/, '');
   }
-  function bind(ta) {
+  const native = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+  const boxes = new Map();          // textarea id → { ta, ed }
+  // maxWords: typing stops at the limit (deleting still works); onLimit() then
+  function attach(ta, o = {}) {
     if (!ta || ta._mssRich) return;
-    ta._mssRich = true;
-    ta.addEventListener('keydown', ev => {
-      if (!(ev.ctrlKey || ev.metaKey) || ev.altKey || ev.shiftKey) return;
-      const k = { b: 'b', i: 'i', u: 'u' }[ev.key.toLowerCase()];
-      if (k) { ev.preventDefault(); apply(ta, k); }
+    const ed = document.createElement('div');
+    ed.className = `${ta.className} mss-rte`;
+    ed.contentEditable = 'true';
+    ed.setAttribute('role', 'textbox'); ed.setAttribute('aria-multiline', 'true');
+    ed.setAttribute('aria-label', ta.getAttribute('aria-label') || ta.placeholder || 'Note');
+    ed.setAttribute('translate', 'no'); ed.spellcheck = true;
+    ed.dataset.placeholder = ta.placeholder || '';
+    ta.after(ed);
+    ta.hidden = true;
+    ta._mssRich = { ed };
+    boxes.set(ta.id, { ta, ed });
+    const draw = v => { ed.innerHTML = v ? html(v) : ''; };
+    const sync = () => {
+      if (!ed.textContent.trim() && !ed.querySelector('blockquote')) ed.innerHTML = '';     // shows the placeholder again
+      native.set.call(ta, toMarkup(ed));
+      ta.dispatchEvent(new Event('input', { bubbles: true }));                               // word counts…
+    };
+    Object.defineProperty(ta, 'value', { configurable: true, get: () => native.get.call(ta), set: v => { native.set.call(ta, v); draw(v); } });
+    ta.focus = () => {
+      ed.focus();
+      const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    };
+    draw(native.get.call(ta));
+    try { document.execCommand('styleWithCSS', false, false); } catch {}
+    ed.addEventListener('input', sync);
+    ed.addEventListener('beforeinput', ev => {
+      if (!o.maxWords || !ev.inputType || !ev.inputType.startsWith('insert') || ev.inputType === 'insertParagraph') return;
+      const sel = getSelection();
+      if (sel && !sel.isCollapsed) return;                                  // typing over a selection is fine
+      if (plain(native.get.call(ta)).trim().split(/\s+/).filter(Boolean).length >= o.maxWords) { ev.preventDefault(); o.onLimit?.(); }
+    });
+    ed.addEventListener('paste', ev => {                                    // pasted text comes in plain
+      ev.preventDefault();
+      document.execCommand('insertText', false, (ev.clipboardData || window.clipboardData).getData('text/plain'));
+    });
+    ed.addEventListener('keydown', ev => {
+      const k = ev.key.toLowerCase();
+      if ((ev.ctrlKey || ev.metaKey) && !ev.altKey && !ev.shiftKey && 'biu'.includes(k) && k.length === 1) { ev.preventDefault(); cmd(ta.id, k); }
     });
   }
-  return { html, plain, toolbarHTML, apply, bind };
+  function cmd(id, k) {
+    const box = boxes.get(id);
+    if (!box) return;
+    const { ed } = box;
+    if (document.activeElement !== ed) ed.focus();
+    if (k === 'q') {
+      const n = getSelection().anchorNode, inQuote = n && (n.nodeType === 1 ? n : n.parentElement)?.closest('blockquote');
+      document.execCommand('formatBlock', false, inQuote && ed.contains(inQuote) ? 'div' : 'blockquote');
+    } else document.execCommand(EXEC[k]);
+    pressed();
+  }
+  // Toolbar buttons light up for the style under the cursor
+  function pressed() {
+    const sel = getSelection(), n = sel && sel.anchorNode;
+    boxes.forEach(({ ed }, id) => {
+      if (!n || !ed.contains(n)) return;
+      const q = (n.nodeType === 1 ? n : n.parentElement)?.closest('blockquote');
+      document.querySelectorAll(`.mss-rt[data-for="${id}"] .mss-rt-btn`).forEach(b => {
+        const k = b.dataset.k;
+        let on = false;
+        try { on = k === 'q' ? !!(q && ed.contains(q)) : document.queryCommandState(EXEC[k]); } catch {}
+        b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+      });
+    });
+  }
+  document.addEventListener('selectionchange', pressed);
+
+  return { html, plain, toolbarHTML, attach, cmd, toMarkup };
 })();
 
 function posterHTML(entry, size) {
