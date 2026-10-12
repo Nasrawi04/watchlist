@@ -5086,6 +5086,16 @@ html.mss-scroll-locked [role="dialog"], html.mss-scroll-locked [role="dialog"] *
 .mss-rt-btn:hover { border-color:var(--border-olive); color:var(--text); background:var(--olive-faint); }
 .mss-rt-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .mss-rt-btn:active { transform:translateY(1px); }
+.mss-rt-btn.on, .mss-rt-btn.on:hover { background:var(--olive); border-color:var(--olive); color:#fff; }
+/* the writing box (MSSRich.attach): looks like the textarea it replaces, styles show as you type */
+:where(.mss-rte) { min-height:120px; max-height:min(60vh, 560px); }    /* the box's own class (np-textarea, field-input) can set these */
+.mss-rte { display:block; overflow-y:auto; white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; text-align:start; outline:none; }
+.mss-rte:empty::before { content:attr(data-placeholder); color:var(--text-3); pointer-events:none; }
+.mss-rte:focus-visible { outline:none; }
+.mss-rte strong, .mss-rte b { font-weight:700; }
+.mss-rte blockquote, .mss-rte .mss-rq { margin:8px 0; padding:2px 0; padding-inline-start:14px; border-inline-start:3px solid var(--border-olive); font-style:italic; color:var(--text-2); }
+.mss-rte blockquote::before, .mss-rte blockquote::after { content:none; }
+.np-actions .np-del { flex:0 0 auto !important; min-width:46px; padding-inline:12px !important; }
 :is(div, blockquote).mss-rich { font-style:normal; white-space:normal; }   /* beats the italic note styles, so *italic* shows */
 .mss-rich strong { font-weight:700; color:var(--text); }
 .mss-rich em { font-style:italic; }
