@@ -798,6 +798,7 @@
         <div class="det-fields-grid">
           <div class="field-group" id="dNotesSection" style="margin-bottom:0;">
             <div class="field-label">Personal Notes</div>
+            <div id="dNotesTools"></div>
             <textarea class="field-input" id="dNotes" placeholder="Your thoughts…" oninput="_notesUpdateWordCount()"></textarea>
             <div class="list-desc-count" id="dNotesCount">0 / 500 words</div>
             <div id="dNotesSpoilerWrap"></div>
@@ -2151,6 +2152,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dNotesSpoiler').checked = mssIsSpoiler(e);
     _notesUpdateWordCount();
     _notesGuardWordLimit();
+    _notesRichTools();
     // Rewatch count
     const _rewatchEl = document.getElementById('dRewatchCount');
     const _rewatchSec = document.getElementById('dRewatchSection');
@@ -2620,22 +2622,29 @@ function _showDuplicatePopup(title, existing) {
    (deletions and replacing a selection still work) instead of silently
    trimming text back after the fact. */
 function _notesCountWords(s) {
-  return s.trim() ? s.trim().split(/\s+/).length : 0;
+  const t = MSSRich.plain(s).trim();      // style markers (**, > …) aren't words
+  return t ? t.split(/\s+/).length : 0;
 }
 function _notesUpdateWordCount() {
   const el = document.getElementById('dNotes');
   const countEl = document.getElementById('dNotesCount');
   if (!el || !countEl) return;
-  const words = el.value.trim().split(/\s+/).filter(Boolean);
-  if (words.length > NOTE_WORD_LIMIT) {
+  const count = _notesCountWords(el.value);
+  if (count > NOTE_WORD_LIMIT) {
     el.value = clampWords(el.value, NOTE_WORD_LIMIT);
     countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`;
     countEl.classList.add('over');
     return;
   }
-  const count = words.length;
   countEl.textContent = `${count} / ${NOTE_WORD_LIMIT} words`;
   countEl.classList.toggle('over', count >= NOTE_WORD_LIMIT);
+}
+// B · I · U · S · Quote above the note box (MSSRich, config.js)
+function _notesRichTools() {
+  const box = document.getElementById('dNotesTools');
+  if (!box || box.childElementCount) return;
+  box.innerHTML = MSSRich.toolbarHTML('dNotes');
+  MSSRich.bind(document.getElementById('dNotes'));
 }
 function _notesGuardWordLimit() {
   const el = document.getElementById('dNotes');
@@ -2644,8 +2653,7 @@ function _notesGuardWordLimit() {
   el.addEventListener('beforeinput', e => {
     if (e.inputType && e.inputType.startsWith('delete')) return;
     if (el.selectionStart !== el.selectionEnd) return;
-    const count = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
-    if (count >= NOTE_WORD_LIMIT) {
+    if (_notesCountWords(el.value) >= NOTE_WORD_LIMIT) {
       e.preventDefault();
       const countEl = document.getElementById('dNotesCount');
       if (countEl) { countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`; countEl.classList.add('over'); }
