@@ -554,6 +554,88 @@ function clampWords(text, max) {
   return n >= max ? text.slice(0, end) : text;
 }
 
+/* ── Rich notes (MSSRich) — Letterboxd-style styling for personal notes /
+   reviews. Saved as plain text with small markers, so nothing else changes:
+     **bold**   *italic*   __underline__   ~~strike~~   > a quoted line
+   MSSRich.html(text)   → safe HTML for a full note (quotes become blocks)
+   MSSRich.plain(text)  → the text without markers (previews, cards, images)
+   MSSRich.toolbarHTML(textareaId) / MSSRich.bind(textarea)
+     → B · I · U · S · Quote buttons above a note box (+ Ctrl/⌘ B, I, U) ── */
+const MSSRich = (() => {
+  const INLINE = [
+    [/\*\*(?=\S)([^\n]*?\S)\*\*/g, '<strong>$1</strong>'],
+    [/__(?=\S)([^\n]*?\S)__/g, '<u>$1</u>'],
+    [/~~(?=\S)([^\n]*?\S)~~/g, '<s>$1</s>'],
+    [/(^|[^*\w])\*(?=[^\s*])([^\n*]*?[^\s*])\*(?![*\w])/g, '$1<em>$2</em>'],
+  ];
+  const QUOTE = /^\s*>\s?/;
+  const inline = line => INLINE.reduce((t, [re, to]) => t.replace(re, to), line);
+  function html(text) {
+    const lines = String(text || '').trim().split(/\r?\n/);
+    const out = [];
+    let quote = null;
+    const flush = () => { if (quote) { out.push(`<blockquote class="mss-rq">${quote.join('<br>')}</blockquote>`); quote = null; } };
+    lines.forEach(raw => {
+      if (QUOTE.test(raw)) { (quote ||= []).push(inline(escHTML(raw.replace(QUOTE, '')))); return; }
+      flush();
+      out.push(inline(escHTML(raw)) + '<br>');
+    });
+    flush();
+    return out.join('').replace(/(<br>)+$/, '').replace(/<br>(<blockquote)/g, '$1');
+  }
+  const plain = text => String(text || '').split(/\r?\n/).map(l => l.replace(QUOTE, '')).join('\n')
+    .replace(/\*\*(?=\S)([^\n]*?\S)\*\*/g, '$1').replace(/__(?=\S)([^\n]*?\S)__/g, '$1').replace(/~~(?=\S)([^\n]*?\S)~~/g, '$1')
+    .replace(/(^|[^*\w])\*(?=[^\s*])([^\n*]*?[^\s*])\*(?![*\w])/g, '$1$2');
+
+  const MARK = { b: '**', i: '*', u: '__', s: '~~' };
+  const BTNS = [['b', '<b>B</b>', 'Bold', 'Ctrl+B'], ['i', '<i style="font-family:Georgia,serif">I</i>', 'Italic', 'Ctrl+I'], ['u', '<u>U</u>', 'Underline', 'Ctrl+U'], ['s', '<s>S</s>', 'Strikethrough', ''],
+    ['q', '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M4 18h5l2-4V6H4v8h3zM13 18h5l2-4V6h-7v8h3z"/></svg>', 'Quote', '']];
+  function toolbarHTML(id) {
+    return `<div class="mss-rt" role="toolbar" aria-label="Text style" aria-controls="${id}">${BTNS.map(([k, label, name, key]) =>
+      `<button type="button" class="mss-rt-btn" onpointerdown="event.preventDefault()" onclick="MSSRich.apply('${id}','${k}')" aria-label="${name}${key ? ` (${key})` : ''}" title="${name}${key ? ` (${key})` : ''}">${label}</button>`).join('')}</div>`;
+  }
+  function apply(id, kind) {
+    const ta = typeof id === 'string' ? document.getElementById(id) : id;
+    if (!ta) return;
+    let v = ta.value, a = ta.selectionStart, z = ta.selectionEnd;
+    if (kind === 'q') {
+      // every line touched by the selection becomes a quote (or stops being one)
+      const from = v.lastIndexOf('\n', a - 1) + 1, toNl = v.indexOf('\n', z), to = toNl === -1 ? v.length : toNl;
+      const lines = v.slice(from, to).split('\n');
+      const all = lines.every(l => QUOTE.test(l) || !l.trim());
+      const next = lines.map(l => all ? l.replace(QUOTE, '') : (l.trim() && !QUOTE.test(l) ? '> ' + l : l)).join('\n');
+      ta.value = v.slice(0, from) + next + v.slice(to);
+      ta.setSelectionRange(from, from + next.length);
+    } else {
+      const m = MARK[kind];
+      // trim the selection to its words, so "**word **" never happens
+      while (a < z && /\s/.test(v[a])) a++;
+      while (z > a && /\s/.test(v[z - 1])) z--;
+      const wrapped = v.slice(a - m.length, a) === m && v.slice(z, z + m.length) === m
+        && !(kind === 'i' && (v[a - 2] === '*' || v[z + 1] === '*'));            // *x* inside **x** is bold, not italic
+      if (wrapped) {
+        ta.value = v.slice(0, a - m.length) + v.slice(a, z) + v.slice(z + m.length);
+        ta.setSelectionRange(a - m.length, z - m.length);
+      } else {
+        ta.value = v.slice(0, a) + m + v.slice(a, z) + m + v.slice(z);
+        ta.setSelectionRange(a + m.length, z + m.length);
+      }
+    }
+    ta.focus();
+    ta.dispatchEvent(new Event('input', { bubbles: true }));      // word counts, drafts…
+  }
+  function bind(ta) {
+    if (!ta || ta._mssRich) return;
+    ta._mssRich = true;
+    ta.addEventListener('keydown', ev => {
+      if (!(ev.ctrlKey || ev.metaKey) || ev.altKey || ev.shiftKey) return;
+      const k = { b: 'b', i: 'i', u: 'u' }[ev.key.toLowerCase()];
+      if (k) { ev.preventDefault(); apply(ta, k); }
+    });
+  }
+  return { html, plain, toolbarHTML, apply, bind };
+})();
+
 function posterHTML(entry, size) {
   const letter = escHTML((entry.title || '?')[0].toUpperCase());
   const url = safeURL(entry.poster_url);
