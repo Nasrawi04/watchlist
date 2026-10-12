@@ -850,8 +850,11 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     window.location.reload();
   }
-  if (e.key === 'n' && !e.target.closest('input,textarea,select')) openAddModal();
-  if (e.key === '/' && !e.target.closest('input,textarea,select')) {
+  // single-key shortcuts never fire while you're typing (fields, the note box) or with Ctrl / ⌘ / Alt held
+  const typing = e.target.closest?.('input,textarea,select,[contenteditable]') || e.target.isContentEditable;
+  const plainKey = !typing && !e.ctrlKey && !e.metaKey && !e.altKey;
+  if (e.key === 'n' && plainKey && !MSSDialog.top()) openAddModal();
+  if (e.key === '/' && plainKey) {
     e.preventDefault();
     document.getElementById('globalSearch')?.focus();
   }
