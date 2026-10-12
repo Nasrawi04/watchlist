@@ -808,8 +808,8 @@ function renderSocialNotes() {
         <div class="nc-top"><div class="nc-title" translate="no">${esc(n.title)}</div>${MSSNote.scorePill(n.final_score)}</div>
         <div class="nc-tags">${MSSNote.badges(n, { date: MSSNote.date(MSSNote.watchedDate(n), true) })}</div>
         ${mssIsSpoiler(n) && n.user_id !== _notesUser?.id
-          ? mssSpoilerHTML(`<blockquote class="nc-quote" translate="no">&ldquo;${esc(MSSNote.trim(n.notes))}&rdquo;</blockquote>`, { compact: true, id: n.entry_id })
-          : `<blockquote class="nc-quote" translate="no">&ldquo;${esc(MSSNote.trim(n.notes))}&rdquo;</blockquote>`}
+          ? mssSpoilerHTML(`<blockquote class="nc-quote" translate="no">&ldquo;${esc(MSSNote.trim(MSSRich.plain(n.notes)))}&rdquo;</blockquote>`, { compact: true, id: n.entry_id })
+          : `<blockquote class="nc-quote" translate="no">&ldquo;${esc(MSSNote.trim(MSSRich.plain(n.notes)))}&rdquo;</blockquote>`}
         <div class="nc-foot">
           <div class="nc-reacts">
             <button type="button" class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="event.stopPropagation();reactToSocialNote(${id}, true)">
