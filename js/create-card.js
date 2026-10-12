@@ -619,7 +619,7 @@ async function _drawCardPage1(myToken) {
     // original single-column look; longer ones switch to two columns with
     // slightly smaller text so the card grows gently instead of turning
     // into a long strip. Paragraph breaks from the note are kept.
-    const note = (e.notes || '').trim();
+    const note = MSSRich.plain(e.notes).trim();     // the image shows the words, not the ** / > markers
     if (note) {
       const boxPadTop = 34, boxPadBottom = 26, boxPadX = 30, colGap = 34;
       const wordCount = note.split(/\s+/).filter(Boolean).length;
