@@ -256,6 +256,12 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
   transition:border-color .15s;
 }
 .td-note-card:hover { border-color:var(--border-olive); }
+.td-note-card { cursor:pointer; }
+.td-note-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.td-note-card .td-note-text { display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
+.td-lists-count { font-family:var(--bebas); font-size:.9em; color:var(--text-3); margin-inline-start:6px; letter-spacing:.5px; }
+.td-lists { margin-bottom:.5rem; }
+.td-list-pos { margin-inline-start:8px; padding:1px 8px; border-radius:20px; background:var(--olive-faint); color:var(--olive-light); font-size:11px; font-weight:700; }
 .td-note-avatar {
   width:38px; height:38px; border-radius:50%; flex-shrink:0; overflow:hidden;
   background:var(--olive-faint); color:var(--olive-light); font-family:var(--serif); font-size:16px;
@@ -479,6 +485,7 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
 <script src="js/rating-popup.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/info-popup.js"></script>
+<script src="js/list-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
 <script src="js/discover-categories.js"></script>
 <script>
@@ -604,6 +611,7 @@ async function loadTitle() {
   if (firstSeason) _selectSeason(firstSeason);
 
   _tdLoadNotes();
+  _tdLoadLists();
   _tdLoadFriends(titleForMatch);
   _tdLoadRelated(detail);
   _tdLoadFans(detail);
@@ -1065,6 +1073,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
     <div id="tdFans"></div>
     <div id="tdCollection"></div>
     <div id="tdRecs"></div>
+    <div id="tdLists"></div>
 
     <div class="td-section-title">Community Notes</div>
     <div class="td-notes-controls">
@@ -1566,15 +1575,15 @@ function _tdRenderNotes() {
     const myReaction = _tdNotesReactions[n.entry_id];
     const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const initial = (n.username || '?')[0].toUpperCase();
-    return `<div class="td-note-card" data-dbl-like>
+    return `<div class="td-note-card" data-dbl-like role="button" tabindex="0" onclick="_tdOpenNote(${attrJSON(n.entry_id)})" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();this.click()}" aria-label="Open @${esc(n.username || 'user')}’s note">
       <div class="td-note-avatar">${n.avatar_url ? `<img src="${esc(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
       <div class="td-note-body">
         <div class="td-note-head">
           <span class="td-note-username">@${esc(n.username || 'user')}</span>
           <span class="td-note-date">${dateStr}</span>
         </div>
-        ${mssIsSpoiler(n) && n.user_id !== _tdUser?.id ? mssSpoilerHTML(`<div class="td-note-text" translate="no">${esc(n.notes)}</div>`, { compact: true }) : `<div class="td-note-text" translate="no">${esc(n.notes)}</div>`}
-        <div class="td-note-actions">
+        ${mssIsSpoiler(n) && n.user_id !== _tdUser?.id ? mssSpoilerHTML(`<div class="td-note-text" translate="no">${esc(MSSNote.trim(MSSRich.plain(n.notes)))}</div>`, { compact: true }) : `<div class="td-note-text" translate="no">${esc(MSSNote.trim(MSSRich.plain(n.notes)))}</div>`}
+        <div class="td-note-actions" onclick="event.stopPropagation()">
           <button type="button" class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="_tdReactToNote('${n.entry_id}', true)">
             ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
           </button>
@@ -1659,6 +1668,62 @@ function _replyReact(replyId, isLike) {
       if (st.mine) _replyMyReactions[replyId] = st.mine; else delete _replyMyReactions[replyId];
       _replyRenderList();
     });
+}
+
+// Someone's note → the same Info · Ratings · Note popup as the Notes page, opening on the note
+function _tdOpenNote(entryId) {
+  const n = _tdNotesRaw.find(x => x.entry_id === entryId);
+  if (!n) return;
+  const own = !!_tdUser && n.user_id === _tdUser.id;
+  MSSViews.open({ ...n, id: n.entry_id }, {
+    start: 'note', own, from: location.pathname.split('/').pop() + location.search,
+    profile: { id: n.user_id, username: n.username, avatar_url: n.avatar_url },
+    counts: { like: Number(n.like_count) || 0, dislike: Number(n.dislike_count) || 0 },
+    onReact: st => {
+      n.like_count = st.like; n.dislike_count = st.dislike;
+      if (st.mine) _tdNotesReactions[entryId] = st.mine; else delete _tdNotesReactions[entryId];
+      _tdRenderNotes();
+    },
+    onNoteSaved: () => _tdLoadNotes(),
+    onDelete: () => _tdLoadNotes(),
+  });
+}
+
+/* ── In Lists: every list holding this title (043) — cards + popup like the Lists page ── */
+let _tdLists = [], _tdListMap = {}, _tdListsAll = false;
+const _tdListItem = id => MSSList.isTmdbId(id) ? MSSList.tmdb(id) : _tdListMap[id] || null;
+async function _tdLoadLists() {
+  const box = document.getElementById('tdLists');
+  if (!box || !_tdId || !_tdType) return;
+  try {
+    const { data, error } = await sb.rpc('get_lists_for_title', { p_tmdb_id: Number(_tdId), p_tmdb_type: _tdType });
+    if (error) throw error;
+    _tdLists = data || [];
+    if (!_tdLists.length) { box.innerHTML = ''; return; }
+    // posters: the first 8 titles of each list (cards show 5, the popup 8)
+    const ids = [...new Set(_tdLists.flatMap(l => (l.items || []).slice(0, 8)))].filter(id => !MSSList.isTmdbId(id));
+    if (ids.length) ((await sb.from('entries').select('*').in('id', ids)).data || []).forEach(e => { _tdListMap[e.id] = e; });
+    _tdRenderLists();
+    if (await MSSList.hydrate(_tdLists, 8)) _tdRenderLists();
+  } catch (err) { console.error('Lists for title:', err); box.innerHTML = ''; }
+}
+function _tdRenderLists() {
+  const box = document.getElementById('tdLists');
+  if (!box) return;
+  const shown = _tdListsAll ? _tdLists : _tdLists.slice(0, 8);
+  box.innerHTML = `<div class="td-section-title">In Lists <span class="td-lists-count">${_tdLists.length}</span></div>
+    <div class="lc-grid td-lists">${shown.map((l, i) => MSSList.cardHTML(l, {
+      resolve: _tdListItem, onclick: `_tdOpenList(${i})`,
+      ownerHTML: MSSList.ownerHTML({ username: l.username, avatar_url: l.avatar_url }),
+      metaExtra: l.ranked && l.pos ? `<span class="td-list-pos">#${l.pos} in this list</span>` : '',
+    })).join('')}</div>
+    ${_tdLists.length > shown.length ? `<button type="button" class="td-cast-more-btn" onclick="_tdListsAll=true;_tdRenderLists()">See all ${_tdLists.length} lists</button>` : ''}`;
+}
+function _tdOpenList(i) {
+  const l = (_tdListsAll ? _tdLists : _tdLists.slice(0, 8))[i];
+  if (!l) return;
+  const mine = !!_tdUser && l.user_id === _tdUser.id;
+  MSSList.open(l, { resolve: _tdListItem, owner: { id: l.user_id, username: l.username, avatar_url: l.avatar_url }, social: !mine });
 }
 
 function _tdReactToNote(entryId, isLike) {
