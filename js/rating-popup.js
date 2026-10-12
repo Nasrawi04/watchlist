@@ -115,7 +115,7 @@ const MSSRate = (() => {
     if (favChips) html += `<div class="fav-chips mr-chips">${favChips}</div>`;
     if (lowChips) html += `<div class="fav-chips mr-chips">${lowChips}</div>`;
     if (!hideNotes && e.notes && e.notes.trim()) {
-      const nt = `<div class="fd-notes mr-notes">&ldquo;${esc(e.notes.trim())}&rdquo;</div>`;
+      const nt = `<div class="fd-notes mr-notes mss-rich" translate="no">${MSSRich.html(e.notes)}</div>`;
       html += '<div class="fd-section-hd mr-gap">Notes</div>' + (blurSpoilers && mssIsSpoiler(e) ? mssSpoilerHTML(nt, { compact: true, id: e.id }) : nt);
     }
     return html;
