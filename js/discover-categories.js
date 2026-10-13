@@ -530,8 +530,87 @@ const DISCOVER_CATEGORIES = [
   },
 ];
 
+// "See All" arrow (Discover rows, home Recommended for You)
+const _SEE_ALL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
+
+/* ══ Recommended for You — MSSRecs ══
+   Built from EVERY title in your profile favorites (Top Favorites, Top
+   Picks and the Top 5 TV Shows / Movies / Anime / Cartoons): TMDB's
+   recommendations for each one are pooled; a title several favorites
+   point to weighs more (w). Anything already in your library is left out.
+   Each favorite's list is kept a day on the device.
+     MSSRecs.pool(entries, profile) → [{ it, w }]   (the home row draws from it)
+     MSSRecs.category                              (discover-list.html "See All":
+                                                    all of them, highest rated first)
+   Not one of the Discover rows — it lives on the home page. */
+const MSSRecs = (() => {
+  const STORE = 'mss_recs_v2', TTL = 864e5, KEYS = ['top_picks', 'recommended', 'fav_tv', 'fav_movies', 'fav_anime', 'fav_cartoons'];
+  async function recsOf(type, id, cache) {
+    const key = `${type}:${id}`, hit = cache[key];
+    if (hit && Date.now() - hit.t < TTL) return hit.items;
+    const d = await _discFetchJSON(`${TMDB_BASE}/${type}/${id}/recommendations?api_key=${TMDB_KEY}&language=en-US&page=1`);
+    const items = (d.results || []).filter(r => r.media_type === 'movie' || r.media_type === 'tv').map(r => {
+      const it = _discNormalize(r, r.media_type);
+      return { id: it.id, media_type: it.media_type, title: it.title, poster_url: it.poster_url, year: it.year, score: it.score,
+        votes: r.vote_count || 0, genres: it.genres, overview: it.overview.slice(0, 300) };
+    });
+    cache[key] = { t: Date.now(), items };
+    return items;
+  }
+  async function pool(entries, profile) {
+    const byId = new Map(entries.map(e => [e.id, e]));
+    const seeds = [], seen = new Set();
+    KEYS.forEach(k => (Array.isArray(profile?.[k]) ? profile[k] : []).forEach(id => {
+      const e = byId.get(id), type = e?.tmdb_type === 'movie' ? 'movie' : e?.tmdb_type === 'tv' ? 'tv' : null;
+      if (!type || !e.tmdb_id || seen.has(`${type}:${e.tmdb_id}`)) return;
+      seen.add(`${type}:${e.tmdb_id}`); seeds.push({ type, id: e.tmdb_id });
+    }));
+    if (!seeds.length) return [];
+    let cache = {};
+    try { cache = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch {}
+    const lists = [];
+    for (let i = 0; i < seeds.length; i += 4)                    // a few at a time — easier on TMDB
+      lists.push(...await Promise.all(seeds.slice(i, i + 4).map(s => recsOf(s.type, s.id, cache).catch(() => []))));
+    const keep = {};
+    seeds.forEach(s => { const k = `${s.type}:${s.id}`; if (cache[k]) keep[k] = cache[k]; });
+    try { localStorage.setItem(STORE, JSON.stringify(keep)); } catch {}
+    // higher on a favorite's list = more; on several lists = adds up
+    const have = new Set(entries.filter(e => e.tmdb_id).map(e => `${e.tmdb_type}:${e.tmdb_id}`));
+    const out = new Map();
+    lists.forEach(items => items.forEach((it, i) => {
+      const k = `${it.media_type}:${it.id}`;
+      if (have.has(k) || seen.has(k)) return;
+      const p = out.get(k) || { it, w: 0 };
+      p.w += 1 + (20 - Math.min(i, 20)) / 20;
+      out.set(k, p);
+    }));
+    return [...out.values()];
+  }
+  // All of them, highest TMDB rating first. Titles with under 50 votes go
+  // after the rest (a 10/10 from three people isn't a real rating yet).
+  let ranked = null;
+  const category = {
+    key: 'recommended',
+    title: 'Recommended for You',
+    href: 'discover-list.html?list=recommended&title=' + encodeURIComponent('Recommended for You'),
+    backTo: 'index.html',
+    emptyMsg: 'Pick favorites on your profile and recommendations based on them will show up here.',
+    async fetch(page) {
+      if (!ranked) {
+        const user = await getCurrentUser();
+        if (!user) return [];
+        const [entries, profile] = await Promise.all([getEntries(user.id), getProfile(user.id)]);
+        const sure = p => p.it.votes >= 50;
+        ranked = (await pool(entries, profile)).sort((a, b) => (sure(b) - sure(a)) || ((b.it.score ?? 0) - (a.it.score ?? 0)) || (b.w - a.w)).map(p => p.it);
+      }
+      return ranked.slice((page - 1) * 20, page * 20);
+    },
+  };
+  return { pool, category };
+})();
+
 function getDiscoverCategory(key) {
-  return DISCOVER_CATEGORIES.find(c => c.key === key) || DISCOVER_CATEGORIES[0];
+  return DISCOVER_CATEGORIES.find(c => c.key === key) || (key === MSSRecs.category.key ? MSSRecs.category : DISCOVER_CATEGORIES[0]);
 }
 
 
