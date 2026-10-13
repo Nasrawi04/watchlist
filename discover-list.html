@@ -142,7 +142,7 @@ let _dlPage = 1;
 let _dlLoading = false;
 let _dlDone = false;
 let _dlView = localStorage.getItem('disc_listView') || 'grid';
-const _dlIsRanked = _dlCategory.key.startsWith('top250');
+const _dlIsRanked = _dlCategory.key.startsWith('top250') || _dlCategory.key === 'recommended';
 
 // Type badge is only shown on the Anime/Cartoons categories, where a
 // single list genuinely mixes movies and shows (a viewer can't tell
@@ -230,7 +230,7 @@ function _dlSetView(v) {
    Sorting/filtering a ranked list only makes sense over the WHOLE list, so
    applying either first loads every remaining page (these lists are capped:
    250, or 500 for MSS). Rank badges keep each title's original position. */
-const _DL_SF_KEYS = new Set(['top_rated_mss', 'top250_movies', 'top250_shows', 'top250_anime', 'top250_cartoons']);
+const _DL_SF_KEYS = new Set(['top_rated_mss', 'top250_movies', 'top250_shows', 'top250_anime', 'top250_cartoons', 'recommended']);
 const _dlHasSF = _DL_SF_KEYS.has(_dlCategory.key);
 const _dlIsMss = _dlCategory.key === 'top_rated_mss';
 
@@ -352,7 +352,9 @@ async function _dlLoadMore() {
 
     if (!items.length) {
       _dlDone = true;
-      document.getElementById('dlEndMsg').style.display = '';
+      const endMsg = document.getElementById('dlEndMsg');
+      if (!_dlAllItems.length && _dlCategory.emptyMsg) endMsg.textContent = _dlCategory.emptyMsg;
+      endMsg.style.display = '';
       return;
     }
     const startRank = _dlAllItems.length + 1;
@@ -389,6 +391,7 @@ async function _dlLoadMore() {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dlTitle').textContent = _dlTitle;
+  if (_dlCategory.backTo) document.getElementById('dlBack').href = _dlCategory.backTo;   // e.g. Recommended for You → home
   document.title = _dlTitle + ' — MyScreenScore';
   document.getElementById('dlGrid').className = _dlView === 'list' ? 'dl-list' : 'dl-grid';
   _dlRenderViewToggle();
