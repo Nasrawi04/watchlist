@@ -154,6 +154,9 @@
   <!-- CURRENTLY WATCHING -->
   <div id="homeWatching" style="margin-top:4rem"></div>
 
+  <!-- RECOMMENDED FOR YOU (from every profile favorite) -->
+  <div id="homeRecs" style="margin-top:3rem"></div>
+
   <!-- FROM YOUR WATCHLIST -->
   <div id="homeWatchlist" style="margin-top:3rem"></div>
 
@@ -346,14 +349,18 @@ const _NAV_RIGHT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 
 function _homeEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// Shared horizontal-scroll section shell — used by all five home sections.
-function _homeHScrollSection(containerId, gridId, eyebrow, title, cardsHTML) {
+// Shared horizontal-scroll section shell — used by the home row sections.
+// seeAll: link for a "See All" on the right (same header as the Discover rows)
+function _homeHScrollSection(containerId, gridId, eyebrow, title, cardsHTML, seeAll) {
   const el = document.getElementById(containerId);
   if (!el) return;
   if (!cardsHTML) { el.innerHTML = ''; return; }
   el.innerHTML = `
-    <div class="section-eyebrow">${eyebrow}</div>
-    <div class="section-title">${title}</div>
+    ${seeAll ? `<div class="disc-section-head">
+      <div><div class="section-eyebrow">${eyebrow}</div><div class="section-title" style="margin-bottom:0">${title}</div></div>
+      <a class="disc-see-all" href="${escHTML(seeAll)}">See All ${_SEE_ALL_SVG}</a>
+    </div>` : `<div class="section-eyebrow">${eyebrow}</div>
+    <div class="section-title">${title}</div>`}
     <div class="grid-nav-wrap">
       <button class="grid-nav-btn arr-left" onclick="event.stopPropagation();document.getElementById('${gridId}').scrollBy({left:-660,behavior:'smooth'})" aria-label="Scroll left">${_NAV_LEFT_SVG}</button>
       <button class="grid-nav-btn arr-right" onclick="event.stopPropagation();document.getElementById('${gridId}').scrollBy({left:660,behavior:'smooth'})" aria-label="Scroll right">${_NAV_RIGHT_SVG}</button>
@@ -430,6 +437,23 @@ function renderHomeWatchlist(entries) {
   const cards = queue.map(e => MSSCard.poster({ onclick: `_homeOpenInfo('${e.id}')`, title: e.title, year: e.year, posterHTML: posterHTML(e, 'big'), typeHTML: getTypeBadgeOverlay(e, 'latest') })).join('');
   _homeHScrollSection('homeWatchlist', 'homeWatchlistGrid', 'Saved', 'From Your Watchlist', cards);
 }
+/* ── Recommended for You ── (pool: MSSRecs in discover-categories.js)
+   Each visit draws a fresh mix from the strongest ~40 (stronger ones more
+   often), so it changes as you come back. 12 on laptops, 6 on phones (same
+   as the Discover rows). "See All" opens every one, ranked by rating. */
+async function renderHomeRecs(entries, profile) {
+  const top = (await MSSRecs.pool(entries, profile)).sort((a, b) => b.w - a.w).slice(0, 40);
+  const limit = window.matchMedia('(max-width:640px)').matches ? 6 : 12;
+  const picks = [];
+  while (picks.length < limit && top.length) {                  // weighted draw, no repeats
+    let r = Math.random() * top.reduce((a, p) => a + p.w * p.w, 0), j = 0;
+    while (j < top.length - 1 && (r -= top[j].w * top[j].w) > 0) j++;
+    picks.push(top.splice(j, 1)[0].it);
+  }
+  const cards = picks.map(it => MSSCard.poster({ attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url,
+    type: it.media_type, score: _discFloorScore(it.score) })).join('');
+  _homeHScrollSection('homeRecs', 'homeRecsGrid', 'Based on your favorites', MSSRecs.category.title, cards, MSSRecs.category.href);
+}
 function renderHomeRecentlyViewed(rows) {
   const cards = rows.map(r => _tmdbCardHTML(r.poster_url, r.title, null,
     `MSSInfo.fromDiscover({ id: ${Number(r.tmdb_id)}, media_type: ${escHTML(JSON.stringify(r.tmdb_type === 'movie' ? 'movie' : 'tv'))}, title: ${escHTML(JSON.stringify(r.title || ''))}, poster_url: ${escHTML(JSON.stringify(r.poster_url || ''))} })`)).join('');
@@ -439,6 +463,7 @@ function renderHomeRecentlyViewed(rows) {
 function renderGuestLanding() {
   document.getElementById('homeWatching').innerHTML = '';
   document.getElementById('homeWatchlist').innerHTML = '';
+  document.getElementById('homeRecs').innerHTML = '';
   document.getElementById('homeRecentlyViewed').innerHTML = '';
   document.getElementById('guestCta').innerHTML = `
     <div class="guest-cta">
@@ -458,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
   _xpRender();   // cards show instantly in their colors; posters fill in as they load
   _xpAutoScroll();
   _xpLoad();
-  initInlineSearch('heroSearch', { hide: ['.xp', '#homeWatching', '#homeWatchlist', '#homeRecentlyViewed', '#guestCta'] });   // live results on the page (no dropdown)
+  initInlineSearch('heroSearch', { hide: ['.xp', '#homeWatching', '#homeRecs', '#homeWatchlist', '#homeRecentlyViewed', '#guestCta'] });   // live results on the page (no dropdown)
   initPageGuest(async (user) => {
     if (!user) { renderGuestLanding(); return; }
     _homeUser = user;
@@ -472,6 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
        and don't block the rest of the page; local sections (Watchlist,
        Recently Viewed) render as soon as their own data is back. */
     renderHomeWatchlist(entries);
+    getProfile(user.id).then(p => renderHomeRecs(entries, p)).catch(e => console.warn('Recommendations:', e));
 
     getRecentlyViewed(user.id, 12).then(renderHomeRecentlyViewed);
 
