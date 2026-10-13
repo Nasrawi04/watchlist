@@ -37,14 +37,8 @@
   .disc-main { flex:1; min-width:0; }
 
   .disc-section { margin-bottom:3.5rem; scroll-margin-top:calc(var(--page-pt) + 88px); }
-  .disc-section-head { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; margin-bottom:.25rem; flex-wrap:wrap; }
-  .disc-see-all {
-    display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:var(--olive-light);
-    text-decoration:none; white-space:nowrap; flex-shrink:0; transition:opacity .15s;
-  }
-  .disc-see-all:hover { opacity:.75; }
-  .disc-see-all svg { width:12px; height:12px; }
 
+  body.disc-browsing #discYourTV, body.disc-browsing #discNavDD, body.disc-browsing .disc-layout { display:none !important; }
   @media(max-width:900px) {
     .disc-side-nav { display:none; }
     .disc-nav-dd-wrap { display:block; }
@@ -79,6 +73,9 @@
     </button>
   </div>
 
+  <section id="discBrowse" class="brw-panel fade-up" aria-label="Browse"></section>
+  <section id="discBrowseResults" class="inline-search" aria-live="polite" hidden></section>
+
   <div id="discYourTV" class="ys-wrap"></div>
 
   <div class="disc-nav-dd-wrap" id="discNavDD"></div>
@@ -99,12 +96,12 @@
 <script src="js/info-popup.js"></script>
 <script src="js/discover-categories.js"></script>
 <script src="js/tv-schedule.js"></script>
+<script src="js/browse.js"></script>
 <script>
 function _discEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 const _NAV_LEFT_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const _NAV_RIGHT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
-const _SEE_ALL_SVG   = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
 
 function _discCardHTML(it) {
   return MSSCard.poster({ attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url, score: _discFloorScore(it.score) });
@@ -245,7 +242,9 @@ function _initDiscSideNavScrollSpy() {
 // keeps the exact scroll position for free.)
 
 document.addEventListener('DOMContentLoaded', () => {
-  initInlineSearch('heroSearch', { hide: ['#discYourTV', '#discNavDD', '.disc-layout'] });   // live results on the page (no dropdown)
+  initInlineSearch('heroSearch', { hide: ['#discBrowse', '#discBrowseResults', '#discYourTV', '#discNavDD', '.disc-layout'] });
+  // Browse (browse.js): its results stand in for the rows below until you go back
+  MSSBrowse.init(document.getElementById('discBrowse'), document.getElementById('discBrowseResults'));   // live results on the page (no dropdown)
   // Layout + any rows cached from this session are drawn right away (none
   // of it depends on sign-in), so coming back restores the scroll position
   // on the very first frame instead of after the auth check.
