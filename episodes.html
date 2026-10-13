@@ -91,6 +91,9 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
 .eg-legend i.eg-unaired-sw { background:var(--bg-3); border:0.5px solid var(--border-2); }
 /* graph */
 .eg-graph { width:100%; height:auto; display:block; }
+.eg-graph-scroll { overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:thin; margin:0 -4px; padding:0 4px 6px; }
+.eg-graph-scroll .eg-graph { max-width:none; }
+.eg-graph-scroll:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; border-radius:6px; }
 .eg-graph .eg-pt { cursor:pointer; }
 /* list */
 .eg-list { display:flex; flex-direction:column; gap:10px; }
@@ -104,6 +107,7 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
 .eg-row-desc { font-size:12.5px; color:var(--text-2); line-height:1.5; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .eg-row-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .eg-row-tags span { font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:3px; background:var(--olive); color:#fff; }
+.eg-row-chips { display:flex; gap:8px; flex-shrink:0; }
 .eg-chip { min-width:50px; padding:6px 8px; border-radius:6px; text-align:center; font-family:var(--bebas); font-size:19px; line-height:1; }
 .eg-chip-empty { background:var(--olive-faint); color:var(--olive-light); border:0.5px solid var(--border-olive); }
 .eg-chip small { display:block; font-family:'Manrope',var(--sans); font-size:8.5px; letter-spacing:1px; text-transform:uppercase; opacity:.85; margin-top:2px; }
@@ -209,7 +213,15 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
   .eg-cell { width:clamp(46px, 17vw, 96px); height:34px; font-size:17px; }
   .eg-grid th.eg-ep { width:44px; min-width:40px; font-size:14px; padding:4px; }
   .eg-grid td { padding:3px; }
-  .eg-row-still { width:88px; }
+  .eg-season-row th.eg-ep { font-size:8.5px; letter-spacing:.5px; padding:4px 2px; }
+  /* list: picture + text on top, the three scores in one slim row underneath */
+  .eg-row { flex-wrap:wrap; align-items:flex-start; gap:10px 12px; min-height:0; padding:10px; }
+  .eg-row-still { width:96px; }
+  .eg-row-info { flex:1 1 calc(100% - 108px); }
+  .eg-row-title { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; font-size:15px; line-height:1.3; }
+  .eg-row-chips { width:100%; gap:6px; }
+  .eg-chip { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:6px 8px; font-size:17px; }
+  .eg-chip small { display:inline; margin:0; }
 }
 </style>
 </head>
@@ -540,7 +552,9 @@ function graphHTML() {
   const pts = []; let i = 0;
   vis().forEach((sn, si) => (S.eps[sn] || []).forEach(ep => { i++; const v = scoreOf(sn, ep); if (v != null) pts.push({ x: i, v, s: sn, n: ep.n, si }); }));
   if (!pts.length) return `<div class="mss-empty">Nothing to plot for this source yet.</div>`;
-  const W = 900, H = 340, L = 34, R = 10, T = 12, B = 28, total = i;
+  // Phones: drawn at real size (about 13px per episode) and scrolled sideways, so it stays readable
+  const narrow = matchMedia('(max-width:640px)').matches;
+  const W = narrow ? Math.max(560, i * 13) : 900, H = narrow ? 300 : 340, L = 34, R = 10, T = 12, B = 28, total = i;
   const diff = S.source === 'diff', lo = diff ? -3 : 1, hi = diff ? 3 : 10;
   const X = x => L + (total <= 1 ? 0 : (x - 1) / (total - 1)) * (W - L - R);
   const Y = v => T + (1 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * (H - T - B);
@@ -558,7 +572,8 @@ function graphHTML() {
   const dots = pts.map(p => `<circle class="eg-pt" cx="${X(p.x)}" cy="${Y(p.v)}" r="5" fill="${col(p.v)}" stroke="var(--bg)" stroke-width="1.5" onclick="egOpen(${p.s},${p.n})"><title>S${p.s} · E${p.n}: ${p.v.toFixed(1)}</title></circle>`).join('');
   const ticks = (diff ? [-3, -1.5, 0, 1.5, 3] : [2, 4, 6, 8, 10]).map(v => `<text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--text-3)">${v}</text><line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--border)" stroke-width="0.5"></line>`).join('');
   const seasonLabels = vis().map(sn => { const sp = pts.filter(p => p.s === sn); if (!sp.length) return ''; return `<line x1="${X(sp[0].x) - 6}" x2="${X(sp[0].x) - 6}" y1="${T}" y2="${H - B}" stroke="var(--border-2)" stroke-dasharray="3 4"></line><text x="${X(sp[0].x)}" y="${H - 8}" font-size="11" font-weight="600" fill="var(--olive-light)">S${sn}</text>`; }).join('');
-  return `<svg class="eg-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="Episode scores across the series">${stripes}${ticks}${lines}${dots}${seasonLabels}</svg>`;
+  const svg = `<svg class="eg-graph" viewBox="0 0 ${W} ${H}"${narrow ? ` style="width:${W}px"` : ''} role="img" aria-label="Episode scores across the series">${stripes}${ticks}${lines}${dots}${seasonLabels}</svg>`;
+  return narrow ? `<div class="eg-graph-scroll" tabindex="0" aria-label="Episode graph — scroll sideways">${svg}</div>` : svg;
 }
 function listHTML() {
   const rows = [];
@@ -573,7 +588,7 @@ function listHTML() {
         ${ep.overview ? `<div class="eg-row-desc" translate="no">${esc(ep.overview)}</div>` : ''}
         ${mine?.tags?.length ? `<div class="eg-row-tags">${mine.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
       </div>
-      ${chip(mine ? Number(mine.score) : null, S.readOnly ? esc(S.whoName) : 'You')}${chip(comm ? Number(comm.avg_score) : null, 'MSS')}${chip(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}
+      <div class="eg-row-chips">${chip(mine ? Number(mine.score) : null, S.readOnly ? esc(S.whoName) : 'You')}${chip(comm ? Number(comm.avg_score) : null, 'MSS')}${chip(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}</div>
     </div>`);
   }));
   return `<div class="eg-list">${rows.join('')}</div>`;
