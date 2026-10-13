@@ -169,8 +169,8 @@ SF.register(LIB_SCOPE, {
   onSearch: function(){ renderLibrary(); },     // search narrows all three sections at once
   sortState: _libSort,
   // Runtime only once movies can be present, Episode Count only once shows can
-  sorts: function(){ return ['alpha','added','release','ratings', _libCatFilter!=='tv'&&_libFormat!=='show'&&'runtime', _libCatFilter!=='movies'&&_libFormat!=='movie'&&'episodes']; },
-  lengthLabel: function(){ return _libCatFilter==='movies'?'Runtime (minutes)':_libCatFilter==='tv'?'Episode Count':'Runtime / Episode Count'; },
+  sorts: function(){ return ['alpha','added','release','ratings', _libCatFilter!=='tv'&&_libFormat!=='show'&&'runtime', _libCatFilter!=='movies'&&_libFormat!=='movie'&&'seasons', _libCatFilter!=='movies'&&_libFormat!=='movie'&&'episodes']; },
+  lengthKind: function(){ return _libCatFilter==='movies'||_libFormat==='movie'?'movie':_libCatFilter==='tv'||_libFormat==='show'?'show':'mixed'; },
   choiceFilters: function(sec){
     return sec==='completed' ? [{ key:'status', label:'Status', options:[['','All'],['completed','Watched'],['ongoing','To Be Continued']] }] : [];
   },
