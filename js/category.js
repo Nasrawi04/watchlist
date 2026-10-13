@@ -135,8 +135,10 @@ SF.register('cat', {
   },
   sortState: _sort,
   watched: section => section === 'completed' || section === 'ongoing',   // Year Watched filter
-  sorts: section => ['alpha', 'added', 'release', !IS_MOVIE_CAT() && 'episode', section !== 'queue' && 'ratings', 'length'],
-  lengthLabel: () => IS_MOVIE_CAT() ? 'Runtime (minutes)' : 'Episode Count',
+  // Length: movies by runtime, shows by seasons / episodes (Anime / Cartoons have both)
+  sorts: section => ['alpha', 'added', 'release', !IS_MOVIE_CAT() && 'episode', section !== 'queue' && 'ratings',
+    ...(IS_MOVIE_CAT() ? ['runtime'] : window.PAGE_CAT === 'tv' ? ['seasons', 'episodes'] : ['runtime', 'seasons', 'episodes'])],
+  lengthKind: () => IS_MOVIE_CAT() ? 'movie' : window.PAGE_CAT === 'tv' ? 'show' : 'mixed',
   ratingSort: {
     show: section => section === 'completed' || section === 'ongoing',
     options: () => _ratingFilterOptions(window.PAGE_CAT),
