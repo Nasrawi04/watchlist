@@ -684,7 +684,7 @@ const SF = (() => {
       // how many titles match, across every section on the page
       const n = s.query ? [...s.sections].reduce((a, sec) => a + list(scope, sec).length, 0) : 0;
       document.querySelectorAll(`.sf-search[data-scope="${scope}"] .sf-search-count`).forEach(c => {
-        c.textContent = s.query ? (n ? `${n} found` : 'No matches') : '';
+        c.innerHTML = s.query ? (n ? `<b>${n}</b> found` : 'No matches') : '';
       });
     }, now ? 0 : 140);
   }
