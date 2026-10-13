@@ -1432,7 +1432,7 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 .notif-badge {
   position:absolute; top:-3px; inset-inline-end:-3px; min-width:17px; height:17px; padding:0 4px; box-sizing:border-box;
   border-radius:999px; background:#c0392b; color:#fff; border:2px solid var(--bg);
-  font-family:var(--sans); font-size:9.5px; font-weight:700; line-height:13px; text-align:center;
+  font-family:var(--bebas); font-size:12px; font-weight:400; letter-spacing:.3px; line-height:15px; text-align:center;
   display:none;
 }
 .notif-badge.show { display:block; animation:notifPop .3s cubic-bezier(.2,.8,.2,1); }
@@ -1524,7 +1524,7 @@ body.notif-sheet-open { overflow:hidden; }
 }
 .notif-tab:hover { border-color:var(--border-olive); color:var(--text); }
 .notif-tab.active { background:var(--olive); border-color:var(--olive); color:#fff; }
-.notif-tab-dot { min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; border-radius:999px; background:#c0392b; color:#fff; font-size:9.5px; line-height:16px; text-align:center; }
+.notif-tab-dot { min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; border-radius:999px; background:#c0392b; color:#fff; font-family:var(--bebas); font-size:12px; letter-spacing:.3px; line-height:17px; text-align:center; }
 .notif-tab.active .notif-tab-dot { background:#fff; color:var(--olive); }
 .notif-av { position:relative; overflow:visible !important; }
 .notif-av > img { border-radius:50%; }
@@ -5121,6 +5121,7 @@ html.mss-scroll-locked [role="dialog"], html.mss-scroll-locked [role="dialog"] *
 .sf-search-input::placeholder { color:var(--text-3); }
 .sf-search-input::-webkit-search-cancel-button, .sf-search-input::-webkit-search-decoration { -webkit-appearance:none; appearance:none; }
 .sf-search-count { font-size:12px; font-weight:600; color:var(--text-3); white-space:nowrap; }
+.sf-search-count b { font-family:var(--bebas); font-size:16px; font-weight:400; letter-spacing:.3px; color:var(--olive-light); vertical-align:-1px; }
 .sf-search-clear { display:none; width:30px; height:30px; flex-shrink:0; align-items:center; justify-content:center; border:none; border-radius:50%; background:var(--bg-3); color:var(--text-2); cursor:pointer; }
 .sf-search.has-q .sf-search-clear { display:inline-flex; }
 .sf-search-clear:hover { background:var(--olive-faint); color:var(--text); }
