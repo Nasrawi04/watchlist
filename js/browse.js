@@ -1,0 +1,285 @@
+/* ═══════════════════════════════════════════════════════════════
+   browse.js — Browse on Discover (MSSBrowse)
+
+   Letterboxd-style "browse by": pick a Type, Year, Genre, Country,
+   Service and Sort, press Browse, and the matching titles (TMDB
+   discover) replace the Discover rows until you go back.
+     • up to 100 titles, 20 at a time ("Show more")
+     • "All types" mixes movies and shows in the chosen order
+     • Type follows the site's split: Movies / TV Shows leave out
+       animation, Anime = Japanese animation, Cartoons = the rest
+     • Service = streaming in your country (MSSRegion), TMDB/JustWatch
+     • the choice is kept in the address (?type=…&year=…), so Back and
+       shared links open the same results; what was loaded and the
+       scroll position come back from this session
+
+     MSSBrowse.init(panelEl, resultsEl)   draws the panel; restores a browse
+   Requires config.js, nav.js, discover-categories.js (_discNormalize,
+   _discClickAttr, _discFloorScore, _discIsAnimeOrigin, _discFetchJSON).
+═══════════════════════════════════════════════════════════════ */
+
+const MSSBrowse = (() => {
+  const PAGE = 20, CAP = 100, STATE = 'mss_browse_state';
+  const PROV_STORE = 'mss_browse_prov_v1', PROV_TTL = 7 * 864e5;
+  const KEYS = ['type', 'year', 'genre', 'country', 'service', 'sort'];
+  const esc = s => escHTML(s == null ? '' : String(s));
+  const NOW = new Date().getFullYear();
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  // Site genre → [movie genre id, TV genre id] (TMDB keeps two lists)
+  const GENRES = {
+    Action: [28, 10759], Adventure: [12, 10759], Comedy: [35, 35], Crime: [80, 80], Documentary: [99, 99],
+    Drama: [18, 18], Family: [10751, 10751], Fantasy: [14, 10765], History: [36, null], Horror: [27, null],
+    Music: [10402, null], Mystery: [9648, 9648], Romance: [10749, null], 'Science Fiction': [878, 10765],
+    Thriller: [53, null], War: [10752, 10768], Western: [37, 37],
+  };
+  const COUNTRIES = ['US', 'GB', 'CA', 'AU', 'IE', 'FR', 'DE', 'ES', 'IT', 'PT', 'NL', 'BE', 'SE', 'DK', 'NO', 'FI', 'PL', 'HR',
+    'TR', 'RU', 'JP', 'KR', 'CN', 'HK', 'TW', 'TH', 'IN', 'IR', 'EG', 'AE', 'SA', 'NG', 'ZA', 'MX', 'BR', 'AR', 'CO'];
+  const TYPES = [['', 'All types'], ['movie', 'Movies'], ['tv', 'TV Shows'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
+  const SORTS = [['', 'Most popular'], ['rating', 'Highest rated'], ['newest', 'Newest first'], ['oldest', 'Oldest first']];
+  const region = () => MSSRegion.guess()[0];
+  const placeName = c => { try { return new Intl.DisplayNames([MSSI18n.locale.split('-u-')[0], 'en'], { type: 'region' }).of(c) || c; } catch { return c; } };
+
+  function yearOptions() {
+    const o = [['', 'Any year'], ['upcoming', 'Upcoming']];
+    for (let y = NOW; y >= 2015; y--) o.push([String(y), String(y)]);
+    for (let d = 2010; d >= 1930; d -= 10) o.push([d + 's', d + 's']);
+    o.push(['older', 'Before 1930']);
+    return o;
+  }
+  function yearRange(v) {
+    if (!v) return null;
+    if (v === 'upcoming') { const t = new Date(Date.now() + 864e5).toISOString().slice(0, 10); return [t, null]; }
+    if (v === 'older') return [null, '1929-12-31'];
+    const m = v.match(/^(\d{4})(s?)$/); if (!m) return null;
+    const a = +m[1], b = m[2] ? a + 9 : a;
+    return [`${a}-01-01`, `${b}-12-31`];
+  }
+
+  let panel = null, out = null, providers = null, S = null, seq = 0;
+  const q = {};          // the current choice (what the dropdowns show)
+
+  /* ── Panel ── */
+  function field(key, label, options) {
+    const id = 'brw-' + key;
+    return `<div class="brw-field"><div class="field-label" id="${id}-l">${esc(label)}</div>
+      ${_selDDHTML(id, options.map(([value, l]) => ({ value, label: l })), q[key] || '', null)}</div>`;
+  }
+  function serviceOptions() {
+    if (!providers) return [['', 'Any service']];
+    return [['', 'Any service'], ...providers.map(p => [String(p.id), p.name])];
+  }
+  function drawPanel() {
+    const countries = COUNTRIES.map(c => [c, placeName(c)]).sort((a, b) => a[1].localeCompare(b[1]));
+    panel.innerHTML = `
+      <div class="brw-head"><div class="section-eyebrow">Browse</div><div class="section-title">Find something to watch</div></div>
+      <div class="brw-fields">
+        ${field('type', 'Type', TYPES)}
+        ${field('year', 'Year', yearOptions())}
+        ${field('genre', 'Genre', [['', 'Any genre'], ...Object.keys(GENRES).map(g => [g, g])])}
+        ${field('country', 'Country', [['', 'Any country'], ...countries])}
+        ${field('service', 'Service', serviceOptions())}
+        ${field('sort', 'Sort by', SORTS)}
+        <div class="brw-actions">
+          <button type="button" class="sf-clear-btn" onclick="MSSBrowse.reset()">Reset</button>
+          <button type="button" class="sf-apply-btn" onclick="MSSBrowse.go()">${icon('search', 14)} Browse</button>
+        </div>
+      </div>`;
+    KEYS.forEach(named);
+  }
+  // the visible label names each dropdown for screen readers
+  function named(k) {
+    const dd = document.getElementById('brw-' + k);
+    dd.querySelector('.sel-dd-label').id = `brw-${k}-v`;
+    dd.querySelector('.sel-dd-trigger').setAttribute('aria-labelledby', `brw-${k}-l brw-${k}-v`);
+  }
+  function readPanel() { KEYS.forEach(k => { q[k] = document.getElementById('brw-' + k)?.dataset.value || ''; }); }
+
+  // Streaming services in your country, most-used first (kept a week on the device)
+  async function loadProviders() {
+    const r = region();
+    try {
+      const c = JSON.parse(localStorage.getItem(PROV_STORE) || 'null');
+      if (c && c.r === r && Date.now() - c.t < PROV_TTL) { providers = c.p; return; }
+    } catch {}
+    try {
+      const url = t => `${TMDB_BASE}/watch/providers/${t}?api_key=${TMDB_KEY}&language=en-US&watch_region=${r}`;
+      const [m, t] = await Promise.all([_discFetchJSON(url('movie')), _discFetchJSON(url('tv'))]);
+      const seen = new Map();
+      [...(m.results || []), ...(t.results || [])].forEach(p => {
+        const prio = p.display_priorities?.[r] ?? p.display_priority ?? 99;
+        const had = seen.get(p.provider_id);
+        if (!had || prio < had.prio) seen.set(p.provider_id, { id: p.provider_id, name: p.provider_name, prio });
+      });
+      providers = [...seen.values()].sort((a, b) => a.prio - b.prio || a.name.localeCompare(b.name)).slice(0, 30).map(({ id, name }) => ({ id, name }));
+      try { localStorage.setItem(PROV_STORE, JSON.stringify({ r, t: Date.now(), p: providers })); } catch {}
+    } catch (e) { console.warn('Browse services:', e); providers = []; }
+  }
+
+  /* ── Results ── */
+  function sources() {
+    const g = q.genre ? GENRES[q.genre] : null, yr = yearRange(q.year), r = region();
+    const kinds = { '': [['movie'], ['tv']], movie: [['movie', 'no-anim']], tv: [['tv', 'no-anim']],
+      anime: [['movie', 'anime'], ['tv', 'anime']], cartoons: [['movie', 'cartoon'], ['tv', 'cartoon']] }[q.type || ''];
+    return kinds.map(([t, kind]) => {
+      const gid = g ? g[t === 'movie' ? 0 : 1] : null;
+      if (g && !gid) return null;                                   // e.g. Horror has no TV genre on TMDB
+      const p = new URLSearchParams({ api_key: TMDB_KEY, language: 'en-US', include_adult: 'false' });
+      const genres = [gid, kind === 'anime' || kind === 'cartoon' ? 16 : null].filter(Boolean);
+      if (genres.length) p.set('with_genres', genres.join(','));
+      if (kind === 'no-anim') p.set('without_genres', '16');
+      if (kind === 'anime') p.set('with_original_language', 'ja');
+      if (q.country) p.set('with_origin_country', q.country);
+      if (q.service) { p.set('with_watch_providers', q.service); p.set('watch_region', r); p.set('with_watch_monetization_types', 'flatrate|free|ads'); }
+      const d = t === 'movie' ? 'primary_release_date' : 'first_air_date';
+      if (yr?.[0]) p.set(`${d}.gte`, yr[0]);
+      if (yr?.[1]) p.set(`${d}.lte`, yr[1]);
+      if ((q.sort === 'newest' || q.sort === 'oldest') && q.year !== 'upcoming' && !(yr?.[1] && yr[1] < today())) p.set(`${d}.lte`, today());
+      p.set('sort_by', q.sort === 'rating' ? 'vote_average.desc' : q.sort === 'newest' ? `${d}.desc` : q.sort === 'oldest' ? `${d}.asc` : 'popularity.desc');
+      if (q.sort === 'rating') p.set('vote_count.gte', t === 'movie' ? '100' : '50');
+      if (q.sort === 'oldest') p.set('vote_count.gte', '5');                // skips empty placeholder entries
+      return { t, kind, url: `${TMDB_BASE}/discover/${t}?${p}`, page: 0, pages: 1, total: 0, buf: [], done: false };
+    }).filter(Boolean);
+  }
+  const better = {
+    '': (a, b) => b.pop - a.pop,
+    rating: (a, b) => (b.score ?? 0) - (a.score ?? 0),
+    newest: (a, b) => (b.date || '').localeCompare(a.date || ''),
+    oldest: (a, b) => (a.date || '9999').localeCompare(b.date || '9999'),
+  };
+  async function fetchPage(src) {
+    src.page++;
+    const d = await _discFetchJSON(`${src.url}&page=${src.page}`);
+    src.pages = Math.min(d.total_pages || 0, 500); src.total = d.total_results || 0;
+    if (src.page >= src.pages) src.done = true;
+    src.buf = (d.results || []).map(r => Object.assign(_discNormalize(r, src.t), {
+      pop: r.popularity || 0, date: (src.t === 'movie' ? r.release_date : r.first_air_date) || '' }))
+      .filter(it => src.kind !== 'cartoon' || !_discIsAnimeOrigin(it));
+  }
+  // Takes the next 20 in order, pulling pages from each source as needed
+  async function more() {
+    const target = Math.min(S.items.length + PAGE, CAP);
+    while (S.items.length < target) {
+      for (const s of S.src) { let n = 0; while (!s.buf.length && !s.done && n++ < 5) await fetchPage(s); }
+      const ready = S.src.filter(s => s.buf.length);
+      if (!ready.length) break;
+      const cmp = better[q.sort || ''];
+      const best = ready.reduce((a, b) => cmp(a.buf[0], b.buf[0]) <= 0 ? a : b);
+      const it = best.buf.shift();
+      if (!S.items.some(x => x.id === it.id && x.media_type === it.media_type)) S.items.push(it);
+    }
+    S.end = S.items.length >= CAP || S.src.every(s => s.done && !s.buf.length);
+  }
+  const totalOf = () => S.end ? S.items.length : Math.min(CAP, Math.max(S.items.length, S.src.reduce((a, s) => a + s.total, 0)));
+
+  function summary() {
+    const parts = [];
+    parts.push(TYPES.find(t => t[0] === (q.type || ''))[1].replace('All types', 'Everything'));
+    if (q.genre) parts.push(q.genre);
+    if (q.year) parts.push(yearOptions().find(y => y[0] === q.year)?.[1] || q.year);
+    if (q.country) parts.push(`from ${placeName(q.country)}`);
+    if (q.service) parts.push(`on ${providers?.find(p => String(p.id) === q.service)?.name || 'your service'} in ${placeName(region())}`);
+    return parts.join(' · ');
+  }
+  function card(it) {
+    return MSSCard.poster({ attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url,
+      type: q.type === 'movie' || q.type === 'tv' ? null : it.media_type, score: _discFloorScore(it.score) });
+  }
+  function headHTML(loading) {
+    const n = S.items.length ? totalOf() : 0;
+    return `<div class="inline-search-head"><div class="section-eyebrow">Browse</div>
+        <div class="section-title" style="margin-bottom:0">${esc(summary())}</div>
+        ${loading ? '' : `<div class="inline-search-count"><b>${n}</b> ${n === 1 ? 'title' : 'titles'}</div>`}
+        <button type="button" class="brw-back" onclick="MSSBrowse.close()">${icon('back', 14)} Back to Discover</button></div>`;
+  }
+  function moreHTML() {
+    if (S.end) return '';
+    const left = Math.max(0, totalOf() - S.items.length);
+    return `<div class="eg-more"><button type="button" class="dp-more" id="brwMore" onclick="MSSBrowse.more()">Show more${left ? ` <span>(${left} left)</span>` : ''}</button></div>`;
+  }
+  function drawResults() {
+    out.innerHTML = headHTML() + (S.items.length
+      ? `<div class="inline-search-grid" id="brwGrid">${S.items.map(card).join('')}</div>${moreHTML()}`
+      : `<div class="mss-empty">Nothing matches all of these. Try fewer choices.</div>`);
+  }
+  function show(on) {
+    document.body.classList.toggle('disc-browsing', on);
+    out.hidden = !on;
+  }
+  function save() {
+    try { sessionStorage.setItem(STATE, JSON.stringify({ t: Date.now(), key: location.search, S })); } catch {}
+  }
+  function syncURL() {
+    const p = new URLSearchParams();
+    KEYS.forEach(k => { if (q[k]) p.set(k, q[k]); });
+    const s = [...p].length ? '?browse=1&' + p : '';
+    history.replaceState(history.state, '', location.pathname + s);
+  }
+
+  async function go() {
+    readPanel(); syncURL();
+    const my = ++seq;
+    S = { src: sources(), items: [], end: false };
+    show(true);
+    out.innerHTML = headHTML(true) + `<div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>`;
+    out.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    try { await more(); }
+    catch (e) {
+      if (my !== seq) return;
+      console.error('Browse:', e);
+      out.innerHTML = headHTML() + `<div class="mss-empty">${isRateLimitError(e) ? 'TMDB is busy right now — try again in a moment.' : "Couldn't load these right now — try again shortly."}</div>`;
+      return;
+    }
+    if (my !== seq) return;
+    drawResults(); save();
+  }
+  async function loadMore() {
+    const btn = document.getElementById('brwMore'), from = S.items.length, my = seq;
+    if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+    try { await more(); } catch (e) { console.error('Browse:', e); if (isRateLimitError(e)) showToast('TMDB is busy right now — try again in a moment.', 'err'); }
+    if (my !== seq) return;
+    const grid = document.getElementById('brwGrid');
+    grid.insertAdjacentHTML('beforeend', S.items.slice(from).map(card).join(''));
+    out.querySelector('.inline-search-head').outerHTML = headHTML();
+    out.querySelector('.eg-more')?.remove();
+    grid.insertAdjacentHTML('afterend', moreHTML());
+    grid.children[from]?.focus({ preventScroll: true });           // keyboard users carry on from the first new title
+    save();
+  }
+  function close() {
+    ++seq; S = null; show(false); out.innerHTML = '';
+    history.replaceState(history.state, '', location.pathname);
+    try { sessionStorage.removeItem(STATE); } catch {}
+    panel.scrollIntoView({ block: 'start' });
+  }
+  function reset() {
+    KEYS.forEach(k => { q[k] = ''; });
+    drawPanel();
+    if (S) close();
+  }
+
+  function init(panelEl, resultsEl) {
+    panel = panelEl; out = resultsEl;
+    const p = new URLSearchParams(location.search);
+    if (p.get('browse')) KEYS.forEach(k => { q[k] = p.get(k) || ''; });
+    drawPanel();
+    loadProviders().then(() => {
+      const keep = document.getElementById('brw-service')?.dataset.value || q.service || '';
+      q.service = keep;
+      const f = document.getElementById('brw-service')?.closest('.brw-field');
+      if (f) { f.outerHTML = field('service', 'Service', serviceOptions()); named('service'); }
+      if (S && q.service) out.querySelector('.inline-search-head .section-title').textContent = summary();
+    });
+    if (!p.get('browse')) return;
+    // Coming back: what was loaded is drawn straight away (so the scroll can return)
+    try {
+      const st = JSON.parse(sessionStorage.getItem(STATE) || 'null');
+      if (st && st.key === location.search && Date.now() - st.t < 30 * 60 * 1000 && st.S?.items?.length) {
+        S = st.S; show(true); drawResults(); return;
+      }
+    } catch {}
+    go();
+  }
+
+  return { init, go, more: loadMore, close, reset };
+})();
