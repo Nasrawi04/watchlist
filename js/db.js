@@ -109,7 +109,9 @@ async function quickCreate(payload, userId) {
   // which missed a real case: an existing entry added without a TMDB link
   // (tmdb_id is null) never matches a new tmdb-linked attempt on tmdb_id,
   // so it slipped through as "not a duplicate" and created a second copy.
-  // Now the title check always runs if the tmdb_id check didn't find one.
+  // Now the title check always runs if the tmdb_id check didn't find one —
+  // but for a TMDB-linked title it only matches entries WITHOUT a TMDB link:
+  // two different shows can share a name (Accused 2010 vs Accused 2023).
   let dupe = null;
 
   if (payload.tmdb_id && payload.tmdb_type) {
@@ -123,11 +125,12 @@ async function quickCreate(payload, userId) {
   }
 
   if (!dupe && payload.title) {
-    const { data } = await sb.from('entries')
+    let qy = sb.from('entries')
       .select('id,title,cat')
       .eq('user_id', userId)
-      .eq('title', payload.title)
-      .limit(1);
+      .eq('title', payload.title);
+    if (payload.tmdb_id) qy = qy.is('tmdb_id', null);
+    const { data } = await qy.limit(1);
     if (data && data.length) dupe = data[0];
   }
 
@@ -470,11 +473,15 @@ async function getOwnEntryByTmdb(userId, tmdbId, tmdbType, title) {
   // can never match against a real numeric tmdb_id. Without this, a title
   // already in the library under a manually-created entry would still show
   // "Add to Library" instead of "In your library".
+  // With a TMDB id, only UNLINKED entries count: a linked entry with the same
+  // name is a different title (Accused 2010 vs Accused 2023).
   if (title) {
-    const { data: byTitle, error: err2 } = await sb.from('entries')
+    let qy = sb.from('entries')
       .select('*')
       .eq('user_id', userId)
-      .eq('title', title)
+      .eq('title', title);
+    if (tmdbId) qy = qy.is('tmdb_id', null);
+    const { data: byTitle, error: err2 } = await qy
       .order('created_at', { ascending: true })
       .limit(1);
     if (err2) { console.error('getOwnEntryByTmdb (title fallback):', err2); return null; }
