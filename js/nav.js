@@ -2118,7 +2118,7 @@ function _notifItemHTML(n, opts = {}) {
     href = n.meta?.tmdb_id && n.meta?.tmdb_type ? `title.html?type=${n.meta.tmdb_type}&id=${n.meta.tmdb_id}` : (n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : '');
   } else if (n.type === 'new_episode') {
     const m = n.meta || {};
-    text = `New episode of <b translate="no">${escHTML(m.title || 'a show')}</b> — S${escHTML(m.season)} · E${escHTML(m.episode)}${m.episode_name ? ` “${escHTML(m.episode_name)}”` : ''}`; icon2 = 'tv';
+    text = _notifEpText(m, `<b translate="no">${escHTML(m.title || 'a show')}</b>`) + (m.episode_name && !(m.count > 1) ? ` “${escHTML(m.episode_name)}”` : ''); icon2 = 'tv';
     href = m.tmdb_id ? `episodes.html?show=${encodeURIComponent(m.tmdb_id)}` : '';
   } else if (n.type === 'new_release') {
     const m = n.meta || {};
@@ -2340,10 +2340,20 @@ function _notifShortText(n) {
     case 'list_invite_declined': return `${who} declined your invite to ${list}`;
     case 'friend_started':       return `${who} started watching ${t}`;
     case 'friend_queued':        return `${who} added ${t} from your library`;
-    case 'new_episode':          return `New episode of ${t} — S${escHTML(n.meta?.season)} · E${escHTML(n.meta?.episode)}`;
+    case 'new_episode':          return _notifEpText(n.meta || {}, t);
     case 'new_release':          return `${t} ${n.meta?.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`;
   }
   return 'New notification';
+}
+
+// Episodes that came out together share one notification (044):
+// one → "New episode of X — S1 · E4", a few → "3 new episodes of X — S1 · E4–E6",
+// a whole season at once → "All 8 episodes of Season 1 of X are out"
+function _notifEpText(m, t) {
+  const s = escHTML(m.season), a = escHTML(m.episode), b = escHTML(m.episode_to), c = +m.count || 1;
+  if (c > 1 && +m.episode === 1 && +m.season_size === c) return `All ${c} episodes of Season ${s} of ${t} are out`;
+  if (c > 1 && b) return `${c} new episodes of ${t} — S${s} · E${a}–E${b}`;
+  return `New episode of ${t} — S${s} · E${a}`;
 }
 
 let _notifPeekTimer = null;
