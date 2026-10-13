@@ -16,9 +16,9 @@
      render: (section, list) => {},         // redraw a section with the result
 
      // OPTIONAL — omit any of these to get the default
-     sorts:   section => ['alpha','added','release','episode','ratings','length'],
-              // mixed movie+show pages can use 'runtime' / 'episodes' instead
-              // of 'length' (movies-only / shows-only, the rest go last)
+     sorts:   section => ['alpha','added','release','episode','ratings','runtime','seasons','episodes'],
+              // length sorts: movies by 'runtime', shows by 'seasons' / 'episodes'
+              // (on a mixed page the other kind goes last)
      filters: section => ['genre','year','score','length','person'],
      watched: section => true,              // adds "Year Watched" (From / To) for sections of
                                             // watched titles; reads watchedDate (default completed_date)
@@ -30,7 +30,8 @@
      ],
      defaultSort: 'newest',
      sortState: {},                         // pass the page's own object to share it
-     lengthLabel: section => 'Runtime (minutes)',
+     lengthKind: section => 'mixed',        // Length filter: 'movie' → Runtime (minutes);
+                                            // 'show' → Seasons + Episodes; 'mixed' (default) → all three
      ratingSort: {                          // "Specific Rating" dropdown
        show: section => true,
        options: () => [{ key, label, group }],
@@ -87,15 +88,15 @@ const SF = (() => {
     release: { header: 'Release Date', opts: [['releaseNewest', 'Latest'], ['releaseOldest', 'Earliest']] },
     episode: { header: 'Episode',      opts: [['episodeNewest', 'Latest'], ['episodeOldest', 'Earliest']] },
     ratings: { header: 'Ratings',      opts: [['highest', 'Highest'], ['lowest', 'Lowest']] },
-    length:  { header: 'Length',       opts: [['longest', 'Longest'], ['shortest', 'Shortest']] },
     runtime: { header: 'Runtime',      opts: [['runtime_longest', 'Longest'], ['runtime_shortest', 'Shortest']] },
+    seasons: { header: 'Season Count', opts: [['seasons_most', 'Most'], ['seasons_least', 'Fewest']] },
     episodes:{ header: 'Episode Count',opts: [['eps_most', 'Most'], ['eps_least', 'Fewest']] },
     // Original list position (items carry _rank) — for ranked lists like Top 250
     rank:    { header: 'Rank',         opts: [['rank', 'Top First'], ['rankRev', 'Bottom First']] },
   };
-  const DEFAULT_SORTS   = ['alpha', 'added', 'release', 'ratings', 'length'];
+  const DEFAULT_SORTS   = ['alpha', 'added', 'release', 'ratings', 'runtime', 'seasons', 'episodes'];
   const DEFAULT_FILTERS = ['genre', 'year', 'score', 'length', 'person'];
-  const EMPTY_FILTER = () => ({ genres: [], yearMin: '', yearMax: '', watchedMin: '', watchedMax: '', scoreMin: '', scoreMax: '', lengthMin: '', lengthMax: '', person: '', choice: {} });
+  const EMPTY_FILTER = () => ({ genres: [], yearMin: '', yearMax: '', watchedMin: '', watchedMax: '', scoreMin: '', scoreMax: '', lengthMin: '', lengthMax: '', seasonsMin: '', seasonsMax: '', epsMin: '', epsMax: '', person: '', choice: {} });
 
   // Session caches shared by every scope (keyed by TMDB id)
   const creditsCache = {};
@@ -110,12 +111,10 @@ const SF = (() => {
   function isMovie(e) {
     return e.cat === 'movies' || e.tmdb_type === 'movie' || e.ratings?._media_type === 'movie';
   }
-  // Movies: runtime in minutes. Shows: total episode count (closest
-  // available "length" — there's no single per-show runtime).
-  function lengthOf(e) {
-    if (isMovie(e)) return (Number(e.runtime_h) || 0) * 60 + (Number(e.runtime_m) || 0);
-    return Number(e.total_eps) || 0;
-  }
+  // Length: a movie's runtime (minutes); a show's season / episode counts
+  const runtimeOf = e => (Number(e.runtime_h) || 0) * 60 + (Number(e.runtime_m) || 0);
+  const seasonsOf = e => Number(e.total_seasons) || 0;
+  const epsOf = e => Number(e.total_eps) || 0;
   function releaseValue(e) {
     if (typeof getReleaseDateValue === 'function') return getReleaseDateValue(e) || 0;
     return Number(e.year) || 0;
@@ -143,7 +142,7 @@ const SF = (() => {
   }
   function filterCount(f) {
     return Object.values(f.choice || {}).filter(Boolean).length + (f.genres || []).length + (f.yearMin || f.yearMax ? 1 : 0) + (f.watchedMin || f.watchedMax ? 1 : 0) + (f.scoreMin || f.scoreMax ? 1 : 0)
-         + (f.lengthMin || f.lengthMax ? 1 : 0) + (f.person ? 1 : 0);
+         + (f.lengthMin || f.lengthMax ? 1 : 0) + (f.seasonsMin || f.seasonsMax ? 1 : 0) + (f.epsMin || f.epsMax ? 1 : 0) + (f.person ? 1 : 0);
   }
   function sortLabel(s, value) {
     if (value.startsWith('rating:') && s.cfg.ratingSort) {
@@ -180,22 +179,20 @@ const SF = (() => {
       // or shows sorted by episode count (movies after).
       case 'runtime_longest': case 'runtime_shortest': {
         const dir = value === 'runtime_longest' ? -1 : 1;
-        const m = a.filter(isMovie).sort((x, y) => dir * (lengthOf(x) - lengthOf(y)));
+        const m = a.filter(isMovie).sort((x, y) => dir * (runtimeOf(x) - runtimeOf(y)));
         out = m.concat(a.filter(e => !isMovie(e)).sort((x, y) => d(y) - d(x)));
         break;
       }
-      case 'eps_most': case 'eps_least': {
-        const dir = value === 'eps_most' ? -1 : 1;
-        const sh = a.filter(e => !isMovie(e)).sort((x, y) => dir * (lengthOf(x) - lengthOf(y)));
+      case 'eps_most': case 'eps_least': case 'seasons_most': case 'seasons_least': {
+        const dir = value.endsWith('_most') ? -1 : 1, by = value.startsWith('eps') ? epsOf : seasonsOf;
+        const sh = a.filter(e => !isMovie(e)).sort((x, y) => dir * (by(x) - by(y)));
         out = sh.concat(a.filter(isMovie).sort((x, y) => d(y) - d(x)));
         break;
       }
       case 'episodeNewest': out = a.sort((x, y) => new Date(y.ratings?._last_episode_date || 0) - new Date(x.ratings?._last_episode_date || 0)); break;
       case 'episodeOldest': out = a.sort((x, y) => new Date(x.ratings?._last_episode_date || 0) - new Date(y.ratings?._last_episode_date || 0)); break;
-      case 'longest':       out = a.sort((x, y) => lengthOf(y) - lengthOf(x)); break;
       case 'rank':          out = a.sort((x, y) => (x._rank ?? 1e9) - (y._rank ?? 1e9)); break;
       case 'rankRev':       out = a.sort((x, y) => (y._rank ?? -1) - (x._rank ?? -1)); break;
-      case 'shortest':      out = a.sort((x, y) => lengthOf(x) - lengthOf(y)); break;
       default:
         if (s.cfg.compare && s.cfg.compare[value]) {
           out = a.sort(s.cfg.compare[value]);
@@ -231,8 +228,13 @@ const SF = (() => {
     const sc = scoreFn(s);
     if (f.scoreMin)  out = out.filter(e => sc(e) != null && sc(e) >= Number(f.scoreMin));
     if (f.scoreMax)  out = out.filter(e => sc(e) != null && sc(e) <= Number(f.scoreMax));
-    if (f.lengthMin) out = out.filter(e => lengthOf(e) >= Number(f.lengthMin));
-    if (f.lengthMax) out = out.filter(e => lengthOf(e) <= Number(f.lengthMax));
+    // Length: movies by runtime, shows by seasons / episodes. Set only one kind
+    // and the other kind is left out (runtime 90–120 → just those movies).
+    const inR = (v, lo, hi) => (!lo || v >= Number(lo)) && (!hi || v <= Number(hi));
+    const forMovies = f.lengthMin || f.lengthMax, forShows = f.seasonsMin || f.seasonsMax || f.epsMin || f.epsMax;
+    if (forMovies || forShows) out = out.filter(e => isMovie(e)
+      ? (forMovies ? inR(runtimeOf(e), f.lengthMin, f.lengthMax) : false)
+      : (forShows ? inR(seasonsOf(e), f.seasonsMin, f.seasonsMax) && inR(epsOf(e), f.epsMin, f.epsMax) : false));
     if (f._personMatchIds) out = out.filter(e => f._personMatchIds.includes(e.id));
     return out;
   }
@@ -503,8 +505,12 @@ const SF = (() => {
         rangeRow('sfScoreMin', 'sfScoreMax', f.scoreMin, f.scoreMax, 'Min', 'Max', 'step="0.1" min="0" max="10"');
     }
     if (on.has('length')) {
-      const label = s.cfg.lengthLabel ? s.cfg.lengthLabel(section) : 'Length <span class="sf-section-hint">(movies: minutes · shows: episodes)</span>';
-      html += `<div class="sf-section-label">${label}</div>` + rangeRow('sfLengthMin', 'sfLengthMax', f.lengthMin, f.lengthMax, 'Min', 'Max', 'min="0"');
+      const kind = s.cfg.lengthKind ? s.cfg.lengthKind(section) : 'mixed', mixed = kind === 'mixed';
+      const hint = t => mixed ? ` <span class="sf-section-hint">(${t})</span>` : '';
+      if (kind !== 'show') html += `<div class="sf-section-label">Runtime <span class="sf-section-hint">(minutes${mixed ? ' · movies' : ''})</span></div>`
+        + rangeRow('sfLengthMin', 'sfLengthMax', f.lengthMin, f.lengthMax, 'Min', 'Max', 'min="0"');
+      if (kind !== 'movie') html += `<div class="sf-section-label">Seasons${hint('shows')}</div>` + rangeRow('sfSeasonsMin', 'sfSeasonsMax', f.seasonsMin, f.seasonsMax, 'Min', 'Max', 'min="0"')
+        + `<div class="sf-section-label">Episodes${hint('shows')}</div>` + rangeRow('sfEpsMin', 'sfEpsMax', f.epsMin, f.epsMax, 'Min', 'Max', 'min="0"');
     }
     if (on.has('person')) {
       html += `<div class="sf-section-label">Actor / Director</div>
@@ -536,6 +542,8 @@ const SF = (() => {
       watchedMin: v('sfWatchedMin'), watchedMax: v('sfWatchedMax'),
       scoreMin: v('sfScoreMin'), scoreMax: v('sfScoreMax'),
       lengthMin: v('sfLengthMin'), lengthMax: v('sfLengthMax'),
+      seasonsMin: v('sfSeasonsMin'), seasonsMax: v('sfSeasonsMax'),
+      epsMin: v('sfEpsMin'), epsMax: v('sfEpsMax'),
     });
   }
   function _clearFilter() {
@@ -709,7 +717,7 @@ const SF = (() => {
     typeFilterButton: (onclick, label, active) => buttonHTML('filter', label, active, onclick, 'Filter'),
     filterCount: (scope, section) => filterCount(getFilter(scope, section)),
     filterState: (scope, section) => getFilter(scope, section),
-    isMovie, lengthOf, GENRES,
+    isMovie, GENRES,
     // internal — used by the popup markup's inline handlers
     _stageSort, _resetSort, _applySort, _stageGenre, _stageChoice, _stageRanges, _clearFilter, _applyFilter,
     _openPersonDD, _personInput, _pickPerson, _toggleDD,
