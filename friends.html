@@ -757,7 +757,7 @@ SF.register('frActivity', {
   defaultSort: 'newest',
   presets: { added: { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Oldest']] } },
   sorts: () => ['added', 'ratings', 'alpha'],
-  filters: () => ['score'],
+  filters: () => ['score', 'length'],
   addedDate: x => x._at,
   choiceFilters: () => [
     { key: 'who',  label: 'Friend',   options: _frFriendOptions(), test: (x, v) => x.user_id === v },
@@ -879,7 +879,7 @@ SF.register('frNotes', {
     length: { header: 'Note Length', opts: [['note_long', 'Longest'], ['note_short', 'Shortest']] },
   },
   sorts: () => ['added', 'length', 'ratings', 'alpha'],
-  filters: () => ['genre', 'score'],
+  filters: () => ['genre', 'score', 'length'],
   watched: () => true,          // Year Watched filter
   addedDate: e => e.completed_date || e.updated_at,
   compare: {
