@@ -89,7 +89,7 @@ const MSSTabs = (() => {
       likes: { header: 'Likes', opts: [['likes_most', 'Most Liked'], ['likes_least', 'Least Liked']] },
     },
     sorts: () => ['added', 'alpha', 'length', 'ratings', 'likes'],
-    filters: () => ['genre', 'year', 'score'],
+    filters: () => ['genre', 'year', 'score', 'length'],
     compare: {
       note_long:   (a, b) => MSSNote.words(b.notes) - MSSNote.words(a.notes),
       note_short:  (a, b) => MSSNote.words(a.notes) - MSSNote.words(b.notes),
