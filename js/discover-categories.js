@@ -534,25 +534,30 @@ const DISCOVER_CATEGORIES = [
 const _SEE_ALL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
 
 /* ══ Recommended for You — MSSRecs ══
-   Built from EVERY title in your profile favorites (Top Favorites, Top
-   Picks and the Top 5 TV Shows / Movies / Anime / Cartoons): TMDB's
-   recommendations for each one are pooled; a title several favorites
-   point to weighs more (w). Anything already in your library is left out.
+   Built from every movie, TV show and anime in your profile favorites
+   (Top Favorites, Top Picks and the Top 5 TV Shows / Movies / Anime):
+   TMDB's recommendations for each one are pooled; a title several
+   favorites point to weighs more (w). Anything already in your library is
+   left out. No cartoons, either way: cartoon favorites aren't used, and
+   cartoons (animation that isn't anime) are never recommended.
    Each favorite's list is kept a day on the device.
      MSSRecs.pool(entries, profile) → [{ it, w }]   (the home row draws from it)
      MSSRecs.category                              (discover-list.html "See All":
                                                     all of them, highest rated first)
    Not one of the Discover rows — it lives on the home page. */
 const MSSRecs = (() => {
-  const STORE = 'mss_recs_v2', TTL = 864e5, KEYS = ['top_picks', 'recommended', 'fav_tv', 'fav_movies', 'fav_anime', 'fav_cartoons'];
+  const STORE = 'mss_recs_v3', TTL = 864e5, KEYS = ['top_picks', 'recommended', 'fav_tv', 'fav_movies', 'fav_anime'];
   async function recsOf(type, id, cache) {
     const key = `${type}:${id}`, hit = cache[key];
     if (hit && Date.now() - hit.t < TTL) return hit.items;
     const d = await _discFetchJSON(`${TMDB_BASE}/${type}/${id}/recommendations?api_key=${TMDB_KEY}&language=en-US&page=1`);
-    const items = (d.results || []).filter(r => r.media_type === 'movie' || r.media_type === 'tv').map(r => {
+    const items = [];
+    (d.results || []).forEach(r => {
+      if (r.media_type !== 'movie' && r.media_type !== 'tv') return;
       const it = _discNormalize(r, r.media_type);
-      return { id: it.id, media_type: it.media_type, title: it.title, poster_url: it.poster_url, year: it.year, score: it.score,
-        votes: r.vote_count || 0, genres: it.genres, overview: it.overview.slice(0, 300) };
+      if (it.genre_ids.includes(_ANIMATION_GENRE) && !_discIsAnimeOrigin(it)) return;      // no cartoons
+      items.push({ id: it.id, media_type: it.media_type, title: it.title, poster_url: it.poster_url, year: it.year, score: it.score,
+        votes: r.vote_count || 0, genres: it.genres, overview: it.overview.slice(0, 300) });
     });
     cache[key] = { t: Date.now(), items };
     return items;
@@ -562,7 +567,7 @@ const MSSRecs = (() => {
     const seeds = [], seen = new Set();
     KEYS.forEach(k => (Array.isArray(profile?.[k]) ? profile[k] : []).forEach(id => {
       const e = byId.get(id), type = e?.tmdb_type === 'movie' ? 'movie' : e?.tmdb_type === 'tv' ? 'tv' : null;
-      if (!type || !e.tmdb_id || seen.has(`${type}:${e.tmdb_id}`)) return;
+      if (!type || !e.tmdb_id || e.cat === 'cartoons' || seen.has(`${type}:${e.tmdb_id}`)) return;
       seen.add(`${type}:${e.tmdb_id}`); seeds.push({ type, id: e.tmdb_id });
     }));
     if (!seeds.length) return [];
