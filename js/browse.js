@@ -2,13 +2,15 @@
    browse.js — Browse on Discover (MSSBrowse)
 
    Letterboxd-style "browse by": pick a Type, Year, Genre, Country,
-   Service and Sort, press Browse, and the matching titles (TMDB
+   Watch in, Service and Sort, press Browse, and the matching titles (TMDB
    discover) replace the Discover rows until you go back.
      • up to 100 titles, 20 at a time ("Show more")
      • "All types" mixes movies and shows in the chosen order
      • Type follows the site's split: Movies / TV Shows leave out
        animation, Anime = Japanese animation, Cartoons = the rest
-     • Service = streaming in your country (MSSRegion), TMDB/JustWatch
+     • Service = in cinemas now / coming soon (movies), or any streaming
+       service JustWatch lists (via TMDB) for the "Watch in" country —
+       that country starts as yours (MSSRegion) and is remembered
      • the choice is kept in the address (?type=…&year=…), so Back and
        shared links open the same results; what was loaded and the
        scroll position come back from this session
@@ -20,8 +22,8 @@
 
 const MSSBrowse = (() => {
   const PAGE = 20, CAP = 100, STATE = 'mss_browse_state';
-  const PROV_STORE = 'mss_browse_prov_v1', PROV_TTL = 7 * 864e5;
-  const KEYS = ['type', 'year', 'genre', 'country', 'service', 'sort'];
+  const PROV_STORE = 'mss_browse_prov_v2', PROV_TTL = 7 * 864e5;
+  const KEYS = ['type', 'year', 'genre', 'country', 'region', 'service', 'sort'];
   const esc = s => escHTML(s == null ? '' : String(s));
   const NOW = new Date().getFullYear();
   const today = () => new Date().toISOString().slice(0, 10);
@@ -37,7 +39,8 @@ const MSSBrowse = (() => {
     'TR', 'RU', 'JP', 'KR', 'CN', 'HK', 'TW', 'TH', 'IN', 'IR', 'EG', 'AE', 'SA', 'NG', 'ZA', 'MX', 'BR', 'AR', 'CO'];
   const TYPES = [['', 'All types'], ['movie', 'Movies'], ['tv', 'TV Shows'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
   const SORTS = [['', 'Most popular'], ['rating', 'Highest rated'], ['newest', 'Newest first'], ['oldest', 'Oldest first']];
-  const region = () => MSSRegion.guess()[0];
+  // Where you watch (services + cinemas): picked here or on a title's Where to watch, else a guess
+  const region = () => P.region?.value || q.region || MSSRegion.guess()[0];
   const placeName = c => { try { return new Intl.DisplayNames([MSSI18n.locale.split('-u-')[0], 'en'], { type: 'region' }).of(c) || c; } catch { return c; } };
 
   function yearOptions() {
@@ -61,20 +64,38 @@ const MSSBrowse = (() => {
 
   /* ── Panel ── each choice is the site's type-to-search dropdown (MSSPicker) */
   const P = {};          // the dropdowns, by key
-  const SEARCH = { type: 'Type to search…', year: 'Type a year…', genre: 'Type a genre…', country: 'Type a country…', service: 'Type a service…', sort: 'Type to search…' };
+  const SEARCH = { type: 'Type to search…', year: 'Type a year…', genre: 'Type a genre…', country: 'Type a country…', region: 'Type a country…', service: 'Type a service…', sort: 'Type to search…' };
   function fieldHTML(key, label) {
     return `<div class="brw-field"><div class="field-label" id="brw-${key}-l" aria-hidden="true">${esc(label)}</div><div id="brw-${key}-w"></div></div>`;
   }
-  // options: [value, label, extra search words?]
-  function mountField(key, label, options) {
+  // options: [value, label, extra search words?] — or groups: [{ label, options }]
+  function mountField(key, label, options, onChange) {
+    const groups = options[0]?.options ? options : [{ options }];
     P[key] = MSSPicker.mount(document.getElementById(`brw-${key}-w`), { id: 'brw-' + key, label, value: P[key]?.value ?? q[key] ?? '',
-      groups: [{ items: options.map(([value, l, keys]) => ({ value, label: l, keys })) }], search: SEARCH[key] });
+      groups: groups.map(g => ({ label: g.label, items: g.options.map(([value, l, keys]) => ({ value, label: l, keys })) })), search: SEARCH[key], onChange });
   }
+  // Cinemas (movies only), then every streaming service JustWatch lists for that country
+  const CINEMA = { cinema: 'Now in cinemas', cinema_soon: 'Coming to cinemas' };
   function serviceOptions() {
-    if (!providers) return [['', 'Any service']];
-    return [['', 'Any service'], ...providers.map(p => [String(p.id), p.name])];
+    const stream = (providers || []).map(p => [String(p.id), p.name, /\bmax\b/i.test(p.name) ? ['HBO', 'Max'] : []]);
+    return [{ options: [['', 'Any service']] },
+      { label: 'Cinemas', options: Object.entries(CINEMA).map(([v, l]) => [v, l, ['cinema', 'theater', 'theatre']]) },
+      { label: `Streaming in ${placeName(region())}`, options: stream.length ? stream : [] }].filter(g => g.options.length);
   }
-  const LABELS = { type: 'Type', year: 'Year', genre: 'Genre', country: 'Country', service: 'Service', sort: 'Sort by' };
+  function regionOptions() {
+    return [...new Set([...COUNTRIES, MSSRegion.guess()[0]])].map(c => [c, placeName(c), [c]]).sort((a, b) => a[1].localeCompare(b[1]));
+  }
+  // A new country: remember it (Where to watch uses it too) and load its services
+  function onRegion(r) {
+    try { localStorage.setItem(MSSRegion.KEY, r); } catch {}
+    providers = null;
+    loadProviders().then(() => {
+      const v = P.service?.value;
+      if (v && !CINEMA[v] && !providers.some(x => String(x.id) === v)) P.service.value = '';   // not offered there
+      mountField('service', 'Service', serviceOptions());
+    });
+  }
+  const LABELS = { type: 'Type', year: 'Year', genre: 'Genre', country: 'Country', region: 'Watch in', service: 'Service', sort: 'Sort by' };
   function drawPanel() {
     KEYS.forEach(k => { delete P[k]; });
     const countries = COUNTRIES.map(c => [c, placeName(c), [c]]).sort((a, b) => a[1].localeCompare(b[1]));
@@ -91,18 +112,20 @@ const MSSBrowse = (() => {
     mountField('year', 'Year', yearOptions());
     mountField('genre', 'Genre', [['', 'Any genre'], ...Object.keys(GENRES).map(g => [g, g, g === 'Science Fiction' ? ['Sci-Fi', 'SciFi'] : []])]);
     mountField('country', 'Country', [['', 'Any country'], ...countries]);
+    if (!q.region) q.region = MSSRegion.guess()[0];
+    mountField('region', 'Watch in', regionOptions(), onRegion);
     mountField('service', 'Service', serviceOptions());
     mountField('sort', 'Sort by', SORTS);
   }
   function readPanel() { KEYS.forEach(k => { q[k] = P[k]?.value || ''; }); }
 
-  // Streaming services in your country, most-used first (kept a week on the device)
+  // Streaming services in that country, most-used first — all of them, the
+  // search box finds the one you want (kept a week on the device, per country)
   async function loadProviders() {
     const r = region();
-    try {
-      const c = JSON.parse(localStorage.getItem(PROV_STORE) || 'null');
-      if (c && c.r === r && Date.now() - c.t < PROV_TTL) { providers = c.p; return; }
-    } catch {}
+    let all = {};
+    try { all = JSON.parse(localStorage.getItem(PROV_STORE) || '{}'); } catch {}
+    if (all[r] && Date.now() - all[r].t < PROV_TTL) { providers = all[r].p; return; }
     try {
       const url = t => `${TMDB_BASE}/watch/providers/${t}?api_key=${TMDB_KEY}&language=en-US&watch_region=${r}`;
       const [m, t] = await Promise.all([_discFetchJSON(url('movie')), _discFetchJSON(url('tv'))]);
@@ -112,8 +135,9 @@ const MSSBrowse = (() => {
         const had = seen.get(p.provider_id);
         if (!had || prio < had.prio) seen.set(p.provider_id, { id: p.provider_id, name: p.provider_name, prio });
       });
-      providers = [...seen.values()].sort((a, b) => a.prio - b.prio || a.name.localeCompare(b.name)).slice(0, 30).map(({ id, name }) => ({ id, name }));
-      try { localStorage.setItem(PROV_STORE, JSON.stringify({ r, t: Date.now(), p: providers })); } catch {}
+      providers = [...seen.values()].sort((a, b) => a.prio - b.prio || a.name.localeCompare(b.name)).map(({ id, name }) => ({ id, name }));
+      all[r] = { t: Date.now(), p: providers };
+      try { localStorage.setItem(PROV_STORE, JSON.stringify(all)); } catch {}
     } catch (e) { console.warn('Browse services:', e); providers = []; }
   }
 
@@ -122,7 +146,9 @@ const MSSBrowse = (() => {
     const g = q.genre ? GENRES[q.genre] : null, yr = yearRange(q.year), r = region();
     const kinds = { '': [['movie'], ['tv']], movie: [['movie', 'no-anim']], tv: [['tv', 'no-anim']],
       anime: [['movie', 'anime'], ['tv', 'anime']], cartoons: [['movie', 'cartoon'], ['tv', 'cartoon']] }[q.type || ''];
+    const cinema = q.service === 'cinema' || q.service === 'cinema_soon';
     return kinds.map(([t, kind]) => {
+      if (cinema && t !== 'movie') return null;                      // cinemas show movies
       const gid = g ? g[t === 'movie' ? 0 : 1] : null;
       if (g && !gid) return null;                                   // e.g. Horror has no TV genre on TMDB
       const p = new URLSearchParams({ api_key: TMDB_KEY, language: 'en-US', include_adult: 'false' });
@@ -131,7 +157,12 @@ const MSSBrowse = (() => {
       if (kind === 'no-anim') p.set('without_genres', '16');
       if (kind === 'anime') p.set('with_original_language', 'ja');
       if (q.country) p.set('with_origin_country', q.country);
-      if (q.service) { p.set('with_watch_providers', q.service); p.set('watch_region', r); p.set('with_watch_monetization_types', 'flatrate|free|ads'); }
+      if (cinema) {                                                   // cinema release dates in that country (TMDB: 2 = limited, 3 = wide)
+        const day = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+        p.set('region', r); p.set('with_release_type', '2|3');
+        p.set('release_date.gte', q.service === 'cinema' ? day(-42) : day(1));
+        p.set('release_date.lte', q.service === 'cinema' ? day(0) : day(90));
+      } else if (q.service) { p.set('with_watch_providers', q.service); p.set('watch_region', r); p.set('with_watch_monetization_types', 'flatrate|free|ads'); }
       const d = t === 'movie' ? 'primary_release_date' : 'first_air_date';
       if (yr?.[0]) p.set(`${d}.gte`, yr[0]);
       if (yr?.[1]) p.set(`${d}.lte`, yr[1]);
@@ -179,7 +210,8 @@ const MSSBrowse = (() => {
     if (q.genre) parts.push(q.genre);
     if (q.year) parts.push(yearOptions().find(y => y[0] === q.year)?.[1] || q.year);
     if (q.country) parts.push(`from ${placeName(q.country)}`);
-    if (q.service) parts.push(`on ${providers?.find(p => String(p.id) === q.service)?.name || 'your service'} in ${placeName(region())}`);
+    if (CINEMA[q.service]) parts.push(`${CINEMA[q.service].toLowerCase().replace('now in', 'in')} in ${placeName(region())}`);
+    else if (q.service) parts.push(`on ${providers?.find(p => String(p.id) === q.service)?.name || 'your service'} in ${placeName(region())}`);
     return parts.join(' · ');
   }
   function card(it) {
@@ -212,7 +244,7 @@ const MSSBrowse = (() => {
   }
   function syncURL() {
     const p = new URLSearchParams();
-    KEYS.forEach(k => { if (q[k]) p.set(k, q[k]); });
+    KEYS.forEach(k => { if (q[k] && (k !== 'region' || q.service)) p.set(k, q[k]); });   // the country only matters with a service
     const s = [...p].length ? '?browse=1&' + p : '';
     history.replaceState(history.state, '', location.pathname + s);
   }
