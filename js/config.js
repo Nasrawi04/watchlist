@@ -1365,7 +1365,8 @@ const MSSDialog = (() => {
        id, label, describedBy?,            // ids + aria-label (+ aria-describedby)
        value,                              // selected value
        groups: [{ label?, items: [{ value, label, keys?, lang? }] }],
-       search: 'Type to search…',          // placeholder
+       search: 'Type to search…',          // placeholder in the search box
+       placeholder?,                       // shown on the button while nothing is picked
        onChange(value),
      })
      MSSPicker.closeOpen() → true when one was open (Esc / outside tap)
@@ -1394,7 +1395,11 @@ const MSSPicker = (() => {
         <ul class="mss-pick-list" id="${listId}" role="listbox" aria-label="${escHTML(o.label)}"></ul>
       </div>`;
     const btn = el.querySelector('.mss-pick-trigger'), input = el.querySelector('input'), list = el.querySelector('.mss-pick-list');
-    const paintValue = () => { el.querySelector('.mss-pick-value').textContent = cur()?.label || ''; };
+    const paintValue = () => {                                       // nothing picked → the placeholder, if any
+      const v = el.querySelector('.mss-pick-value'), c = cur();
+      v.textContent = c?.label || o.placeholder || '';
+      v.classList.toggle('mss-pick-placeholder', !c && !!o.placeholder);
+    };
 
     function render() {
       const q = norm(input.value.trim());
