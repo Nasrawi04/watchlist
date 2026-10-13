@@ -55,6 +55,13 @@
    SF.refresh('cat', section)    → recompute + call render()
    SF.setSort('cat', section, v) → set sort and refresh
    SF.invalidate('cat')          → drop cached actor names (after reload)
+   SF.searchHTML('cat', 'Search your TV Shows…')
+                                 → the search box for a page (put it somewhere the
+                                   page never redraws). Typing narrows every section
+                                   of the scope by title / year; cfg.onSearch(query)
+                                   redraws the page (default: each section).
+   SF.query('cat')               → what's typed ('' when not searching)
+   SF.rank(entry, i)             → its #place in the full sorted list (true while searching)
 ═══════════════════════════════════════════════════════════════ */
 
 const SF = (() => {
@@ -230,10 +237,26 @@ const SF = (() => {
     return out;
   }
 
+  /* ── Search: every word typed must appear in the title (accents, case and
+     punctuation ignored, so "spiderman" finds "Spider-Man") or be the year ── */
+  const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  function matches(e, words) {
+    const hay = norm(`${e.title || ''} ${e.ratings?._original_title || ''}`), flat = hay.replace(/ /g, ''), year = String(e.year || '').slice(0, 4);
+    return words.every(w => hay.includes(w) || flat.includes(w) || w === year);
+  }
+  function searchFilter(s, list) {
+    const words = norm(s.query).split(' ').filter(Boolean);
+    return words.length ? list.filter(e => matches(e, words)) : list;
+  }
+
   function list(scope, section) {
     const s = S(scope);
+    s.sections.add(section);
     const base = applyFilter(s, section, s.cfg.base(section) || [], getFilter(scope, section));
-    return sortEntries(s, section, base, getSort(scope, section));
+    const sorted = sortEntries(s, section, base, getSort(scope, section));
+    // ranks come from the whole sorted list, so a search keeps #1, #2… true (SF.rank)
+    sorted.forEach((e, x) => { e._sfRank = x + 1; });
+    return searchFilter(s, sorted);
   }
 
   function refresh(scope, section) {
@@ -630,7 +653,40 @@ const SF = (() => {
     if (!cfg || typeof cfg.base !== 'function' || typeof cfg.render !== 'function') {
       throw new Error(`SF.register("${scope}"): base() and render() are required`);
     }
-    scopes[scope] = { cfg, sort: cfg.sortState || {}, filter: {}, personNames: {} };
+    scopes[scope] = { cfg, sort: cfg.sortState || {}, filter: {}, personNames: {}, query: '', sections: new Set() };
+  }
+  // The search box. data-scope ties it to its scope; it's drawn once and left alone,
+  // so typing never loses focus while the sections redraw underneath.
+  function searchHTML(scope, placeholder) {
+    const q = S(scope).query;
+    return `<div class="sf-search${q ? ' has-q' : ''}" role="search" data-scope="${escHTML(scope)}">
+        <span class="sf-search-ic" aria-hidden="true">${icon('search', 16)}</span>
+        <input type="search" class="sf-search-input" placeholder="${escHTML(placeholder || 'Search…')}" aria-label="${escHTML(placeholder || 'Search')}" value="${escHTML(q)}"
+          autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"
+          oninput="SF._search('${escHTML(scope)}', this.value)" onkeydown="if(event.key==='Escape'&&this.value){event.stopPropagation();SF._search('${escHTML(scope)}','',true)}">
+        <span class="sf-search-count" aria-live="polite"></span>
+        <button type="button" class="sf-search-clear" onclick="SF._search('${escHTML(scope)}','',true)" aria-label="Clear search">${icon('x', 14)}</button>
+      </div>`;
+  }
+  let searchTimer = null;
+  function search(scope, value, now) {
+    const s = S(scope);
+    s.query = value || '';
+    document.querySelectorAll(`.sf-search[data-scope="${scope}"]`).forEach(box => {
+      box.classList.toggle('has-q', !!s.query);
+      const inp = box.querySelector('input');
+      if (inp.value !== s.query) inp.value = s.query;
+      if (now && !s.query) inp.focus();
+    });
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      if (s.cfg.onSearch) s.cfg.onSearch(s.query); else s.sections.forEach(sec => refresh(scope, sec));
+      // how many titles match, across every section on the page
+      const n = s.query ? [...s.sections].reduce((a, sec) => a + list(scope, sec).length, 0) : 0;
+      document.querySelectorAll(`.sf-search[data-scope="${scope}"] .sf-search-count`).forEach(c => {
+        c.textContent = s.query ? (n ? `${n} found` : 'No matches') : '';
+      });
+    }, now ? 0 : 140);
   }
   function invalidate(scope) { if (scopes[scope]) scopes[scope].personNames = {}; }
   // Put back a saved sort/filter (e.g. when returning to a page)
@@ -646,7 +702,9 @@ const SF = (() => {
   }
 
   return {
-    register, list, refresh, bar, setSort, getSort, invalidate, clearFilters, restoreState,
+    register, list, refresh, bar, setSort, getSort, invalidate, clearFilters, restoreState, searchHTML,
+    query: scope => S(scope).query, _search: search,
+    rank: (e, i) => e._sfRank || i + 1,           // a title's place in its ranked list (search or not)
     openSort, closeSort, openFilter, closeFilter, typeFilter, closeTypeFilter,
     typeFilterButton: (onclick, label, active) => buttonHTML('filter', label, active, onclick, 'Filter'),
     filterCount: (scope, section) => filterCount(getFilter(scope, section)),
