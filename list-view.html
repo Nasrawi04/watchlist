@@ -437,8 +437,8 @@ SF.register('lv', {
   base: () => _lvItems,
   render: () => _lvRenderGrid(),
   defaultSort: 'rank',
-  sorts: () => ['rank', 'alpha', 'release', 'ratings', 'runtime', 'episodes'],
-  filters: () => ['genre', 'year', 'score'],
+  sorts: () => ['rank', 'alpha', 'release', 'ratings', 'runtime', 'seasons', 'episodes'],
+  filters: () => ['genre', 'year', 'score', 'length'],
   choiceFilters: () => [{
     key: 'cat', label: 'Type',
     options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']],
