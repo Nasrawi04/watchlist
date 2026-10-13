@@ -43,7 +43,7 @@ const MSSBrowse = (() => {
   function yearOptions() {
     const o = [['', 'Any year'], ['upcoming', 'Upcoming']];
     for (let y = NOW; y >= 2015; y--) o.push([String(y), String(y)]);
-    for (let d = 2010; d >= 1930; d -= 10) o.push([d + 's', d + 's']);
+    for (let d = 2010; d >= 1930; d -= 10) o.push([d + 's', d + 's', Array.from({ length: 10 }, (_, i) => String(d + i))]);   // typing 2005 finds the 2000s
     o.push(['older', 'Before 1930']);
     return o;
   }
@@ -59,41 +59,42 @@ const MSSBrowse = (() => {
   let panel = null, out = null, providers = null, S = null, seq = 0;
   const q = {};          // the current choice (what the dropdowns show)
 
-  /* ── Panel ── */
-  function field(key, label, options) {
-    const id = 'brw-' + key;
-    return `<div class="brw-field"><div class="field-label" id="${id}-l">${esc(label)}</div>
-      ${_selDDHTML(id, options.map(([value, l]) => ({ value, label: l })), q[key] || '', null)}</div>`;
+  /* ── Panel ── each choice is the site's type-to-search dropdown (MSSPicker) */
+  const P = {};          // the dropdowns, by key
+  const SEARCH = { type: 'Type to search…', year: 'Type a year…', genre: 'Type a genre…', country: 'Type a country…', service: 'Type a service…', sort: 'Type to search…' };
+  function fieldHTML(key, label) {
+    return `<div class="brw-field"><div class="field-label" id="brw-${key}-l" aria-hidden="true">${esc(label)}</div><div id="brw-${key}-w"></div></div>`;
+  }
+  // options: [value, label, extra search words?]
+  function mountField(key, label, options) {
+    P[key] = MSSPicker.mount(document.getElementById(`brw-${key}-w`), { id: 'brw-' + key, label, value: P[key]?.value ?? q[key] ?? '',
+      groups: [{ items: options.map(([value, l, keys]) => ({ value, label: l, keys })) }], search: SEARCH[key] });
   }
   function serviceOptions() {
     if (!providers) return [['', 'Any service']];
     return [['', 'Any service'], ...providers.map(p => [String(p.id), p.name])];
   }
+  const LABELS = { type: 'Type', year: 'Year', genre: 'Genre', country: 'Country', service: 'Service', sort: 'Sort by' };
   function drawPanel() {
-    const countries = COUNTRIES.map(c => [c, placeName(c)]).sort((a, b) => a[1].localeCompare(b[1]));
+    KEYS.forEach(k => { delete P[k]; });
+    const countries = COUNTRIES.map(c => [c, placeName(c), [c]]).sort((a, b) => a[1].localeCompare(b[1]));
     panel.innerHTML = `
       <div class="brw-head"><div class="section-eyebrow">Browse</div><div class="section-title">Find something to watch</div></div>
       <div class="brw-fields">
-        ${field('type', 'Type', TYPES)}
-        ${field('year', 'Year', yearOptions())}
-        ${field('genre', 'Genre', [['', 'Any genre'], ...Object.keys(GENRES).map(g => [g, g])])}
-        ${field('country', 'Country', [['', 'Any country'], ...countries])}
-        ${field('service', 'Service', serviceOptions())}
-        ${field('sort', 'Sort by', SORTS)}
+        ${KEYS.map(k => fieldHTML(k, LABELS[k])).join('')}
         <div class="brw-actions">
           <button type="button" class="sf-clear-btn" onclick="MSSBrowse.reset()">Reset</button>
           <button type="button" class="sf-apply-btn" onclick="MSSBrowse.go()">${icon('search', 14)} Browse</button>
         </div>
       </div>`;
-    KEYS.forEach(named);
+    mountField('type', 'Type', TYPES);
+    mountField('year', 'Year', yearOptions());
+    mountField('genre', 'Genre', [['', 'Any genre'], ...Object.keys(GENRES).map(g => [g, g, g === 'Science Fiction' ? ['Sci-Fi', 'SciFi'] : []])]);
+    mountField('country', 'Country', [['', 'Any country'], ...countries]);
+    mountField('service', 'Service', serviceOptions());
+    mountField('sort', 'Sort by', SORTS);
   }
-  // the visible label names each dropdown for screen readers
-  function named(k) {
-    const dd = document.getElementById('brw-' + k);
-    dd.querySelector('.sel-dd-label').id = `brw-${k}-v`;
-    dd.querySelector('.sel-dd-trigger').setAttribute('aria-labelledby', `brw-${k}-l brw-${k}-v`);
-  }
-  function readPanel() { KEYS.forEach(k => { q[k] = document.getElementById('brw-' + k)?.dataset.value || ''; }); }
+  function readPanel() { KEYS.forEach(k => { q[k] = P[k]?.value || ''; }); }
 
   // Streaming services in your country, most-used first (kept a week on the device)
   async function loadProviders() {
@@ -264,10 +265,7 @@ const MSSBrowse = (() => {
     if (p.get('browse')) KEYS.forEach(k => { q[k] = p.get(k) || ''; });
     drawPanel();
     loadProviders().then(() => {
-      const keep = document.getElementById('brw-service')?.dataset.value || q.service || '';
-      q.service = keep;
-      const f = document.getElementById('brw-service')?.closest('.brw-field');
-      if (f) { f.outerHTML = field('service', 'Service', serviceOptions()); named('service'); }
+      if (P.service && !P.service.el.classList.contains('open')) mountField('service', 'Service', serviceOptions());
       if (S && q.service) out.querySelector('.inline-search-head .section-title').textContent = summary();
     });
     if (!p.get('browse')) return;
