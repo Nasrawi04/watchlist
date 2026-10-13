@@ -349,7 +349,7 @@ SF.register('notesMine', {
     likes: { header: 'Likes', opts: [['likes_most', 'Most Liked'], ['likes_least', 'Least Liked']] },
   },
   sorts: () => ['added', 'alpha', 'length', 'ratings', 'likes'],
-  filters: () => ['genre', 'year', 'score'],
+  filters: () => ['genre', 'year', 'score', 'length'],
   compare: {
     ..._noteLenCompare,
     likes_most:  (a, b) => ((_notesReactionCounts[b.id]?.like || 0) - (_notesReactionCounts[a.id]?.like || 0)),
