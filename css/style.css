@@ -5104,3 +5104,28 @@ html.mss-scroll-locked [role="dialog"], html.mss-scroll-locked [role="dialog"] *
 .mss-rq::before { content:'“'; } .mss-rq::after { content:'”'; }
 .mss-rq:first-child { margin-top:2px; } .mss-rq:last-child { margin-bottom:2px; }
 .mss-rq em { font-style:normal; }
+
+/* ── Search inside a page's sections (SF.searchHTML, sort-filter.js) ── */
+.sf-search-row { margin:0 0 1.25rem; }
+.sf-search-row-split { display:flex; align-items:center; gap:10px; }
+.sf-search-row-split .sf-search { flex:1 1 auto; width:auto; min-width:0; }
+.sf-search-row-split > :last-child { flex-shrink:0; }
+.sf-search-row-split .sf-trigger-row { margin:0; }
+.sf-search { position:relative; display:flex; align-items:center; gap:10px; width:100%; max-width:480px; height:46px; box-sizing:border-box; padding:0 8px 0 14px;
+  background:var(--card); border:0.5px solid var(--border-2); border-radius:var(--radius); transition:border-color .15s, box-shadow .15s; }
+.sf-search:hover { border-color:var(--border-olive); }
+.sf-search:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.sf-search-ic { display:flex; color:var(--text-3); flex-shrink:0; }
+.sf-search:focus-within .sf-search-ic, .sf-search.has-q .sf-search-ic { color:var(--olive-light); }
+.sf-search-input { flex:1; min-width:0; height:100%; border:none; outline:none; background:transparent; color:var(--text); font:500 14.5px 'Manrope',var(--sans); padding:0; }
+.sf-search-input::placeholder { color:var(--text-3); }
+.sf-search-input::-webkit-search-cancel-button, .sf-search-input::-webkit-search-decoration { -webkit-appearance:none; appearance:none; }
+.sf-search-count { font-size:12px; font-weight:600; color:var(--text-3); white-space:nowrap; }
+.sf-search-clear { display:none; width:30px; height:30px; flex-shrink:0; align-items:center; justify-content:center; border:none; border-radius:50%; background:var(--bg-3); color:var(--text-2); cursor:pointer; }
+.sf-search.has-q .sf-search-clear { display:inline-flex; }
+.sf-search-clear:hover { background:var(--olive-faint); color:var(--text); }
+.sf-search-clear:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.sf-search-empty { display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; padding:3rem 1rem; color:var(--text-3); font-size:13.5px; }
+.sf-search-empty svg { opacity:.6; margin-bottom:4px; }
+.sf-search-empty b { color:var(--text); font-size:15px; overflow-wrap:anywhere; }
+@media(max-width:640px) { .sf-search { max-width:none; height:44px; } .sf-search-input { font-size:16px; } }   /* 16px: phones don't zoom in */
