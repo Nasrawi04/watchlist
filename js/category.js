@@ -148,7 +148,15 @@ SF.register('cat', {
     ? [...list.filter(e => e.status === 'watching'), ...list.filter(e => e.status === 'up_next'), ...list.filter(e => e.status === 'paused')]
     : list,
   saveRatings: (entry, ratings) => updateProgress(entry.id, _catUser.id, { ratings }).catch(() => {}),
+  onSearch: () => renderSections(),          // search narrows every section at once
 });
+// The page's search box: just above the sections, drawn once (renderSections never touches it)
+function _catSearchBox() {
+  const wrap = document.getElementById('sectionsWrap');
+  if (!wrap || document.querySelector('.sf-search[data-scope="cat"]')) return;
+  const label = CAT_META[window.PAGE_CAT]?.label || 'library';
+  wrap.insertAdjacentHTML('beforebegin', `<div class="sf-search-row fade-up fade-up-2">${SF.searchHTML('cat', `Search your ${label}…`)}</div>`);
+}
 
 function sortBar(section)          { return SF.bar('cat', section); }
 function setSort(section, value)   { SF.setSort('cat', section, value); }
@@ -198,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
       return;
     }
+    _catSearchBox();
     await renderPage();
     // Check if we arrived here from "Add to Watchlist" in profile-view
     var _addTitle = sessionStorage.getItem('addModalTitle');
@@ -371,6 +380,9 @@ function renderSections(
   const so = SF.list('cat', 'ongoing');
   let html = '';
 
+  // Searching: each section shows only its matches (count = matches) and sections without any step aside
+  const q = SF.query('cat');
+  if (q) { watching = sw; queue = sq; completed = sc; ongoing = so; }
   html += buildSection('watching', icon('play',15) + ' Currently Watching', watching.length, buildWatchingContent(sw));
   html += buildSection('queue',    icon('bookmark',15) + ' Watchlist', queue.length,     buildQueue(sq));
 
@@ -385,6 +397,7 @@ function renderSections(
   }
 
   html += buildSection('completed',icon('check',15)   + ' Watched',    completed.length, buildCompleted(sc));
+  if (q && !html) html = `<div class="sf-search-empty">${icon('search', 22)}<b>Nothing matches “${escHTML(q)}”</b><span>Try another title or year.</span></div>`;
 
   document.getElementById('sectionsWrap').innerHTML = html;
   if (typeof fitTitleYear === 'function') fitTitleYear(document.getElementById('sectionsWrap'));
@@ -392,7 +405,9 @@ function renderSections(
 
 /* ════════ SECTION ACCORDION ════════ */
 function buildSection(key, title, count, content) {
-  const isOpen      = !collapsed[key];
+  const searching   = !!SF.query('cat');
+  if (searching && !count) return '';             // no matches in this section
+  const isOpen      = searching || !collapsed[key];
   const currentView = getView(key);
 
   const viewToggle = `<div class="view-toggle">
@@ -765,7 +780,7 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
       <div class="wg-poster" onclick="openGridPopup('${e.id}')" style="position:relative;">
         ${posterHTML(e,'big')}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
-        ${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(i+1) : '')}
+        ${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(SF.rank(e, i)) : '')}
         ${SHOW_TYPE_TAG() ? `<span class="${typeClsC}">${isMc ? 'Movie' : 'TV Show'}</span>` : ''}
       </div>
       <div class="cg-grid-info" onclick="openGridPopup('${e.id}')">
@@ -1074,7 +1089,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
     return `<div class="cc-block">
       <div class="comp-row" style="cursor:pointer;" onclick="openGridPopup('${e.id}')">
-        <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(i+1) : '')}</div>
+        <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(SF.rank(e, i)) : '')}</div>
         <div class="comp-info">
           <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
           <div class="comp-meta">${_badge}</div>
