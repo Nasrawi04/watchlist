@@ -341,8 +341,8 @@ SF.register('comp', {
   },
   sortState: _compSortState,
   onSearch: () => renderMain(),
-  sorts: () => ['alpha', 'added', 'release', 'ratings', _catFilter !== 'tv' && 'runtime', _catFilter !== 'movies' && 'episodes'],
-  lengthLabel: () => _catFilter === 'movies' ? 'Runtime (minutes)' : _catFilter === 'tv' ? 'Episode Count' : 'Runtime / Episode Count',
+  sorts: () => ['alpha', 'added', 'release', 'ratings', _catFilter !== 'tv' && 'runtime', _catFilter !== 'movies' && 'seasons', _catFilter !== 'movies' && 'episodes'],
+  lengthKind: () => _catFilter === 'movies' ? 'movie' : _catFilter === 'tv' ? 'show' : 'mixed',
   choiceFilters: () => [
     { key: 'cat',    label: 'Type',   options: Object.entries(_compCatLabels) },
     // Anime & Cartoons mix series and films — pick one under Type to get this
