@@ -119,7 +119,7 @@ function _ratingFilterLabelAll(key){
 }
 
 function _libCatFilterBar() {
-  return '<div class="sf-trigger-row" style="margin-bottom:10px;justify-content:flex-start;">'
+  return '<div class="sf-trigger-row" style="justify-content:flex-start;">'
     + SF.typeFilterButton('openLibTypeFilterPopup()', _libCatFilter ? _libCatLabels[_libCatFilter] + (_libFormat ? ' · ' + _libFormatLabels[_libFormat] : '') : 'Filter', !!_libCatFilter)
     + '</div>';
 }
@@ -166,6 +166,7 @@ SF.register(LIB_SCOPE, {
   watched: function(sec){ return sec==='completed'; },   // Year Watched filter
   base: _libBaseEntries,
   render: function(){ renderLibrary(); },
+  onSearch: function(){ renderLibrary(); },     // search narrows all three sections at once
   sortState: _libSort,
   // Runtime only once movies can be present, Episode Count only once shows can
   sorts: function(){ return ['alpha','added','release','ratings', _libCatFilter!=='tv'&&_libFormat!=='show'&&'runtime', _libCatFilter!=='movies'&&_libFormat!=='movie'&&'episodes']; },
@@ -202,7 +203,9 @@ function _libViewToggle(vk){
   renderLibrary();
 }
 function _libSection(key,title,count,vk,sk,content){
-  var isOpen=!_libCollapsed[key];
+  var searching=!!SF.query(LIB_SCOPE);
+  if(searching&&!count)return '';                 // no matches in this section
+  var isOpen=searching||!_libCollapsed[key];
   var cv=vk==='watch'?_libWatchView:vk==='queue'?_libQueueView:_libCompView;
   var chevRot=isOpen?'':'transform:rotate(-90deg);';
   return '<div class="section-block" id="libsec-'+key+'" style="margin-bottom:16px;">'
@@ -326,7 +329,7 @@ function _libRender(){
     var cg='libcg';
     var ccs=completed.map(function(e,i){
       var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
-      var cls=i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other';
+      var rk=SF.rank(e,i), cls=rk===1?'cg-rank-1':rk===2?'cg-rank-2':rk===3?'cg-rank-3':'cg-rank-other';
       var date=e.completed_date?new Date(e.completed_date+'T12:00:00').toLocaleDateString(MSSI18n.locale,{day:'numeric',month:'short',year:'numeric'}):'';
       var dateSpan=date?'<span class="genre-dot" style="color:var(--text-3)">'+date+'</span>':'';
       var isMovie=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
@@ -345,7 +348,7 @@ function _libRender(){
       var isMovieG=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var typeClsG=(isMovieG?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card cg-card-wrap" style="cursor:pointer;">'
-        +'<div class="wg-poster" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+(i+1)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsG+'">'+(isMovieG?'Movie':'TV Show')+'</span>'+' </div>'
+        +'<div class="wg-poster" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+SF.rank(e,i)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsG+'">'+(isMovieG?'Movie':'TV Show')+'</span>'+' </div>'
         +'<div class="cg-grid-info" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
         +metaHtml
@@ -363,7 +366,7 @@ function _libRender(){
       var isMc=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       return '<div class="fv-entry-block">'
         +'<div class="fv-rank-row" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
-        +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+(i===0?'cg-rank-1':i===1?'cg-rank-2':i===2?'cg-rank-3':'cg-rank-other')+'">'+(i+1)+'</div>':''))+'</div>'
+        +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+(SF.rank(e,i)===1?'cg-rank-1':SF.rank(e,i)===2?'cg-rank-2':SF.rank(e,i)===3?'cg-rank-3':'cg-rank-other')+'">'+SF.rank(e,i)+'</div>':''))+'</div>'
         +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
         +'<div class="fv-rank-meta">'+_libTypeBadge(isMc)+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(MSSRich.plain(e.notes)))+'&rdquo;</div>':'')
@@ -374,10 +377,19 @@ function _libRender(){
     }).join('')+'</div>';
   }
 
-  el.innerHTML = statsHTML + _libCatFilterBar()
-    +_libSection('watching',icon('play',14)+' Currently Watching',watching.length,'watch','watching',wc)
+  // Stats + type filter on top, then the search box (drawn once, so typing keeps
+  // its focus), then the sections — only the top and the sections redraw
+  if(!el.querySelector('#libSecs')){
+    el.innerHTML='<div id="libTop"></div><div class="sf-search-row sf-search-row-split">'+SF.searchHTML(LIB_SCOPE, LIB_READONLY ? 'Search this library…' : 'Search your library…')+'<div id="libTypeSlot"></div></div><div id="libSecs"></div>';
+  }
+  var q=SF.query(LIB_SCOPE);
+  var secs=_libSection('watching',icon('play',14)+' Currently Watching',watching.length,'watch','watching',wc)
     +_libSection('queue',icon('bookmark',14)+' Watchlist',queue.length,'queue','queue',qc)
     +_libSection('completed',icon('check',14)+' Watched',completed.length,'comp','completed',cc);
+  if(q&&!secs) secs='<div class="sf-search-empty">'+icon('search',22)+'<b>Nothing matches “'+escHTML(q)+'”</b><span>Try another title or year.</span></div>';
+  el.querySelector('#libTop').innerHTML = statsHTML;
+  el.querySelector('#libTypeSlot').innerHTML = _libCatFilterBar();      // the Type filter sits beside the search
+  el.querySelector('#libSecs').innerHTML = secs;
   if (typeof fitTitleYear === 'function') fitTitleYear(el);
   if(loading)loading.style.display='none';
   el.style.display='block';
