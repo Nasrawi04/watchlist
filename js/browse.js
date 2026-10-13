@@ -111,6 +111,7 @@ const MSSBrowse = (() => {
       <div class="brw-fields">
         ${KEYS.map(k => fieldHTML(k, LABELS[k])).join('')}
         <div class="brw-actions">
+          <span class="brw-filter" id="brwFilterBtn">${filterBtn()}</span>
           <button type="button" class="sf-clear-btn" onclick="MSSBrowse.reset()">Reset</button>
           <button type="button" class="sf-apply-btn" onclick="MSSBrowse.go()">${icon('search', 14)} Browse</button>
         </div>
@@ -147,14 +148,53 @@ const MSSBrowse = (() => {
     } catch (e) { console.warn('Browse services:', e); providers = []; }
   }
 
+  /* ── Filters: the site's Filter popup (sort-filter.js, scope 'brw') ──
+     TMDB Score and a movie's Runtime are asked of TMDB; a show's Seasons /
+     Episodes aren't something TMDB can search by, so each show's details are
+     looked up (once) and checked here, like "Hide what's in my library".
+     Set only movie or only show lengths and the other kind is left out.
+     Apply re-runs the results when they're showing. */
+  SF.register('brw', {
+    base: () => [],
+    render: () => { document.getElementById('brwFilterBtn').innerHTML = filterBtn(); if (S) go(); },
+    filters: () => ['score', 'length'],
+    choiceFilters: () => [{ key: 'hide', label: 'Your Library', options: [['', 'Show everything'], ['watched', 'Hide what’s in my library']] }],
+    scoreLabel: 'TMDB Score',
+    lengthKind: () => ({ movie: 'movie', tv: 'show' })[P.type?.value] || 'mixed',
+  });
+  const F = () => SF.filterState('brw', 'all');
+  const FKEYS = { smin: 'scoreMin', smax: 'scoreMax', lmin: 'lengthMin', lmax: 'lengthMax', snmin: 'seasonsMin', snmax: 'seasonsMax',
+    emin: 'epsMin', emax: 'epsMax', hide: 'hide' };   // address ↔ filter
+  const lengths = f => ({ movies: !!(f.lengthMin || f.lengthMax), shows: !!(f.seasonsMin || f.seasonsMax || f.epsMin || f.epsMax) });
+  // A show's seasons + episodes (TMDB details, kept for this visit)
+  const showSize = new Map();
+  async function sizeOf(id) {
+    if (!showSize.has(id)) showSize.set(id, _discFetchJSON(`${TMDB_BASE}/tv/${id}?api_key=${TMDB_KEY}&language=en-US`)
+      .then(d => ({ s: d.number_of_seasons || 0, e: d.number_of_episodes || 0 })).catch(() => null));
+    return showSize.get(id);
+  }
+  function filterBtn() {
+    const n = SF.filterCount('brw', 'all');
+    return SF.typeFilterButton("SF.openFilter('brw','all')", n ? `Filter (${n})` : 'Filter', n > 0);
+  }
+  // What's in your library (tmdb type:id), loaded once when "Hide" is on
+  let lib = null;
+  async function libraryKeys() {
+    if (lib) return lib;
+    const user = await getCurrentUser();
+    lib = new Set(user ? (await getEntries(user.id)).filter(e => e.tmdb_id).map(e => `${e.tmdb_type}:${e.tmdb_id}`) : []);
+    return lib;
+  }
+
   /* ── Results ── */
   function sources() {
     const g = q.genre ? GENRES[q.genre] : null, yr = yearRange(q.year), r = region();
     const kinds = { '': [['movie'], ['tv']], movie: [['movie', 'no-anim']], tv: [['tv', 'no-anim']],
       anime: [['movie', 'anime'], ['tv', 'anime']], cartoons: [['movie', 'cartoon'], ['tv', 'cartoon']] }[q.type || ''];
-    const cinema = q.service === 'cinema' || q.service === 'cinema_soon';
+    const cinema = q.service === 'cinema' || q.service === 'cinema_soon', len = lengths(F());
     return kinds.map(([t, kind]) => {
       if (cinema && t !== 'movie') return null;                      // cinemas show movies
+      if (t === 'movie' ? len.shows && !len.movies : len.movies && !len.shows) return null;   // only one kind's length set
       const gid = g ? g[t === 'movie' ? 0 : 1] : null;
       if (g && !gid) return null;                                   // e.g. Horror has no TV genre on TMDB
       const p = new URLSearchParams({ api_key: TMDB_KEY, language: 'en-US', include_adult: 'false' });
@@ -176,6 +216,11 @@ const MSSBrowse = (() => {
       p.set('sort_by', q.sort === 'rating' ? 'vote_average.desc' : q.sort === 'newest' ? `${d}.desc` : q.sort === 'oldest' ? `${d}.asc` : 'popularity.desc');
       if (q.sort === 'rating') p.set('vote_count.gte', t === 'movie' ? '100' : '50');
       if (q.sort === 'oldest') p.set('vote_count.gte', '5');                // skips empty placeholder entries
+      const f = F();
+      if (f.scoreMin) { p.set('vote_average.gte', f.scoreMin); if (!p.has('vote_count.gte')) p.set('vote_count.gte', '20'); }   // a real score, not 3 votes
+      if (f.scoreMax) p.set('vote_average.lte', f.scoreMax);
+      if (t === 'movie' && f.lengthMin) p.set('with_runtime.gte', f.lengthMin);
+      if (t === 'movie' && f.lengthMax) p.set('with_runtime.lte', f.lengthMax);
       return { t, kind, url: `${TMDB_BASE}/discover/${t}?${p}`, page: 0, pages: 1, total: 0, buf: [], done: false };
     }).filter(Boolean);
   }
@@ -192,7 +237,14 @@ const MSSBrowse = (() => {
     if (src.page >= src.pages) src.done = true;
     src.buf = (d.results || []).map(r => Object.assign(_discNormalize(r, src.t), {
       pop: r.popularity || 0, date: (src.t === 'movie' ? r.release_date : r.first_air_date) || '' }))
-      .filter(it => src.kind !== 'cartoon' || !_discIsAnimeOrigin(it));
+      .filter(it => src.kind !== 'cartoon' || !_discIsAnimeOrigin(it))
+      .filter(it => !S.hide || !lib?.has(`${it.media_type}:${it.id}`));
+    const f = F();
+    if (src.t === 'tv' && lengths(f).shows) {                        // seasons / episodes: checked one show at a time
+      const inR = (v, lo, hi) => (!lo || v >= Number(lo)) && (!hi || v <= Number(hi));
+      const sizes = await Promise.all(src.buf.map(it => sizeOf(it.id)));
+      src.buf = src.buf.filter((it, i) => sizes[i] && inR(sizes[i].s, f.seasonsMin, f.seasonsMax) && inR(sizes[i].e, f.epsMin, f.epsMax));
+    }
   }
   // Takes the next 20 in order, pulling pages from each source as needed
   async function more() {
@@ -208,7 +260,9 @@ const MSSBrowse = (() => {
     }
     S.end = S.items.length >= CAP || S.src.every(s => s.done && !s.buf.length);
   }
-  const totalOf = () => S.end ? S.items.length : Math.min(CAP, Math.max(S.items.length, S.src.reduce((a, s) => a + s.total, 0)));
+  // TMDB's total is exact unless titles are dropped here (library / seasons / episodes) — then it's "N+"
+  const fuzzy = () => !S.end && (S.hide || lengths(F()).shows);
+  const totalOf = () => S.end || fuzzy() ? S.items.length : Math.min(CAP, Math.max(S.items.length, S.src.reduce((a, s) => a + s.total, 0)));
 
   function summary() {
     const parts = [];
@@ -218,6 +272,12 @@ const MSSBrowse = (() => {
     if (q.country) parts.push(`from ${placeName(q.country)}`);
     if (CINEMA[q.service]) parts.push(`${CINEMA[q.service].toLowerCase().replace('now in', 'in')} in ${placeName(region())}`);
     else if (q.service) parts.push(`on ${providers?.find(p => String(p.id) === q.service)?.name || 'your service'} in ${placeName(region())}`);
+    const f = F(), rng = (a, b, u) => a && b ? `${a}–${b}${u}` : a ? `${a}+${u}` : `up to ${b}${u}`;
+    if (f.scoreMin || f.scoreMax) parts.push(`★ ${rng(f.scoreMin, f.scoreMax, '')}`);
+    if (f.lengthMin || f.lengthMax) parts.push(rng(f.lengthMin, f.lengthMax, ' min'));
+    if (f.seasonsMin || f.seasonsMax) parts.push(rng(f.seasonsMin, f.seasonsMax, ' seasons'));
+    if (f.epsMin || f.epsMax) parts.push(rng(f.epsMin, f.epsMax, ' episodes'));
+    if (f.choice?.hide) parts.push('not in your library');
     return parts.join(' · ');
   }
   function card(it) {
@@ -228,7 +288,7 @@ const MSSBrowse = (() => {
     const n = S.items.length ? totalOf() : 0;
     return `<div class="inline-search-head"><div class="section-eyebrow">Browse</div>
         <div class="section-title" style="margin-bottom:0">${esc(summary())}</div>
-        ${loading ? '' : `<div class="inline-search-count"><b>${n}</b> ${n === 1 ? 'title' : 'titles'}</div>`}
+        ${loading ? '' : `<div class="inline-search-count"><b>${n}${fuzzy() ? '+' : ''}</b> ${n === 1 ? 'title' : 'titles'}</div>`}
         <button type="button" class="brw-back" onclick="MSSBrowse.close()">${icon('back', 14)} Back to Discover</button></div>`;
   }
   function moreHTML() {
@@ -251,6 +311,8 @@ const MSSBrowse = (() => {
   function syncURL() {
     const p = new URLSearchParams();
     KEYS.forEach(k => { if (q[k] && (k !== 'region' || q.service)) p.set(k, q[k]); });   // the country only matters with a service
+    const f = F();
+    Object.entries(FKEYS).forEach(([u, k]) => { const v = k === 'hide' ? f.choice?.hide : f[k]; if (v) p.set(u, v); });
     const s = [...p].length ? '?browse=1&' + p : '';
     history.replaceState(history.state, '', location.pathname + s);
   }
@@ -262,7 +324,11 @@ const MSSBrowse = (() => {
     show(true);
     out.innerHTML = headHTML(true) + `<div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>`;
     out.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-    try { await more(); }
+    try {
+      S.hide = !!F().choice?.hide;
+      if (S.hide) await libraryKeys();
+      await more();
+    }
     catch (e) {
       if (my !== seq) return;
       console.error('Browse:', e);
@@ -273,6 +339,7 @@ const MSSBrowse = (() => {
     drawResults(); save();
   }
   async function loadMore() {
+    if (S.hide) await libraryKeys().catch(() => {});
     const btn = document.getElementById('brwMore'), from = S.items.length, my = seq;
     if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
     try { await more(); } catch (e) { console.error('Browse:', e); if (isRateLimitError(e)) showToast('TMDB is busy right now — try again in a moment.', 'err'); }
@@ -293,6 +360,7 @@ const MSSBrowse = (() => {
   }
   function reset() {
     KEYS.forEach(k => { q[k] = ''; });
+    SF.clearFilters('brw', 'all');
     drawPanel();
     if (S) close();
   }
@@ -300,7 +368,12 @@ const MSSBrowse = (() => {
   function init(panelEl, resultsEl) {
     panel = panelEl; out = resultsEl;
     const p = new URLSearchParams(location.search);
-    if (p.get('browse')) KEYS.forEach(k => { q[k] = p.get(k) || ''; });
+    if (p.get('browse')) {
+      KEYS.forEach(k => { q[k] = p.get(k) || ''; });
+      const f = { genres: [], choice: { hide: p.get('hide') || '' } };
+      Object.entries(FKEYS).forEach(([u, k]) => { if (k !== 'hide') f[k] = p.get(u) || ''; });
+      SF.restoreState('brw', 'all', { filter: f });
+    }
     drawPanel();
     loadProviders().then(() => {
       if (P.service && !P.service.el.classList.contains('open')) mountField('service', 'Service', serviceOptions());
