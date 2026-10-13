@@ -10,7 +10,7 @@
        animation, Anime = Japanese animation, Cartoons = the rest
      • Service = in cinemas now / coming soon (movies), or any streaming
        service JustWatch lists (via TMDB) for the "Watch in" country —
-       that country starts as yours (MSSRegion) and is remembered
+       left on "Choose a country", it's your own (first in its list)
      • the choice is kept in the address (?type=…&year=…), so Back and
        shared links open the same results; what was loaded and the
        scroll position come back from this session
@@ -39,8 +39,15 @@ const MSSBrowse = (() => {
     'TR', 'RU', 'JP', 'KR', 'CN', 'HK', 'TW', 'TH', 'IN', 'IR', 'EG', 'AE', 'SA', 'NG', 'ZA', 'MX', 'BR', 'AR', 'CO'];
   const TYPES = [['', 'All types'], ['movie', 'Movies'], ['tv', 'TV Shows'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
   const SORTS = [['', 'Most popular'], ['rating', 'Highest rated'], ['newest', 'Newest first'], ['oldest', 'Oldest first']];
-  // Where you watch (services + cinemas): picked here or on a title's Where to watch, else a guess
-  const region = () => P.region?.value || q.region || MSSRegion.guess()[0];
+  // Where you watch (services + cinemas): the "Watch in" pick, else your own country.
+  // Your own = what the device says (time zone / language) — not a country picked
+  // on a title's Where to watch, which may be somewhere you were just checking.
+  const HOME = (() => {
+    const g = MSSRegion.guess(); let picked = null;
+    try { picked = localStorage.getItem(MSSRegion.KEY); } catch {}
+    return picked && g[0] === picked && g.length > 1 ? g[1] : g[0];
+  })();
+  const region = () => P.region?.value || q.region || HOME;
   const placeName = c => { try { return new Intl.DisplayNames([MSSI18n.locale.split('-u-')[0], 'en'], { type: 'region' }).of(c) || c; } catch { return c; } };
 
   function yearOptions() {
@@ -69,10 +76,10 @@ const MSSBrowse = (() => {
     return `<div class="brw-field"><div class="field-label" id="brw-${key}-l" aria-hidden="true">${esc(label)}</div><div id="brw-${key}-w"></div></div>`;
   }
   // options: [value, label, extra search words?] — or groups: [{ label, options }]
-  function mountField(key, label, options, onChange) {
+  function mountField(key, label, options, onChange, placeholder) {
     const groups = options[0]?.options ? options : [{ options }];
     P[key] = MSSPicker.mount(document.getElementById(`brw-${key}-w`), { id: 'brw-' + key, label, value: P[key]?.value ?? q[key] ?? '',
-      groups: groups.map(g => ({ label: g.label, items: g.options.map(([value, l, keys]) => ({ value, label: l, keys })) })), search: SEARCH[key], onChange });
+      groups: groups.map(g => ({ label: g.label, items: g.options.map(([value, l, keys]) => ({ value, label: l, keys })) })), search: SEARCH[key], onChange, placeholder });
   }
   // Cinemas (movies only), then every streaming service JustWatch lists for that country
   const CINEMA = { cinema: 'Now in cinemas', cinema_soon: 'Coming to cinemas' };
@@ -83,11 +90,11 @@ const MSSBrowse = (() => {
       { label: `Streaming in ${placeName(region())}`, options: stream.length ? stream : [] }].filter(g => g.options.length);
   }
   function regionOptions() {
-    return [...new Set([...COUNTRIES, MSSRegion.guess()[0]])].map(c => [c, placeName(c), [c]]).sort((a, b) => a[1].localeCompare(b[1]));
+    const rest = COUNTRIES.filter(c => c !== HOME).map(c => [c, placeName(c), [c]]).sort((a, b) => a[1].localeCompare(b[1]));
+    return [{ label: 'Your country', options: [[HOME, placeName(HOME), [HOME]]] }, { label: 'All countries', options: rest }];
   }
-  // A new country: remember it (Where to watch uses it too) and load its services
-  function onRegion(r) {
-    try { localStorage.setItem(MSSRegion.KEY, r); } catch {}
+  // Another country: load its services
+  function onRegion() {
     providers = null;
     loadProviders().then(() => {
       const v = P.service?.value;
@@ -112,8 +119,7 @@ const MSSBrowse = (() => {
     mountField('year', 'Year', yearOptions());
     mountField('genre', 'Genre', [['', 'Any genre'], ...Object.keys(GENRES).map(g => [g, g, g === 'Science Fiction' ? ['Sci-Fi', 'SciFi'] : []])]);
     mountField('country', 'Country', [['', 'Any country'], ...countries]);
-    if (!q.region) q.region = MSSRegion.guess()[0];
-    mountField('region', 'Watch in', regionOptions(), onRegion);
+    mountField('region', 'Watch in', regionOptions(), onRegion, 'Choose a country');
     mountField('service', 'Service', serviceOptions());
     mountField('sort', 'Sort by', SORTS);
   }
