@@ -5147,7 +5147,7 @@ html.mss-scroll-locked [role="dialog"], html.mss-scroll-locked [role="dialog"] *
    ═════════════════════════════════════════════════════════════ */
 .brw-panel { position:relative; z-index:60; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.25rem 1.25rem 1.35rem; margin:0 0 3rem; }   /* its own layer: open dropdowns sit over the rows + side nav below (nav is 400) */
 .brw-head .section-title { margin-bottom:1rem; }
-.brw-fields { display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:14px 12px; align-items:end; }
+.brw-fields { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:14px 12px; align-items:end; }
 .brw-field .field-label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .brw-actions { grid-column:1 / -1; display:flex; justify-content:flex-end; gap:10px; }
 .brw-actions .sf-clear-btn, .brw-actions .sf-apply-btn { flex:0 0 auto; min-width:120px; display:inline-flex; align-items:center; justify-content:center; gap:7px; }
@@ -5159,7 +5159,7 @@ html.mss-scroll-locked [role="dialog"], html.mss-scroll-locked [role="dialog"] *
 .brw-back:hover { border-color:var(--border-olive); color:var(--olive-light); }
 .brw-back:focus-visible, .brw-actions button:focus-visible, .dp-more:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 #discBrowseResults { scroll-margin-top:calc(var(--page-pt) + 88px); }
-@media(max-width:1100px) { .brw-fields { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+@media(max-width:1100px) { .brw-fields { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
 @media(max-width:640px) {
   .brw-panel { padding:1rem; margin-bottom:2.25rem; }
   .brw-fields { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px 10px; }
