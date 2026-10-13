@@ -10,11 +10,13 @@
      • Upcoming Seasons  — announced / dated new seasons
    
    Release notifications (nav.js runs this on every page, at most every
-   3 hours per person — the database skips ones already sent, 042):
-     • every episode that aired in the last 14 days of a show you track
-       (and after you added it) → add_new_episode_notifications
+   3 hours per person — the database skips ones already sent, 042/044):
+     • episodes that aired in the last 7 days of a show you track (and
+       after you added it), one notification per show per release day
+       → add_new_episode_notifications
      • a movie on your Watchlist / Up Next coming out in your country —
-       in cinemas, then to stream / buy (TMDB release dates; MSSRegion)
+       in cinemas, then to stream / buy, in the last 14 days (TMDB
+       release dates; MSSRegion)
        → add_release_notifications
 
      MSSSchedule.renderDiscover(el)   draws the four sections into el
@@ -233,20 +235,23 @@ const MSSSchedule = (() => {
     // From: N days back, and never before the day before you added the title
     const from = (days, created) => ymd(new Date(Math.max(+today() - days * DAY, created ? +new Date(new Date(created).toDateString()) - DAY : 0)));
 
-    // TV: every episode out in the last 14 days (several can drop at once)
+    // TV: episodes out in the last 7 days — the ones that came out together share one notification
     const episodes = [];
     for (const { e, d } of await load(uid)) {
-      const since = from(14, e.created_at), seasons = new Set();
+      const since = from(7, e.created_at), seasons = new Set();
       if (d.last?.air && d.last.air >= since) seasons.add(d.last.s);
       if (d.next?.air && d.next.air <= todayS) seasons.add(d.next.s);      // aired since TMDB details were cached
       for (const s of seasons) {
         const size = d.seasons.find(x => x.s === s)?.eps || 0;
         const before = d.seasons.filter(x => x.s < s).reduce((a, x) => a + (x.eps || 0), 0);
+        const days = {};
         (await seasonEps(e.tmdb_id, s)).filter(x => x.air && x.air >= since && x.air <= todayS).forEach(x => {
           const n = size && x.n > size ? x.n - before : x.n;         // series-wide numbering (One Piece) → place in season
-          episodes.push({ entry_id: e.id, title: e.title, poster_url: e.poster_url || (d.poster ? TMDB_IMG + d.poster : null), tmdb_id: String(e.tmdb_id),
-            season: String(s), episode: String(n > 0 ? n : x.n), episode_name: x.name, air_date: x.air });
+          (days[x.air] = days[x.air] || []).push({ n: n > 0 ? n : x.n, name: x.name });
         });
+        Object.entries(days).forEach(([air, eps]) => episodes.push({ entry_id: e.id, title: e.title,
+          poster_url: e.poster_url || (d.poster ? TMDB_IMG + d.poster : null), tmdb_id: String(e.tmdb_id), season: String(s),
+          episodes: eps.map(x => x.n), season_size: size || null, episode_name: eps.length === 1 ? eps[0].name : null, air_date: air }));
       }
     }
 
@@ -260,7 +265,7 @@ const MSSSchedule = (() => {
       const ds = await Promise.all(chunk.map(m => movieDates(m.tmdb_id)));
       chunk.forEach((m, j) => {
         const r = ds[j]; if (!r) return;
-        const since = from(30, m.created_at);
+        const since = from(14, m.created_at);
         ['cinema', 'digital'].forEach(kind => {
           if (r[kind] && r[kind] >= since && r[kind] <= todayS) releases.push({ entry_id: m.id, title: m.title, poster_url: m.poster_url || (r.poster ? TMDB_IMG + r.poster : null),
             tmdb_id: String(m.tmdb_id), kind, release_date: r[kind], region: r.region || '' });
