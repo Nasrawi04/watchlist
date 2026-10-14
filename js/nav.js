@@ -1951,7 +1951,9 @@ function fitTitleYear(root) {
    Sections:
      episodes  — new_episode, new_release (tv-schedule.js → add_new_episode_notifications /
                  add_release_notifications, 033 / 042)
-     activity  — friend_started, friend_queued, friend_poll, poll_comment, friend_rec (Social, 045)
+     activity  — friend_started, friend_episode, friend_finished, friend_note, friend_list
+                 ("notify me about @friend", 022 / 047), friend_queued, friend_poll,
+                 poll_comment, friend_rec (Social, 045)
      lists     — list_invite, list_invite_accepted
      requests  — friend_request
    Rows are created by the database (021/022 SQL); here we list them,
@@ -2054,13 +2056,6 @@ function _notifTimeAgo(d) {
 }
 
 // "a new show" / "a new movie" / … for friend activity
-function _notifKind(meta) {
-  const m = meta || {};
-  const isMovie = m.cat === 'movies' || m.media_type === 'movie' || m.tmdb_type === 'movie';
-  if (m.cat === 'anime')    return isMovie ? 'an anime movie' : 'a new anime';
-  if (m.cat === 'cartoons') return isMovie ? 'an animated movie' : 'a new cartoon';
-  return isMovie ? 'a new movie' : 'a new show';
-}
 function _notifTypeLabel(meta) {
   const m = meta || {};
   const isMovie = m.cat === 'movies' || m.media_type === 'movie' || m.tmdb_type === 'movie';
@@ -2112,10 +2107,26 @@ function _notifItemHTML(n, opts = {}) {
   } else if (n.type === 'list_invite_declined') {
     text = `${who} declined your invite to ${title}`; icon2 = 'layers';
     href = n.list ? `list-view.html?list=${encodeURIComponent(n.list_id)}` : '';
-  } else if (n.type === 'friend_started') {
-    text = `${who} started watching ${_notifKind(n.meta)}`; icon2 = 'play';
-    extra = _notifTitleCard(n.meta);
-    href = n.meta?.tmdb_id && n.meta?.tmdb_type ? `title.html?type=${n.meta.tmdb_type}&id=${n.meta.tmdb_id}` : (n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : '');
+  } else if (n.type === 'friend_started' || n.type === 'friend_finished' || n.type === 'friend_episode' || n.type === 'friend_note') {
+    // "Notify me about @friend" (047): what they're watching, the moment they do it
+    const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'something')}</b>`;
+    const titleHref = m.tmdb_id && m.tmdb_type ? `title.html?type=${m.tmdb_type}&id=${m.tmdb_id}` : (n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : '');
+    href = titleHref;
+    if (n.type === 'friend_started') { text = `${who} started watching ${t}`; icon2 = 'play'; }
+    if (n.type === 'friend_finished') {
+      const movie = m.cat === 'movies' || m.media_type === 'movie' || m.tmdb_type === 'movie';
+      text = m.kind === 'ongoing' ? `${who} is caught up on ${t}` : movie ? `${who} watched ${t}` : `${who} finished ${t}`; icon2 = 'check';
+    }
+    if (n.type === 'friend_episode') {
+      text = `${who} ${_notifFriendEpText(m, t)}`; icon2 = 'tv';
+      if (m.tmdb_id) href = `episodes.html?show=${encodeURIComponent(m.tmdb_id)}${n.actor_id ? `&user=${encodeURIComponent(n.actor_id)}` : ''}`;
+    }
+    if (n.type === 'friend_note') { text = `${who} wrote a note on ${t}`; icon2 = 'notebook'; href = 'friends.html?s=notes'; }
+    extra = (n.type === 'friend_episode' && !(m.count > 1) && m.tmdb_id ? mssEpNameHTML(m.tmdb_id, m.season, m.episode, 'notif-quote') : '') + _notifTitleCard(m);
+  } else if (n.type === 'friend_list') {
+    const m = n.meta || {};
+    text = `${who} made a new list <b translate="no">&ldquo;${escHTML(m.title || 'Untitled')}&rdquo;</b>`; icon2 = 'layers';
+    href = m.list_id ? `list-view.html?list=${encodeURIComponent(m.list_id)}` : '';
   } else if (n.type === 'new_episode') {
     const m = n.meta || {};
     text = _notifEpText(m, `<b translate="no">${escHTML(m.title || 'a show')}</b>`) + (m.episode_name && !(m.count > 1) ? ` “${escHTML(m.episode_name)}”` : ''); icon2 = 'tv';
@@ -2211,6 +2222,7 @@ function _notifRenderPanel() {
   listEl.innerHTML = !items.length ? _notifEmptyHTML(_notifTab)
     : (fresh.length ? `<div class="notif-group">New</div>${fresh.map(n => _notifItemHTML(n)).join('')}` : '')
     + (older.length ? `<div class="notif-group">Earlier</div>${older.map(n => _notifItemHTML(n)).join('')}` : '');
+  mssFillEpNames(listEl);
 }
 function _notifSheetReadAll() {
   _notifMarkRead(_notifItems.filter(n => !n.read_at).map(n => n.id));
@@ -2352,6 +2364,10 @@ function _notifShortText(n) {
     case 'list_invite_accepted': return `${who} joined ${list}`;
     case 'list_invite_declined': return `${who} declined your invite to ${list}`;
     case 'friend_started':       return `${who} started watching ${t}`;
+    case 'friend_episode':       return `${who} ${_notifFriendEpText(n.meta || {}, t)}`;
+    case 'friend_finished':      return n.meta?.kind === 'ongoing' ? `${who} is caught up on ${t}` : `${who} finished ${t}`;
+    case 'friend_note':          return `${who} wrote a note on ${t}`;
+    case 'friend_list':          return `${who} made a new list “${escHTML(n.meta?.title || '')}”`;
     case 'friend_queued':        return `${who} added ${t} from your library`;
     case 'new_episode':          return _notifEpText(n.meta || {}, t);
     case 'new_release':          return `${t} ${n.meta?.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`;
@@ -2370,6 +2386,43 @@ function _notifEpText(m, t) {
   if (c > 1 && +m.episode === 1 && +m.season_size === c) return `All ${c} episodes of Season ${s} of ${t} are out`;
   if (c > 1 && b) return `${c} new episodes of ${t} — S${s} · E${a}–E${b}`;
   return `New episode of ${t} — S${s} · E${a}`;
+}
+
+// A friend's episodes (047): one → "watched S2 · E5 of X";
+// a run → "watched 3 episodes of X — S2 · E3–E5" (or S1 · E9 – S2 · E2 across seasons)
+function _notifFriendEpText(m, t) {
+  const s = +m.season || 1, e = +m.episode || 1, fs = +m.from_season || s, fe = +m.from_episode || e, c = +m.count || 1;
+  if (c <= 1 || (fs === s && fe === e)) return `watched S${s} · E${e} of ${t}`;
+  return `watched ${c} episodes of ${t} — ${fs === s ? `S${s} · E${fe}–E${e}` : `S${fs} · E${fe} – S${s} · E${e}`}`;
+}
+
+/* Episode names (TMDB season data, cached — MSSEp's 7-day cache when
+   episode-ratings.js is on the page). mssEpNameHTML() leaves a hidden
+   placeholder; mssFillEpNames(root) fills them in after a render. */
+const _mssEpSeasons = {};
+function mssEpName(tmdbId, season, ep) {
+  if (!tmdbId || !(+season > 0) || !(+ep > 0)) return Promise.resolve(null);
+  const k = tmdbId + ':' + season;
+  const p = _mssEpSeasons[k] || (_mssEpSeasons[k] = typeof MSSEp !== 'undefined' && MSSEp.seasonEpisodes
+    ? MSSEp.seasonEpisodes(tmdbId, season)
+    : tmdbFetch(`${TMDB_BASE}/tv/${tmdbId}/season/${season}?api_key=${TMDB_KEY}&language=en-US`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => (d?.episodes || []).slice().sort((a, b) => a.episode_number - b.episode_number).map((x, i) => ({ n: i + 1, name: x.name })))
+        .catch(() => []));
+  return p.then(eps => {
+    const name = (eps || []).find(x => x.n === +ep)?.name;
+    return name && !/^Episode \d+$/i.test(name.trim()) ? name : null;     // skip TMDB's "Episode 3" placeholders
+  }, () => null);
+}
+function mssEpNameHTML(tmdbId, season, ep, cls = '') {
+  return `<div class="${cls}" translate="no" hidden data-ep-name="${escHTML(`${tmdbId}:${season}:${ep}`)}"></div>`;
+}
+function mssFillEpNames(root) {
+  (root || document).querySelectorAll('[data-ep-name]').forEach(el => {
+    const [id, s, e] = el.dataset.epName.split(':');
+    el.removeAttribute('data-ep-name');
+    mssEpName(id, s, e).then(name => { if (name) { el.textContent = `“${name}”`; el.hidden = false; } });
+  });
 }
 
 let _notifPeekTimer = null;
