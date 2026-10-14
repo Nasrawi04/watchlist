@@ -434,10 +434,11 @@ const MSSShare = (() => {
       <div class="rec-what">${poster ? `<img src="${poster}" alt="">` : `<span class="rec-what-ph">${icon(k === 'list' ? 'layers' : 'film', 18)}</span>`}
         <span><b translate="no">${_socEsc(it.title)}</b><small>${sub.map(_socEsc).join(' · ')}</small></span></div>
       <div class="sf-section-label">Send to <span class="sf-section-hint">(up to 10)</span></div>
-      <input type="text" class="pf-input" id="recFind" placeholder="Find a friend…" autocomplete="off" aria-label="Find a friend" oninput="MSSShare._find(this.value)">
-      <div class="rec-friends" id="recFriends"><div class="page-loading" style="padding:1rem"><div class="spinner"></div></div></div>
+      <div class="soc-pick-search">${icon('search', 15)}<input type="text" id="recFind" placeholder="Search your friends…" autocomplete="off" aria-label="Search your friends" oninput="MSSShare._find(this.value)"></div>
+      <div class="soc-picked" id="recPicked" aria-live="polite"></div>
+      <div class="soc-pick-list" id="recFriends"><div class="page-loading" style="padding:1rem"><div class="spinner"></div></div></div>
       <label class="sf-section-label" for="recMsg">Message <span class="sf-section-hint">(optional)</span></label>
-      <textarea class="pf-q" id="recMsg" maxlength="280" rows="3" placeholder="${k === 'entry' ? 'What did you think?' : k === 'list' ? 'Why you made it…' : 'Why they’ll love it…'}" oninput="document.getElementById('recMsgN').textContent=this.value.length"></textarea>
+      <textarea class="pf-q" id="recMsg" maxlength="280" rows="2" placeholder="${k === 'entry' ? 'What did you think?' : k === 'list' ? 'Why you made it…' : 'Why they’ll love it…'}" oninput="document.getElementById('recMsgN').textContent=this.value.length"></textarea>
       <div class="pf-count"><span id="recMsgN">0</span>/280</div>`;
     document.getElementById('recFormFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="MSSShare._close()">Cancel</button>
       <button type="button" class="sf-apply-btn" id="recSend" onclick="MSSShare._send()" disabled>Send</button>`;
@@ -451,19 +452,30 @@ const MSSShare = (() => {
   }
   function drawFriends(q) {
     const list = document.getElementById('recFriends'); if (!list) return;
-    if (!friends.length) { list.innerHTML = `<div class="pf-r-msg">Add friends on Social first — then you can send them titles.</div>`; return; }
-    const n = q.trim().toLowerCase();
+    if (!friends.length) { list.innerHTML = `<div class="soc-pick-empty">${icon('users', 26)}<div>You don’t have any friends to send to yet.</div><a href="friends.html">Find friends →</a></div>`; return; }
+    const n = (q || '').trim().toLowerCase();
     const shown = friends.filter(f => !n || (f.username || '').toLowerCase().includes(n) || (f.display_name || '').toLowerCase().includes(n));
-    list.innerHTML = shown.map(f => `<label class="rec-friend">
-        <input type="checkbox" ${picked.has(f.id) ? 'checked' : ''} onchange="MSSShare._pick(${attrJSON(f.id)}, this.checked)">
-        ${_socAv(f, 30)}<span><b translate="no">${_socEsc(f.display_name || f.username)}</b>${f.display_name ? `<small>@${_socEsc(f.username)}</small>` : ''}</span>
-        <span class="sf-check-mark">${icon('check', 12)}</span></label>`).join('') || `<div class="pf-r-msg">No friend by that name.</div>`;
+    list.innerHTML = shown.map(f => {
+      const on = picked.has(f.id);
+      return `<div class="soc-pick-row" onclick="MSSShare._pick(${attrJSON(f.id)})">
+        ${_socAv(f, 40)}
+        <span class="soc-pick-who"><b translate="no">${_socEsc(f.display_name || f.username)}</b><small>@${_socEsc(f.username)}</small></span>
+        <button type="button" class="soc-pick-btn${on ? ' on' : ''}" aria-pressed="${on}" aria-label="${on ? 'Remove' : 'Add'} ${_socEsc(f.display_name || f.username)}"
+          onclick="event.stopPropagation();MSSShare._pick(${attrJSON(f.id)})">${on ? `${icon('check', 13)} Added` : 'Add'}</button>
+      </div>`; }).join('') || `<div class="soc-pick-empty">No friends match “${_socEsc(q.trim())}”.</div>`;
   }
-  function pick(id, on) {
-    if (on && picked.size >= 10) { showToast('You can send to 10 friends at a time.', 'err'); drawFriends(document.getElementById('recFind').value); return; }
-    on ? picked.add(id) : picked.delete(id);
+  function drawPicked() {
+    const box = document.getElementById('recPicked'); if (!box) return;
+    box.innerHTML = friends.filter(f => picked.has(f.id)).map(f => `<button type="button" class="soc-chip" onclick="MSSShare._pick(${attrJSON(f.id)})" aria-label="Remove ${_socEsc(f.display_name || f.username)}">
+      ${_socAv(f, 22)}<span translate="no">${_socEsc(f.display_name || f.username)}</span>${icon('x', 12)}</button>`).join('');
     const b = document.getElementById('recSend');
     b.disabled = !picked.size; b.textContent = picked.size ? `Send to ${picked.size}` : 'Send';
+  }
+  function pick(id) {
+    if (!picked.has(id) && picked.size >= 10) { showToast('You can send to 10 friends at a time.', 'err'); return; }
+    picked.has(id) ? picked.delete(id) : picked.add(id);
+    drawFriends(document.getElementById('recFind')?.value || '');
+    drawPicked();
   }
   function closeSend() { MSSDialog.close(document.getElementById('recForm')); }
   async function send() {
