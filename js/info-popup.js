@@ -35,8 +35,8 @@
 
 const INFO_POPUP_CONFIG = {
   // Buttons, left → right. Remove / reorder here.
-  actions: ['queue', 'discover'],                                         // someone else's / TMDB title
-  ownerActions: ['start', 'upnext', 'rateEps', 'edit', 'discover', 'card', 'delete'], // your own entry
+  actions: ['queue', 'recommend', 'discover'],                            // someone else's / TMDB title
+  ownerActions: ['start', 'upnext', 'rateEps', 'edit', 'recommend', 'discover', 'card', 'delete'], // your own entry
   addStatus: 'queue',      // status used by "Add to Watchlist"
   showTmdbScore: true,     // TMDB community rating in the tags row
   showCrew: true,          // Director (movies) / Created By (TV)
@@ -219,6 +219,8 @@ const MSSInfo = (() => {
         return btn('queue', 'plus', 'Add to Watchlist');
       },
       discover: () => (it.tmdb_id || it.title) ? btn('discover', 'search', 'Discover') : '',
+      // send it to friends (Social → Recommendations, js/social.js)
+      recommend: () => user && it.tmdb_id && (it.media_type === 'movie' || it.media_type === 'tv') ? btn('recommend', 'send', 'Recommend') : '',
       start:  () => e && (e.status === 'queue' || e.status === 'up_next') ? btn('start', 'play', 'Start Watching') : '',
       upnext: () => e && e.status === 'queue' ? btn('upnext', 'skipForward', 'Up Next') : '',
       rateEps: () => e && typeof MSSEp !== 'undefined' && MSSEp.isShow(e) ? btn('rateEps', 'ratingStar', 'Rate Episodes') : '',
@@ -236,6 +238,8 @@ const MSSInfo = (() => {
     const user = window._navUser || null;
     if (key === 'queue') return addToQueue(el);
     if (key === 'discover') return discover(e || it, el);
+    if (key === 'recommend') return mssRecommend({ tmdb_id: it.tmdb_id, media_type: it.media_type, title: it.title || it._details?.title || it._details?.name,
+      poster_url: it.poster_url || e?.poster_url, year: it.year || e?.year });
     if (!e) return;
     if (key === 'edit') { goToDetail(e.id, opts.from || thisFile()); return; }
     if (key === 'rateEps') { close(); MSSEp.rate(e, e.season || 1, Math.max(1, e.episode || 1)); return; }
@@ -400,6 +404,15 @@ const MSSInfo = (() => {
     }
   }
 
+  // Adds a TMDB title to your Watchlist without opening the popup (Social → Recommendations)
+  async function quickAdd(item) {
+    const user = window._navUser || await getCurrentUser();
+    if (!user) { location.href = 'login.html'; return null; }
+    let d = null;
+    try { d = item.tmdb_id ? await fetchDetails(item) : null; } catch {}
+    return quickCreate(payloadFor(item, d), user.id);
+  }
+
   /* ── Discover: linked → title page; unlinked → search + "Which one is it?" ── */
   async function discover(src, b) {
     if (!src) return;
@@ -476,7 +489,7 @@ const MSSInfo = (() => {
   }
 
   return {
-    open, close, fromDiscover, fromEntry, forOwnEntry, discover, config: INFO_POPUP_CONFIG,
+    open, close, fromDiscover, fromEntry, forOwnEntry, discover, quickAdd, config: INFO_POPUP_CONFIG,
     _act: act, _closePicker: closePicker,
   };
 })();
