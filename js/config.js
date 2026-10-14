@@ -135,6 +135,8 @@ const ICONS = {
   thumbsDownFilled: `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z"/></svg>`,
   // No direct Lucide equivalent for an "anime" glyph — simple stylized
   // face (outline head, two large eyes, small smile) instead of a blank tag.
+  poll:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  send:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`,
   animeFace: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.3" fill="currentColor" stroke="none"/><path d="M9 15c1 1 5 1 6 0"/></svg>`,
 };
 
@@ -1254,6 +1256,18 @@ const MSSRegion = (() => {
   }
   return { KEY, guess };
 })();
+
+/* ── Recommend a title to friends (Social → Recommendations) ──
+   item: { tmdb_id, media_type: 'movie'|'tv', title, poster_url, year }.
+   js/social.js is loaded the first time it's needed. */
+function mssRecommend(item) {
+  if (typeof MSSShare !== 'undefined') return MSSShare.open(item);
+  const sc = document.createElement('script');
+  sc.src = 'js/social.js';
+  sc.onload = () => MSSShare.open(item);
+  sc.onerror = () => showToast('Couldn’t open that right now — try again.', 'err');
+  document.head.appendChild(sc);
+}
 
 /* ══════════════════════════════════════════
    DIALOG SHELL — MSSDialog
