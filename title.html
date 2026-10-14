@@ -65,13 +65,11 @@
 .td-meta-row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; font-size:clamp(11.5px, 1.8vw, 15px); opacity:.85; }
 .td-meta-row span { display:flex; align-items:center; gap:5px; }
 .td-genres { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:0.85rem; }
-.td-genre-chip {
-  font-size:clamp(10px, 1.5vw, 13px); padding:5px 14px; border-radius:20px;
-  background:rgba(126,184,108,0.12); border:0.5px solid rgba(126,184,108,0.35); color:#B8E0A8;
-}
+/* Type + genre tags: the site's own tags (.type-label / .w-ep-badge), a touch larger in the hero */
+.td-genres .type-label, .td-genres .w-ep-badge { font-size:clamp(11px, 1.4vw, 13px); padding:4px 10px; box-shadow:0 1px 6px rgba(0,0,0,.25); }
 .td-director-row {
   display:inline-flex; align-items:center; gap:6px; font-size:13.5px; color:#fff;
-  margin-bottom:1.25rem; padding:7px 16px; border-radius:20px;
+  margin-bottom:1.25rem; padding:7px 14px; border-radius:var(--radius-sm);
   background:rgba(0,0,0,0.55); backdrop-filter:blur(6px); border:0.5px solid rgba(255,255,255,0.12);
 }
 .td-director-label { text-transform:uppercase; font-size:11px; letter-spacing:.8px; color:var(--olive-light); font-weight:700; }
@@ -81,26 +79,30 @@
 .td-rating-badge {
   display:inline-flex; align-items:center; gap:10px;
   background:rgba(0,0,0,0.35); border:0.5px solid rgba(255,255,255,0.15);
-  border-radius:var(--radius); padding:11px 18px;
+  border-radius:var(--radius-sm); padding:11px 18px;
 }
 .td-rating-num { font-family:var(--bebas); font-weight:400; font-size:clamp(19px, 3.2vw, 29px); color:#F5C94B; }
 .td-rating-num.td-rating-mss { color:#8FD177; }
 .td-rating-label { font-size:clamp(9px, 1.3vw, 12px); opacity:.65; letter-spacing:.5px; text-transform:uppercase; }
+/* Hero buttons — Trailer · Where to watch · Recommend: the site's button
+   shape (radius-sm) on a dark glass fill so they read on any backdrop */
 .td-trailer-link {
-  display:inline-flex; align-items:center; gap:7px; margin-inline-start:14px;
-  font-size:clamp(11.5px, 1.8vw, 15px); color:#EDEDED; text-decoration:none; opacity:.85;
-  border:0.5px solid rgba(255,255,255,0.25); border-radius:20px; padding:9px 18px;
-  transition:opacity .15s;
+  display:inline-flex; align-items:center; gap:7px;
+  font-size:clamp(11.5px, 1.8vw, 15px); font-weight:500; color:#F2F2EE; text-decoration:none;
+  background:rgba(0,0,0,0.42); backdrop-filter:blur(6px);
+  border:0.5px solid rgba(255,255,255,0.28); border-radius:var(--radius-sm); padding:9px 16px;
+  transition:background-color .15s, border-color .15s;
 }
-.td-trailer-link:hover { opacity:1; }
+.td-trailer-link:hover { background:rgba(0,0,0,0.6); border-color:var(--olive-light); }
+.td-trailer-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.td-trailer-link svg { color:#A9D88F; }
 .td-trailer-mobile { display:none; }
 .td-mobile-links { display:contents; }
 
 /* ── Where to watch — pill in the header (same look as Trailer) + popup.
    Providers aren't links (TMDB / JustWatch give no deep links), so the tiles
    in the popup are plain text + logo: no hover, no pointer. ── */
-button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); background:none; cursor:pointer; }
-.td-wtw-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .td-wtw-logos { display:inline-flex; }
 .td-wtw-logos img { width:20px; height:20px; border-radius:5px; object-fit:cover; box-shadow:0 0 0 1.5px rgba(0,0,0,.45); }
 .td-wtw-logos img + img { margin-inline-start:-6px; }
@@ -137,12 +139,12 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
 .wtw-where { margin-top:16px; display:flex; }
 .wtw-where .mss-pick { width:auto; max-width:100%; }
 .wtw-where .mss-pick-trigger {
-  min-height:38px; border-radius:999px; padding:0 14px 0 12px; gap:8px; font-size:14px; font-weight:600;
+  min-height:38px; border-radius:var(--radius-sm); padding:0 14px 0 12px; gap:8px; font-size:14px; font-weight:600;
   background:rgba(255,255,255,.12); border:0.5px solid rgba(255,255,255,.3); color:#F2F2EE;
 }
 .wtw-where .mss-pick-trigger:hover { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.45); }
 .wtw-where .mss-pick-chevron { color:#F2F2EE; }
-.wtw-where .mss-pick.open .mss-pick-trigger { border-radius:999px; border-color:#A9D88F; }
+.wtw-where .mss-pick.open .mss-pick-trigger { border-color:#A9D88F; }
 .wtw-where .mss-pick-menu { width:min(300px, calc(100vw - 72px)); inset-inline-end:auto; top:calc(100% + 6px); border-top:0.5px solid var(--olive-light); border-radius:var(--radius-sm); }
 .wtw-flag { font-size:17px; line-height:1; }
 .wtw-body { flex:1; min-height:0; overflow-y:auto; overscroll-behavior-y:contain; padding:20px 22px 18px; }
@@ -221,7 +223,7 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
 .td-in-library {
   display:flex; align-items:center; gap:12px; font-size:clamp(12.5px, 1.8vw, 15px); color:#EDEDED;
   background:rgba(0,0,0,0.35); border:0.5px solid rgba(255,255,255,0.15);
-  border-radius:var(--radius); padding:12px 20px; flex-wrap:wrap;
+  border-radius:var(--radius-sm); padding:12px 20px; flex-wrap:wrap;
 }
 
 /* ── Sections ── */
@@ -235,7 +237,7 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
 /* ── Community Notes ── */
 .td-notes-controls { display:flex; gap:8px; margin-bottom:1.25rem; margin-top:-0.5rem; }
 .td-notes-sort-btn {
-  padding:6px 14px; border-radius:20px; font-size:12.5px; font-weight:500;
+  padding:6px 14px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500;
   background:var(--bg-3); border:0.5px solid var(--border); color:var(--text-3);
   cursor:pointer; transition:all .15s;
 }
@@ -261,7 +263,7 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
 .td-note-card .td-note-text { display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
 .td-lists-count { font-family:var(--bebas); font-size:.9em; color:var(--text-3); margin-inline-start:6px; letter-spacing:.5px; }
 .td-lists { margin-bottom:.5rem; }
-.td-list-pos { margin-inline-start:8px; padding:1px 8px; border-radius:20px; background:var(--olive-faint); color:var(--olive-light); font-size:11px; font-weight:700; }
+.td-list-pos { margin-inline-start:8px; padding:1px 8px; border-radius:4px; background:var(--olive-faint); color:var(--olive-light); font-size:11px; font-weight:700; }
 .td-note-avatar {
   width:38px; height:38px; border-radius:50%; flex-shrink:0; overflow:hidden;
   background:var(--olive-faint); color:var(--olive-light); font-family:var(--serif); font-size:16px;
@@ -327,7 +329,7 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
 }
 .ep-popup-close:hover { background:rgba(0,0,0,0.8); }
 .ep-popup-num-badge {
-  position:absolute; top:14px; inset-inline-start:14px; padding:4px 12px; border-radius:20px;
+  position:absolute; top:14px; inset-inline-start:14px; padding:4px 10px; border-radius:4px;
   font-size:12px; font-weight:600; letter-spacing:.3px;
   background:rgba(0,0,0,0.6); color:#fff; backdrop-filter:blur(4px);
 }
@@ -335,7 +337,7 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
 .ep-popup-title { font-family:var(--serif); font-size:clamp(22px, 4vw, 30px); font-weight:400; margin-bottom:.6rem; line-height:1.2; }
 .ep-popup-meta-row { display:flex; flex-wrap:wrap; gap:8px 16px; font-size:13px; color:var(--text-3); margin-bottom:1.25rem; }
 .ep-popup-meta-row span { display:inline-flex; align-items:center; gap:5px; }
-.ep-popup-rating { font-family:var(--bebas); color:var(--olive-light); font-weight:400; font-size:16px; }
+.ep-popup-rating { font-family:var(--bebas); color:var(--olive-light); font-weight:400; font-size:18px; letter-spacing:.3px; }
 .ep-popup-overview { font-size:14.5px; color:var(--text-2); line-height:1.75; white-space:pre-line; }
 .td-season-loading { padding:16px; font-size:12.5px; color:var(--text-3); text-align:center; }
 #tdEpisodesList { margin-top:1rem; }
@@ -366,7 +368,7 @@ button.td-wtw-btn { font:inherit; font-size:clamp(11.5px, 1.8vw, 15px); backgrou
   .td-trailer-desktop { display:none; }
   .td-genres { justify-content:center; margin-bottom:.85rem; }
   .td-director-row { display:flex; width:fit-content; margin-inline-start:auto; margin-inline-end:auto; }
-  .td-trailer-mobile { display:inline-flex; margin-inline-start:0; margin-bottom:1rem; }
+  .td-trailer-mobile { display:inline-flex; margin-bottom:1rem; }
   .td-ratings-row { justify-content:center; }
   .td-rating-badge { padding:8px 14px; }
   .td-hero-actions { width:100%; margin-top:1.1rem; }
@@ -1040,7 +1042,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
             ${_tdWtwPillHTML(d, 'td-trailer-desktop')}
             ${_tdRecPillHTML(d, 'td-trailer-desktop')}
           </div>
-          <div class="td-genres">${genres.map(g => `<span class="td-genre-chip">${esc(g)}</span>`).join('')}</div>
+          <div class="td-genres"><span class="type-label${_tdType === 'movie' ? '' : ' type-label-tv'}">${_tdType === 'movie' ? 'Movie' : 'TV Show'}</span>${genres.map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('')}</div>
           ${uniqueDirectors.length ? `<div class="td-director-row"><span class="td-director-label">${uniqueDirectors.length > 1 ? directorLabelPlural : directorLabel}</span> ${uniqueDirectors.map(p => `<a class="td-director-link" href="person.html?id=${p.id}&mode=directing" translate="no">${esc(p.name)}</a>`).join(', ')}</div>` : ''}
           ${trailer || _tdWtw(d).any || _tdUser ? `<div class="td-mobile-links">
             ${trailer ? `<a class="td-trailer-link td-trailer-mobile" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
@@ -1317,7 +1319,7 @@ async function _selectSeason(el) {
     const runtime = ep.runtime ? `${ep.runtime}m` : '';
     const k = `${seasonNum}:${ep.episode_number}`, mineS = _tdMyEp[k], commS = _tdCommEp[k];
     const rating = ep.vote_average ? _discFloorScore(ep.vote_average) : null;
-    const date = ep.air_date || '';
+    const date = _tdEpDate(ep.air_date, 'short');
     return `
     <div class="td-episode-card" onclick="_openEpisodePopup(${i})">
       <div class="td-ep-still">
@@ -1329,8 +1331,8 @@ async function _selectSeason(el) {
         <div class="td-ep-title" translate="no">${esc(ep.name)}</div>
         <div class="td-ep-meta-row">
           ${rating ? `<span class="td-ep-rating">★ ${rating}</span>` : ''}
+          ${runtime ? `<span class="w-ep-badge">${runtime}</span>` : ''}
           ${date ? `<span>${date}</span>` : ''}
-          ${runtime ? `<span>${runtime}</span>` : ''}
         </div>
         <div class="td-ep-overview" translate="no">${esc(ep.overview) || mssT('No description available.')}</div>
       </div>
@@ -1380,7 +1382,7 @@ function _tdWtwPillHTML(d, cls) {
   const lead = w.logos.length
     ? `<span class="td-wtw-logos" aria-hidden="true">${w.logos.map(l => `<img src="${TMDB_IMG.replace('w185', 'w92')}${l}" alt="" loading="lazy">`).join('')}</span>`
     : icon('film', 13);
-  return `<button type="button" class="td-trailer-link td-wtw-btn ${cls}" onclick="_tdOpenWtw()" aria-haspopup="dialog">${lead} Where to watch</button>`;
+  return `<button type="button" class="td-trailer-link ${cls}" onclick="_tdOpenWtw()" aria-haspopup="dialog">${lead} Where to watch</button>`;
 }
 // Recommend to friends (Social → Recommendations; social.js via mssRecommend)
 function _tdRecPillHTML(d, cls) {
@@ -1498,9 +1500,7 @@ function _openEpisodePopup(index) {
 
   const runtime = ep.runtime ? `${ep.runtime} min` : '';
   const rating = ep.vote_average ? _discFloorScore(ep.vote_average) : null;
-  const date = ep.air_date
-    ? new Date(ep.air_date + 'T00:00:00').toLocaleDateString(MSSI18n.locale, { year: 'numeric', month: 'long', day: 'numeric' })
-    : '';
+  const date = _tdEpDate(ep.air_date, 'long');
 
   document.getElementById('epPopupCard').innerHTML = `
     <div class="ep-popup-still">
@@ -1512,8 +1512,8 @@ function _openEpisodePopup(index) {
       <div class="ep-popup-title" id="epPopupTitle" translate="no">${esc(ep.name)}</div>
       <div class="ep-popup-meta-row">
         ${rating ? `<span class="ep-popup-rating">★ ${rating}</span>` : ''}
+        ${runtime ? `<span class="w-ep-badge">${runtime}</span>` : ''}
         ${date ? `<span>${date}</span>` : ''}
-        ${runtime ? `<span>${runtime}</span>` : ''}
       </div>
       <div class="ep-popup-overview" translate="no">${esc(ep.overview) || mssT('No description available.')}</div>
     </div>`;
@@ -1521,6 +1521,10 @@ function _openEpisodePopup(index) {
   MSSDialog.open(document.getElementById('epPopupOverlay'));
 }
 
+// "Jun 2, 2013" (cards) / "June 2, 2013" (popup) — TMDB gives 2013-06-02
+function _tdEpDate(d, month) {
+  return d ? new Date(d + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { year: 'numeric', month, day: 'numeric' }) : '';
+}
 function _closeEpisodePopup() { MSSDialog.close(document.getElementById('epPopupOverlay')); }
 
 /* ── Community Notes ── */
