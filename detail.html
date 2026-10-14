@@ -1797,12 +1797,35 @@ const _favSeasonBlock = (s, onclick, picked) => `<button type="button" class="td
     <div class="td-season-block-info">
       <div class="td-season-block-name" translate="no">${escHTML(mssSeasonLabel(s.number, s.name))}</div>
       <div class="td-season-block-sub">${s.episode_count ? `${s.episode_count} ep${s.episode_count !== 1 ? 's' : ''}` : ''}${s.air_date ? ` · ${s.air_date.split('-')[0]}` : ''}</div>
+      ${_favSeasonMineHTML(s.number)}
     </div>
   </button>`;
 
+/* ── Your own episode / season ratings (episodes page), shown as a tag on
+   each card of the pickers: "You 8.7" in that score's band colour.
+   A season shows its whole-season rating, else the average of the
+   episodes you rated in it ("Your avg"). Loaded each time a picker opens. ── */
+let _favMine = {};   // 'season:episode' → score (episode 0 = the whole season)
+async function _favLoadMine() {
+  _favMine = {};
+  if (!_detId) return;
+  try {
+    const { data } = await sb.from('episode_ratings').select('season_number,episode_number,score').eq('entry_id', _detId);
+    (data || []).forEach(r => { _favMine[`${r.season_number}:${r.episode_number}`] = Number(r.score); });
+  } catch {}
+}
+const _favMineTag = (v, label) => `<span class="fav-mine ep-band-${MSSEp.band(v).key}"><small>${label}</small> ${v.toFixed(1)}</span>`;
+function _favSeasonMineHTML(sn) {
+  const whole = _favMine[`${sn}:0`];
+  if (whole != null) return _favMineTag(whole, 'You');
+  const eps = Object.entries(_favMine).filter(([k]) => k.startsWith(sn + ':') && k !== sn + ':0').map(([, v]) => v);
+  return eps.length ? _favMineTag(eps.reduce((a, b) => a + b, 0) / eps.length, 'Your avg') : '';
+}
+
 /* ── Season picker: the title page's season posters ── */
-function _favOpenSeasonPicker(which) {
+async function _favOpenSeasonPicker(which) {
   _favPersonTarget = which;
+  await _favLoadMine();
   _favOverlay('favSeasonOverlay', 'favSeasonCard', 'Choose a Season', '_favCloseSeasonPicker');
   const seasons = _favData?.seasons || [];
   const current = document.getElementById(`${which}Season`).value;
@@ -1841,7 +1864,6 @@ async function _favLoadSeasonEpisodes(n) {
 async function _favOpenEpisodePicker(which) {
   _favPersonTarget = which;
   _favOverlay('favEpisodeOverlay', 'favEpisodeCard', 'Choose an Episode', '_favCloseEpisodePicker', `
-      <div class="fav-ep-suggest" id="favEpSuggest"></div>
       <div class="fav-ep-seasons" id="favEpSeasons"></div>
       <div class="search-wrap fav-picker-search">
         <span class="search-icon-wrap">${icon('search', 14)}</span>
@@ -1855,29 +1877,11 @@ async function _favOpenEpisodePicker(which) {
     body.innerHTML = `<div class="sf-empty">No episode data available — link this title to TMDB first.</div>`;
     return;
   }
-  _favSuggest(which);
+  await _favLoadMine();
   // Open on the season of the episode already picked, else Season 1
   const cur = document.getElementById(`${which}Episode`).value.match(/^S(\d+)E/);
   const start = cur && _favData.seasons.some(s => s.number === +cur[1]) ? +cur[1] : _favData.seasons[0].number;
   _favShowSeason(start);
-}
-
-// "From your ratings": your 3 highest (Favorite) or lowest (Least Favorite) rated episodes
-async function _favSuggest(which) {
-  const box = document.getElementById('favEpSuggest');
-  if (!box || !_detId) return;
-  box.innerHTML = '';
-  try {
-    const { data } = await sb.from('episode_ratings').select('season_number,episode_number,score').eq('entry_id', _detId).gt('episode_number', 0)
-      .order('score', { ascending: which === 'low' }).limit(3);
-    if (!data?.length) return;
-    box.innerHTML = `<span class="fav-sug-label">From your ratings</span>${data.map(r => `<button type="button" class="fav-sug ep-band-${MSSEp.band(r.score).key}" onclick="_favPickRated(${r.season_number},${r.episode_number})">S${r.season_number} · E${r.episode_number} <b>${Number(r.score).toFixed(1)}</b></button>`).join('')}`;
-  } catch {}
-}
-async function _favPickRated(sn, n) {
-  await _favLoadSeasonEpisodes(sn);
-  const ep = (_favData.episodesBySeasonNum[sn] || []).find(x => x.number === n) || { number: n, name: `Episode ${n}` };
-  _favPickEpisode(_favEpisodeLabel(sn, ep));
 }
 
 async function _favShowSeason(n) {
@@ -1904,6 +1908,7 @@ function _favEpCardHTML(seasonNumber, ep) {
     <div class="td-ep-body">
       <div class="td-ep-title" translate="no">${escHTML(ep.name)}</div>
       <div class="td-ep-meta-row">
+        ${_favMine[`${seasonNumber}:${ep.number}`] != null ? _favMineTag(_favMine[`${seasonNumber}:${ep.number}`], 'You') : ''}
         ${rating ? `<span class="td-ep-rating">★ ${rating}</span>` : ''}
         ${ep.air_date ? `<span>${escHTML(ep.air_date)}</span>` : ''}
         ${ep.runtime ? `<span>${ep.runtime}m</span>` : ''}
