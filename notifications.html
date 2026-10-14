@@ -96,6 +96,7 @@ function renderNotificationsPage() {
   list.innerHTML =
     (unread.length ? `<div class="np-group-label">New</div>${unread.map(n => _notifItemHTML(n, { page: true })).join('')}` : '') +
     (read.length ? `<div class="np-group-label">Earlier</div>${read.map(n => _notifItemHTML(n, { page: true })).join('')}` : '');
+  mssFillEpNames(list);
 }
 
 async function npMarkAllRead() {
