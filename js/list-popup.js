@@ -167,6 +167,8 @@ const MSSList = (() => {
   function footerHTML(list, o) {
     const url = `list-view.html?list=${encodeURIComponent(list.id)}`;
     return `<button type="button" class="popup-action-btn lp-view" onclick="MSSList.close();location.href=${escHTML(JSON.stringify(url))}">${icon('list', 14)} View List</button>`
+      // Share with friends (Social → Recommendations, social.js via mssRecommend)
+      + (window._navUser && (!list.cat || list.cat === 'custom') ? `<button type="button" class="popup-action-btn lp-share" onclick="mssRecommend(${escHTML(JSON.stringify({ kind: 'list', list_id: list.id, title: list.title, count: (list.items || []).length }))})">${icon('send', 14)} Share</button>` : '')
       + (o.manage
         ? `<button type="button" class="popup-action-btn lp-replies" onclick="location.href='lists.html'">${icon('edit', 14)} Manage in Lists</button>`
         : `<button type="button" class="popup-action-btn lp-replies" onclick="MSSList.close()">Close</button>`);
