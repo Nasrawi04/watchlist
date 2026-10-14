@@ -2016,6 +2016,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 #lpPopupActions .popup-action-btn, #lpNavPopupActions .popup-action-btn { padding:11px 14px; font-size:13px; gap:7px; }
 #lpPopupActions .popup-action-btn svg, #lpNavPopupActions .popup-action-btn svg { width:14px; height:14px; opacity:1; }
 .lp-view { flex:3 1 0 !important; }                        /* View List gets most of the width */
+.lp-share { flex:1.6 1 0 !important; }
 .lp-replies { flex:1 1 0 !important; }
 .lp-actions-social { flex-wrap:nowrap; }
 .lp-react-pair { display:flex; gap:8px; flex:0 0 auto; }
@@ -5301,20 +5302,35 @@ button.poll-opt:disabled { cursor:progress; opacity:.75; }
 .pf-chips { display:flex; flex-wrap:wrap; gap:8px; }
 .pf-chip { padding:7px 12px; border-radius:999px; border:0.5px solid var(--border-2); background:var(--bg-3); color:var(--text-2); cursor:pointer; font:inherit; font-size:12.5px; font-weight:600; }
 .pf-chip.active { background:var(--olive); border-color:var(--olive); color:#fff; }
-.rec-what { display:flex; align-items:center; gap:12px; padding:10px 0 4px; }
-.rec-what img, .rec-what-ph { width:46px; height:68px; border-radius:6px; object-fit:cover; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; color:var(--text-3); }
+.rec-what { display:flex; align-items:center; gap:12px; padding:10px 12px; margin:10px 0 2px; border-radius:var(--radius); background:var(--card); border:0.5px solid var(--border); }
+.rec-what img, .rec-what-ph { width:40px; height:60px; border-radius:5px; object-fit:cover; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; color:var(--text-3); }
 .rec-what span { display:flex; flex-direction:column; min-width:0; }
-.rec-what b { font-family:var(--serif); font-size:17px; }
-.rec-what small { font-size:12px; color:var(--text-3); }
-.rec-friends { display:flex; flex-direction:column; max-height:240px; overflow-y:auto; margin-top:6px; }
-.rec-friend { display:flex; align-items:center; gap:10px; padding:8px 6px; border-radius:var(--radius-sm); cursor:pointer; position:relative; }
-.rec-friend:hover { background:var(--bg-3); }
-.rec-friend input { position:absolute; opacity:0; width:0; height:0; }
-.rec-friend > span:not(.sf-check-mark) { flex:1; display:flex; flex-direction:column; min-width:0; }
-.rec-friend b { font-size:13.5px; } .rec-friend small { font-size:11.5px; color:var(--text-3); }
-.rec-friend input:checked ~ .sf-check-mark { background:var(--olive-light); border-color:var(--olive-light); }
-.rec-friend input:checked ~ .sf-check-mark svg { opacity:1; }
-.rec-friend input:focus-visible ~ .sf-check-mark { outline:2px solid var(--olive-light); outline-offset:2px; }
+.rec-what b { font-family:var(--serif); font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rec-what small { font-size:12px; color:var(--text-3); margin-top:2px; }
+/* Friend picker (same look as Lists → invite collaborators) */
+.soc-pick-search { position:relative; margin:4px 0 8px; }
+.soc-pick-search > svg { position:absolute; inset-inline-start:13px; top:50%; transform:translateY(-50%); color:var(--text-3); pointer-events:none; }
+.soc-pick-search input { width:100%; box-sizing:border-box; padding-block:10px; padding-inline:38px 14px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-3); color:var(--text); font:inherit; font-size:16px; outline:none; }
+.soc-pick-search input:focus { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.soc-picked:empty { display:none; }
+.soc-picked { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px; }
+.soc-chip { display:inline-flex; align-items:center; gap:6px; padding:3px 4px 3px 3px; border-radius:999px; background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; }
+.soc-chip .soc-av { width:22px !important; height:22px !important; font-size:10px !important; }
+.soc-chip svg { opacity:.8; }
+.soc-chip:hover { border-color:#c0564a; color:#c0564a; }
+.soc-pick-list { display:flex; flex-direction:column; max-height:min(260px, 34dvh); overflow-y:auto; overscroll-behavior:contain; margin:0 -6px; }
+.soc-pick-row { display:flex; align-items:center; gap:12px; padding:8px 6px; border-radius:var(--radius-sm); cursor:pointer; }
+.soc-pick-row:hover { background:var(--card); }
+.soc-pick-who { flex:1; min-width:0; display:flex; flex-direction:column; }
+.soc-pick-who b { font-size:14px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.soc-pick-who small { font-size:12px; color:var(--text-3); }
+.soc-pick-btn { flex-shrink:0; min-width:78px; padding:7px 14px; border-radius:var(--radius-sm); font-family:'Manrope',var(--sans); font-size:12.5px; font-weight:600; cursor:pointer;
+  background:transparent; border:1px solid var(--border-olive); color:var(--olive-light); display:inline-flex; align-items:center; justify-content:center; gap:5px; }
+.soc-pick-btn:hover { background:var(--olive-faint); }
+.soc-pick-btn.on { background:var(--olive); border-color:var(--olive); color:#fff; }
+.soc-pick-btn:focus-visible, .soc-chip:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.soc-pick-empty { padding:22px 10px; text-align:center; color:var(--text-3); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.soc-pick-empty a { color:var(--olive-light); font-weight:600; text-decoration:none; }
 /* Recommendations inbox */
 .rec-list { display:flex; flex-direction:column; gap:12px; }
 .rec-card { display:flex; gap:16px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:14px; }
