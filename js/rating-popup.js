@@ -34,7 +34,7 @@
 ═══════════════════════════════════════════════════════════════ */
 
 const RATING_POPUP_CONFIG = {
-  ownerActions:  ['edit', 'lists', 'share', 'rewatch', 'card', 'discoverCard', 'delete'],
+  ownerActions:  ['edit', 'lists', 'recommend', 'share', 'rewatch', 'card', 'discoverCard', 'delete'],
   friendActions: ['queue', 'recommend', 'discover'],
 };
 
@@ -137,8 +137,8 @@ const MSSRate = (() => {
       delete:       () => btn('delete', 'trash', 'Delete', ' popup-action-danger'),
       queue:        () => btn('queue', 'plus', 'Add to Watchlist'),
       discover:     () => btn('discover', 'search', 'Discover'),
-      // Social → Recommendations (social.js via mssRecommend): yours → "I watched this"; a friend's → recommend the title
-      share:        () => window._navUser ? btn('share', 'send', 'Share') : '',
+      // Social → Recommendations (social.js via mssRecommend): Recommend sends the title; Share (yours) → "I watched this"
+      share:        () => window._navUser ? btn('share', 'share', 'Share') : '',
       recommend:    () => window._navUser && e.tmdb_id && (e.tmdb_type === 'movie' || e.tmdb_type === 'tv') ? btn('recommend', 'send', 'Recommend') : '',
     };
     const keys = opts.owner ? RATING_POPUP_CONFIG.ownerActions : RATING_POPUP_CONFIG.friendActions;
