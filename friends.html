@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>Friends — MyScreenScore</title>
+<title>Social — MyScreenScore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -428,7 +428,7 @@
   <header class="fr-hero fade-up">
     <div class="fr-hero-text">
       <div class="fr-eyebrow">Your circle</div>
-      <h1 class="cat-page-title">Friends</h1>
+      <h1 class="cat-page-title">Social</h1>
       <div class="cat-page-sub" id="friendsPageSub">&nbsp;</div>
     </div>
     <div class="fr-find">
@@ -442,14 +442,23 @@
     </div>
   </header>
 
-  <!-- Sections -->
-  <div class="fr-tabs fade-up fade-up-1" id="frTabs" role="tablist" aria-label="Friends sections"></div>
-
-  <!-- Section toolbar: label + count + Sort / Filter -->
-  <div class="fr-toolbar" id="frToolbar"></div>
-
-  <!-- Section content -->
-  <div id="frContent" class="fade-up fade-up-2"><div class="page-loading"><div class="spinner"></div></div></div>
+  <!-- Social sections: side nav (phones: a dropdown) — Friends · Polls · Recommendations -->
+  <div class="disc-nav-dd-wrap" id="socNavDD"></div>
+  <div class="disc-layout">
+    <nav class="disc-side-nav fade-up fade-up-1" id="socSideNav" aria-label="Social sections"></nav>
+    <div class="disc-main">
+      <section id="socFriends" aria-label="Friends">
+        <!-- Friends: its own tabs, as before -->
+        <div class="fr-tabs fade-up fade-up-1" id="frTabs" role="tablist" aria-label="Friends sections"></div>
+        <!-- Section toolbar: label + count + Sort / Filter -->
+        <div class="fr-toolbar" id="frToolbar"></div>
+        <!-- Section content -->
+        <div id="frContent" class="fade-up fade-up-2"><div class="page-loading"><div class="spinner"></div></div></div>
+      </section>
+      <section id="socPolls" aria-label="Polls" hidden></section>
+      <section id="socRecs" aria-label="Recommendations" hidden></section>
+    </div>
+  </div>
 
 </div>
 
@@ -464,6 +473,7 @@
 <script src="js/episode-ratings.js"></script>
 <script src="js/list-popup.js"></script>
 <script src="js/sort-filter.js"></script>
+<script src="js/social.js"></script>
 <script>
 let _fUser = null;
 let _fProfile = null;
@@ -472,8 +482,8 @@ let _friendships = [];
 /* ── Avatar HTML helper — handles both photo and initial fallback ── */
 
 /* ══════════════════════════════════════════════════════════════
-   Friends — v620 redesign
-   Sections: Friends · Activity · Lists · Notes · Compare
+   Social (friends.html) — side nav: Friends · Polls · Recommendations
+   Friends (v620 redesign) has its own tabs: Friends · Activity · Lists · Notes · Compare
    Each section has the site's Sort / Filter buttons (sort-filter.js).
    Everything comes from 2 queries (all friends' entries + lists), made
    once when the page opens; Compare adds your own library on first use.
@@ -594,6 +604,7 @@ function _frToolbar(label, count, scope, noun = 'items') {
 }
 
 function _frRender() {
+  _socNav();
   document.getElementById('frTabs').innerHTML = _frTabsHTML();
   const c = document.getElementById('frContent'), tb = document.getElementById('frToolbar');
   if (!_frAuthKnown) { tb.style.display = 'none'; c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; return; }
@@ -1123,18 +1134,59 @@ function _cmpShowTitle(picker) {
       return `<article class="fn-card"><div class="fn-by">${_frAvHTML(prof(u), 22)}<span translate="no">${escHTML(name(u))}</span></div>${mssIsSpoiler(e) && u !== me ? mssSpoilerHTML(text, { compact: true, id: e.id }) : text}</article>`; }).join('')}</div>` : ''}`;
 }
 
+/* ══ Social: Friends · Polls · Recommendations (side nav; phones: a dropdown) ══
+   friends.html?s=polls&poll=<id> opens a section (and one poll). Polls and
+   Recommendations live in js/social.js (MSSPolls / MSSShare). */
+const _SOC = [
+  { key: 'friends', label: 'Friends',         icon: 'users' },
+  { key: 'polls',   label: 'Polls',           icon: 'poll' },
+  { key: 'recs',    label: 'Recommendations', icon: 'send' },
+];
+let _socSection = 'friends';
+function _socBadge(k) {
+  if (k === 'friends' && _frIncoming.length) return `<span class="fr-tab-dot">${_frIncoming.length}</span>`;
+  if (k === 'recs' && MSSShare.count) return `<span class="soc-nav-count">${MSSShare.count}</span>`;
+  return '';
+}
+function _socNav() {
+  document.getElementById('socSideNav').innerHTML = `<div class="disc-side-head">Social</div>` + _SOC.map(x =>
+    `<button type="button" class="disc-side-link${_socSection === x.key ? ' active' : ''}" aria-current="${_socSection === x.key ? 'page' : 'false'}" onclick="setSocialSection('${x.key}')">${icon(x.icon, 15)}<span>${x.label}</span>${_socBadge(x.key)}</button>`).join('');
+  const opts = _SOC.map(x => ({ value: x.key, label: x.label + (x.key === 'recs' && MSSShare.count ? ` (${MSSShare.count})` : '') }));
+  document.getElementById('socNavDD').innerHTML = _selDDHTML('socNavSel', opts, _socSection, 'setSocialSection');
+}
+function setSocialSection(k, opts = {}) {
+  if (!_SOC.some(x => x.key === k)) k = 'friends';
+  _socSection = k;
+  try { sessionStorage.setItem('social_section', k); } catch {}
+  const url = new URL(location.href);
+  if (k === 'friends') url.searchParams.delete('s'); else url.searchParams.set('s', k);
+  if (!opts.keepPoll) url.searchParams.delete('poll');
+  history.replaceState(history.state, '', url.pathname + url.search);
+  _SOC.forEach(x => { document.getElementById('soc' + x.key[0].toUpperCase() + x.key.slice(1)).hidden = x.key !== k; });
+  _socNav();
+  if (k === 'polls') MSSPolls.mount(document.getElementById('socPolls'), _fUser, { poll: opts.poll });
+  if (k === 'recs') MSSShare.inbox(document.getElementById('socRecs'), _fUser);
+  if (!opts.noScroll) window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
 /* ── Start ── */
 document.addEventListener('DOMContentLoaded', () => {
   attachClearButton('addFriendInput');
   let t = null; try { t = sessionStorage.getItem('friends_tab'); } catch {}
   if (t && _FR_TABS.some(x => x.key === t)) _frTab = t;
+  const q = new URLSearchParams(location.search);
+  let sec = q.get('s'); try { sec = sec || sessionStorage.getItem('social_section'); } catch {}
+  _socSection = _SOC.some(x => x.key === sec) ? sec : 'friends';
+  _socNav();
   _frRender();
   initPage(async (user) => {
     _fUser = user;
     _frAuthKnown = true;
-    if (user) _frRender();         // signed in: tabs + spinner while friends load
+    setSocialSection(_socSection, { keepPoll: true, poll: q.get('poll'), noScroll: true });
+    if (user) { _frRender(); MSSShare.refreshCount(user).then(_socNav); }        // signed in: tabs + spinner while friends load
     if (!user) { document.getElementById('friendsPageSub').textContent = 'Search for someone above to view their profile.'; _frRender(); return; }
     await loadFriends();
+    _socNav();
   });
 });
 
