@@ -5338,3 +5338,8 @@ button.poll-opt:disabled { cursor:progress; opacity:.75; }
 /* A quoted line in a notification (poll comment, recommendation message) */
 .notif-quote { margin-top:6px; padding:6px 10px; border-inline-start:2px solid var(--olive-light); background:var(--olive-faint); border-radius:0 6px 6px 0; font-size:12.5px; color:var(--text-2); line-height:1.45;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+.rec-tags { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.rec-list-tag { display:inline-flex; align-items:center; gap:5px; background:var(--olive); color:#fff; }
+.rec-score { font-family:var(--bebas); font-size:17px; letter-spacing:.3px; color:var(--olive-light); line-height:1; }
+.rec-has-note { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600; color:var(--text-3); }
+.rec-card.is-list .rec-poster { color:var(--olive-light); background:var(--olive-faint); }
