@@ -36,7 +36,7 @@
 const INFO_POPUP_CONFIG = {
   // Buttons, left → right. Remove / reorder here.
   actions: ['queue', 'recommend', 'discover'],                            // someone else's / TMDB title
-  ownerActions: ['start', 'upnext', 'rateEps', 'edit', 'recommend', 'discover', 'card', 'delete'], // your own entry
+  ownerActions: ['start', 'upnext', 'rateEps', 'edit', 'recommend', 'share', 'discover', 'card', 'delete'], // your own entry
   addStatus: 'queue',      // status used by "Add to Watchlist"
   showTmdbScore: true,     // TMDB community rating in the tags row
   showCrew: true,          // Director (movies) / Created By (TV)
@@ -219,10 +219,10 @@ const MSSInfo = (() => {
         return btn('queue', 'plus', 'Add to Watchlist');
       },
       discover: () => (it.tmdb_id || it.title) ? btn('discover', 'search', 'Discover') : '',
-      // Your own title → Share it ("I watched this": they see your rating + note);
-      // anything else → Recommend it (Social → Recommendations, js/social.js)
-      recommend: () => !user ? '' : e ? btn('recommend', 'send', 'Share')
-        : it.tmdb_id && (it.media_type === 'movie' || it.media_type === 'tv') ? btn('recommend', 'send', 'Recommend') : '',
+      // Social → Recommendations (js/social.js): Recommend sends the title to watch;
+      // Share (your own, once watched or rated) sends "I watched this" — your rating + note
+      recommend: () => user && it.tmdb_id && (it.media_type === 'movie' || it.media_type === 'tv') ? btn('recommend', 'send', 'Recommend') : '',
+      share:  () => user && e && (e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null) ? btn('share', 'share', 'Share') : '',
       start:  () => e && (e.status === 'queue' || e.status === 'up_next') ? btn('start', 'play', 'Start Watching') : '',
       upnext: () => e && e.status === 'queue' ? btn('upnext', 'skipForward', 'Up Next') : '',
       rateEps: () => e && typeof MSSEp !== 'undefined' && MSSEp.isShow(e) ? btn('rateEps', 'ratingStar', 'Rate Episodes') : '',
@@ -240,10 +240,9 @@ const MSSInfo = (() => {
     const user = window._navUser || null;
     if (key === 'queue') return addToQueue(el);
     if (key === 'discover') return discover(e || it, el);
-    if (key === 'recommend') return opts.owner && e
-      ? mssRecommend({ kind: 'entry', entry_id: e.id, title: e.title, poster_url: e.poster_url, year: e.year, media_type: it.media_type })
-      : mssRecommend({ tmdb_id: it.tmdb_id, media_type: it.media_type, title: it.title || it._details?.title || it._details?.name,
-          poster_url: it.poster_url || e?.poster_url, year: it.year || e?.year });
+    if (key === 'recommend') return mssRecommend({ tmdb_id: it.tmdb_id, media_type: it.media_type, title: it.title || it._details?.title || it._details?.name,
+      poster_url: it.poster_url || e?.poster_url, year: it.year || e?.year });
+    if (key === 'share' && e) return mssRecommend({ kind: 'entry', entry_id: e.id, title: e.title, poster_url: e.poster_url, year: e.year, media_type: it.media_type });
     if (!e) return;
     if (key === 'edit') { goToDetail(e.id, opts.from || thisFile()); return; }
     if (key === 'rateEps') { close(); MSSEp.rate(e, e.season || 1, Math.max(1, e.episode || 1)); return; }
