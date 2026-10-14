@@ -186,6 +186,7 @@
 .fa-title span, .cp-hero-title span { font-family:var(--bebas); font-weight:400; color:var(--text-3); font-size:.85em; letter-spacing:.3px; }
 .fa-meta { display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:11.5px; color:var(--text-3); }
 .fa-meta .type-label { font-size:10.5px; padding:2px 7px; }
+.fa-ep-name { font-size:12.5px; color:var(--text-2); margin-top:3px; font-style:italic; }
 .fa-note { margin-top:8px; padding-inline-start:10px; border-inline-start:2px solid var(--border-olive); font-size:13px; font-style:italic; color:var(--text-2); line-height:1.55; }
 .fa-score { font-family:var(--bebas); font-size:22px; color:var(--olive-light); flex-shrink:0; letter-spacing:.3px; }
 .fa-poster { width:54px; height:81px; border-radius:7px; flex-shrink:0; box-shadow:0 3px 10px rgba(0,0,0,.14); }
@@ -690,12 +691,18 @@ const _FR_ACT = {
   logged:    { verb: 'logged',                   color: '#55705a', ic: 'notebook', label: 'Logged' },
   caught_up: { verb: 'is caught up on',          color: '#8a5a1c', ic: 'clock',   label: 'Caught Up' },
   started:   { verb: 'started watching',         color: '#2f7a3a', ic: 'play',    label: 'Started' },
+  episode:   { verb: 'watched',                  color: '#2a6f6a', ic: 'tv',      label: 'Episode' },
   up_next:   { verb: 'lined up',                 color: '#264e78', ic: 'skipForward', label: 'Up Next' },
   watchlist: { verb: 'added to their watchlist', color: '#6b6b6b', ic: 'bookmark', label: 'Watchlist' },
   note:      { verb: 'wrote a note on',          color: '#7a3e78', ic: 'notebook', label: 'Note' },
   list:      { verb: 'made a list',              color: '#3d5a80', ic: 'layers',  label: 'New List' },
   rated_ep:  { verb: 'rated',                    color: '#1f4d2b', ic: 'ratingStar', label: 'Episode Rating' },
 };
+// A show they're part-way through → its last watched episode, else null
+function _frEpOf(e) {
+  const movie = e.cat === 'movies' || e.tmdb_type === 'movie' || e.ratings?._media_type === 'movie';
+  return !movie && Number(e.episode) > 0 ? { s: Number(e.season) || 1, e: Number(e.episode) } : null;
+}
 function _frEvents() {
   const ev = [];
   _frEntries.forEach(e => {
@@ -707,9 +714,11 @@ function _frEvents() {
       const old = done && added && (added - done) >= 30 * 86400000;
       push(old ? 'logged' : 'finished', old ? e.created_at : (e.completed_at || e.completed_date));   // completed_at: exact time it was marked watched
     }
-    else if (e.status === 'ongoing') push('caught_up', e.updated_at);
-    else if (e.status === 'watching') push('started', e.updated_at);
-    else if (e.status === 'up_next') push('up_next', e.updated_at);
+    // progress_at (047): when they last actually moved on it — rating edits and
+    // TMDB refreshes don't count. Mid-show → "watched S2 · E5"; else "started watching"
+    else if (e.status === 'ongoing') push('caught_up', e.progress_at || e.updated_at);
+    else if (e.status === 'watching') push(_frEpOf(e) ? 'episode' : 'started', e.progress_at || e.updated_at);
+    else if (e.status === 'up_next') push('up_next', e.progress_at || e.updated_at);
     else if (e.status === 'queue') push('watchlist', e.created_at);
     if (e.notes && e.notes.trim()) push('note', e.updated_at);
   });
@@ -786,8 +795,9 @@ function _frRenderActivity() {
     html += `<article class="fa-item" onclick="_frOpenEvent(${attrJSON(x.id.split(':')[0])}, '${x._ev}')">
       <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
       <div class="fa-body">
-        <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
+        <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}${x._ev === 'episode' ? ` S${_frEpOf(x).s} · E${_frEpOf(x).e} of` : ''}</div>
         <div class="fa-title" translate="no">${escHTML(x.title)}${x.year ? ` <span>${escHTML(String(x.year).slice(0, 4))}</span>` : ''}</div>
+        ${x._ev === 'episode' && x.tmdb_id ? mssEpNameHTML(x.tmdb_id, _frEpOf(x).s, _frEpOf(x).e, 'fa-ep-name') : ''}
         <div class="fa-meta">${_frTypeBadge(x)}<span>${x._ev === 'finished' || x._ev === 'logged' ? x._at.toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
         ${x._ev === 'note' ? `<div class="fa-note">${mssIsSpoiler(x) ? mssSpoilerTag() : `&ldquo;${escHTML(MSSRich.plain(x.notes).trim().split(/\s+/).slice(0, 30).join(' '))}${MSSRich.plain(x.notes).trim().split(/\s+/).length > 30 ? '…' : ''}&rdquo;`}</div>` : ''}
       </div>
@@ -798,6 +808,7 @@ function _frRenderActivity() {
   html += '</div>';
   if (list.length > _frActShown) html += `<button class="fr-more" onclick="_frActShown+=40;_frRender()">Show more</button>`;
   document.getElementById('frContent').innerHTML = html;
+  mssFillEpNames(document.getElementById('frContent'));
 }
 
 /* ══ LISTS ══ */
