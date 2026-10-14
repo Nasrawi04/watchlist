@@ -2243,12 +2243,10 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .fav-ep-seasons .td-season-block-info { padding:8px 10px; }
 .fav-ep-seasons .td-season-block-name { font-size:13px; margin:0 0 2px; }
 .fav-ep-seasons .td-season-block-sub { font-size:11px; }
-.fav-ep-suggest:empty { display:none; }
-.fav-ep-suggest { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 20px 0; }
-.fav-sug-label { font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--text-3); margin-inline-end:2px; }
-.fav-sug { padding:6px 10px; border-radius:var(--radius-sm); border:none; cursor:pointer; font-family:'Manrope',var(--sans); font-size:12.5px; font-weight:600; }
-.fav-sug b { font-family:var(--bebas); font-weight:400; font-size:15px; margin-inline-start:4px; }
-.fav-sug:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+/* Your own rating on a picker card (detail.html Favorites / Lowlights) — band colour */
+.fav-mine { display:inline-flex; align-items:baseline; gap:4px; white-space:nowrap; padding:2px 7px; border-radius:4px; font-family:var(--bebas); font-size:14px; line-height:1.2; letter-spacing:.3px; }
+.fav-mine small { font-family:'Manrope',var(--sans); font-size:9px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; }
+.td-season-block-info .fav-mine { margin-top:5px; }
 .fav-ep-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:14px; }
 .fav-ep-grid .td-episode-card { width:auto; cursor:pointer; text-align:start; padding:0; font:inherit; color:inherit; }
 .fav-ep-group { grid-column:1 / -1; font-family:var(--serif); font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-top:4px; }
@@ -5150,7 +5148,8 @@ html.mss-scroll-locked [role="dialog"], html.mss-scroll-locked [role="dialog"] *
 .brw-head .section-title { margin-bottom:1rem; }
 .brw-fields { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:14px 12px; align-items:end; }
 .brw-field .field-label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.brw-actions { grid-column:1 / -1; display:flex; justify-content:flex-end; gap:10px; }
+.brw-actions { grid-column:1 / -1; display:flex; justify-content:flex-end; align-items:center; gap:10px; }
+.brw-filter { margin-inline-end:auto; display:flex; }
 .brw-actions .sf-clear-btn, .brw-actions .sf-apply-btn { flex:0 0 auto; min-width:120px; display:inline-flex; align-items:center; justify-content:center; gap:7px; }
 .brw-back {
   margin-inline-start:auto; align-self:center; display:inline-flex; align-items:center; gap:6px; padding:7px 14px; cursor:pointer;
