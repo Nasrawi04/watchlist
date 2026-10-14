@@ -1257,8 +1257,10 @@ const MSSRegion = (() => {
   return { KEY, guess };
 })();
 
-/* ── Recommend a title to friends (Social → Recommendations) ──
-   item: { tmdb_id, media_type: 'movie'|'tv', title, poster_url, year }.
+/* ── Share with friends (Social → Recommendations) ──
+   item: a title { tmdb_id, media_type: 'movie'|'tv', title, poster_url, year },
+   one of your own titles { kind: 'entry', entry_id, … } ("I watched this"),
+   or a list { kind: 'list', list_id, title, count }.
    js/social.js is loaded the first time it's needed. */
 function mssRecommend(item) {
   if (typeof MSSShare !== 'undefined') return MSSShare.open(item);
