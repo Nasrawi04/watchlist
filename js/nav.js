@@ -2132,8 +2132,10 @@ function _notifItemHTML(n, opts = {}) {
     href = m.poll_id ? `friends.html?s=polls&poll=${encodeURIComponent(m.poll_id)}` : 'friends.html?s=polls';
   } else if (n.type === 'friend_rec') {
     const m = n.meta || {};
-    text = `${who} recommended <b translate="no">${escHTML(m.title || 'something')}</b> to you`; icon2 = 'send';
-    extra = (m.message ? `<div class="notif-quote" translate="no">${escHTML(m.message)}</div>` : '') + _notifTitleCard({ ...m, media_type: m.tmdb_type });
+    const t = `<b translate="no">${escHTML(m.title || 'something')}</b>`;
+    text = m.kind === 'entry' ? `${who} shared that they watched ${t}` : m.kind === 'list' ? `${who} shared their list ${t}` : `${who} recommended ${t} to you`;
+    icon2 = m.kind === 'list' ? 'layers' : 'send';
+    extra = (m.message ? `<div class="notif-quote" translate="no">${escHTML(m.message)}</div>` : '') + (m.kind === 'list' ? '' : _notifTitleCard({ ...m, media_type: m.tmdb_type }));
     href = 'friends.html?s=recs';
   } else if (n.type === 'friend_queued') {
     text = `${who} added something from your library to their watchlist`; icon2 = 'plus';
@@ -2355,7 +2357,7 @@ function _notifShortText(n) {
     case 'new_release':          return `${t} ${n.meta?.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`;
     case 'friend_poll':          return `${who} started a poll: “${escHTML(n.meta?.question || '')}”`;
     case 'poll_comment':         return `${who} commented on your poll`;
-    case 'friend_rec':           return `${who} recommended ${t} to you`;
+    case 'friend_rec':           return n.meta?.kind === 'entry' ? `${who} shared that they watched ${t}` : n.meta?.kind === 'list' ? `${who} shared a list` : `${who} recommended ${t} to you`;
   }
   return 'New notification';
 }
