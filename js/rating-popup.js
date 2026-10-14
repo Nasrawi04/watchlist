@@ -34,8 +34,8 @@
 ═══════════════════════════════════════════════════════════════ */
 
 const RATING_POPUP_CONFIG = {
-  ownerActions:  ['edit', 'lists', 'rewatch', 'card', 'discoverCard', 'delete'],
-  friendActions: ['queue', 'discover'],
+  ownerActions:  ['edit', 'lists', 'share', 'rewatch', 'card', 'discoverCard', 'delete'],
+  friendActions: ['queue', 'recommend', 'discover'],
 };
 
 const MSSRate = (() => {
@@ -137,6 +137,9 @@ const MSSRate = (() => {
       delete:       () => btn('delete', 'trash', 'Delete', ' popup-action-danger'),
       queue:        () => btn('queue', 'plus', 'Add to Watchlist'),
       discover:     () => btn('discover', 'search', 'Discover'),
+      // Social → Recommendations (social.js via mssRecommend): yours → "I watched this"; a friend's → recommend the title
+      share:        () => window._navUser ? btn('share', 'send', 'Share') : '',
+      recommend:    () => window._navUser && e.tmdb_id && (e.tmdb_type === 'movie' || e.tmdb_type === 'tv') ? btn('recommend', 'send', 'Recommend') : '',
     };
     const keys = opts.owner ? RATING_POPUP_CONFIG.ownerActions : RATING_POPUP_CONFIG.friendActions;
     return keys.map(k => B[k] ? B[k]() : '').join('');
@@ -152,6 +155,8 @@ const MSSRate = (() => {
     if (key === 'discoverCard') { createShareCard(e.id, 3, true); return; }
     if (key === 'queue')        { close(); MSSInfo.fromEntry(e); return; }
     if (key === 'discover')     { close(); MSSInfo.discover(e, b); return; }
+    if (key === 'share')        { mssRecommend({ kind: 'entry', entry_id: e.id, title: e.title, poster_url: e.poster_url, year: e.year, media_type: e.tmdb_type }); return; }
+    if (key === 'recommend')    { mssRecommend({ tmdb_id: e.tmdb_id, media_type: e.tmdb_type, title: e.title, poster_url: e.poster_url, year: e.year }); return; }
     if (key === 'delete') {
       const ok = await showConfirm({ title: 'Delete entry?', message: `"${e.title || 'This entry'}" will be permanently removed.`, confirmText: 'Delete', iconName: 'trash' });
       if (!ok) return;
