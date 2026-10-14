@@ -12,9 +12,14 @@
      • the author edits it (options only until the first vote), ends it
        early or deletes it
 
-   MSSShare.open(item)                  send a title to friends (+ a message)
+   MSSShare.open(item)                  share with friends (+ a message) — item.kind:
+       'title' (default)  a movie / show to watch   { tmdb_id, media_type, title, poster_url, year }
+       'entry'            "I watched this" — one of your titles; friends open it
+                          in Info · Ratings · Note        { entry_id, title, poster_url, year, media_type }
+       'list'             a custom list                    { list_id, title, count }
    MSSShare.inbox(el, user)             Social → Recommendations: Received / Sent,
-                                        with Add to Watchlist, Hide and Unsend
+                                        with Add to Watchlist / See rating & note /
+                                        Open list, Hide and Unsend
    MSSShare.refreshCount(user)          how many are waiting (MSSShare.count)
    mssRecommend(item) (config.js) loads this file on other pages.
 
@@ -418,17 +423,21 @@ const MSSShare = (() => {
   async function openSend(it) {
     const u = window._navUser || await getCurrentUser();
     if (!u) { location.href = 'login.html'; return; }
-    item = it; picked = new Set();
-    const ov = _socDialog('recForm', 'Recommend to Friends', closeSend);
+    item = { kind: 'title', ...it }; picked = new Set();
+    const k = item.kind;
+    const ov = _socDialog('recForm', { title: 'Recommend to Friends', entry: 'Share What You Watched', list: 'Share List' }[k], closeSend);
     const poster = safeURL(it.poster_url);
+    const sub = k === 'list' ? [`List · ${it.count || 0} ${it.count === 1 ? 'title' : 'titles'}`]
+      : [it.year, it.media_type === 'movie' ? 'Movie' : it.media_type === 'tv' ? 'TV Show' : ''].filter(Boolean);
+    if (k === 'entry') sub.push('your rating & note go with it');
     document.getElementById('recFormBody').innerHTML = `
-      <div class="rec-what">${poster ? `<img src="${poster}" alt="">` : `<span class="rec-what-ph">${icon('film', 18)}</span>`}
-        <span><b translate="no">${_socEsc(it.title)}</b><small>${[it.year, it.media_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).map(_socEsc).join(' · ')}</small></span></div>
+      <div class="rec-what">${poster ? `<img src="${poster}" alt="">` : `<span class="rec-what-ph">${icon(k === 'list' ? 'layers' : 'film', 18)}</span>`}
+        <span><b translate="no">${_socEsc(it.title)}</b><small>${sub.map(_socEsc).join(' · ')}</small></span></div>
       <div class="sf-section-label">Send to <span class="sf-section-hint">(up to 10)</span></div>
       <input type="text" class="pf-input" id="recFind" placeholder="Find a friend…" autocomplete="off" aria-label="Find a friend" oninput="MSSShare._find(this.value)">
       <div class="rec-friends" id="recFriends"><div class="page-loading" style="padding:1rem"><div class="spinner"></div></div></div>
       <label class="sf-section-label" for="recMsg">Message <span class="sf-section-hint">(optional)</span></label>
-      <textarea class="pf-q" id="recMsg" maxlength="280" rows="3" placeholder="Why they'll love it…" oninput="document.getElementById('recMsgN').textContent=this.value.length"></textarea>
+      <textarea class="pf-q" id="recMsg" maxlength="280" rows="3" placeholder="${k === 'entry' ? 'What did you think?' : k === 'list' ? 'Why you made it…' : 'Why they’ll love it…'}" oninput="document.getElementById('recMsgN').textContent=this.value.length"></textarea>
       <div class="pf-count"><span id="recMsgN">0</span>/280</div>`;
     document.getElementById('recFormFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="MSSShare._close()">Cancel</button>
       <button type="button" class="sf-apply-btn" id="recSend" onclick="MSSShare._send()" disabled>Send</button>`;
@@ -462,7 +471,8 @@ const MSSShare = (() => {
     const b = document.getElementById('recSend'); b.disabled = true; b.textContent = 'Sending…';
     const poster = String(item.poster_url || '').match(/\/[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp)$/)?.[0] || null;
     try {
-      const n = await _socRpc('recommend_title', { p_to: [...picked], p_tmdb_id: Number(item.tmdb_id), p_type: item.media_type, p_title: item.title,
+      const ref = item.kind === 'entry' ? item.entry_id : item.kind === 'list' ? item.list_id : String(item.tmdb_id);
+      const n = await _socRpc('share_with_friends', { p_to: [...picked], p_kind: item.kind, p_ref_id: ref, p_type: item.media_type || null, p_title: item.title || null,
         p_poster: poster, p_year: String(item.year || '').slice(0, 4) || null, p_message: document.getElementById('recMsg').value.trim() || null });
       closeSend();
       const one = friends.find(f => picked.has(f.id));
@@ -477,7 +487,7 @@ const MSSShare = (() => {
   /* ── Inbox (Social → Recommendations) ── */
   let recs = [];
   async function refreshCount(u) {
-    try { api.count = ((await _socRpc('get_recs', { p_box: 'received' })) || []).filter(r => !r.in_library).length; } catch { api.count = 0; }
+    try { api.count = ((await _socRpc('get_recs', { p_box: 'received' })) || []).filter(r => !r.in_library || r.kind !== 'title').length; } catch { api.count = 0; }
     return api.count;
   }
   async function inbox(target, u) {
@@ -491,44 +501,67 @@ const MSSShare = (() => {
     el.innerHTML = head + `<div class="pn-toggle soc-toggle" role="tablist">${[['received', 'Received'], ['sent', 'Sent']].map(([k, l]) =>
         `<button type="button" class="pn-toggle-btn${box === k ? ' active' : ''}" role="tab" aria-selected="${box === k}" onclick="MSSShare._box('${k}')">${l}</button>`).join('')}</div>
       <div id="recList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
-    try { recs = await _socRpc('get_recs', { p_box: box }) || []; } catch { recs = []; showToast('Couldn’t load recommendations — try again.', 'err'); }
-    if (box === 'received') api.count = recs.filter(r => !r.in_library).length;
+    try {
+      recs = await _socRpc('get_recs', { p_box: box }) || [];
+      // "I watched this": the sender's entry itself (score, rating, note) for the popups
+      const ids = recs.filter(r => r.kind === 'entry').map(r => r.entry_id);
+      const { data } = ids.length ? await sb.from('entries').select('*').in('id', ids) : { data: [] };
+      const byId = Object.fromEntries((data || []).map(e => [e.id, e]));
+      recs.forEach(r => { r.entry = byId[r.entry_id] || null; });
+    } catch { recs = []; showToast('Couldn’t load recommendations — try again.', 'err'); }
+    if (box === 'received') api.count = recs.filter(r => !r.in_library || r.kind !== 'title').length;
     if (typeof _socNav === 'function') _socNav();
     drawRecs();
   }
-  const itemOf = r => ({ id: r.tmdb_id, tmdb_id: r.tmdb_id, media_type: r.tmdb_type, title: r.title, year: r.year, poster_url: r.poster_path ? TMDB_FULL + r.poster_path : null });
+  const itemOf = r => ({ id: r.tmdb_id, tmdb_id: r.tmdb_id, media_type: r.tmdb_type, title: r.title, year: r.year,
+    poster_url: r.poster_path ? TMDB_FULL + r.poster_path : (r.entry?.poster_url || r.poster_url || null) });
   function drawRecs() {
     const list = document.getElementById('recList'); if (!list) return;
     if (!recs.length) {
-      list.innerHTML = `<div class="fr-empty"><div class="fr-empty-ic">${icon('send', 26)}</div><div class="fr-empty-title">${box === 'received' ? 'Nothing here yet' : 'You haven’t sent anything yet'}</div>
-        <div class="fr-empty-text">${box === 'received' ? 'When a friend sends you something to watch, it lands here.' : 'Open any movie or show and press Recommend to send it to friends.'}</div></div>`;
+      list.innerHTML = `<div class="fr-empty"><div class="fr-empty-ic">${icon('send', 26)}</div><div class="fr-empty-title">${box === 'received' ? 'Nothing here yet' : 'You haven’t shared anything yet'}</div>
+        <div class="fr-empty-text">${box === 'received' ? 'When a friend sends you something to watch, a title they watched or a list, it lands here.' : 'Press Recommend on any movie or show, Share on one of your own titles, or Share on a list.'}</div></div>`;
       return;
     }
-    list.innerHTML = `<div class="rec-list">${recs.map(r => {
-      const poster = r.poster_path ? _socImg(r.poster_path, 'w185') : '';
-      const who = r.person || {};
-      const lib = r.in_library ? `<span class="rec-in">${icon('check', 13)} In your library</span>` : '';
-      return `<article class="rec-card" id="rec-${r.id}">
-        <button type="button" class="rec-poster" onclick="MSSShare._view(${attrJSON(r.id)})" aria-label="About ${_socEsc(r.title)}">${poster ? `<img src="${poster}" alt="" loading="lazy">` : icon('film', 22)}</button>
-        <div class="rec-body">
-          <div class="rec-from">${_socAv(who, 22)}<span>${box === 'received' ? 'From' : 'To'} <b translate="no">${_socEsc(_socName(who))}</b> · ${_notifTimeAgo(r.created_at)}</span></div>
-          <button type="button" class="rec-title" onclick="MSSShare._view(${attrJSON(r.id)})"><b translate="no">${_socEsc(r.title)}</b>${r.year ? `<span class="title-year-inline">${_socEsc(r.year)}</span>` : ''}</button>
-          <span class="${r.tmdb_type === 'movie' ? 'type-label' : 'type-label type-label-tv'}">${r.tmdb_type === 'movie' ? 'Movie' : 'TV Show'}</span>
-          ${r.message ? `<blockquote class="rec-msg" translate="no">${_socEsc(r.message)}</blockquote>` : ''}
-          <div class="rec-acts">
-            ${box === 'received' ? (r.in_library ? lib : `<button type="button" class="btn-add-entry" onclick="MSSShare._add(${attrJSON(r.id)}, this)">${icon('plus', 14)} Add to Watchlist</button>`) : ''}
-            <button type="button" class="poll-link" onclick="MSSShare._view(${attrJSON(r.id)})">${icon('info', 13)} Details</button>
-            <button type="button" class="poll-link poll-danger" onclick="MSSShare._remove(${attrJSON(r.id)})">${box === 'received' ? `${icon('x', 13)} Hide` : `${icon('trash', 13)} Unsend`}</button>
-          </div>
+    list.innerHTML = `<div class="rec-list">${recs.map(cardHTML).join('')}</div>`;
+  }
+  function cardHTML(r) {
+    const who = r.person || {}, id = attrJSON(r.id), e = r.entry;
+    const posterUrl = r.poster_path ? _socImg(r.poster_path, 'w185') : safeURL(e?.poster_url || r.poster_url);
+    const isList = r.kind === 'list', isEntry = r.kind === 'entry';
+    const open = isList ? `MSSShare._openList(${id})` : isEntry && e ? `MSSShare._views(${id}, 'info')` : `MSSShare._view(${id})`;
+    const verb = box === 'received'
+      ? (isEntry ? 'watched this' : isList ? 'shared a list' : 'recommends')
+      : (isEntry ? 'You shared what you watched with' : isList ? 'You shared a list with' : 'You recommended this to');
+    const from = box === 'received' ? `<b translate="no">${_socEsc(_socName(who))}</b> ${verb}` : `${verb} <b translate="no">${_socEsc(_socName(who))}</b>`;
+    const score = isEntry && e && liveScore(e) != null ? Number(liveScore(e)).toFixed(1) : null;
+    const tag = isList ? `<span class="type-label rec-list-tag">${icon('layers', 11)} List · ${r.list_count || 0} ${r.list_count === 1 ? 'title' : 'titles'}</span>`
+      : r.tmdb_type ? `<span class="${r.tmdb_type === 'movie' ? 'type-label' : 'type-label type-label-tv'}">${r.tmdb_type === 'movie' ? 'Movie' : 'TV Show'}</span>` : '';
+    const add = box === 'received' && !isList && r.tmdb_id
+      ? (r.in_library ? `<span class="rec-in">${icon('check', 13)} In your library</span>` : `<button type="button" class="btn-add-entry" onclick="MSSShare._add(${id}, this)">${icon('plus', 14)} Add to Watchlist</button>`) : '';
+    const main = isList ? `<button type="button" class="btn-add-entry" onclick="${open}">${icon('layers', 14)} Open List</button>`
+      : isEntry && e ? `<button type="button" class="${add ? 'poll-link' : 'btn-add-entry'}" onclick="MSSShare._views(${id}, '${score ? 'rate' : 'info'}')">${icon('ratingStar', 13)} ${score ? 'Rating & note' : 'See it'}</button>` : '';
+    return `<article class="rec-card${isList ? ' is-list' : ''}" id="rec-${r.id}">
+      <button type="button" class="rec-poster" onclick="${open}" aria-label="Open ${_socEsc(r.title)}">${posterUrl ? `<img src="${posterUrl}" alt="" loading="lazy">` : icon(isList ? 'layers' : 'film', 22)}</button>
+      <div class="rec-body">
+        <div class="rec-from">${_socAv(who, 22)}<span>${from} · ${_notifTimeAgo(r.created_at)}</span></div>
+        <button type="button" class="rec-title" onclick="${open}"><b translate="no">${_socEsc(r.title)}</b>${r.year ? `<span class="title-year-inline">${_socEsc(r.year)}</span>` : ''}</button>
+        <div class="rec-tags">${tag}${score ? `<span class="rec-score" title="${_socEsc(_socName(who))}’s score">★ ${score}</span>` : ''}${isEntry && e?.notes?.trim() ? `<span class="rec-has-note">${icon('notebook', 12)} Note</span>` : ''}</div>
+        ${r.message ? `<blockquote class="rec-msg" translate="no">${_socEsc(r.message)}</blockquote>` : ''}
+        ${isEntry && !e ? `<div class="pf-r-msg">They’ve removed this title from their library.</div>` : ''}
+        <div class="rec-acts">
+          ${add}${main}
+          ${!isList ? `<button type="button" class="poll-link" onclick="MSSShare._view(${id})">${icon('info', 13)} Details</button>` : ''}
+          <button type="button" class="poll-link poll-danger" onclick="MSSShare._remove(${id})">${box === 'received' ? `${icon('x', 13)} Hide` : `${icon('trash', 13)} Unsend`}</button>
         </div>
-      </article>`; }).join('')}</div>`;
+      </div>
+    </article>`;
   }
   async function add(id, btn) {
     const r = recs.find(x => x.id === id); if (!r) return;
     btn.disabled = true; btn.textContent = 'Adding…';
     try {
       await MSSInfo.quickAdd(itemOf(r));
-      r.in_library = true; api.count = recs.filter(x => !x.in_library).length;
+      r.in_library = true; api.count = recs.filter(x => !x.in_library || x.kind !== 'title').length;
       drawRecs(); if (typeof _socNav === 'function') _socNav();
       showToast(`Added “${r.title}” to your Watchlist`);
     } catch (err) {
@@ -545,7 +578,7 @@ const MSSShare = (() => {
     try {
       await _socRpc('remove_rec', { p_id: id });
       recs = recs.filter(r => r.id !== id);
-      if (box === 'received') api.count = recs.filter(x => !x.in_library).length;
+      if (box === 'received') api.count = recs.filter(x => !x.in_library || x.kind !== 'title').length;
       drawRecs(); if (typeof _socNav === 'function') _socNav();
     } catch (err) { showToast(_socErr(err), 'err'); }
   }
@@ -554,6 +587,9 @@ const MSSShare = (() => {
     open: openSend, inbox, refreshCount,
     _find: drawFriends, _pick: pick, _send: send, _close: closeSend,
     _box: k => { box = k; inbox(el, user); }, _add: add, _remove: remove,
-    _view: id => { const r = recs.find(x => x.id === id); if (r) MSSInfo.fromDiscover(itemOf(r)); },
+    _view: id => { const r = recs.find(x => x.id === id); if (!r) return; r.tmdb_id ? MSSInfo.fromDiscover(itemOf(r)) : r.entry && MSSInfo.fromEntry(r.entry); },
+    // "I watched this" → their entry in Info · Ratings · Note (read-only, "Sam's rating")
+    _views: (id, start) => { const r = recs.find(x => x.id === id); if (r?.entry) MSSViews.open(r.entry, { start, profile: r.person || {} }); },
+    _openList: id => { const r = recs.find(x => x.id === id); if (r?.list_id) location.href = `list-view.html?list=${encodeURIComponent(r.list_id)}`; },
   });
 })();
