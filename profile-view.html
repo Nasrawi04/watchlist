@@ -394,12 +394,13 @@ function _friendBtnHTML() {
   return '<button class="pv-friend-btn add" onclick="pvSendRequest()">+ Follow</button>';
 }
 
-/* Friend-activity notifications toggle — OFF by default. When on, you get
-   a notification each time this friend starts watching something. */
+/* Friend-activity notifications toggle — OFF by default. When on, you're
+   notified the moment this friend starts, watches an episode of or finishes
+   something, writes a note or makes a list (022 / 047). */
 function _pvNotifyBtnHTML() {
   return _pvNotifyOn
     ? '<button class="pv-friend-btn pv-notify on" onclick="pvToggleNotify()" title="Turn off notifications for this friend"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications On</button>'
-    : '<button class="pv-friend-btn pv-notify" onclick="pvToggleNotify()" title="Get notified when they start watching something"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.9 17.9 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Notify Me</button>';
+    : '<button class="pv-friend-btn pv-notify" onclick="pvToggleNotify()" title="Get notified about what they watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.9 17.9 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Notify Me</button>';
 }
 async function pvToggleNotify() {
   const next = !_pvNotifyOn;
@@ -409,7 +410,7 @@ async function pvToggleNotify() {
     _pvNotifyOn = next;
     document.getElementById('pvBtns').innerHTML = _friendBtnHTML();
     const name = (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || 'them';
-    showToast(next ? `You'll be notified when ${name} starts something new.` : `Notifications off for ${name}.`);
+    showToast(next ? `You'll be notified when ${name} starts, watches or finishes something.` : `Notifications off for ${name}.`);
   } catch (e) { console.error(e); showToast('Could not update notifications — try again.', 'err'); }
 }
 
