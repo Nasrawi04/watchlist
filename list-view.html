@@ -131,7 +131,9 @@
   font-size:clamp(13px, 3.4vw, 14.5px); color:var(--text-2); line-height:1.65; max-width:none; width:100%;
   margin:0 0 1.4rem; white-space:pre-line; overflow-wrap:anywhere; padding:0; border:none;
 }
-.lv-import-row { display:flex; margin:0 0 1.25rem; padding:0 !important; }
+.lv-import-row { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 1.25rem; padding:0 !important; }
+.lv-import-slot { display:contents; }
+#lvShareBtn[hidden] { display:none; }
 .lv-import-row .popup-action-btn { flex:0 0 auto; padding:11px 22px; font-size:13.5px; }
 .lv-import-row .popup-action-btn:disabled { opacity:.65; cursor:default; }
 .lv-controls {
@@ -216,8 +218,11 @@
     </div>
     <div class="lv-desc" id="lvDesc"></div>
 
-    <div id="lvImportPopupActions" class="lv-import-row">
-      <button class="popup-action-btn" id="lvImportBtn" onclick="importList()"><span class="lv-import-btn-label">+ Import This List</span></button>
+    <div class="lv-import-row">
+      <span id="lvImportPopupActions" class="lv-import-slot">
+        <button class="popup-action-btn" id="lvImportBtn" onclick="importList()"><span class="lv-import-btn-label">+ Import This List</span></button>
+      </span>
+      <button type="button" class="popup-action-btn" id="lvShareBtn" hidden onclick="_lvShare()"><span class="lv-import-btn-label">Share with Friends</span></button>
     </div>
 
     <div class="lv-controls">
@@ -487,6 +492,12 @@ async function _lvSetRanked(value) {
   }
 }
 
+// Send this list to friends (social.js, loaded on demand by mssRecommend)
+function _lvShare() {
+  if (!_lvList) return;
+  mssRecommend({ kind: 'list', list_id: _lvList.id, title: _lvList.title, count: (_lvList.items || []).length });
+}
+
 function _lvMarkImported() {
   const btn = document.getElementById('lvImportBtn');
   btn.disabled = true;
@@ -591,6 +602,7 @@ async function _lvLoad() {
     document.getElementById('lvCountLabel').textContent = entries.length === 1 ? 'title' : 'titles';
 
     const isOwn = _lvUser && list.user_id === _lvUser.id;
+    document.getElementById('lvShareBtn').hidden = !_lvUser || list.cat !== 'custom';   // Social → Recommendations
     document.getElementById('lvImportPopupActions').style.display = isOwn ? 'none' : '';
     if (!isOwn && _lvUser) {
       // Collaborators already have this list in their Lists — no Import
