@@ -85,28 +85,8 @@
 .fr-find .add-friend-input { flex:1; min-width:0; background:transparent; border:none; color:var(--text); font-size:16px; padding:14px 16px; outline:none; }
 .fr-find .btn-send-req { border:none; border-radius:0; padding:0 18px; white-space:nowrap; background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff; font-weight:600; font-size:13px; cursor:pointer; }
 
-/* Tabs — underline style with icons + counts */
-.fr-tabs { display:flex; gap:4px; border-bottom:0.5px solid var(--border); margin-bottom:1.25rem; overflow-x:auto; scrollbar-width:none; }
-.fr-tabs::-webkit-scrollbar { display:none; }
-.fr-tab {
-  position:relative; flex-shrink:0; display:inline-flex; align-items:center; gap:8px; padding:12px 16px 14px;
-  background:none; border:none; cursor:pointer; color:var(--text-3); font-family:var(--sans); font-size:14px; font-weight:600; transition:color .15s;
-}
-.fr-tab svg { width:15px; height:15px; opacity:.85; }
-.fr-tab:hover { color:var(--text); }
-.fr-tab.active { color:var(--text); }
-.fr-tab.active::after { content:''; position:absolute; inset-inline-start:10px; inset-inline-end:10px; bottom:-0.5px; height:2.5px; border-radius:2px; background:var(--olive-light); }
-.fr-tab-count { font-family:var(--bebas); font-size:14px; font-weight:400; color:var(--text-3); letter-spacing:.3px; }
+/* Red count dot (friend requests: their header and the side nav) */
 .fr-tab-dot { min-width:18px; height:18px; padding:0 5px; box-sizing:border-box; border-radius:999px; background:#c0392b; color:#fff; font-size:10px; font-weight:700; line-height:18px; text-align:center; }
-/* Phones: five equal tabs, icon over label, all visible without scrolling */
-@media(max-width:600px) {
-  .fr-tabs { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:0; overflow:visible; }
-  .fr-tab { flex-direction:column; gap:4px; padding:10px 2px 12px; font-size:11px; }
-  .fr-tab svg { width:17px; height:17px; }
-  .fr-tab-count { display:none; }
-  .fr-tab-dot { position:absolute; top:5px; inset-inline-start:calc(50% + 6px); min-width:16px; height:16px; line-height:16px; font-size:9px; }
-  .fr-tab.active::after { inset-inline-start:18%; inset-inline-end:18%; }
-}
 
 /* Toolbar */
 .fr-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 1rem; }
@@ -259,7 +239,6 @@
 .cp-cell { min-width:70px; padding:8px 10px; } .cp-cell b { font-size:22px; }
 .cp-match-name { font-size:20px; }
 .cp-ring { width:96px; height:96px; } .cp-ring > div { width:78px; height:78px; } .cp-ring b { font-size:30px; }
-.fr-tab { font-size:15px; } .fr-tab svg { width:16px; height:16px; }
 
 /* Compare */
 .cp-pick { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:14px 16px 12px; margin-bottom:14px; }
@@ -395,8 +374,6 @@
   .fn-grid { grid-template-columns:1fr; }
 }
 @media(max-width:480px) {
-  .fr-tab { min-width:0; padding:10px 0 12px; font-size:10.5px; }
-  .fr-tab span:not(.fr-tab-dot) { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .fm-grid { grid-template-columns:1fr; }
   .fm-cover { height:150px; }
   .fa-item { padding:10px; gap:10px; }
@@ -442,14 +419,15 @@
     </div>
   </header>
 
-  <!-- Social sections: side nav (phones: a dropdown) — Friends · Polls · Recommendations -->
+  <!-- Social sections: side nav (phones: a dropdown) — Friends · Activity · Lists ·
+       Notes · Compare · Polls · Recommendations -->
   <div class="disc-nav-dd-wrap" id="socNavDD"></div>
   <div class="disc-layout">
     <nav class="disc-side-nav fade-up fade-up-1" id="socSideNav" aria-label="Social sections"></nav>
     <div class="disc-main">
       <section id="socFriends" aria-label="Friends">
-        <!-- Friends: its own tabs, as before -->
-        <div class="fr-tabs fade-up fade-up-1" id="frTabs" role="tablist" aria-label="Friends sections"></div>
+        <!-- Lists / Notes: Friends ↔ Community toggle -->
+        <div id="frScope"></div>
         <!-- Section toolbar: label + count + Sort / Filter -->
         <div class="fr-toolbar" id="frToolbar"></div>
         <!-- Section content -->
@@ -497,13 +475,6 @@ let _frSentOpen = false;
 let _frAuthKnown = false;          // until sign-in is checked, show a spinner (never the signed-out view)
 window._frEntryMap = {};
 
-const _FR_TABS = [
-  { key: 'friends',  label: 'Friends',  icon: 'users' },
-  { key: 'activity', label: 'Activity', icon: 'activity' },
-  { key: 'lists',    label: 'Lists',    icon: 'layers' },
-  { key: 'notes',    label: 'Notes',    icon: 'notebook' },
-  { key: 'compare',  label: 'Compare',  icon: 'compare' },
-];
 
 /* ── Small helpers ── */
 const _frName = uid => { const p = _frProfiles[uid] || {}; return p.display_name || p.username || 'Friend'; };
@@ -584,19 +555,6 @@ async function loadFriends() {
   _frRender();
 }
 
-/* ── Tabs ── */
-function _frTabsHTML() {
-  const count = { friends: _frAccepted.length, activity: null, lists: _frLists.length, notes: _frEntries.filter(e => e.notes && e.notes.trim()).length, compare: null };
-  return _FR_TABS.map(t => `<button class="fr-tab${_frTab === t.key ? ' active' : ''}" role="tab" aria-selected="${_frTab === t.key}" onclick="setFriendsTab('${t.key}')">
-      ${icon(t.icon, 15)}<span>${t.label}</span>${t.key === 'friends' && _frIncoming.length ? `<span class="fr-tab-dot">${_frIncoming.length}</span>` : (count[t.key] ? `<span class="fr-tab-count">${count[t.key]}</span>` : '')}
-    </button>`).join('');
-}
-function setFriendsTab(tab) {
-  _frTab = tab;
-  try { sessionStorage.setItem('friends_tab', tab); } catch {}
-  _frRender();
-}
-
 function _frToolbar(label, count, scope, noun = 'items') {
   const el = document.getElementById('frToolbar');
   el.innerHTML = `<div class="fr-toolbar-label"><div class="fr-toolbar-title">${escHTML(label)}</div>${count != null ? `<div class="fr-toolbar-count"><b>${count}</b> ${noun}</div>` : ''}</div>${scope ? SF.bar(scope, 'all') : ''}`;
@@ -605,10 +563,12 @@ function _frToolbar(label, count, scope, noun = 'items') {
 
 function _frRender() {
   _socNav();
-  document.getElementById('frTabs').innerHTML = _frTabsHTML();
   const c = document.getElementById('frContent'), tb = document.getElementById('frToolbar');
+  const community = _frCommunity();
+  document.getElementById('frScope').innerHTML = _frScopeHTML();
   if (!_frAuthKnown) { tb.style.display = 'none'; c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; return; }
   if (!_fUser) { tb.style.display = 'none'; c.innerHTML = _frGuestHTML(); return; }
+  if (community) return _frTab === 'lists' ? _frRenderCLists() : _frRenderCNotes();
   if (!_frLoaded) { tb.style.display = 'none'; c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; return; }
   if (_frTab !== 'friends' && !_frAccepted.length) {
     tb.style.display = 'none';
@@ -864,7 +824,7 @@ SF.register('frLists', {
 function _frRenderLists() {
   const list = SF.list('frLists', 'all');
   // Titles added from Discover ("tmdb:…") — posters arrive, then redraw
-  MSSList.hydrate(list, 8).then(changed => { if (changed && _frTab === 'lists') _frRender(); });
+  MSSList.hydrate(list, 8).then(changed => { if (changed && _frTab === 'lists' && !_frCommunity()) _frRender(); });
   _frToolbar("Friends' Lists", list.length, 'frLists', list.length === 1 ? 'list' : 'lists');
   if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('layers', 'No lists yet', 'When your friends make lists, they show up here.'); return; }
   // Same cards + popup as the Lists page (list-popup.js)
@@ -911,13 +871,146 @@ function _frRenderNotes() {
     MSSFriendPop.noteCardHTML(e, _frProfiles[e.user_id], `_frOpenNote(${attrJSON(e.id)})`)).join('')}</div>`;
 }
 
+/* ══ FRIENDS ↔ COMMUNITY (Lists, Notes) ══
+   The same toggle as Polls (Friends / Everyone): Community is everyone's
+   public lists and notes — the same feeds as the Lists and Notes pages
+   (get_social_lists / get_social_notes), drawn with the same cards. */
+let _frScopeMode = { lists: 'friends', notes: 'friends' };
+try { Object.assign(_frScopeMode, JSON.parse(sessionStorage.getItem('social_scope') || '{}')); } catch {}
+const _frCommunity = () => (_frTab === 'lists' || _frTab === 'notes') && _frScopeMode[_frTab] === 'community';
+function _frScopeHTML() {
+  if (_socSection !== _frTab || !(_frTab in _frScopeMode) || !_fUser) return '';
+  const cur = _frScopeMode[_frTab];
+  return `<div class="pn-toggle soc-toggle" role="tablist" aria-label="Whose ${_frTab}">${[['friends', 'Friends', 'users'], ['community', 'Community', 'globe']].map(([k, l, ic]) =>
+    `<button type="button" class="pn-toggle-btn${cur === k ? ' active' : ''}" role="tab" aria-selected="${cur === k}" onclick="_frSetScope('${k}')">${icon(ic, 13)} ${l}</button>`).join('')}</div>`;
+}
+function _frSetScope(k) {
+  _frScopeMode[_frTab] = k;
+  try { sessionStorage.setItem('social_scope', JSON.stringify(_frScopeMode)); } catch {}
+  _frRender();
+}
+const _frLikeScore = x => Number(x.like_count || 0) - Number(x.dislike_count || 0);
+const _FR_POPULAR = { header: 'Popularity', opts: [['popular', 'Most Liked'], ['least_popular', 'Least Liked']] };
+const _frPopularCompare = {
+  popular: (a, b) => (_frLikeScore(b) - _frLikeScore(a)) || (new Date(b.created_at) - new Date(a.created_at)),
+  least_popular: (a, b) => (Number(b.dislike_count) - Number(a.dislike_count)) || (_frLikeScore(a) - _frLikeScore(b)),
+};
+const _frWhose = noun => ({ key: 'owner', label: `Whose ${noun}`, options: [['', 'Everyone'], ['others', 'Other People'], ['mine', 'Mine']],
+  test: (x, v) => v === 'mine' ? x.user_id === _fUser?.id : x.user_id !== _fUser?.id });
+
+// Fetched once, when Community is first opened
+let _frC = { lists: null, notes: null }, _frCLoading = {};
+async function _frCLoad(kind) {
+  if (_frC[kind] || _frCLoading[kind]) return;
+  _frCLoading[kind] = true;
+  try {
+    const { data, error } = await sb.rpc(kind === 'lists' ? 'get_social_lists' : 'get_social_notes', { p_limit: 100 });
+    if (error) throw error;
+    const rows = data || [];
+    if (kind === 'lists') {
+      // Other people's titles for the poster previews (Discover titles hydrate after)
+      const ids = [...new Set(rows.flatMap(l => l.items || []))].filter(id => !MSSList.isTmdbId(id) && !window._frEntryMap[id]);
+      if (ids.length) {
+        const { data: ents } = await sb.from('entries').select('*').in('id', ids.slice(0, 1000));
+        (ents || []).forEach(e => { window._frEntryMap[e.id] = e; });
+      }
+      MSSList.hydrate(rows, 8).then(changed => { if (changed && _frCommunity()) _frRender(); });
+    }
+    _frC[kind] = kind === 'notes' ? rows.map(n => ({ ...n, id: n.entry_id })) : rows;
+  } catch (err) {
+    console.error('Community ' + kind + ':', err);
+    _frC[kind] = 'error';
+  } finally { _frCLoading[kind] = false; }
+  if (_frCommunity()) _frRender();
+}
+function _frCPending(kind) {
+  if (_frC[kind] === 'error') {
+    document.getElementById('frToolbar').style.display = 'none';
+    document.getElementById('frContent').innerHTML = `<div class="mss-empty">Couldn't load community ${kind} right now.</div>`;
+    return true;
+  }
+  if (_frC[kind]) return false;
+  document.getElementById('frToolbar').style.display = 'none';
+  document.getElementById('frContent').innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
+  _frCLoad(kind);
+  return true;
+}
+const _frCOwner = x => ({ id: x.user_id, username: x.username, avatar_url: x.avatar_url });
+
+SF.register('frCLists', {
+  base: () => Array.isArray(_frC.lists) ? _frC.lists : [],
+  render: () => _frRender(),
+  defaultSort: 'popular',
+  presets: { popularity: _FR_POPULAR, added: { header: 'Posted', opts: [['newest', 'Newest'], ['oldest', 'Oldest']] } },
+  sorts: () => ['popularity', 'added', 'alpha'],
+  filters: () => [],
+  addedDate: l => l.created_at,
+  compare: _frPopularCompare,
+  choiceFilters: () => [
+    { key: 'rank', label: 'Ranking', options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked']], test: (l, v) => v === 'yes' ? l.ranked === true : l.ranked === false },
+    _frWhose('Lists'),
+  ],
+});
+function _frRenderCLists() {
+  if (_frCPending('lists')) return;
+  const list = SF.list('frCLists', 'all');
+  _frToolbar('Community Lists', list.length, 'frCLists', list.length === 1 ? 'list' : 'lists');
+  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('layers', 'No lists here', _frC.lists.length ? 'Try clearing the filter.' : 'Public lists from the community show up here.'); return; }
+  document.getElementById('frContent').innerHTML = `<div class="lc-grid">${list.map(l => MSSList.cardHTML(l, {
+    resolve: _frListItem, onclick: `_frOpenCList(${attrJSON(l.id)})`, ownerHTML: MSSList.ownerHTML(_frCOwner(l)),
+  })).join('')}</div>`;
+}
+function _frOpenCList(id) {
+  const l = (_frC.lists || []).find(x => x.id === id);
+  if (l) MSSList.open(l, { resolve: _frListItem, owner: _frCOwner(l), social: l.user_id !== _fUser?.id });
+}
+
+SF.register('frCNotes', {
+  base: () => Array.isArray(_frC.notes) ? _frC.notes : [],
+  render: () => _frRender(),
+  defaultSort: 'popular',
+  presets: {
+    popularity: _FR_POPULAR,
+    added:  { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Oldest']] },
+    length: { header: 'Note Length', opts: [['note_long', 'Longest'], ['note_short', 'Shortest']] },
+  },
+  sorts: () => ['popularity', 'added', 'length', 'ratings', 'alpha'],
+  filters: () => ['score'],
+  watched: () => true,
+  scoreOf: n => n.final_score != null ? Number(n.final_score) : null,
+  addedDate: MSSNote.watchedDate,
+  compare: {
+    ..._frPopularCompare,
+    note_long: (a, b) => _frWords(b.notes) - _frWords(a.notes),
+    note_short: (a, b) => _frWords(a.notes) - _frWords(b.notes),
+  },
+  choiceFilters: () => [
+    { key: 'type', label: 'Type', options: [['', 'All Types'], ['tv', 'TV Shows'], ['movie', 'Movies']], test: (n, v) => n.tmdb_type === v },
+    _frWhose('Notes'),
+  ],
+});
+function _frRenderCNotes() {
+  if (_frCPending('notes')) return;
+  const list = SF.list('frCNotes', 'all');
+  _frToolbar('Community Notes', list.length, 'frCNotes', list.length === 1 ? 'note' : 'notes');
+  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('edit', 'No notes here', _frC.notes.length ? 'Try clearing the filter.' : 'Public notes from the community show up here.'); return; }
+  document.getElementById('frContent').innerHTML = `<div class="nc-grid">${list.map(n =>
+    MSSFriendPop.noteCardHTML(n, _frCOwner(n), `_frOpenCNote(${attrJSON(n.id)})`)).join('')}</div>`;
+}
+// Their note in the shared popup, with 👍 / 👎 (counts on the card update too)
+function _frOpenCNote(id) {
+  const n = (_frC.notes || []).find(x => x.id === id); if (!n) return;
+  MSSViews.open(n, { start: 'note', own: n.user_id === _fUser?.id, profile: _frCOwner(n),
+    onReact: st => { n.like_count = st.like; n.dislike_count = st.dislike; } });
+}
+
 /* ══ COMPARE ══
    1) choose who to compare with   2) see your taste match + shared titles
    (sortable / filterable)   3) open a title for the full side-by-side. */
 let _cmpMine = null, _cmpMyLists = [], _cmpProfiles = {}, _cmpWith = [], _cmpKey = null, _cmpQuery = '';
 const _cmpKeyOf = e => e.tmdb_id && e.tmdb_type ? `t:${e.tmdb_type}:${e.tmdb_id}` : `n:${e.cat}:${(e.title || '').trim().toLowerCase()}`;
 
-function _frCompareWith(uid) { _cmpWith = [uid]; _cmpKey = null; setFriendsTab('compare'); }
+function _frCompareWith(uid) { _cmpWith = [uid]; _cmpKey = null; setSocialSection('compare'); }
 
 async function _cmpLoad() {
   if (_cmpMine) return;
@@ -995,7 +1088,7 @@ async function _frRenderCompare() {
     </section>`;
   if (!_cmpWith.length) {
     document.getElementById('frToolbar').style.display = 'none';
-    c.innerHTML = picker + _frEmptyHTML('sparkles', 'Who do you want to compare with?', 'Choose a friend above to see how your taste lines up — shared titles, score differences, favorites and notes.');
+    c.innerHTML = picker + _frEmptyHTML('compare', 'Who do you want to compare with?', 'Choose a friend above to see how your taste lines up — shared titles, score differences, favorites and notes.');
     return;
   }
   if (_cmpKey) return _cmpShowTitle(picker);
@@ -1134,56 +1227,67 @@ function _cmpShowTitle(picker) {
       return `<article class="fn-card"><div class="fn-by">${_frAvHTML(prof(u), 22)}<span translate="no">${escHTML(name(u))}</span></div>${mssIsSpoiler(e) && u !== me ? mssSpoilerHTML(text, { compact: true, id: e.id }) : text}</article>`; }).join('')}</div>` : ''}`;
 }
 
-/* ══ Social: Friends · Polls · Recommendations (side nav; phones: a dropdown) ══
-   friends.html?s=polls&poll=<id> opens a section (and one poll). Polls and
-   Recommendations live in js/social.js (MSSPolls / MSSShare). */
+/* ══ Social side nav (phones: a dropdown) ══
+   Friends · Activity · Lists · Notes · Compare share one panel (#socFriends,
+   drawn by _frRender); Polls and Recommendations live in js/social.js
+   (MSSPolls / MSSShare). friends.html?s=<key>&poll=<id> opens a section. */
 const _SOC = [
-  { key: 'friends', label: 'Friends',         icon: 'users' },
-  { key: 'polls',   label: 'Polls',           icon: 'poll' },
-  { key: 'recs',    label: 'Recommendations', icon: 'send' },
+  { key: 'friends',  label: 'Friends',         icon: 'users',    panel: 'socFriends' },
+  { key: 'activity', label: 'Activity',        icon: 'activity', panel: 'socFriends' },
+  { key: 'lists',    label: 'Lists',           icon: 'layers',   panel: 'socFriends' },
+  { key: 'notes',    label: 'Notes',           icon: 'notebook', panel: 'socFriends' },
+  { key: 'compare',  label: 'Compare',         icon: 'compare',  panel: 'socFriends' },
+  { key: 'polls',    label: 'Polls',           icon: 'poll',     panel: 'socPolls' },
+  { key: 'recs',     label: 'Recommendations', icon: 'send',     panel: 'socRecs' },
 ];
 let _socSection = 'friends';
+function _socCount(k) {
+  if (k === 'friends') return _frAccepted.length;
+  if (k === 'lists') return _frLists.length;
+  if (k === 'notes') return _frEntries.filter(e => e.notes && e.notes.trim()).length;
+  if (k === 'recs') return MSSShare.count;
+  return 0;
+}
 function _socBadge(k) {
-  if (k === 'friends' && _frIncoming.length) return `<span class="fr-tab-dot">${_frIncoming.length}</span>`;
-  if (k === 'recs' && MSSShare.count) return `<span class="soc-nav-count">${MSSShare.count}</span>`;
-  return '';
+  if (k === 'friends' && _frIncoming.length) return `<span class="fr-tab-dot" aria-label="${_frIncoming.length} requests">${_frIncoming.length}</span>`;
+  const n = _socCount(k);
+  return n ? `<span class="soc-nav-count">${n}</span>` : '';
 }
 function _socNav() {
   document.getElementById('socSideNav').innerHTML = `<div class="disc-side-head">Social</div>` + _SOC.map(x =>
     `<button type="button" class="disc-side-link${_socSection === x.key ? ' active' : ''}" aria-current="${_socSection === x.key ? 'page' : 'false'}" onclick="setSocialSection('${x.key}')">${icon(x.icon, 15)}<span>${x.label}</span>${_socBadge(x.key)}</button>`).join('');
-  const opts = _SOC.map(x => ({ value: x.key, label: x.label + (x.key === 'recs' && MSSShare.count ? ` (${MSSShare.count})` : '') }));
+  const opts = _SOC.map(x => ({ value: x.key, label: x.label + (x.key === 'friends' && _frIncoming.length ? ` (${_frIncoming.length} new)` : x.key === 'recs' && MSSShare.count ? ` (${MSSShare.count})` : '') }));
   document.getElementById('socNavDD').innerHTML = _selDDHTML('socNavSel', opts, _socSection, 'setSocialSection');
 }
 function setSocialSection(k, opts = {}) {
-  if (!_SOC.some(x => x.key === k)) k = 'friends';
-  _socSection = k;
-  try { sessionStorage.setItem('social_section', k); } catch {}
+  const sec = _SOC.find(x => x.key === k) || _SOC[0];
+  _socSection = sec.key;
+  try { sessionStorage.setItem('social_section', sec.key); } catch {}
   const url = new URL(location.href);
-  if (k === 'friends') url.searchParams.delete('s'); else url.searchParams.set('s', k);
+  if (sec.key === 'friends') url.searchParams.delete('s'); else url.searchParams.set('s', sec.key);
   if (!opts.keepPoll) url.searchParams.delete('poll');
   history.replaceState(history.state, '', url.pathname + url.search);
-  _SOC.forEach(x => { document.getElementById('soc' + x.key[0].toUpperCase() + x.key.slice(1)).hidden = x.key !== k; });
-  _socNav();
-  if (k === 'polls') MSSPolls.mount(document.getElementById('socPolls'), _fUser, { poll: opts.poll });
-  if (k === 'recs') MSSShare.inbox(document.getElementById('socRecs'), _fUser);
+  ['socFriends', 'socPolls', 'socRecs'].forEach(id => { document.getElementById(id).hidden = id !== sec.panel; });
+  if (sec.panel === 'socFriends') { _frTab = sec.key; _frRender(); } else _socNav();
+  if (sec.key === 'polls') MSSPolls.mount(document.getElementById('socPolls'), _fUser, { poll: opts.poll });
+  if (sec.key === 'recs') MSSShare.inbox(document.getElementById('socRecs'), _fUser);
   if (!opts.noScroll) window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 /* ── Start ── */
 document.addEventListener('DOMContentLoaded', () => {
   attachClearButton('addFriendInput');
-  let t = null; try { t = sessionStorage.getItem('friends_tab'); } catch {}
-  if (t && _FR_TABS.some(x => x.key === t)) _frTab = t;
   const q = new URLSearchParams(location.search);
   let sec = q.get('s'); try { sec = sec || sessionStorage.getItem('social_section'); } catch {}
   _socSection = _SOC.some(x => x.key === sec) ? sec : 'friends';
+  if (_SOC.find(x => x.key === _socSection).panel === 'socFriends') _frTab = _socSection;
   _socNav();
   _frRender();
   initPage(async (user) => {
     _fUser = user;
     _frAuthKnown = true;
     setSocialSection(_socSection, { keepPoll: true, poll: q.get('poll'), noScroll: true });
-    if (user) { _frRender(); MSSShare.refreshCount(user).then(_socNav); }        // signed in: tabs + spinner while friends load
+    if (user) { _frRender(); MSSShare.refreshCount(user).then(_socNav); }        // signed in: nav + spinner while friends load
     if (!user) { document.getElementById('friendsPageSub').textContent = 'Search for someone above to view their profile.'; _frRender(); return; }
     await loadFriends();
     _socNav();
