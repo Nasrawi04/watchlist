@@ -1619,6 +1619,7 @@ function _renderListPopup() {
     ${actions}
     <div id="lpNavPopupActions" class="lp-footer">
       <button class="popup-action-btn lp-view" onclick="closeSocialListPopup(); location.href='list-view.html?list=${encodeURIComponent(l.id)}'">${icon('list', 14)} View List</button>
+      ${_listsUser && l.cat === 'custom' ? `<button class="popup-action-btn lp-share" onclick="mssRecommend(${escHTML(JSON.stringify({ kind: 'list', list_id: l.id, title: l.title, count: items.length }))})">${icon('send', 14)} Share</button>` : ''}
       <button class="popup-action-btn lp-replies" onclick="closeSocialListPopup()">Close</button>
     </div>
   `;
