@@ -318,7 +318,7 @@ function injectChrome() {
         ${navLink('lists.html',      page, 'layers',   'Lists')}
         ${navLink('notes.html',      page, 'notebook',     'Notes')}
         ${navLink('episodes.html',   page, 'episodes', 'Episodes')}
-        ${navLink('friends.html',   page, 'users',    'Friends')}
+        ${navLink('friends.html',   page, 'users',    'Social')}
         ${navLink('profile.html',   page, 'user',     'Profile')}
       </div>
       <div class="nav-right">
@@ -358,7 +358,7 @@ function injectChrome() {
     ${mobileNavLink('lists.html',     page, 'layers',   'Lists')}
     ${mobileNavLink('notes.html',     page, 'notebook',     'Notes')}
     ${mobileNavLink('episodes.html',  page, 'episodes', 'Episodes')}
-    ${mobileNavLink('friends.html',   page, 'users',    'Friends')}
+    ${mobileNavLink('friends.html',   page, 'users',    'Social')}
     ${mobileNavLink('profile.html',   page, 'user',     'Profile')}
     ${mobileNavLink('settings.html',  page, 'settings', 'Settings')}
     <hr>
@@ -1951,7 +1951,7 @@ function fitTitleYear(root) {
    Sections:
      episodes  — new_episode, new_release (tv-schedule.js → add_new_episode_notifications /
                  add_release_notifications, 033 / 042)
-     activity  — friend_started, friend_queued
+     activity  — friend_started, friend_queued, friend_poll, poll_comment, friend_rec (Social, 045)
      lists     — list_invite, list_invite_accepted
      requests  — friend_request
    Rows are created by the database (021/022 SQL); here we list them,
@@ -2124,6 +2124,17 @@ function _notifItemHTML(n, opts = {}) {
     const m = n.meta || {};
     text = `<b translate="no">${escHTML(m.title || 'A movie')}</b> ${m.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`; icon2 = 'film';
     href = m.tmdb_id ? `title.html?type=movie&id=${encodeURIComponent(m.tmdb_id)}` : '';
+  } else if (n.type === 'friend_poll' || n.type === 'poll_comment') {
+    const m = n.meta || {}, q = `“${escHTML(m.question || 'a poll')}”`;
+    text = n.type === 'friend_poll' ? `${who} started a poll: ${q}` : `${who} commented on your poll ${q}`;
+    icon2 = n.type === 'friend_poll' ? 'poll' : 'comment';
+    if (n.type === 'poll_comment' && m.excerpt) extra = `<div class="notif-quote" translate="no">${escHTML(m.excerpt)}</div>`;
+    href = m.poll_id ? `friends.html?s=polls&poll=${encodeURIComponent(m.poll_id)}` : 'friends.html?s=polls';
+  } else if (n.type === 'friend_rec') {
+    const m = n.meta || {};
+    text = `${who} recommended <b translate="no">${escHTML(m.title || 'something')}</b> to you`; icon2 = 'send';
+    extra = (m.message ? `<div class="notif-quote" translate="no">${escHTML(m.message)}</div>` : '') + _notifTitleCard({ ...m, media_type: m.tmdb_type });
+    href = 'friends.html?s=recs';
   } else if (n.type === 'friend_queued') {
     text = `${who} added something from your library to their watchlist`; icon2 = 'plus';
     extra = _notifTitleCard(n.meta);
@@ -2342,6 +2353,9 @@ function _notifShortText(n) {
     case 'friend_queued':        return `${who} added ${t} from your library`;
     case 'new_episode':          return _notifEpText(n.meta || {}, t);
     case 'new_release':          return `${t} ${n.meta?.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`;
+    case 'friend_poll':          return `${who} started a poll: “${escHTML(n.meta?.question || '')}”`;
+    case 'poll_comment':         return `${who} commented on your poll`;
+    case 'friend_rec':           return `${who} recommended ${t} to you`;
   }
   return 'New notification';
 }
