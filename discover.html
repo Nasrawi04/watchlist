@@ -15,34 +15,10 @@
   .nav-icon-btn { display:none !important; }
   .mobile-search-bar { display:none !important; }
 
-  .disc-layout { display:flex; gap:clamp(1.5rem, 3vw, 3rem); align-items:flex-start; }
-  .disc-side-nav {
-    position:sticky; top:calc(var(--page-pt) + 88px); flex-shrink:0; width:220px;
-    display:flex; flex-direction:column; gap:2px;
-    background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-    padding:.85rem; max-height:calc(100vh - var(--page-pt) - 120px); overflow-y:auto;
-  }
-  /* Mobile nav dropdown — hidden on desktop, shown once the sidebar hides */
-  .disc-nav-dd-wrap { display:none; margin-bottom:1.5rem; }
-  .disc-nav-dd-wrap .sel-dd { width:100%; }
-  .disc-nav-dd-wrap .sel-dd-trigger { width:100%; }
-  .disc-nav-dd-wrap .sel-dd-menu { max-height:60vh; overflow-y:auto; }
-  .disc-side-link {
-    display:block; padding:9px 14px; border-radius:var(--radius-sm); font-size:13.5px;
-    color:var(--text-2); text-decoration:none; border:1.5px solid transparent;
-    transition:all .15s var(--ease); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
-  .disc-side-link:hover { color:var(--text); background:var(--card); }
-  .disc-side-link.active { color:var(--olive-light); border-color:var(--border-olive); background:var(--olive-faint); }
-  .disc-main { flex:1; min-width:0; }
 
   .disc-section { margin-bottom:3.5rem; scroll-margin-top:calc(var(--page-pt) + 88px); }
 
   body.disc-browsing #discYourTV, body.disc-browsing #discNavDD, body.disc-browsing .disc-layout { display:none !important; }
-  @media(max-width:900px) {
-    .disc-side-nav { display:none; }
-    .disc-nav-dd-wrap { display:block; }
-  }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
