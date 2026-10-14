@@ -1038,12 +1038,14 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
             ${metaBits.map(b => `<span>${esc(b)}</span>`).join('')}
             ${trailer ? `<a class="td-trailer-link td-trailer-desktop" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
             ${_tdWtwPillHTML(d, 'td-trailer-desktop')}
+            ${_tdRecPillHTML(d, 'td-trailer-desktop')}
           </div>
           <div class="td-genres">${genres.map(g => `<span class="td-genre-chip">${esc(g)}</span>`).join('')}</div>
           ${uniqueDirectors.length ? `<div class="td-director-row"><span class="td-director-label">${uniqueDirectors.length > 1 ? directorLabelPlural : directorLabel}</span> ${uniqueDirectors.map(p => `<a class="td-director-link" href="person.html?id=${p.id}&mode=directing" translate="no">${esc(p.name)}</a>`).join(', ')}</div>` : ''}
-          ${trailer || _tdWtw(d).any ? `<div class="td-mobile-links">
+          ${trailer || _tdWtw(d).any || _tdUser ? `<div class="td-mobile-links">
             ${trailer ? `<a class="td-trailer-link td-trailer-mobile" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
             ${_tdWtwPillHTML(d, 'td-trailer-mobile')}
+            ${_tdRecPillHTML(d, 'td-trailer-mobile')}
           </div>` : ''}
           <div class="td-hero-actions fade-up fade-up-1">
             ${_tdAddControlsHTML(ownEntry)}
@@ -1379,6 +1381,13 @@ function _tdWtwPillHTML(d, cls) {
     ? `<span class="td-wtw-logos" aria-hidden="true">${w.logos.map(l => `<img src="${TMDB_IMG.replace('w185', 'w92')}${l}" alt="" loading="lazy">`).join('')}</span>`
     : icon('film', 13);
   return `<button type="button" class="td-trailer-link td-wtw-btn ${cls}" onclick="_tdOpenWtw()" aria-haspopup="dialog">${lead} Where to watch</button>`;
+}
+// Recommend to friends (Social → Recommendations; social.js via mssRecommend)
+function _tdRecPillHTML(d, cls) {
+  if (!_tdUser) return '';
+  const item = { tmdb_id: Number(_tdId), media_type: _tdType, title: _tdType === 'movie' ? d.title : d.name,
+    poster_url: d.poster_path ? TMDB_IMG + d.poster_path : null, year: ((_tdType === 'movie' ? d.release_date : d.first_air_date) || '').slice(0, 4) };
+  return `<button type="button" class="td-trailer-link ${cls}" onclick="mssRecommend(${attrJSON(item)})" aria-haspopup="dialog">${icon('send', 13)} Recommend</button>`;
 }
 function _injectWtw() {
   if (document.getElementById('wtwOverlay')) return;
