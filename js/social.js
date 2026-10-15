@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   social.js — Social: Polls (MSSPolls) + Recommendations (MSSShare)
+   social.js — Social: Polls (MSSPolls) + Inbox / sharing (MSSShare)
    Database: 045_social_polls_recs.sql (everything goes through its RPCs).
 
    MSSPolls.mount(el, user, { poll })   the Polls section on Social (friends.html)
@@ -17,9 +17,9 @@
        'entry'            "I watched this" — one of your titles; friends open it
                           in Info · Ratings · Note        { entry_id, title, poster_url, year, media_type }
        'list'             a custom list                    { list_id, title, count }
-   MSSShare.inbox(el, user)             Social → Recommendations: Received / Sent,
-                                        with Add to Watchlist / See rating & note /
-                                        Open list, Hide and Unsend
+   MSSShare.inbox(el, user)             Social → Inbox: Received / Sent, filter chips
+                                        (All · To Watch · Watched · Lists), Add to
+                                        Watchlist / rating & note / Open list, Hide, Unsend
    MSSShare.refreshCount(user)          how many are waiting (MSSShare.count)
    mssRecommend(item) (config.js) loads this file on other pages.
 
@@ -146,42 +146,43 @@ const MSSPolls = (() => {
     const h = ms / 36e5;
     return h < 1 ? `Ends in ${Math.max(1, Math.round(ms / 6e4))}m` : h < 24 ? `Ends in ${Math.round(h)}h` : `Ends in ${Math.round(h / 24)}d`;
   };
-  function optionThumb(o) {
-    if (o.kind === 'text') return '';
+  function optionThumb(o, i) {
+    if (o.kind === 'text') return `<span class="poll-letter" aria-hidden="true">${'ABCDEF'[i]}</span>`;
     const img = _socImg(o.image_path, 'w92');
     return `<span class="poll-thumb${o.kind === 'person' ? ' is-person' : ''}">${img ? `<img src="${img}" alt="" loading="lazy">` : icon(o.kind === 'person' ? 'user' : 'film', 16)}</span>`;
   }
-  function optionHTML(p, o) {
+  function optionHTML(p, o, i) {
     const total = p.total_votes || 0, show = p.show_results, mine = p.my_vote === o.id;
     const pct = show && total ? Math.round((o.votes || 0) / total * 100) : 0;
     const top = show && total && o.votes === Math.max(...p.options.map(x => x.votes || 0)) && o.votes > 0;
-    const label = `${optionThumb(o)}<span class="poll-opt-text"><b translate="${o.kind === 'text' ? 'yes' : 'no'}">${_socEsc(o.label)}</b>${o.sub ? `<small>${_socEsc(o.sub)}</small>` : ''}</span>`;
-    const res = show ? `<span class="poll-opt-res"><b>${pct}%</b><small>${o.votes || 0}</small></span>` : '';
+    const label = `${optionThumb(o, i)}<span class="poll-opt-text"><b translate="${o.kind === 'text' ? 'yes' : 'no'}">${_socEsc(o.label)}</b>${o.sub ? `<small>${_socEsc(o.sub)}</small>` : ''}</span>`;
+    const res = show ? `<span class="poll-opt-res"><b>${pct}%</b><small>${o.votes || 0} ${o.votes === 1 ? 'vote' : 'votes'}</small></span>` : '';
     const bar = show ? `<span class="poll-bar" style="width:${pct}%"></span>` : '';
+    const badge = (top && !p.is_open ? `<span class="poll-win" title="Winner">${icon('trophy', 12)}</span>` : '') + (mine ? `<span class="poll-check" title="Your vote">${icon('check', 12)}</span>` : '');
     const cls = `poll-opt${mine ? ' mine' : ''}${top ? ' top' : ''}${show ? ' shown' : ''}`;
-    if (!p.is_open) return `<div class="${cls}">${bar}${label}${mine ? `<span class="poll-check" title="Your vote">${icon('check', 13)}</span>` : ''}${res}</div>`;
+    if (!p.is_open) return `<div class="${cls}">${bar}${label}${badge}${res}</div>`;
     return `<button type="button" class="${cls}" aria-pressed="${mine}" onclick="MSSPolls.vote(${attrJSON(p.id)}, ${attrJSON(mine ? null : o.id)})"
-        aria-label="${_socEsc(o.label)}${mine ? ' — your vote, tap to take it back' : ''}">${bar}${label}${mine ? `<span class="poll-check">${icon('check', 13)}</span>` : ''}${res}</button>`;
+        aria-label="${_socEsc(o.label)}${mine ? ' — your vote, tap to take it back' : ''}">${bar}${label}${badge}${res}</button>`;
   }
   function card(p) {
-    const a = p.author || {}, n = p.comment_count || 0;
-    const menu = p.is_mine ? `<div class="poll-own">
-        <button type="button" class="poll-link" onclick="MSSPolls.edit(${attrJSON(p.id)})">${icon('edit', 13)} Edit</button>
-        ${p.is_open ? `<button type="button" class="poll-link" onclick="MSSPolls.end(${attrJSON(p.id)})">${icon('clock', 13)} End now</button>` : ''}
-        <button type="button" class="poll-link poll-danger" onclick="MSSPolls.remove(${attrJSON(p.id)})">${icon('trash', 13)} Delete</button></div>` : '';
+    const a = p.author || {}, n = p.comment_count || 0, pid = attrJSON(p.id);
+    const own = p.is_mine ? `<div class="poll-own">
+        <button type="button" class="rec-icon" onclick="MSSPolls.edit(${pid})" aria-label="Edit poll" title="Edit">${icon('edit', 14)}</button>
+        ${p.is_open ? `<button type="button" class="rec-icon" onclick="MSSPolls.end(${pid})" aria-label="End poll now" title="End now">${icon('clock', 14)}</button>` : ''}
+        <button type="button" class="rec-icon rec-icon-x" onclick="MSSPolls.remove(${pid})" aria-label="Delete poll" title="Delete">${icon('trash', 14)}</button></div>` : '';
     return `<article class="poll-card${p.is_open ? '' : ' ended'}" id="poll-${p.id}">
       <header class="poll-by">
-        <a href="profile-view.html?id=${encodeURIComponent(a.id || '')}" class="poll-who">${_socAv(a, 34)}<span><b translate="no">${_socEsc(p.is_mine ? 'You' : _socName(a))}</b>
-          <small>${_notifTimeAgo(p.created_at)}${p.edited_at ? ' · edited' : ''}</small></span></a>
-        <span class="poll-vis" title="${p.visibility === 'public' ? 'Anyone can vote' : 'Friends can vote'}">${icon(p.visibility === 'public' ? 'globe' : 'users', 12)} ${p.visibility === 'public' ? 'Public' : 'Friends'}</span>
+        <a href="profile-view.html?id=${encodeURIComponent(a.id || '')}" class="poll-who">${_socAv(a, 36)}<span><b translate="no">${_socEsc(p.is_mine ? 'You' : _socName(a))}</b>
+          <small>${_notifTimeAgo(p.created_at)}${p.edited_at ? ' · edited' : ''} · <span title="${p.visibility === 'public' ? 'Anyone can vote' : 'Friends can vote'}">${icon(p.visibility === 'public' ? 'globe' : 'users', 11)} ${p.visibility === 'public' ? 'Public' : 'Friends'}</span></small></span></a>
+        <span class="poll-status${p.is_open ? ' live' : ''}">${p.is_open ? `<i aria-hidden="true"></i>${left(p)}` : `${icon('lock', 11)} Ended`}</span>
+        ${own}
       </header>
       <h3 class="poll-q">${_socEsc(p.question)}</h3>
-      <div class="poll-opts">${p.options.map(o => optionHTML(p, o)).join('')}</div>
+      <div class="poll-opts">${p.options.map((o, i) => optionHTML(p, o, i)).join('')}</div>
       <div class="poll-foot">
-        <span class="poll-meta"><b>${p.total_votes || 0}</b> ${p.total_votes === 1 ? 'vote' : 'votes'} · ${p.is_open ? left(p) : 'Ended'}${p.is_open && !p.show_results ? ' · vote to see results' : ''}</span>
-        <button type="button" class="poll-link" aria-expanded="${!!open[p.id]}" onclick="MSSPolls.toggleComments(${attrJSON(p.id)})">${icon('comment', 13)} ${n ? `${n} ${n === 1 ? 'comment' : 'comments'}` : 'Comment'}</button>
+        <span class="poll-meta"><b>${p.total_votes || 0}</b> ${p.total_votes === 1 ? 'vote' : 'votes'}${p.is_open && !p.show_results ? ` · <span class="poll-hint">Vote to see the results</span>` : ''}</span>
+        <button type="button" class="rec-chip${open[p.id] ? ' active' : ''}" aria-expanded="${!!open[p.id]}" onclick="MSSPolls.toggleComments(${pid})">${icon('comment', 13)} ${n ? `${n} ${n === 1 ? 'comment' : 'comments'}` : 'Comment'}</button>
       </div>
-      ${menu}
       ${open[p.id] ? commentsHTML(p) : ''}
     </article>`;
   }
@@ -229,7 +230,7 @@ const MSSPolls = (() => {
     const list = comments[p.id];
     if (!list) return `<div class="poll-comments"><div class="page-loading" style="padding:1rem"><div class="spinner"></div></div></div>`;
     return `<div class="poll-comments">
-      ${list.map(c => `<div class="poll-c" id="pc-${c.id}">
+      ${list.map(c => `<div class="poll-c${c.can_edit ? ' is-me' : ''}" id="pc-${c.id}">
           ${_socAv(c.author, 28)}
           <div class="poll-c-body">
             <div class="poll-c-by"><b translate="no">${_socEsc(c.can_edit ? 'You' : _socName(c.author))}</b><small>${_notifTimeAgo(c.created_at)}${c.edited_at ? ' · edited' : ''}</small></div>
@@ -496,22 +497,30 @@ const MSSShare = (() => {
     }
   }
 
-  /* ── Inbox (Social → Recommendations) ── */
+  /* ── Inbox state ── */
   let recs = [];
   async function refreshCount(u) {
     try { api.count = ((await _socRpc('get_recs', { p_box: 'received' })) || []).filter(r => !r.in_library || r.kind !== 'title').length; } catch { api.count = 0; }
     return api.count;
   }
+  /* ── Inbox: everything friends send you (and what you sent) ──
+     Filter chips by kind — To Watch (a recommended title), Watched ("I
+     watched this": their rating + note), Lists. Cards: poster, kind label,
+     who sent it, the message as a chat bubble, actions in a footer bar. */
+  const KINDS = [['all', 'All', 'inbox'], ['title', 'To Watch', 'send'], ['entry', 'Watched', 'ratingStar'], ['list', 'Lists', 'layers']];
+  const KIND = { title: ['Recommendation', 'send'], entry: ['Watched', 'ratingStar'], list: ['List', 'layers'] };
+  let kind = 'all';
   async function inbox(target, u) {
     el = target; user = u;
-    const head = `<div class="soc-head"><div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Recommendations</div></div></div>`;
+    const head = `<div class="soc-head"><div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Inbox</div></div>
+      ${user ? `<div class="pn-toggle soc-toggle soc-toggle-sm" role="tablist" aria-label="Received or sent">${[['received', 'Received'], ['sent', 'Sent']].map(([k, l]) =>
+        `<button type="button" class="pn-toggle-btn${box === k ? ' active' : ''}" role="tab" aria-selected="${box === k}" onclick="MSSShare._box('${k}')">${l}</button>`).join('')}</div>` : ''}</div>`;
     if (!user) {
-      el.innerHTML = head + `<div class="fr-empty"><div class="fr-empty-ic">${icon('send', 26)}</div><div class="fr-empty-title">Titles from your friends</div>
+      el.innerHTML = head + `<div class="fr-empty"><div class="fr-empty-ic">${icon('inbox', 26)}</div><div class="fr-empty-title">Titles from your friends</div>
         <div class="fr-empty-text">Sign in to send friends something to watch — and see what they send you.</div></div>`;
       return;
     }
-    el.innerHTML = head + `<div class="pn-toggle soc-toggle" role="tablist">${[['received', 'Received'], ['sent', 'Sent']].map(([k, l]) =>
-        `<button type="button" class="pn-toggle-btn${box === k ? ' active' : ''}" role="tab" aria-selected="${box === k}" onclick="MSSShare._box('${k}')">${l}</button>`).join('')}</div>
+    el.innerHTML = head + `<div class="rec-chips" id="recChips" role="toolbar" aria-label="Show"></div>
       <div id="recList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
     try {
       recs = await _socRpc('get_recs', { p_box: box }) || [];
@@ -520,7 +529,7 @@ const MSSShare = (() => {
       const { data } = ids.length ? await sb.from('entries').select('*').in('id', ids) : { data: [] };
       const byId = Object.fromEntries((data || []).map(e => [e.id, e]));
       recs.forEach(r => { r.entry = byId[r.entry_id] || null; });
-    } catch { recs = []; showToast('Couldn’t load recommendations — try again.', 'err'); }
+    } catch { recs = []; showToast('Couldn’t load your inbox — try again.', 'err'); }
     if (box === 'received') api.count = recs.filter(r => !r.in_library || r.kind !== 'title').length;
     if (typeof _socNav === 'function') _socNav();
     drawRecs();
@@ -529,41 +538,53 @@ const MSSShare = (() => {
     poster_url: r.poster_path ? TMDB_FULL + r.poster_path : (r.entry?.poster_url || r.poster_url || null) });
   function drawRecs() {
     const list = document.getElementById('recList'); if (!list) return;
+    const n = k => k === 'all' ? recs.length : recs.filter(r => (r.kind || 'title') === k).length;
+    if (kind !== 'all' && !n(kind)) kind = 'all';
+    const chips = document.getElementById('recChips');
+    if (chips) chips.innerHTML = recs.length ? KINDS.map(([k, l, ic]) => `<button type="button" class="rec-chip${kind === k ? ' active' : ''}" aria-pressed="${kind === k}" ${n(k) ? '' : 'disabled'} onclick="MSSShare._kind('${k}')">${icon(ic, 13)} ${l}<b>${n(k)}</b></button>`).join('') : '';
     if (!recs.length) {
-      list.innerHTML = `<div class="fr-empty"><div class="fr-empty-ic">${icon('send', 26)}</div><div class="fr-empty-title">${box === 'received' ? 'Nothing here yet' : 'You haven’t shared anything yet'}</div>
+      list.innerHTML = `<div class="fr-empty"><div class="fr-empty-ic">${icon('inbox', 26)}</div><div class="fr-empty-title">${box === 'received' ? 'Your inbox is empty' : 'You haven’t shared anything yet'}</div>
         <div class="fr-empty-text">${box === 'received' ? 'When a friend sends you something to watch, a title they watched or a list, it lands here.' : 'Press Recommend on any movie or show, Share on one of your own titles, or Share on a list.'}</div></div>`;
       return;
     }
-    list.innerHTML = `<div class="rec-list">${recs.map(cardHTML).join('')}</div>`;
+    const shown = kind === 'all' ? recs : recs.filter(r => (r.kind || 'title') === kind);
+    list.innerHTML = `<div class="rec-grid">${shown.map(cardHTML).join('')}</div>`;
   }
   function cardHTML(r) {
-    const who = r.person || {}, id = attrJSON(r.id), e = r.entry;
-    const posterUrl = r.poster_path ? _socImg(r.poster_path, 'w185') : safeURL(e?.poster_url || r.poster_url);
-    const isList = r.kind === 'list', isEntry = r.kind === 'entry';
+    const who = r.person || {}, id = attrJSON(r.id), e = r.entry, k = r.kind || 'title';
+    const posterUrl = r.poster_path ? _socImg(r.poster_path, 'w342') : safeURL(e?.poster_url || r.poster_url);
+    const isList = k === 'list', isEntry = k === 'entry';
     const open = isList ? `MSSShare._openList(${id})` : isEntry && e ? `MSSShare._views(${id}, 'info')` : `MSSShare._view(${id})`;
-    const verb = box === 'received'
-      ? (isEntry ? 'watched this' : isList ? 'shared a list' : 'recommends')
-      : (isEntry ? 'You shared what you watched with' : isList ? 'You shared a list with' : 'You recommended this to');
-    const from = box === 'received' ? `<b translate="no">${_socEsc(_socName(who))}</b> ${verb}` : `${verb} <b translate="no">${_socEsc(_socName(who))}</b>`;
+    const name = `<b translate="no">${_socEsc(_socName(who))}</b>`;
+    const line = box === 'received'
+      ? `${name} ${isEntry ? 'watched this' : isList ? 'shared a list' : 'recommends this'}`
+      : `${isEntry ? 'You told' : isList ? 'You shared it with' : 'You sent it to'} ${name}${isEntry ? ' you watched it' : ''}`;
     const score = isEntry && e && liveScore(e) != null ? Number(liveScore(e)).toFixed(1) : null;
-    const tag = isList ? `<span class="type-label rec-list-tag">${icon('layers', 11)} List · ${r.list_count || 0} ${r.list_count === 1 ? 'title' : 'titles'}</span>`
-      : r.tmdb_type ? `<span class="${r.tmdb_type === 'movie' ? 'type-label' : 'type-label type-label-tv'}">${r.tmdb_type === 'movie' ? 'Movie' : 'TV Show'}</span>` : '';
-    const add = box === 'received' && !isList && r.tmdb_id
-      ? (r.in_library ? `<span class="rec-in">${icon('check', 13)} In your library</span>` : `<button type="button" class="btn-add-entry" onclick="MSSShare._add(${id}, this)">${icon('plus', 14)} Add to Watchlist</button>`) : '';
-    const main = isList ? `<button type="button" class="btn-add-entry" onclick="${open}">${icon('layers', 14)} Open List</button>`
-      : isEntry && e ? `<button type="button" class="${add ? 'poll-link' : 'btn-add-entry'}" onclick="MSSShare._views(${id}, '${score ? 'rate' : 'info'}')">${icon('ratingStar', 13)} ${score ? 'Rating & note' : 'See it'}</button>` : '';
-    return `<article class="rec-card${isList ? ' is-list' : ''}" id="rec-${r.id}">
-      <button type="button" class="rec-poster" onclick="${open}" aria-label="Open ${_socEsc(r.title)}">${posterUrl ? `<img src="${posterUrl}" alt="" loading="lazy">` : icon(isList ? 'layers' : 'film', 22)}</button>
+    const type = !isList && r.tmdb_type ? `<span class="${r.tmdb_type === 'movie' ? 'type-label' : 'type-label type-label-tv'}">${r.tmdb_type === 'movie' ? 'Movie' : 'TV Show'}</span>` : '';
+    const tags = `${type}${isList ? `<span class="w-ep-badge">${r.list_count || 0} ${r.list_count === 1 ? 'title' : 'titles'}</span>` : ''}${isEntry && e?.notes?.trim() ? `<span class="rec-has-note">${icon('notebook', 12)} Has a note</span>` : ''}`;
+    const libTag = () => inLib ? `<span class="rec-in">${icon('check', 12)} In your library</span>` : '';
+    const primary = isList ? `<button type="button" class="btn-add-entry" onclick="${open}">${icon('layers', 14)} Open List</button>`
+      : isEntry && e ? `<button type="button" class="btn-add-entry" onclick="MSSShare._views(${id}, '${score ? 'rate' : 'info'}')">${icon('ratingStar', 14)} ${score ? 'Their rating & note' : 'See it'}</button>`
+      : '';
+    const inLib = box === 'received' && !isList && r.tmdb_id && r.in_library;
+    const add = box === 'received' && !isList && r.tmdb_id && !r.in_library
+      ? `<button type="button" class="${primary ? 'rec-btn' : 'btn-add-entry'}" onclick="MSSShare._add(${id}, this)">${icon('plus', 14)} Add to Watchlist</button>` : '';
+    return `<article class="rec-card k-${k}" id="rec-${r.id}">
+      <button type="button" class="rec-poster" onclick="${open}" aria-label="Open ${_socEsc(r.title)}">
+        ${posterUrl ? `<img src="${posterUrl}" alt="" loading="lazy">` : `<span class="rec-poster-ph">${icon(isList ? 'layers' : 'film', 26)}${isList ? `<b>${r.list_count || 0}</b>` : ''}</span>`}
+        ${score ? `<span class="rec-score" title="${_socEsc(_socName(who))}’s score">★ ${score}</span>` : ''}
+      </button>
       <div class="rec-body">
-        <div class="rec-from">${_socAv(who, 22)}<span>${from} · ${_notifTimeAgo(r.created_at)}</span></div>
+        <div class="rec-top"><span class="rec-kind">${icon(KIND[k][1], 11)} ${KIND[k][0]}</span><time datetime="${_socEsc(r.created_at)}">${_notifTimeAgo(r.created_at)}</time></div>
         <button type="button" class="rec-title" onclick="${open}"><b translate="no">${_socEsc(r.title)}</b>${r.year ? `<span class="title-year-inline">${_socEsc(r.year)}</span>` : ''}</button>
-        <div class="rec-tags">${tag}${score ? `<span class="rec-score" title="${_socEsc(_socName(who))}’s score">★ ${score}</span>` : ''}${isEntry && e?.notes?.trim() ? `<span class="rec-has-note">${icon('notebook', 12)} Note</span>` : ''}</div>
-        ${r.message ? `<blockquote class="rec-msg" translate="no">${_socEsc(r.message)}</blockquote>` : ''}
-        ${isEntry && !e ? `<div class="pf-r-msg">They’ve removed this title from their library.</div>` : ''}
+        ${tags || inLib ? `<div class="rec-tags">${tags}${libTag()}</div>` : ''}
+        <div class="rec-from">${_socAv(who, 24)}<span>${line}</span></div>
+        ${r.message ? `<div class="rec-msg" translate="no">${_socEsc(r.message)}</div>` : ''}
+        ${isEntry && !e ? `<div class="rec-gone">They’ve removed this title from their library.</div>` : ''}
         <div class="rec-acts">
-          ${add}${main}
-          ${!isList ? `<button type="button" class="poll-link" onclick="MSSShare._view(${id})">${icon('info', 13)} Details</button>` : ''}
-          <button type="button" class="poll-link poll-danger" onclick="MSSShare._remove(${id})">${box === 'received' ? `${icon('x', 13)} Hide` : `${icon('trash', 13)} Unsend`}</button>
+          ${primary}${add}
+          ${!isList ? `<button type="button" class="rec-icon" onclick="MSSShare._view(${id})" aria-label="Details" title="Details">${icon('info', 15)}</button>` : ''}
+          <button type="button" class="rec-icon rec-icon-x" onclick="MSSShare._remove(${id})" aria-label="${box === 'received' ? 'Hide' : 'Unsend'}" title="${box === 'received' ? 'Hide' : 'Unsend'}">${icon(box === 'received' ? 'x' : 'trash', 15)}</button>
         </div>
       </div>
     </article>`;
@@ -584,7 +605,7 @@ const MSSShare = (() => {
   }
   async function remove(id) {
     if (box === 'sent') {
-      const ok = await showConfirm({ title: 'Unsend this?', message: 'It disappears from your friend’s Recommendations.', confirmText: 'Unsend', iconName: 'trash' });
+      const ok = await showConfirm({ title: 'Unsend this?', message: 'It disappears from your friend’s Inbox.', confirmText: 'Unsend', iconName: 'trash' });
       if (!ok) return;
     }
     try {
@@ -598,7 +619,7 @@ const MSSShare = (() => {
   return Object.assign(api, {
     open: openSend, inbox, refreshCount,
     _find: drawFriends, _pick: pick, _send: send, _close: closeSend,
-    _box: k => { box = k; inbox(el, user); }, _add: add, _remove: remove,
+    _box: k => { box = k; kind = 'all'; inbox(el, user); }, _kind: k => { kind = k; drawRecs(); }, _add: add, _remove: remove,
     _view: id => { const r = recs.find(x => x.id === id); if (!r) return; r.tmdb_id ? MSSInfo.fromDiscover(itemOf(r)) : r.entry && MSSInfo.fromEntry(r.entry); },
     // "I watched this" → their entry in Info · Ratings · Note (read-only, "Sam's rating")
     _views: (id, start) => { const r = recs.find(x => x.id === id); if (r?.entry) MSSViews.open(r.entry, { start, profile: r.person || {} }); },
