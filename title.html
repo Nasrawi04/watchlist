@@ -338,6 +338,7 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .ep-popup-meta-row { display:flex; flex-wrap:wrap; gap:8px 16px; font-size:13px; color:var(--text-3); margin-bottom:1.25rem; }
 .ep-popup-meta-row span { display:inline-flex; align-items:center; gap:5px; }
 .ep-popup-rating { font-family:var(--bebas); color:var(--olive-light); font-weight:400; font-size:18px; letter-spacing:.3px; }
+.td-ep-chat { margin-top:1.25rem; }
 .ep-popup-overview { font-size:14.5px; color:var(--text-2); line-height:1.75; white-space:pre-line; }
 .td-season-loading { padding:16px; font-size:12.5px; color:var(--text-3); text-align:center; }
 #tdEpisodesList { margin-top:1rem; }
@@ -456,6 +457,10 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
   .td-friends-tabs .pn-toggle-btn { flex:1; justify-content:center; font-size:12.5px; padding:9px 6px; }
   .td-friends-avg { align-items:flex-start; text-align:start; }
 }
+/* the smallest phones: the three tabs share the width, a long label wraps instead of being cut off */
+@media(max-width:400px) {
+  .td-friends-tabs .pn-toggle-btn { min-width:0; white-space:normal; flex-wrap:wrap; text-align:center; gap:2px 5px; font-size:12px; padding:8px 4px; line-height:1.2; }
+}
 @media(prefers-reduced-motion:reduce) { .td-friend-photo { transition:none; } }
 </style>
   <!-- PWA -->
@@ -489,6 +494,7 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 <script src="js/info-popup.js"></script>
 <script src="js/list-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
+<script src="js/episode-chat.js"></script>
 <script src="js/discover-categories.js"></script>
 <script>
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -1516,6 +1522,7 @@ function _openEpisodePopup(index) {
         ${date ? `<span>${date}</span>` : ''}
       </div>
       <div class="ep-popup-overview" translate="no">${esc(ep.overview) || mssT('No description available.')}</div>
+      ${_tdUser ? `<button type="button" class="btn-add-entry td-ep-chat" onclick="_tdEpChat(${index})">${icon('comment', 14)} Friends’ Chat</button>` : ''}
     </div>`;
 
   MSSDialog.open(document.getElementById('epPopupOverlay'));
@@ -1524,6 +1531,13 @@ function _openEpisodePopup(index) {
 // "Jun 2, 2013" (cards) / "June 2, 2013" (popup) — TMDB gives 2013-06-02
 function _tdEpDate(d, month) {
   return d ? new Date(d + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { year: 'numeric', month, day: 'numeric' }) : '';
+}
+// Episode chat (episode-chat.js) — friends-only, unlocks once you've watched it
+function _tdEpChat(index) {
+  const ep = _tdCurrentEpisodes[index]; if (!ep) return;
+  // the episode's place in its season (1, 2, 3…) — same as your progress and the Episodes page
+  // (some shows number episodes across the whole series on TMDB)
+  MSSEpChat.open({ tmdb_id: Number(_tdId), season: ep.season_number, episode: index + 1, show: _tdDetail?.name, name: ep.name, poster_path: _tdDetail?.poster_path });
 }
 function _closeEpisodePopup() { MSSDialog.close(document.getElementById('epPopupOverlay')); }
 
