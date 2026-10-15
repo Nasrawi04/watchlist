@@ -202,6 +202,43 @@
 .fn-text.clamp { display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
 
 /* v621: pin icon on the cover */
+/* Blend */
+.bl-head { display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:16px 18px; margin-bottom:1.25rem; border-radius:var(--radius);
+  background:linear-gradient(135deg, var(--card), var(--olive-faint)); border:0.5px solid var(--border-olive); }
+.bl-avs { display:flex; flex-shrink:0; }
+.bl-avs .fr-av { border:2px solid var(--card); box-sizing:content-box; }
+.bl-avs .fr-av + .fr-av { margin-inline-start:-14px; }
+.bl-head-info { flex:1; min-width:160px; }
+.bl-head-title { font-family:var(--serif); font-size:20px; font-weight:600; color:var(--text); }
+.bl-head-sub { font-size:12.5px; color:var(--text-3); margin-top:2px; }
+.bl-head-sub b { font-family:var(--bebas); font-weight:400; font-size:16px; color:var(--olive-light); letter-spacing:.3px; }
+.bl-head-acts { display:flex; gap:8px; flex-wrap:wrap; }
+.bl-head-acts .rec-btn { padding:9px 14px; font-size:13px; }
+.bl-more { width:52px; height:52px; border-radius:50%; margin-inline-start:-14px; border:2px solid var(--card); display:inline-flex; align-items:center; justify-content:center;
+  background:var(--bg-3); color:var(--text-2); font-family:var(--bebas); font-size:18px; box-sizing:content-box; }
+.bl-surprise { display:flex; gap:18px; align-items:center; }
+.bl-surprise-poster { width:120px; aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; color:var(--text-3); box-shadow:0 10px 26px rgba(0,0,0,.3); }
+.bl-surprise-poster img { width:100%; height:100%; object-fit:cover; }
+.bl-surprise-info { display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; }
+.bl-surprise-info b { font-family:var(--serif); font-size:22px; font-weight:600; color:var(--text); line-height:1.2; overflow-wrap:anywhere; }
+.bl-surprise-info small { font-size:12.5px; color:var(--text-3); }
+.bl-surprise-info .poll-link { margin-top:4px; }
+.bl-sec { margin-bottom:1.5rem; }
+.bl-sec-head { display:flex; align-items:center; gap:8px; margin-bottom:10px; font-family:var(--serif); font-size:13px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); }
+.bl-sec-head b { font-family:var(--bebas); font-weight:400; font-size:15px; letter-spacing:.3px; color:var(--text-3); }
+.bl-row { display:grid; grid-auto-flow:column; grid-auto-columns:clamp(140px, 16vw, 190px); gap:14px; overflow-x:auto; padding:2px 2px 12px; scroll-snap-type:x proximity; scrollbar-width:thin; }
+.bl-row .q-card { scroll-snap-align:start; min-width:0; }
+.bl-why { font-size:11.5px; color:var(--text-3); line-height:1.35; margin-top:3px; }
+.bl-why b { font-family:var(--bebas); font-weight:400; font-size:14px; color:var(--olive-light); letter-spacing:.3px; }
+.bl-none { font-size:13px; color:var(--text-3); padding:12px 0; }
+.bl-loading { display:inline-flex; align-items:center; gap:10px; }
+.bl-loading .spinner { width:16px; height:16px; }
+@media(max-width:640px) { .bl-head { padding:14px; gap:12px; } .bl-head-acts { width:100%; } .bl-head-acts > * { flex:1 1 auto; justify-content:center; } .bl-row { grid-auto-columns:42vw; gap:10px; }
+  .bl-avs .fr-av, .bl-more { width:42px !important; height:42px !important; } .bl-surprise { flex-direction:column; text-align:center; } .bl-surprise-info { align-items:center; } }
+.fm-match { position:absolute; top:10px; inset-inline-start:10px; z-index:2; display:inline-flex; align-items:center; gap:5px; padding:4px 8px; border-radius:4px;
+  font-size:11.5px; font-weight:700; letter-spacing:.2px; color:#fff; background:rgba(0,0,0,.55); backdrop-filter:blur(6px); border:0.5px solid rgba(255,255,255,.2); }
+.fm-match.hi { background:var(--olive); border-color:rgba(255,255,255,.3); }
+.fm-match.lo { color:rgba(255,255,255,.8); }
 .fm-pin { position:absolute; top:10px; inset-inline-end:10px; z-index:2; width:34px; height:34px; border-radius:50%; cursor:pointer;
   display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.35);
   background:rgba(0,0,0,.45); color:#fff; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); opacity:0; transition:opacity .15s, background .15s; }
@@ -436,6 +473,9 @@
       </section>
       <section id="socPolls" aria-label="Polls" hidden></section>
       <section id="socRecs" aria-label="Inbox" hidden></section>
+      <section id="socEp" aria-label="Episode Chat" hidden></section>
+      <section id="socNight" aria-label="Movie Night" hidden></section>
+      <section id="socCh" aria-label="Challenges" hidden></section>
     </div>
   </div>
 
@@ -453,6 +493,9 @@
 <script src="js/list-popup.js"></script>
 <script src="js/sort-filter.js"></script>
 <script src="js/social.js"></script>
+<script src="js/episode-chat.js"></script>
+<script src="js/movie-night.js"></script>
+<script src="js/challenges.js"></script>
 <script>
 let _fUser = null;
 let _fProfile = null;
@@ -553,7 +596,11 @@ async function loadFriends() {
   const sub = document.getElementById('friendsPageSub');
   if (sub) sub.textContent = `${_frAccepted.length} friend${_frAccepted.length === 1 ? '' : 's'}${_frIncoming.length ? ` · ${_frIncoming.length} request${_frIncoming.length === 1 ? '' : 's'}` : ''}`;
   ['frFriends', 'frActivity', 'frLists', 'frNotes', 'frShared'].forEach(k => SF.invalidate && SF.invalidate(k));
+  Object.keys(_frMatchMemo).forEach(k => delete _frMatchMemo[k]);
   _frRender();
+  // Your own titles, quietly — taste match % on the friend cards (and ready for Compare)
+  if (_frAccepted.length) _cmpLoad().then(() => { SF.invalidate && SF.invalidate('frFriends'); if (_frTab === 'friends') _frRender(); }).catch(() => {});
+  if (_socSection === 'night') MSSNight.redraw();       // watchlist suggestions need your friends' titles
 }
 
 function _frToolbar(label, count, scope, noun = 'items') {
@@ -581,6 +628,7 @@ function _frRender() {
   if (_frTab === 'lists') return _frRenderLists();
   if (_frTab === 'notes') return _frRenderNotes();
   if (_frTab === 'compare') return _frRenderCompare();
+  if (_frTab === 'blend') return _frRenderBlend();
 }
 function _frEmptyHTML(ic, title, text) {
   return `<div class="fr-empty"><div class="fr-empty-ic">${icon(ic, 26)}</div><div class="fr-empty-title">${escHTML(title)}</div><div class="fr-empty-text">${escHTML(text)}</div></div>`;
@@ -602,13 +650,15 @@ SF.register('frFriends', {
   presets: {
     activity: { header: 'Activity', opts: [['active', 'Recently Active'], ['watched_most', 'Most Watched']] },
     added:    { header: 'Friends Since', opts: [['newest', 'Newest'], ['oldest', 'Oldest']] },
+    taste:    { header: 'Taste', opts: [['match', 'Best Match']] },
   },
-  sorts: () => ['activity', 'added', 'alpha'],
+  sorts: () => ['activity', 'taste', 'added', 'alpha'],
   filters: () => [],
   addedDate: f => f.created_at,
   compare: {
     active: (a, b) => new Date(_frStats[b.friendId]?.recent || 0) - new Date(_frStats[a.friendId]?.recent || 0),
     watched_most: (a, b) => (_frStats[b.friendId]?.completed || 0) - (_frStats[a.friendId]?.completed || 0),
+    match: (a, b) => (_frMatchPct(b.friendId) ?? -1) - (_frMatchPct(a.friendId) ?? -1),
   },
   // Your pinned friend always comes first
   postSort: (sec, list) => { const pin = _fProfile?.pinned_friend_id; return pin ? [...list.filter(f => f.friendId === pin), ...list.filter(f => f.friendId !== pin)] : list; },
@@ -635,6 +685,7 @@ function _frMemberCard(f) {
     <div class="fm-cover">
       ${cover.length ? cover.map(e => `<div class="fm-cover-tile">${_frPosterHTML(e, 'fm-cover-img')}</div>`).join('') : '<div class="fm-cover-empty"></div>'}
       <div class="fm-cover-shade"></div>
+      ${_frMatchPct(f.friendId) != null ? (m => `<span class="fm-match${m >= 80 ? ' hi' : m < 55 ? ' lo' : ''}" title="Taste match — based on ${_cmpMatch(f.friendId).rated} titles you've both rated">${icon('compare', 11)} ${m}% match</span>`)(_frMatchPct(f.friendId)) : ''}
       ${(!somePinned || isPinned) ? `<button type="button" class="fm-pin${isPinned ? ' on' : ''}" title="${isPinned ? 'Unpin' : 'Pin to top'}" aria-label="${isPinned ? 'Unpin' : 'Pin to top'}" onclick="event.stopPropagation();togglePinFriend(${attrJSON(f.friendId)})">${isPinned ? _PIN_SVG_FILLED : _PIN_SVG}</button>` : ''}
     </div>
     <div class="fm-body">
@@ -887,7 +938,6 @@ function _frRenderNotes() {
    public lists and notes — the same feeds as the Lists and Notes pages
    (get_social_lists / get_social_notes), drawn with the same cards. */
 let _frScopeMode = { lists: 'friends', notes: 'friends' };
-try { Object.assign(_frScopeMode, JSON.parse(sessionStorage.getItem('social_scope') || '{}')); } catch {}
 const _frCommunity = () => (_frTab === 'lists' || _frTab === 'notes') && _frScopeMode[_frTab] === 'community';
 function _frScopeHTML() {
   if (_socSection !== _frTab || !(_frTab in _frScopeMode) || !_fUser) return '';
@@ -897,7 +947,6 @@ function _frScopeHTML() {
 }
 function _frSetScope(k) {
   _frScopeMode[_frTab] = k;
-  try { sessionStorage.setItem('social_scope', JSON.stringify(_frScopeMode)); } catch {}
   _frRender();
 }
 const _frLikeScore = x => Number(x.like_count || 0) - Number(x.dislike_count || 0);
@@ -1071,21 +1120,18 @@ SF.register('frShared', {
 });
 
 // Taste match with one friend: how closely your scores line up
+// (shared formula: mssTasteMatch, config.js — also on friend cards and profiles)
+const _frMatchMemo = {};
 function _cmpMatch(uid) {
-  const me = _fUser.id, mineIdx = {};
-  _cmpMine.forEach(e => { mineIdx[_cmpKeyOf(e)] = e; });
-  const pairs = [];
-  _frEntries.filter(e => e.user_id === uid).forEach(e => {
-    const m = mineIdx[_cmpKeyOf(e)]; if (!m) return;
-    pairs.push({ m, t: e, a: _frScore(m), b: _frScore(e) });
-  });
-  const rated = pairs.filter(p => p.a != null && p.b != null);
-  const avgDiff = rated.length ? rated.reduce((s, p) => s + Math.abs(p.a - p.b), 0) / rated.length : null;
-  const pct = avgDiff != null ? Math.max(0, Math.round(100 - avgDiff * 12)) : null;
+  if (_frMatchMemo[uid]) return _frMatchMemo[uid];
+  const t = mssTasteMatch(_cmpMine, _frEntries.filter(e => e.user_id === uid));
+  const rated = t.rated, avgDiff = t.avgDiff, pct = t.pct, pairs = t.pairs;
   const loved = rated.slice().sort((x, y) => (y.a + y.b) - (x.a + x.b))[0];
   const split = rated.slice().sort((x, y) => Math.abs(y.a - y.b) - Math.abs(x.a - x.b))[0];
-  return { shared: pairs.length, rated: rated.length, pct, avgDiff, loved, split: split && Math.abs(split.a - split.b) >= 1 ? split : null };
+  return (_frMatchMemo[uid] = { shared: pairs.length, rated: rated.length, pct, avgDiff, loved, split: split && Math.abs(split.a - split.b) >= 1 ? split : null });
 }
+// A friend's match % once your own titles are in (null: not enough rated by both yet)
+const _frMatchPct = uid => _cmpMine ? _cmpMatch(uid).pct : null;
 
 async function _frRenderCompare() {
   const c = document.getElementById('frContent');
@@ -1238,17 +1284,241 @@ function _cmpShowTitle(picker) {
       return `<article class="fn-card"><div class="fn-by">${_frAvHTML(prof(u), 22)}<span translate="no">${escHTML(name(u))}</span></div>${mssIsSpoiler(e) && u !== me ? mssSpoilerHTML(text, { compact: true, id: e.id }) : text}</article>`; }).join('')}</div>` : ''}`;
 }
 
+/* ══ BLEND ══
+   Pick one friend — or a group (up to 8) — and get one list made for all of you:
+     • You all want to watch it (on 2+ of your watchlists)
+     • Loved by a friend, new to you   • You loved it, new to them
+     • Picked for all of you — TMDB recommendations from titles 2+ of you rated highly
+   Each title says why it's there. Then: Save as a list / send it, "Surprise us"
+   (a random pick → straight into a Movie Night), or "Start a Movie Night" with the
+   top titles up for a vote. Movie Night uses _blendFor() for its suggestions too. */
+let _blendGroup = [];
+const _blendTmdb = {};   // group key → TMDB picks (or a promise while loading)
+const _blKey = e => e.tmdb_id && e.tmdb_type ? `t:${e.tmdb_type}:${e.tmdb_id}` : `n:${e.cat}:${(e.title || '').trim().toLowerCase()}`;
+const _blWant = e => e.status === 'queue' || e.status === 'up_next';
+const _blDone = e => e.status === 'completed' || e.status === 'ongoing';
+const _blNames = uids => { const n = uids.map(u => _frName(u)); return n.length <= 2 ? n.join(' & ') : `${n.slice(0, -1).join(', ')} & ${n[n.length - 1]}`; };
+// The Blend for you + these friends (friend ids): sections + seeds for TMDB picks
+function _blendFor(uids) {
+  uids = uids.filter(u => _frProfiles[u]);
+  const me = _fUser.id, mine = _cmpMine || [];
+  const libs = { [me]: mine };
+  uids.forEach(u => { libs[u] = _frEntries.filter(e => e.user_id === u); });
+  const idx = {};   // key → { e, by: {uid: entry} }
+  Object.entries(libs).forEach(([u, list]) => list.forEach(e => { const k = _blKey(e); (idx[k] ||= { e, by: {} }).by[u] = e; if (u === me) idx[k].e = e; }));
+  const people = [me, ...uids], all = Object.values(idx);
+  const friendsWith = (x, test) => uids.filter(u => x.by[u] && test(x.by[u]));
+  // on 2+ watchlists (you and at least one friend, or 2+ friends)
+  const want = all.map(x => ({ x, who: people.filter(u => x.by[u] && _blWant(x.by[u])) })).filter(y => y.who.length >= 2)
+    .sort((a, b) => b.who.length - a.who.length).slice(0, 24)
+    .map(({ x, who }) => ({ e: x.e, why: who.length === people.length ? (people.length === 2 ? 'On both your watchlists' : 'On everyone’s watchlist') : `On ${who.length} of your watchlists` }));
+  // loved by a friend (8+), not in your library
+  const theyLoved = all.filter(x => !x.by[me]).map(x => ({ x, who: friendsWith(x, e => _blDone(e) && _frScore(e) >= 8) })).filter(y => y.who.length)
+    .sort((a, b) => b.who.length - a.who.length || Math.max(...b.who.map(u => _frScore(b.x.by[u]))) - Math.max(...a.who.map(u => _frScore(a.x.by[u]))))
+    .slice(0, 24).map(({ x, who }) => ({ e: x.by[who[0]], why: who.length === 1 ? `${escHTML(_frName(who[0]))} rated it <b>${_frScore(x.by[who[0]]).toFixed(1)}</b>` : `Loved by ${escHTML(_blNames(who))}` }));
+  // you loved it (8+), and it's new to every friend in the group
+  const youLoved = all.filter(x => x.by[me] && _blDone(x.by[me]) && _frScore(x.by[me]) >= 8 && uids.every(u => !x.by[u]))
+    .sort((a, b) => _frScore(b.by[me]) - _frScore(a.by[me])).slice(0, 24)
+    .map(x => ({ e: x.by[me], why: `You rated it <b>${_frScore(x.by[me]).toFixed(1)}</b>` }));
+  // seeds: rated 7.5+ by 2+ of you (best first), else each person's favourite
+  const shared = all.filter(x => x.e.tmdb_id).map(x => ({ x, r: people.filter(u => x.by[u] && _frScore(x.by[u]) >= 7.5) })).filter(y => y.r.length >= 2)
+    .sort((a, b) => b.r.length - a.r.length).map(y => y.x.e);
+  const top = list => list.filter(e => e.tmdb_id && _blDone(e)).sort((a, b) => (_frScore(b) ?? 0) - (_frScore(a) ?? 0))[0];
+  return { uids, want, theyLoved, youLoved, have: new Set(Object.keys(idx)),
+    seeds: shared.length ? shared.slice(0, 4) : people.map(u => top(libs[u])).filter(Boolean).slice(0, 4) };
+}
+async function _blendLoadPicks(d) {
+  const key = d.uids.slice().sort().join(',');
+  if (_blendTmdb[key]) return _blendTmdb[key];
+  _blendTmdb[key] = (async () => {
+    const tally = {};
+    await Promise.all(d.seeds.map(async e => {
+      try {
+        const res = await tmdbFetch(`${TMDB_BASE}/${e.tmdb_type}/${e.tmdb_id}/recommendations?api_key=${TMDB_KEY}&language=en-US`);
+        const j = res.ok ? await res.json() : null;
+        (j?.results || []).slice(0, 20).forEach((r, i) => {
+          const t = r.media_type === 'tv' || (!r.media_type && e.tmdb_type === 'tv') ? 'tv' : 'movie';
+          const k = `t:${t}:${r.id}`;
+          if (d.have.has(k) || (r.genre_ids || []).includes(16) && !(e.cat === 'anime' || e.cat === 'cartoons')) return;
+          const x = (tally[k] ||= { r, t, n: 0, rank: 0, from: e.title });
+          x.n += 1; x.rank += 20 - i;
+        });
+      } catch {}
+    }));
+    return Object.values(tally).sort((a, b) => b.n - a.n || b.rank - a.rank || (b.r.vote_average || 0) - (a.r.vote_average || 0)).slice(0, 18)
+      .map(x => ({ ..._discLite(x.r, x.t), _why: x.n > 1 ? `Fits ${x.n} titles you love` : `Because you liked ${x.from}` }));
+  })().then(v => (_blendTmdb[key] = v), () => (_blendTmdb[key] = []));
+  return _blendTmdb[key];
+}
+// a TMDB result → what MSSInfo / MSSCard need
+const _discLite = (r, t) => ({ id: r.id, tmdb_id: r.id, media_type: t, title: r.title || r.name, year: (r.release_date || r.first_air_date || '').slice(0, 4),
+  poster_url: r.poster_path ? TMDB_FULL + r.poster_path : null, score: r.vote_average });
+// any Blend item → a Movie Night option (TMDB id, type, title, poster path, year)
+const _blOption = e => e && e.tmdb_id ? { tmdb_id: Number(e.tmdb_id), tmdb_type: e.media_type || e.tmdb_type, title: e.title,
+  poster_path: (e.poster_url || '').match(/\/[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp)$/)?.[0] || null, year: String(e.year || '').slice(0, 4) } : null;
+function _blendCard(e, why, open) {
+  const t = e.media_type || (e.tmdb_type === 'movie' || e.cat === 'movies' ? 'movie' : 'tv');
+  return MSSCard.poster({ cls: 'bl-card', onclick: open, title: e.title, year: e.year, poster: e.poster_url, type: t,
+    below: `<div class="bl-why">${why}</div>` });
+}
+function _blendRow(title, ic, cards, empty) {
+  return `<section class="bl-sec"><div class="bl-sec-head">${icon(ic, 14)}<span>${title}</span><b>${cards.length}</b></div>
+    ${cards.length ? `<div class="bl-row">${cards.join('')}</div>` : `<div class="bl-none">${empty}</div>`}</section>`;
+}
+let _blendNow = null;    // what's on screen: { d, picks }
+async function _frRenderBlend() {
+  const c = document.getElementById('frContent');
+  document.getElementById('frToolbar').style.display = 'none';
+  if (!_cmpMine) { c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; await _cmpLoad(); if (_frTab !== 'blend') return; }
+  _blendGroup = _blendGroup.filter(u => _frProfiles[u]);
+  const g = _blendGroup;
+  const picker = `<section class="cp-pick">
+      <div class="cp-pick-head"><div class="fr-toolbar-title">Blend with</div><div class="cp-pick-hint">${g.length ? `${g.length} selected · up to 8` : 'Pick one friend — or a few for a group Blend'}</div></div>
+      <div class="cp-pick-row">${_frAccepted.map(f => { const on = g.includes(f.friendId);
+        return `<button type="button" class="cp-person${on ? ' on' : ''}" aria-pressed="${on}" onclick="_blendPick(${attrJSON(f.friendId)})">${_frAvHTML(f.friendProfile, 52)}<span translate="no">${escHTML(_frName(f.friendId))}</span>${on ? `<i>${icon('check', 11)}</i>` : ''}</button>`; }).join('')}</div>
+    </section>`;
+  if (!g.length) {
+    c.innerHTML = picker + _frEmptyHTML('shuffle', 'Blend your taste with friends', 'Pick one friend, or a few for a group Blend — one list for all of you: what you all want to watch, what each of you loved that the others haven’t seen, and new picks you’ll all like. Then let us pick for your Movie Night.');
+    return;
+  }
+  const d = _blendFor(g), single = g.length === 1, names = escHTML(_blNames(g)), first = escHTML(_frName(g[0]));
+  _blendNow = { d, picks: null };
+  const m = single ? _cmpMatch(g[0]) : null;
+  window._blendMine = Object.fromEntries((_cmpMine || []).map(e => [e.id, e]));
+  const mineOpen = e => `MSSViews.open(window._blendMine[${attrJSON(e.id)}], { own: true, start: 'info' })`;
+  const theirOpen = e => e.user_id === _fUser.id ? mineOpen(e) : `_frViews(window._frEntryMap[${attrJSON(e.id)}], 'rate')`;
+  const head = `<div class="bl-head">
+      <div class="bl-avs">${_frAvHTML(_cmpProfiles[_fUser.id] || {}, 52)}${g.slice(0, 4).map(u => _frAvHTML(_frProfiles[u], 52)).join('')}${g.length > 4 ? `<span class="bl-more">+${g.length - 4}</span>` : ''}</div>
+      <div class="bl-head-info">
+        <div class="bl-head-title">You &amp; <span translate="no">${names}</span></div>
+        <div class="bl-head-sub">${m && m.pct != null ? `<b>${m.pct}%</b> taste match · ` : ''}${d.want.length + d.theyLoved.length + d.youLoved.length} titles so far${single ? '' : ` · ${g.length + 1} people`}</div>
+      </div>
+      <div class="bl-head-acts">
+        <button type="button" class="btn-add-entry" onclick="_blendSurprise()">${icon('shuffle', 14)} Surprise us</button>
+        <button type="button" class="rec-btn" onclick="_blendNight(this)">${icon('film', 14)} Start a Movie Night</button>
+        <button type="button" class="rec-btn" onclick="_blendSave(this)">${icon('layers', 14)} Save as List</button>
+      </div>
+    </div>`;
+  const rows = [
+    _blendRow(single ? 'You both want to watch' : 'You want to watch together', 'bookmark', d.want.map(x => _blendCard(x.e, x.why, theirOpen(x.e))), single ? 'Nothing on both your watchlists yet.' : 'Nothing on two of your watchlists yet.'),
+    _blendRow(single ? `${first} loved, you haven’t seen` : 'Loved by a friend, new to you', 'heart', d.theyLoved.map(x => _blendCard(x.e, x.why, theirOpen(x.e))), single ? `Nothing yet — once ${first} rates titles you haven’t seen, they show up here.` : 'Nothing yet — once your friends rate titles you haven’t seen, they show up here.'),
+    _blendRow(single ? `You loved, ${first} hasn’t seen` : 'You loved, new to all of them', 'ratingStar', d.youLoved.map(x => _blendCard(x.e, x.why, mineOpen(x.e))), single ? `Rate a few favourites ${first} hasn’t seen and they’ll appear here.` : 'Rate a few favourites none of them have seen and they’ll appear here.'),
+    `<div id="blPicks">${_blendRow(single ? 'Picked for both of you' : 'Picked for all of you', 'sparkles', [], `<span class="bl-loading"><span class="spinner"></span> Finding picks you’ll all like…</span>`)}</div>`,
+  ];
+  c.innerHTML = picker + head + rows.join('');
+  const picks = await _blendLoadPicks(d);
+  if (_frTab !== 'blend' || _blendNow?.d !== d) return;
+  _blendNow.picks = picks;
+  window._blendPicksNow = Object.fromEntries(picks.map(p => [p.media_type + ':' + p.tmdb_id, p]));
+  const box = document.getElementById('blPicks');
+  if (box) box.innerHTML = _blendRow(single ? 'Picked for both of you' : 'Picked for all of you', 'sparkles',
+    picks.map(p => _blendCard(p, escHTML(p._why), `MSSInfo.fromDiscover(window._blendPicksNow[${attrJSON(p.media_type + ':' + p.tmdb_id)}])`)),
+    d.seeds.length ? 'No new picks right now — try again after you rate a few more titles.' : 'Rate a few titles and we’ll find picks for you.');
+}
+function _blendPick(uid) {
+  const i = _blendGroup.indexOf(uid);
+  if (i >= 0) _blendGroup.splice(i, 1);
+  else if (_blendGroup.length >= 8) { showToast('A Blend can have up to 8 friends.', 'err'); return; }
+  else _blendGroup.push(uid);
+  _frRender();
+}
+// Everything in the Blend that can go into a Movie Night, best first (watchlists, picks, loved)
+function _blendPool() {
+  if (!_blendNow) return [];
+  const { d, picks } = _blendNow, seen = new Set(), out = [];
+  [...d.want.map(x => ({ e: x.e, why: x.why })), ...(picks || []).map(p => ({ e: p, why: escHTML(p._why) })), ...d.theyLoved, ...d.youLoved].forEach(x => {
+    const o = _blOption(x.e); if (!o) return;
+    const k = o.tmdb_type + ':' + o.tmdb_id; if (seen.has(k)) return; seen.add(k);
+    out.push({ ...x, o });
+  });
+  return out;
+}
+// Surprise us: a random title from the Blend → make it tonight's Movie Night
+let _blSurprise = null;
+function _blendSurprise() {
+  const pool = _blendPool();
+  if (!pool.length) { showToast('Nothing in this Blend yet — add titles to your watchlists or rate a few.', 'err'); return; }
+  let x = pool[Math.floor(Math.random() * pool.length)];
+  if (pool.length > 1 && _blSurprise && x.o.tmdb_id === _blSurprise.o.tmdb_id) x = pool.find(y => y !== x && y.o.tmdb_id !== _blSurprise.o.tmdb_id) || x;
+  _blSurprise = x;
+  const ov = _socDialog('blSurpriseDlg', 'Surprise pick', () => MSSDialog.close(ov));
+  const poster = x.o.poster_path ? `https://image.tmdb.org/t/p/w342${x.o.poster_path}` : null;
+  document.getElementById('blSurpriseDlgBody').innerHTML = `<div class="bl-surprise">
+      <div class="bl-surprise-poster">${poster ? `<img src="${poster}" alt="">` : icon('film', 34)}</div>
+      <div class="bl-surprise-info">
+        <span class="mn-pick-eyebrow">${icon('shuffle', 12)} Tonight you’re watching</span>
+        <b translate="no">${escHTML(x.o.title)}</b>
+        <small>${[x.o.year, x.o.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small>
+        <div class="bl-why">${x.why}</div>
+        <button type="button" class="poll-link" onclick="MSSInfo.fromDiscover({ id: ${x.o.tmdb_id}, tmdb_id: ${x.o.tmdb_id}, media_type: '${x.o.tmdb_type}', title: ${escHTML(JSON.stringify(x.o.title))}, poster_url: ${poster ? `'${poster}'` : 'null'} })">${icon('info', 13)} Details</button>
+      </div>
+    </div>`;
+  document.getElementById('blSurpriseDlgFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="_blendSurprise()">${icon('shuffle', 14)} Spin again</button>
+    <button type="button" class="sf-apply-btn" onclick="_blendSurpriseNight(this)">Make it a Movie Night</button>`;
+  MSSDialog.open(ov);
+}
+async function _blendSurpriseNight(btn) {
+  const x = _blSurprise; if (!x) return;
+  btn.disabled = true;
+  try {
+    const id = await sb.rpc('create_movie_night', { p_title: `Movie Night with ${_blNames(_blendGroup)}`.slice(0, 80), p_when: null, p_friends: _blendGroup, p_options: [x.o] }).then(r => { if (r.error) throw r.error; return r.data; });
+    await sb.rpc('decide_movie_night', { p_night: id, p_option: null }).then(r => { if (r.error) throw r.error; });
+    MSSDialog.close(document.getElementById('blSurpriseDlg'));
+    showToast(`Movie Night made — you’re watching ${x.o.title}!`);
+    setSocialSection('night', { night: id });
+  } catch (err) { btn.disabled = false; showToast(err?.hint || 'Couldn’t make the Movie Night — try again.', 'err'); }
+}
+// Start a Movie Night with the top Blend titles up for a vote
+async function _blendNight(btn) {
+  const opts = _blendPool().slice(0, 8).map(x => x.o);
+  if (!opts.length) { showToast('Nothing in this Blend yet — add titles to your watchlists or rate a few.', 'err'); return; }
+  btn.disabled = true;
+  try {
+    const id = await sb.rpc('create_movie_night', { p_title: `Movie Night with ${_blNames(_blendGroup)}`.slice(0, 80), p_when: null, p_friends: _blendGroup, p_options: opts }).then(r => { if (r.error) throw r.error; return r.data; });
+    showToast(`Movie Night made with ${opts.length} titles to vote on`);
+    setSocialSection('night', { night: id });
+  } catch (err) { btn.disabled = false; showToast(err?.hint || 'Couldn’t make the Movie Night — try again.', 'err'); }
+}
+// Save the Blend as one of your lists (your titles as themselves, the rest as TMDB titles) — then share it if you like
+async function _blendSave(btn) {
+  if (!_blendNow) return;
+  const mineIdx = Object.fromEntries((_cmpMine || []).map(e => [_blKey(e), e]));
+  const ids = [], seen = new Set();
+  _blendPool().forEach(x => {
+    const k = `t:${x.o.tmdb_type}:${x.o.tmdb_id}`; if (seen.has(k)) return; seen.add(k);
+    ids.push(mineIdx[k] ? mineIdx[k].id : `tmdb:${x.o.tmdb_type}:${x.o.tmdb_id}`);
+  });
+  if (!ids.length) { showToast('Nothing to save yet.', 'err'); return; }
+  btn.disabled = true;
+  try {
+    const title = `Blend: You & ${_blNames(_blendGroup)}`.slice(0, 80);
+    const { data, error } = await sb.from('favorite_lists').insert({ user_id: _fUser.id, cat: 'custom', genre: '', title, items: ids.slice(0, 200) }).select('id').single();
+    if (error) throw error;
+    showToast(`Saved “${title}” to your Lists`);
+    mssRecommend({ kind: 'list', list_id: data.id, title, count: Math.min(ids.length, 200) });
+  } catch (err) { console.error('Blend save:', err); showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save the Blend — try again.', 'err'); }
+  btn.disabled = false;
+}
+
 /* ══ Social side nav (phones: a dropdown) ══
    Friends · Activity · Lists · Notes · Compare share one panel (#socFriends,
    drawn by _frRender); Polls and Inbox live in js/social.js
    (MSSPolls / MSSShare). friends.html?s=<key>&poll=<id> opens a section;
-   ?s=recs&rec=<id>&box=sent|received opens one Inbox item with its reply box. */
+   ?s=recs&rec=<id>&box=sent|received opens one Inbox item with its reply box;
+   ?s=compare&with=<friend id> opens Compare with that friend;
+   ?s=epchat&ep=<tmdb>:<season>:<episode> opens one episode's chat (js/episode-chat.js);
+   ?s=night&night=<id> scrolls to one Movie Night (js/movie-night.js);
+   ?s=challenges&ch=<id> scrolls to one challenge (js/challenges.js). */
 const _SOC = [
   { key: 'friends',  label: 'Friends',         icon: 'users',    panel: 'socFriends' },
   { key: 'activity', label: 'Activity',        icon: 'activity', panel: 'socFriends' },
   { key: 'lists',    label: 'Lists',           icon: 'layers',   panel: 'socFriends' },
   { key: 'notes',    label: 'Notes',           icon: 'notebook', panel: 'socFriends' },
   { key: 'compare',  label: 'Compare',         icon: 'compare',  panel: 'socFriends' },
+  { key: 'blend',    label: 'Blend',           icon: 'shuffle',  panel: 'socFriends' },
+  { key: 'epchat',   label: 'Episode Chat',    icon: 'comment',  panel: 'socEp' },
+  { key: 'night',    label: 'Movie Night',     icon: 'film',     panel: 'socNight' },
+  { key: 'challenges', label: 'Challenges',    icon: 'trophy',   panel: 'socCh' },
   { key: 'polls',    label: 'Polls',           icon: 'poll',     panel: 'socPolls' },
   { key: 'recs',     label: 'Inbox',           icon: 'inbox',    panel: 'socRecs' },
 ];
@@ -1258,6 +1528,7 @@ function _socCount(k) {
   if (k === 'lists') return _frLists.length;
   if (k === 'notes') return _frEntries.filter(e => e.notes && e.notes.trim()).length;
   if (k === 'recs') return MSSShare.count;
+  if (k === 'epchat') return MSSEpChat.count;
   return 0;
 }
 function _socBadge(k) {
@@ -1268,20 +1539,22 @@ function _socBadge(k) {
 function _socNav() {
   document.getElementById('socSideNav').innerHTML = `<div class="disc-side-head">Social</div>` + _SOC.map(x =>
     `<button type="button" class="disc-side-link${_socSection === x.key ? ' active' : ''}" aria-current="${_socSection === x.key ? 'page' : 'false'}" onclick="setSocialSection('${x.key}')">${icon(x.icon, 15)}<span>${x.label}</span>${_socBadge(x.key)}</button>`).join('');
-  const opts = _SOC.map(x => ({ value: x.key, label: x.label + (x.key === 'friends' && _frIncoming.length ? ` (${_frIncoming.length} new)` : x.key === 'recs' && MSSShare.count ? ` (${MSSShare.count})` : '') }));
+  const opts = _SOC.map(x => ({ value: x.key, label: x.label + (x.key === 'friends' && _frIncoming.length ? ` (${_frIncoming.length} new)` : x.key === 'recs' && MSSShare.count ? ` (${MSSShare.count})` : x.key === 'epchat' && MSSEpChat.count ? ` (${MSSEpChat.count} new)` : '') }));
   document.getElementById('socNavDD').innerHTML = _selDDHTML('socNavSel', opts, _socSection, 'setSocialSection');
 }
 function setSocialSection(k, opts = {}) {
   const sec = _SOC.find(x => x.key === k) || _SOC[0];
   _socSection = sec.key;
-  try { sessionStorage.setItem('social_section', sec.key); } catch {}
   const url = new URL(location.href);
   if (sec.key === 'friends') url.searchParams.delete('s'); else url.searchParams.set('s', sec.key);
-  if (!opts.keepPoll) ['poll', 'rec', 'box'].forEach(x => url.searchParams.delete(x));
+  if (!opts.keepPoll) ['poll', 'rec', 'box', 'with', 'ep', 'night', 'ch'].forEach(x => url.searchParams.delete(x));
   history.replaceState(history.state, '', url.pathname + url.search);
-  ['socFriends', 'socPolls', 'socRecs'].forEach(id => { document.getElementById(id).hidden = id !== sec.panel; });
+  ['socFriends', 'socPolls', 'socRecs', 'socEp', 'socNight', 'socCh'].forEach(id => { document.getElementById(id).hidden = id !== sec.panel; });
   if (sec.panel === 'socFriends') { _frTab = sec.key; _frRender(); } else _socNav();
   if (sec.key === 'polls') MSSPolls.mount(document.getElementById('socPolls'), _fUser, { poll: opts.poll });
+  if (sec.key === 'challenges') MSSChallenges.mount(document.getElementById('socCh'), _fUser, { ch: opts.ch });
+  if (sec.key === 'night') MSSNight.mount(document.getElementById('socNight'), _fUser, { night: opts.night });
+  if (sec.key === 'epchat') MSSEpChat.mount(document.getElementById('socEp'), _fUser, { open: opts.ep });
   if (sec.key === 'recs') MSSShare.inbox(document.getElementById('socRecs'), _fUser, { rec: opts.rec, box: opts.box });
   if (!opts.noScroll) window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -1290,7 +1563,7 @@ function setSocialSection(k, opts = {}) {
 document.addEventListener('DOMContentLoaded', () => {
   attachClearButton('addFriendInput');
   const q = new URLSearchParams(location.search);
-  let sec = q.get('s'); try { sec = sec || sessionStorage.getItem('social_section'); } catch {}
+  const sec = q.get('s');                    // opens on Friends unless a link asks for a section
   _socSection = _SOC.some(x => x.key === sec) ? sec : 'friends';
   if (_SOC.find(x => x.key === _socSection).panel === 'socFriends') _frTab = _socSection;
   _socNav();
@@ -1298,8 +1571,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initPage(async (user) => {
     _fUser = user;
     _frAuthKnown = true;
-    setSocialSection(_socSection, { keepPoll: true, poll: q.get('poll'), rec: q.get('rec'), box: q.get('box'), noScroll: true });
-    if (user) { _frRender(); MSSShare.refreshCount(user).then(_socNav); }        // signed in: nav + spinner while friends load
+    if (q.get('with')) _cmpWith = [q.get('with')];          // from a profile's taste match pill
+    setSocialSection(_socSection, { keepPoll: true, poll: q.get('poll'), rec: q.get('rec'), box: q.get('box'), ep: q.get('ep'), night: q.get('night'), ch: q.get('ch'), noScroll: true });
+    if (user) { _frRender(); MSSShare.refreshCount(user).then(_socNav); MSSEpChat.unread(user).then(n => { MSSEpChat.count = n; _socNav(); }); }        // signed in: nav + spinner while friends load
     if (!user) { document.getElementById('friendsPageSub').textContent = 'Search for someone above to view their profile.'; _frRender(); return; }
     await loadFriends();
     _socNav();
