@@ -1952,7 +1952,8 @@ function fitTitleYear(root) {
      episodes  — new_episode, new_release (tv-schedule.js → add_new_episode_notifications /
                  add_release_notifications, 033 / 042)
      activity  — friend_started, friend_episode, friend_finished, friend_note, friend_list,
-                 rec_reply (Inbox conversations, 048)
+                 rec_reply (Inbox conversations, 048), episode_chat (049), movie_night (050),
+                 challenge (051)
                  ("notify me about @friend", 022 / 047), friend_queued, friend_poll,
                  poll_comment, friend_rec (Social, 045)
      lists     — list_invite, list_invite_accepted
@@ -1978,6 +1979,14 @@ function _notifInit(user) {
   _notifUser = user;
   _notifLoad();
   _notifLive(user);
+  // Movie Night (050): a reminder on the day of a dated night — checked when the app opens (every 20 min at most)
+  try {
+    const last = Number(localStorage.getItem('mss_mn_rem') || 0);
+    if (Date.now() - last > 20 * 60000) {
+      localStorage.setItem('mss_mn_rem', String(Date.now()));
+      sb.rpc('movie_night_reminders').then(r => { if (r.data > 0) _notifLoad(); }, () => {});
+    }
+  } catch {}
   // Safety net if the live connection drops (and when coming back to the tab)
   setInterval(() => _notifLoad(), 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) _notifLoad(); });
@@ -2149,6 +2158,24 @@ function _notifItemHTML(n, opts = {}) {
     icon2 = m.kind === 'list' ? 'layers' : 'send';
     extra = (m.message ? `<div class="notif-quote" translate="no">${escHTML(m.message)}</div>` : '') + (m.kind === 'list' ? '' : _notifTitleCard({ ...m, media_type: m.tmdb_type }));
     href = m.rec_id ? `friends.html?s=recs&box=received&rec=${encodeURIComponent(m.rec_id)}` : 'friends.html?s=recs';
+  } else if (n.type === 'challenge') {
+    // Challenges (051): an invite, or someone reaching the goal
+    const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'a challenge')}</b>`;
+    text = m.kind === 'finished' ? `${who} finished ${t} — ${escHTML(m.goal)} watched!` : `${who} challenged you: ${t}${m.goal ? ` · watch ${escHTML(m.goal)}` : ''}`;
+    icon2 = 'trophy';
+    href = m.challenge_id ? `friends.html?s=challenges&ch=${encodeURIComponent(m.challenge_id)}` : 'friends.html?s=challenges';
+  } else if (n.type === 'movie_night') {
+    // Movie Night (050): invites, the pick, changes and the reminder on the day
+    const m = n.meta || {};
+    text = _notifNightText(m, who); icon2 = m.kind === 'decided' ? 'sparkles' : m.kind === 'cancelled' ? 'x' : m.kind === 'reminder' ? 'clock' : 'film';
+    if (m.kind === 'decided' && m.pick) extra = _notifTitleCard({ title: m.pick, poster_url: m.poster_url, tmdb_type: m.tmdb_type, media_type: m.tmdb_type });
+    href = m.night_id ? `friends.html?s=night&night=${encodeURIComponent(m.night_id)}` : 'friends.html?s=night';
+  } else if (n.type === 'episode_chat') {
+    // Episode chat (049): only sent to friends who've watched the episode too
+    const m = n.meta || {};
+    text = `${who} commented on S${escHTML(m.season)} · E${escHTML(m.episode)} of <b translate="no">${escHTML(m.title || 'a show')}</b>`; icon2 = 'comment';
+    if (m.body) extra = `<div class="notif-quote" translate="no">${escHTML(m.body)}</div>`;
+    href = `friends.html?s=epchat&ep=${encodeURIComponent(`${m.tmdb_id}:${m.season}:${m.episode}`)}`;
   } else if (n.type === 'rec_reply') {
     // Inbox conversation (048): their reply, or what they did with what you sent
     const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'it')}</b>`;
@@ -2382,6 +2409,9 @@ function _notifShortText(n) {
     case 'friend_poll':          return `${who} started a poll: “${escHTML(n.meta?.question || '')}”`;
     case 'poll_comment':         return `${who} commented on your poll`;
     case 'rec_reply':            return _notifRecReplyText(n.meta || {}, who, t);
+    case 'movie_night':          return _notifNightText(n.meta || {}, who);
+    case 'challenge':            return n.meta?.kind === 'finished' ? `${who} finished ${t}` : `${who} challenged you: ${t}`;
+    case 'episode_chat':         return `${who} commented on S${escHTML(n.meta?.season)} · E${escHTML(n.meta?.episode)} of ${t}`;
     case 'friend_rec':           return n.meta?.kind === 'entry' ? `${who} shared that they watched ${t}` : n.meta?.kind === 'list' ? `${who} shared a list` : `${who} recommended ${t} to you`;
   }
   return 'New notification';
@@ -2409,6 +2439,20 @@ function _notifRecReplyText(m, who, t) {
     case 'saved_list': return `${who} saved ${thing}`;
   }
   return yours ? `${who} replied about ${thing}` : `${who} replied about ${t}`;
+}
+
+// Movie Night (050)
+function _notifNightText(m, who) {
+  const t = `<b translate="no">${escHTML(m.title || 'Movie Night')}</b>`;
+  const when = m.when ? new Date(m.when).toLocaleString(MSSI18n.locale, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+  const time = m.when ? new Date(m.when).toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' }) : '';
+  switch (m.kind) {
+    case 'decided':     return `${t}: you’re watching <b translate="no">${escHTML(m.pick || 'something good')}</b>${m.surprise ? ' (surprise pick!)' : ''}`;
+    case 'cancelled':   return `${who} cancelled ${t}`;
+    case 'rescheduled': return `${who} moved ${t}${when ? ` to ${escHTML(when)}` : ''}`;
+    case 'reminder':    return `${t} is today${time ? ` at ${escHTML(time)}` : ''}${m.pick ? ` — <b translate="no">${escHTML(m.pick)}</b>` : ' — time to vote!'}`;
+  }
+  return `${who} invited you to ${t}${when ? ` · ${escHTML(when)}` : ''}`;
 }
 
 // A friend's episodes (047): one → "watched S2 · E5 of X";
