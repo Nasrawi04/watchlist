@@ -1951,7 +1951,8 @@ function fitTitleYear(root) {
    Sections:
      episodes  — new_episode, new_release (tv-schedule.js → add_new_episode_notifications /
                  add_release_notifications, 033 / 042)
-     activity  — friend_started, friend_episode, friend_finished, friend_note, friend_list
+     activity  — friend_started, friend_episode, friend_finished, friend_note, friend_list,
+                 rec_reply (Inbox conversations, 048)
                  ("notify me about @friend", 022 / 047), friend_queued, friend_poll,
                  poll_comment, friend_rec (Social, 045)
      lists     — list_invite, list_invite_accepted
@@ -2147,7 +2148,14 @@ function _notifItemHTML(n, opts = {}) {
     text = m.kind === 'entry' ? `${who} shared that they watched ${t}` : m.kind === 'list' ? `${who} shared their list ${t}` : `${who} recommended ${t} to you`;
     icon2 = m.kind === 'list' ? 'layers' : 'send';
     extra = (m.message ? `<div class="notif-quote" translate="no">${escHTML(m.message)}</div>` : '') + (m.kind === 'list' ? '' : _notifTitleCard({ ...m, media_type: m.tmdb_type }));
-    href = 'friends.html?s=recs';
+    href = m.rec_id ? `friends.html?s=recs&box=received&rec=${encodeURIComponent(m.rec_id)}` : 'friends.html?s=recs';
+  } else if (n.type === 'rec_reply') {
+    // Inbox conversation (048): their reply, or what they did with what you sent
+    const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'it')}</b>`;
+    text = _notifRecReplyText(m, who, t);
+    icon2 = m.code ? ({ added: 'plus', had_it: 'check', started: 'play', finished: 'check', saved_list: 'layers' }[m.code] || 'inbox') : 'comment';
+    if (!m.code && m.body) extra = `<div class="notif-quote" translate="no">${escHTML(m.body)}</div>`;
+    href = m.rec_id ? `friends.html?s=recs&box=${m.box === 'sent' ? 'sent' : 'received'}&rec=${encodeURIComponent(m.rec_id)}` : 'friends.html?s=recs';
   } else if (n.type === 'friend_queued') {
     text = `${who} added something from your library to their watchlist`; icon2 = 'plus';
     extra = _notifTitleCard(n.meta);
@@ -2373,6 +2381,7 @@ function _notifShortText(n) {
     case 'new_release':          return `${t} ${n.meta?.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`;
     case 'friend_poll':          return `${who} started a poll: “${escHTML(n.meta?.question || '')}”`;
     case 'poll_comment':         return `${who} commented on your poll`;
+    case 'rec_reply':            return _notifRecReplyText(n.meta || {}, who, t);
     case 'friend_rec':           return n.meta?.kind === 'entry' ? `${who} shared that they watched ${t}` : n.meta?.kind === 'list' ? `${who} shared a list` : `${who} recommended ${t} to you`;
   }
   return 'New notification';
@@ -2386,6 +2395,20 @@ function _notifEpText(m, t) {
   if (c > 1 && +m.episode === 1 && +m.season_size === c) return `All ${c} episodes of Season ${s} of ${t} are out`;
   if (c > 1 && b) return `${c} new episodes of ${t} — S${s} · E${a}–E${b}`;
   return `New episode of ${t} — S${s} · E${a}`;
+}
+
+// Inbox (048): what they did with what you sent, or their reply.
+// m.box is the box it sits in for YOU ('sent' = you sent it, they responded)
+function _notifRecReplyText(m, who, t) {
+  const yours = m.box === 'sent', thing = m.kind === 'list' ? `your list ${t}` : t;
+  switch (m.code) {
+    case 'added':      return `${who} added ${t} to their watchlist`;
+    case 'had_it':     return `${who} already had ${t}`;
+    case 'started':    return `${who} started watching ${t}`;
+    case 'finished':   return `${who} watched ${t}`;
+    case 'saved_list': return `${who} saved ${thing}`;
+  }
+  return yours ? `${who} replied about ${thing}` : `${who} replied about ${t}`;
 }
 
 // A friend's episodes (047): one → "watched S2 · E5 of X";
