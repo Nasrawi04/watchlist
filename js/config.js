@@ -273,6 +273,26 @@ function liveScore(e) {
   return calc != null ? calc : (e.final_score != null ? Number(e.final_score) : null);
 }
 
+/* ── Taste match (Social → Compare, friend cards, friends' profiles) ──
+   How closely two people's scores line up on the titles they've both rated:
+   100% = the same scores, −12 points per point of average difference.
+   pct is null until there are MSS_MATCH_MIN titles rated by both (fewer is noise). */
+const MSS_MATCH_MIN = 3;
+function mssTasteMatch(mine, theirs) {
+  const key = e => e.tmdb_id && e.tmdb_type ? `t:${e.tmdb_type}:${e.tmdb_id}` : `n:${e.cat}:${(e.title || '').trim().toLowerCase()}`;
+  const idx = {};
+  (mine || []).forEach(e => { idx[key(e)] = e; });
+  const pairs = [];
+  (theirs || []).forEach(t => {
+    const m = idx[key(t)]; if (!m) return;
+    const a = liveScore(m), b = liveScore(t);
+    pairs.push({ m, t, a: a != null ? Number(a) : null, b: b != null ? Number(b) : null });
+  });
+  const rated = pairs.filter(p => p.a != null && p.b != null);
+  const avgDiff = rated.length ? rated.reduce((s, p) => s + Math.abs(p.a - p.b), 0) / rated.length : null;
+  return { pairs, rated, shared: pairs.length, avgDiff, pct: rated.length >= MSS_MATCH_MIN ? Math.max(0, Math.round(100 - avgDiff * 12)) : null };
+}
+
 /* ── Favorites chips display helper ── */
 function _favEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function renderFavChips(ratings, cat) {
