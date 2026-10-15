@@ -1241,7 +1241,8 @@ function _cmpShowTitle(picker) {
 /* ══ Social side nav (phones: a dropdown) ══
    Friends · Activity · Lists · Notes · Compare share one panel (#socFriends,
    drawn by _frRender); Polls and Inbox live in js/social.js
-   (MSSPolls / MSSShare). friends.html?s=<key>&poll=<id> opens a section. */
+   (MSSPolls / MSSShare). friends.html?s=<key>&poll=<id> opens a section;
+   ?s=recs&rec=<id>&box=sent|received opens one Inbox item with its reply box. */
 const _SOC = [
   { key: 'friends',  label: 'Friends',         icon: 'users',    panel: 'socFriends' },
   { key: 'activity', label: 'Activity',        icon: 'activity', panel: 'socFriends' },
@@ -1276,12 +1277,12 @@ function setSocialSection(k, opts = {}) {
   try { sessionStorage.setItem('social_section', sec.key); } catch {}
   const url = new URL(location.href);
   if (sec.key === 'friends') url.searchParams.delete('s'); else url.searchParams.set('s', sec.key);
-  if (!opts.keepPoll) url.searchParams.delete('poll');
+  if (!opts.keepPoll) ['poll', 'rec', 'box'].forEach(x => url.searchParams.delete(x));
   history.replaceState(history.state, '', url.pathname + url.search);
   ['socFriends', 'socPolls', 'socRecs'].forEach(id => { document.getElementById(id).hidden = id !== sec.panel; });
   if (sec.panel === 'socFriends') { _frTab = sec.key; _frRender(); } else _socNav();
   if (sec.key === 'polls') MSSPolls.mount(document.getElementById('socPolls'), _fUser, { poll: opts.poll });
-  if (sec.key === 'recs') MSSShare.inbox(document.getElementById('socRecs'), _fUser);
+  if (sec.key === 'recs') MSSShare.inbox(document.getElementById('socRecs'), _fUser, { rec: opts.rec, box: opts.box });
   if (!opts.noScroll) window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -1297,7 +1298,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initPage(async (user) => {
     _fUser = user;
     _frAuthKnown = true;
-    setSocialSection(_socSection, { keepPoll: true, poll: q.get('poll'), noScroll: true });
+    setSocialSection(_socSection, { keepPoll: true, poll: q.get('poll'), rec: q.get('rec'), box: q.get('box'), noScroll: true });
     if (user) { _frRender(); MSSShare.refreshCount(user).then(_socNav); }        // signed in: nav + spinner while friends load
     if (!user) { document.getElementById('friendsPageSub').textContent = 'Search for someone above to view their profile.'; _frRender(); return; }
     await loadFriends();
