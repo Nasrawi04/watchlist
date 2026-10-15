@@ -139,26 +139,44 @@ const MSSChallenges = (() => {
   function closeForm() { MSSDialog.close(document.getElementById('chForm')); form = null; }
   const friendChips = exclude => (typeof _frAccepted !== 'undefined' ? _frAccepted : []).filter(f => !exclude.has(f.friendId))
     .map(f => `<button type="button" class="soc-chip mn-inv" aria-pressed="false" data-id="${esc(f.friendId)}" onclick="MSSChallenges._inv(this)">${av(f.friendProfile, 22)}<span translate="no">${esc(nameOf(f.friendProfile))}</span></button>`).join('');
+  // A row of equal buttons (Goal presets, What counts, date ranges) — one is pressed
+  const seg = (key, items, on) => `<div class="ch-seg" role="group">${items.map(([v, l, ic]) =>
+    `<button type="button" class="ch-seg-btn${String(v) === String(on) ? ' active' : ''}" data-${key}="${v}" aria-pressed="${String(v) === String(on)}"
+      onclick="MSSChallenges._f('${key}', '${v}')">${ic ? icon(ic, 16) : ''}<span>${l}</span></button>`).join('')}</div>`;
+  const press = (key, v) => document.querySelectorAll(`#chFormBody [data-${key}]`).forEach(b => {
+    const on = b.dataset[key] === String(v); b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
+  // "Invite friends ……… Select all" — the label row both popups share
+  const inviteHead = (label, hint) => `<div class="sf-section-label ch-label-row"><span>${label} <span class="sf-section-hint">${hint}</span></span>
+      <button type="button" class="ch-all" id="chAll" onclick="MSSChallenges._f('all')">Select all</button></div>`;
   function create() {
     const today = new Date(), end = new Date(); end.setDate(end.getDate() + 30);
     form = { mode: 'new', picked: new Set(), goal: 10, cat: '', genre: '' };
+    const chips = friendChips(new Set());
     popup('New Challenge', `
         <label class="sf-section-label" for="chT">Name it</label>
-        <input id="chT" class="pf-input" maxlength="80" placeholder="Spooky October">
-        <div class="sf-section-label">Goal <span class="sf-section-hint">(titles to watch)</span></div>
-        <div class="ch-goal"><input id="chG" class="pf-input" type="number" min="1" max="500" value="10" aria-label="Goal" oninput="MSSChallenges._f('goal', this.value)">
-          <div class="pf-chips">${[5, 10, 25, 50, 100].map(n => `<button type="button" class="pf-chip${n === 10 ? ' active' : ''}" data-goal="${n}" onclick="MSSChallenges._f('goalChip', ${n})">${n}</button>`).join('')}</div></div>
+        <input id="chT" class="pf-input ch-in" maxlength="80" placeholder="Spooky October" autocomplete="off">
+        <div class="sf-section-label">Goal <span class="sf-section-hint">titles to watch</span></div>
+        <div class="ch-goal">
+          <div class="ch-step" role="group" aria-label="Goal">
+            <button type="button" class="ch-step-btn" aria-label="One less" onclick="MSSChallenges._f('step', -1)">${icon('minus', 16)}</button>
+            <input id="chG" inputmode="numeric" pattern="[0-9]*" maxlength="3" value="10" aria-label="Goal — titles to watch" oninput="MSSChallenges._f('goal', this.value)">
+            <button type="button" class="ch-step-btn" aria-label="One more" onclick="MSSChallenges._f('step', 1)">${icon('plus', 16)}</button>
+          </div>
+          ${seg('goal', [5, 10, 25, 50, 100].map(n => [n, n]), 10)}
+        </div>
         <div class="sf-section-label">What counts</div>
-        <div class="pf-chips" id="chCats">${CATS.map(([k, l]) => `<button type="button" class="pf-chip${k === '' ? ' active' : ''}" data-cat="${k}" onclick="MSSChallenges._f('cat', '${k}')">${l}</button>`).join('')}</div>
-        <label class="sf-section-label" for="chGenre">Genre <span class="sf-section-hint">(optional)</span></label>
-        <select id="chGenre" class="pf-input" onchange="MSSChallenges._f('genre', this.value)"><option value="">Any genre</option>${GENRES.map(g => `<option>${g}</option>`).join('')}</select>
+        ${seg('cat', [['', 'Anything', 'sparkles'], ['movies', 'Movies', 'film'], ['tv', 'TV Shows', 'tv'], ['anime', 'Anime', 'animeFace'], ['cartoons', 'Cartoons', 'brush']], '').replace('ch-seg"', 'ch-seg ch-cats"')}
+        <label class="sf-section-label" for="chGenre">Genre <span class="sf-section-hint">optional</span></label>
+        <div class="ch-select"><select id="chGenre" class="pf-input ch-in" onchange="MSSChallenges._f('genre', this.value)"><option value="">Any genre</option>${GENRES.map(g => `<option>${g}</option>`).join('')}</select>${icon('chevdown', 14)}</div>
         <div class="sf-section-label">Dates</div>
-        <div class="ch-dates"><label><span>From</span><input id="chS" class="pf-input" type="date" value="${iso(today)}"></label>
-          <label><span>To</span><input id="chE" class="pf-input" type="date" value="${iso(end)}" min="${iso(today)}"></label></div>
-        <div class="pf-chips">${[['1 week', 7], ['1 month', 30], ['3 months', 91], ['Rest of the year', 'year']].map(([l, d]) => `<button type="button" class="pf-chip" onclick="MSSChallenges._f('span', '${d}')">${l}</button>`).join('')}</div>
-        <div class="sf-section-label">Invite friends <span class="sf-section-hint">(up to 99 — they can invite theirs too)</span></div>
-        <div class="mn-invite"><button type="button" class="poll-link" onclick="MSSChallenges._f('all')">Select all</button>${friendChips(new Set())}</div>
-        <div class="pf-note">${icon('check', 13)} Titles you mark Watched with a date inside the challenge count automatically.</div>`,
+        <div class="ch-dates">
+          <label class="ch-field"><span>Starts</span><input id="chS" class="pf-input ch-in" type="date" value="${iso(today)}" onchange="MSSChallenges._f('dates')"></label>
+          <label class="ch-field"><span>Ends</span><input id="chE" class="pf-input ch-in" type="date" value="${iso(end)}" min="${iso(today)}" onchange="MSSChallenges._f('dates')"></label>
+        </div>
+        ${seg('span', [[7, '1 week'], [30, '1 month'], [91, '3 months'], ['year', 'This year']], 30).replace('ch-seg"', 'ch-seg ch-spans"')}
+        <div class="soc-tip"><span class="soc-tip-ic">${icon('check', 15)}</span>
+          <div><b>Counts automatically</b><span>Anything you mark Watched between these dates counts toward the goal.</span></div></div>
+        ${chips ? inviteHead('Invite friends', 'up to 99') + `<div class="mn-invite" role="group" aria-label="Invite friends">${chips}</div>` : ''}`,
       `<button type="button" class="sf-clear-btn" onclick="MSSChallenges._close()">Cancel</button>
         <button type="button" class="sf-apply-btn" id="chSave" onclick="MSSChallenges._save()">Start Challenge</button>`);
   }
@@ -167,29 +185,41 @@ const MSSChallenges = (() => {
     const have = new Set(c.members.map(m => m.id));
     const chips = friendChips(have);
     form = { mode: 'invite', id, picked: new Set() };
-    popup('Invite Friends', chips ? `<div class="sf-section-label">${esc(c.title)} <span class="sf-section-hint">(${100 - c.members.length} spots left)</span></div>
-        <div class="mn-invite"><button type="button" class="poll-link" onclick="MSSChallenges._f('all')">Select all</button>${chips}</div>`
-      : `<div class="pf-note">${icon('users', 13)} All your friends are already in this challenge.</div>`,
+    popup('Invite Friends', chips ? inviteHead(esc(c.title), `${100 - c.members.length} spots left`) + `<div class="mn-invite" role="group" aria-label="Invite friends">${chips}</div>`
+      : `<div class="soc-tip"><span class="soc-tip-ic">${icon('users', 15)}</span><div><b>Everyone’s in</b><span>All your friends are already in this challenge.</span></div></div>`,
       `<button type="button" class="sf-clear-btn" onclick="MSSChallenges._close()">Close</button>
         ${chips ? `<button type="button" class="sf-apply-btn" id="chSave" onclick="MSSChallenges._save()" disabled>Invite</button>` : ''}`);
   }
   function f(what, v) {
     if (!form) return;
-    if (what === 'goal') { form.goal = Number(v); document.querySelectorAll('[data-goal]').forEach(b => b.classList.toggle('active', Number(b.dataset.goal) === form.goal)); }
-    if (what === 'goalChip') { form.goal = v; document.getElementById('chG').value = v; f('goal', v); }
-    if (what === 'cat') { form.cat = v; document.querySelectorAll('#chCats .pf-chip').forEach(b => b.classList.toggle('active', b.dataset.cat === v)); }
+    const g = document.getElementById('chG');
+    if (what === 'step') { v = Math.min(500, Math.max(1, (Number(g.value) || 0) + v)); g.value = v; what = 'goal'; }
+    if (what === 'goal') {
+      if (g && g.value !== String(v)) g.value = v;
+      const n = Number(String(v).replace(/\D/g, '')) || 0;
+      if (g && /\D/.test(g.value)) g.value = n || '';
+      form.goal = n; press('goal', n);
+    }
+    if (what === 'cat') { form.cat = v; press('cat', v); }
     if (what === 'genre') form.genre = v;
     if (what === 'span') {
       const s = document.getElementById('chS').value || iso(new Date()), e = day(s);
       if (v === 'year') { e.setMonth(11, 31); } else e.setDate(e.getDate() + Number(v));
       document.getElementById('chE').value = iso(e);
+      press('span', v);
     }
-    if (what === 'all') document.querySelectorAll('#chFormBody .mn-inv[aria-pressed="false"]').forEach(inv);
+    if (what === 'dates') press('span', null);
+    if (what === 'all') {
+      const off = [...document.querySelectorAll('#chFormBody .mn-inv[aria-pressed="false"]')];
+      (off.length ? off : [...document.querySelectorAll('#chFormBody .mn-inv')]).forEach(inv);
+    }
   }
   function inv(b) {
     const id = b.dataset.id, on = !form.picked.has(id);
     on ? form.picked.add(id) : form.picked.delete(id);
     b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
+    const all = document.getElementById('chAll');
+    if (all) all.textContent = document.querySelector('#chFormBody .mn-inv[aria-pressed="false"]') ? 'Select all' : 'Clear';
     if (form.mode === 'invite') document.getElementById('chSave').disabled = !form.picked.size;
   }
   async function save() {
