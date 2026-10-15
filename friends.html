@@ -421,7 +421,7 @@
   </header>
 
   <!-- Social sections: side nav (phones: a dropdown) — Friends · Activity · Lists ·
-       Notes · Compare · Polls · Recommendations -->
+       Notes · Compare · Polls · Inbox -->
   <div class="disc-nav-dd-wrap" id="socNavDD"></div>
   <div class="disc-layout">
     <nav class="disc-side-nav fade-up fade-up-1" id="socSideNav" aria-label="Social sections"></nav>
@@ -435,7 +435,7 @@
         <div id="frContent" class="fade-up fade-up-2"><div class="page-loading"><div class="spinner"></div></div></div>
       </section>
       <section id="socPolls" aria-label="Polls" hidden></section>
-      <section id="socRecs" aria-label="Recommendations" hidden></section>
+      <section id="socRecs" aria-label="Inbox" hidden></section>
     </div>
   </div>
 
@@ -461,7 +461,7 @@ let _friendships = [];
 /* ── Avatar HTML helper — handles both photo and initial fallback ── */
 
 /* ══════════════════════════════════════════════════════════════
-   Social (friends.html) — side nav: Friends · Polls · Recommendations
+   Social (friends.html) — side nav: Friends · Activity · Lists · Notes · Compare · Polls · Inbox
    Friends (v620 redesign) has its own tabs: Friends · Activity · Lists · Notes · Compare
    Each section has the site's Sort / Filter buttons (sort-filter.js).
    Everything comes from 2 queries (all friends' entries + lists), made
@@ -1240,7 +1240,7 @@ function _cmpShowTitle(picker) {
 
 /* ══ Social side nav (phones: a dropdown) ══
    Friends · Activity · Lists · Notes · Compare share one panel (#socFriends,
-   drawn by _frRender); Polls and Recommendations live in js/social.js
+   drawn by _frRender); Polls and Inbox live in js/social.js
    (MSSPolls / MSSShare). friends.html?s=<key>&poll=<id> opens a section. */
 const _SOC = [
   { key: 'friends',  label: 'Friends',         icon: 'users',    panel: 'socFriends' },
@@ -1249,7 +1249,7 @@ const _SOC = [
   { key: 'notes',    label: 'Notes',           icon: 'notebook', panel: 'socFriends' },
   { key: 'compare',  label: 'Compare',         icon: 'compare',  panel: 'socFriends' },
   { key: 'polls',    label: 'Polls',           icon: 'poll',     panel: 'socPolls' },
-  { key: 'recs',     label: 'Recommendations', icon: 'send',     panel: 'socRecs' },
+  { key: 'recs',     label: 'Inbox',           icon: 'inbox',    panel: 'socRecs' },
 ];
 let _socSection = 'friends';
 function _socCount(k) {
