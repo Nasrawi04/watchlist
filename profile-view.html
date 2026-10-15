@@ -108,6 +108,10 @@
 .pv-friend-btn.accept:hover { background:var(--olive-2); }
 .pv-friend-btn.decline { background:transparent; color:#f87171; border:0.5px solid #f87171; }
 .pv-friend-btn.decline:hover { background:#f87171; color:#fff; }
+.pv-friend-btn.pv-match { display:inline-flex; align-items:center; gap:6px; margin-inline-start:6px; font-weight:600;
+  text-decoration:none; color:var(--olive-light); background:var(--olive-faint); border:0.5px solid var(--border-olive); vertical-align:middle; }
+.pv-friend-btn.pv-match.hi { background:var(--olive); color:#fff; border-color:var(--olive); }
+.pv-friend-btn.pv-match:hover { border-color:var(--olive-light); }
 .pv-friend-btn.pv-notify { display:inline-flex; align-items:center; gap:6px; background:transparent; color:var(--text-2); border:0.5px solid var(--border-2); margin-inline-start:6px; }
 .pv-friend-btn.pv-notify:hover { border-color:var(--border-olive); color:var(--olive-light); background:var(--olive-faint); }
 .pv-friend-btn.pv-notify.on { background:var(--olive); color:#fff; border-color:var(--olive); }
@@ -295,6 +299,7 @@ let _pvUserId = null, _pvUsername = null, _pvProfile = null;
 let _pvEntries = [];
 let _pvFriendship = null;
 let _pvNotifyOn = false;   // am I subscribed to this friend's activity? (off by default)
+let _pvMatch = null;       // taste match with a friend (mssTasteMatch, config.js)
 
 // Returning via browser back/forward can restore this page from the
 // bfcache with stale data (e.g. an entry just added/edited elsewhere
@@ -370,6 +375,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   _pvCmtUser = _pvMe;
   renderProfile();
+  // Friends: how your tastes line up — your own titles, quietly, then the pill by the buttons
+  if (_pvFriendship && _pvFriendship.status === 'accepted') {
+    getEntries(_pvMe.id).then(mine => {
+      _pvMatch = mssTasteMatch(mine, _pvEntries);
+      const b = document.getElementById('pvBtns'); if (b) b.innerHTML = _friendBtnHTML();
+    }).catch(() => {});
+  }
 });
 
 function _friendBtnHTML() {
@@ -382,7 +394,7 @@ function _friendBtnHTML() {
   }
   if (f.status === 'accepted') {
     return '<button class="pv-friend-btn friends" onclick="pvUnfriend()" title="Click to unfriend">✓ Friends</button>'
-      + _pvNotifyBtnHTML();
+      + _pvNotifyBtnHTML() + _pvMatchHTML();
   }
   if (f.status === 'pending' && f.iRequested) {
     return '<button class="pv-friend-btn pending" onclick="pvCancelRequest()">Requested ✕</button>';
@@ -397,6 +409,11 @@ function _friendBtnHTML() {
 /* Friend-activity notifications toggle — OFF by default. When on, you're
    notified the moment this friend starts, watches an episode of or finishes
    something, writes a note or makes a list (022 / 047). */
+function _pvMatchHTML() {
+  const m = _pvMatch && _pvMatch.pct;
+  return m != null ? '<a class="pv-friend-btn pv-match' + (m >= 80 ? ' hi' : '') + '" href="friends.html?s=compare&with=' + encodeURIComponent(_pvUserId) + '" title="Based on ' + _pvMatch.rated.length + ' titles you have both rated — see the full comparison">'
+    + icon('compare', 12) + ' ' + m + '% taste match</a>' : '';
+}
 function _pvNotifyBtnHTML() {
   return _pvNotifyOn
     ? '<button class="pv-friend-btn pv-notify on" onclick="pvToggleNotify()" title="Turn off notifications for this friend"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications On</button>'
