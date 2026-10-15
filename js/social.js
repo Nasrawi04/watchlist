@@ -497,24 +497,42 @@ const MSSShare = (() => {
     }
   }
 
-  /* ── Inbox state ── */
+  /* ── Inbox (048): a conversation under every item ──
+     • new until you open it (the side-nav number); a reply makes it new again
+     • Sent items show a Sent / Seen badge; their responses are in the thread
+     • the app posts responses for the receiver (added it, already had it,
+       started / watched it, saved your list) and either of you can reply */
   let recs = [];
-  async function refreshCount(u) {
-    try { api.count = ((await _socRpc('get_recs', { p_box: 'received' })) || []).filter(r => !r.in_library || r.kind !== 'title').length; } catch { api.count = 0; }
-    return api.count;
-  }
-  /* ── Inbox: everything friends send you (and what you sent) ──
-     Filter chips by kind — To Watch (a recommended title), Watched ("I
-     watched this": their rating + note), Lists. Cards: poster, kind label,
-     who sent it, the message as a chat bubble, actions in a footer bar. */
   const KINDS = [['all', 'All', 'inbox'], ['title', 'To Watch', 'send'], ['entry', 'Watched', 'ratingStar'], ['list', 'Lists', 'layers']];
   const KIND = { title: ['Recommendation', 'send'], entry: ['Watched', 'ratingStar'], list: ['List', 'layers'] };
-  let kind = 'all';
-  async function inbox(target, u) {
+  // Responses the app posts for the receiver — [your view, their view (sender), short label, icon]
+  const AUTO = {
+    added:      ['You added it to your watchlist', n => `${n} added it to their watchlist`, 'Added', 'plus'],
+    had_it:     ['It was already in your library', n => `${n} already had it`, 'Already had it', 'check'],
+    started:    ['You started watching it', n => `${n} started watching it`, 'Watching', 'play'],
+    finished:   ['You watched it', n => `${n} watched it`, 'Watched', 'check'],
+    saved_list: ['You saved this list', n => `${n} saved your list`, 'Saved', 'layers'],
+  };
+  const QUICK = {
+    title: ['Thanks!', 'Watching it soon', 'Seen it already', 'Not my thing'],
+    entry: ['Great pick!', 'Want to watch it', 'Agree!', 'Not for me'],
+    list:  ['Love this list', 'Thanks!'],
+    sent:  ['Enjoy!', 'Let me know what you think', 'You’ll love it'],
+  };
+  let kind = 'all', focusRec = null;
+  const reply = {};    // rec id → composer open
+  const full = {};     // rec id → whole thread shown
+  async function refreshCount(u) {
+    try { api.count = Number(await _socRpc('inbox_unread_count', {})) || 0; } catch { api.count = 0; }
+    return api.count;
+  }
+  async function inbox(target, u, o = {}) {
     el = target; user = u;
+    if (o.box === 'sent' || o.box === 'received') box = o.box;
+    if (o.rec) { focusRec = o.rec; reply[o.rec] = true; kind = 'all'; }
     const head = `<div class="soc-head"><div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Inbox</div></div>
       ${user ? `<div class="pn-toggle soc-toggle soc-toggle-sm" role="tablist" aria-label="Received or sent">${[['received', 'Received'], ['sent', 'Sent']].map(([k, l]) =>
-        `<button type="button" class="pn-toggle-btn${box === k ? ' active' : ''}" role="tab" aria-selected="${box === k}" onclick="MSSShare._box('${k}')">${l}</button>`).join('')}</div>` : ''}</div>`;
+        `<button type="button" class="pn-toggle-btn${box === k ? ' active' : ''}" role="tab" aria-selected="${box === k}" onclick="MSSShare._box('${k}')">${l}<span class="rec-box-dot" id="recDot-${k}" hidden></span></button>`).join('')}</div>` : ''}</div>`;
     if (!user) {
       el.innerHTML = head + `<div class="fr-empty"><div class="fr-empty-ic">${icon('inbox', 26)}</div><div class="fr-empty-title">Titles from your friends</div>
         <div class="fr-empty-text">Sign in to send friends something to watch — and see what they send you.</div></div>`;
@@ -528,11 +546,44 @@ const MSSShare = (() => {
       const ids = recs.filter(r => r.kind === 'entry').map(r => r.entry_id);
       const { data } = ids.length ? await sb.from('entries').select('*').in('id', ids) : { data: [] };
       const byId = Object.fromEntries((data || []).map(e => [e.id, e]));
-      recs.forEach(r => { r.entry = byId[r.entry_id] || null; });
+      recs.forEach(r => { r.entry = byId[r.entry_id] || null; r.replies = r.replies || []; });
     } catch { recs = []; showToast('Couldn’t load your inbox — try again.', 'err'); }
-    if (box === 'received') api.count = recs.filter(r => !r.in_library || r.kind !== 'title').length;
-    if (typeof _socNav === 'function') _socNav();
     drawRecs();
+    // Sent: their responses are right there on the cards, so opening the tab reads them
+    // (they stay highlighted as New for this visit)
+    if (box === 'sent') markRead(recs.filter(r => r.unread), true);
+    refreshCount(user).then(() => { if (typeof _socNav === 'function') _socNav(); drawBoxDots(); });
+    if (focusRec) {
+      const r = recs.find(x => x.id === focusRec);
+      if (r) { seen(r); requestAnimationFrame(() => { const n = document.getElementById('rec-' + r.id); n?.scrollIntoView({ block: 'center', behavior: 'smooth' }); n?.querySelector('textarea')?.focus({ preventScroll: true }); }); }
+      focusRec = null;
+    }
+  }
+  // the little dot on Received / Sent when the other box has something new
+  async function drawBoxDots() {
+    const other = box === 'received' ? 'sent' : 'received';
+    const d = document.getElementById('recDot-' + other); if (!d) return;
+    const mine = recs.filter(r => r.unread && !r._readLocal).length;
+    d.hidden = !(api.count - mine > 0);
+  }
+  // Opened it → Seen; the side-nav number and the bell go down
+  function markRead(list, keepNew) {
+    list = list.filter(r => r.unread); if (!list.length) return;
+    list.forEach(r => { if (!keepNew) r.unread = false; if (box === 'received') r.seen_at = r.seen_at || new Date().toISOString(); });
+    if (keepNew) list.forEach(r => { r._readLocal = true; });
+    _socRpc('mark_rec_read', { p_ids: list.map(r => r.id) }).then(() => {
+      refreshCount(user).then(() => { if (typeof _socNav === 'function') _socNav(); drawBoxDots(); });
+      if (typeof _notifLoad === 'function') _notifLoad();
+      // "already had it" is posted by the database — pick it up
+      if (box === 'received' && list.some(r => r.in_library && !r.replies.some(q => q.kind === 'auto'))) reload();
+    }).catch(() => {});
+  }
+  function seen(r) { if (r && r.unread && !r._readLocal) { markRead([r]); redraw(r); } }
+  async function reload() {
+    try {
+      const fresh = await _socRpc('get_recs', { p_box: box }) || [];
+      fresh.forEach(f => { const r = recs.find(x => x.id === f.id); if (r) { Object.assign(r, { replies: f.replies || [], seen_at: f.seen_at, in_library: f.in_library }); redraw(r); } });
+    } catch {}
   }
   const itemOf = r => ({ id: r.tmdb_id, tmdb_id: r.tmdb_id, media_type: r.tmdb_type, title: r.title, year: r.year,
     poster_url: r.poster_path ? TMDB_FULL + r.poster_path : (r.entry?.poster_url || r.poster_url || null) });
@@ -550,6 +601,34 @@ const MSSShare = (() => {
     const shown = kind === 'all' ? recs : recs.filter(r => (r.kind || 'title') === kind);
     list.innerHTML = `<div class="rec-grid">${shown.map(cardHTML).join('')}</div>`;
   }
+  function redraw(r) { const node = document.getElementById('rec-' + r.id); if (node) node.outerHTML = cardHTML(r); }
+
+  // Sent: a small badge — Sent, or Seen (when they opened it); their responses are in the thread
+  function statusHTML(r) {
+    const seen = !!r.seen_at || r.replies.some(q => !q.mine);
+    return `<span class="rec-status${seen ? ' seen' : ''}" title="${seen && r.seen_at ? 'Seen ' + _notifTimeAgo(r.seen_at) : seen ? 'Seen' : 'Sent — not opened yet'}">${icon(seen ? 'eye' : 'check', 12)} ${seen ? 'Seen' : 'Sent'}${seen && r.seen_at ? ` <small>${_notifTimeAgo(r.seen_at)}</small>` : ''}</span>`;
+  }
+  function threadHTML(r) {
+    const who = _socEsc(_socName(r.person));
+    const items = r.replies;
+    const hidden = full[r.id] ? 0 : Math.max(0, items.length - 3);
+    const one = q => {
+      if (q.kind === 'auto') {
+        const a = AUTO[q.code]; if (!a) return '';
+        return `<li class="rec-ev"><span>${icon(a[3], 12)}</span>${box === 'received' ? a[0] : a[1](`<b translate="no">${who}</b>`)}<time>${_notifTimeAgo(q.created_at)}</time></li>`;
+      }
+      return `<li class="rec-bub${q.mine ? ' mine' : ''}"><div translate="no">${_socEsc(q.body)}</div><time>${q.mine ? 'You' : who} · ${_notifTimeAgo(q.created_at)}</time></li>`;
+    };
+    const list = items.length ? `<ul class="rec-thread">${hidden ? `<li><button type="button" class="poll-link" onclick="MSSShare._full(${attrJSON(r.id)})">Show ${hidden} earlier</button></li>` : ''}${items.slice(hidden).map(one).join('')}</ul>` : '';
+    const quick = QUICK[box === 'sent' ? 'sent' : (r.kind || 'title')] || [];
+    const composer = reply[r.id] ? `<div class="rec-compose">
+        <div class="rec-quick">${quick.map(t => `<button type="button" class="rec-chip" onclick="MSSShare._say(${attrJSON(r.id)}, ${attrJSON(t)}, this)">${_socEsc(t)}</button>`).join('')}</div>
+        <form class="poll-c-new" onsubmit="event.preventDefault();MSSShare._say(${attrJSON(r.id)}, null, this)">
+          <textarea id="rcIn-${r.id}" maxlength="500" rows="1" placeholder="Reply to ${who}…" aria-label="Reply to ${who}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+          <button type="submit" class="btn-add-entry" aria-label="Send reply">${icon('send', 14)}</button>
+        </form></div>` : '';
+    return list + composer;
+  }
   function cardHTML(r) {
     const who = r.person || {}, id = attrJSON(r.id), e = r.entry, k = r.kind || 'title';
     const posterUrl = r.poster_path ? _socImg(r.poster_path, 'w342') : safeURL(e?.poster_url || r.poster_url);
@@ -561,29 +640,31 @@ const MSSShare = (() => {
       : `${isEntry ? 'You told' : isList ? 'You shared it with' : 'You sent it to'} ${name}${isEntry ? ' you watched it' : ''}`;
     const score = isEntry && e && liveScore(e) != null ? Number(liveScore(e)).toFixed(1) : null;
     const type = !isList && r.tmdb_type ? `<span class="${r.tmdb_type === 'movie' ? 'type-label' : 'type-label type-label-tv'}">${r.tmdb_type === 'movie' ? 'Movie' : 'TV Show'}</span>` : '';
-    const tags = `${type}${isList ? `<span class="w-ep-badge">${r.list_count || 0} ${r.list_count === 1 ? 'title' : 'titles'}</span>` : ''}${isEntry && e?.notes?.trim() ? `<span class="rec-has-note">${icon('notebook', 12)} Has a note</span>` : ''}`;
-    const libTag = () => inLib ? `<span class="rec-in">${icon('check', 12)} In your library</span>` : '';
-    const primary = isList ? `<button type="button" class="btn-add-entry" onclick="${open}">${icon('layers', 14)} Open List</button>`
-      : isEntry && e ? `<button type="button" class="btn-add-entry" onclick="MSSShare._views(${id}, '${score ? 'rate' : 'info'}')">${icon('ratingStar', 14)} ${score ? 'Their rating & note' : 'See it'}</button>`
-      : '';
     const inLib = box === 'received' && !isList && r.tmdb_id && r.in_library;
+    const tags = `${type}${isList ? `<span class="w-ep-badge">${r.list_count || 0} ${r.list_count === 1 ? 'title' : 'titles'}</span>` : ''}${isEntry && e?.notes?.trim() ? `<span class="rec-has-note">${icon('notebook', 12)} Has a note</span>` : ''}${inLib ? `<span class="rec-in">${icon('check', 12)} In your library</span>` : ''}${box === 'sent' ? statusHTML(r) : ''}`;
+    const primary = isList ? `<button type="button" class="btn-add-entry" onclick="${open}">${icon('layers', 14)} Open List</button>`
+      : isEntry && e ? `<button type="button" class="btn-add-entry" onclick="MSSShare._views(${id}, '${score ? 'rate' : 'info'}')">${icon('ratingStar', 14)} ${score ? 'Rating & note' : 'See it'}</button>`
+      : '';
     const add = box === 'received' && !isList && r.tmdb_id && !r.in_library
       ? `<button type="button" class="${primary ? 'rec-btn' : 'btn-add-entry'}" onclick="MSSShare._add(${id}, this)">${icon('plus', 14)} Add to Watchlist</button>` : '';
-    return `<article class="rec-card k-${k}" id="rec-${r.id}">
+    const n = r.replies.filter(q => q.kind === 'text').length;
+    return `<article class="rec-card k-${k}${r.unread ? ' is-new' : ''}" id="rec-${r.id}">
       <button type="button" class="rec-poster" onclick="${open}" aria-label="Open ${_socEsc(r.title)}">
         ${posterUrl ? `<img src="${posterUrl}" alt="" loading="lazy">` : `<span class="rec-poster-ph">${icon(isList ? 'layers' : 'film', 26)}${isList ? `<b>${r.list_count || 0}</b>` : ''}</span>`}
         ${score ? `<span class="rec-score" title="${_socEsc(_socName(who))}’s score">★ ${score}</span>` : ''}
       </button>
       <div class="rec-body">
-        <div class="rec-top"><span class="rec-kind">${icon(KIND[k][1], 11)} ${KIND[k][0]}</span><time datetime="${_socEsc(r.created_at)}">${_notifTimeAgo(r.created_at)}</time></div>
+        <div class="rec-top"><span class="rec-kind">${icon(KIND[k][1], 11)} ${KIND[k][0]}</span>${r.unread ? `<span class="rec-new">New</span>` : ''}<time datetime="${_socEsc(r.created_at)}">${_notifTimeAgo(r.created_at)}</time></div>
         <button type="button" class="rec-title" onclick="${open}"><b translate="no">${_socEsc(r.title)}</b>${r.year ? `<span class="title-year-inline">${_socEsc(r.year)}</span>` : ''}</button>
-        ${tags || inLib ? `<div class="rec-tags">${tags}${libTag()}</div>` : ''}
+        ${tags ? `<div class="rec-tags">${tags}</div>` : ''}
         <div class="rec-from">${_socAv(who, 24)}<span>${line}</span></div>
-        ${r.message ? `<div class="rec-msg" translate="no">${_socEsc(r.message)}</div>` : ''}
+        ${r.message ? `<div class="rec-msg${box === 'sent' ? ' mine' : ''}" translate="no">${_socEsc(r.message)}</div>` : ''}
         ${isEntry && !e ? `<div class="rec-gone">They’ve removed this title from their library.</div>` : ''}
+        ${threadHTML(r)}
         <div class="rec-acts">
           ${primary}${add}
-          ${!isList ? `<button type="button" class="rec-icon" onclick="MSSShare._view(${id})" aria-label="Details" title="Details">${icon('info', 15)}</button>` : ''}
+          <button type="button" class="rec-btn${reply[r.id] ? ' on' : ''}" aria-expanded="${!!reply[r.id]}" onclick="MSSShare._reply(${id})">${icon('comment', 14)} Reply${n ? ` <b>${n}</b>` : ''}</button>
+          ${!isList && !(isEntry && e) ? `<button type="button" class="rec-icon" onclick="MSSShare._view(${id})" aria-label="Details" title="Details">${icon('info', 15)}</button>` : ''}
           <button type="button" class="rec-icon rec-icon-x" onclick="MSSShare._remove(${id})" aria-label="${box === 'received' ? 'Hide' : 'Unsend'}" title="${box === 'received' ? 'Hide' : 'Unsend'}">${icon(box === 'received' ? 'x' : 'trash', 15)}</button>
         </div>
       </div>
@@ -593,36 +674,53 @@ const MSSShare = (() => {
     const r = recs.find(x => x.id === id); if (!r) return;
     btn.disabled = true; btn.textContent = 'Adding…';
     try {
-      await MSSInfo.quickAdd(itemOf(r));
-      r.in_library = true; api.count = recs.filter(x => !x.in_library || x.kind !== 'title').length;
-      drawRecs(); if (typeof _socNav === 'function') _socNav();
-      showToast(`Added “${r.title}” to your Watchlist`);
+      await MSSInfo.quickAdd(itemOf(r));                  // the database posts "added it to their watchlist"
+      r.in_library = true; r.unread = false;
+      showToast(`Added “${r.title}” to your Watchlist — ${_socName(r.person)} will see it`);
+      reload(); refreshCount(user).then(() => { if (typeof _socNav === 'function') _socNav(); });
     } catch (err) {
-      if (String(err?.message).startsWith('DUPLICATE:')) { r.in_library = true; drawRecs(); showToast('Already in your library.'); return; }
+      if (String(err?.message).startsWith('DUPLICATE:')) { r.in_library = true; seen(r); redraw(r); showToast('Already in your library.'); return; }
       showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Could not add — try again.', 'err');
       btn.disabled = false; btn.innerHTML = `${icon('plus', 14)} Add to Watchlist`;
     }
   }
+  async function say(id, text, src) {
+    const r = recs.find(x => x.id === id); if (!r) return;
+    const ta = document.getElementById('rcIn-' + id);
+    const body = (text ?? ta?.value ?? '').trim(); if (!body) return;
+    const btns = document.querySelectorAll(`#rec-${CSS.escape(id)} .rec-compose button`);
+    btns.forEach(b => { b.disabled = true; });
+    try {
+      await _socRpc('reply_rec', { p_id: id, p_body: body });
+      r.replies.push({ id: 'local-' + Date.now(), mine: true, kind: 'text', body, created_at: new Date().toISOString() });
+      r.unread = false; r.seen_at = r.seen_at || (box === 'received' ? new Date().toISOString() : r.seen_at);
+      reply[id] = false; redraw(r);
+      showToast(`Sent to ${_socName(r.person)}`);
+      refreshCount(user).then(() => { if (typeof _socNav === 'function') _socNav(); });
+    } catch (err) { btns.forEach(b => { b.disabled = false; }); showToast(_socErr(err, 'Couldn’t send — try again.'), 'err'); }
+  }
   async function remove(id) {
     if (box === 'sent') {
-      const ok = await showConfirm({ title: 'Unsend this?', message: 'It disappears from your friend’s Inbox.', confirmText: 'Unsend', iconName: 'trash' });
+      const ok = await showConfirm({ title: 'Unsend this?', message: 'It disappears from your friend’s Inbox, with its replies.', confirmText: 'Unsend', iconName: 'trash' });
       if (!ok) return;
     }
     try {
       await _socRpc('remove_rec', { p_id: id });
       recs = recs.filter(r => r.id !== id);
-      if (box === 'received') api.count = recs.filter(x => !x.in_library || x.kind !== 'title').length;
-      drawRecs(); if (typeof _socNav === 'function') _socNav();
+      drawRecs(); refreshCount(user).then(() => { if (typeof _socNav === 'function') _socNav(); });
     } catch (err) { showToast(_socErr(err), 'err'); }
   }
+  const touch = id => { const r = recs.find(x => x.id === id); seen(r); return r; };
 
   return Object.assign(api, {
     open: openSend, inbox, refreshCount,
     _find: drawFriends, _pick: pick, _send: send, _close: closeSend,
-    _box: k => { box = k; kind = 'all'; inbox(el, user); }, _kind: k => { kind = k; drawRecs(); }, _add: add, _remove: remove,
-    _view: id => { const r = recs.find(x => x.id === id); if (!r) return; r.tmdb_id ? MSSInfo.fromDiscover(itemOf(r)) : r.entry && MSSInfo.fromEntry(r.entry); },
+    _box: k => { box = k; kind = 'all'; inbox(el, user); }, _kind: k => { kind = k; drawRecs(); }, _add: (id, b) => { touch(id); add(id, b); }, _remove: remove,
+    _reply: id => { const r = touch(id); if (!r) return; reply[id] = !reply[id]; redraw(r); if (reply[id]) document.getElementById('rcIn-' + id)?.focus(); },
+    _say: say, _full: id => { full[id] = true; const r = recs.find(x => x.id === id); if (r) redraw(r); },
+    _view: id => { const r = touch(id); if (!r) return; r.tmdb_id ? MSSInfo.fromDiscover(itemOf(r)) : r.entry && MSSInfo.fromEntry(r.entry); },
     // "I watched this" → their entry in Info · Ratings · Note (read-only, "Sam's rating")
-    _views: (id, start) => { const r = recs.find(x => x.id === id); if (r?.entry) MSSViews.open(r.entry, { start, profile: r.person || {} }); },
-    _openList: id => { const r = recs.find(x => x.id === id); if (r?.list_id) location.href = `list-view.html?list=${encodeURIComponent(r.list_id)}`; },
+    _views: (id, start) => { const r = touch(id); if (r?.entry) MSSViews.open(r.entry, { start, profile: r.person || {} }); },
+    _openList: id => { const r = touch(id); if (r?.list_id) location.href = `list-view.html?list=${encodeURIComponent(r.list_id)}`; },
   });
 })();
