@@ -2167,7 +2167,7 @@ function _notifItemHTML(n, opts = {}) {
   } else if (n.type === 'movie_night') {
     // Movie Night (050): invites, the pick, changes and the reminder on the day
     const m = n.meta || {};
-    text = _notifNightText(m, who); icon2 = m.kind === 'decided' ? 'sparkles' : m.kind === 'cancelled' ? 'x' : m.kind === 'reminder' ? 'clock' : 'film';
+    text = _notifNightText(m, who); icon2 = m.kind === 'review' ? 'ratingStar' : m.kind === 'decided' ? 'sparkles' : m.kind === 'cancelled' ? 'x' : m.kind === 'reminder' ? 'clock' : 'film';
     if (m.kind === 'decided' && m.pick) extra = _notifTitleCard({ title: m.pick, poster_url: m.poster_url, tmdb_type: m.tmdb_type, media_type: m.tmdb_type });
     href = m.night_id ? `friends.html?s=night&night=${encodeURIComponent(m.night_id)}` : 'friends.html?s=night';
   } else if (n.type === 'episode_chat') {
@@ -2450,6 +2450,7 @@ function _notifNightText(m, who) {
     case 'decided':     return `${t}: you’re watching <b translate="no">${escHTML(m.pick || 'something good')}</b>${m.surprise ? ' (surprise pick!)' : ''}`;
     case 'cancelled':   return `${who} cancelled ${t}`;
     case 'rescheduled': return `${who} moved ${t}${when ? ` to ${escHTML(when)}` : ''}`;
+    case 'review':      return `${who} ${m.noted ? 'shared their take on' : 'rated'} <b translate="no">${escHTML(m.pick || 'the pick')}</b> from ${t}`;
     case 'reminder':    return `${t} is today${time ? ` at ${escHTML(time)}` : ''}${m.pick ? ` — <b translate="no">${escHTML(m.pick)}</b>` : ' — time to vote!'}`;
   }
   return `${who} invited you to ${t}${when ? ` · ${escHTML(when)}` : ''}`;
