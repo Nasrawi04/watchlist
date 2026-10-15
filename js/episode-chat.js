@@ -1,11 +1,13 @@
 /* ═══════════════════════════════════════════════════════════════
    episode-chat.js — Episode chat (049_episode_chat.sql)
    A friends-only thread for every episode. Spoiler-safe: the database only
-   shows (and accepts) messages once you've watched that episode — before
-   that you just see how many friends are talking.
+   shows (and accepts) messages once you've watched that episode (progress
+   at or past it, or finished — no rating needed) — before that you just see
+   how many friends are talking.
 
    MSSEpChat.open({ tmdb_id, season, episode, show, name, poster_path })
-                                     the chat popup (thread + message bar)
+                                     the chat popup (thread + message bar + which
+                                     friends have watched it — 053)
    MSSEpChat.counts(tmdbId)          → { 'S:E': { count, unlocked, new } } for a show
    MSSEpChat.chipHTML(c, onclick)    the little 💬 count for an episode row
    MSSEpChat.mount(el, user, o)      Social → Episode Chat (o.open = 'tmdb:s:e')
@@ -23,6 +25,14 @@ const MSSEpChat = (() => {
   };
   const rpc = async (fn, args) => { const { data, error } = await sb.rpc(fn, args); if (error) throw error; return data; };
   const errText = (err, fb) => err?.hint || fb;
+  // "Sam, Ali +2 have watched it" — friends who can see and join this chat
+  function whoHTML(d) {
+    if (!d || d.error || d.watchers_count == null) return `${icon('users', 11)} Friends only · spoiler-safe`;
+    const w = d.watchers || [], n = d.watchers_count;
+    if (!n) return `${icon('users', 11)} None of your friends have watched it yet`;
+    return `<span class="epc-who-avs" aria-hidden="true">${w.slice(0, 4).map(p => av(p, 18)).join('')}</span>
+      <span class="epc-who-text"><b translate="no">${esc(name(w[0]))}</b>${n > 1 ? ` +${n - 1}` : ''} watched it</span>`;
+  }
   let cur = null;          // { ep, data }
   let onChange = null;     // a page that wants to know (counts on its episode rows)
 
@@ -72,7 +82,7 @@ const MSSEpChat = (() => {
         <div class="epc-head-info">
           <div class="epc-show" translate="no">${esc(ep.show || 'Episode chat')}</div>
           <div class="epc-title" id="epcTitle"><span class="epc-se">S${ep.season} · E${ep.episode}</span>${ep.name ? ` <span translate="no">${esc(ep.name)}</span>` : ''}</div>
-          <div class="epc-sub">${icon('users', 11)} Friends only · spoiler-safe</div>
+          <div class="epc-sub">${whoHTML(data)}</div>
         </div>
         <button type="button" class="mss-views-close epc-x" onclick="MSSEpChat.close()" aria-label="Close">${icon('x', 16)}</button>
       </header>`;
@@ -83,7 +93,7 @@ const MSSEpChat = (() => {
           <div class="epc-lock-ic">${icon('lock', 26)}</div>
           <div class="epc-lock-title">Watch this episode to unlock the chat</div>
           <div class="epc-lock-text">${data.people ? `${data.people} ${data.people === 1 ? 'friend is' : 'friends are'} talking about it (${data.count} ${data.count === 1 ? 'message' : 'messages'}).` : 'No one’s talking about it yet.'}
-            Mark it watched or rate it and you’re in — no spoilers before then.</div>
+            Update your progress to this episode (or mark the show finished) and you’re in — no rating needed, no spoilers before then.</div>
           <a class="btn-add-entry" href="episodes.html?show=${encodeURIComponent(ep.tmdb_id)}">${icon('episodes', 14)} Open Episodes</a>
         </div>`;
       return;
@@ -95,9 +105,9 @@ const MSSEpChat = (() => {
           <div class="rec-bub${m.mine ? ' mine' : ''}"><div translate="no">${esc(m.body)}</div></div>
           <div class="epc-meta">${m.mine ? 'You' : `<b translate="no">${esc(name(m.author))}</b>`} · ${_notifTimeAgo(m.created_at)}${m.mine ? ` · <button type="button" class="poll-link poll-danger" onclick="MSSEpChat._del(${attrJSON(m.id)})">Delete</button>` : ''}</div>
         </div></li>`).join('')}</ul>`
-      : `<div class="epc-empty">${icon('comment', 22)}<b>Start the conversation</b><span>Your friends who’ve watched it will get a notification.</span></div>`;
+      : `<div class="epc-empty">${icon('comment', 22)}<b>Start the conversation</b><span>${data.watchers_count ? 'Friends who’ve watched it will get a notification.' : 'Friends can join once they’ve reached this episode.'}</span></div>`;
     box.innerHTML = head + list + `<form class="rec-input epc-input" onsubmit="event.preventDefault();MSSEpChat._send()">
-        <textarea id="epcIn" maxlength="1000" rows="1" placeholder="Say something about this episode…" aria-label="Message your friends about this episode"
+        <textarea id="epcIn" maxlength="1000" rows="1" placeholder="Message friends…" aria-label="Message your friends about this episode"
           oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.requestSubmit()}"></textarea>
         <button type="submit" class="rec-send" aria-label="Send">${icon('send', 15)}</button>
       </form>`;
@@ -140,7 +150,8 @@ const MSSEpChat = (() => {
   async function mount(target, u, o = {}) {
     el = target; user = u;
     const head = `<div class="soc-head"><div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Episode Chat</div></div></div>
-      <p class="epc-intro">${icon('lock', 12)} Talk about an episode with friends who’ve seen it. Chats unlock once you’ve watched the episode — no spoilers.</p>`;
+      <div class="soc-tip"><span class="soc-tip-ic">${icon('lock', 16)}</span>
+        <div><b>Spoiler-safe chats</b><span>Talk about an episode with friends who’ve seen it. A chat unlocks once your progress reaches that episode — no rating needed.</span></div></div>`;
     if (!user) {
       el.innerHTML = head + `<div class="fr-empty"><div class="fr-empty-ic">${icon('comment', 26)}</div><div class="fr-empty-title">Episode chat with friends</div><div class="fr-empty-text">Sign in to talk about episodes with your friends.</div></div>`;
       return;
