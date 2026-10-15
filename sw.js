@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'mss-v766';
+const CACHE_VERSION = 'mss-v781';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -68,6 +68,9 @@ const STATIC_ASSETS = [
   'js/tv-schedule.js',
   'js/browse.js',
   'js/social.js',
+  'js/episode-chat.js',
+  'js/movie-night.js',
+  'js/challenges.js',
   'js/friend-popups.js',
   'manifest.json',
   'icons/logo-nav.png',
