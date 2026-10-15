@@ -290,7 +290,7 @@ async function admOverview() {
 /* ── Members ── */
 function admMembers() {
   const panel = document.getElementById('admPanel');
-  panel.innerHTML = `<input class="field-input adm-search" id="admUserSearch" type="search" placeholder="Search by username or name…" aria-label="Search members" autocomplete="off" value="${esc(_admUserQuery)}">
+  panel.innerHTML = `<input class="field-input adm-search" id="admUserSearch" type="search" placeholder="Search members by name or handle…" aria-label="Search members" name="mss-admin-search" autocapitalize="none" data-1p-ignore data-lpignore="true" data-form-type="other" autocomplete="off" value="${esc(_admUserQuery)}">
     <div id="admUserResults" aria-live="polite"></div>`;
   const input = document.getElementById('admUserSearch');
   input.addEventListener('input', () => { clearTimeout(_admTimer); _admTimer = setTimeout(() => admFindUsers(input.value), 300); });
