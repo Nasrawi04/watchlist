@@ -1336,6 +1336,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
   color:var(--olive-light); margin:18px 0 10px; padding-bottom:8px; border-bottom:0.5px solid var(--border);
 }
 .sf-section-label:first-child { margin-top:12px; }
+label.sf-section-label { display:block; }
 
 .sf-empty { font-family:'Manrope',var(--sans); font-size:13px; color:var(--text-3); padding:10px 0; }
 
@@ -5122,7 +5123,9 @@ html.mss-scroll-locked [role="dialog"], html.mss-scroll-locked [role="dialog"] *
 .sf-search:focus-within .sf-search-ic, .sf-search.has-q .sf-search-ic { color:var(--olive-light); }
 .sf-search-input { flex:1; min-width:0; height:100%; border:none; outline:none; background:transparent; color:var(--text); font:500 14.5px 'Manrope',var(--sans); padding:0; }
 .sf-search-input::placeholder { color:var(--text-3); }
-.sf-search-input::-webkit-search-cancel-button, .sf-search-input::-webkit-search-decoration { -webkit-appearance:none; appearance:none; }
+/* search fields: no native styling or clear "x" (pages add their own clear button) */
+input[type=search] { -webkit-appearance:none; appearance:none; }
+input[type=search]::-webkit-search-cancel-button, input[type=search]::-webkit-search-decoration { -webkit-appearance:none; appearance:none; }
 .sf-search-count { font-size:12px; font-weight:600; color:var(--text-3); white-space:nowrap; }
 .sf-search-count b { font-family:var(--bebas); font-size:16px; font-weight:400; letter-spacing:.3px; color:var(--olive-light); vertical-align:-1px; }
 .sf-search-clear { display:none; width:30px; height:30px; flex-shrink:0; align-items:center; justify-content:center; border:none; border-radius:50%; background:var(--bg-3); color:var(--text-2); cursor:pointer; }
@@ -5336,6 +5339,13 @@ button.poll-opt:disabled { cursor:progress; opacity:.75; }
 .soc-pick-search input:focus { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
 .soc-picked:empty { display:none; }
 .soc-picked { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px; }
+/* An info strip — icon + bold line + one sentence (Episode Chat intro, challenge form) */
+.soc-tip { display:flex; align-items:flex-start; gap:12px; margin:0 0 1rem; padding:12px 14px; border-radius:var(--radius-sm); background:var(--olive-faint); border:0.5px solid var(--border-olive); }
+.soc-tip-ic { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--card); color:var(--olive-light); }
+.soc-tip > div { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.soc-tip b { font-size:13.5px; font-weight:600; color:var(--text); }
+.soc-tip > div > span { font-size:12.5px; line-height:1.5; color:var(--text-2); }
+@media(max-width:640px) { .soc-tip { padding:10px 12px; gap:10px; } .soc-tip-ic { width:28px; height:28px; } }
 .soc-chip { display:inline-flex; align-items:center; gap:6px; padding:3px 4px 3px 3px; border-radius:999px; background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; }
 .soc-chip .soc-av { width:22px !important; height:22px !important; font-size:10px !important; }
 .soc-chip svg { opacity:.8; }
@@ -5478,7 +5488,12 @@ button.poll-opt:disabled { cursor:progress; opacity:.75; }
 .epc-show { font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--olive-light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .epc-title { font-family:var(--serif); font-size:18px; font-weight:600; color:var(--text); line-height:1.25; margin-top:2px; overflow-wrap:anywhere; }
 .epc-se { display:inline-block; padding:1px 6px; border-radius:4px; background:var(--olive); color:#fff; font-family:var(--sans); font-size:11.5px; font-weight:700; letter-spacing:.3px; vertical-align:2px; }
-.epc-sub { display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-3); margin-top:3px; }
+.epc-sub { display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-3); margin-top:3px; min-width:0; }
+.epc-sub b { color:var(--text-2); font-weight:600; }
+.epc-who-avs { display:inline-flex; flex-shrink:0; }
+.epc-who-avs .soc-av { box-shadow:0 0 0 1.5px var(--card); }
+.epc-who-avs .soc-av + .soc-av { margin-inline-start:-6px; }
+.epc-who-text { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .epc-x { flex-shrink:0; }
 .epc-thread { list-style:none; margin:0; padding:16px 18px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex:1; min-height:0; overscroll-behavior:contain; }
 .epc-msg { display:flex; align-items:flex-end; gap:8px; max-width:88%; }
@@ -5498,7 +5513,6 @@ button.poll-opt:disabled { cursor:progress; opacity:.75; }
 .epc-lock-title { font-family:var(--serif); font-size:18px; font-weight:600; color:var(--text); }
 .epc-lock-text { font-size:13.5px; color:var(--text-3); line-height:1.55; max-width:380px; }
 .epc-locked .btn-add-entry { text-decoration:none; margin-top:6px; }
-.epc-intro { display:flex; align-items:center; gap:6px; margin:-4px 0 1rem; font-size:13px; color:var(--text-3); }
 .epc-list { display:flex; flex-direction:column; gap:10px; }
 .epc-row { display:flex; align-items:center; gap:14px; width:100%; padding:12px 14px; text-align:start; cursor:pointer; font:inherit; color:inherit;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); transition:border-color .15s; }
@@ -5694,11 +5708,56 @@ button.mn-take:focus-visible { outline:2px solid var(--olive-light); outline-off
 .ch-pending > span:last-child { margin-inline-start:6px; }
 .ch-acts { display:flex; align-items:center; gap:12px; padding-top:12px; border-top:0.5px solid var(--border); }
 .ch-acts .rec-btn { padding:8px 14px; }
-.ch-goal { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.ch-goal .pf-input { width:96px; }
-.ch-dates { display:flex; gap:10px; margin-bottom:8px; }
-.ch-dates label { flex:1; display:flex; flex-direction:column; gap:4px; font-size:11.5px; color:var(--text-3); font-weight:600; min-width:0; }
-#chFormBody select.pf-input { appearance:auto; }
+.ch-in { height:44px; padding:0 14px; font-size:15px; }
+.ch-in::placeholder { color:var(--text-3); }
+/* equal-width buttons: Goal presets, What counts, date ranges */
+.ch-seg { display:grid; grid-template-columns:repeat(auto-fit, minmax(64px, 1fr)); gap:8px; }
+.ch-seg-btn { display:flex; align-items:center; justify-content:center; gap:7px; min-height:40px; padding:8px 10px; box-sizing:border-box; border-radius:var(--radius-sm);
+  border:0.5px solid var(--border-2); background:var(--bg-3); color:var(--text-2); font:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:border-color .15s, background .15s, color .15s; }
+.ch-seg-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.ch-seg-btn.active { background:var(--olive); border-color:var(--olive); color:#fff; }
+.ch-seg-btn:focus-visible, .ch-step-btn:focus-visible, .ch-all:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.ch-seg-btn svg { width:16px; height:16px; flex-shrink:0; }
+.ch-goal .ch-seg, .ch-cats { grid-template-columns:repeat(5, minmax(0, 1fr)); }
+.ch-spans { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+.ch-cats .ch-seg-btn { flex-direction:column; gap:5px; min-height:62px; font-size:12.5px; }
+/* Goal: − 10 + stepper beside the presets */
+.ch-goal { display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:stretch; }
+.ch-step { display:flex; align-items:stretch; height:40px; border:0.5px solid var(--border-2); border-radius:var(--radius-sm); background:var(--bg-3); overflow:hidden; }
+.ch-step:focus-within { border-color:var(--olive-light); }
+.ch-step-btn { width:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:none; background:none; color:var(--text-2); cursor:pointer; }
+.ch-step-btn:hover { background:var(--olive-faint); color:var(--olive-light); }
+.ch-step input { width:48px; min-width:0; border:none; border-inline:0.5px solid var(--border-2); background:transparent; color:var(--text); text-align:center;
+  font-family:var(--bebas); font-size:22px; letter-spacing:.5px; padding:0; outline:none; }
+/* Genre: the native picker, styled like the filter dropdowns */
+.ch-select { position:relative; }
+.ch-select select { appearance:none; -webkit-appearance:none; padding-inline-end:40px; cursor:pointer; }
+.ch-select svg { position:absolute; inset-inline-end:14px; top:50%; transform:translateY(-50%); color:var(--text-3); pointer-events:none; }
+/* Dates */
+.ch-dates { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+.ch-field { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.ch-field > span { font-size:11.5px; font-weight:600; color:var(--text-3); }
+.ch-field input[type=date] { -webkit-appearance:none; appearance:none; display:flex; align-items:center; text-align:start; min-width:0; width:100%; }
+.ch-field input[type=date]::-webkit-date-and-time-value { text-align:start; margin:0; }
+.ch-field input[type=date]::-webkit-calendar-picker-indicator { opacity:.6; cursor:pointer; }
+html:not([data-theme="light"]) .ch-field input[type=date]::-webkit-calendar-picker-indicator { filter:invert(1); }
+#chFormBody .soc-tip { margin:14px 0 0; }
+/* "Invite friends ……… Select all" */
+.ch-label-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.ch-label-row > span { min-width:0; }
+.ch-all { flex-shrink:0; background:none; border:none; padding:2px 0; cursor:pointer; font-family:'Manrope',var(--sans); font-size:12px; font-weight:700; letter-spacing:0; text-transform:none; color:var(--olive-light); }
+.ch-all:hover { text-decoration:underline; }
+#chFormBody .mn-invite { margin-bottom:8px; }
+@media(max-width:520px) {
+  .ch-goal { grid-template-columns:1fr; }
+  .ch-step { width:fit-content; }
+  .ch-seg-btn { font-size:12.5px; padding:8px 6px; }
+  .ch-cats { grid-template-columns:1fr 1fr; }
+  .ch-cats .ch-seg-btn { flex-direction:row; min-height:44px; gap:8px; }
+  .ch-cats .ch-seg-btn:first-child { grid-column:1 / -1; }
+  .ch-in { font-size:16px; }
+}
+@media(max-width:380px) { .ch-spans { grid-template-columns:1fr 1fr; } }
 @media(max-width:640px) {
   .ch-card { padding:14px; gap:12px; }
   .ch-mine { gap:12px; }
