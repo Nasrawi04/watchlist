@@ -6,6 +6,9 @@
        on more than one of your watchlists), one vote each
      • the host locks in the top pick, or hits "Surprise us"
      • Going / Can't make it; a reminder on the day (nav.js → movie_night_reminders)
+     • After the movie (052): everyone's take on the pick side by side — score,
+       note, favourite, lists — a group score, highlights and a ratings comparison
+     • From your Blend: suggestions from the group's Blend (friends.html, _blendGroup)
 
    MSSNight.mount(el, user, { night })   the section (night: open that one)
 
@@ -26,6 +29,8 @@ const MSSNight = (() => {
   const whenText = d => d ? new Date(d).toLocaleString(MSSI18n.locale, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
   let el = null, user = null, nights = [], focus = null;
   const adding = {};       // night id → search open
+  const reviews = {};      // night id → get_movie_night_reviews (After the movie)
+  const cmpOpen = {};      // night id → ratings comparison shown
   const hits = {};         // night id → search results
 
   async function mount(target, u, o = {}) {
@@ -42,6 +47,7 @@ const MSSNight = (() => {
     await load();
   }
   async function load() {
+    Object.keys(reviews).forEach(k => delete reviews[k]);
     try { nights = await rpc('get_movie_nights', {}) || []; } catch { nights = []; showToast('Couldn’t load Movie Nights — try again.', 'err'); }
     draw();
     if (focus) { requestAnimationFrame(() => document.getElementById('mn-' + focus)?.scrollIntoView({ block: 'start', behavior: 'smooth' })); focus = null; }
@@ -59,6 +65,70 @@ const MSSNight = (() => {
       return;
     }
     box.innerHTML = `<div class="mn-list">${nights.map(card).join('')}</div>`;
+    nights.filter(n => n.pick_id && n.status === 'decided').forEach(n => { if (!reviews[n.id]) loadReviews(n.id); });
+  }
+
+  /* ── After the movie (052) ── */
+  const LABELS = Object.fromEntries([...CORE_RATINGS, ...BONUS_RATINGS, ...ANIME_CORE_RATINGS, ...ANIME_BONUS_RATINGS, ANIMATION_RATING].map(r => [r.key, r.label]));
+  const scoreOf = e => e && liveScore(e) != null ? Number(liveScore(e)) : null;
+  async function loadReviews(id) {
+    reviews[id] = 'loading';
+    try { reviews[id] = await rpc('get_movie_night_reviews', { p_night: id }) || { people: [] }; } catch { reviews[id] = { people: [], error: true }; }
+    const box = document.getElementById('mnA-' + id);
+    if (box) box.outerHTML = afterHTML(find(id));
+  }
+  function afterHTML(n) {
+    const id = n.id, R = reviews[id];
+    const wrap = inner => `<section class="mn-after" id="mnA-${id}" aria-label="After the movie">${inner}</section>`;
+    if (!R || R === 'loading') return wrap(`<div class="mn-after-head">${icon('film', 14)} After the movie</div><div class="page-loading" style="padding:1rem"><div class="spinner"></div></div>`);
+    const people = (R.people || []).map(p => ({ ...p, score: scoreOf(p.entry) }));
+    const rated = people.filter(p => p.score != null);
+    const avg = rated.length ? rated.reduce((a, p) => a + p.score, 0) / rated.length : null;
+    const hi = rated.slice().sort((a, b) => b.score - a.score)[0], lo = rated.slice().sort((a, b) => a.score - b.score)[0];
+    const spread = rated.length > 1 ? hi.score - lo.score : null;
+    const who = p => p.me ? 'You' : esc(nameOf(p));
+    const me = people.find(p => p.me);
+    const status = e => !e ? 'Hasn’t logged it yet' : e.status === 'completed' ? `Watched${e.completed_date ? ' · ' + new Date(e.completed_date + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short' }) : ''}`
+      : e.status === 'queue' || e.status === 'up_next' ? 'On their watchlist' : e.status === 'watching' ? 'Watching' : 'In their library';
+    const take = (p, i) => {
+      const e = p.entry, note = e?.notes?.trim();
+      const quote = note ? `<blockquote class="mn-take-note" translate="no">“${esc(MSSRich.plain(note).trim().split(/\s+/).slice(0, 40).join(' '))}${MSSRich.plain(note).trim().split(/\s+/).length > 40 ? '…' : ''}”</blockquote>` : '';
+      const tags = `${p.favourite ? `<span class="mn-tag fav">${icon('trophy', 11)} Favourite</span>` : ''}${(p.lists || []).length ? `<span class="mn-tag" title="${esc(p.lists.join(', '))}">${icon('layers', 11)} In ${p.lists.length === 1 ? esc(p.lists[0]) : p.lists.length + ' lists'}</span>` : ''}`;
+      const open = e ? `MSSNight._take(${attrJSON(id)}, ${i})` : (p.me ? `MSSNight._details(${attrJSON(n.pick_id)})` : '');
+      return `<${open ? 'button type="button"' : 'div'} class="mn-take${p.me ? ' me' : ''}${e ? '' : ' empty'}" ${open ? `onclick="${open}"` : ''}>
+          <span class="mn-take-top">${av(p, 30)}<span class="mn-take-who"><b translate="no">${who(p)}</b><small>${status(e)}</small></span>
+            ${p.score != null ? `<span class="mn-take-score${p === hi && rated.length > 1 ? ' top' : ''}">${p.score.toFixed(1)}</span>` : `<span class="mn-take-score none">—</span>`}</span>
+          ${note ? (mssIsSpoiler(e) && !p.me ? mssSpoilerHTML(quote, { compact: true, id: e.id }) : quote) : ''}
+          ${tags ? `<span class="mn-tags">${tags}</span>` : ''}
+          ${p.me && (!e || p.score == null) ? `<span class="mn-take-cta">${icon('ratingStar', 12)} ${e ? 'Rate it' : 'Log it & rate it'}</span>` : ''}
+        </${open ? 'button' : 'div'}>`;
+    };
+    // the ratings side by side (only categories someone used)
+    const ratedCols = rated;
+    const keys = [...new Set(ratedCols.flatMap(p => Object.keys(p.entry.ratings || {}).filter(k => !k.startsWith('_') && LABELS[k] && p.entry.ratings[k] != null && p.entry.ratings[k] !== '')))];
+    const table = cmpOpen[id] && ratedCols.length ? `<div class="mn-cmp" role="region" aria-label="Ratings side by side" tabindex="0"><table>
+        <thead><tr><th></th>${ratedCols.map(p => `<th>${av(p, 22)}<span translate="no">${who(p)}</span></th>`).join('')}</tr></thead>
+        <tbody>${keys.map(k => { const vals = ratedCols.map(p => Number(p.entry.ratings[k])).filter(v => !isNaN(v)); const mx = Math.max(...vals);
+          return `<tr><td>${esc(LABELS[k])}</td>${ratedCols.map(p => { const v = p.entry.ratings[k]; return `<td class="${Number(v) === mx && vals.length > 1 ? 'best' : ''}">${v != null && v !== '' ? Number(v).toFixed(1) : '—'}</td>`; }).join('')}</tr>`; }).join('')}
+        <tr class="mn-cmp-total"><td>Score</td>${ratedCols.map(p => `<td>${p.score.toFixed(1)}</td>`).join('')}</tr></tbody></table></div>` : '';
+    return wrap(`
+      <div class="mn-after-head">${icon('film', 14)} After the movie
+        ${avg != null ? `<span class="mn-group"><b>${avg.toFixed(1)}</b> group score</span>` : ''}
+        <small>${rated.length} of ${people.length} rated</small></div>
+      ${rated.length > 1 ? `<div class="mn-hl">
+          <span>${icon('trophy', 12)} Loved it most: <b translate="no">${who(hi)}</b> ${hi.score.toFixed(1)}</span>
+          <span>${spread < 1 ? `${icon('check', 12)} You all agree` : `${icon('zap', 12)} Split by <b>${spread.toFixed(1)}</b> — ${esc(who(lo))} ${lo.score.toFixed(1)}`}</span>
+          ${people.filter(p => p.entry?.notes?.trim()).length ? `<span>${icon('notebook', 12)} ${people.filter(p => p.entry?.notes?.trim()).length} notes</span>` : ''}
+        </div>` : rated.length === 1 ? `<div class="mn-hl"><span>${icon('ratingStar', 12)} ${who(rated[0])} rated it first — your turn.</span></div>`
+        : `<div class="mn-hl"><span>${icon('ratingStar', 12)} Watched it? Rate it and add a note — everyone here sees each other’s take.</span></div>`}
+      <div class="mn-takes">${people.map(take).join('')}</div>
+      ${rated.length ? `<button type="button" class="rec-btn mn-cmp-btn" aria-expanded="${!!cmpOpen[id]}" onclick="MSSNight._cmp(${attrJSON(id)})">${icon('compare', 14)} ${cmpOpen[id] ? 'Hide' : 'Compare'} ratings</button>` : ''}
+      ${table}`);
+  }
+  function openTake(id, i) {
+    const R = reviews[id]; const p = R?.people?.[i]; if (!p?.entry) return;
+    MSSViews.open(p.entry, p.me ? { own: true, start: scoreOf(p.entry) != null ? 'rate' : 'info', onChange: () => loadReviews(id), onNoteSaved: () => loadReviews(id) }
+      : { start: scoreOf(p.entry) != null ? 'rate' : p.entry.notes ? 'note' : 'info', profile: p });
   }
 
   // Titles on more than one of the members' watchlists (yours + friends'), not already in the night
@@ -73,6 +143,21 @@ const MSSNight = (() => {
       const t = (tally[k] ||= { e, who: new Set() }); t.who.add(e.user_id);
     });
     return Object.values(tally).filter(t => t.who.size >= 2).sort((a, b) => b.who.size - a.who.size).slice(0, 8);
+  }
+  // From the group's Blend (friends.html _blendFor): loved by someone here, new to others
+  const blendFrom = {};    // night id → items (kept so a tap can add one)
+  function blendSuggestions(n, skip) {
+    if (typeof _blendFor !== 'function' || typeof _cmpMine === 'undefined' || !_cmpMine) return [];
+    const friends = n.members.filter(m => !m.me && m.status !== 'declined' && _frProfiles[m.id]).map(m => m.id);
+    if (!friends.length) return [];
+    const d = _blendFor(friends), have = new Set([...n.options.map(o => `${o.tmdb_type}:${o.tmdb_id}`), ...skip]);
+    const out = [];
+    [...d.theyLoved, ...d.youLoved].forEach(x => {
+      const o = _blOption(x.e); if (!o) return;
+      const k = `${o.tmdb_type}:${o.tmdb_id}`; if (have.has(k)) return; have.add(k);
+      out.push({ o, why: x.why.replace(/<[^>]+>/g, '') });
+    });
+    return (blendFrom[n.id] = out.slice(0, 6));
   }
 
   function card(n) {
@@ -104,12 +189,15 @@ const MSSNight = (() => {
         : `<div class="poll-opt shown${o.id === n.pick_id ? ' top' : ''}"><span class="poll-bar" style="width:${pct}%"></span>${label}</div>`}${rm}</div>`;
     };
     const sugg = open ? suggestions(n) : [];
+    const bsugg = open ? blendSuggestions(n, sugg.map(t => `${t.e.tmdb_type}:${t.e.tmdb_id}`)) : [];
     const addBox = open ? `<div class="mn-add">
         ${adding[n.id] ? `<div class="mn-search"><input id="mnQ-${n.id}" type="search" placeholder="Search a movie or show…" aria-label="Search a movie or show" autocomplete="off" oninput="MSSNight._q(${id}, this.value)">
             <div class="mn-hits" id="mnH-${n.id}"></div></div>`
           : `<button type="button" class="rec-btn" onclick="MSSNight._add(${id})">${icon('plus', 14)} Add a title</button>`}
         ${sugg.length ? `<div class="mn-sugg"><span class="mn-sugg-label">${icon('bookmark', 12)} On your watchlists</span>${sugg.map(t =>
           `<button type="button" class="rec-qr" onclick="MSSNight._addSugg(${id}, ${attrJSON(`${t.e.tmdb_type}:${t.e.tmdb_id}`)})" title="On ${t.who.size} of your watchlists">+ <span translate="no">${esc(t.e.title)}</span> <b>${t.who.size}</b></button>`).join('')}</div>` : ''}
+        ${bsugg.length ? `<div class="mn-sugg"><span class="mn-sugg-label">${icon('shuffle', 12)} From your Blend</span>${bsugg.map((t, k) =>
+          `<button type="button" class="rec-qr" onclick="MSSNight._addBlend(${id}, ${k})" title="${esc(t.why)}">+ <span translate="no">${esc(t.o.title)}</span></button>`).join('')}</div>` : ''}
       </div>` : '';
     const decided = pick ? `<div class="mn-pick">
         ${pick.poster_path ? `<img src="${img(pick.poster_path, 'w185')}" alt="" loading="lazy">` : `<span class="mn-pick-ph">${icon('film', 26)}</span>`}
@@ -131,6 +219,7 @@ const MSSNight = (() => {
       </header>
       ${people}
       ${decided}
+      ${pick && n.status === 'decided' ? afterHTML(n) : ''}
       ${n.status !== 'cancelled' && n.options.length ? `<div class="mn-opts-head">${open ? `${icon('poll', 13)} Vote for one${total ? ` · <b>${total}</b> ${total === 1 ? 'vote' : 'votes'}` : ''}` : `${icon('poll', 13)} The votes`}</div>
         <div class="poll-opts">${n.options.map(optRow).join('')}</div>` : ''}
       ${open && !n.options.length ? `<div class="mn-none">No titles yet — add one, or pick from your watchlists below.</div>` : ''}
@@ -269,6 +358,7 @@ const MSSNight = (() => {
   }
 
   return { mount, create, edit, remove, rsvp, vote, decide, removeOption, redraw: draw,
+    _take: openTake, _addBlend: (id, k) => { const t = blendFrom[id]?.[k]; if (t) addOption(id, t.o); }, _cmp: id => { cmpOpen[id] = !cmpOpen[id]; const n = find(id); const b = document.getElementById('mnA-' + id); if (n && b) b.outerHTML = afterHTML(n); },
     _add: id => { adding[id] = true; draw(); document.getElementById('mnQ-' + id)?.focus(); },
     _q: search, _pick: (id, k) => { const h = hits[id]?.[k]; if (h) addOption(id, h); }, _addSugg: addSugg, _details: details,
     _close: closeForm, _inv: inv, _save: save, _cancelNight: cancelNight };
