@@ -149,6 +149,11 @@
 .push-switch[aria-checked="true"] span { transform:translateX(20px); }
 .push-switch:disabled { opacity:.45; cursor:default; }
 .push-link { display:inline-block; margin-top:12px; font-size:12.5px; font-weight:600; color:var(--olive-light); text-decoration:none; }
+/* Episode Ratings toggle: on phones the three choices share the width (never wider than the screen) */
+@media(max-width:640px) {
+  .ep-mode-toggle { width:100%; }
+  .ep-mode-toggle .pn-toggle-btn { flex:1; min-width:0; padding:10px 6px; white-space:nowrap; }
+}
 </style>
 </head>
 <body>
