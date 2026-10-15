@@ -235,6 +235,7 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/episode-ratings.js"></script>
+<script src="js/episode-chat.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
    episodes.html — Episode Ratings
@@ -424,6 +425,7 @@ async function renderShow() {
   // your own page: once you've rated anything of this show, your ratings are what you see first
   else if (Object.keys(X.mine).length) X.source = 'mine';
   S = X;
+  if (_egUser) S.chat = await MSSEpChat.counts(_egShowId);
   // someone else's ratings are view only — no comparing (or exporting) them
   if (_egVsId && !X.readOnly) S2 = await loadState(_egVsId, userId);
   else if (_egVsUser && !X.readOnly && _egVsUser !== userId) {
@@ -588,7 +590,7 @@ function listHTML() {
         ${ep.overview ? `<div class="eg-row-desc" translate="no">${esc(ep.overview)}</div>` : ''}
         ${mine?.tags?.length ? `<div class="eg-row-tags">${mine.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
       </div>
-      <div class="eg-row-chips">${chip(mine ? Number(mine.score) : null, S.readOnly ? esc(S.whoName) : 'You')}${chip(comm ? Number(comm.avg_score) : null, 'MSS')}${chip(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}</div>
+      <div class="eg-row-chips">${chip(mine ? Number(mine.score) : null, S.readOnly ? esc(S.whoName) : 'You')}${chip(comm ? Number(comm.avg_score) : null, 'MSS')}${chip(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}${MSSEpChat.chipHTML(S.chat?.[k], `egChat(${sn},${ep.n})`)}</div>
     </div>`);
   }));
   return `<div class="eg-list">${rows.join('')}</div>`;
@@ -668,11 +670,19 @@ function egOpen(sn, n) {
     </div>
     <div class="ep-actions">
       <button type="button" class="popup-action-btn np-ghost" onclick="egClose()">Close</button>
+      <button type="button" class="popup-action-btn eg-chat-btn" onclick="egChat(${sn},${n})">${icon(S.chat?.[k] && !S.chat[k].unlocked ? 'lock' : 'comment', 14)} Friends’ Chat${S.chat?.[k]?.count ? ` · ${S.chat[k].count}` : ''}</button>
       ${S.entry && !S.readOnly ? `<button type="button" class="popup-action-btn ep-save" onclick="egRate(${sn},${n})">${mine ? 'Edit Rating' : 'Rate'}</button>` : ''}
     </div>`;
   MSSDialog.open(ov);
 }
 function egClose() { MSSDialog.close(document.getElementById('egEpOverlay')); }
+// Episode chat (episode-chat.js): friends-only, unlocks once you've watched the episode
+async function egChatCounts() { S.chat = await MSSEpChat.counts(_egShowId); }
+function egChat(sn, n) {
+  const ep = (S.eps[sn] || []).find(x => x.n === n);
+  MSSEpChat.open({ tmdb_id: _egShowId, season: sn, episode: n, show: S.show?.name, name: ep?.name, poster_path: S.show?.poster_path },
+    { onChange: () => egChatCounts().then(() => { if (S.view === 'list') draw(); }) });
+}
 function egStep(d) {
   const ov = document.getElementById('egEpOverlay'); let sn = +ov.dataset.s, n = +ov.dataset.n + d;
   if (n < 1) { const i = vis().indexOf(sn); if (i > 0) { sn = vis()[i - 1]; n = (S.eps[sn] || []).length; } else return; }
