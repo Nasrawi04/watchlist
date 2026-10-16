@@ -39,6 +39,7 @@ const MSSChallenges = (() => {
     return `${c.genre ? esc(c.genre) + ' ' : ''}${c.cat ? cat.toLowerCase() : 'titles'}`;
   };
   let el = null, user = null, list = [], off = { me_official: false, can_official: false, list: [] }, focus = null;
+  let picks = {};   // "Let me choose" challenges you're in → your picks (061)
   const showAll = {};
 
   async function mount(target, u, o = {}) {
@@ -60,7 +61,8 @@ const MSSChallenges = (() => {
     return off.me_official ? offBtn : off.can_official ? `<span class="ch-head-btns">${friendsBtn}${offBtn}</span>` : friendsBtn;
   };
   async function load() {
-    const [a, b] = await Promise.allSettled([rpc('get_challenges', {}), rpc('official_challenges', {})]);
+    const [a, b, pk] = await Promise.allSettled([rpc('get_challenges', {}), rpc('official_challenges', {}), rpc('my_challenge_picks', {})]);
+    picks = pk.value && typeof pk.value === 'object' && !Array.isArray(pk.value) ? pk.value : {};
     if (a.status === 'rejected') showToast('Couldn’t load challenges — try again.', 'err');
     list = (a.value || []).filter(c => !c.official);
     off = { me_official: !!b.value?.me_official, can_official: !!b.value?.can_official, list: b.value?.list || [] };
@@ -117,7 +119,7 @@ const MSSChallenges = (() => {
   function details(id) {
     const c = off.list.find(x => x.id === id) || list.find(x => x.id === id); if (!c) return;
     infoId = id;
-    const isOff = !!off.list.find(x => x.id === id), lst = isOff && c.count_mode === 'list';
+    const isOff = !!off.list.find(x => x.id === id), lst = isOff && c.count_mode === 'list', pick = !isOff && !!picks[id];
     const t = c.titles || [], today = iso(new Date());
     const joined = c.my_status === 'joined', invited = c.my_status === 'invited';
     const me = !isOff ? (c.members || []).find(m => m.me) : null;
@@ -130,9 +132,11 @@ const MSSChallenges = (() => {
     const anyN = t.filter(x => x.anytime).length;
     const steps = [
       joined || finished ? `<b>You’re in.</b> Everything below already counts for you.` : `<b>Join the challenge</b>${isOff ? ' — anyone can.' : invited ? ' — you’ve been invited.' : '.'}`,
-      lst ? `<b>Watch ${c.goal === t.length ? `all ${t.length}` : `${c.goal} of the ${t.length}`} ${t.length === 1 ? 'title' : 'titles'} below</b> and mark each one Watched.`
+      pick ? `<b>Watch ${c.goal} ${kind} of your choice</b> — whatever fits the idea of the challenge.`
+      : lst ? `<b>Watch ${c.goal === t.length ? `all ${t.length}` : `${c.goal} of the ${t.length}`} ${t.length === 1 ? 'title' : 'titles'} below</b> and mark each one Watched.`
         : `<b>Watch ${c.goal} ${c.genre ? esc(c.genre) + ' ' : ''}${kind}</b> — any you like${c.cat || c.genre ? ' that fit' : ''}. Mark them Watched as you go.`,
-      lst && anyN ? `Titles marked ${icon('refresh', 12)} <b>count even if you watched them before</b>. The others have to be marked Watched between <b>${fmtDay(c.starts_on)}</b> and <b>${fmtDay(c.ends_on)}</b>.`
+      pick ? `When you mark one Watched between <b>${fmtDay(c.starts_on)}</b> and <b>${fmtDay(c.ends_on)}</b>, we ask <b>“Does this count?”</b> — tick this challenge. Changed your mind? Take it off on the card.`
+      : lst && anyN ? `Titles marked ${icon('refresh', 12)} <b>count even if you watched them before</b>. The others have to be marked Watched between <b>${fmtDay(c.starts_on)}</b> and <b>${fmtDay(c.ends_on)}</b>.`
         : `Only titles marked Watched between <b>${fmtDay(c.starts_on)}</b> and <b>${fmtDay(c.ends_on)}</b> count — progress updates by itself.`,
       isOff ? `<b>Finish it and the ${esc(medalName)} medal is yours</b> — everyone who finishes gets the same one.`
         : `<b>Race your friends:</b> first to finish gets gold, second silver, everyone after bronze.`,
@@ -215,7 +219,7 @@ const MSSChallenges = (() => {
         <span class="ch-ic" aria-hidden="true">${icon('trophy', 20)}</span>
         <div class="ch-head-info">
           <div class="ch-title" translate="no"><button type="button" class="ch-title-btn" onclick="MSSChallenges.details(${id})">${esc(c.title)}</button></div>
-          <div class="ch-meta">Watch <b>${c.goal}</b> ${what(c)} · ${fmtDay(c.starts_on)} – ${fmtDay(c.ends_on)}</div>
+          <div class="ch-meta">Watch <b>${c.goal}</b> ${what(c)}${picks[c.id] ? ' · <span class="ch-pick-tag">you choose what counts</span>' : ''} · ${fmtDay(c.starts_on)} – ${fmtDay(c.ends_on)}</div>
         </div>
         <span class="ch-state ${state[1]}">${state[0]}</span>
         ${c.is_creator ? `<div class="poll-own"><button type="button" class="rec-icon rec-icon-x" onclick="MSSChallenges.remove(${id})" aria-label="Delete challenge" title="Delete">${icon('trash', 14)}</button></div>` : ''}
@@ -232,6 +236,7 @@ const MSSChallenges = (() => {
             <div class="ch-mine-text">${me?.finished_at ? `You finished — <b>#${me.finish_rank}</b> to get there` : c.state === 'upcoming' ? 'Starts soon — anything you watch from the start date counts.' : c.state === 'ended' ? `It’s over — you got ${c.my_progress || 0} of ${c.goal}.` : `${c.goal - (c.my_progress || 0)} to go · ${pct}%`}</div>
           </div>
         </div>`}
+      ${picks[c.id] && !invited ? picksHTML(c, me) : ''}
       <div class="ch-board-head">${icon('users', 13)} Leaderboard · <b>${joined.length}</b> ${joined.length === 1 ? 'person' : 'people'}${pending.length ? ` · ${pending.length} invited` : ''}</div>
       <ol class="ch-board">${shown.map(row).join('')}</ol>
       ${joined.length > shown.length ? `<button type="button" class="poll-link" onclick="MSSChallenges._all(${id})">Show all ${joined.length}</button>` : ''}
@@ -240,6 +245,21 @@ const MSSChallenges = (() => {
       ${!invited && c.state !== 'ended' && c.members.length < 100 ? `<button type="button" class="rec-btn" onclick="MSSChallenges.invite(${id})">${icon('plus', 14)} Invite friends</button>
           ${!c.is_creator ? `<button type="button" class="poll-link poll-danger" onclick="MSSChallenges.respond(${id}, 'leave')">Leave</button>` : ''}` : ''}</div>
     </article>`;
+  }
+
+  // "Let me choose": the titles you've counted, removable until you finish
+  function picksHTML(c, me) {
+    const mine = picks[c.id] || [], locked = !!me?.finished_at || c.state === 'ended';
+    return `<div class="ch-picks"><div class="ch-picks-head">${icon('check', 13)} Your picks <span>${mine.length ? `${mine.filter(x => x.counts).length} counting` : 'none yet'}</span></div>
+      ${mine.length ? `<div class="ch-pick-list">${mine.map(x => `<span class="ch-pick${x.counts ? '' : ' off'}" title="${x.counts ? '' : 'No longer counts — it isn’t marked Watched in the dates'}">
+          <span class="ch-pick-poster">${safeURL(x.poster_url) ? `<img src="${safeURL(x.poster_url)}" alt="" loading="lazy">` : esc((x.title || '?')[0])}</span>
+          <span class="ch-pick-t" translate="no">${esc(x.title)}</span>
+          ${locked ? '' : `<button type="button" class="ch-pick-x" onclick="MSSChallenges._unpick(${attrJSON(c.id)}, ${attrJSON(x.entry_id)})" aria-label="Take ${esc(x.title)} off this challenge">${icon('x', 11)}</button>`}</span>`).join('')}</div>`
+        : `<p class="ch-picks-empty">Mark a title Watched and we’ll ask if it counts for this challenge.</p>`}</div>`;
+  }
+  async function unpick(chId, entryId) {
+    try { await rpc('set_challenge_pick', { p_ch: chId, p_entry: entryId, p_on: false }); await load(); showToast('Taken off the challenge'); }
+    catch (err) { showToast(errText(err, 'Couldn’t change that — try again.'), 'err'); }
   }
 
   /* ── Actions ── */
@@ -290,23 +310,27 @@ const MSSChallenges = (() => {
         </div>`;
   const kindHTML = (cat, genre) => `<div class="sf-section-label">${form.mode === 'official' ? 'Type' : 'What counts'}</div>
         ${seg('cat', [['', 'Anything', 'sparkles'], ['movies', 'Movies', 'film'], ['tv', 'TV Shows', 'tv'], ['anime', 'Anime', 'animeFace'], ['cartoons', 'Cartoons', 'brush']], cat).replace('ch-seg"', 'ch-seg ch-cats"')}
-        <div class="sf-section-label">Genre <span class="sf-section-hint">optional</span></div>
-        ${SF.dd('chGenreDD', genre || 'Any genre', !!genre, ['', ...GENRES].map(g => `<button type="button" class="td-dd-opt${g === genre ? ' active' : ''}" data-genre="${esc(g)}" onclick="MSSChallenges._f('genre', ${attrJSON(g)})">${g || 'Any genre'}</button>`).join(''))}`;
+        <div id="chGenreBox"${form.fmode === 'pick' ? ' hidden' : ''}><div class="sf-section-label">Genre <span class="sf-section-hint">optional</span></div>
+        ${SF.dd('chGenreDD', genre || 'Any genre', !!genre, ['', ...GENRES].map(g => `<button type="button" class="td-dd-opt${g === genre ? ' active' : ''}" data-genre="${esc(g)}" onclick="MSSChallenges._f('genre', ${attrJSON(g)})">${g || 'Any genre'}</button>`).join(''))}</div>`;
   const datesHTML = (start, end) => `<div class="sf-section-label">Dates</div>
         ${MSSDateRange.html('chD', { start, end, min: iso(new Date()), onChange: () => f('dates') })}
         ${seg('span', [[7, '1 week'], [30, '1 month'], [91, '3 months'], ['year', 'This year']], daysBetween(start, end)).replace('ch-seg"', 'ch-seg ch-spans"')}`;
+  const modeTip = m => m === 'pick'
+    ? `<span class="soc-tip-ic">${icon('check', 15)}</span><div><b>Everyone chooses what counts</b><span>When someone marks a title Watched between these dates, we ask “Does this count?” — great for “Marvel movies” or “comfort rewatches”.</span></div>`
+    : `<span class="soc-tip-ic">${icon('sparkles', 15)}</span><div><b>Counts automatically</b><span>Anything you mark Watched between these dates that fits counts toward the goal.</span></div>`;
   function create() {
     const today = new Date(), end = new Date(); end.setDate(end.getDate() + 30);
-    form = { mode: 'new', picked: new Set(), goal: 10, cat: '', genre: '' };
+    form = { mode: 'new', picked: new Set(), goal: 10, cat: '', genre: '', fmode: 'auto' };
     const chips = friendChips(new Set());
     popup('New Challenge', `
         <label class="sf-section-label" for="chT">Name it</label>
         <input id="chT" class="pf-input ch-in" maxlength="80" placeholder="Spooky October" autocomplete="off">
         ${goalHTML(10)}
+        <div class="sf-section-label">How it counts</div>
+        ${seg('fmode', [['auto', 'Automatically', 'sparkles'], ['pick', 'Let me choose', 'check']], 'auto')}
         ${kindHTML('', '')}
         ${datesHTML(iso(today), iso(end))}
-        <div class="soc-tip"><span class="soc-tip-ic">${icon('check', 15)}</span>
-          <div><b>Counts automatically</b><span>Anything you mark Watched between these dates counts toward the goal.</span></div></div>
+        <div class="soc-tip" id="chModeTip">${modeTip('auto')}</div>
         ${chips ? inviteHead('Invite friends', 'up to 99') + `<div class="mn-invite" role="group" aria-label="Invite friends">${chips}</div>` : ''}`,
       `<button type="button" class="sf-clear-btn" onclick="MSSChallenges._close()">Cancel</button>
         <button type="button" class="sf-apply-btn" id="chSave" onclick="MSSChallenges._save()">Start Challenge</button>`);
@@ -409,6 +433,11 @@ const MSSChallenges = (() => {
     if (what === 'cat') { form.cat = v; press('cat', v); }
     if (what === 'medal') { form.medal = v; press('medal', v); document.querySelectorAll('#chFormBody .chf-medal-opt').forEach(b => b.classList.toggle('active', b.dataset.medal === v)); }
     if (what === 'spot') { form.spot = v; press('spot', v); }
+    if (what === 'fmode') {
+      form.fmode = v; press('fmode', v);
+      document.getElementById('chGenreBox').hidden = v === 'pick';
+      document.getElementById('chModeTip').innerHTML = modeTip(v);
+    }
     if (what === 'cmode') {
       form.cmode = v; press('cmode', v);
       document.getElementById('chfListBox').hidden = v !== 'list';
@@ -459,7 +488,8 @@ const MSSChallenges = (() => {
       } else if (form.mode === 'new') {
         const invited = form.picked.size;
         const id = await rpc('create_challenge', { p_title: document.getElementById('chT').value.trim(), p_goal: Number(document.getElementById('chG').value),
-          p_cat: form.cat || null, p_genre: form.genre || null, p_starts: MSSDateRange.get('chD').start, p_ends: MSSDateRange.get('chD').end, p_friends: [...form.picked] });
+          p_cat: form.cat || null, p_genre: form.fmode === 'pick' ? null : form.genre || null, p_starts: MSSDateRange.get('chD').start, p_ends: MSSDateRange.get('chD').end,
+          p_friends: [...form.picked], p_mode: form.fmode });
         closeForm(); focus = id; await load();
         showToast(invited ? 'Challenge started — your friends got an invite' : 'Challenge started');
       } else {
@@ -470,7 +500,7 @@ const MSSChallenges = (() => {
     } catch (err) { btn.disabled = false; showToast(errText(err, 'Couldn’t save — try again.'), 'err'); }
   }
 
-  return { mount, create, official, invite, respond, remove, details, reload: load, _any: toggleAny, _closeInfo: closeInfo, _infoJoin: infoJoin,
+  return { mount, create, official, invite, respond, remove, details, reload: load, _unpick: unpick, _any: toggleAny, _closeInfo: closeInfo, _infoJoin: infoJoin,
     _all: id => { showAll[id] = true; draw(); }, _f: f, _inv: inv, _save: save, _close: closeForm,
     _joinOfficial: joinOfficial, _preview: id => { const c = off.list.find(x => x.id === id); if (c) MSSSpotlight.preview(c); },
     _q: search, _pick: pick, _rm: i => { form?.titles.splice(i, 1); drawChosen(); } };
