@@ -18,6 +18,17 @@ function _navReleaseCheck(user) {
 
 /* Spotlights (054): the popup for an official challenge — js/spotlights.js
    (+ medals.js), loaded on the home page every time the app is opened. */
+/* Achievements (060): save newly reached levels now and then — every 30 minutes
+   at most (the cabinet page does it on open). New medals arrive as one notification. */
+function _navAchSync() {
+  if (/cabinet\.html$/.test(location.pathname)) return;
+  try {
+    if (Date.now() - Number(localStorage.getItem('mss_ach_sync') || 0) < 30 * 60000) return;
+    localStorage.setItem('mss_ach_sync', String(Date.now()));
+  } catch { return; }
+  setTimeout(() => sb.rpc('sync_achievements').then(({ error }) => { if (!error && typeof _notifLoad === 'function') _notifLoad(); }), 3000);
+}
+
 function _navSpotlight() {
   // Home page only, once each time the app is opened (sessionStorage resets when it's closed)
   if (!/\/(index\.html)?$/.test(location.pathname)) return;
@@ -47,6 +58,7 @@ async function _fillNavUser(user) {
   _navAccountCheck(profile);
   _navReleaseCheck(user);
   _navSpotlight();
+  _navAchSync();
   const username = profile?.username || user.email?.split('@')[0] || 'You';
   const initial  = username[0].toUpperCase();
 
@@ -314,6 +326,7 @@ function injectChrome() {
           <div class="nav-user-avatar" id="navUserInitialMobile">?</div>
           <div class="nav-user-dropdown" id="userMenuDropdownMobile">
             <a href="profile.html">${icon('user', 15)} Profile</a>
+            <a href="cabinet.html">${icon('trophy', 15)} Achievement Cabinet</a>
             <a href="notifications.html">${icon('bell', 15)} Notifications</a>
             <a href="settings.html">${icon('settings', 15)} Settings</a>
             <a href="admin.html" class="nav-admin-link" hidden>${icon('lock', 15)} Admin</a>
@@ -360,6 +373,7 @@ function injectChrome() {
           <span class="nav-chevron">${icon('chevdown', 12)}</span>
           <div class="nav-user-dropdown" id="userMenuDropdown">
             <a href="profile.html">${icon('user', 15)} Profile</a>
+            <a href="cabinet.html">${icon('trophy', 15)} Achievement Cabinet</a>
             <a href="notifications.html">${icon('bell', 15)} Notifications</a>
             <a href="settings.html">${icon('settings', 15)} Settings</a>
             <a href="admin.html" class="nav-admin-link" hidden>${icon('lock', 15)} Admin</a>
@@ -2111,7 +2125,8 @@ function _notifItemHTML(n, opts = {}) {
   const name = n.actor ? escHTML(n.actor.display_name || n.actor.username) : 'Someone';
   const who = `<b>${name}</b>`;
   const title = n.list ? `<b>&ldquo;${escHTML(n.list.title)}&rdquo;</b>` : 'a list';
-  const av = (n.type === 'new_episode' || n.type === 'new_release') && safeURL(n.meta?.poster_url)
+  const av = n.type === 'achievement' ? `<span class="notif-av-ach">${icon('trophy', 18)}</span>`
+    : (n.type === 'new_episode' || n.type === 'new_release') && safeURL(n.meta?.poster_url)
     ? `<img src="${safeURL(n.meta.poster_url)}" alt="">`
     : n.actor && safeURL(n.actor.avatar_url)
     ? `<img src="${safeURL(n.actor.avatar_url)}" alt="">`
@@ -2186,6 +2201,13 @@ function _notifItemHTML(n, opts = {}) {
     text = m.kind === 'finished' ? `${who} finished ${t} — ${escHTML(m.goal)} watched!` : `${who} challenged you: ${t}${m.goal ? ` · watch ${escHTML(m.goal)}` : ''}`;
     icon2 = 'trophy';
     href = m.challenge_id ? `friends.html?s=challenges&ch=${encodeURIComponent(m.challenge_id)}` : 'friends.html?s=challenges';
+  } else if (n.type === 'achievement') {
+    // Achievements (060): the first time, one "check your cabinet" for everything already earned
+    const m = n.meta || {}, more = (Number(m.count) || 1) - 1;
+    text = m.kind === 'welcome' ? `<b>Your Achievement Cabinet is open</b> — you’ve already earned ${escHTML(m.count)} ${Number(m.count) === 1 ? 'medal' : 'medals'}. Take a look!`
+      : `New medal: <b>${escHTML(m.name || 'Achievement')}</b>${m.at ? ` · ${escHTML(Number(m.at).toLocaleString(MSSI18n.locale))}` : ''}${more > 0 ? ` and ${more} more` : ''}`;
+    icon2 = 'sparkles';
+    href = m.key ? `cabinet.html?tab=ach` : 'cabinet.html';
   } else if (n.type === 'movie_night') {
     // Movie Night (050): invites, the pick, changes and the reminder on the day
     const m = n.meta || {};
@@ -2432,6 +2454,7 @@ function _notifShortText(n) {
     case 'poll_comment':         return `${who} commented on your poll`;
     case 'rec_reply':            return _notifRecReplyText(n.meta || {}, who, t);
     case 'movie_night':          return _notifNightText(n.meta || {}, who);
+    case 'achievement':          return n.meta?.kind === 'welcome' ? 'Your Achievement Cabinet is open — take a look!' : `New medal: ${escHTML(n.meta?.name || 'Achievement')}`;
     case 'challenge':            return n.meta?.kind === 'finished' ? `${who} finished ${t}` : `${who} challenged you: ${t}`;
     case 'episode_chat':         return `${who} commented on S${escHTML(n.meta?.season)} · E${escHTML(n.meta?.episode)} of ${t}`;
     case 'friend_rec':           return n.meta?.kind === 'entry' ? `${who} shared that they watched ${t}` : n.meta?.kind === 'list' ? `${who} shared a list` : `${who} recommended ${t} to you`;
