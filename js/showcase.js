@@ -89,6 +89,7 @@ const MSSShowcase = (() => {
       MSSDialog.bind(ov, close);
       document.body.appendChild(ov);
     }
+    document.getElementById('scSave').disabled = false;   // the dialog is reused — a finished save left it switched off
     drawEdit();
     MSSDialog.open(ov, { focus: '#scSave' });
   }
