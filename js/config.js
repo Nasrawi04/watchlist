@@ -327,9 +327,71 @@ async function requireAuth(redirect = 'login.html') {
 // getProfile() lives in db.js (loaded on every page that needs it).
 
 async function handleLogout() {
+  // this account only: it's taken off the device's saved accounts and signed out;
+  // any other saved account stays one tap away on the sign-in page
+  try { const { data: { session } } = await sb.auth.getSession(); if (session) MSSAccounts.forget(session.user.id); } catch {}
   if (sb) await sb.auth.signOut();
   window.location.href = 'login.html';
 }
+
+/* ══════════════════════════════════════════
+   MSSAccounts — several accounts on one device, Instagram-style
+   (e.g. your own + msf_official). Each account you sign in to is kept here
+   (its session, always the newest one, plus name + picture) so you can
+   switch without typing the password again.
+     MSSAccounts.list()          saved accounts [{ id, username, display_name, avatar_url }]
+     MSSAccounts.switchTo(id)    become that account (back to the home page)
+     MSSAccounts.add()           keep this account, sign in to another one
+     MSSAccounts.forget(id)      take an account off this device
+     MSSAccounts.setProfile(id, profile)   keep the name / picture current (nav.js)
+   Sessions live in this browser only (like the normal sign-in does); signing
+   out of an account forgets it here.
+══════════════════════════════════════════ */
+const MSSAccounts = (() => {
+  const KEY = 'msf_accounts';
+  const read = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+  const write = a => { try { localStorage.setItem(KEY, JSON.stringify(a.slice(0, 5))); } catch {} };
+  function keep(session) {
+    if (!session?.user || !session.refresh_token) return;
+    const a = read(), u = session.user, i = a.findIndex(x => x.id === u.id);
+    const meta = u.user_metadata || {};
+    const row = { ...(i >= 0 ? a[i] : {}), id: u.id, at: session.access_token, rt: session.refresh_token };
+    if (!row.username) row.username = meta.username || (u.email || '').split('@')[0];
+    if (i >= 0) a[i] = row; else a.push(row);
+    write(a);
+  }
+  // every new token goes straight in, so the saved one is never stale
+  if (sb) sb.auth.onAuthStateChange((ev, session) => { if (session) keep(session); });
+  const pub = x => ({ id: x.id, username: x.username, display_name: x.display_name || '', avatar_url: x.avatar_url || '' });
+  function forget(id) { write(read().filter(x => x.id !== id)); }
+  async function switchTo(id) {
+    const t = read().find(x => x.id === id); if (!t) return false;
+    const { data, error } = await sb.auth.setSession({ access_token: t.at, refresh_token: t.rt });
+    if (error || !data?.session) {
+      forget(id);
+      showToast(`@${t.username} needs to sign in again.`, 'err');
+      return false;
+    }
+    keep(data.session);
+    sessionStorage.clear();          // per-account caches (admin check, spotlight…) start fresh
+    window.location.href = 'index.html';
+    return true;
+  }
+  async function add() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) keep(session);
+    // leave without signing out (that would end the saved session): just clear the active one here
+    try { localStorage.removeItem(sb.auth.storageKey); } catch {}
+    sessionStorage.clear();
+    window.location.href = 'login.html?add=1';
+  }
+  function setProfile(id, p) {
+    const a = read(), x = a.find(r => r.id === id); if (!x || !p) return;
+    Object.assign(x, { username: p.username || x.username, display_name: p.display_name || '', avatar_url: safeURL(p.avatar_url) || '' });
+    write(a);
+  }
+  return { list: () => read().map(pub), switchTo, add, forget, setProfile, keep };
+})();
 
 // Word filter (migration 038): false when the name has a blocked word. If the
 // check can't run it says yes — the database still enforces it on save.
