@@ -74,6 +74,8 @@ const MSSList = (() => {
     if (ranked === false) return `<span class="list-rank-badge is-unranked">Unranked</span>`;
     return '';
   }
+  // Lists by the official account (065)
+  const officialBadge = list => list?.official ? `<span class="list-rank-badge is-official">${icon('crown', 11)} Official</span>` : '';
   const countHTML = n => `<b>${n}</b> ${n === 1 ? 'title' : 'titles'}`;
   function postersHTML(items, resolve) {
     const posters = (items || []).slice(0, 5).map(resolve).filter(Boolean);
@@ -105,7 +107,7 @@ const MSSList = (() => {
   function cardInnerHTML(list, o = {}) {
     const items = list.items || [];
     return `${o.ownerHTML || ''}
-    <div class="lc-title-row"><div class="lc-title" translate="no">${esc(list.title)}</div>${rankBadge(list.ranked)}</div>
+    <div class="lc-title-row"><div class="lc-title" translate="no">${esc(list.title)}</div>${officialBadge(list)}${rankBadge(list.ranked)}</div>
     <div class="lc-meta">${countHTML(items.length)}${o.metaExtra || ''}</div>
     ${o.collabLine || ''}
     ${list.description ? `<div class="lc-desc" translate="no">${esc(list.description)}</div>` : ''}
@@ -134,7 +136,7 @@ const MSSList = (() => {
     const url = `list-view.html?list=${encodeURIComponent(list.id)}`;
     document.getElementById('mssListCard').innerHTML = `
       <div class="lp-head">${head}<button type="button" class="lp-close" onclick="MSSList.close()" aria-label="Close">${icon('x', 18)}</button></div>
-      <div class="lp-title-row"><div class="lp-title" translate="no">${esc(list.title)}</div>${rankBadge(list.ranked)}</div>
+      <div class="lp-title-row"><div class="lp-title" translate="no">${esc(list.title)}</div>${officialBadge(list)}${rankBadge(list.ranked)}</div>
       ${list.description ? `<div class="lp-desc" translate="no">${esc(list.description)}</div>` : ''}
       <div class="lp-meta">${countHTML(items.length)}</div>
       ${o.collabLine || ''}
@@ -323,5 +325,5 @@ const MSSList = (() => {
     if (add === c) drawAdd();
   }
 
-  return { _react: react, _import: importList, addTo, reorder, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, open, close, rankBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
+  return { _react: react, _import: importList, addTo, reorder, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, open, close, rankBadge, officialBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
 })();
