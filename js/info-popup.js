@@ -35,8 +35,8 @@
 
 const INFO_POPUP_CONFIG = {
   // Buttons, left → right. Remove / reorder here.
-  actions: ['queue', 'recommend', 'discover'],                            // someone else's / TMDB title
-  ownerActions: ['start', 'upnext', 'rateEps', 'edit', 'recommend', 'share', 'discover', 'card', 'delete'], // your own entry
+  actions: ['queue', 'chart', 'recommend', 'discover'],                          // someone else's / TMDB title
+  ownerActions: ['start', 'upnext', 'rateEps', 'chart', 'edit', 'recommend', 'share', 'discover', 'card', 'delete'], // your own entry
   addStatus: 'queue',      // status used by "Add to Watchlist"
   showTmdbScore: true,     // TMDB community rating in the tags row
   showCrew: true,          // Director (movies) / Created By (TV)
@@ -226,6 +226,9 @@ const MSSInfo = (() => {
       start:  () => e && (e.status === 'queue' || e.status === 'up_next') ? btn('start', 'play', 'Start Watching') : '',
       upnext: () => e && e.status === 'queue' ? btn('upnext', 'skipForward', 'Up Next') : '',
       rateEps: () => e && typeof MSSEp !== 'undefined' && MSSEp.isShow(e) ? btn('rateEps', 'ratingStar', 'Rate Episodes') : '',
+      // shows: straight to their Episode Chart (episodes.html)
+      chart:  () => it.tmdb_id && (e?.tmdb_type || it.media_type) === 'tv'
+        ? `<a class="popup-action-btn" href="episodes.html?show=${Number(it.tmdb_id)}" style="text-decoration:none;">${icon('episodes', 14)} Episode Chart</a>` : '',
       edit:   () => e ? btn('edit', 'edit', 'Edit') : '',
       card:   () => e && typeof createShareCard === 'function' ? btn('card', 'idCard', 'Discover Card') : '',
       delete: () => e ? btn('delete', 'trash', 'Delete', ' popup-action-danger') : '',
