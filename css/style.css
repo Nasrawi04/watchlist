@@ -6226,3 +6226,35 @@ span.sc-empty { cursor:default; }
 .chf-team-color:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 @media(prefers-reduced-motion:reduce) { .team-card, .chf-teams-bar i { transition:none; } }
 @media(max-width:420px) { .team-cards { gap:8px; } .team-card { padding:12px 8px; } .team-medal { height:100px; } .team-medal svg { width:92px; height:auto; } .chf-team-row { flex-direction:column; align-items:center; } }
+
+/* ══ §60 Switch account (nav.js _navAccounts) ══ */
+.acc-sw { max-width:400px; }
+.acc-sw-list { display:flex; flex-direction:column; gap:6px; }
+.acc-sw-item { display:flex; align-items:center; gap:6px; }
+.acc-sw-row {
+  flex:1; min-width:0; display:flex; align-items:center; gap:12px; padding:8px 10px;
+  border-radius:var(--radius); border:1px solid var(--border); background:var(--bg-2);
+  color:var(--text); font:inherit; text-align:start;
+}
+button.acc-sw-row { cursor:pointer; transition:border-color var(--trans) var(--ease), background var(--trans) var(--ease); }
+button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3); }
+.acc-sw-row[aria-current] { border-color:var(--olive-light); background:var(--olive-faint); }
+.acc-sw-row.is-busy { opacity:.6; cursor:wait; }
+.acc-sw-row:focus-visible, .acc-sw-x:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.acc-sw-ava {
+  width:40px; height:40px; border-radius:50%; overflow:hidden; flex:none;
+  display:grid; place-items:center; background:var(--olive-faint); color:var(--olive-light); font-weight:600;
+}
+.acc-sw-ava img { width:100%; height:100%; object-fit:cover; }
+.acc-sw-name { flex:1; min-width:0; display:flex; flex-direction:column; }
+.acc-sw-name b, .acc-sw-name small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.acc-sw-name b { font-size:14px; font-weight:600; }
+.acc-sw-name small { font-size:12px; color:var(--text-2); }
+.acc-sw-cur { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; color:var(--olive-light); white-space:nowrap; }
+.acc-sw-x {
+  width:36px; height:36px; flex:none; display:grid; place-items:center; border-radius:50%;
+  border:none; background:none; color:var(--text-3); cursor:pointer;
+}
+.acc-sw-x:hover { color:var(--text); background:var(--bg-3); }
+.acc-sw-note { margin:12px 0 0; font-size:12px; line-height:1.5; color:var(--text-3); }
+.acc-sw .sf-apply-btn { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
