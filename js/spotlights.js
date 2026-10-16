@@ -28,9 +28,9 @@
 const MSSSpotlights = [
   { key: 'halloween-2026', name: 'Halloween 2026', eyebrow: 'Spooky season',
     accent: '#F59A3A', glow: 'rgba(245,154,58,.38)' },
-  { key: 'dune-part-three', name: 'Dune: Part Three', eyebrow: 'Before the premiere',
+  { key: 'dune-part-three', name: 'Dune: Part Three', eyebrow: 'Dunesday · Dec 18',
     accent: '#E9A94E', glow: 'rgba(226,138,62,.36)' },
-  { key: 'avengers-doomsday', name: 'Avengers: Doomsday', eyebrow: 'Before Doomsday',
+  { key: 'avengers-doomsday', name: 'Avengers: Doomsday', eyebrow: 'Dunesday · Dec 18',
     accent: '#5FE39A', glow: 'rgba(90,230,150,.30)' },
 ];
 
@@ -53,11 +53,15 @@ const MSSSpotlight = (() => {
       : `${c.goal} ${c.genre ? esc(c.genre) + ' ' : ''}${KINDS[c.cat] || 'titles'}`;
     return `<span class="spot-tag is-official">${icon('crown', 12)} Official</span><span class="spot-tag">${what}</span><span class="spot-tag">Everyone who finishes gets this medal</span>`;
   }
+  // ✓ = you've got it already · ↻ = counts even if watched before the challenge
   function posters(c, max = 8) {
     const t = c.titles || []; if (!t.length) return '';
+    const any = t.some(x => x.anytime), got = t.filter(x => x.done).length;
+    const tip = x => `${x.title}${x.done ? ' — you’ve got this one' : x.anytime ? ' — counts if you’ve already watched it' : ' — watch it during the challenge'}`;
     return `<div class="spot-posters" aria-label="${t.length} ${t.length === 1 ? 'title' : 'titles'}">${t.slice(0, max).map(x =>
-      `<span class="spot-poster" title="${esc(x.title)}">${x.poster_path ? `<img src="https://image.tmdb.org/t/p/w154${esc(x.poster_path)}" alt="" loading="lazy">` : `<b>${esc((x.title || '?')[0])}</b>`}</span>`).join('')}
-      ${t.length > max ? `<span class="spot-poster more">+${t.length - max}</span>` : ''}</div>`;
+      `<span class="spot-poster${x.done ? ' done' : ''}" title="${esc(tip(x))}">${x.poster_path ? `<img src="https://image.tmdb.org/t/p/w154${esc(x.poster_path)}" alt="" loading="lazy">` : `<b>${esc((x.title || '?')[0])}</b>`}${x.done ? `<i class="spot-poster-mark">${icon('check', 11)}</i>` : x.anytime ? `<i class="spot-poster-mark any">${icon('refresh', 10)}</i>` : ''}</span>`).join('')}
+      ${t.length > max ? `<span class="spot-poster more">+${t.length - max}</span>` : ''}</div>
+      ${any || got ? `<div class="spot-note">${got ? `${icon('check', 12)} You’ve got ${got} of ${t.length}` : ''}${got && any ? ' · ' : ''}${any ? `${icon('refresh', 12)} Already watched? Those count` : ''}</div>` : ''}`;
   }
   // "Starts in 3 days" / "Live · 5 days left" (short: without "Live · ", for cards that show the state already)
   function when(c, short) {
