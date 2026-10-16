@@ -11,6 +11,11 @@
                                        wreath with a star — the same for everyone
                                        who finishes. key = one of MSSMedal.OFFICIAL.
    MSSMedal.OFFICIAL                   [{ key, name }] — the official artwork
+   MSSMedal.achievement(key, level, o) an achievement (060): emblem centred, the
+                                       level's number on a plate — level 1 bronze,
+                                       2 silver, 3 gold, 4 green (the top). o.at = the
+                                       number on the plate (e.g. 1000 → "1K").
+   MSSMedal.ACH                        { key: { name, em, about } } — the achievements
    o = { size (px, default 120), locked (grey), label (aria-label — omit for
          decorative use next to a visible name) }
 
@@ -34,6 +39,35 @@ const MSSMedal = (() => {
     anime: '<path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19ZM7.6 10a2.1 2.6 0 1 0 0 5.2 2.1 2.6 0 0 0 0-5.2Zm8.8 0a2.1 2.6 0 1 0 0 5.2 2.1 2.6 0 0 0 0-5.2Zm-6.4 7.4c1.3.9 2.7.9 4 0Z"/>',
     cartoons: '<path d="M20.6 2.4c.6.6.6 1.5 0 2.1l-8.4 9.4-2.1-2.1 9.4-8.4c.6-.6 1.5-.6 2.1 0Z"/><path d="M8.6 12.7l2.7 2.7c.3 3-1.6 5.7-5 6.1-1.7.2-3 0-3.8-.4 1.1-.8 1.4-1.9 1.5-3.2.2-3 2-5.1 4.6-5.2Z"/>',
   };
+  Object.assign(EM, {
+    play: '<path fill-rule="evenodd" d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm-2.3 5.6v8.8l7-4.4Z"/>',
+    tvStar: '<path fill-rule="evenodd" d="M4 7.5h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Zm8 2.3-1.2 2.5-2.7.4 2 1.9-.5 2.7 2.4-1.3 2.4 1.3-.5-2.7 2-1.9-2.7-.4Z"/><path d="m8.2 2.6 3.8 3.6 3.8-3.6.9.9L13.4 7h-2.8L7.3 3.5Z"/>',
+    tvDone: '<path fill-rule="evenodd" d="M4 7.5h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Zm11.9 3.4-5 5-2.8-2.8-1.3 1.3 4.1 4.1 6.3-6.3Z"/><path d="m8.2 2.6 3.8 3.6 3.8-3.6.9.9L13.4 7h-2.8L7.3 3.5Z"/>',
+    star: '<path d="m12 2 3 6.3 6.9.9-5 4.8 1.2 6.9L12 17.6l-6.1 3.3 1.2-6.9-5-4.8 6.9-.9Z"/>',
+    list: '<rect x="3" y="4" width="3.4" height="3.4" rx="1"/><rect x="8.5" y="4.6" width="12.5" height="2.2" rx="1.1"/><rect x="3" y="10.3" width="3.4" height="3.4" rx="1"/><rect x="8.5" y="10.9" width="12.5" height="2.2" rx="1.1"/><rect x="3" y="16.6" width="3.4" height="3.4" rx="1"/><rect x="8.5" y="17.2" width="9" height="2.2" rx="1.1"/>',
+    note: '<path fill-rule="evenodd" d="M5 2.5h10l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-12A1.5 1.5 0 0 1 4 20V4a1.5 1.5 0 0 1 1-1.5Zm2.5 8v1.8h9v-1.8Zm0 3.8v1.8h9v-1.8Zm0 3.8v1.8h6v-1.8Z"/>',
+    hourglass: '<path d="M6 2.5h12v2h-1.2c0 3.2-1.6 5.6-3.6 7.5 2 1.9 3.6 4.3 3.6 7.5H18v2H6v-2h1.2c0-3.2 1.6-5.6 3.6-7.5-2-1.9-3.6-4.3-3.6-7.5H6Zm3.5 2c.1 1.7.9 3.2 2.5 4.5 1.6-1.3 2.4-2.8 2.5-4.5Zm2.5 10.2c-1.6 1.1-2.6 2.6-2.8 4.8h5.6c-.2-2.2-1.2-3.7-2.8-4.8Z"/>',
+    trophy: '<path fill-rule="evenodd" d="M7 3h10v1.5h3.5V7c0 2.6-1.8 4.6-4.3 5-.8 1.8-2.3 3.1-4.2 3.4V18h3.5v2.5h-7V18H12v-2.6c-1.9-.3-3.4-1.6-4.2-3.4-2.5-.4-4.3-2.4-4.3-5V4.5H7Zm-1.6 3.4V7c0 1.2.6 2.2 1.6 2.7V6.4Zm13.2 0H17v3.3c1-.5 1.6-1.5 1.6-2.7Z"/>',
+    compass: '<path fill-rule="evenodd" d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm4.6 5.4-6.5 2.7-2.7 6.5 6.5-2.7Zm-4.6 3.3a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6Z"/>',
+  });
+  // Achievements (060) — the levels come from the database (achievements_state)
+  const ACH = {
+    watched:        { name: 'Titles watched',    em: 'play',      about: 'Movies and shows you’ve marked Watched or To Be Continued.' },
+    episodes:       { name: 'Episodes watched',  em: 'tv',        about: 'Every episode from your shows’ progress.' },
+    episodes_rated: { name: 'Episodes rated',    em: 'tvStar',    about: 'Episodes you’ve rated.' },
+    rated:          { name: 'Titles rated',      em: 'star',      about: 'Titles you’ve watched and given a score.' },
+    hours:          { name: 'Hours watched',     em: 'hourglass', about: 'Movie runtimes plus your episodes — about 42 minutes each (anime 24, cartoons 22).' },
+    shows:          { name: 'Shows finished',    em: 'tvDone',    about: 'Shows — anime and cartoons too — you’ve marked Watched.' },
+    anime:          { name: 'Anime fan',         em: 'anime',     about: 'Anime you’ve watched.' },
+    cartoons:       { name: 'Cartoon fan',       em: 'cartoons',  about: 'Cartoons you’ve watched.' },
+    genres:         { name: 'Genres explored',   em: 'compass',   about: 'Different genres among what you’ve watched — there are 19.' },
+    lists:          { name: 'Lists made',        em: 'list',      about: 'Lists you’ve made.' },
+    notes:          { name: 'Notes written',     em: 'note',      about: 'Titles you’ve written a note on.' },
+    challenges:     { name: 'Challenges joined', em: 'trophy',    about: 'Challenges you’ve joined — friends’ and official.' },
+  };
+  const LEVEL = [null, ['bronze', 'Bronze'], ['silver', 'Silver'], ['gold', 'Gold'], ['green', 'Green']];
+  const GREEN = { rim: '#9BE38A', rim2: '#2F5A28', hi: '#4F8A43', lo: '#2F5F2A', em: '#F1FFE9' };
+  const short = n => n >= 1000 ? (Math.round(n / 100) / 10) + 'K' : String(n);
   const PLACE = p => p == null ? null : p === 1 ? ['gold', '1ST'] : p === 2 ? ['silver', '2ND'] : ['bronze', '3RD+'];
 
   // Official artwork: colours + a scene on the face
@@ -100,5 +134,18 @@ const MSSMedal = (() => {
     </svg>`, o);
   }
 
-  return { challenge, official, OFFICIAL: Object.entries(OFF).map(([key, v]) => ({ key, name: v.name })) };
+  function achievement(key, level, o = {}) {
+    const L = LEVEL[level] || LEVEL[1], T = o.locked ? GREY : L[0] === 'green' ? GREEN : TIER[L[0]];
+    const size = o.size || 120, id = 'mda' + (++uid), em = EM[(ACH[key] || {}).em] || EM.sparkles;
+    return wrap(`<svg class="mss-medal" viewBox="0 0 120 124" width="${size}" height="${(size * 124 / 120).toFixed(1)}">
+      <defs><clipPath id="${id}"><circle cx="60" cy="58" r="46"/></clipPath></defs>
+      <circle cx="60" cy="58" r="56" fill="${T.rim2}"/><circle cx="60" cy="58" r="52" fill="${T.rim}"/>
+      <g clip-path="url(#${id})"><rect width="120" height="58" fill="${T.hi}"/><rect y="58" width="120" height="66" fill="${T.lo}"/></g>
+      <g transform="translate(36 34) scale(2)" fill="${T.em}">${em}</g>
+      <rect x="34" y="100" width="52" height="22" rx="6" fill="${T.rim2}"/><rect x="36" y="102" width="48" height="18" rx="5" fill="${T.lo}"/>
+      <text x="60" y="116.5" text-anchor="middle" font-family="Bebas Neue, Oswald, sans-serif" font-size="17" letter-spacing=".5" fill="${T.em}">${o.at != null ? short(o.at) : '—'}</text>
+    </svg>`, o);
+  }
+
+  return { challenge, official, achievement, ACH, LEVEL: LEVEL.slice(1).map(l => l[1]), OFFICIAL: Object.entries(OFF).map(([key, v]) => ({ key, name: v.name })) };
 })();
