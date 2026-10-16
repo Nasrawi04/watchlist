@@ -353,10 +353,10 @@
         <button class="prof-share-btn" id="profShareBtn" onclick="openShareProfile()" style="display:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share</button>
       </div>
     </div>
-    <div id="profShowcase"></div>
 
   <select class="prof-tab-select" id="profTabsSelect" aria-label="Profile tab" onchange="switchTab(+this.value)">
     <option value="0">Overview</option>
+    <option value="6">Showcase</option>
     <option value="1">Library</option>
     <option value="2">Lists</option>
     <option value="3">Notes</option>
@@ -368,6 +368,10 @@
     <div class="prof-tab active" id="tab0" onclick="switchTab(0)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       <span class="prof-tab-label">Overview</span>
+    </div>
+    <div class="prof-tab" id="tab6" onclick="switchTab(6)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+      <span class="prof-tab-label">Showcase</span>
     </div>
     <div class="prof-tab" id="tab1" onclick="switchTab(1)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -397,6 +401,7 @@
   <div class="prof-panel" id="panel3"><div id="notesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel4"><div id="exportsContent"></div></div>
   <div class="prof-panel" id="panel5"><div id="episodesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+  <div class="prof-panel" id="panel6"><div id="profShowcase"><div class="page-loading"><div class="spinner"></div></div></div></div>
 
 </div>
 
@@ -454,7 +459,6 @@ document.addEventListener('DOMContentLoaded', function() {
     _profFavLists = both[1];
     _pEntriesLoaded();
     populateHeader();
-    MSSShowcase.mount(document.getElementById('profShowcase'), user.id, { own: true });
     renderTab0();
     if (_activeTab === 1) renderLibrary();
   });
@@ -503,7 +507,7 @@ function switchTab(n) {
   _activeTab = n;
   var sel = document.getElementById('profTabsSelect');
   if (sel && +sel.value !== n) sel.value = n;
-  [0,1,2,3,4,5].forEach(function(i) {
+  [0,1,2,3,4,5,6].forEach(function(i) {
     var t=document.getElementById('tab'+i), p=document.getElementById('panel'+i);
     if(t) t.classList.toggle('active', i===n);
     if(p) p.classList.toggle('active', i===n);
@@ -512,7 +516,8 @@ function switchTab(n) {
   if (n===2 || n===3) _renderPersonalTab(n);
   if (n===4) renderExports();
   if (n===5) MSSTabs.episodes(document.getElementById('episodesTabContent'), { userId: _pUser.id, owner: true });
-  if (n===0 && _pEntries.length) renderTab0();
+  if (n===6) MSSShowcase.mount(document.getElementById('profShowcase'), _pUser.id, { own: true });
+  if (n===0) renderTab0();
 }
 
 /* ── Popup ── */
@@ -567,7 +572,12 @@ function _statsBoxHTML(entries, profile, favLists) {
 function renderTab0() {
   var el = document.getElementById('overviewContent');
   if (!el) return;
-  if (!_pEntries || !_pEntries.length) return;
+  if (!_pEntries || !_pEntries.length) {   // nothing added yet: say so (was a spinner forever)
+    el.innerHTML = '<div class="fr-empty prof-empty"><div class="fr-empty-ic">'+icon('film',26)+'</div><div class="fr-empty-title">Your profile is waiting</div>'
+      +'<div class="fr-empty-text">Add movies and shows you\u2019ve watched — your stats, favorites and top picks show up here.</div>'
+      +'<a class="btn-add-entry" style="display:inline-flex;width:auto;margin-top:14px;text-decoration:none" href="discover.html">'+icon('search',15)+' Find something to add</a></div>';
+    return;
+  }
   var _statsHTML = _statsBoxHTML(_pEntries, _pProfile, _profFavLists);
   el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+'</div><div class="overview-main" id="profDashMain"></div></div>';
   // Dashboard: Top Favorites, Would Recommend, Top 5 per type — editable here
