@@ -12,6 +12,7 @@
        medal artwork (same for everyone who finishes) and an optional spotlight popup
 
    MSSChallenges.mount(el, user, { ch })   the section (ch: scroll to that one)
+   MSSChallenges.details(id)                the Details popup — how it works, the titles, the medal
 
    Uses friends.html's _frAccepted for the invite lists, the shared Social
    popup (_socDialog, social.js), the filter dropdown (SF.dd, sort-filter.js),
@@ -98,11 +99,11 @@ const MSSChallenges = (() => {
       <div class="chf-medal">${MSSMedal.official(c.medal, { size: 132, label: `${c.title} medal` })}</div>
       <div class="chf-body">
         <div class="chf-eyebrow"><span class="chf-state ${state[1]}">${state[0]}</span>${MSSSpotlight.entry(c.spotlight)?.eyebrow && c.state !== 'ended' ? `<span class="chf-tagline">${esc(MSSSpotlight.entry(c.spotlight).eyebrow)}</span>` : ''}${c.state !== 'hidden' && c.state !== 'ended' ? `<span>${MSSSpotlight.when(c, true)}</span>` : ''}<span>${fmtDay(c.starts_on)} – ${fmtDay(c.ends_on)}</span></div>
-        <h3 class="chf-title" translate="no">${esc(c.title)}</h3>
+        <h3 class="chf-title" translate="no"><button type="button" class="ch-title-btn" onclick="MSSChallenges.details(${id})">${esc(c.title)}</button></h3>
         ${c.description ? `<p class="chf-desc">${esc(c.description)}</p>` : ''}
         <div class="spot-tags">${MSSSpotlight.tags(c)}</div>
         ${MSSSpotlight.posters(c, 10)}
-        <div class="chf-foot">${foot}<span class="chf-count">${icon('users', 13)} <b>${c.joined}</b> joined${c.finished ? ` · <b>${c.finished}</b> finished` : ''}</span>
+        <div class="chf-foot">${foot}<button type="button" class="rec-btn chf-info" onclick="MSSChallenges.details(${id})">${icon('info', 14)} Details</button><span class="chf-count">${icon('users', 13)} <b>${c.joined}</b> joined${c.finished ? ` · <b>${c.finished}</b> finished` : ''}</span>
           ${joined && !done ? `<button type="button" class="poll-link poll-danger" onclick="MSSChallenges.respond(${id}, 'leave')">Leave</button>` : ''}</div>
         ${c.can_manage ? `<div class="chf-own">
             <button type="button" class="rec-btn" onclick="MSSChallenges.official(${id})">${icon('edit', 14)} Edit</button>
@@ -111,6 +112,80 @@ const MSSChallenges = (() => {
       </div>
     </article>`;
   }
+  /* ── Details popup: everything about one challenge, in plain words ── */
+  let infoId = null;
+  function details(id) {
+    const c = off.list.find(x => x.id === id) || list.find(x => x.id === id); if (!c) return;
+    infoId = id;
+    const isOff = !!off.list.find(x => x.id === id), lst = isOff && c.count_mode === 'list';
+    const t = c.titles || [], today = iso(new Date());
+    const joined = c.my_status === 'joined', invited = c.my_status === 'invited';
+    const me = !isOff ? (c.members || []).find(m => m.me) : null;
+    const finished = !!(c.my_finished_at || me?.finished_at);
+    const started = today >= c.starts_on, ended = today > c.ends_on;
+    const left = daysBetween(today, c.ends_on), until = daysBetween(today, c.starts_on);
+    const when = ended ? 'Ended' : !started ? `Starts in ${until} ${until === 1 ? 'day' : 'days'}` : left <= 0 ? 'Last day!' : `${left} ${left === 1 ? 'day' : 'days'} left`;
+    const medalName = isOff ? (MSSMedal.OFFICIAL.find(m => m.key === c.medal)?.name || 'Official') : '';
+    const kind = (c.cat ? CATS.find(x => x[0] === c.cat)[1].toLowerCase() : 'titles');
+    const anyN = t.filter(x => x.anytime).length;
+    const steps = [
+      joined || finished ? `<b>You’re in.</b> Everything below already counts for you.` : `<b>Join the challenge</b>${isOff ? ' — anyone can.' : invited ? ' — you’ve been invited.' : '.'}`,
+      lst ? `<b>Watch ${c.goal === t.length ? `all ${t.length}` : `${c.goal} of the ${t.length}`} ${t.length === 1 ? 'title' : 'titles'} below</b> and mark each one Watched.`
+        : `<b>Watch ${c.goal} ${c.genre ? esc(c.genre) + ' ' : ''}${kind}</b> — any you like${c.cat || c.genre ? ' that fit' : ''}. Mark them Watched as you go.`,
+      lst && anyN ? `Titles marked ${icon('refresh', 12)} <b>count even if you watched them before</b>. The others have to be marked Watched between <b>${fmtDay(c.starts_on)}</b> and <b>${fmtDay(c.ends_on)}</b>.`
+        : `Only titles marked Watched between <b>${fmtDay(c.starts_on)}</b> and <b>${fmtDay(c.ends_on)}</b> count — progress updates by itself.`,
+      isOff ? `<b>Finish it and the ${esc(medalName)} medal is yours</b> — everyone who finishes gets the same one.`
+        : `<b>Race your friends:</b> first to finish gets gold, second silver, everyone after bronze.`,
+    ];
+    const status = x => x.done ? `<span class="chi-st done">${icon('check', 12)} You’ve got it</span>`
+      : x.anytime ? `<span class="chi-st any">${icon('refresh', 12)} Already watched counts</span>` : `<span class="chi-st during">${icon('clock', 12)} Watch during</span>`;
+    const titles = lst ? `<div class="sf-section-label">The titles <span class="sf-section-hint">${t.filter(x => x.done).length} of ${t.length} done</span></div>
+      <ul class="chi-titles">${t.map(x => `<li><button type="button" class="chi-row" onclick="goToTitle(${attrJSON(x.tmdb_type)}, ${Number(x.tmdb_id)})">
+          <span class="poll-thumb">${x.poster_path ? `<img src="https://image.tmdb.org/t/p/w92${esc(x.poster_path)}" alt="" loading="lazy">` : icon(x.tmdb_type === 'movie' ? 'film' : 'tv', 14)}</span>
+          <span class="poll-opt-text"><b translate="no">${esc(x.title)}</b><small>${[x.year, x.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small></span>
+          ${status(x)}</button></li>`).join('')}</ul>` : '';
+    const prog = c.my_progress || 0, pct = Math.min(100, Math.round(prog / c.goal * 100));
+    const mine = joined || finished ? `<div class="chi-prog"><div class="ch-mine-n"><b>${prog}</b><span>/ ${c.goal}</span></div>
+        <div class="ch-mine-main"><div class="ch-bar big" role="progressbar" aria-valuemin="0" aria-valuemax="${c.goal}" aria-valuenow="${prog}" aria-label="Your progress"><i style="width:${pct}%"></i></div>
+        <div class="ch-mine-text">${finished ? 'You finished — the medal is yours.' : !started ? 'You’re in — it starts soon.' : `${c.goal - prog} to go · ${pct}%`}</div></div></div>` : '';
+    const medals = isOff ? `<div class="chi-medals one">${MSSMedal.official(c.medal, { size: 84, locked: !finished, label: `${medalName} medal${finished ? '' : ' (not earned yet)'}` })}
+        <span><b>${esc(medalName)}</b>${finished ? 'You’ve earned it' : 'Yours when you finish'}</span></div>`
+      : `<div class="chi-medals">${[[1, 'Gold', '1st to finish'], [2, 'Silver', '2nd'], [3, 'Bronze', 'Everyone after']].map(([pl, n, d]) =>
+          `<span>${MSSMedal.challenge(pl, c.cat, { size: 58, locked: finished ? me?.finish_rank !== pl && !(pl === 3 && me?.finish_rank >= 3) : false, label: `${n} medal` })}<b>${n}</b><small>${d}</small></span>`).join('')}</div>`;
+    const people = isOff ? `${c.joined || 0} joined${c.finished ? ` · ${c.finished} finished` : ''}`
+      : `${(c.members || []).filter(m => m.status === 'joined').length} racing${(c.members || []).filter(m => m.finished_at).length ? ` · ${(c.members || []).filter(m => m.finished_at).length} finished` : ''}`;
+    const ov = _socDialog('chInfo', isOff ? 'Official challenge' : 'Challenge', closeInfo);
+    ov.querySelector('.soc-card').classList.add('chi-card');
+    document.getElementById('chInfoBody').innerHTML = `
+      <div class="chi-hero">
+        <div class="chi-medal">${isOff ? MSSMedal.official(c.medal, { size: 96 }) : `<span class="ch-ic chi-ic" aria-hidden="true">${icon('trophy', 26)}</span>`}</div>
+        <div class="chi-hero-main">
+          <div class="chi-chips"><span class="chi-when${ended ? ' ended' : !started ? ' soon' : ''}">${when}</span><span>${icon('clock', 12)} ${fmtDay(c.starts_on)} – ${fmtDay(c.ends_on)}</span><span>${icon('users', 12)} ${people}</span></div>
+          <h3 class="chi-title" translate="no">${esc(c.title)}</h3>
+          ${c.description ? `<p class="chi-desc">${esc(c.description)}</p>` : ''}
+        </div>
+      </div>
+      ${mine}
+      <div class="sf-section-label">How it works</div>
+      <ol class="chi-steps">${steps.map(x => `<li>${x}</li>`).join('')}</ol>
+      ${titles}
+      <div class="sf-section-label">${isOff ? 'The medal' : 'The medals'}</div>
+      ${medals}`;
+    const canJoin = !joined && !finished && !ended && (isOff ? started || c.state === 'soon' : invited);
+    document.getElementById('chInfoFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="MSSChallenges._closeInfo()">Close</button>
+      ${canJoin ? `<button type="button" class="sf-apply-btn" onclick="MSSChallenges._infoJoin()">${icon('check', 14)} Join</button>` : ''}`;
+    MSSDialog.open(ov, { focus: canJoin ? '#chInfoFoot .sf-apply-btn' : '#chInfoFoot .sf-clear-btn' });
+  }
+  function closeInfo() { infoId = null; MSSDialog.close(document.getElementById('chInfo')); }
+  async function infoJoin() {
+    const id = infoId; if (!id) return;
+    const isOff = !!off.list.find(x => x.id === id);
+    const ok = isOff ? await act('join_official_challenge', { p_ch: id }) : await act('respond_challenge', { p_ch: id, p_action: 'join' });
+    if (!ok) return;
+    showToast('You’re in — go watch something!');
+    if (infoId === id) details(id);
+  }
+
   async function joinOfficial(id) {
     if (await act('join_official_challenge', { p_ch: id })) showToast('You’re in — go watch something!');
   }
@@ -139,7 +214,7 @@ const MSSChallenges = (() => {
       <header class="ch-head">
         <span class="ch-ic" aria-hidden="true">${icon('trophy', 20)}</span>
         <div class="ch-head-info">
-          <div class="ch-title" translate="no">${esc(c.title)}</div>
+          <div class="ch-title" translate="no"><button type="button" class="ch-title-btn" onclick="MSSChallenges.details(${id})">${esc(c.title)}</button></div>
           <div class="ch-meta">Watch <b>${c.goal}</b> ${what(c)} · ${fmtDay(c.starts_on)} – ${fmtDay(c.ends_on)}</div>
         </div>
         <span class="ch-state ${state[1]}">${state[0]}</span>
@@ -161,8 +236,9 @@ const MSSChallenges = (() => {
       <ol class="ch-board">${shown.map(row).join('')}</ol>
       ${joined.length > shown.length ? `<button type="button" class="poll-link" onclick="MSSChallenges._all(${id})">Show all ${joined.length}</button>` : ''}
       ${pending.length ? `<div class="ch-pending">${pending.slice(0, 12).map(m => `<span title="${esc(nameOf(m))} — invited">${av(m, 22)}</span>`).join('')}<span>Invited</span></div>` : ''}
-      ${!invited && c.state !== 'ended' && c.members.length < 100 ? `<div class="ch-acts"><button type="button" class="rec-btn" onclick="MSSChallenges.invite(${id})">${icon('plus', 14)} Invite friends</button>
-          ${!c.is_creator ? `<button type="button" class="poll-link poll-danger" onclick="MSSChallenges.respond(${id}, 'leave')">Leave</button>` : ''}</div>` : ''}
+      <div class="ch-acts"><button type="button" class="rec-btn" onclick="MSSChallenges.details(${id})">${icon('info', 14)} Details</button>
+      ${!invited && c.state !== 'ended' && c.members.length < 100 ? `<button type="button" class="rec-btn" onclick="MSSChallenges.invite(${id})">${icon('plus', 14)} Invite friends</button>
+          ${!c.is_creator ? `<button type="button" class="poll-link poll-danger" onclick="MSSChallenges.respond(${id}, 'leave')">Leave</button>` : ''}` : ''}</div>
     </article>`;
   }
 
@@ -394,7 +470,7 @@ const MSSChallenges = (() => {
     } catch (err) { btn.disabled = false; showToast(errText(err, 'Couldn’t save — try again.'), 'err'); }
   }
 
-  return { mount, create, official, invite, respond, remove, reload: load, _any: toggleAny,
+  return { mount, create, official, invite, respond, remove, details, reload: load, _any: toggleAny, _closeInfo: closeInfo, _infoJoin: infoJoin,
     _all: id => { showAll[id] = true; draw(); }, _f: f, _inv: inv, _save: save, _close: closeForm,
     _joinOfficial: joinOfficial, _preview: id => { const c = off.list.find(x => x.id === id); if (c) MSSSpotlight.preview(c); },
     _q: search, _pick: pick, _rm: i => { form?.titles.splice(i, 1); drawChosen(); } };
