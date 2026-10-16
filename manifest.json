@@ -1,7 +1,7 @@
 {
-  "name": "MyScreenScore",
-  "short_name": "MyScreenScore",
-  "description": "Track, rate, and rank everything you watch.",
+  "name": "MyScreenFolio",
+  "short_name": "MyScreenFolio",
+  "description": "Your screen portfolio — track, rate and curate everything you watch.",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait-primary",
