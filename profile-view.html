@@ -293,6 +293,8 @@
 <script src="js/list-popup.js"></script>
 <script src="js/profile-tabs.js"></script>
 <script src="js/episode-ratings.js"></script>
+<script src="js/medals.js"></script>
+<script src="js/showcase.js"></script>
 <script>
 let _pvMe = null, _pvMeProfile = null;
 let _pvUserId = null, _pvUsername = null, _pvProfile = null;
@@ -495,7 +497,8 @@ function renderProfile() {
   var panel3 = '<div class="prof-panel" id="pvPanel3"><div id="pvNotesContent"></div></div>';
   var panel4 = '<div class="prof-panel" id="pvPanel4"><div id="pvEpisodesContent"></div></div>';
 
-  document.getElementById('pvContent').innerHTML = header + mobileSelect + tabBar + panel0 + panel1 + panel2 + panel3 + panel4;
+  document.getElementById('pvContent').innerHTML = header + '<div id="pvShowcase"></div>' + mobileSelect + tabBar + panel0 + panel1 + panel2 + panel3 + panel4;
+  MSSShowcase.mount(document.getElementById('pvShowcase'), p.id, { own: false });
 
   window.pvTab = function(n, el) {
     document.querySelectorAll('.prof-tab').forEach(function(t){t.classList.remove('active');});
