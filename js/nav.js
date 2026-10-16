@@ -83,8 +83,13 @@ async function _navAdminCheck() {
   let on = null;
   try { const c = sessionStorage.getItem('mss_admin'); if (c && c.startsWith(uid + ':')) on = c.slice(-1); } catch {}
   if (on == null) {
-    try { const { data, error } = await sb.rpc('is_app_admin'); on = !error && data === true ? '1' : '0'; } catch { on = '0'; }
-    try { sessionStorage.setItem('mss_admin', uid + ':' + on); } catch {}
+    // only a real answer is remembered — a failed check (offline, mid-deploy) asks again next page
+    try {
+      const { data, error } = await sb.rpc('is_app_admin');
+      if (error) throw error;
+      on = data === true ? '1' : '0';
+      try { sessionStorage.setItem('mss_admin', uid + ':' + on); } catch {}
+    } catch { on = '0'; }
   }
   document.querySelectorAll('.nav-admin-link').forEach(a => { a.hidden = on !== '1'; });
 }
