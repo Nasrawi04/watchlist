@@ -134,8 +134,9 @@ function achCard(a) {
   </button>`;
 }
 function badgeCard(b) {
-  const medal = b.kind === 'official' ? MSSMedal.official(b.medal, { size: 104 }) : `<span style="height:110px;display:flex;align-items:flex-end">${MSSMedal.challenge(b.place, b.cat, { size: 84 })}</span>`;
-  const sub = b.kind === 'official' ? 'Official challenge' : b.place === 1 ? 'Gold · finished 1st' : b.place === 2 ? 'Silver · finished 2nd' : `Bronze · finished ${b.place ? '#' + b.place : ''}`;
+  const team = b.team_color ? { color: b.team_color } : null;
+  const medal = b.kind === 'official' ? MSSMedal.official(b.medal, { size: 104, team }) : `<span style="height:110px;display:flex;align-items:flex-end">${MSSMedal.challenge(b.place, b.cat, { size: 84 })}</span>`;
+  const sub = b.kind === 'official' ? (b.team_name ? `Official · ${esc(b.team_name)}` : 'Official challenge') : b.place === 1 ? 'Gold · finished 1st' : b.place === 2 ? 'Silver · finished 2nd' : `Bronze · finished ${b.place ? '#' + b.place : ''}`;
   return `<button type="button" class="cab-card" onclick="cabBadge('${b.id}')" aria-label="${esc(b.title)} — ${sub}">
     ${medal}<span class="cab-card-name" translate="no">${esc(b.title)}</span><span class="cab-card-lv">${sub}</span><span class="cab-card-lv">${when(b.earned_at)}</span></button>`;
 }
@@ -213,10 +214,10 @@ function cabAch(key) {
 function cabBadge(id) {
   const b = CAB.badges.find(x => x.id === id); if (!b) return;
   const off = b.kind === 'official';
-  const sub = off ? 'Official challenge · everyone who finishes gets this medal'
+  const sub = off ? (b.team_name ? `Official challenge · ${esc(b.team_name)}` : 'Official challenge · everyone who finishes gets this medal')
     : b.place === 1 ? 'Gold — finished 1st' : b.place === 2 ? 'Silver — finished 2nd' : `Bronze — finished ${b.place ? '#' + b.place : ''}`;
   cabPopup(`<div class="cab-pop-hero">
-      <div class="cab-medal-in">${off ? MSSMedal.official(b.medal, { size: 150, label: `${b.title} medal` }) : MSSMedal.challenge(b.place, b.cat, { size: 120, label: `${b.title} medal` })}</div>
+      <div class="cab-medal-in">${off ? MSSMedal.official(b.medal, { size: 150, team: b.team_color ? { color: b.team_color } : null, label: `${b.title} medal` }) : MSSMedal.challenge(b.place, b.cat, { size: 120, label: `${b.title} medal` })}</div>
       <h3 class="cab-pop-title" id="cabPopTitle" translate="no">${esc(b.title)}</h3>
       <div class="cab-pop-sub">${sub}</div>
       <div class="cab-pop-sub">Earned ${when(b.earned_at)}</div>
