@@ -24,12 +24,14 @@
 ═══════════════════════════════════════════════════════════════ */
 
 const MSSEp = (() => {
+  // ink: dark text on that colour
   const BANDS = [
+    { min: 10,  key: 'perfect',     name: 'Perfect 10', ink: true },
     { min: 9.5, key: 'masterpiece', name: 'Masterpiece' },
     { min: 8.5, key: 'great',       name: 'Great' },
-    { min: 7.5, key: 'good',        name: 'Good' },
-    { min: 6.5, key: 'decent',      name: 'Decent' },
-    { min: 5.0, key: 'meh',         name: 'Meh' },
+    { min: 7.5, key: 'good',        name: 'Good',   ink: true },
+    { min: 6.5, key: 'decent',      name: 'Decent', ink: true },
+    { min: 5.0, key: 'meh',         name: 'Meh',    ink: true },
     { min: 0,   key: 'bad',         name: 'Bad' },
   ];
   const TAGS = ['Plot Twist', 'Emotional', 'Funny', 'Action-Packed', 'Cliffhanger', 'Scary', 'Iconic', 'Character Focus', 'Slow', 'Filler'];
