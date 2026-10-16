@@ -6149,10 +6149,12 @@ span.sc-empty { cursor:default; }
 /* editor */
 .sc-edit { max-width:640px; }
 .sc-edit-shelf { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; max-width:330px; margin:0 auto 6px; }
+.sc-edit-cab { padding:14px; margin:0 0 6px; }
+.sc-edit-cab .sc-edit-shelf { margin-bottom:0; }
 .sc-edit-slot { position:relative; }
 .sc-edit-pick { all:unset; box-sizing:border-box; width:100%; aspect-ratio:1 / 1.15; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); cursor:pointer;
-  background:var(--bg-3); border:1.5px dashed var(--border-2); }
-.sc-edit-slot.sel .sc-edit-pick { border:2px solid var(--olive-light); background:var(--olive-faint); }
+  background:transparent; border:1.5px dashed color-mix(in srgb, var(--sc-faint) 70%, transparent); }
+.sc-edit-slot.sel .sc-edit-pick { border:2px solid var(--olive-light); background:color-mix(in srgb, var(--olive-light) 16%, transparent); }
 .sc-edit-pick:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .sc-edit-pick svg.mss-medal { max-width:90%; height:auto; }
 .sc-edit-x { position:absolute; top:-6px; inset-inline-end:-6px; width:22px; height:22px; border-radius:50%; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
