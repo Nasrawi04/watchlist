@@ -458,7 +458,8 @@ SF.register('lv', {
 });
 
 function _lvRankedBadgeHTML() {
-  return (_lvList?.official ? `<span class="list-rank-badge is-official">${icon('crown', 11)} Official</span>` : '') + _lvRankedOnlyHTML();
+  // official lists: just the Official tag — no Ranked / Unranked (or its switch)
+  return _lvList?.official ? `<span class="list-rank-badge is-official">${icon('crown', 11)} Official</span>` : _lvRankedOnlyHTML();
 }
 function _lvRankedOnlyHTML() {
   const ranked = _lvList?.ranked;
