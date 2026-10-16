@@ -1014,6 +1014,9 @@ SF.register('frCLists', {
   addedDate: l => l.created_at,
   compare: _frPopularCompare,
   choiceFilters: () => [
+    { key: 'official', label: 'Official',
+      options: [['', 'All Lists'], ['yes', 'Official Lists'], ['no', 'Community Only']],
+      test: (l, v) => v === 'yes' ? !!l.official : !l.official },
     { key: 'rank', label: 'Ranking', options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked']], test: (l, v) => v === 'yes' ? l.ranked === true : l.ranked === false },
     _frWhose('Lists'),
   ],
