@@ -11,6 +11,7 @@
                                        wreath with a star — the same for everyone
                                        who finishes. key = one of MSSMedal.OFFICIAL.
    MSSMedal.OFFICIAL                   [{ key, name }] — the official artwork
+                                       (o.team = { color }: a team's version — wreath, star and rim in its colour)
    MSSMedal.achievement(key, level, o) an achievement (060): emblem centred, the
                                        level's number on a plate — level 1 bronze,
                                        2 silver, 3 gold, 4 green (the top). o.at = the
@@ -119,8 +120,14 @@ const MSSMedal = (() => {
     </svg>`, o);
   }
 
+  // o.team = { color } — a team's version (064): the wreath, star and rim in the team's colour
+  const shade = (hex, k) => '#' + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * k)).map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
   function official(key, o = {}) {
-    const A = OFF[key] || OFF.halloween, T = o.locked ? GREY : A, size = o.size || 120, id = 'mdo' + (++uid);
+    const A = OFF[key] || OFF.halloween, size = o.size || 120, id = 'mdo' + (++uid);
+    const tc = !o.locked && /^#[0-9a-f]{6}$/i.test(o.team?.color || '') ? o.team.color : null;
+    // a dark team colour (Team Black) gets a light edge instead, so it still shows on dark pages
+    const dark = tc && [1, 3, 5].reduce((s, i, k) => s + parseInt(tc.slice(i, i + 2), 16) * [.3, .59, .11][k], 0) < 70;
+    const T = o.locked ? GREY : tc ? { ...A, rim: tc, rim2: dark ? '#9A9AA6' : shade(tc, .55) } : A;
     const leaves = side => [...Array(8)].map((_, i) => {
       const deg = 100 + i * 17, a = deg * Math.PI / 180, x = side < 0 ? 60 + 50 * Math.cos(a) : 60 - 50 * Math.cos(a), y = 64 + 50 * Math.sin(a);
       return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3.4" ry="7.5" transform="rotate(${(side < 0 ? deg + 25 : 155 - deg).toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
