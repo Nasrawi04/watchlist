@@ -1182,6 +1182,9 @@ SF.register('social', {
     least_popular: (a, b) => (Number(b.dislike_count) - Number(a.dislike_count)) || (_socialScore(a) - _socialScore(b)),
   },
   choiceFilters: () => [
+    { key: 'official', label: 'Official',
+      options: [['', 'All Lists'], ['yes', 'Official Lists'], ['no', 'Community Only']],
+      test: (l, v) => v === 'yes' ? !!l.official : !l.official },
     { key: 'ranked', label: 'Ranking',
       options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked']],
       test: (l, v) => v === 'yes' ? l.ranked === true : l.ranked === false },
@@ -1494,7 +1497,7 @@ function renderSocialLists() {
         <div class="social-list-avatar">${safeURL(l.avatar_url) ? `<img src="${safeURL(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
         <div class="social-list-username">@${esc(l.username || 'user')}</div>
       </div>
-      <div class="lc-title-row"><div class="lc-title" translate="no">${esc(l.title)}</div>${MSSList.rankBadge(l.ranked)}</div>
+      <div class="lc-title-row"><div class="lc-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l)}${MSSList.rankBadge(l.ranked)}</div>
       <div class="lc-meta">${MSSList.countHTML(items.length)}</div>
       ${MSSList.postersHTML(items, _resolveSocialItem)}
       <div class="social-list-reactions">
@@ -1607,7 +1610,7 @@ function _renderListPopup() {
 
   card.innerHTML = `
     <div class="lp-head">${head}<button class="lp-close" onclick="closeSocialListPopup()" aria-label="Close">${icon('x', 18)}</button></div>
-    <div class="lp-title-row"><div class="lp-title" translate="no">${esc(l.title)}</div>${MSSList.rankBadge(l.ranked)}</div>
+    <div class="lp-title-row"><div class="lp-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l)}${MSSList.rankBadge(l.ranked)}</div>
     ${l.description ? `<div class="lp-desc" translate="no">${esc(l.description)}</div>` : ''}
     <div class="lp-meta">${MSSList.countHTML(items.length)}</div>
     ${mine ? MSSList.collabLineHTML(l, _listsCollab[l.id]) : ''}
