@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Achievement Cabinet — MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ── Achievement Cabinet ── */
+.cab-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem 2rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+.cab-eyebrow { font-size:11px; font-weight:700; letter-spacing:2.6px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
+.cab-title { font-family:var(--serif); font-size:clamp(28px, 5.5vw, 42px); font-weight:600; line-height:1.1; margin:0; color:var(--text); overflow-wrap:anywhere; }
+.cab-sub { font-size:13.5px; color:var(--text-2); margin-top:6px; }
+.cab-stats { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; margin-bottom:1.25rem; }
+.cab-stat { padding:14px 16px; border-radius:var(--radius); background:var(--card); border:0.5px solid var(--border); }
+.cab-stat b { display:block; font-family:var(--bebas); font-weight:400; font-size:32px; line-height:1; color:var(--text); letter-spacing:.3px; }
+.cab-stat span { display:block; margin-top:4px; font-size:12px; color:var(--text-3); }
+.cab-stat.hl { background:var(--olive-faint); border-color:var(--border-olive); }
+.cab-stat.hl b { color:var(--olive-light); }
+.cab-tabs { margin:0 0 1.25rem; }
+.cab-sec + .cab-sec { margin-top:2rem; }
+.cab-sec-head { display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
+.cab-sec-title { font-family:var(--serif); font-size:20px; font-weight:600; color:var(--text); margin:0; }
+.cab-sec-count { font-size:12.5px; color:var(--text-3); }
+.cab-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr)); gap:12px; }
+.cab-card { all:unset; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; gap:6px; padding:16px 12px 14px; text-align:center; cursor:pointer;
+  border-radius:var(--radius); background:var(--card); border:0.5px solid var(--border); transition:border-color .15s, transform .15s; min-width:0; }
+.cab-card:hover { border-color:var(--border-olive); transform:translateY(-2px); }
+.cab-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.cab-card.locked .mss-medal { opacity:.85; }
+.cab-card-name { font-size:14px; font-weight:700; color:var(--text); line-height:1.25; overflow-wrap:anywhere; }
+.cab-card-lv { font-size:12px; color:var(--text-3); }
+.cab-card-lv b { color:var(--olive-light); font-weight:700; }
+.cab-pips { display:flex; gap:4px; }
+.cab-pips i { width:16px; height:5px; border-radius:3px; background:var(--bg-3); }
+.cab-pips i.l1 { background:#C17A4A; } .cab-pips i.l2 { background:#A6AEB9; } .cab-pips i.l3 { background:#DDAE45; } .cab-pips i.l4 { background:#4F8A43; }
+.cab-prog { width:100%; margin-top:2px; }
+.cab-bar { height:6px; border-radius:3px; background:var(--bg-3); overflow:hidden; }
+.cab-bar i { display:block; height:100%; border-radius:3px; background:var(--olive-light); }
+.cab-prog small { display:block; margin-top:5px; font-size:11.5px; color:var(--text-3); }
+.cab-empty { padding:24px 16px; border-radius:var(--radius); border:1px dashed var(--border-2); text-align:center; font-size:13.5px; color:var(--text-3); }
+.cab-empty a { color:var(--olive-light); font-weight:600; }
+/* detail popup */
+.cab-pop { max-width:520px; }
+.cab-pop-hero { display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; padding-bottom:6px; }
+.cab-pop-title { margin:4px 0 0; font-family:var(--serif); font-size:24px; font-weight:600; color:var(--text); line-height:1.2; overflow-wrap:anywhere; }
+.cab-pop-sub { font-size:13px; color:var(--text-3); }
+.cab-pop-about { margin:4px 0 0; font-size:14px; line-height:1.55; color:var(--text-2); }
+.cab-pop-prog { width:100%; max-width:340px; margin:6px auto 0; }
+.cab-pop-prog .cab-bar { height:8px; }
+.cab-levels { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:6px; }
+.cab-level { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 4px; border-radius:var(--radius-sm); background:var(--bg-3); text-align:center; }
+.cab-level b { font-size:12.5px; color:var(--text); }
+.cab-level small { font-size:11px; color:var(--text-3); line-height:1.3; }
+.cab-level.on { background:var(--olive-faint); }
+.cab-pop .cab-medal-in { animation:cabIn .5s var(--spring) both; }
+@keyframes cabIn { from { opacity:0; transform:scale(.7); } to { opacity:1; transform:none; } }
+@media(prefers-reduced-motion:reduce) { .cab-card, .cab-pop .cab-medal-in { transition:none; animation:none; } }
+@media(max-width:640px) {
+  .cab-stats { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .cab-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+  .cab-card { padding:14px 8px 12px; }
+  .cab-tabs .pn-toggle { width:100%; } .cab-tabs .pn-toggle-btn { flex:1; padding:8px 4px; font-size:12.5px; }
+}
+</style>
+</head>
+<body>
+<div class="page-wrap" id="cabPage">
+  <div class="page-loading"><div class="spinner"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/medals.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   cabinet.html — the Achievement Cabinet (060_achievements.sql)
+     cabinet.html             your medals: achievements (with progress to the
+                              next level), official challenge medals, friends'
+                              challenge medals · tabs All / Achievements / Official / Challenges
+     cabinet.html?user=<id>   someone else's — what they've earned, no progress
+   Opening your own cabinet saves any newly reached levels (sync_achievements).
+═══════════════════════════════════════════════════════════════ */
+const esc = s => escHTML(s == null ? '' : String(s));
+const CAB = { user: null, who: null, own: true, ach: [], badges: [], tab: 'all', name: '' };
+const num = n => Number(n || 0).toLocaleString(MSSI18n.locale);
+const when = d => new Date(d).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' });
+const topLevel = a => Math.max(0, ...(a.earned || []).map(e => e.level));
+const TABS = [['all', 'All'], ['ach', 'Achievements'], ['official', 'Official'], ['challenge', 'Challenges']];
+
+async function cabLoad() {
+  const params = new URLSearchParams(location.search);
+  CAB.who = params.get('user') || CAB.user.id;
+  CAB.own = CAB.who === CAB.user.id;
+  if (['all', 'ach', 'official', 'challenge'].includes(params.get('tab'))) CAB.tab = params.get('tab');
+  const rpc = async (fn, args) => { const { data, error } = await sb.rpc(fn, args); if (error) throw error; return data; };
+  const [ach, badges, prof] = await Promise.all([
+    CAB.own ? rpc('sync_achievements', {}) : rpc('achievements_state', { p_user: CAB.who }),
+    rpc('my_badges', { p_user: CAB.who }),
+    CAB.own ? null : sb.from('profiles').select('username,display_name').eq('id', CAB.who).maybeSingle().then(r => r.data),
+  ]);
+  CAB.ach = Array.isArray(ach) ? ach : [];
+  CAB.badges = (Array.isArray(badges) ? badges : []).filter(b => b.kind !== 'achievement');
+  CAB.name = prof ? (prof.display_name || prof.username || 'Their') : '';
+  try { localStorage.setItem('mss_ach_sync', String(Date.now())); } catch {}
+  cabDraw();
+}
+
+function achCard(a) {
+  const top = topLevel(a), L = MSSMedal.LEVEL, lv = a.levels;
+  const medal = top ? MSSMedal.achievement(a.key, top, { size: 104, at: lv[top - 1] })
+    : MSSMedal.achievement(a.key, 1, { size: 104, locked: true, at: lv[0] });
+  const next = top < 4 ? lv[top] : null;
+  const prog = CAB.own && a.count != null ? (next ? `<div class="cab-prog"><div class="cab-bar" aria-hidden="true"><i style="width:${Math.min(100, Math.round(a.count / next * 100))}%"></i></div>
+      <small>${num(a.count)} / ${num(next)}</small></div>` : `<div class="cab-prog"><small>${num(a.count)} · all levels done</small></div>`) : '';
+  return `<button type="button" class="cab-card${top ? '' : ' locked'}" onclick="cabAch('${a.key}')"
+      aria-label="${esc(a.name)}: ${top ? L[top - 1] : 'not earned yet'}${CAB.own && a.count != null ? `, ${a.count} so far` : ''}">
+    ${medal}
+    <span class="cab-card-name">${esc(MSSMedal.ACH[a.key]?.name || a.name)}</span>
+    <span class="cab-card-lv">${top ? `<b>${L[top - 1]}</b> · ${num(lv[top - 1])}` : 'Not earned yet'}</span>
+    <span class="cab-pips" aria-hidden="true">${[1, 2, 3, 4].map(i => `<i${i <= top ? ` class="l${i}"` : ''}></i>`).join('')}</span>
+    ${prog}
+  </button>`;
+}
+function badgeCard(b) {
+  const medal = b.kind === 'official' ? MSSMedal.official(b.medal, { size: 104 }) : `<span style="height:110px;display:flex;align-items:flex-end">${MSSMedal.challenge(b.place, b.cat, { size: 84 })}</span>`;
+  const sub = b.kind === 'official' ? 'Official challenge' : b.place === 1 ? 'Gold · finished 1st' : b.place === 2 ? 'Silver · finished 2nd' : `Bronze · finished ${b.place ? '#' + b.place : ''}`;
+  return `<button type="button" class="cab-card" onclick="cabBadge('${b.id}')" aria-label="${esc(b.title)} — ${sub}">
+    ${medal}<span class="cab-card-name" translate="no">${esc(b.title)}</span><span class="cab-card-lv">${sub}</span><span class="cab-card-lv">${when(b.earned_at)}</span></button>`;
+}
+
+function cabDraw() {
+  const page = document.getElementById('cabPage');
+  const official = CAB.badges.filter(b => b.kind === 'official'), chal = CAB.badges.filter(b => b.kind === 'challenge');
+  const levels = CAB.ach.reduce((s, a) => s + (a.earned || []).length, 0), maxed = CAB.ach.filter(a => topLevel(a) === 4).length;
+  const sec = (k, title, count, body) => (CAB.tab === 'all' || CAB.tab === k) ? `<section class="cab-sec" aria-label="${title}">
+      <div class="cab-sec-head"><h2 class="cab-sec-title">${title}</h2><span class="cab-sec-count">${count}</span></div>${body}</section>` : '';
+  const who = CAB.own ? 'You' : esc(CAB.name);
+  page.innerHTML = `
+    <div class="cab-head fade-up"><div>
+      <div class="cab-eyebrow">${CAB.own ? 'Your medals' : `<span translate="no">${esc(CAB.name)}</span>’s medals`}</div>
+      <h1 class="cab-title">Achievement Cabinet</h1>
+      <div class="cab-sub">${CAB.own ? 'Every medal you’ve earned — and how close you are to the next one.' : 'Every medal they’ve earned so far.'}</div>
+    </div></div>
+    <div class="cab-stats">
+      <div class="cab-stat hl"><b>${levels + official.length + chal.length}</b><span>Medals in total</span></div>
+      <div class="cab-stat"><b>${levels}<small style="font-size:18px;color:var(--text-3)"> / ${CAB.ach.length * 4}</small></b><span>Achievement levels${maxed ? ` · ${maxed} maxed` : ''}</span></div>
+      <div class="cab-stat"><b>${official.length}</b><span>Official medals</span></div>
+      <div class="cab-stat"><b>${chal.length}</b><span>Challenge medals</span></div>
+    </div>
+    <div class="cab-tabs"><div class="pn-toggle" role="tablist" aria-label="Show">${TABS.map(([k, l]) =>
+      `<button type="button" role="tab" class="pn-toggle-btn${CAB.tab === k ? ' active' : ''}" aria-selected="${CAB.tab === k}" onclick="cabTab('${k}')">${l}</button>`).join('')}</div></div>
+    ${sec('ach', 'Achievements', `${levels} of ${CAB.ach.length * 4} levels`, `<div class="cab-grid">${CAB.ach.map(achCard).join('')}</div>`)}
+    ${sec('official', 'Official', `${official.length} ${official.length === 1 ? 'medal' : 'medals'}`, official.length ? `<div class="cab-grid">${official.map(badgeCard).join('')}</div>`
+      : `<div class="cab-empty">${CAB.own ? `Finish an official challenge and its medal lands here. <a href="friends.html?s=challenges">See the challenges</a>` : 'No official medals yet.'}</div>`)}
+    ${sec('challenge', 'Challenges', `${chal.length} ${chal.length === 1 ? 'medal' : 'medals'}`, chal.length ? `<div class="cab-grid">${chal.map(badgeCard).join('')}</div>`
+      : `<div class="cab-empty">${CAB.own ? `Race friends in a challenge — 1st gets gold, 2nd silver, everyone after bronze. <a href="friends.html?s=challenges">Start one</a>` : 'No challenge medals yet.'}</div>`)}`;
+}
+function cabTab(k) {
+  CAB.tab = k;
+  const u = new URL(location.href); if (k === 'all') u.searchParams.delete('tab'); else u.searchParams.set('tab', k);
+  history.replaceState(null, '', u);
+  cabDraw();
+}
+
+/* ── Detail popup ── */
+function cabPopup(body) {
+  let ov = document.getElementById('cabOverlay');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'cabOverlay'; ov.className = 'soc-overlay';
+    ov.innerHTML = `<div class="soc-card cab-pop" role="dialog" aria-modal="true" aria-labelledby="cabPopTitle">
+        <div class="sf-header"><div class="sf-title">Medal</div><button type="button" class="sf-close" onclick="cabClose()" aria-label="Close">${icon('x', 18)}</button></div>
+        <div class="sf-body" id="cabPopBody"></div>
+        <div class="sf-footer"><button type="button" class="sf-apply-btn" onclick="cabClose()">Close</button></div></div>`;
+    MSSDialog.bind(ov, cabClose);
+    document.body.appendChild(ov);
+  }
+  document.getElementById('cabPopBody').innerHTML = body;
+  MSSDialog.open(ov, { focus: '.sf-footer .sf-apply-btn' });
+}
+function cabClose() { MSSDialog.close(document.getElementById('cabOverlay')); }
+function cabAch(key) {
+  const a = CAB.ach.find(x => x.key === key); if (!a) return;
+  const top = topLevel(a), lv = a.levels, L = MSSMedal.LEVEL, D = MSSMedal.ACH[key] || { name: a.name, about: '' };
+  const next = top < 4 ? lv[top] : null;
+  const at = l => (a.earned || []).find(e => e.level === l)?.earned_at;
+  cabPopup(`<div class="cab-pop-hero">
+      <div class="cab-medal-in">${top ? MSSMedal.achievement(key, top, { size: 150, at: lv[top - 1], label: `${D.name} — ${L[top - 1]}` })
+        : MSSMedal.achievement(key, 1, { size: 150, locked: true, at: lv[0], label: `${D.name} — not earned yet` })}</div>
+      <h3 class="cab-pop-title" id="cabPopTitle">${esc(D.name)}</h3>
+      <div class="cab-pop-sub">${top ? `${L[top - 1]} level${top === 4 ? ' — the top' : ''}` : 'Not earned yet'}</div>
+      <p class="cab-pop-about">${esc(D.about)}</p>
+      ${CAB.own && a.count != null ? `<div class="cab-pop-prog">${next ? `<div class="cab-bar" aria-hidden="true"><i style="width:${Math.min(100, Math.round(a.count / next * 100))}%"></i></div>
+        <div class="cab-pop-sub" style="margin-top:6px"><b style="color:var(--text)">${num(a.count)}</b> so far · ${num(next - a.count)} more for ${L[top]}</div>`
+        : `<div class="cab-pop-sub"><b style="color:var(--text)">${num(a.count)}</b> — every level earned</div>`}</div>` : ''}
+    </div>
+    <div class="sf-section-label">Levels</div>
+    <div class="cab-levels">${[1, 2, 3, 4].map(l => `<div class="cab-level${at(l) ? ' on' : ''}">
+        ${MSSMedal.achievement(key, l, { size: 58, locked: !at(l), at: lv[l - 1] })}
+        <b>${L[l - 1]}</b><small>${num(lv[l - 1])}<br>${at(l) ? when(at(l)) : 'Locked'}</small></div>`).join('')}</div>`);
+}
+function cabBadge(id) {
+  const b = CAB.badges.find(x => x.id === id); if (!b) return;
+  const off = b.kind === 'official';
+  const sub = off ? 'Official challenge · everyone who finishes gets this medal'
+    : b.place === 1 ? 'Gold — finished 1st' : b.place === 2 ? 'Silver — finished 2nd' : `Bronze — finished ${b.place ? '#' + b.place : ''}`;
+  cabPopup(`<div class="cab-pop-hero">
+      <div class="cab-medal-in">${off ? MSSMedal.official(b.medal, { size: 150, label: `${b.title} medal` }) : MSSMedal.challenge(b.place, b.cat, { size: 120, label: `${b.title} medal` })}</div>
+      <h3 class="cab-pop-title" id="cabPopTitle" translate="no">${esc(b.title)}</h3>
+      <div class="cab-pop-sub">${sub}</div>
+      <div class="cab-pop-sub">Earned ${when(b.earned_at)}</div>
+      ${b.challenge_id && CAB.own ? `<a class="rec-btn" style="margin-top:8px;text-decoration:none" href="friends.html?s=challenges&ch=${encodeURIComponent(b.challenge_id)}">${icon('trophy', 14)} Open the challenge</a>` : ''}
+    </div>`);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async user => {
+    CAB.user = user;
+    try { await cabLoad(); }
+    catch (err) {
+      console.error('Cabinet:', err);
+      document.getElementById('cabPage').innerHTML = `<div class="mss-empty">Couldn’t load the cabinet — please refresh.</div>`;
+    }
+  });
+});
+</script>
+</body>
+</html>
