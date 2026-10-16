@@ -54,6 +54,16 @@ const MSSDash = (() => {
   function sectionHTML(sec) {
     const ids = idsOf(sec.key);
     if (!opts.editable && !ids.length) return '';
+    // your own, still empty: one slim "pick" row instead of five big blank cards
+    // (and nothing at all for a type you have no titles of yet)
+    if (!ids.length) {
+      if (sec.cat && !opts.entries.some(e => e.cat === sec.cat)) return '';
+      return `<div class="pv-section dash-section dash-section-empty" data-key="${sec.key}">
+        <button type="button" class="dash-empty-row" onclick="MSSDash._pickFor(${attrJSON(sec.key)}, 0)">
+          <span class="dash-empty-plus">${icon('plus', 16)}</span>
+          <span><span class="pv-eyebrow">${esc(sec.eyebrow)}</span><b>${esc(sec.title)}</b><small>Pick up to ${DASH_MAX}</small></span>
+        </button></div>`;
+    }
     const edit = editing === sec.key;
     const slots = [];
     ids.forEach((id, i) => slots.push(cardHTML(byId(id), sec, i)));
