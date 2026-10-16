@@ -458,6 +458,9 @@ SF.register('lv', {
 });
 
 function _lvRankedBadgeHTML() {
+  return (_lvList?.official ? `<span class="list-rank-badge is-official">${icon('crown', 11)} Official</span>` : '') + _lvRankedOnlyHTML();
+}
+function _lvRankedOnlyHTML() {
   const ranked = _lvList?.ranked;
   const isOwner = _lvUser && _lvList && _lvList.user_id === _lvUser.id;
   if (ranked === true)  return `<span class="list-rank-badge is-ranked">Ranked</span>`;
