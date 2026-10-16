@@ -93,10 +93,10 @@ const MSSMedal = (() => {
     }).join('');
     return wrap(`<svg class="mss-medal" viewBox="0 0 120 124" width="${size}" height="${(size * 124 / 120).toFixed(1)}">
       <defs><clipPath id="${id}"><circle cx="60" cy="64" r="36"/></clipPath></defs>
-      <g fill="${T.rim}">${leaves(-1)}${leaves(1)}</g>
+      <g fill="${T.rim}" stroke="${T.rim2}" stroke-width=".9">${leaves(-1)}${leaves(1)}</g>
       <circle cx="60" cy="64" r="41" fill="${T.rim2}"/><circle cx="60" cy="64" r="39" fill="${T.rim}"/>
       <g clip-path="url(#${id})"${o.locked ? ' opacity=".35"' : ''}>${(SCENE[key] || SCENE.halloween)(T)}</g>
-      <path d="m60 2 2.6 5.4 5.9.8-4.3 4.1 1 5.8L60 15.3l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8Z" fill="${T.rim}"/>
+      <path d="m60 2 2.6 5.4 5.9.8-4.3 4.1 1 5.8L60 15.3l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8Z" fill="${T.rim}" stroke="${T.rim2}" stroke-width=".9" stroke-linejoin="round"/>
     </svg>`, o);
   }
 
