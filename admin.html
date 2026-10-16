@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>Admin — MyScreenScore</title>
+<title>Admin — MyScreenFolio</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
@@ -173,7 +173,7 @@ button.adm-row:hover { border-color:var(--border-olive); }
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -331,6 +331,11 @@ async function admUser(id) {
       <div><dt>Last signed in</dt><dd>${_admAgo(u.last_sign_in_at)}</dd></div>
       <div><dt>Language</dt><dd translate="no">${esc(lang)}</dd></div>
     </dl>
+    ${u.id === window._navUser?.id ? '' : `<div class="adm-card adm-filter">
+      <div class="adm-card-h"><span class="adm-card-t">Admin</span><span class="adm-card-s">${u.is_admin ? 'on' : 'off'}</span></div>
+      <div class="adm-filter-txt">Admins can open this page, manage members, make other admins and run official challenges.</div>
+      <div class="adm-actions" style="margin-top:12px"><button type="button" class="adm-btn${u.is_admin ? ' danger' : ' on'}" onclick="admSetAdmin('${esc(u.id)}', ${!u.is_admin})">${u.is_admin ? 'Remove admin' : 'Make admin'}</button></div>
+    </div>`}
     <div class="adm-card adm-filter">
       <div class="adm-card-h"><span class="adm-card-t">Official account</span><span class="adm-card-s">${u.is_official ? 'on' : 'off'}</span></div>
       <div class="adm-filter-txt">Official accounts make official challenges — open to everyone, in Featured, with their own medal — and can keep a reserved username.</div>
@@ -452,7 +457,7 @@ async function admBan(id, username) {
 async function admUnban(id, username) {
   const { error } = await sb.rpc('admin_unban_user', { p_user: id });
   if (error) { console.error(error); showToast('Couldn’t unban. Try again.', 'err'); return; }
-  showToast(`@${username} can use MyScreenScore again.`);
+  showToast(`@${username} can use MyScreenFolio again.`);
   admUser(id);
 }
 async function admDeleteUser(id, username) {
@@ -557,6 +562,13 @@ async function admRemoveWord(w) {
   if (error) { console.error(error); showToast('Couldn’t unblock it. Try again.', 'err'); return; }
   showToast('Word unblocked.');
   admCheckWord();
+}
+async function admSetAdmin(id, on) {
+  if (!(await showConfirm({ title: on ? 'Make this person an admin?' : 'Remove their admin access?', message: on ? 'They’ll be able to manage members, make other admins and run official challenges.' : 'They won’t be able to open the admin page anymore.', confirmText: on ? 'Make admin' : 'Remove', iconName: 'crown', danger: !on }))) return;
+  const { error } = await sb.rpc('admin_set_admin', { p_user: id, p_on: on });
+  if (error) { console.error(error); showToast(error.hint || 'Couldn’t change it. Try again.', 'err'); return; }
+  showToast(on ? 'Now an admin.' : 'Admin access removed.');
+  admUser(id);
 }
 async function admOfficial(id, on) {
   if (!(await showConfirm({ title: on ? 'Make this an official account?' : 'Turn off official?', message: on ? 'It can make official challenges for everyone.' : 'It can’t make official challenges anymore. Its challenges stay.', confirmText: on ? 'Make official' : 'Turn off', iconName: 'crown', danger: !on }))) return;
