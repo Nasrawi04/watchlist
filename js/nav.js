@@ -17,22 +17,19 @@ function _navReleaseCheck(user) {
 }
 
 /* Spotlights (054): the popup for an official challenge — js/spotlights.js
-   (+ medals.js), loaded once the page has settled, at most every 30 minutes;
-   it shows at most one a day. */
+   (+ medals.js), loaded on the home page every time the app is opened. */
 function _navSpotlight() {
-  try {
-    if (Date.now() - Number(localStorage.getItem('mss_spot_chk') || 0) < 30 * 60000) return;
-    localStorage.setItem('mss_spot_chk', String(Date.now()));
-  } catch { return; }
+  // Home page only, once each time the app is opened (sessionStorage resets when it's closed)
+  if (!/\/(index\.html)?$/.test(location.pathname)) return;
+  try { if (sessionStorage.getItem('mss_spot_open')) return; } catch { return; }
   const load = src => new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.async = true; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
-  const run = async () => {
+  setTimeout(async () => {
     try {
       if (typeof MSSMedal === 'undefined') await load('js/medals.js');
       if (typeof MSSSpotlight === 'undefined') await load('js/spotlights.js');
       MSSSpotlight.check();
     } catch {}
-  };
-  ('requestIdleCallback' in window) ? requestIdleCallback(() => setTimeout(run, 2500), { timeout: 8000 }) : setTimeout(run, 4000);
+  }, 900);
 }
 
 async function _fillNavUser(user) {
