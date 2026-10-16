@@ -718,6 +718,7 @@ const SF = (() => {
     filterCount: (scope, section) => filterCount(getFilter(scope, section)),
     filterState: (scope, section) => getFilter(scope, section),
     isMovie, GENRES,
+    dd: ddHTML, closeDD: closeAllDD,              // the filter dropdown, for other popups (Challenges genre)
     // internal — used by the popup markup's inline handlers
     _stageSort, _resetSort, _applySort, _stageGenre, _stageChoice, _stageRanges, _clearFilter, _applyFilter,
     _openPersonDD, _personInput, _pickPerson, _toggleDD,
