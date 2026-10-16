@@ -113,7 +113,7 @@ function _navSuspended() {
   el.innerHTML = `<div class="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="mssSuspTitle" aria-describedby="mssSuspMsg">
       <div class="confirm-icon" aria-hidden="true">${icon('lock', 36)}</div>
       <div class="confirm-title" id="mssSuspTitle">Your account is suspended</div>
-      <div class="confirm-msg" id="mssSuspMsg">This account broke MyScreenScore’s community rules, so it can’t be used anymore. If you think this is a mistake, contact the site’s owners.</div>
+      <div class="confirm-msg" id="mssSuspMsg">This account broke MyScreenFolio’s community rules, so it can’t be used anymore. If you think this is a mistake, contact the site’s owners.</div>
       <div class="confirm-actions"><button type="button" class="confirm-ok is-safe" onclick="handleLogout()">Sign out</button></div>
     </div>`;
   MSSDialog.bind(el, () => {});
@@ -127,7 +127,7 @@ function _navRenamePopup(uid, name) {
   el.innerHTML = `<form class="confirm-card mss-rename" role="dialog" aria-modal="true" aria-labelledby="mssRenameTitle" aria-describedby="mssRenameMsg" novalidate>
       <div class="confirm-icon" aria-hidden="true">${icon('user', 36)}</div>
       <div class="confirm-title" id="mssRenameTitle">Choose a new username</div>
-      <div class="confirm-msg" id="mssRenameMsg">Your username <b translate="no">@${escHTML(name)}</b> isn’t allowed on MyScreenScore. Pick a new one to keep going — your library, ratings and friends stay the same.</div>
+      <div class="confirm-msg" id="mssRenameMsg">Your username <b translate="no">@${escHTML(name)}</b> isn’t allowed on MyScreenFolio. Pick a new one to keep going — your library, ratings and friends stay the same.</div>
       <input class="field-input" id="mssRenameInput" maxlength="20" placeholder="new_username" aria-label="New username" aria-describedby="mssRenameHint" autocomplete="off" spellcheck="false" autocapitalize="none">
       <div class="mss-rename-hint" id="mssRenameHint" aria-live="polite">Letters, numbers and _ only — at least 3.</div>
       <div class="confirm-actions"><button type="submit" class="confirm-ok is-safe" id="mssRenameSave" disabled>Save username</button></div>
@@ -300,7 +300,7 @@ function injectChrome() {
       <button class="nav-hamburger" id="navHamburger" onclick="toggleMobileNav()" aria-label="Menu">
         <span></span><span></span><span></span>
       </button>
-      <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenScore" class="nav-logo-img"></a>
+      <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenFolio" class="nav-logo-img"></a>
       <div class="nav-top-controls">
 <button class="nav-icon-btn" onclick="toggleMobileSearch()" aria-label="Search">
           ${icon('search', 15)}
@@ -330,7 +330,7 @@ function injectChrome() {
     </div>
     <!-- DESKTOP LINKS ROW -->
     <div class="nav-inner">
-      <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenScore" class="nav-logo-img"></a>
+      <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenFolio" class="nav-logo-img"></a>
       <div class="nav-links">
         ${navLink('index.html',     page, 'home',     'Home')}
         ${navLink('discover.html',  page, 'compass',  'Discover')}
@@ -493,7 +493,7 @@ function injectChrome() {
       +'<span class="footer-created">Created by </span>'
       +'<span class="footer-name">Mohammad &amp; Narimaan</span>'
       +'<span class="footer-sep">&nbsp;&middot;&nbsp;</span>'
-      +'<span class="footer-copy">&copy; 2026 MyScreenScore</span>'
+      +'<span class="footer-copy">&copy; 2026 MyScreenFolio</span>'
     +'</div>'
     +'<div class="footer-row footer-row-tmdb">'
       +'<a href="https://www.themoviedb.org" target="_blank" rel="noopener" class="footer-tmdb-link">'
