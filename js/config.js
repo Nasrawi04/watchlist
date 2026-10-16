@@ -1178,7 +1178,7 @@ const mssSkeleton = (() => {
   const SKEL_BY_PAGE = {
     'completed.html': 'completed', 'notes.html': 'notes', 'lists.html': 'lists', 'episodes.html': 'episodes',
     'title.html': 'title', 'person.html': 'person', 'detail.html': 'detail', 'list-view.html': 'grid',
-    'user.html': 'profile', 'profile-view.html': 'profile', 'friends.html': 'rows', 'notifications.html': 'rows',
+    'user.html': 'profile', 'profile-view.html': 'profile', 'friends.html': 'rows', 'notifications.html': 'rows', 'cabinet.html': 'grid',
   };
   const page = location.pathname.split('/').pop() || 'index.html';
   function kindFor(el) {
