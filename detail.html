@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>MyScreenScore</title>
+<title>MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -25,7 +25,7 @@
 .tmdb-lock-btn svg { width:13px; height:13px; }
 #updateDetailsOverlay {
   position:fixed; inset:0; z-index:1300;
-  background:rgba(0,0,0,0.6); backdrop-filter:blur(6px);
+  background:rgba(0,0,0,0.6); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
   display:flex; align-items:center; justify-content:center; padding:16px;
   opacity:0; pointer-events:none; transition:opacity .2s ease;
 }
@@ -33,7 +33,7 @@
 
 #posterPickerOverlay {
   position:fixed; inset:0; z-index:1300;
-  background:rgba(0,0,0,0.6); backdrop-filter:blur(6px);
+  background:rgba(0,0,0,0.6); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
   display:flex; align-items:center; justify-content:center; padding:16px;
   opacity:0; pointer-events:none; transition:opacity .2s ease;
 }
@@ -231,7 +231,7 @@
 /* ── Completion popup ── */
 .completion-overlay{
   position:fixed;inset:0;z-index:900;
-  background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);
+  background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
   display:none;align-items:center;justify-content:center;padding:20px;
 }
 .completion-overlay.open{display:flex;animation:fadeIn .25s var(--ease);}
@@ -576,7 +576,7 @@
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -599,7 +599,7 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           <span>Upload Poster</span>
         </div>
-        <div id="posterUploadingOverlay" style="display:none;position:absolute;inset:0;background:rgba(10,10,14,0.75);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;border-radius:var(--radius);">
+        <div id="posterUploadingOverlay" style="display:none;position:absolute;inset:0;background:rgba(10,10,14,0.75);-webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;border-radius:var(--radius);">
           <div style="width:36px;height:36px;border-radius:50%;border:3px solid rgba(126,184,108,0.3);border-top-color:var(--olive-light);animation:spin .65s linear infinite;"></div>
           <span style="font-size:12px;color:var(--olive-light);letter-spacing:.5px;">Uploading…</span>
         </div>
@@ -2243,7 +2243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Show layout
     document.getElementById('detailLoading').style.display = 'none';
     document.getElementById('detailLayout').style.display  = '';
-    document.title = e ? `${e.title} — MyScreenScore` : 'New Entry';
+    document.title = e ? `${e.title} — MyScreenFolio` : 'New Entry';
 
     // Scroll to progress section if coming from Continue Watching
     const scrollTo = sessionStorage.getItem('detailScrollTo');
@@ -2567,7 +2567,7 @@ function _showDuplicatePopup(title, existing) {
   const catLabel = (CAT_META[existing.cat] && CAT_META[existing.cat].label) || existing.cat;
   const el = document.createElement('div');
   el.id = 'dupPopupOverlay';
-  el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity .2s;pointer-events:none;';
+  el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.72);-webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity .2s;pointer-events:none;';
   el.innerHTML = `
     <div id="dupPopupCard" style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:97%;max-width:440px;padding:28px 28px 24px;box-sizing:border-box;transform:translateY(16px);transition:transform .25s cubic-bezier(.4,0,.2,1);text-align:center;">
       <div style="color:var(--olive-light);margin-bottom:14px;opacity:.7;">${icon('x', 32)}</div>

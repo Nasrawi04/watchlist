@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>Notes — MyScreenScore</title>
+<title>Notes — MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#1E5C26">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MyScreenScore">
+<meta name="apple-mobile-web-app-title" content="MyScreenFolio">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -40,7 +40,7 @@
 /* ── Search popup (opened via + Add Note / Edit Note) ── */
 .notes-search-overlay {
   position:fixed; inset:0; z-index:1150; background:rgba(0,0,0,0.72);
-  backdrop-filter:blur(6px); display:flex; align-items:flex-start; justify-content:center;
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:flex-start; justify-content:center;
   padding:16px; padding-top:max(16px, env(safe-area-inset-top)); box-sizing:border-box;
   opacity:0; pointer-events:none; transition:opacity .2s; overflow-y:auto;
 }
@@ -482,7 +482,7 @@ function _fetchSocialNotes(force) {
 
 async function loadSocialNotes() {
   const wrap = document.getElementById('notesPageContent');
-  document.getElementById('notesPageSub').textContent = 'Discover what the MyScreenScore community has to say about the titles they’ve watched.';
+  document.getElementById('notesPageSub').textContent = 'Discover what the MyScreenFolio community has to say about the titles they’ve watched.';
   if (!_socialNotesCache) {                                  // not prefetched yet
     wrap.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
     document.getElementById('notesPageStats').innerHTML = '';

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>Sign In — MyScreenScore</title>
+<title>Sign In — MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -48,7 +48,7 @@
 .auth-tab {
   font-size:13px; font-weight:500; color:var(--text-2);
   cursor:pointer; transition:color var(--trans) var(--ease);
-  user-select:none;
+  -webkit-user-select:none; user-select:none;
 }
 .auth-tab.active {
   color:var(--text); font-weight:600;
@@ -217,7 +217,7 @@
 }
 .si-mode-toggle label {
   flex:1; display:flex; align-items:center; justify-content:center;
-  cursor:pointer; user-select:none; font-size:12px; font-weight:500;
+  cursor:pointer; -webkit-user-select:none; user-select:none; font-size:12px; font-weight:500;
   color:var(--text-3); transition:all var(--trans) var(--ease);
   padding:8px 12px; position:relative;
 }
@@ -246,7 +246,7 @@
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -257,7 +257,7 @@
 
   <!-- Updated Logo with underline exactly under "Screen" -->
   <div class="auth-logo" translate="no">
-    My<em>Screen</em>Score
+    My<em>Screen</em>Folio
   </div>
 
   <!-- Toggle row -->
@@ -301,7 +301,7 @@
       <!-- BACK: Sign Up -->
       <div class="flip-card__back">
         <div class="flip-card__title">Create Account</div>
-        <div class="flip-card__sub">Start tracking today</div>
+        <div class="flip-card__sub">Start your portfolio today</div>
         <form class="flip-card__form" onsubmit="doSignUp(event)">
           <div class="flip-card__error" id="suError"></div>
           <input class="flip-card__input" id="suUser" type="text" maxlength="20"

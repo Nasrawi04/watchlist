@@ -1,9 +1,9 @@
 /* ══════════════════════════════════════════
-   sw.js — MyScreenScore Service Worker
+   sw.js — MyScreenFolio Service Worker
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'mss-v784';
+const CACHE_VERSION = 'msf-v3';   // MyScreenFolio — restarted at v1 (was mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -71,6 +71,8 @@ const STATIC_ASSETS = [
   'js/episode-chat.js',
   'js/movie-night.js',
   'js/date-range.js',
+  'js/medals.js',
+  'js/spotlights.js',
   'js/challenges.js',
   'js/friend-popups.js',
   'manifest.json',
@@ -106,7 +108,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(k => k.startsWith('mss-') && !KEEP_CACHES.includes(k))
+          .filter(k => (k.startsWith('msf-') || k.startsWith('mss-')) && !KEEP_CACHES.includes(k))
           .map(k => caches.delete(k))
       )
     )
@@ -144,7 +146,7 @@ self.addEventListener('fetch', event => {
       // Only the versioned page/JS/CSS cache — posters, fonts and vendor
       // libraries are content-addressed and never go stale in a way a
       // hard refresh would fix, so wiping them just made the next loads slow.
-      await Promise.all(keys.filter(k => k.startsWith('mss-') && !KEEP_CACHES.includes(k) || k === STATIC_CACHE).map(k => caches.delete(k)));
+      await Promise.all(keys.filter(k => (k.startsWith('msf-') || k.startsWith('mss-')) && !KEEP_CACHES.includes(k) || k === STATIC_CACHE).map(k => caches.delete(k)));
       try {
         return await fetch(request);
       } catch {

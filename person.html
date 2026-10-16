@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>MyScreenScore</title>
+<title>MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -84,7 +84,7 @@
 .pp-mode-toggle-row .vt-btn { width:auto; height:auto; padding:8px 18px; font-size:13px; font-weight:500; font-family:var(--sans); white-space:nowrap; }
 
 .pp-bio { font-size:clamp(13.5px, 3vw, 14.5px); line-height:1.75; color:var(--text-2); white-space:pre-line; }
-.pp-bio.clamped { display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
+.pp-bio.clamped { display:-webkit-box; -webkit-line-clamp:6; line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
 .pp-bio-toggle { font-size:12.5px; color:var(--olive-light); cursor:pointer; margin-top:8px; display:inline-block; background:none; border:none; padding:0; font-family:var(--sans); }
 
 /* ── Credits grid — self-contained, no shared-class dependency ── */
@@ -128,7 +128,7 @@
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -191,7 +191,7 @@ function renderPerson(p) {
   document.getElementById('ppLoading').style.display = 'none';
   const c = document.getElementById('ppContent');
   c.style.display = '';
-  document.title = p.name ? `${p.name} — MyScreenScore` : 'MyScreenScore';
+  document.title = p.name ? `${p.name} — MyScreenFolio` : 'MyScreenFolio';
 
   const photo = p.profile_path ? `${TMDB_IMG.replace('w185','w342')}${p.profile_path}` : null;
   const bio = (p.biography || '').trim();

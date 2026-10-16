@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>Settings — MyScreenScore</title>
+<title>Settings — MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -190,11 +190,11 @@
         </div>
 
         <!-- Avatar crop/zoom/pan popup -->
-        <div id="avatarCropOverlay" style="position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:20px;">
+        <div id="avatarCropOverlay" style="position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:20px;">
           <div style="width:100%;max-width:380px;background:var(--bg-2);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);box-shadow:4px 4px 0 var(--olive);padding:1.75rem;">
             <div style="font-family:var(--serif);font-size:20px;font-weight:400;margin-bottom:1.25rem;text-align:center;">Adjust Photo</div>
             <div id="avatarCropViewport" style="width:240px;height:240px;border-radius:50%;overflow:hidden;margin:0 auto 1.25rem;position:relative;background:var(--bg-3);border:0.5px solid var(--border);cursor:grab;touch-action:none;">
-              <img id="avatarCropImg" style="position:absolute;top:50%;left:50%;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none;">
+              <img id="avatarCropImg" style="position:absolute;top:50%;left:50%;max-width:none;-webkit-user-select:none; user-select:none;-webkit-user-drag:none;pointer-events:none;">
             </div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;">
               <span style="font-size:12px;color:var(--text-3);">−</span>
@@ -227,7 +227,7 @@
 
         <div class="settings-section fade-up fade-up-1">
           <div class="settings-title">Language</div>
-          <p class="settings-desc" id="langHint">MyScreenScore and everything from TMDB — titles, posters, descriptions, seasons and episodes — show in this language. Anything not translated yet stays in English.</p>
+          <p class="settings-desc" id="langHint">MyScreenFolio and everything from TMDB — titles, posters, descriptions, seasons and episodes — show in this language. Anything not translated yet stays in English.</p>
           <div class="field-label" id="setLanguageLabel">Language</div>
           <div id="setLanguagePick"></div>
           <div class="lang-req" id="langReq" hidden>
@@ -319,7 +319,7 @@
 
         <div class="settings-section fade-up fade-up-2">
           <div class="settings-title">Episode Ratings</div>
-          <p class="settings-desc">When you mark an episode watched with “+”, MyScreenScore can ask you to rate it.</p>
+          <p class="settings-desc">When you mark an episode watched with “+”, MyScreenFolio can ask you to rate it.</p>
           <div class="pn-toggle ep-mode-toggle" role="radiogroup" aria-label="Episode ratings">
             <button type="button" class="pn-toggle-btn" role="radio" aria-checked="true" data-mode="ask" onclick="setEpisodeMode('ask')">Ask per show</button>
             <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-mode="always" onclick="setEpisodeMode('always')">Always</button>
@@ -330,7 +330,7 @@
 
         <div class="settings-section fade-up fade-up-2">
           <div class="settings-title">Sessions</div>
-          <p class="settings-desc">Signed in on a shared or lost device? Sign out of MyScreenScore everywhere, including this browser.</p>
+          <p class="settings-desc">Signed in on a shared or lost device? Sign out of MyScreenFolio everywhere, including this browser.</p>
           <button type="button" class="set-btn" onclick="doSignOutEverywhere()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign Out of All Devices
@@ -339,7 +339,7 @@
 
         <div class="settings-section fade-up fade-up-2">
           <div class="settings-title">Delete Account</div>
-          <p class="settings-desc">Permanently delete your MyScreenScore account. This removes:</p>
+          <p class="settings-desc">Permanently delete your MyScreenFolio account. This removes:</p>
           <ul class="del-list">
             <li>Your library, ratings and notes</li>
             <li>Your lists, comments, replies and reactions</li>
@@ -435,7 +435,7 @@ function shareProfileNative() {
   const un = _sProfile?.username || _sUser?.email?.split('@')[0] || '';
   const url = document.getElementById('shareProfileUrl').value;
   if (navigator.share) {
-    navigator.share({ title: 'MyScreenScore — @' + un, url }).catch(() => {});
+    navigator.share({ title: 'MyScreenFolio — @' + un, url }).catch(() => {});
   } else {
     copyProfileLink();
   }

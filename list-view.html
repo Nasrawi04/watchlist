@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>MyScreenScore</title>
+<title>MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -88,7 +88,7 @@
 .lv-list-title-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; min-width:0; }
 .lv-list-title { font-family:var(--serif); font-size:18px; font-weight:500; color:var(--text); }
 .lv-list-badges-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-/* Own MSS score's dedicated column — a real standout element, not a
+/* Own MSF score's dedicated column — a real standout element, not a
    line sharing space with year/genre text the way it used to. */
 .lv-list-score-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
 .lv-list-score-wrap .home-tmdb-score { font-size:clamp(13px, 3vw, 15px); }
@@ -101,7 +101,7 @@
 .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
 .home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
 .home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
-/* Your own MSS rating — a genuine standout now, not just "slightly
+/* Your own MSF rating — a genuine standout now, not just "slightly
    bigger": large serif numerals matching the same treatment
    completed.html gives its own rank/recent scores, in its own
    dedicated column rather than sharing a line with other text. */
@@ -191,7 +191,7 @@
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -357,7 +357,7 @@ function _lvListRowHTML(e, rank) {
   </div>`;
 }
 
-// Shows the viewer's own MSS score, in the same star/olive style used
+// Shows the viewer's own MSF score, in the same star/olive style used
 // for ratings everywhere else — but only when it's actually meaningful:
 // this is your own list, it's a ranked list, and this particular item
 // is a real personal entry (not something added straight from
@@ -588,7 +588,7 @@ async function _lvLoad() {
     }
     _lvItems = entries.map((e, i) => Object.assign({}, e, { _rank: i + 1 }));
 
-    document.title = `${list.title} — MyScreenScore`;
+    document.title = `${list.title} — MyScreenFolio`;
     document.getElementById('lvTitle').textContent = list.title; document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML();
     document.getElementById('lvDesc').textContent = list.description || '';
     document.getElementById('lvDesc').style.display = list.description ? '' : 'none';

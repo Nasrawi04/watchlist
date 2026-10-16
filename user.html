@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>MyScreenScore</title>
+<title>MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -97,7 +97,7 @@
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -111,7 +111,7 @@
     </div>
 
     <div class="pub-footer">
-      <img class="pub-footer-logo" src="icons/logo-nav.png" alt="MyScreenScore">
+      <img class="pub-footer-logo" src="icons/logo-nav.png" alt="MyScreenFolio">
       Track, rate, and rank everything you watch · <a href="login.html">Create your own</a>
     </div>
   </div>
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const username = (params.get('u') || '').trim().replace(/^@/, '').toLowerCase();
 
   if (!username) { renderNotFound('No username provided.'); return; }
-  document.title = `@${username} — MyScreenScore`;
+  document.title = `@${username} — MyScreenFolio`;
 
   try {
     const profile = await getProfileByUsername(username);
@@ -242,7 +242,7 @@ function renderProfile(profile, entries) {
   const avatar  = _pubSafeUrl(profile.avatar_url);
   const initial = _pubEsc((name || '?')[0].toUpperCase());
 
-  document.title = `${name} (@${profile.username}) — MyScreenScore`;
+  document.title = `${name} (@${profile.username}) — MyScreenFolio`;
 
   document.getElementById('pubContent').innerHTML = `
     <div class="pub-hero fade-up">

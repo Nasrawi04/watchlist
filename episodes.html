@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>Episodes — MyScreenScore</title>
+<title>Episodes — MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -41,7 +41,7 @@
 .eg-hero-sub span + span::before { content:'·'; margin-inline-end:10px; opacity:.6; }
 .eg-hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:1.2rem; }
 .eg-hero-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:var(--radius-sm); font:600 13.5px 'Manrope',var(--sans); text-decoration:none;
-  color:#fff; background:rgba(255,255,255,.1); border:0.5px solid rgba(255,255,255,.28); backdrop-filter:blur(6px); transition:background-color .15s, border-color .15s; }
+  color:#fff; background:rgba(255,255,255,.1); border:0.5px solid rgba(255,255,255,.28); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); transition:background-color .15s, border-color .15s; }
 .eg-hero-btn:hover { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.45); }
 .eg-hero-btn:focus-visible, .eg-back:focus-visible { outline:2px solid #8FD177; outline-offset:3px; }
 .eg-hero-tag { display:inline-flex; align-items:center; gap:7px; padding:10px 16px; border-radius:var(--radius-sm); font:600 13px 'Manrope',var(--sans); color:#B8E0A8; background:rgba(126,184,108,.14); border:0.5px solid rgba(126,184,108,.4); }
@@ -104,7 +104,7 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
 .eg-row-info { flex:1; min-width:0; }
 .eg-row-title { font-family:var(--serif); font-size:15.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .eg-row-meta { font-size:12px; color:var(--text-3); margin-top:2px; }
-.eg-row-desc { font-size:12.5px; color:var(--text-2); line-height:1.5; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.eg-row-desc { font-size:12.5px; color:var(--text-2); line-height:1.5; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .eg-row-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .eg-row-tags span { font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:3px; background:var(--olive); color:#fff; }
 .eg-row-chips { display:flex; gap:8px; flex-shrink:0; }
@@ -218,7 +218,7 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
   .eg-row { flex-wrap:wrap; align-items:flex-start; gap:10px 12px; min-height:0; padding:10px; }
   .eg-row-still { width:96px; }
   .eg-row-info { flex:1 1 calc(100% - 108px); }
-  .eg-row-title { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; font-size:15px; line-height:1.3; }
+  .eg-row-title { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; font-size:15px; line-height:1.3; }
   .eg-row-chips { width:100%; gap:6px; }
   .eg-chip { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:6px 8px; font-size:17px; }
   .eg-chip small { display:inline; margin:0; }
@@ -488,7 +488,7 @@ function draw() {
       </div>`}
     </div>
     ${S.source === 'mine' && !S.entry ? `<div class="mss-empty" style="margin-bottom:1rem">${S.readOnly ? 'No episode ratings for this show yet.' : 'Add this show to your library to rate its episodes.'}</div>` : ''}
-    ${S.source === 'community' && !Object.keys(S.comm).length ? `<div class="mss-empty" style="margin-bottom:1rem">Community scores appear once an episode has 2+ ratings on MyScreenScore.</div>` : ''}`}
+    ${S.source === 'community' && !Object.keys(S.comm).length ? `<div class="mss-empty" style="margin-bottom:1rem">Community scores appear once an episode has 2+ ratings on MyScreenFolio.</div>` : ''}`}
     ${S2 ? compareHTML() : `<div class="eg-layout">
       <div class="eg-board">${S.view === 'grid' ? gridHTML() : S.view === 'graph' ? graphHTML() : listHTML()}</div>
       ${panelHTML()}
@@ -590,7 +590,7 @@ function listHTML() {
         ${ep.overview ? `<div class="eg-row-desc" translate="no">${esc(ep.overview)}</div>` : ''}
         ${mine?.tags?.length ? `<div class="eg-row-tags">${mine.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
       </div>
-      <div class="eg-row-chips">${chip(mine ? Number(mine.score) : null, S.readOnly ? esc(S.whoName) : 'You')}${chip(comm ? Number(comm.avg_score) : null, 'MSS')}${chip(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}${MSSEpChat.chipHTML(S.chat?.[k], `egChat(${sn},${ep.n})`)}</div>
+      <div class="eg-row-chips">${chip(mine ? Number(mine.score) : null, S.readOnly ? esc(S.whoName) : 'You')}${chip(comm ? Number(comm.avg_score) : null, 'MSF')}${chip(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}${MSSEpChat.chipHTML(S.chat?.[k], `egChat(${sn},${ep.n})`)}</div>
     </div>`);
   }));
   return `<div class="eg-list">${rows.join('')}</div>`;
@@ -648,7 +648,7 @@ function egOpen(sn, n) {
         <div class="eg-view-who"><span translate="no">${esc(S.whoName)}</span>’s rating${mine?.updated_at ? ` · ${esc(when(mine.updated_at))}` : ''}</div>
         ${tags}
         ${mine?.note ? `<div class="eg-pop-note" translate="no">“${esc(mine.note)}”</div>` : mine ? '<div class="eg-view-empty">No note.</div>' : ''}
-        <div class="eg-view-also"><span>MSS <b>${fmt(comm ? Number(comm.avg_score) : null)}</b></span><span>TMDB <b>${fmt(ep.vote ? Math.round(ep.vote * 10) / 10 : null)}</b></span></div>
+        <div class="eg-view-also"><span>MSF <b>${fmt(comm ? Number(comm.avg_score) : null)}</b></span><span>TMDB <b>${fmt(ep.vote ? Math.round(ep.vote * 10) / 10 : null)}</b></span></div>
       </div></div>` : '';
   document.getElementById('egEpCard').innerHTML = `
     <div class="ep-hero">${ep.still ? `<img src="https://image.tmdb.org/t/p/w780${ep.still}" alt="">` : `<div class="ep-hero-empty" translate="no">${esc(S.show.name)}</div>`}
@@ -658,7 +658,7 @@ function egOpen(sn, n) {
       <div class="ep-eyebrow" translate="no">${esc(S.show.name)}</div>
       <div class="ep-title" id="egEpTitle" translate="no">${esc(ep.name || 'Episode ' + n)}</div>
       <div class="ep-meta">${esc([ep.air ? new Date(ep.air + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '', ep.rt ? ep.rt + 'm' : ''].filter(Boolean).join(' · '))}</div>
-      ${S.readOnly ? theirs : `<div class="eg-pop-scores">${box(mine ? Number(mine.score) : null, 'Yours')}${box(comm ? Number(comm.avg_score) : null, comm ? `MSS · ${comm.rating_count}` : 'MSS')}${box(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}</div>
+      ${S.readOnly ? theirs : `<div class="eg-pop-scores">${box(mine ? Number(mine.score) : null, 'Yours')}${box(comm ? Number(comm.avg_score) : null, comm ? `MSF · ${comm.rating_count}` : 'MSF')}${box(ep.vote ? Math.round(ep.vote * 10) / 10 : null, 'TMDB')}</div>
       ${tags}
       ${mine?.note ? `<div class="eg-pop-note">“${esc(mine.note)}”</div>` : ''}`}
       ${ep.overview ? `<p class="eg-pop-over" translate="no">${esc(ep.overview)}</p>` : ''}
@@ -922,7 +922,7 @@ async function egImage(btn) {
       g.save(); g.beginPath(); g.roundRect(pad, pY, pW, pH, 14); g.clip(); g.drawImage(poster, pad, pY, pW, pH); g.restore();
     }
     const tx = poster ? pad + pW + 30 : pad;
-    const srcName = { tmdb: 'TMDB scores', mine: 'My ratings', community: 'MSS community', diff: 'vs TMDB' }[S.source];
+    const srcName = { tmdb: 'TMDB scores', mine: 'My ratings', community: 'MSF community', diff: 'vs TMDB' }[S.source];
     g.textBaseline = 'alphabetic'; g.textAlign = 'left';
     g.fillStyle = '#ffffff'; g.font = `600 ${Math.round(U * 0.017)}px Oswald, sans-serif`;
     g.fillText(('EPISODE RATINGS · ' + srcName).toUpperCase(), tx, bandH - Math.round(U * 0.03));
@@ -987,7 +987,7 @@ async function egImage(btn) {
     const iw = (W - pad * 2) / items.length;
     items.forEach(([c, l], i) => { const x = pad + i * iw; g.fillStyle = c; g.beginPath(); g.roundRect(x, ly - 8, 16, 16, 4); g.fill(); g.fillStyle = C.text; g.fillText(l, x + 22, ly + 1); });
 
-    // ── Footer: user (left) · MyScreenScore logo + name (right) ──
+    // ── Footer: user (left) · MyScreenFolio logo + name (right) ──
     const fy = H - pad - footH / 2 + 6;
     g.fillStyle = C.line; g.fillRect(pad, H - pad - footH + 6, W - pad * 2, 1.5);
     const av = Math.round(footH * 0.5);
@@ -996,10 +996,10 @@ async function egImage(btn) {
     else { g.fillStyle = band('great'); g.fill(); g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = `600 ${Math.round(av * 0.48)}px Oswald, sans-serif`; g.fillText((who?.username || '?')[0].toUpperCase(), pad + av / 2, fy + 1); }
     g.restore();
     g.textAlign = 'left'; g.fillStyle = C.text; g.font = `600 ${Math.round(U * 0.014)}px Manrope, sans-serif`;
-    g.fillText('@' + (who?.username || 'myscreenscore'), pad + av + 14, fy);
+    g.fillText('@' + (who?.username || 'myscreenfolio'), pad + av + 14, fy);
     const lg = Math.round(footH * 0.5);
     g.textAlign = 'right'; g.fillStyle = C.olive; g.font = `600 ${Math.round(U * 0.016)}px Oswald, sans-serif`;
-    const brand = 'MYSCREENSCORE', bw = g.measureText(brand).width;
+    const brand = 'MYSCREENFOLIO', bw = g.measureText(brand).width;
     g.fillText(brand, W - pad, fy);
     if (logo) { g.save(); g.beginPath(); g.roundRect(W - pad - bw - lg - 12, fy - lg / 2, lg, lg, lg * 0.22); g.clip(); g.drawImage(logo, W - pad - bw - lg - 12, fy - lg / 2, lg, lg); g.restore(); }
     g.fillStyle = C.sub; g.font = `500 ${Math.round(U * 0.012)}px Manrope, sans-serif`; g.textAlign = 'center';

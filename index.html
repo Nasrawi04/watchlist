@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>MyScreenScore</title>
+<title>MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -67,7 +67,7 @@
   .xp-title { font-family:var(--serif); font-weight:600; font-size:24px; line-height:1.1; margin-bottom:6px; text-shadow:0 2px 14px rgba(0,0,0,.45); white-space:nowrap; }
   .xp-text { z-index:1; padding-inline-end:22px; }
   .xp-sub, .xp-badge { max-width:calc(100% - 118px); }
-  .xp-sub { font-size:12.5px; color:rgba(255,255,255,.82); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .xp-sub { font-size:12.5px; color:rgba(255,255,255,.82); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .xp-cta {
     margin-top:auto; align-self:flex-start; display:inline-flex; align-items:center; gap:7px;
     padding:8px 14px; border-radius:999px; background:#fff; color:var(--xp-b);
@@ -113,7 +113,7 @@
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -123,9 +123,9 @@
 <div class="page-wrap">
   <!-- HERO -->
   <div class="home-hero fade-up">
-    <div class="home-eyebrow">Your personal entertainment archive</div>
-    <h1 class="home-title" translate="no">My <em>Screen</em> Score</h1>
-    <p class="home-sub">Build your collection, track your progress, rate every watch, and create rankings that reflect your taste.</p>
+    <div class="home-eyebrow">Your screen portfolio</div>
+    <h1 class="home-title" translate="no">My <em>Screen</em> Folio</h1>
+    <p class="home-sub">Everything you’ve watched, in one portfolio — track your progress, rate every watch, and curate rankings that show your taste.</p>
   </div>
 
   <!-- HERO SEARCH -->
@@ -160,7 +160,7 @@
   <!-- FROM YOUR WATCHLIST -->
   <div id="homeWatchlist" style="margin-top:3rem"></div>
 
-  <!-- RECENTLY VIEWED (MyScreenScore view history) -->
+  <!-- RECENTLY VIEWED (MyScreenFolio view history) -->
   <div id="homeRecentlyViewed" style="margin-top:3rem"></div>
 
   <!-- GUEST SIGN-IN CTA (shown only when logged out) -->
@@ -180,7 +180,7 @@ let _homeUser = null;
 /* ── Explore cards ── */
 const _XP_ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
 const HOME_EXPLORE = [
-  { key:'top_rated_mss',   title:'Top Rated on MSS', sub:'Highest rated by our community', badge:'Community Pick', num:'MSS', a:'#2E7D32', b:'#0E2F14' },
+  { key:'top_rated_mss',   title:'Top Rated on MSF', sub:'Highest rated by our community', badge:'Community Pick', num:'MSF', a:'#2E7D32', b:'#0E2F14' },
   { key:'popular',         title:"What's Popular",    sub:'Trending across the board',     badge:'Trending',       num:'HOT', a:'#8A5A1C', b:'#2B1A08' },
   { key:'top250_movies',   title:'Top 250 Movies',    sub:'The best movies ever, ranked',      badge:'Ranked',         num:'250', a:'#9C3D1C', b:'#2E1007' },
   { key:'top250_shows',    title:'Top 250 Shows',     sub:'The best TV ever made, ranked',               badge:'Ranked',         num:'250', a:'#2F5F8A', b:'#0C1D2E' },

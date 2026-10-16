@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>Profile — MyScreenScore</title>
+<title>Profile — MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -596,10 +596,10 @@ function _profExport(type) {
     var done = _pEntries.filter(function(e){ return e.status==='completed'||e.status==='ongoing'; });
     var byScore = function(a,b){ return (liveScore(b)||0)-(liveScore(a)||0); };
     var list;
-    if (type==='ranked') list = { subtitle:'Ranked List', entries:done.sort(byScore), useRanked:true, filename:'ranked-list.pdf' };
-    else if (type==='completed') list = { subtitle:'Watched List', entries:done.sort(function(a,b){ return new Date(b.completed_date||0)-new Date(a.completed_date||0); }), useRanked:false, filename:'completed-list.pdf' };
-    else if (type==='watchlater') list = { subtitle:'Watchlist', entries:_pEntries.filter(function(e){ return e.status==='queue'; }).sort(function(a,b){ return new Date(b.created_at||0)-new Date(a.created_at||0); }), useRanked:false, isWatchLater:true, filename:'watch-later.pdf' };
-    else list = { subtitle:'Profile Overview', entries:done.sort(byScore).slice(0,10), useRanked:true, filename:'my-screenscore-profile.pdf' };
+    if (type==='ranked') list = { subtitle:'Ranked List', entries:done.sort(byScore), useRanked:true, filename:'myscreenfolio-ranked.pdf' };
+    else if (type==='completed') list = { subtitle:'Watched List', entries:done.sort(function(a,b){ return new Date(b.completed_date||0)-new Date(a.completed_date||0); }), useRanked:false, filename:'myscreenfolio-watched.pdf' };
+    else if (type==='watchlater') list = { subtitle:'Watchlist', entries:_pEntries.filter(function(e){ return e.status==='queue'; }).sort(function(a,b){ return new Date(b.created_at||0)-new Date(a.created_at||0); }), useRanked:false, isWatchLater:true, filename:'myscreenfolio-watchlist.pdf' };
+    else list = { subtitle:'Profile Overview', entries:done.sort(byScore).slice(0,10), useRanked:true, filename:'myscreenfolio-profile.pdf' };
     if (!list.entries.length) return false;
     await buildAndExportPDF(list);
   }});
@@ -628,7 +628,7 @@ function openShareProfile() {
   var url = base + 'profile-view.html?u=' + encodeURIComponent(un);
   // Use navigator.share if available
   if (navigator.share) {
-    navigator.share({ title: 'MyScreenScore — @'+un, url: url }).catch(function(){});
+    navigator.share({ title: 'MyScreenFolio — @'+un, url: url }).catch(function(){});
     return;
   }
   // Fallback: show popup

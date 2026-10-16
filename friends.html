@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>Social — MyScreenScore</title>
+<title>Social — MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -203,7 +203,7 @@
 .fn-card { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0; }
 .fn-by { display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--text-2); }
 .fn-text { margin:0; padding-block:2px; padding-inline:14px 0; border-inline-start:3px solid var(--olive-light); font-size:14px; line-height:1.7; color:var(--text); font-style:italic; white-space:pre-line; overflow-wrap:anywhere; }
-.fn-text.clamp { display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
+.fn-text.clamp { display:-webkit-box; -webkit-line-clamp:5; line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
 
 /* v621: pin icon on the cover */
 /* Blend */
@@ -240,7 +240,7 @@
 @media(max-width:640px) { .bl-head { padding:14px; gap:12px; } .bl-head-acts { width:100%; } .bl-head-acts > * { flex:1 1 auto; justify-content:center; } .bl-row { grid-auto-columns:42vw; gap:10px; }
   .bl-avs .fr-av, .bl-more { width:42px !important; height:42px !important; } .bl-surprise { flex-direction:column; text-align:center; } .bl-surprise-info { align-items:center; } }
 .fm-match { position:absolute; top:10px; inset-inline-start:10px; z-index:2; display:inline-flex; align-items:center; gap:5px; padding:4px 8px; border-radius:4px;
-  font-size:11.5px; font-weight:700; letter-spacing:.2px; color:#fff; background:rgba(0,0,0,.55); backdrop-filter:blur(6px); border:0.5px solid rgba(255,255,255,.2); }
+  font-size:11.5px; font-weight:700; letter-spacing:.2px; color:#fff; background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); border:0.5px solid rgba(255,255,255,.2); }
 .fm-match.hi { background:var(--olive); border-color:rgba(255,255,255,.3); }
 .fm-match.lo { color:rgba(255,255,255,.8); }
 .fm-pin { position:absolute; top:10px; inset-inline-end:10px; z-index:2; width:34px; height:34px; border-radius:50%; cursor:pointer;
@@ -435,7 +435,7 @@
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenScore">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -500,6 +500,8 @@
 <script src="js/episode-chat.js"></script>
 <script src="js/date-range.js"></script>
 <script src="js/movie-night.js"></script>
+<script src="js/medals.js"></script>
+<script src="js/spotlights.js"></script>
 <script src="js/challenges.js"></script>
 <script>
 let _fUser = null;

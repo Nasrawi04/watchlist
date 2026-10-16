@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
-<title>Lists — MyScreenScore</title>
+<title>Lists — MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#1E5C26">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MyScreenScore">
+<meta name="apple-mobile-web-app-title" content="MyScreenFolio">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -146,7 +146,7 @@
 /* Picker */
 #favListPickerOverlay {
   position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.65);
-  backdrop-filter:blur(10px);display:flex;align-items:center;
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:flex;align-items:center;
   justify-content:center;padding:16px;box-sizing:border-box;
   opacity:0;pointer-events:none;transition:opacity .22s;
 }
@@ -178,7 +178,7 @@
 /* ── Custom List Modal ── */
 #favCustomListModal {
   position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.72);
-  backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;
   padding:16px;box-sizing:border-box;opacity:0;pointer-events:none;transition:opacity .2s;
 }
 #favCustomListModal.open { opacity:1;pointer-events:auto; }
@@ -774,7 +774,7 @@ async function _collabCopyLink() {
   const title = _collabPickerList?.title || 'my list';
   // Phones: native share sheet (Messages, WhatsApp…); otherwise copy
   if (navigator.share && window.matchMedia('(pointer:coarse)').matches) {
-    try { await navigator.share({ title: `Join “${title}” on MyScreenScore`, url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    try { await navigator.share({ title: `Join “${title}” on MyScreenFolio`, url }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }
   try { await navigator.clipboard.writeText(url); }
   catch { const i = document.getElementById('collabLinkInput'); i.select(); document.execCommand('copy'); }
@@ -1514,7 +1514,7 @@ function _injectSocialListPopupOverlay() {
   if (document.getElementById('slPopupOverlay')) return;
   const el = document.createElement('div');
   el.id = 'slPopupOverlay';
-  el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
+  el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
   el.innerHTML = `<div id="slPopupCard" data-dbl-like role="dialog" aria-modal="true" aria-label="List" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:560px;width:100%;max-height:88vh;overflow-y:auto;padding:clamp(1.1rem, 4vw, 1.6rem);box-shadow:0 24px 60px rgba(0,0,0,.35);"></div>`;
   el.addEventListener('click', e => { if (e.target === el) closeSocialListPopup(); });
   document.body.appendChild(el);
@@ -2033,7 +2033,7 @@ function _injectRankOrderOverlay() {
   if (document.getElementById('rankOrderOverlay')) return;
   const el = document.createElement('div');
   el.id = 'rankOrderOverlay';
-  el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.65);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:16px;';
+  el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.65);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:16px;';
   el.innerHTML = `
     <div style="width:97%;max-width:420px;height:480px;max-height:85vh;display:flex;flex-direction:column;background:var(--bg-2);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);box-shadow:4px 4px 0 var(--olive);padding:1.75rem;">
       <div style="font-family:var(--serif);font-size:20px;font-weight:400;margin-bottom:.4rem;flex-shrink:0;">Order this ranked list</div>
