@@ -9,6 +9,8 @@
           name     what the official account sees when picking it
           eyebrow  the small line above the title in the popup
           accent   main colour (buttons, chips)        glow  the light behind the medal
+          light    the same for light mode, darker so it reads on a pale page:
+                   { accent, glow } — text on the accent turns white
           shows / ends (optional, 'YYYY-MM-DD')  — by default it shows from
                    7 days before the challenge starts until it ends
           headline / pitch (optional) — by default the challenge's own
@@ -27,11 +29,11 @@
 ═══════════════════════════════════════════════════════════════ */
 const MSSSpotlights = [
   { key: 'halloween-2026', name: 'Halloween 2026', eyebrow: 'Spooky season',
-    accent: '#F59A3A', glow: 'rgba(245,154,58,.38)' },
+    accent: '#F59A3A', glow: 'rgba(245,154,58,.38)', light: { accent: '#B85A0C', glow: 'rgba(214,110,20,.22)' } },
   { key: 'dune-part-three', name: 'Dune: Part Three', eyebrow: 'Dunesday · Dec 18',
-    accent: '#E9A94E', glow: 'rgba(226,138,62,.36)' },
+    accent: '#E9A94E', glow: 'rgba(226,138,62,.36)', light: { accent: '#A0601A', glow: 'rgba(200,128,50,.24)' } },
   { key: 'avengers-doomsday', name: 'Avengers: Doomsday', eyebrow: 'Dunesday · Dec 18',
-    accent: '#5FE39A', glow: 'rgba(90,230,150,.30)' },
+    accent: '#5FE39A', glow: 'rgba(90,230,150,.30)', light: { accent: '#17734A', glow: 'rgba(30,120,80,.18)' } },
 ];
 
 const MSSSpotlight = (() => {
@@ -86,8 +88,10 @@ const MSSSpotlight = (() => {
   function show(c, e, preview) {
     cur = c;
     const ov = overlay(), card = ov.querySelector('.spot-card');
-    card.style.setProperty('--spot', e.accent || 'var(--olive-light)');
-    card.style.setProperty('--spot-glow', e.glow || 'var(--olive-faint)');
+    const lt = document.documentElement.getAttribute('data-theme') === 'light' && e.light;   // light mode: the darker set
+    card.style.setProperty('--spot', (lt ? e.light.accent : e.accent) || 'var(--olive-light)');
+    card.style.setProperty('--spot-glow', (lt ? e.light.glow : e.glow) || 'var(--olive-faint)');
+    card.style.setProperty('--spot-on', lt ? '#fff' : '#14110b');
     document.getElementById('spotBody').innerHTML = `
       <button type="button" class="spot-x" onclick="MSSSpotlight._close()" aria-label="Close">${icon('x', 18)}</button>
       <div class="spot-hero"><div class="spot-medal">${MSSMedal.official(c.medal, { size: 168, label: `${c.title} medal` })}</div></div>
