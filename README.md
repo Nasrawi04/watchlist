@@ -145,10 +145,14 @@ A side nav (a dropdown on phones) with:
   - **Friends' challenges:** a ribbon medal with the place on a plate. Gold for 1st, silver for 2nd, bronze for 3rd and after.
   - **Official challenges:** a scene inside a wreath with a star (Halloween, Arrakis, Doomsday Clock…). Everyone who finishes gets the same one.
   - Earlier finishers got their medals backdated.
+  - **Achievements:** the emblem with the level's number on a plate — bronze, silver, gold, then green at the top. 12 of them (titles watched, episodes watched / rated, titles rated, hours, shows finished, anime, cartoons, genres, lists, notes, challenges), counted from what people already have.
+- **Set lists** can mark titles "Already watched OK" — they count even if watched before the challenge (e.g. earlier films in a saga).
+- **Details popup** on every challenge: how it works step by step, each title's status, the medal.
+- **Achievement Cabinet** (`cabinet.html`, in the avatar menu): every medal, with progress to the next level; tabs All / Achievements / Official / Challenges. `cabinet.html?user=<id>` shows someone else's (earned only). New medals arrive as one notification — the first time, a single "your cabinet is open".
 - **Spotlights** (`js/spotlights.js`):
   - a popup that advertises an official challenge;
-  - shows once per person, never to people who joined, at most one a day;
-  - "Maybe later" brings it back once when the challenge goes live;
+  - shows every time the app is opened on the home page, until you join or it ends;
+  - a darker colour set for light mode;
   - the official account can preview it.
 
 ### Notifications
@@ -205,6 +209,7 @@ A side nav (a dropdown on phones) with:
 ├── notes.html            Notes
 ├── friends.html          Social hub
 ├── notifications.html    Notifications
+├── cabinet.html          Achievement Cabinet
 ├── profile.html · profile-view.html · user.html   Your / a friend's / public profile
 ├── settings.html         Settings
 ├── admin.html            Admin dashboard
@@ -223,9 +228,9 @@ A side nav (a dropdown on phones) with:
 │   ├── episode-ratings.js · episode-chat.js
 │   ├── social.js         Polls + Inbox
 │   ├── friend-popups.js · movie-night.js · challenges.js
-│   ├── medals.js         Medals (SVG)
+│   ├── medals.js         Medals (SVG) — challenge, official, achievement
 │   └── spotlights.js     Spotlight popups — every spotlight ever made lives here
-└── sql/                  Numbered migrations 001 → 055 (+ 999 reference queries)
+└── sql/                  Numbered migrations 001 → 060 (+ 999 reference queries)
 ```
 
 ---
@@ -246,7 +251,7 @@ A side nav (a dropdown on phones) with:
 ## Setup
 
 1. Create a Supabase project.
-2. In the SQL Editor, run every file in `sql/` **in number order**, from `001` to `055`. Each file can be re-run safely and lists what it needs at the top. Skip `999`; it's reference queries only.
+2. In the SQL Editor, run every file in `sql/` **in number order**, from `001` to `060`. Each file can be re-run safely and lists what it needs at the top. Skip `999`; it's reference queries only.
 3. Add your Supabase URL and anon key in `js/config.js`, and your Cloudinary cloud name and unsigned preset in `js/db.js`.
 4. Serve the folder, for example with `python3 -m http.server 8080`, and create an account.
 5. Make yourself an admin:
