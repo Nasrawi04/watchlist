@@ -13,9 +13,10 @@
    MSSNight.mount(el, user, { night })   the section (night: open that one)
 
    Uses friends.html's friends (_frAccepted, _frProfiles, _frEntries, _cmpLoad /
-   _cmpMine) for the invite list and the watchlist suggestions. Option rows use
-   the shared poster card (MSSCard.poster) for the ballot and the suggestion
-   rails, the search the poll form's (pf-r …).
+   _cmpMine) for the invite list and the watchlist suggestions. Uses the date +
+   time picker (MSSDateRange.when, date-range.js) in the popups, the shared
+   poster card (MSSCard.poster) for the ballot and the suggestion rails, and
+   the poll form's search results (pf-r …).
 ═══════════════════════════════════════════════════════════════ */
 const MSSNight = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));
@@ -310,7 +311,6 @@ const MSSNight = (() => {
     MSSDialog.open(ov, { focus: '#mnT' });
   }
   function closeForm() { MSSDialog.close(document.getElementById('mnForm')); form = null; }
-  const localValue = d => { if (!d) return ''; const x = new Date(d); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().slice(0, 16); };
   function create() {
     const friends = typeof _frAccepted !== 'undefined' ? _frAccepted : [];
     if (!friends.length) { showToast('Add a friend first — then invite them to a Movie Night.', 'err'); return; }
@@ -318,8 +318,8 @@ const MSSNight = (() => {
     popup('New Movie Night', `
         <label class="sf-section-label" for="mnT">Name it</label>
         <input id="mnT" class="pf-input" maxlength="80" placeholder="Movie Night">
-        <label class="sf-section-label" for="mnW">When <span class="sf-section-hint">(optional — everyone gets a reminder that day)</span></label>
-        <input id="mnW" class="pf-input" type="datetime-local" min="${localValue(new Date())}">
+        <div class="sf-section-label">When <span class="sf-section-hint">optional · everyone gets a reminder that day</span></div>
+        ${MSSDateRange.when('mnW', { value: null })}
         <div class="sf-section-label">Invite friends <span class="sf-section-hint">(1–19)</span></div>
         <div class="mn-invite" role="group" aria-label="Invite friends">${friends.map(f => `<button type="button" class="soc-chip mn-inv" aria-pressed="false" data-id="${esc(f.friendId)}" onclick="MSSNight._inv(this)">${av(f.friendProfile, 22)}<span translate="no">${esc(nameOf(f.friendProfile))}</span></button>`).join('')}</div>
         <div class="pf-note">${icon('film', 13)} Add titles once it’s made — we’ll suggest the ones on your watchlists.</div>`,
@@ -332,8 +332,8 @@ const MSSNight = (() => {
     popup('Edit Movie Night', `
         <label class="sf-section-label" for="mnT">Name</label>
         <input id="mnT" class="pf-input" maxlength="80" value="${esc(n.title)}">
-        <label class="sf-section-label" for="mnW">When <span class="sf-section-hint">(optional — clear it for no date)</span></label>
-        <input id="mnW" class="pf-input" type="datetime-local" value="${localValue(n.scheduled_at)}">
+        <div class="sf-section-label">When <span class="sf-section-hint">optional</span></div>
+        ${MSSDateRange.when('mnW', { value: n.scheduled_at })}
         <button type="button" class="poll-link poll-danger mn-cancel" onclick="MSSNight._cancelNight()">${icon('x', 13)} Cancel this Movie Night</button>`,
       `<button type="button" class="sf-clear-btn" onclick="MSSNight._close()">Close</button>
         <button type="button" class="sf-apply-btn" id="mnSave" onclick="MSSNight._save()">Save</button>`);
