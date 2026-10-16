@@ -13,7 +13,8 @@
 .auth-page {
   position:fixed; inset:0;
   display:flex; flex-direction:column;
-  align-items:center; justify-content:center;
+  align-items:center; justify-content:safe center;
+  overflow-y:auto;   /* short phones + saved accounts: scroll instead of cutting the logo off */
   background:var(--bg); padding:2rem;
   gap:24px;
 }
@@ -240,6 +241,29 @@
   .flip-card-wrapper { width:92vw; }
   .flip-card-inner   { min-height:420px; height:auto; }
 }
+
+/* Saved accounts (MSSAccounts) */
+.auth-saved { display:flex; flex-direction:column; align-items:center; gap:8px; max-width:340px; width:100%; }
+.auth-saved[hidden] { display:none; }
+.auth-saved-h { font-size:12px; color:var(--text-2); text-align:center; }
+.auth-saved-list { max-width:100%; display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
+.auth-saved-btn {
+  display:inline-flex; align-items:center; gap:8px; min-height:40px;
+  padding:4px 14px 4px 4px; border-radius:999px; cursor:pointer;
+  background:var(--bg-3); color:var(--text); font:600 13px var(--sans, inherit);
+  border:1.5px solid var(--olive-light); box-shadow:2px 2px 0 var(--olive);
+  transition:transform var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
+}
+.auth-saved-btn { max-width:100%; }
+.auth-saved-btn > span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.auth-saved-btn:hover { transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--olive); }
+.auth-saved-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.auth-saved-btn:disabled { opacity:.6; cursor:wait; }
+.auth-saved-ava {
+  width:30px; height:30px; border-radius:50%; overflow:hidden; flex:none;
+  display:grid; place-items:center; background:var(--olive-faint); color:var(--olive-light); font-size:13px;
+}
+.auth-saved-ava img { width:100%; height:100%; object-fit:cover; }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -259,6 +283,9 @@
   <div class="auth-logo" translate="no">
     My<em>Screen</em>Folio
   </div>
+
+  <!-- Accounts already signed in on this device: one tap, no password -->
+  <div class="auth-saved" id="authSaved" hidden></div>
 
   <!-- Toggle row -->
   <div class="auth-toggle-row">
@@ -368,7 +395,19 @@
   const isRecovery = hash && hash.includes('type=recovery');
   if (isRecovery) return; // Don't redirect — let reset form handle it
   const user = await getCurrentUser();
-  if (user) window.location.href = 'index.html';
+  if (user) { window.location.href = 'index.html'; return; }
+  const saved = MSSAccounts.list(), box = document.getElementById('authSaved');
+  if (!saved.length) return;
+  const ava = a => { const u = safeURL(a.avatar_url);
+    return `<span class="auth-saved-ava" aria-hidden="true">${u ? `<img src="${u}" alt="">` : escHTML((a.username || '?')[0].toUpperCase())}</span>`; };
+  box.innerHTML = `<div class="auth-saved-h">${new URLSearchParams(location.search).has('add') ? 'Sign in to another account, or go back to' : 'Continue as'}</div>
+    <div class="auth-saved-list">${saved.map(a => `<button type="button" class="auth-saved-btn" data-id="${a.id}">${ava(a)}<span translate="no">@${escHTML(a.username)}</span></button>`).join('')}</div>`;
+  box.querySelectorAll('.auth-saved-btn').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    if (!(await MSSAccounts.switchTo(b.dataset.id))) b.remove();
+    if (!box.querySelector('.auth-saved-btn')) box.hidden = true;
+  });
+  box.hidden = false;
 })();
 
 /* ── Toggle mode ── */
