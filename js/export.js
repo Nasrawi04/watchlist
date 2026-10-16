@@ -127,12 +127,12 @@ async function buildAndExportPDF({ subtitle, titleLine, statItems, entries, useR
   const HDR_H = 32;
   pdf.setFillColor(...BG3); pdf.rect(0, 0, W, HDR_H, 'F');
 
-  // Title centered — times bold, MY + SCREEN(underlined) + SCORE
+  // Title centered — times bold, MY + SCREEN(underlined) + FOLIO
   pdf.setFont('times','bold'); pdf.setFontSize(24);
   const wMY     = pdf.getTextWidth('MY');
   const wSCREEN = pdf.getTextWidth('SCREEN');
-  const wSCORE  = pdf.getTextWidth('SCORE');
-  const totalTW = wMY + wSCREEN + wSCORE;
+  const wFOLIO  = pdf.getTextWidth('FOLIO');
+  const totalTW = wMY + wSCREEN + wFOLIO;
   let tx = (W - totalTW) / 2;
   const tY = 16;
 
@@ -141,7 +141,7 @@ async function buildAndExportPDF({ subtitle, titleLine, statItems, entries, useR
   pdf.setDrawColor(...ACC);   pdf.setLineWidth(0.8);
   pdf.line(tx, tY + 1.5, tx + wSCREEN, tY + 1.5);
   tx += wSCREEN;
-  pdf.setTextColor(...TEXT);  pdf.text('SCORE', tx, tY);
+  pdf.setTextColor(...TEXT);  pdf.text('FOLIO', tx, tY);
 
   // Subtitle — helvetica, centered
   pdf.setFont('helvetica','normal'); pdf.setFontSize(7);

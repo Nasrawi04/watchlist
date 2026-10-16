@@ -920,7 +920,7 @@ function _showRateNowPopup(title, id) {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = '_rateNowOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:950;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:950;background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px;';
     overlay.innerHTML = `
       <div style="background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:2rem 1.75rem;max-width:400px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
         <div style="width:64px;height:64px;border-radius:50%;background:var(--olive-faint);border:1.5px solid var(--border-olive);display:flex;align-items:center;justify-content:center;">
@@ -1096,7 +1096,7 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
           <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
           <div class="comp-meta">${_badge}</div>
           ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
-          ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">"${escHTML(MSSRich.plain(e.notes))}"</div>` : ''}
+          ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2; line-clamp:2;-webkit-box-orient:vertical;">"${escHTML(MSSRich.plain(e.notes))}"</div>` : ''}
           ${renderFavChips(e.ratings, e.cat)}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;" onclick="event.stopPropagation()">
@@ -1174,7 +1174,7 @@ function showFinishPopup(title) {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = '_finishOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px;';
     overlay.innerHTML = `
       <div style="background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:2rem 1.75rem;max-width:360px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
         <div style="width:64px;height:64px;border-radius:50%;background:var(--olive-faint);border:1.5px solid var(--border-olive);display:flex;align-items:center;justify-content:center;">

@@ -749,7 +749,7 @@ async function _drawCardPage1(myToken) {
   ctx.font = '700 14px "Oswald", Arial, sans-serif';
   ctx.fillStyle = ACCENT;
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  const msLabel = 'MyScreenScore';
+  const msLabel = 'MyScreenFolio';
   const msW = ctx.measureText(msLabel).width;
   ctx.fillText(msLabel, W - PAD, footerMidY);
   if (logoImg) {
@@ -1333,7 +1333,7 @@ async function _drawDiscoverCard(myToken) {
   ctx.font = '700 14px "Oswald", Arial, sans-serif';
   ctx.fillStyle = ACCENT;
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  const msLabel = 'MyScreenScore';
+  const msLabel = 'MyScreenFolio';
   const msW = ctx.measureText(msLabel).width;
   ctx.fillText(msLabel, W - PAD, footerMidY);
   if (logoImg) {
@@ -1357,7 +1357,7 @@ async function downloadCard() {
   const canvas = document.getElementById('createCardCanvas');
   if (!canvas) return;
   const title = (_cardEntry?.title || 'card').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  const filename = _cardPage === 3 ? `mss_${title}_discover.png` : `mss_${title}.png`;
+  const filename = _cardPage === 3 ? `msf_${title}_discover.png` : `msf_${title}.png`;
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   const attemptSave = async () => {
@@ -1367,7 +1367,7 @@ async function downloadCard() {
     const file = new File([blob], filename, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
-        await navigator.share({ files: [file], title: 'MyScreenScore' });
+        await navigator.share({ files: [file], title: 'MyScreenFolio' });
         return;
       } catch(shareErr) {
         if (shareErr && shareErr.name === 'AbortError') return;

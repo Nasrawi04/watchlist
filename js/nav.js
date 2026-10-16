@@ -16,6 +16,25 @@ function _navReleaseCheck(user) {
   ('requestIdleCallback' in window) ? requestIdleCallback(() => setTimeout(run, 1500), { timeout: 6000 }) : setTimeout(run, 3000);
 }
 
+/* Spotlights (054): the popup for an official challenge — js/spotlights.js
+   (+ medals.js), loaded once the page has settled, at most every 30 minutes;
+   it shows at most one a day. */
+function _navSpotlight() {
+  try {
+    if (Date.now() - Number(localStorage.getItem('mss_spot_chk') || 0) < 30 * 60000) return;
+    localStorage.setItem('mss_spot_chk', String(Date.now()));
+  } catch { return; }
+  const load = src => new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.async = true; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+  const run = async () => {
+    try {
+      if (typeof MSSMedal === 'undefined') await load('js/medals.js');
+      if (typeof MSSSpotlight === 'undefined') await load('js/spotlights.js');
+      MSSSpotlight.check();
+    } catch {}
+  };
+  ('requestIdleCallback' in window) ? requestIdleCallback(() => setTimeout(run, 2500), { timeout: 8000 }) : setTimeout(run, 4000);
+}
+
 async function _fillNavUser(user) {
   // Profile + friend-request badge fetched in parallel (was one after the other)
   const [profile, pending] = await Promise.all([
@@ -30,6 +49,7 @@ async function _fillNavUser(user) {
   _navAdminCheck();
   _navAccountCheck(profile);
   _navReleaseCheck(user);
+  _navSpotlight();
   const username = profile?.username || user.email?.split('@')[0] || 'You';
   const initial  = username[0].toUpperCase();
 

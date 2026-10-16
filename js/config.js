@@ -57,8 +57,8 @@ async function _mssWordCheck(values, cols) {
   showConfirm({
     title: severe ? 'Some words were starred out' : 'We softened some language',
     message: severe
-      ? 'A few words aren’t allowed on MyScreenScore, so they were replaced with stars. Everything else was saved as you wrote it.'
-      : 'A few words were softened to keep MyScreenScore friendly for everyone. Everything else was saved as you wrote it.',
+      ? 'A few words aren’t allowed on MyScreenFolio, so they were replaced with stars. Everything else was saved as you wrote it.'
+      : 'A few words were softened to keep MyScreenFolio friendly for everyone. Everything else was saved as you wrote it.',
     confirmText: 'Got it', cancelText: null, iconName: 'eyeOff', danger: false,
   });
 }
@@ -385,7 +385,7 @@ const MSSImageCheck = (() => {
     sb.rpc('mss_report_image', { p_where: where }).then(() => {}, () => {});
     await showConfirm({
       title: 'This picture can’t be used',
-      message: 'It looks like it doesn’t follow MyScreenScore’s community rules. Please choose a different picture.',
+      message: 'It looks like it doesn’t follow MyScreenFolio’s community rules. Please choose a different picture.',
       confirmText: 'Choose another', cancelText: null, iconName: 'image', danger: false,
     });
     return false;

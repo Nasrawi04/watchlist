@@ -437,7 +437,7 @@ async function getTmdbLibraryStats(tmdbId, tmdbType) {
   };
 }
 
-/* Site-wide average final_score for this TMDB title (the "MyScreenScore rating") —
+/* Site-wide average final_score for this TMDB title (the "MyScreenFolio rating") —
    only pulls the score column, no user identity. */
 async function getTmdbAvgScore(tmdbId, tmdbType, title, year) {
   const { data, error } = await sb.rpc('get_tmdb_avg_score', { p_tmdb_id: tmdbId, p_tmdb_type: tmdbType, p_title: title || null, p_year: year ? Number(year) : null });

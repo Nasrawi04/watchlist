@@ -76,7 +76,6 @@ const MSSPolls = (() => {
   /* ── Feed ── */
   async function mount(target, u, o = {}) {
     el = target; user = u;
-    try { scope = sessionStorage.getItem('polls_scope') || scope; } catch {}
     if (!user) {
       el.innerHTML = head(false) + `<div class="fr-empty"><div class="fr-empty-ic">${icon('poll', 26)}</div><div class="fr-empty-title">Polls with your friends</div>
         <div class="fr-empty-text">Sign in to ask your friends — or everyone — what to watch next.</div></div>`;
@@ -125,7 +124,7 @@ const MSSPolls = (() => {
     const list = focused ? [focused, ...polls.filter(p => p.id !== focused.id)] : polls;
     const empty = {
       friends: ['Nothing to vote on yet', 'Start a poll — your friends get a notification and can vote and comment.'],
-      public: ['No community polls yet', 'Make a poll Public and anyone on MyScreenScore can vote.'],
+      public: ['No community polls yet', 'Make a poll Public and anyone on MyScreenFolio can vote.'],
       mine: ['You haven’t made a poll yet', 'Ask what to watch next, who the best director is — anything.'],
     }[scope];
     feed.innerHTML = list.length
@@ -135,7 +134,6 @@ const MSSPolls = (() => {
   }
   function setScope(k) {
     scope = k; focused = null;
-    try { sessionStorage.setItem('polls_scope', k); } catch {}
     load(true);
   }
 

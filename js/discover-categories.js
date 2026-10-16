@@ -15,7 +15,7 @@ function _discTodayStr() {
 
 // Truncates a score DOWN to one decimal place (never rounds up) —
 // e.g. 8.15 -> "8.1", 8.98 -> "8.9". Used for every score badge across
-// Discover, TMDB-sourced or MyScreenScore's own, so the rule is
+// Discover, TMDB-sourced or MyScreenFolio's own, so the rule is
 // consistent everywhere.
 function _discFloorScore(score) {
   if (score == null || isNaN(score)) return null;
@@ -23,7 +23,7 @@ function _discFloorScore(score) {
 }
 
 /* ── Official TMDB poster for a title ──
-   Top Rated on MSS is built from users' own entries, so its poster was
+   Top Rated on MSF is built from users' own entries, so its poster was
    whatever that entry had (sometimes a custom upload or an odd crop).
    This looks up the title's official TMDB poster instead, keeping the
    answer on the device for 30 days so it's only fetched once. */
@@ -192,7 +192,7 @@ function _discMergeByScore(a, b) {
 }
 
 // Click handler for a Discover card. If we have a real TMDB id, route
-// straight to title.html as usual. If not (e.g. a MyScreenScore-rated
+// straight to title.html as usual. If not (e.g. a MyScreenFolio-rated
 // title where nobody has linked it to TMDB yet), open a popup letting
 // the user search TMDB and pick the right match — selecting one links
 // it for every user who rated that title, not just whoever clicked.
@@ -220,7 +220,7 @@ function _discClickAttr(it) {
   return `onclick='_discOpenLinkPopup(${_discAttrJSON(it.title || '')}, ${_discAttrJSON(it.derived_type || 'tv')})'`;
 }
 
-/* ── Link-to-TMDB popup for unlinked MyScreenScore titles ──
+/* ── Link-to-TMDB popup for unlinked MyScreenFolio titles ──
    Same picker design as Create Card's "Link to TMDB" (#cardLinkCard / .card-link-* in style.css). */
 function _discInjectLinkOverlay() {
   if (document.getElementById('discLinkOverlay')) return;
@@ -354,8 +354,8 @@ const DISCOVER_CATEGORIES = [
   },
   {
     key: 'top_rated_mss',
-    navLabel: 'Top Rated on MSS',
-    title: 'Top Rated on MSS',
+    navLabel: 'Top Rated on MSF',
+    title: 'Top Rated on MSF',
     // Sourced from our own users' ratings (final_score), not TMDB — see
     // get_top_rated_myscreenscore() in 011_top_rated_myscreenscore.sql.
     // Capped at the top 500 titles.
@@ -365,7 +365,7 @@ const DISCOVER_CATEGORIES = [
       if (offset >= 500) return [];
       const limit = Math.min(pageSize, 500 - offset);
       const { data, error } = await sb.rpc('get_top_rated_myscreenscore', { p_limit: limit, p_offset: offset });
-      if (error) { console.error('Top Rated (MyScreenScore) fetch error:', error); return []; }
+      if (error) { console.error('Top Rated (MyScreenFolio) fetch error:', error); return []; }
       // Linked titles use their official TMDB poster (cached); the entry's
       // own poster is only a fallback (unlinked titles, or TMDB has none).
       const official = await Promise.all((data || []).map(r =>

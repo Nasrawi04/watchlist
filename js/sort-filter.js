@@ -43,7 +43,7 @@
      beforeSort: async (section, value) => {},        // e.g. fetch data a sort needs
      beforeFilter: async (section, filter) => {},     // same, before a filter applies
      scoreOf: e => number|null,     // what "Ratings" / Score use (default: liveScore)
-     scoreLabel: 'TMDB Score',      // Score filter heading (default: MyScreenScore)
+     scoreLabel: 'TMDB Score',      // Score filter heading (default: MyScreenFolio)
      presets: { rank: { header: 'Order', opts: [['rank', 'Your Order'], ['rankRev', 'Reversed']] } },
      compare: { popular: (a, b) => b.likes - a.likes },   // page-specific sort values
                                     // rename a sort's labels for this page
@@ -501,7 +501,7 @@ const SF = (() => {
       html += `<div class="sf-section-label">Year Watched</div>` + rangeRow('sfWatchedMin', 'sfWatchedMax', f.watchedMin, f.watchedMax, 'From', 'To');
     }
     if (on.has('score')) {
-      html += `<div class="sf-section-label">${escHTML(s.cfg.scoreLabel || 'MyScreenScore')} <span class="sf-section-hint">(rated items only)</span></div>` +
+      html += `<div class="sf-section-label">${escHTML(s.cfg.scoreLabel || 'MyScreenFolio')} <span class="sf-section-hint">(rated items only)</span></div>` +
         rangeRow('sfScoreMin', 'sfScoreMax', f.scoreMin, f.scoreMax, 'Min', 'Max', 'step="0.1" min="0" max="10"');
     }
     if (on.has('length')) {
