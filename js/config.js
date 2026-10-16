@@ -416,6 +416,31 @@ function showToast(msg, type = 'ok') {
    showUndoToast(message, undoFn, ms = 6000): the usual toast plus an "Undo"
    button and a bar that runs down for the time left. undoFn may be async;
    when it finishes the toast says "Undone." (or explains if it couldn't). */
+// Save a finished canvas as a PNG — the same way everywhere (Create Card, Episodes export):
+// phones / tablets get the share sheet (Save Image, Save to Files, Copy, AirDrop…);
+// without one, phones show the picture in `previewEl` to long-press; computers download it.
+// Call it straight from the tap (the share sheet needs that). Throws if the canvas can't be saved.
+async function mssSaveImage(canvas, filename, previewEl) {
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  if (!blob) throw new Error('toBlob returned null (likely a tainted canvas)');
+  const file = new File([blob], filename, { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'MyScreenFolio' }); return; }
+    catch (err) { if (err && err.name === 'AbortError') return; }
+  }
+  const url = URL.createObjectURL(blob);
+  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && previewEl) {
+    previewEl.innerHTML = `<img src="${url}" alt="${escHTML(filename)}" style="width:100%;height:auto;border-radius:8px;display:block;">
+      <a href="${url}" download="${escHTML(filename)}" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;font-size:13px;color:var(--olive-light);">Tap here to open the full image →</a>`;
+    showToast('Long-press the image to save it.');
+    return;
+  }
+  const link = document.createElement('a');
+  link.download = filename; link.href = url; link.style.display = 'none';
+  document.body.appendChild(link); link.click();
+  setTimeout(() => { link.remove(); URL.revokeObjectURL(url); }, 200);
+}
+
 function showUndoToast(msg, undo, ms = 6000) {
   let t = document.getElementById('toast');
   if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
