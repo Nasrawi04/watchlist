@@ -10,7 +10,8 @@
    MSSChallenges.mount(el, user, { ch })   the section (ch: scroll to that one)
 
    Uses friends.html's _frAccepted for the invite lists, the shared Social
-   popup (_socDialog, social.js) and the Polls / Inbox button styles.
+   popup (_socDialog, social.js), the filter dropdown (SF.dd, sort-filter.js),
+   the date range picker (MSSDateRange, date-range.js) and the Polls / Inbox button styles.
 ═══════════════════════════════════════════════════════════════ */
 const MSSChallenges = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));
@@ -166,13 +167,10 @@ const MSSChallenges = (() => {
         </div>
         <div class="sf-section-label">What counts</div>
         ${seg('cat', [['', 'Anything', 'sparkles'], ['movies', 'Movies', 'film'], ['tv', 'TV Shows', 'tv'], ['anime', 'Anime', 'animeFace'], ['cartoons', 'Cartoons', 'brush']], '').replace('ch-seg"', 'ch-seg ch-cats"')}
-        <label class="sf-section-label" for="chGenre">Genre <span class="sf-section-hint">optional</span></label>
-        <div class="ch-select"><select id="chGenre" class="pf-input ch-in" onchange="MSSChallenges._f('genre', this.value)"><option value="">Any genre</option>${GENRES.map(g => `<option>${g}</option>`).join('')}</select>${icon('chevdown', 14)}</div>
+        <div class="sf-section-label">Genre <span class="sf-section-hint">optional</span></div>
+        ${SF.dd('chGenreDD', 'Any genre', false, ['', ...GENRES].map(g => `<button type="button" class="td-dd-opt${g ? '' : ' active'}" data-genre="${esc(g)}" onclick="MSSChallenges._f('genre', ${attrJSON(g)})">${g || 'Any genre'}</button>`).join(''))}
         <div class="sf-section-label">Dates</div>
-        <div class="ch-dates">
-          <label class="ch-field"><span>Starts</span><input id="chS" class="pf-input ch-in" type="date" value="${iso(today)}" onchange="MSSChallenges._f('dates')"></label>
-          <label class="ch-field"><span>Ends</span><input id="chE" class="pf-input ch-in" type="date" value="${iso(end)}" min="${iso(today)}" onchange="MSSChallenges._f('dates')"></label>
-        </div>
+        ${MSSDateRange.html('chD', { start: iso(today), end: iso(end), min: iso(today), onChange: () => f('dates') })}
         ${seg('span', [[7, '1 week'], [30, '1 month'], [91, '3 months'], ['year', 'This year']], 30).replace('ch-seg"', 'ch-seg ch-spans"')}
         <div class="soc-tip"><span class="soc-tip-ic">${icon('check', 15)}</span>
           <div><b>Counts automatically</b><span>Anything you mark Watched between these dates counts toward the goal.</span></div></div>
@@ -201,11 +199,17 @@ const MSSChallenges = (() => {
       form.goal = n; press('goal', n);
     }
     if (what === 'cat') { form.cat = v; press('cat', v); }
-    if (what === 'genre') form.genre = v;
+    if (what === 'genre') {
+      form.genre = v;
+      document.querySelectorAll('#chGenreDD .td-dd-opt').forEach(o => o.classList.toggle('active', o.dataset.genre === v));
+      const t = document.querySelector('#chGenreDD .sf-dd-trigger');
+      t.classList.toggle('active', !!v); t.querySelector('.td-dd-label').textContent = v || 'Any genre';
+      SF.closeDD();
+    }
     if (what === 'span') {
-      const s = document.getElementById('chS').value || iso(new Date()), e = day(s);
+      const s = MSSDateRange.get('chD').start, e = day(s);
       if (v === 'year') { e.setMonth(11, 31); } else e.setDate(e.getDate() + Number(v));
-      document.getElementById('chE').value = iso(e);
+      MSSDateRange.set('chD', s, iso(e));
       press('span', v);
     }
     if (what === 'dates') press('span', null);
@@ -229,7 +233,7 @@ const MSSChallenges = (() => {
       if (form.mode === 'new') {
         const invited = form.picked.size;
         const id = await rpc('create_challenge', { p_title: document.getElementById('chT').value.trim(), p_goal: Number(document.getElementById('chG').value),
-          p_cat: form.cat || null, p_genre: form.genre || null, p_starts: document.getElementById('chS').value, p_ends: document.getElementById('chE').value, p_friends: [...form.picked] });
+          p_cat: form.cat || null, p_genre: form.genre || null, p_starts: MSSDateRange.get('chD').start, p_ends: MSSDateRange.get('chD').end, p_friends: [...form.picked] });
         closeForm(); focus = id; await load();
         showToast(invited ? 'Challenge started — your friends got an invite' : 'Challenge started');
       } else {
