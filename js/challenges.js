@@ -97,14 +97,16 @@ const MSSChallenges = (() => {
               <div class="ch-mine-text">${c.state === 'soon' ? 'You’re in — it starts soon.' : `${c.goal - (c.my_progress || 0)} to go · ${pct}%`}</div></div>
           </div>`
       : c.state === 'soon' || c.state === 'live' ? `<button type="button" class="btn-add-entry chf-join" onclick="MSSChallenges._joinOfficial(${id})">${icon('check', 15)} Join the challenge</button>` : '';
+    const myT = c.teams?.find(t => t.key === c.my_team);
     return `<article class="chf is-${state[1]}" id="ch-${c.id}">
-      <div class="chf-medal">${MSSMedal.official(c.medal, { size: 132, label: `${c.title} medal` })}</div>
+      <div class="chf-medal">${MSSMedal.official(c.medal, { size: 132, team: myT, label: `${c.title} medal${myT ? ' — ' + myT.name : ''}` })}</div>
       <div class="chf-body">
         <div class="chf-eyebrow"><span class="chf-state ${state[1]}">${state[0]}</span>${MSSSpotlight.entry(c.spotlight)?.eyebrow && c.state !== 'ended' ? `<span class="chf-tagline">${esc(MSSSpotlight.entry(c.spotlight).eyebrow)}</span>` : ''}${c.state !== 'hidden' && c.state !== 'ended' ? `<span>${MSSSpotlight.when(c, true)}</span>` : ''}<span>${fmtDay(c.starts_on)} – ${fmtDay(c.ends_on)}</span></div>
         <h3 class="chf-title" translate="no"><button type="button" class="ch-title-btn" onclick="MSSChallenges.details(${id})">${esc(c.title)}</button></h3>
         ${c.description ? `<p class="chf-desc">${esc(c.description)}</p>` : ''}
         <div class="spot-tags">${MSSSpotlight.tags(c)}</div>
         ${MSSSpotlight.posters(c, 10)}
+        ${c.teams ? teamsBar(c, myT) : ''}
         <div class="chf-foot">${foot}<button type="button" class="rec-btn chf-info" onclick="MSSChallenges.details(${id})">${icon('info', 14)} Details</button><span class="chf-count">${icon('users', 13)} <b>${c.joined}</b> joined${c.finished ? ` · <b>${c.finished}</b> finished` : ''}</span>
           ${joined && !done ? `<button type="button" class="poll-link poll-danger" onclick="MSSChallenges.respond(${id}, 'leave')">Leave</button>` : ''}</div>
         ${c.can_manage ? `<div class="chf-own">
@@ -131,14 +133,16 @@ const MSSChallenges = (() => {
     const kind = (c.cat ? CATS.find(x => x[0] === c.cat)[1].toLowerCase() : 'titles');
     const anyN = t.filter(x => x.anytime).length;
     const steps = [
-      joined || finished ? `<b>You’re in.</b> Everything below already counts for you.` : `<b>Join the challenge</b>${isOff ? ' — anyone can.' : invited ? ' — you’ve been invited.' : '.'}`,
+      joined || finished ? `<b>You’re in${c.teams && c.my_team ? ` — on ${esc(c.teams.find(t => t.key === c.my_team)?.name || '')}` : ''}.</b> Everything below already counts for you.`
+        : c.teams ? `<b>Join and pick a side</b> — ${esc(c.teams[0].name)} or ${esc(c.teams[1].name)}. You can switch until you finish.`
+        : `<b>Join the challenge</b>${isOff ? ' — anyone can.' : invited ? ' — you’ve been invited.' : '.'}`,
       pick ? `<b>Watch ${c.goal} ${kind} of your choice</b> — whatever fits the idea of the challenge.`
       : lst ? `<b>Watch ${c.goal === t.length ? `all ${t.length}` : `${c.goal} of the ${t.length}`} ${t.length === 1 ? 'title' : 'titles'} below</b> and mark each one Watched.`
         : `<b>Watch ${c.goal} ${c.genre ? esc(c.genre) + ' ' : ''}${kind}</b> — any you like${c.cat || c.genre ? ' that fit' : ''}. Mark them Watched as you go.`,
       pick ? `When you mark one Watched between <b>${fmtDay(c.starts_on)}</b> and <b>${fmtDay(c.ends_on)}</b>, we ask <b>“Does this count?”</b> — tick this challenge. Changed your mind? Take it off on the card.`
       : lst && anyN ? `Titles marked ${icon('refresh', 12)} <b>count even if you watched them before</b>. The others have to be marked Watched between <b>${fmtDay(c.starts_on)}</b> and <b>${fmtDay(c.ends_on)}</b>.`
         : `Only titles marked Watched between <b>${fmtDay(c.starts_on)}</b> and <b>${fmtDay(c.ends_on)}</b> count — progress updates by itself.`,
-      isOff ? `<b>Finish it and the ${esc(medalName)} medal is yours</b> — everyone who finishes gets the same one.`
+      isOff ? `<b>Finish it and the ${esc(medalName)} medal is yours</b> — ${c.teams ? 'in your team’s colours.' : 'everyone who finishes gets the same one.'}`
         : `<b>Race your friends:</b> first to finish gets gold, second silver, everyone after bronze.`,
     ];
     const status = x => x.done ? `<span class="chi-st done">${icon('check', 12)} You’ve got it</span>`
@@ -152,7 +156,9 @@ const MSSChallenges = (() => {
     const mine = joined || finished ? `<div class="chi-prog"><div class="ch-mine-n"><b>${prog}</b><span>/ ${c.goal}</span></div>
         <div class="ch-mine-main"><div class="ch-bar big" role="progressbar" aria-valuemin="0" aria-valuemax="${c.goal}" aria-valuenow="${prog}" aria-label="Your progress"><i style="width:${pct}%"></i></div>
         <div class="ch-mine-text">${finished ? 'You finished — the medal is yours.' : !started ? 'You’re in — it starts soon.' : `${c.goal - prog} to go · ${pct}%`}</div></div></div>` : '';
-    const medals = isOff ? `<div class="chi-medals one">${MSSMedal.official(c.medal, { size: 84, locked: !finished, label: `${medalName} medal${finished ? '' : ' (not earned yet)'}` })}
+    const medals = isOff && c.teams ? `<div class="chi-medals">${c.teams.map(t => `<span>${MSSMedal.official(c.medal, { size: 84, team: t, locked: finished && c.my_team !== t.key, label: `${t.name} medal` })}
+          <b translate="no" style="color:${esc(t.color)}">${esc(t.name)}</b><small>${t.side ? esc(t.side) : `${t.joined || 0} joined`}</small></span>`).join('')}</div>`
+      : isOff ? `<div class="chi-medals one">${MSSMedal.official(c.medal, { size: 84, locked: !finished, label: `${medalName} medal${finished ? '' : ' (not earned yet)'}` })}
         <span><b>${esc(medalName)}</b>${finished ? 'You’ve earned it' : 'Yours when you finish'}</span></div>`
       : `<div class="chi-medals">${[[1, 'Gold', '1st to finish'], [2, 'Silver', '2nd'], [3, 'Bronze', 'Everyone after']].map(([pl, n, d]) =>
           `<span>${MSSMedal.challenge(pl, c.cat, { size: 58, locked: finished ? me?.finish_rank !== pl && !(pl === 3 && me?.finish_rank >= 3) : false, label: `${n} medal` })}<b>${n}</b><small>${d}</small></span>`).join('')}</div>`;
@@ -184,14 +190,33 @@ const MSSChallenges = (() => {
   async function infoJoin() {
     const id = infoId; if (!id) return;
     const isOff = !!off.list.find(x => x.id === id);
-    const ok = isOff ? await act('join_official_challenge', { p_ch: id }) : await act('respond_challenge', { p_ch: id, p_action: 'join' });
+    const oc = isOff ? off.list.find(x => x.id === id) : null;
+    let team = null;
+    if (oc?.teams) { closeInfo(); team = await MSSSpotlight.pickTeam(oc); if (!team) return; }
+    const ok = isOff ? await act('join_official_challenge', { p_ch: id, p_team: team }) : await act('respond_challenge', { p_ch: id, p_action: 'join' });
     if (!ok) return;
     showToast('You’re in — go watch something!');
-    if (infoId === id) details(id);
+    if (infoId === id || team) details(id);
   }
 
+  // Two teams (064): how many on each side, yours marked; "Switch side" until you finish
+  function teamsBar(c, myT) {
+    const [a, b] = c.teams, n = (a.joined || 0) + (b.joined || 0), pa = n ? Math.round((a.joined || 0) / n * 100) : 50;
+    return `<div class="chf-teams">
+      <div class="chf-teams-names"><span style="--team:${esc(a.color)}"><i></i><b translate="no">${esc(a.name)}</b> ${a.joined || 0}</span>
+        <span style="--team:${esc(b.color)}">${b.joined || 0} <b translate="no">${esc(b.name)}</b><i></i></span></div>
+      <div class="chf-teams-bar" role="img" aria-label="${esc(a.name)} ${a.joined || 0}, ${esc(b.name)} ${b.joined || 0}"><i style="width:${pa}%;background:${esc(a.color)}"></i><i style="width:${100 - pa}%;background:${esc(b.color)}"></i></div>
+      ${myT ? `<div class="chf-myteam">You’re on <b translate="no" style="color:${esc(myT.color)}">${esc(myT.name)}</b>${!c.my_finished_at && c.state !== 'ended' ? ` · <button type="button" class="poll-link" onclick="MSSChallenges._joinOfficial(${attrJSON(c.id)})">Switch side</button>` : ''}</div>` : ''}
+    </div>`;
+  }
   async function joinOfficial(id) {
-    if (await act('join_official_challenge', { p_ch: id })) showToast('You’re in — go watch something!');
+    const c = off.list.find(x => x.id === id); if (!c) return;
+    let team = null;
+    if (c.teams) { team = await MSSSpotlight.pickTeam(c); if (!team) return; }
+    if (await act('join_official_challenge', { p_ch: id, p_team: team })) {
+      const t = c.teams?.find(x => x.key === team);
+      showToast(t ? `You’re on ${t.name} — go watch something!` : 'You’re in — go watch something!');
+    }
   }
 
   function card(c) {
@@ -335,12 +360,34 @@ const MSSChallenges = (() => {
       `<button type="button" class="sf-clear-btn" onclick="MSSChallenges._close()">Cancel</button>
         <button type="button" class="sf-apply-btn" id="chSave" onclick="MSSChallenges._save()">Start Challenge</button>`);
   }
+  // Teams (064): two sides, each a name, what it stands for and a colour (its medal's wreath)
+  const TEAM_COLORS = ['#2F8F46', '#1F1F24', '#C2453D', '#2F5FA8', '#D4A21A', '#7A3FB0', '#E07A2E', '#2A9D9A'];
+  function teamsForm() {
+    if (!form?.teams) return '';
+    return `<div class="chf-team-rows">${form.teams.map((t, i) => `<div class="chf-team-row">
+        <span class="chf-team-medal" id="chfTeamMedal${i}">${MSSMedal.official(form.medal, { size: 64, team: t })}</span>
+        <div class="chf-team-fields">
+          <input class="pf-input ch-in" maxlength="30" placeholder="${i ? 'Team Harkonnen' : 'Team Atreides'}" aria-label="Team ${i + 1} name" value="${esc(t.name)}" oninput="MSSChallenges._team(${i}, 'name', this.value)">
+          <input class="pf-input ch-in" maxlength="120" placeholder="${i ? 'Power through fear' : 'For the desert and its people'}" aria-label="Team ${i + 1} — what this side stands for" value="${esc(t.side)}" oninput="MSSChallenges._team(${i}, 'side', this.value)">
+          <div class="chf-team-colors" role="radiogroup" aria-label="Team ${i + 1} colour">${TEAM_COLORS.map(col => `<button type="button" role="radio" class="chf-team-color${t.color === col ? ' on' : ''}" aria-checked="${t.color === col}" aria-label="${col}" style="background:${col}" onclick="MSSChallenges._team(${i}, 'color', '${col}')"></button>`).join('')}</div>
+        </div></div>`).join('')}</div>`;
+  }
+  function team(i, k, v) {
+    const t = form?.teams?.[i]; if (!t) return;
+    t[k] = v;
+    if (k === 'color') {
+      document.querySelectorAll(`#chfTeams .chf-team-row:nth-child(${i + 1}) .chf-team-color`).forEach(b => { const on = b.style.background && b.getAttribute('aria-label') === v; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+      document.getElementById('chfTeamMedal' + i).innerHTML = MSSMedal.official(form.medal, { size: 64, team: t });
+    }
+  }
+
   /* ── The official account: make / edit an official challenge ── */
   function official(id) {
     const c = id ? off.list.find(x => x.id === id) : null;
     const today = new Date(), end = new Date(); end.setDate(end.getDate() + 14);
     form = { mode: 'official', id: c?.id || null, medal: c?.medal || MSSMedal.OFFICIAL[0].key, cmode: c ? c.count_mode : 'list',
-      titles: (c?.titles || []).map(t => ({ ...t })), goal: c && c.count_mode === 'auto' ? c.goal : 10, cat: c?.cat || '', genre: c?.genre || '', spot: c?.spotlight || '' };
+      titles: (c?.titles || []).map(t => ({ ...t })), goal: c && c.count_mode === 'auto' ? c.goal : 10, cat: c?.cat || '', genre: c?.genre || '', spot: c?.spotlight || '',
+      teams: c?.teams ? c.teams.map(t => ({ name: t.name, side: t.side || '', color: t.color })) : null };
     popup(c ? 'Edit Official Challenge' : 'New Official Challenge', `
         <label class="sf-section-label" for="chT">Name it</label>
         <input id="chT" class="pf-input ch-in" maxlength="80" placeholder="Halloween 2026" autocomplete="off" value="${esc(c?.title || '')}">
@@ -358,6 +405,9 @@ const MSSChallenges = (() => {
         </div>
         <div id="chfAutoBox"${form.cmode === 'auto' ? '' : ' hidden'}>${goalHTML(form.goal)}${kindHTML(form.cat, form.genre)}</div>
         ${datesHTML(c?.starts_on || iso(today), c?.ends_on || iso(end))}
+        <div class="sf-section-label">Teams <span class="sf-section-hint">optional — people pick a side when they join</span></div>
+        ${seg('teamsOn', [['0', 'No teams'], ['1', 'Two teams', 'users']], form.teams ? '1' : '0')}
+        <div id="chfTeams">${teamsForm()}</div>
         <div class="sf-section-label">Spotlight <span class="sf-section-hint">the popup — from js/spotlights.js</span></div>
         ${seg('spot', [['', 'None'], ...MSSSpotlights.map(e => [e.key, esc(e.name)])], form.spot).replace('ch-seg"', 'ch-seg chf-spots"')}
         <div class="soc-tip"><span class="soc-tip-ic">${icon('crown', 15)}</span>
@@ -431,8 +481,13 @@ const MSSChallenges = (() => {
       form.goal = n; press('goal', n);
     }
     if (what === 'cat') { form.cat = v; press('cat', v); }
-    if (what === 'medal') { form.medal = v; press('medal', v); document.querySelectorAll('#chFormBody .chf-medal-opt').forEach(b => b.classList.toggle('active', b.dataset.medal === v)); }
+    if (what === 'medal') { form.medal = v; press('medal', v); document.querySelectorAll('#chFormBody .chf-medal-opt').forEach(b => b.classList.toggle('active', b.dataset.medal === v));
+      const tb = document.getElementById('chfTeams'); if (tb) tb.innerHTML = teamsForm(); }
     if (what === 'spot') { form.spot = v; press('spot', v); }
+    if (what === 'teamsOn') {
+      form.teams = v === '1' ? (form.teams || [{ name: '', side: '', color: TEAM_COLORS[0] }, { name: '', side: '', color: TEAM_COLORS[1] }]) : null;
+      press('teamsOn', v); document.getElementById('chfTeams').innerHTML = teamsForm();
+    }
     if (what === 'fmode') {
       form.fmode = v; press('fmode', v);
       document.getElementById('chGenreBox').hidden = v === 'pick';
@@ -477,11 +532,12 @@ const MSSChallenges = (() => {
       if (form.mode === 'official') {
         const list = form.cmode === 'list';
         if (list && !form.titles.length) { btn.disabled = false; showToast('Add at least one title to the set list.', 'err'); return; }
+        if (form.teams && form.teams.some(t => !t.name.trim())) { btn.disabled = false; showToast('Give both teams a name.', 'err'); return; }
         const d = MSSDateRange.get('chD');
         const id = await rpc('update_official_challenge', { p_ch: form.id, p_title: document.getElementById('chT').value.trim(),
           p_description: document.getElementById('chDesc').value.trim(), p_goal: list ? null : Number(document.getElementById('chG').value),
           p_cat: list ? null : form.cat || null, p_genre: list ? null : form.genre || null, p_starts: d.start, p_ends: d.end,
-          p_medal: form.medal, p_spotlight: form.spot || null, p_titles: list ? form.titles : [] });
+          p_medal: form.medal, p_spotlight: form.spot || null, p_titles: list ? form.titles : [], p_teams: form.teams });
         const edited = !!form.id;
         closeForm(); focus = id; await load();
         showToast(edited ? 'Saved' : 'Official challenge made — it shows in Featured 7 days before it starts');
@@ -500,7 +556,7 @@ const MSSChallenges = (() => {
     } catch (err) { btn.disabled = false; showToast(errText(err, 'Couldn’t save — try again.'), 'err'); }
   }
 
-  return { mount, create, official, invite, respond, remove, details, reload: load, _unpick: unpick, _any: toggleAny, _closeInfo: closeInfo, _infoJoin: infoJoin,
+  return { mount, create, official, invite, respond, remove, details, reload: load, _unpick: unpick, _team: team, _any: toggleAny, _closeInfo: closeInfo, _infoJoin: infoJoin,
     _all: id => { showAll[id] = true; draw(); }, _f: f, _inv: inv, _save: save, _close: closeForm,
     _joinOfficial: joinOfficial, _preview: id => { const c = off.list.find(x => x.id === id); if (c) MSSSpotlight.preview(c); },
     _q: search, _pick: pick, _rm: i => { form?.titles.splice(i, 1); drawChosen(); } };
