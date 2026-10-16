@@ -24,6 +24,7 @@
    MSSSpotlight.check()     on app open, home page (nav.js) — shows one if it's due
    MSSSpotlight.preview(c)  the official account's "Preview spotlight"
    MSSSpotlight.tags(c) / posters(c)   the chips + poster strip (Challenges reuses them)
+   MSSSpotlight.pickTeam(c)  → 'a' | 'b' | null — the "Pick your side" popup (064)
 
    Requires config.js (icon, escHTML, MSSDialog, showToast), medals.js. Styles: §57.
 ═══════════════════════════════════════════════════════════════ */
@@ -53,7 +54,7 @@ const MSSSpotlight = (() => {
     const n = (c.titles || []).length;
     const what = c.count_mode === 'list' ? `${n} ${n === 1 ? 'title' : 'titles'}`
       : `${c.goal} ${c.genre ? esc(c.genre) + ' ' : ''}${KINDS[c.cat] || 'titles'}`;
-    return `<span class="spot-tag is-official">${icon('crown', 12)} Official</span><span class="spot-tag">${what}</span><span class="spot-tag">Everyone who finishes gets this medal</span>`;
+    return `<span class="spot-tag is-official">${icon('crown', 12)} Official</span><span class="spot-tag">${what}</span>${c.teams ? `<span class="spot-tag">${icon('users', 12)} Pick a side: ${esc(c.teams[0].name)} or ${esc(c.teams[1].name)}</span>` : ''}<span class="spot-tag">Everyone who finishes gets this medal</span>`;
   }
   // ✓ = you've got it already · ↻ = counts even if watched before the challenge
   function posters(c, max = 8) {
@@ -115,13 +116,58 @@ const MSSSpotlight = (() => {
   }
   async function join() {
     const c = cur; if (!c) return;
+    let team = null;
+    if (c.teams) { close(); team = await pickTeam(c); if (!team) return; }
     const b = document.querySelector('.spot-join'); if (b) b.disabled = true;
     try {
-      await rpc('join_official_challenge', { p_ch: c.id });
+      await rpc('join_official_challenge', { p_ch: c.id, p_team: team });
       cur = null; MSSDialog.close(document.getElementById('spotOverlay'));
-      showToast(`You’re in — ${c.title} ${c.state === 'soon' ? 'starts soon' : 'is on'}!`);
+      showToast(team ? `You’re on ${c.teams.find(t => t.key === team).name} — good luck!` : `You’re in — ${c.title} ${c.state === 'soon' ? 'starts soon' : 'is on'}!`);
       if (typeof MSSChallenges !== 'undefined' && document.getElementById('chList')) MSSChallenges.reload();
     } catch (err) { if (b) b.disabled = false; showToast(err?.hint || 'Couldn’t join — try again.', 'err'); }
+  }
+
+  /* ── Teams (064): "Pick your side" — both team medals side by side. Resolves 'a' / 'b', or null if closed. ── */
+  let teamDone = null;
+  function pickTeam(c) {
+    return new Promise(res => {
+      teamDone = res;
+      let ov = document.getElementById('teamPick');
+      if (!ov) {
+        ov = document.createElement('div'); ov.id = 'teamPick'; ov.className = 'soc-overlay';
+        ov.innerHTML = `<div class="soc-card team-pick" role="dialog" aria-modal="true" aria-labelledby="teamPickTitle">
+            <div class="sf-header"><div class="sf-title" id="teamPickTitle">Pick your side</div><button type="button" class="sf-close" aria-label="Close">${icon('x', 18)}</button></div>
+            <div class="sf-body" id="teamPickBody"></div><div class="sf-footer" id="teamPickFoot"></div></div>`;
+        ov.querySelector('.sf-close').onclick = () => endTeam(null);
+        MSSDialog.bind(ov, () => endTeam(null));
+        document.body.appendChild(ov);
+      }
+      ov._c = c; ov._sel = c.my_team || null;
+      drawTeam();
+      MSSDialog.open(ov, { focus: '.team-card' });
+    });
+  }
+  function drawTeam() {
+    const ov = document.getElementById('teamPick'), c = ov._c, sel = ov._sel;
+    document.getElementById('teamPickBody').innerHTML = `
+      <p class="team-pick-lead" translate="no">${esc(c.title)}</p>
+      <p class="team-pick-sub">Everyone who finishes gets the medal — in their team’s colours. Choose who you’re watching for.</p>
+      <div class="team-cards" role="radiogroup" aria-label="Teams">${c.teams.map(t => `
+        <button type="button" role="radio" class="team-card${sel === t.key ? ' on' : ''}" aria-checked="${sel === t.key}" style="--team:${esc(t.color)}" onclick="MSSSpotlight._team('${t.key}')">
+          <span class="team-medal">${MSSMedal.official(c.medal, { size: 112, team: t, label: `${t.name} medal` })}</span>
+          <b translate="no">${esc(t.name)}</b>
+          ${t.side ? `<span class="team-side">${esc(t.side)}</span>` : ''}
+          <small>${icon('users', 12)} ${t.joined || 0} joined</small>
+          <i class="team-check" aria-hidden="true">${icon('check', 14)}</i>
+        </button>`).join('')}</div>`;
+    const t = c.teams.find(x => x.key === sel);
+    document.getElementById('teamPickFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="MSSSpotlight._teamEnd(null)">Cancel</button>
+      <button type="button" class="sf-apply-btn team-go" onclick="MSSSpotlight._teamEnd('${sel || ''}')"${t ? '' : ' disabled'} style="${t ? `--team:${esc(t.color)}` : ''}">${t ? `${icon('check', 14)} Join ${esc(t.name)}` : 'Pick a side'}</button>`;
+  }
+  function endTeam(team) {
+    const done = teamDone; teamDone = null;
+    MSSDialog.close(document.getElementById('teamPick'));
+    if (done) done(team || null);
   }
 
   /* ── Each app open, on the home page (nav.js): one spotlight — taking turns when there are several ── */
@@ -147,5 +193,7 @@ const MSSSpotlight = (() => {
     show(c, e, true);
   }
 
-  return { check, preview, tags, posters, when, entry, _close: close, _join: join };
+  return { check, preview, tags, posters, when, entry, pickTeam, _close: close, _join: join,
+    _team: k => { const ov = document.getElementById('teamPick'); ov._sel = k; drawTeam(); ov.querySelector(`.team-card[aria-checked="true"]`)?.focus(); },
+    _teamEnd: k => endTeam(k) };
 })();
