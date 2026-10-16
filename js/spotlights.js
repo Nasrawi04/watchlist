@@ -16,11 +16,10 @@
      2. As the official account, pick it under "Spotlight" when you make
         (or edit) the official challenge. That's it.
 
-   Who sees it: people who haven't joined, once each (remembered across
-   their devices), at most one spotlight a day. "Maybe later" brings it
-   back once more after the challenge goes live.
+   Who sees it: everyone who hasn't joined — every time they open the app
+   and land on the home page, until they join or the challenge ends.
 
-   MSSSpotlight.check()     on app open (nav.js) — shows one if it's due
+   MSSSpotlight.check()     on app open, home page (nav.js) — shows one if it's due
    MSSSpotlight.preview(c)  the official account's "Preview spotlight"
    MSSSpotlight.tags(c) / posters(c)   the chips + poster strip (Challenges reuses them)
 
@@ -69,24 +68,24 @@ const MSSSpotlight = (() => {
   }
 
   /* ── The popup ── */
-  let cur = null;    // { c, e, preview }
+  let cur = null;    // the challenge on show
   function overlay() {
     let ov = document.getElementById('spotOverlay');
     if (ov) return ov;
     ov = document.createElement('div');
     ov.id = 'spotOverlay'; ov.className = 'soc-overlay spot-overlay';
     ov.innerHTML = `<div class="soc-card spot-card" role="dialog" aria-modal="true" aria-labelledby="spotTitle"><div id="spotBody"></div></div>`;
-    MSSDialog.bind(ov, () => close('seen'));
+    MSSDialog.bind(ov, () => close());
     document.body.appendChild(ov);
     return ov;
   }
   function show(c, e, preview) {
-    cur = { c, e, preview };
+    cur = c;
     const ov = overlay(), card = ov.querySelector('.spot-card');
     card.style.setProperty('--spot', e.accent || 'var(--olive-light)');
     card.style.setProperty('--spot-glow', e.glow || 'var(--olive-faint)');
     document.getElementById('spotBody').innerHTML = `
-      <button type="button" class="spot-x" onclick="MSSSpotlight._close('seen')" aria-label="Close">${icon('x', 18)}</button>
+      <button type="button" class="spot-x" onclick="MSSSpotlight._close()" aria-label="Close">${icon('x', 18)}</button>
       <div class="spot-hero"><div class="spot-medal">${MSSMedal.official(c.medal, { size: 168, label: `${c.title} medal` })}</div></div>
       <div class="spot-main">
         <div class="spot-eyebrow">${icon('crown', 13)} Official challenge${e.eyebrow ? ` · ${esc(e.eyebrow)}` : ''}</div>
@@ -98,46 +97,42 @@ const MSSSpotlight = (() => {
       </div>
       <div class="spot-foot">${preview
         ? `<span class="spot-preview-note">${icon('eye', 13)} Preview — this is what people will see</span><button type="button" class="sf-apply-btn" onclick="MSSSpotlight._close()">Close</button>`
-        : `<button type="button" class="sf-clear-btn" onclick="MSSSpotlight._close('later')">Maybe later</button>
+        : `<button type="button" class="sf-clear-btn" onclick="MSSSpotlight._close()">Maybe later</button>
            <button type="button" class="sf-apply-btn spot-join" onclick="MSSSpotlight._join()">${icon('check', 15)} Join</button>`}</div>`;
     MSSDialog.open(ov, { focus: preview ? '.spot-foot .sf-apply-btn' : '.spot-join' });
   }
-  function close(status) {
-    const s = cur; cur = null;
+  function close() {
+    cur = null;
     MSSDialog.close(document.getElementById('spotOverlay'));
-    if (!s || s.preview || !status) return;
-    // "Maybe later" before it starts → once more when it's live; any other close → done
-    const st = status === 'later' && s.c.view !== 'later' && s.c.state === 'soon' ? 'later' : status === 'later' ? 'done' : status;
-    rpc('mark_spotlight', { p_key: s.c.spotlight, p_status: st }).catch(() => {});
   }
   async function join() {
-    const s = cur; if (!s) return;
+    const c = cur; if (!c) return;
     const b = document.querySelector('.spot-join'); if (b) b.disabled = true;
     try {
-      await rpc('join_official_challenge', { p_ch: s.c.id });
-      rpc('mark_spotlight', { p_key: s.c.spotlight, p_status: 'done' }).catch(() => {});
+      await rpc('join_official_challenge', { p_ch: c.id });
       cur = null; MSSDialog.close(document.getElementById('spotOverlay'));
-      showToast(`You’re in — ${s.c.title} ${s.c.state === 'soon' ? 'starts soon' : 'is on'}!`);
+      showToast(`You’re in — ${c.title} ${c.state === 'soon' ? 'starts soon' : 'is on'}!`);
       if (typeof MSSChallenges !== 'undefined' && document.getElementById('chList')) MSSChallenges.reload();
     } catch (err) { if (b) b.disabled = false; showToast(err?.hint || 'Couldn’t join — try again.', 'err'); }
   }
 
-  /* ── On app open (nav.js): one spotlight a day at most ── */
+  /* ── Each app open, on the home page (nav.js): one spotlight — taking turns when there are several ── */
   async function check() {
     const today = iso(new Date());
-    try { if (localStorage.getItem('mss_spot_day') === today) return; } catch {}
     let rows = [];
     try { rows = await rpc('spotlight_state', {}); } catch { return; }
     if (!Array.isArray(rows)) return;
-    const due = rows.find(c => {
+    const due = rows.filter(c => {
       const e = entry(c.spotlight); if (!e) return false;
-      const from = e.shows || add(c.starts_on, -7), to = e.ends || c.ends_on;
-      if (today < from || today > to) return false;
-      return !c.view || (c.view === 'later' && c.state === 'live');
+      return today >= (e.shows || add(c.starts_on, -7)) && today <= (e.ends || c.ends_on);
     });
-    if (!due || document.querySelector('.soc-overlay.open, .mss-views.open')) return;
-    try { localStorage.setItem('mss_spot_day', today); } catch {}
-    show(due, entry(due.spotlight), false);
+    if (document.querySelector('.soc-overlay.open, .mss-views.open')) return;   // something else is open — try next time
+    try { sessionStorage.setItem('mss_spot_open', '1'); } catch {}
+    if (!due.length) return;
+    let turn = 0;
+    try { turn = Number(localStorage.getItem('mss_spot_turn') || 0); localStorage.setItem('mss_spot_turn', String(turn + 1)); } catch {}
+    const c = due[turn % due.length];
+    show(c, entry(c.spotlight), false);
   }
   function preview(c) {
     const e = entry(c.spotlight) || { accent: 'var(--olive-light)', glow: 'var(--olive-faint)' };
