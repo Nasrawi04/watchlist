@@ -97,7 +97,7 @@ const MSSChallenges = (() => {
     return `<article class="chf is-${state[1]}" id="ch-${c.id}">
       <div class="chf-medal">${MSSMedal.official(c.medal, { size: 132, label: `${c.title} medal` })}</div>
       <div class="chf-body">
-        <div class="chf-eyebrow"><span class="chf-state ${state[1]}">${state[0]}</span>${c.state !== 'hidden' && c.state !== 'ended' ? `<span>${MSSSpotlight.when(c, true)}</span>` : ''}<span>${fmtDay(c.starts_on)} – ${fmtDay(c.ends_on)}</span></div>
+        <div class="chf-eyebrow"><span class="chf-state ${state[1]}">${state[0]}</span>${MSSSpotlight.entry(c.spotlight)?.eyebrow && c.state !== 'ended' ? `<span class="chf-tagline">${esc(MSSSpotlight.entry(c.spotlight).eyebrow)}</span>` : ''}${c.state !== 'hidden' && c.state !== 'ended' ? `<span>${MSSSpotlight.when(c, true)}</span>` : ''}<span>${fmtDay(c.starts_on)} – ${fmtDay(c.ends_on)}</span></div>
         <h3 class="chf-title" translate="no">${esc(c.title)}</h3>
         ${c.description ? `<p class="chf-desc">${esc(c.description)}</p>` : ''}
         <div class="spot-tags">${MSSSpotlight.tags(c)}</div>
@@ -268,12 +268,21 @@ const MSSChallenges = (() => {
   }
   function drawChosen() {
     const box = document.getElementById('chfChosen'); if (!box || !form) return;
-    const t = form.titles;
-    box.innerHTML = t.length ? `<div class="chf-chosen-head"><b>${t.length}</b> ${t.length === 1 ? 'title' : 'titles'} · watch them all to finish</div>
+    const t = form.titles, any = t.filter(x => x.anytime).length;
+    box.innerHTML = t.length ? `<div class="chf-chosen-head"><b>${t.length}</b> ${t.length === 1 ? 'title' : 'titles'} · watch them all to finish${any ? ` · <b>${any}</b> count if already watched` : ''}</div>
         <ol class="chf-chosen">${t.map((x, i) => `<li><span class="poll-thumb">${x.poster_path ? `<img src="https://image.tmdb.org/t/p/w92${esc(x.poster_path)}" alt="" loading="lazy">` : icon(x.tmdb_type === 'movie' ? 'film' : 'tv', 14)}</span>
-          <span class="poll-opt-text"><b translate="no">${esc(x.title)}</b><small>${[x.year, x.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small></span>
-          <button type="button" class="rec-icon" onclick="MSSChallenges._rm(${i})" aria-label="Remove ${esc(x.title)}" title="Remove">${icon('x', 13)}</button></li>`).join('')}</ol>`
+          <span class="poll-opt-text"><b translate="no">${esc(x.title)}</b><small>${[x.year, x.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small>
+            <button type="button" class="chf-any${x.anytime ? ' on' : ''}" aria-pressed="${!!x.anytime}" onclick="MSSChallenges._any(${i})"
+              title="${x.anytime ? 'Counts even if they watched it before the challenge' : 'Has to be watched between the challenge dates'}">${icon(x.anytime ? 'refresh' : 'clock', 12)}<span>${x.anytime ? 'Already watched OK' : 'Watch during'}</span></button></span>
+          <button type="button" class="rec-icon" onclick="MSSChallenges._rm(${i})" aria-label="Remove ${esc(x.title)}" title="Remove">${icon('x', 13)}</button></li>`).join('')}</ol>
+        <p class="chf-chosen-tip">Tap <b>Watch during</b> to switch a title to <b>Already watched OK</b> — it then counts even if they watched it before the challenge (e.g. earlier films in a saga).</p>`
       : `<div class="chf-chosen-empty">No titles yet — search above and add the ones that count.</div>`;
+  }
+  function toggleAny(i) {
+    const x = form?.titles[i]; if (!x) return;
+    x.anytime = !x.anytime;
+    drawChosen();
+    document.querySelectorAll('#chfChosen .chf-any')[i]?.focus();
   }
   let qTimer = null, hits = [];
   function search(q) {
@@ -385,7 +394,7 @@ const MSSChallenges = (() => {
     } catch (err) { btn.disabled = false; showToast(errText(err, 'Couldn’t save — try again.'), 'err'); }
   }
 
-  return { mount, create, official, invite, respond, remove, reload: load,
+  return { mount, create, official, invite, respond, remove, reload: load, _any: toggleAny,
     _all: id => { showAll[id] = true; draw(); }, _f: f, _inv: inv, _save: save, _close: closeForm,
     _joinOfficial: joinOfficial, _preview: id => { const c = off.list.find(x => x.id === id); if (c) MSSSpotlight.preview(c); },
     _q: search, _pick: pick, _rm: i => { form?.titles.splice(i, 1); drawChosen(); } };
