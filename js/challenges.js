@@ -37,7 +37,7 @@ const MSSChallenges = (() => {
     const cat = CATS.find(x => x[0] === (c.cat || ''))[1];
     return `${c.genre ? esc(c.genre) + ' ' : ''}${c.cat ? cat.toLowerCase() : 'titles'}`;
   };
-  let el = null, user = null, list = [], off = { me_official: false, list: [] }, focus = null;
+  let el = null, user = null, list = [], off = { me_official: false, can_official: false, list: [] }, focus = null;
   const showAll = {};
 
   async function mount(target, u, o = {}) {
@@ -52,15 +52,17 @@ const MSSChallenges = (() => {
     el.innerHTML = head + `<div id="chList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
     await load();
   }
-  // The official account makes official challenges; everyone else, friends' ones
-  const newBtn = () => off.me_official
-    ? `<button type="button" class="btn-add-entry" onclick="MSSChallenges.official()">${icon('crown', 15)} New Official Challenge</button>`
-    : `<button type="button" class="btn-add-entry" onclick="MSSChallenges.create()">${icon('plus', 15)} New Challenge</button>`;
+  // The official account makes official challenges; admins can make both; everyone else, friends' ones
+  const newBtn = () => {
+    const offBtn = `<button type="button" class="btn-add-entry" onclick="MSSChallenges.official()">${icon('crown', 15)} New Official Challenge</button>`;
+    const friendsBtn = `<button type="button" class="${off.can_official ? 'rec-btn ch-new-plain' : 'btn-add-entry'}" onclick="MSSChallenges.create()">${icon('plus', 15)} New Challenge</button>`;
+    return off.me_official ? offBtn : off.can_official ? `<span class="ch-head-btns">${friendsBtn}${offBtn}</span>` : friendsBtn;
+  };
   async function load() {
     const [a, b] = await Promise.allSettled([rpc('get_challenges', {}), rpc('official_challenges', {})]);
     if (a.status === 'rejected') showToast('Couldn’t load challenges — try again.', 'err');
     list = (a.value || []).filter(c => !c.official);
-    off = { me_official: !!b.value?.me_official, list: b.value?.list || [] };
+    off = { me_official: !!b.value?.me_official, can_official: !!b.value?.can_official, list: b.value?.list || [] };
     const hb = document.getElementById('chHeadBtn'); if (hb) hb.innerHTML = newBtn();
     draw();
     if (focus) { requestAnimationFrame(() => document.getElementById('ch-' + focus)?.scrollIntoView({ block: 'start', behavior: 'smooth' })); focus = null; }
@@ -102,7 +104,7 @@ const MSSChallenges = (() => {
         ${MSSSpotlight.posters(c, 10)}
         <div class="chf-foot">${foot}<span class="chf-count">${icon('users', 13)} <b>${c.joined}</b> joined${c.finished ? ` · <b>${c.finished}</b> finished` : ''}</span>
           ${joined && !done ? `<button type="button" class="poll-link poll-danger" onclick="MSSChallenges.respond(${id}, 'leave')">Leave</button>` : ''}</div>
-        ${c.is_creator ? `<div class="chf-own">
+        ${c.can_manage ? `<div class="chf-own">
             <button type="button" class="rec-btn" onclick="MSSChallenges.official(${id})">${icon('edit', 14)} Edit</button>
             <button type="button" class="rec-btn" onclick="MSSChallenges._preview(${id})">${icon('eye', 14)} Preview spotlight</button>
             <button type="button" class="rec-icon rec-icon-x" onclick="MSSChallenges.remove(${id})" aria-label="Delete challenge" title="Delete">${icon('trash', 14)}</button></div>` : ''}
