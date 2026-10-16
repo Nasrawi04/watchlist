@@ -1358,46 +1358,7 @@ async function downloadCard() {
   if (!canvas) return;
   const title = (_cardEntry?.title || 'card').replace(/[^a-z0-9]/gi, '_').toLowerCase();
   const filename = _cardPage === 3 ? `msf_${title}_discover.png` : `msf_${title}.png`;
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  const attemptSave = async () => {
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-    if (!blob) throw new Error('toBlob returned null (likely a tainted canvas)');
-
-    const file = new File([blob], filename, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: 'MyScreenFolio' });
-        return;
-      } catch(shareErr) {
-        if (shareErr && shareErr.name === 'AbortError') return;
-      }
-    }
-
-    if (isMobile) {
-      const url = URL.createObjectURL(blob);
-      const wrap = document.getElementById('createCardPreviewWrap');
-      if (wrap) {
-        wrap.innerHTML = `
-          <img src="${url}" alt="${filename}" style="width:100%;height:auto;border-radius:8px;display:block;">
-          <a href="${url}" download="${filename}" target="_blank" rel="noopener"
-             style="display:block;text-align:center;margin-top:10px;font-size:13px;color:var(--olive-light);">
-            Tap here to open the full image →
-          </a>`;
-      }
-      showToast('Long-press the image above to save it.');
-      return;
-    }
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = url;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 200);
-  };
+  const attemptSave = () => mssSaveImage(canvas, filename, document.getElementById('createCardPreviewWrap'));
 
   try {
     await attemptSave();
