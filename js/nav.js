@@ -73,6 +73,48 @@ async function _navPickDone(save) {
   if (typeof MSSChallenges !== 'undefined' && document.getElementById('chList')) MSSChallenges.reload();
 }
 
+/* Switch account — every account signed in on this device, one tap to become
+   it (config.js MSSAccounts keeps the sessions). */
+async function _navAccounts() {
+  _navCloseAll();
+  let ov = document.getElementById('accSwitchOverlay');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'accSwitchOverlay'; ov.className = 'soc-overlay';
+    ov.innerHTML = `<div class="soc-card acc-sw" role="dialog" aria-modal="true" aria-labelledby="accSwTitle">
+        <div class="sf-header"><div class="sf-title" id="accSwTitle">Switch account</div><button type="button" class="sf-close" aria-label="Close">${icon('x', 18)}</button></div>
+        <div class="sf-body" id="accSwBody"></div>
+        <div class="sf-footer"><button type="button" class="sf-apply-btn acc-sw-add" onclick="MSSAccounts.add()">${icon('plus', 14)} Add account</button></div></div>`;
+    ov.querySelector('.sf-close').onclick = () => MSSDialog.close(ov);
+    MSSDialog.bind(ov, () => MSSDialog.close(ov));
+    document.body.appendChild(ov);
+  }
+  _navAccountsFill();
+  MSSDialog.open(ov, { focus: '#accSwBody .acc-sw-row:not([aria-current]), .acc-sw-add' });
+}
+function _navAccountsFill() {
+  const me = window._navUser?.id;
+  const rows = MSSAccounts.list().sort((a, b) => (b.id === me) - (a.id === me));
+  const ava = a => { const u = safeURL(a.avatar_url);
+    return `<span class="acc-sw-ava" aria-hidden="true">${u ? `<img src="${u}" alt="">` : escHTML((a.username || '?')[0].toUpperCase())}</span>`; };
+  document.getElementById('accSwBody').innerHTML = `<div class="acc-sw-list">${rows.map(a => {
+      const cur = a.id === me, name = `<span class="acc-sw-name"><b translate="no">${escHTML(a.display_name || a.username)}</b><small translate="no">@${escHTML(a.username)}</small></span>`;
+      return `<div class="acc-sw-item">${cur
+        ? `<div class="acc-sw-row" aria-current="true">${ava(a)}${name}<span class="acc-sw-cur">${icon('check', 14)} Signed in</span></div>`
+        : `<button type="button" class="acc-sw-row" onclick="_navAccountGo(this,'${a.id}')">${ava(a)}${name}</button>
+           <button type="button" class="acc-sw-x" aria-label="Remove @${escHTML(a.username)} from this device" title="Remove from this device" onclick="_navAccountForget('${a.id}')">${icon('x', 14)}</button>`}</div>`;
+    }).join('')}</div>
+    <p class="acc-sw-note">Accounts stay signed in on this device only. Add one once and switch any time without the password.</p>`;
+}
+async function _navAccountGo(btn, id) {
+  btn.disabled = true; btn.classList.add('is-busy');
+  if (!(await MSSAccounts.switchTo(id))) { btn.disabled = false; btn.classList.remove('is-busy'); _navAccountsFill(); }
+}
+function _navAccountForget(id) {
+  MSSAccounts.forget(id);
+  _navAccountsFill();
+  document.querySelector('#accSwBody .acc-sw-row, .acc-sw-add')?.focus();
+}
+
 /* Achievements (060): save newly reached levels now and then — every 30 minutes
    at most (the cabinet page does it on open). New medals arrive as one notification. */
 function _navAchSync() {
@@ -105,6 +147,7 @@ async function _fillNavUser(user) {
     countPendingRequests(user.id).catch(() => 0),
   ]);
   window._navUserProfile = profile;  // store globally for create-card etc.
+  MSSAccounts.setProfile(user.id, profile);
   _notifInit(user);
   window._navUser = user;
   // The account's content language (set on another device) → this device, once
@@ -385,6 +428,7 @@ function injectChrome() {
             <a href="notifications.html">${icon('bell', 15)} Notifications</a>
             <a href="settings.html">${icon('settings', 15)} Settings</a>
             <a href="admin.html" class="nav-admin-link" hidden>${icon('lock', 15)} Admin</a>
+            <a href="#" class="nav-auth-only" onclick="_navAccounts();return false">${icon('users', 15)} Switch Account</a>
             <a href="#" class="nav-auth-only" onclick="handleLogout();return false">${icon('logout', 15)} Sign Out</a>
           </div>
         </div>
@@ -432,6 +476,7 @@ function injectChrome() {
             <a href="notifications.html">${icon('bell', 15)} Notifications</a>
             <a href="settings.html">${icon('settings', 15)} Settings</a>
             <a href="admin.html" class="nav-admin-link" hidden>${icon('lock', 15)} Admin</a>
+            <a href="#" class="nav-auth-only" onclick="_navAccounts();return false">${icon('users', 15)} Switch Account</a>
             <a href="#" class="nav-auth-only" onclick="handleLogout();return false">${icon('logout', 15)} Sign Out</a>
           </div>
         </div>
@@ -454,6 +499,7 @@ function injectChrome() {
     ${mobileNavLink('settings.html',  page, 'settings', 'Settings')}
     <hr>
     <a class="mobile-nav-link mobile-auth-only" href="#" onclick="openAddModal();return false">${icon('plus', 18)} Add Entry</a>
+    <a class="mobile-nav-link mobile-auth-only" href="#" onclick="_navAccounts();return false">${icon('users', 18)} Switch Account</a>
     <a class="mobile-nav-link mobile-auth-only" href="#" onclick="handleLogout();return false">${icon('logout', 18)} Sign Out</a>
     <a class="mobile-nav-link mobile-guest-only" href="login.html" style="display:none">${icon('logout', 18)} Sign In</a>`;
 
