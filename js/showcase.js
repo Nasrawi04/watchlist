@@ -95,11 +95,13 @@ const MSSShowcase = (() => {
   const byId = id => S.all.find(b => b.id === id);
   function drawEdit() {
     const body = document.getElementById('scEditBody'); if (!body || !E) return;
-    const slots = `<div class="sf-section-label">Your shelves <span class="sf-section-hint">tap a spot, then a medal</span></div>
+    // the editor's shelves are a live preview: the chosen style and picture show here as you pick them
+    const slots = `<div class="sf-section-label">Your shelves <span class="sf-section-hint">tap a spot, then a medal · style and picture preview here</span></div>
+      <div class="sc-cab sc-edit-cab sc-s-${E.scheme}${E.bg ? ' has-bg' : ''}">${E.bg ? `<div class="sc-bg" style="background-image:url('${IMG}w780${esc(E.bg)}')" aria-hidden="true"></div>` : ''}
       <div class="sc-edit-shelf" role="group" aria-label="Showcase slots">${E.slots.map((id, i) => { const b = id && byId(id);
         return `<div class="sc-edit-slot${i === E.sel ? ' sel' : ''}">
           <button type="button" class="sc-edit-pick" onclick="MSSShowcase._sel(${i})" aria-pressed="${i === E.sel}" aria-label="Slot ${i + 1}${b ? ': ' + esc(name(b)) : ', empty'}">${b ? medal(b, 52) : `<span class="sc-plus">${icon('plus', 16)}</span>`}</button>
-          ${b ? `<button type="button" class="sc-edit-x" onclick="MSSShowcase._clear(${i})" aria-label="Take ${esc(name(b))} off">${icon('x', 11)}</button>` : ''}</div>`; }).join('')}</div>`;
+          ${b ? `<button type="button" class="sc-edit-x" onclick="MSSShowcase._clear(${i})" aria-label="Take ${esc(name(b))} off">${icon('x', 11)}</button>` : ''}</div>`; }).join('')}</div></div>`;
     const medals = S.all.length ? `<div class="sc-edit-grid">${S.all.map(b => { const at = E.slots.indexOf(b.id);
         return `<button type="button" class="sc-edit-medal${at >= 0 ? ' on' : ''}" onclick="MSSShowcase._put(${attrJSON(b.id)})" aria-pressed="${at >= 0}" title="${esc(name(b))} — ${esc(sub(b))}">
           ${medal(b, 58)}<span translate="no">${esc(name(b))}</span><small>${esc(sub(b))}</small>${at >= 0 ? `<i class="sc-edit-n">${at + 1}</i>` : ''}</button>`; }).join('')}</div>`
@@ -124,7 +126,7 @@ const MSSShowcase = (() => {
       <div id="scBgHits" class="sc-bg-hits">${hitsHTML()}</div>`;
   }
   const hitsHTML = () => E.imgs.length
-    ? `<div class="sf-section-label">Pick a background</div><div class="sc-bg-imgs">${E.imgs.map(p => `<button type="button" class="sc-bg-img" onclick="MSSShowcase._bg(${attrJSON(p)})" style="background-image:url('${IMG}w300${esc(p)}')" aria-label="Use this picture"></button>`).join('')}</div>`
+    ? `<div class="sf-section-label">Pick a background <span class="sf-section-hint">scenes and posters</span></div><div class="sc-bg-imgs">${E.imgs.map(p => `<button type="button" class="sc-bg-img" onclick="MSSShowcase._bg(${attrJSON(p)})" style="background-image:url('${IMG}w300${esc(p)}')" aria-label="Use this picture"></button>`).join('')}</div>`
     : E.hits.map((h, i) => `<button type="button" class="pf-r" onclick="MSSShowcase._title(${i})">
         <span class="poll-thumb">${h.poster_path ? `<img src="${IMG}w92${esc(h.poster_path)}" alt="" loading="lazy">` : icon('film', 16)}</span>
         <span class="poll-opt-text"><b translate="no">${esc(h.title || h.name)}</b><small>${esc(((h.release_date || h.first_air_date || '').slice(0, 4)) + (h.media_type === 'movie' ? ' · Movie' : ' · TV Show'))}</small></span></button>`).join('');
@@ -133,7 +135,7 @@ const MSSShowcase = (() => {
     clearTimeout(qT);
     qT = setTimeout(async () => {
       if (!E) return;
-      E.imgs = []; E.hits = q.trim().length < 2 ? [] : (await _tmdbSearch(q.trim(), 8)).filter(h => h.backdrop_path);
+      E.imgs = []; E.hits = q.trim().length < 2 ? [] : (await _tmdbSearch(q.trim(), 8)).filter(h => h.backdrop_path || h.poster_path);
       const box = document.getElementById('scBgHits'); if (box) box.innerHTML = hitsHTML();
     }, 280);
   }
@@ -143,9 +145,9 @@ const MSSShowcase = (() => {
     let imgs = [];
     try {
       const res = await tmdbFetch(`${TMDB_BASE}/${h.media_type}/${h.id}/images?api_key=${TMDB_KEY}&include_image_language=en,null`);
-      if (res.ok) { const j = await res.json(); imgs = (j.backdrops || []).slice(0, 17).map(x => x.file_path); }
+      if (res.ok) { const j = await res.json(); imgs = [...(j.backdrops || []).slice(0, 12), ...(j.posters || []).slice(0, 6)].map(x => x.file_path); }
     } catch {}
-    E.imgs = [...new Set([h.backdrop_path, ...imgs].filter(Boolean))].slice(0, 18);
+    E.imgs = [...new Set([h.backdrop_path, ...imgs, h.poster_path].filter(Boolean))].slice(0, 20);
     if (box) box.innerHTML = hitsHTML();
   }
   function put(id) {
@@ -160,9 +162,18 @@ const MSSShowcase = (() => {
     const btn = document.getElementById('scSave'); btn.disabled = true;
     try {
       await rpc('set_showcase', { p_slots: E.slots, p_bg: E.bg, p_scheme: E.scheme });
-      S.slots = E.slots.map(id => (id && byId(id)) || null); S.bg = E.bg; S.scheme = E.scheme;
-      close(); draw(); showToast('Showcase saved');
-    } catch (err) { btn.disabled = false; showToast(err?.hint || 'Couldn’t save — try again.', 'err'); }
+      // read it back, so what's shown is what was really saved
+      const d = await rpc('get_showcase', { p_user: S.uid, p_all: true });
+      S.slots = Array.from({ length: SLOTS }, (_, i) => d?.slots?.[i] || null);
+      S.bg = d?.bg || null; S.all = Array.isArray(d?.all) ? d.all : S.all;
+      S.scheme = SCHEMES.some(x => x[0] === d?.scheme) ? d.scheme : 'default';
+      close(); draw();
+      showToast(d && d.scheme === undefined ? 'Saved — but the shelf style needs the 063 database update to stick' : 'Showcase saved', d && d.scheme === undefined ? 'err' : 'ok');
+    } catch (err) {
+      btn.disabled = false;
+      const missing = err?.code === 'PGRST202' || /function .*set_showcase/i.test(err?.message || '');
+      showToast(missing ? 'Couldn’t save — the showcase database update (063) hasn’t been run yet.' : err?.hint || err?.message || 'Couldn’t save — try again.', 'err');
+    }
   }
 
   return { mount, edit, _close: close, _save: save, _put: put,
