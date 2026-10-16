@@ -4765,9 +4765,11 @@ body { font-size:15px; }
    §46  Episode Ratings (episode-ratings.js → MSSEp)
    ═════════════════════════════════════════════════════════════ */
 :root {
-  --band-masterpiece:#1f4d2b; --band-great:#3d7a38; --band-good:#8fbf6a;
+  --band-perfect:#d6a72c; --band-masterpiece:#1f4d2b; --band-great:#3d7a38; --band-good:#8fbf6a;
   --band-decent:#e2c45a; --band-meh:#e0964a; --band-bad:#c2453d;
 }
+/* a perfect 10: gold with a soft sheen */
+.ep-band-perfect     { background:linear-gradient(115deg, #b9820f 0%, #e9b73a 28%, #fff0b3 44%, #efc24a 58%, #a8740c 100%); color:#2b1e02; box-shadow:inset 0 0 0 1px rgba(255,240,190,.6); }
 .ep-band-masterpiece { background:var(--band-masterpiece); color:#fff; }
 .ep-band-great       { background:var(--band-great); color:#fff; }
 .ep-band-good        { background:var(--band-good); color:#16210f; }
