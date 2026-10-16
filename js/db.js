@@ -72,15 +72,22 @@ async function saveEntry(payload, userId, existingId) {
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return _mssWatched(data);
   } else {
     const { data, error } = await sb.from('entries')
       .insert({ ...record, user_id: userId })
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return _mssWatched(data);
   }
+}
+
+// A title just saved as Watched → 'mss:watched' (nav.js asks "Does this count?" for
+// "Let me choose" challenges — 061). Returns the entry so callers stay unchanged.
+function _mssWatched(entry) {
+  if (entry && entry.status === 'completed') document.dispatchEvent(new CustomEvent('mss:watched', { detail: entry }));
+  return entry;
 }
 
 /* ── Delete entry ── */
@@ -98,7 +105,7 @@ async function updateProgress(id, userId, updates) {
     .select()
     .single();
   if (error) throw error;
-  return data;
+  return _mssWatched(data);
 }
 
 /* ── Quick create (from modal) ── */
@@ -167,7 +174,7 @@ async function quickCreate(payload, userId) {
   const { data, error } = await sb.from('entries').insert(record).select().single();
   if (error) throw error;
   _notifyQueuedFrom(data);
-  return data;
+  return _mssWatched(data);
 }
 
 // If this title was added via "Add to Queue" on a friend's profile, tell
