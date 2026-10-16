@@ -18,6 +18,61 @@ function _navReleaseCheck(user) {
 
 /* Spotlights (054): the popup for an official challenge — js/spotlights.js
    (+ medals.js), loaded on the home page every time the app is opened. */
+/* "Does this count?" (061): a title just marked Watched while you're in a running
+   "Let me choose" challenge → tick the challenges it counts for. Asked once per
+   title (a "No" is remembered on this device); already-counted ones show ticked. */
+document.addEventListener('mss:watched', async ev => {
+  const e = ev.detail; if (!e?.id || !window._navUser) return;
+  let opts = [];
+  try { const { data, error } = await sb.rpc('challenge_pick_options', { p_entry: e.id }); if (error) return; opts = Array.isArray(data) ? data : []; } catch { return; }
+  let seen = {}; try { seen = JSON.parse(localStorage.getItem('mss_pick_asked') || '{}'); } catch {}
+  opts = opts.filter(o => !o.picked && !seen[o.id + ':' + e.id]);
+  if (!opts.length) return;
+  _navPickAsk(e, opts);
+});
+function _navPickAsk(e, opts) {
+  let ov = document.getElementById('pickAskOverlay');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'pickAskOverlay'; ov.className = 'soc-overlay';
+    ov.innerHTML = `<div class="soc-card pick-ask" role="dialog" aria-modal="true" aria-labelledby="pickAskTitle">
+        <div class="sf-header"><div class="sf-title" id="pickAskTitle">Does this count?</div><button type="button" class="sf-close" aria-label="Close">${icon('x', 18)}</button></div>
+        <div class="sf-body" id="pickAskBody"></div><div class="sf-footer" id="pickAskFoot"></div></div>`;
+    ov.querySelector('.sf-close').onclick = () => _navPickDone(false);
+    MSSDialog.bind(ov, () => _navPickDone(false));
+    document.body.appendChild(ov);
+  }
+  ov._pick = { e, opts };
+  const poster = safeURL(e.poster_url);
+  document.getElementById('pickAskBody').innerHTML = `
+    <div class="pick-ask-title"><span class="pick-ask-poster">${poster ? `<img src="${poster}" alt="">` : escHTML((e.title || '?')[0])}</span>
+      <span><b translate="no">${escHTML(e.title || 'This title')}</b><small>You just marked it Watched</small></span></div>
+    <p class="pick-ask-q">Tick the challenges it counts for:</p>
+    <div class="pick-ask-list">${opts.map((o, i) => `<label class="pick-ask-opt"><input type="checkbox" value="${i}" checked>
+        <span>${icon('trophy', 15)}<b translate="no">${escHTML(o.title)}</b><small>${o.progress} / ${o.goal} so far</small></span></label>`).join('')}</div>`;
+  document.getElementById('pickAskFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="_navPickDone(false)">Doesn’t count</button>
+    <button type="button" class="sf-apply-btn" onclick="_navPickDone(true)">${icon('check', 14)} Count it</button>`;
+  MSSDialog.open(ov, { focus: '#pickAskFoot .sf-apply-btn' });
+}
+async function _navPickDone(save) {
+  const ov = document.getElementById('pickAskOverlay'), st = ov?._pick; if (!st) return;
+  ov._pick = null;
+  const on = save ? [...ov.querySelectorAll('.pick-ask-opt input:checked')].map(i => st.opts[+i.value]) : [];
+  MSSDialog.close(ov);
+  try {   // remember the ones left unticked, so they aren't asked again
+    const seen = JSON.parse(localStorage.getItem('mss_pick_asked') || '{}');
+    st.opts.filter(o => !on.includes(o)).forEach(o => { seen[o.id + ':' + st.e.id] = 1; });
+    localStorage.setItem('mss_pick_asked', JSON.stringify(seen));
+  } catch {}
+  if (!on.length) return;
+  let finished = null;
+  for (const o of on) {
+    try { const { data, error } = await sb.rpc('set_challenge_pick', { p_ch: o.id, p_entry: st.e.id, p_on: true }); if (error) throw error; if (data?.finished) finished = o; }
+    catch (err) { showToast(err?.hint || 'Couldn’t count it — try again.', 'err'); return; }
+  }
+  showToast(finished ? `You finished “${finished.title}” — your medal’s in the Achievement Cabinet!` : `Counted for ${on.length === 1 ? `“${on[0].title}”` : `${on.length} challenges`}`);
+  if (typeof MSSChallenges !== 'undefined' && document.getElementById('chList')) MSSChallenges.reload();
+}
+
 /* Achievements (060): save newly reached levels now and then — every 30 minutes
    at most (the cabinet page does it on open). New medals arrive as one notification. */
 function _navAchSync() {
