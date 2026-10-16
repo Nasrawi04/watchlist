@@ -1,475 +1,284 @@
-# MyScreenScore
+# MyScreenFolio
 
-Track everything you watch. MyScreenScore is a personal entertainment tracker for TV shows, movies, anime, and cartoons — with a detailed scoring system, watch progress, favorites, friends, and shareable public profiles. Built as an installable Progressive Web App with no framework and no build step.
+Your screen portfolio. Track everything you watch, rate it properly, curate it, and share it with friends. MyScreenFolio (MSF) is a tracker for **TV shows, movies, anime and cartoons**. It has a detailed scoring system, episode ratings, lists and notes, and a full social hub: friends, polls, an inbox, episode chats, Movie Nights, challenges and medals.
 
-**Stack:** Vanilla HTML/CSS/JS · Supabase (PostgreSQL + Auth) · TMDB & AniList API · Cloudinary (image hosting) · No build step · No framework
+It's an installable Progressive Web App with no framework and no build step.
+
+**Stack:** Vanilla HTML / CSS / JS · Supabase (PostgreSQL, Auth, Realtime, Storage) · TMDB + AniList APIs · Cloudinary · GitHub Pages
 
 ---
 
 ## Highlights
 
-- Full-stack multi-user application
-- Authentication and authorization with Supabase Auth
-- PostgreSQL database with Row Level Security (RLS)
-- Advanced rating and ranking system with 13 criteria
-- Progress tracking for shows and episodic content
-- Movie runtime tracking with cumulative watch time stats
-- Ongoing series support (completed but still airing)
-- Rewatch tracking with visible rewatch-count badges
-- Discover page for browsing trending, top-rated, and upcoming movies & shows (TMDB)
-- Personal custom lists, separate from the four built-in libraries
-- Dedicated Notes page for freeform personal notes per entry
-- Friends system with threaded comments and profile sharing
-- Home page comment inbox with inline reply support
-- User avatars with Supabase Storage
-- Public user profiles
-- PDF export for ranked list, completed list, profile overview, and watch later queue
-- Progressive Web App (PWA) — installable on iOS and Android
-- Cloudinary image hosting for posters (zero Supabase egress)
-- Offline support via service worker
-- Responsive mobile-first design
-- Built entirely with Vanilla JavaScript
-
----
-
-## What it is
-
-MyScreenScore is a full-stack multi-user web application that allows users to build a personal entertainment archive for movies, TV shows, anime, and cartoons.
-
-Users can track viewing progress, organize watchlists, create detailed ratings, rank completed titles, leave personal notes, interact with friends, and export their libraries to PDF. The platform combines personal tracking with lightweight social features while maintaining privacy controls through user-managed profile visibility and Supabase Row Level Security.
+- Multi-user app with Supabase Auth and Row Level Security on every table
+- Four libraries (TV · Movies · Anime · Cartoons) with watch progress, rewatches and statuses
+- Detailed ratings: core, bonus and animation criteria with a weighted final score
+- Episode and season ratings, with graphs, fan favourites and a dedicated Episodes page
+- Discover: trending, top-rated, "Top Rated on MSF", genre lists, Browse and "Your TV" release schedule
+- Personal and collaborative lists, notes (with spoiler flags), reactions and comments
+- **Social hub:** friends, activity feed, taste match, compare, Blend, Episode Chat, Movie Night, Challenges, Polls and a two-way Inbox
+- **Official challenges, medals and spotlight popups** run from an official account
+- Live in-app notifications (Realtime) for friends, lists, new episodes and releases
+- Admin dashboard with moderation: word filter, flags, bans and picture checks
+- 15 languages for the site's own text, and the language follows the account
+- Shared Sort & Filter system, PDF export, offline support, light and dark themes
+- Built mobile-first and checked at 320px, 390px, tablet and desktop
 
 ---
 
 ## Features
 
-### Libraries & Tracking
+### Libraries & tracking
 
-Four separate libraries — **TV Shows**, **Movies**, **Anime**, and **Cartoons** — each with five status options:
+- Four libraries: **TV Shows, Movies, Anime, Cartoons**, plus a unified **Library** page.
+- Statuses:
+  - Watchlist
+  - **Up Next** (shown first in Watching)
+  - Watching
+  - Taking a Break
+  - Watched
+  - To Be Continued (watched but still airing)
+- Episode progress by season and episode, with season breakdowns and total episodes. Movies track runtime.
+- Exact "watched" date and time, so same-day titles stay in order.
+- Rewatch tracking with a rewatch-count badge.
+- Anime and Cartoons can be a Movie or a Show. TV and Movies can switch on an Animation Quality rating.
+- Live stats bars on every library: totals, episodes watched and movie watch time.
+- "Length" convention everywhere: movies use runtime, shows use seasons and episodes.
 
-| Status | Description |
-|--------|-------------|
-| Watch Later | Queued for future viewing |
-| Currently Watching | In progress, with episode tracking |
-| Taking a Break | Paused — shown in Watching with a visual indicator |
-| Completed | Finished — triggers rating prompt and score calculation |
-| Completed / Ongoing | Fully rated but still airing — shown in a dedicated Ongoing section |
+### Ratings
 
-Anime and Cartoon entries let you choose between **Movie** or **Show** type, which shows or hides episode/season fields accordingly. TV Shows and Movies can optionally enable an **Animation Quality** rating when the content is animated.
+- Each title is rated across **core** criteria, optional **bonus** criteria and an optional **Animation Quality**, on +/− steppers from 0.0 to 10.0.
+  - **Core:** Story & Plot · Acting / Voice Acting · Character Development · Writing & Dialogue · World Building · Pacing & Consistency · Cinematography & Visuals · Ending & Payoff · Enjoyment
+  - **Bonus:** Music & Soundtrack · Emotional Impact · Main Character vs Villain Dynamics · Rewatchability · Plot Twist Quality · Funny · Bingeable · Horror
+  - **Anime / cartoons** get their own set: Voice Acting, Character Designs, Animation Quality, Action Choreography and more.
+- **Final score:** 70% the core average, plus Enjoyment and the bonus average. Enjoyment and bonus together make 20% + 10%, and either one alone makes 30%.
+- Your score always shows as `★ 8.81`. Poster badges are colour-coded by tier, from gold for 10 down to deep red.
+- One shared **Ratings popup** is used on every page.
 
----
+### Episodes
 
-### Rating System
+- Rate episodes and seasons (SeriesGraph-style), with a prompt when you press **+** on a show and named score bands.
+- **Episodes page:** look up any show and see its episode ratings as a list or a graph, alongside TMDB ratings.
+- **Fan Favorites** on the title page understand how people type episode and character names.
+- "New episode" and "Out today" notifications, grouped to one per show per release day.
 
-Every completed entry is rated across up to **13 criteria** using +/− steppers in 0.5 increments (0.0 → 10.0).
+### Titles, people & Discover
 
-**Core Ratings (8)**
-- Story & Plot · Character Development · Writing · Acting / Voice Acting
-- Pacing & Consistency · Cinematography & Visuals · Ending & Payoff · Enjoyment
+- **Title page** (TMDB): hero backdrop, MSF community score next to TMDB's, seasons, cast, "In Lists", fan favourites, friends who watched it, and the episode chat.
+- **Person page:** biography, personal info and known-for credits.
+- **Discover:**
+  - Trending, Top Picks, Upcoming, Top 250, Airing Today, genre "best of" lists and anime / cartoon categories
+  - "Top Rated on MSF"
+  - **Browse**
+  - **Your TV:** a release schedule for what you watch
+- Discover lists support grid / list view and infinite scroll, and adding a title takes one tap.
 
-**Bonus Ratings (4, optional)**
-- Music / Soundtrack · Emotional Impact · Atmosphere / Immersion · Tension
+### Lists, notes & comments
 
-**Animation Quality (1, optional)**
-- Available for TV Shows and Movies when content is animated — enabled via a toggle
+- **Lists:**
+  - custom lists, ranked or unranked, with their own order and descriptions;
+  - forkable;
+  - **collaborative**, with invite links;
+  - "In Lists" on every title.
+- **Notes:**
+  - notes of up to 500 words, with spoiler flags;
+  - a Notes page with community notes, sortable by date watched;
+  - reactions and replies.
+- **Comments:** one shared comments popup with threaded replies and reactions.
+- **Favourites & Lowlights** per title: favourite character, episode and season, and least favourite ones.
 
-**Score Formula**
-```
-Objective Score  =  average of all 8 core ratings
-Final Score      =  (Objective Score × 70%) + (Enjoyment × 30%)
-```
+### Profiles
 
-Scores are color-coded on entry cards — see [MSS Rating Display](#mss-rating-display) below for the full color scale.
+- **Your profile** (`profile.html`) has:
+  - an overview dashboard;
+  - tabs for library, notes, lists and episodes;
+  - top picks and favourites per category.
+- **Friend profiles** (`profile-view.html`) are read-only and show a **taste match**.
+- **Public profiles** (`user.html?u=username`) work without logging in.
+- **Settings:**
+  - username (with a live availability check), display name, bio and quote;
+  - avatar, theme and password;
+  - language, a share-profile link, and deleting your account.
 
----
+### Social hub (`friends.html`)
 
-### Entry Detail Page
+A side nav (a dropdown on phones) with:
 
-Each entry has a full edit page with two columns:
+- **Friends:** search people, requests, and friend cards with taste match. Best Match sort.
+- **Activity:** what friends watched, with season / episode and episode names, plus their notes and lists.
+- **Lists & Notes:** what your friends have been making.
+- **Compare:** two libraries side by side, shared titles and a taste-match score.
+- **Blend:**
+  - pick up to 8 friends and see what you all want, what they loved and what you loved;
+  - **Surprise us** picks one for a Movie Night;
+  - **Start a Movie Night** builds a vote from the Blend.
+- **Episode Chat:**
+  - a friends-only, spoiler-safe thread for every episode;
+  - it unlocks once your progress reaches that episode, and no rating is needed;
+  - it shows which friends have watched it.
+- **Movie Night:**
+  - invite friends, add titles (from search, your shared watchlists or your Blend) and vote on big poster cards;
+  - lock in the top pick or "Surprise us";
+  - an optional date and time, with a reminder on the day;
+  - **After the movie:** everyone's score, notes, favourites and lists, a group score, highlights, and a **Compare ratings** table.
+- **Challenges:**
+  - set a goal ("10 horror movies in October") with optional type and genre, and dates from the date-range picker;
+  - invite up to 100 friends, who can invite theirs;
+  - a live leaderboard, and medals for finishers.
+- **Official challenges** (see below) appear in a **Featured** row at the top.
+- **Polls:** ask friends with text or title options, plus comments.
+- **Inbox:**
+  - recommend titles, lists or "watched" moments to friends;
+  - a two-way conversation with Sent / Seen badges, quick replies and automatic replies like "Added to watchlist".
 
-- **Left:** Poster upload (via Cloudinary), title, category, type, status, year, genres, description, episode tracking (season / episode / totals), season breakdown, runtime (movies), notes, Favorites & Lowlights
-- **Right:** All rating steppers (including optional Animation Quality toggle), live final score display with objective/personal breakdown bars, Save and Delete actions, and a Comments button (opens a dedicated modal with threaded comments)
+### Official challenges, medals & spotlights
 
-Episode tracking auto-hides for Movies. Runtime (hours/minutes) is shown for movie-type entries. Season breakdown lets you log episodes per season with auto-calculated totals. Watch Later entries show season breakdown but hide current position.
+- **Official account** (`msf_official`):
+  - only admins can make an account official;
+  - it can keep a reserved username;
+  - only it can create official challenges.
+- **Official challenges:**
+  - open to everyone, with your own description and medal;
+  - count either a **set list** (only those titles count) or anything that fits a type / genre;
+  - hidden until 7 days before they start, then "Coming soon" (people can join early), then Live until they end.
+- **Medals** are drawn in code (`js/medals.js`):
+  - **Friends' challenges:** a ribbon medal with the place on a plate. Gold for 1st, silver for 2nd, bronze for 3rd and after.
+  - **Official challenges:** a scene inside a wreath with a star (Halloween, Arrakis, Doomsday Clock…). Everyone who finishes gets the same one.
+  - Earlier finishers got their medals backdated.
+- **Spotlights** (`js/spotlights.js`):
+  - a popup that advertises an official challenge;
+  - shows once per person, never to people who joined, at most one a day;
+  - "Maybe later" brings it back once when the challenge goes live;
+  - the official account can preview it.
 
-**Favorites & Lowlights** — each entry supports optional personal highlights:
-- Favorites: Favorite Character, Favorite Episode, Favorite Season
-- Lowlights: Least Favorite Character, Least Favorite Episode, Least Favorite Season
+### Notifications
 
-These are displayed in the entry detail popup on category pages.
+- A bell with live updates (Supabase Realtime), plus a Notifications page.
+- Covers friend requests and activity, list invites, comments and replies, new episodes and releases, polls, recommendations and replies, Episode Chat, Movie Night (invites, picks, reminders, reviews) and challenges (invites, finishers).
+- Per-friend notification toggles.
 
----
+### Admin & safety (`admin.html`)
 
-### Episode & Runtime Metadata, Type Badges & Rewatching
+- Admins only, set in `app_admins`.
+- **Dashboard:** members, titles, and who's watching what.
+- **Member pages:** stats, flags, ban / unban, delete, rename, and the "Make official" switch.
+- **Word filter:**
+  - offensive words are starred out in posts and blocked in usernames;
+  - reserved names (`official`, `support`, `staff`, `myscreenscore…`) are blocked too;
+  - admins can check, block and unblock words.
+- **Flags & picture checks:** borderline avatar or poster uploads go to a review queue.
+- **Language requests** from users.
 
-All entry cards display contextual metadata badges:
+### Site-wide
 
-- **TV Shows / Anime Shows / Cartoon Shows** — displays total seasons and episodes (e.g. `4 Seasons · 142 Episodes`) across Queue, Completed, Latest Entries, and Friend View. Currently Watching shows current position (e.g. `S3 E7`)
-- **Movies / Anime Movies / Cartoon Movies** — displays runtime (e.g. `2h 14m`) wherever available
-- **Type badge** — a solid-color Movie / TV Show tag appears on every card (olive for Movie, blue for TV Show), positioned on the poster itself in grid view and inline with the runtime/episode badge in list view
-- **Year** — shown next to the title by default; if the title is long enough that showing the year would truncate it, the year automatically drops to its own line below the title instead
-
-Badges scale responsively on smaller screen sizes.
-
-**Rewatch tracking** — re-completing an entry increments a rewatch counter, shown as a small badge on the card (grid and list view) so you can tell at a glance which titles you've gone back to.
-
----
-
-### MSS Rating Display
-
-Your own score for an entry — as distinct from any public rating shown elsewhere — is always shown the same way across the app: a solid olive-green `★` followed by the score to two decimals (e.g. `★ 8.81`). This applies everywhere your own rating appears — Currently Watching, Watch Later, Completed, and Discover.
-
-Corner-overlay score badges (used on poster thumbnails in grid views) are color-coded by score tier, using solid colors rather than gradients for clean readability and accessible contrast in both dark and light mode:
-
-| Range | Color |
-|-------|-------|
-| 10.0 | Gold |
-| 9.0 – 9.9 | Dark Green |
-| 8.0 – 8.9 | Green |
-| 7.0 – 7.9 | Light Green |
-| 6.0 – 6.9 | Amber |
-| 3.0 – 5.9 | Red |
-| 0.0 – 2.9 | Deep Red |
-
----
-
-### Stats & Tracking
-
-Each category page shows a live stats bar:
-
-- **TV Shows / Anime / Cartoons** — Total, Watching, Ongoing, In Queue, Completed, Episodes watched
-- **Movies** — Total, Watching, In Queue, Completed, Movie Watch Time
-
-The Completed page shows additional stats responsive to the active category filter: Completed, Avg Score, Rated, Top Category, Episodes (shows only), Movie Watch Time (movies only).
-
----
-
-### Completed & Rankings
-
-The Completed page shows all finished entries in two modes:
-
-- **Recently Completed** — sorted by completion date
-- **Ranked** — sorted by Final Score
-
-Also includes a dedicated **Ongoing** section for entries marked as Completed / Ongoing. Filterable by category (All / TV Shows / Movies / Anime / Cartoons). Stats update live when a filter is applied. Each entry displays a color-coded score badge and episode/runtime metadata in both grid and list views.
-
----
-
-### Discover
-
-A dedicated page for browsing what's out there, independent of your own library — powered by the TMDB API. Categories include Trending This Week, Top Picks, Upcoming, Top 250 Movies/Shows, Airing Today, and genre-driven "best of" lists, plus separate Anime/Cartoon-flavored categories.
-
-Each category opens its own list page (`discover-list.html`) with:
-
-- **Grid and list view**, toggle persisted per user
-- Infinite-scroll pagination as you browse
-- Movie/TV Show type badges, ranked-list numbering for Top 250-style categories, and public TMDB scores
-- Tapping a title jumps straight into adding it to your own library
-
----
-
-### Personal Lists
-
-Beyond the four built-in libraries, you can create your own custom lists — a way to group titles by theme, mood, or anything else that doesn't map to a status or category (e.g. "Best Comfort Rewatches" or "Movies to Watch With Friends"). Lists have their own dedicated view (`list-view.html`) with the same grid/list toggle, type badges, and score display used everywhere else, and are managed from `lists.html`.
-
----
-
-### Notes
-
-A dedicated Notes page (`notes.html`) for freeform personal notes tied to your entries — separate from the short in-line notes field on the entry detail page, for longer-form thoughts you want to keep track of on their own.
-
----
-
-### Friends
-
-- Send friend requests by username
-- Accept, decline, or cancel requests
-- Unfriend at any time
-- A pending badge in the nav shows incoming request count
-- View any accepted friend's full lists (Currently Watching, Watch Later, Completed/Ranked, Ongoing)
-- Comment on a friend's entries directly from their list view or from the entry detail page
-- Friend comments appear in your home page inbox
-- All access is protected by Supabase Row Level Security — friends only see what they're supposed to
-
----
-
-### Comments
-
-Comments exist in two contexts:
-
-- **Detail page** — a Comments button opens a dedicated modal with the full threaded comment list, post input, reply support, and delete for your own comments
-- **Category / friend view** — a Comments strip on each card popup lets you read and post without leaving the page
-
-**Home page inbox** — a collapsible section on the home page shows recent comments left by friends on your entries. Clicking a comment opens an inline modal with the full thread and reply support, without navigating away from the home page.
-
-Comments support **threaded replies** — any top-level comment can be replied to, with replies displayed indented below their parent. Comments are capped at 500 characters and protected by RLS — only the entry owner, comment author, and accepted friends can read them.
+- **Languages:** English plus Arabic, Croatian, Chinese, French, German, Hindi, Italian, Japanese, Persian, Portuguese, Russian, Spanish, Turkish and Urdu (`js/lang/*.json`). Right-to-left is supported, and the language follows the account across devices.
+- **Sort & Filter:** a shared system (`js/sort-filter.js`) on libraries, the profile, Completed and Discover lists.
+- **Shared popups:** info, ratings, comments, notes, lists and dialogs. One module each, used everywhere.
+- **Date pickers** (`js/date-range.js`):
+  - a Starts / Ends range calendar (Challenges);
+  - a Day + Time picker (Movie Night).
+- **PDF export** with jsPDF: ranked list, completed list, profile overview and watch later, in dark or light themes.
+- **Queue picker:** a random pick from your watchlist.
+- **PWA:**
+  - installable on iOS and Android, with an offline page;
+  - the service worker uses stale-while-revalidate for the app and cache-first for posters and fonts;
+  - Supabase is always network-only.
+- **Accessibility:** labelled controls, focus styles, keyboard support in popups and pickers, and reduced-motion support.
+- **Keyboard shortcuts:** `N` add, `/` search, `Esc` close.
 
 ---
 
-### User Avatars
-
-Users can upload a profile avatar from the Profile page. Avatars are stored in Supabase Storage and displayed across the app — in the nav bar, friend lists, and comment threads.
-
----
-
-### Public Profile
-
-Each user can toggle their profile public or private. When public, a shareable read-only page is available at:
-
-```
-/user.html?u=username
-```
-
-This page shows their ranked list, recently completed entries, and stats — no login required to view.
-
----
-
-### PDF Export
-
-Four export types available from the Profile page (and Completed page for the first two):
-
-- **Ranked List** — all completed entries sorted by final score
-- **Completed List** — full watch history in chronological order
-- **Profile Overview** — stats, highlights, and top-ranked titles
-- **Watch Later** — full watchlist queue with category breakdown stats
-
-Each PDF has a choice of **Dark** or **Light** theme, a full-bleed background, and the MyScreenScore logo as a header. Generated entirely client-side with jsPDF (pure vector — no html2canvas).
-
----
-
-### Queue Picker
-
-Not sure what to watch next?
-
-The Queue Picker randomly selects an entry from your Watch Later list and presents it through a focused recommendation modal. Users can reshuffle selections, rediscover forgotten entries, and quickly choose their next movie, show, anime, or cartoon without scrolling through large queues.
-
----
-
-### Image Hosting (Cloudinary)
-
-Poster images are uploaded directly from the browser to Cloudinary and served via CDN — no image data is stored in Supabase. This keeps database egress near zero and ensures fast poster loading globally.
-
-- Images are auto-compressed before upload (converted to JPEG, max 800px wide)
-- Served at 500px wide with `q_auto` and `f_auto` for optimal delivery
-- Cloudinary free tier: 25 GB storage · 25 GB bandwidth/month
-
----
-
-### Progressive Web App (PWA)
-
-MyScreenScore is installable as a native-feeling app on any device:
-
-- **iOS** — Safari → Share → Add to Home Screen
-- **Android** — Chrome shows an automatic Install prompt
-
-Once installed it opens full screen with no browser bar. A service worker handles:
-
-| Asset | Strategy |
-|-------|----------|
-| HTML / CSS / JS | Stale-while-revalidate (instant load + background update) |
-| Cloudinary posters | Cache first (loads from device after first view) |
-| Google Fonts | Cache first |
-| Supabase API | Network only (always fresh data) |
-
-An offline page is shown when there is no internet connection.
-
----
-
-### Responsive Design
-
-MyScreenScore follows a mobile-first responsive design approach and is optimized for:
-
-- Phones (including iPhone SE)
-- Tablets (iPad)
-- Laptops
-- Desktops
-- Large displays
-
-**Mobile navigation** — hamburger menu on the top bar opens a slide-out drawer. Bottom tab bar covers the main pages. A floating action button (FAB) opens the Add modal. The top bar has no separator line to keep it clean.
-
-Layouts automatically adapt between list and grid views while maintaining feature parity and usability across all supported screen sizes.
-
----
-
-### Search
-
-Global real-time search across all your entries by title and description. Accessible from the nav bar (`/` shortcut) or the home page hero search. Results show category label and genre tags.
-
----
-
-### Navigation
-
-**Desktop** — dual-row nav with logo on top, links and controls below. Includes search bar, Add button, and user menu with avatar, profile, and sign out.
-
-**Mobile** — logo + hamburger on top row, bottom tab bar for main pages (Home / TV / Movies / Anime / Cartoons), slide-out drawer for full nav. A floating action button (FAB) opens the Add modal.
-
----
-
-### Theme
-
-Dark and light mode, toggled from a pill switch in the bottom-right corner. The preference is saved to `localStorage`.
-
-| | Dark | Light |
-|-|------|-------|
-| Background | `#0A0A0E` near-black | `#E2DAD0` warm cream |
-| Card | `rgba(255,255,255,0.058)` | `#F3EDE4` off-white |
-| Accent | `#7EB86C` olive green | `#1E5C26` forest green |
-| Text | `#EDEDED` | `#1A1A1A` |
-
----
-
-### Keyboard Shortcuts
-
-| Key | Action |
-|-----|--------|
-| `N` | Open Add Entry modal |
-| `/` | Focus search bar |
-| `Esc` | Close any open modal or overlay |
-
----
-
-## File Structure
+## File structure
 
 ```
 /
-├── index.html                              — Home dashboard
-├── tv-shows.html                           — TV Shows library
-├── movies.html                             — Movies library
-├── anime.html                              — Anime library
-├── cartoons.html                           — Cartoons library
-├── library.html                            — Unified library view
-├── detail.html                             — Entry detail / edit
-├── title.html                              — TMDB title detail (from Discover)
-├── person.html                             — TMDB person/cast detail
-├── completed.html                          — Completed list + rankings
-├── discover.html                           — Discover home (category ticker)
-├── discover-list.html                      — Discover category browsing (grid/list)
-├── lists.html                              — Personal custom lists management
-├── list-view.html                          — View a single personal list
-├── notes.html                              — Dedicated Notes page
-├── favorites.html                          — Favorites / Top Picks
-├── friends.html                            — Friends management
-├── friend-view.html                        — View a friend's lists
-├── profile.html                            — Settings, avatar, public toggle, PDF export
-├── profile-view.html                       — View another user's profile
-├── settings.html                           — Account settings
-├── user.html                               — Public profile (no auth required)
-├── search.html                             — Search results
-├── login.html                              — Sign in / Create account
-├── offline.html                            — Offline fallback page (PWA)
-├── manifest.json                           — PWA manifest
-├── sw.js                                   — Service worker (caching + offline)
-├── icons/                                  — PWA icons (72 → 512px)
-├── css/
-│   └── style.css                           — Full design system
+├── index.html            Home
+├── tv-shows.html · movies.html · anime.html · cartoons.html   Libraries
+├── library.html          Unified library
+├── completed.html        Watched + rankings
+├── detail.html           Edit an entry
+├── title.html            Title page (TMDB)
+├── person.html           Cast / crew page
+├── episodes.html         Episode ratings, graphs
+├── discover.html · discover-list.html   Discover + its lists
+├── lists.html · list-view.html          Lists
+├── notes.html            Notes
+├── friends.html          Social hub
+├── notifications.html    Notifications
+├── profile.html · profile-view.html · user.html   Your / a friend's / public profile
+├── settings.html         Settings
+├── admin.html            Admin dashboard
+├── login.html · offline.html · 404.html
+├── manifest.json · sw.js · icons/
+├── css/style.css         The design system (numbered § sections)
 ├── js/
-│   ├── config.js                           — Supabase init, constants, icons, utilities
-│   ├── db.js                               — Data layer (all Supabase queries)
-│   ├── nav.js                              — Nav injection, auth guard, modals, shared layout helpers
-│   ├── category.js                         — Category page logic (all sections)
-│   ├── discover-categories.js              — Discover category definitions + TMDB/AniList fetchers
-│   ├── rewatch.js                          — Rewatch count tracking + badge rendering
-│   ├── create-card.js                      — Shared "add new entry" card UI
-│   ├── fav-lists-popup.js                  — Favorites / personal-lists picker popup
-│   ├── tmbd.js                             — TMDB/AniList API helpers
-│   └── export.js                           — PDF export (pure jsPDF)
-└── sql/
-    ├── supabase-schema.sql                 — Core schema (run first)
-    ├── friends-feature.sql                 — Friendships table + RLS policies
-    ├── comments.sql                        — Comments table + RLS policies
-    ├── user-avatar.sql                     — Avatar column + avatars storage bucket
-    ├── restrict-entry-value-status.sql     — Adds 'paused' and 'ongoing' to status constraint
-    ├── security-fixes.sql                  — Hardens trigger functions + revokes
-    └── authenticated-read-policy.sql       — Allows username lookup for friend requests
+│   ├── config.js         Supabase, constants, icons, shared helpers, dialogs, cards
+│   ├── db.js             Data layer
+│   ├── nav.js            Nav, auth guard, search, notifications, add modal
+│   ├── i18n.js · lang/   Translations
+│   ├── category.js · library-view.js · dashboard.js · profile-tabs.js
+│   ├── info-popup.js · rating-popup.js · comments.js · note-popup.js · list-popup.js
+│   ├── sort-filter.js · date-range.js · create-card.js · rewatch.js · export.js
+│   ├── discover-categories.js · browse.js · tv-schedule.js
+│   ├── episode-ratings.js · episode-chat.js
+│   ├── social.js         Polls + Inbox
+│   ├── friend-popups.js · movie-night.js · challenges.js
+│   ├── medals.js         Medals (SVG)
+│   └── spotlights.js     Spotlight popups — every spotlight ever made lives here
+└── sql/                  Numbered migrations 001 → 055 (+ 999 reference queries)
 ```
 
 ---
 
-## Tech Stack
+## Tech stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Vanilla HTML5, CSS3, JavaScript (ES2020+) |
-| Database | Supabase — PostgreSQL |
-| Auth | Supabase Auth |
-| Image Hosting | Cloudinary (poster uploads + CDN delivery) |
-| Storage | Supabase Storage (avatars) |
-| PWA | Service Worker + Web App Manifest |
-| PDF | jsPDF 2.5.1 (pure vector, client-side) |
-| Icons | Lucide (inline SVG) |
-| Fonts | Cormorant Garamond, Inter — Google Fonts |
-| Hosting | GitHub Pages (or any static file server) |
+- **Frontend:** vanilla HTML5, CSS3 and JavaScript (ES2020+). No framework, no build step.
+- **Backend:** Supabase. PostgreSQL with RLS, plus Auth, Realtime and Storage (avatars). Logic lives in `SECURITY DEFINER` RPC functions.
+- **Data:** TMDB (titles, people, episodes) and AniList (anime).
+- **Images:** Cloudinary (posters).
+- **PDF:** jsPDF.
+- **Fonts:** Oswald, Bebas Neue and Manrope (Google Fonts).
+- **Icons:** an inline SVG set in `config.js`.
+- **Hosting:** GitHub Pages, or any static server.
 
 ---
 
 ## Setup
 
-**1. Create a Supabase project** at [supabase.com](https://supabase.com) (free tier is fine).
+1. Create a Supabase project.
+2. In the SQL Editor, run every file in `sql/` **in number order**, from `001` to `055`. Each file can be re-run safely and lists what it needs at the top. Skip `999`; it's reference queries only.
+3. Add your Supabase URL and anon key in `js/config.js`, and your Cloudinary cloud name and unsigned preset in `js/db.js`.
+4. Serve the folder, for example with `python3 -m http.server 8080`, and create an account.
+5. Make yourself an admin:
+   ```sql
+   insert into app_admins (user_id) select id from profiles where username = 'you';
+   ```
 
-**2. Run the SQL files** in this order in the Supabase SQL Editor:
-
-| Order | File | What it does |
-|-------|------|--------------|
-| 1 | `supabase-schema.sql` | Core tables, RLS, triggers |
-| 2 | `friends-feature.sql` | Friendships table + friend RLS |
-| 3 | `comments.sql` | Comments table + comment RLS |
-| 4 | `user-avatar.sql` | Avatar column + avatars storage bucket |
-| 5 | `restrict-entry-value-status.sql` | Adds `paused` and `ongoing` to status enum |
-| 6 | `security-fixes.sql` | Hardens trigger functions |
-| 7 | `authenticated-read-policy.sql` | Allows username lookup for friend requests |
-
-**3. Add runtime columns** to your entries table:
-
-```sql
-ALTER TABLE entries
-ADD COLUMN IF NOT EXISTS runtime_h integer,
-ADD COLUMN IF NOT EXISTS runtime_m integer;
-```
-
-**4. Create a Cloudinary account** at [cloudinary.com](https://cloudinary.com) (free tier).
-
-- Go to Settings → Upload → Add upload preset
-- Set signing mode to **Unsigned**
-- Note your **Cloud Name** and **Upload Preset name**
-
-**5. Add your credentials** to `js/config.js`:
-
-```js
-const SUPABASE_URL      = 'https://your-project.supabase.co';
-const SUPABASE_ANON_KEY = 'your-anon-key';
-```
-
-And in `js/db.js`, update `uploadPoster()` with your Cloudinary details:
-
-```js
-formData.append('upload_preset', 'YOUR_PRESET_NAME');
-// fetch URL: https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload
-```
-
-**6. Serve locally:**
-
-```bash
-python3 -m http.server 8080
-```
-
-Then open `http://localhost:8080` and create an account.
+New tables must get explicit grants in the same migration that creates them. Supabase stops adding them automatically for new tables from Oct 30, 2026.
 
 ---
 
-## Database
+## Database (main tables)
 
-**Tables**
-- `profiles` — username, display name, bio, avatar URL, public toggle
-- `entries` — all tracked titles with ratings, scores, genres, poster URL, episode data, runtime, favorites, lowlights
-- `friendships` — friend requests and accepted connections
-- `comments` — per-entry comments with reply threading, capped at 500 characters, linked to author profiles
+- **Profiles & entries:**
+  - `profiles`: username, name, bio, avatar, language, favourites, `is_official`
+  - `entries`: every tracked title, with ratings, scores, progress, runtime, notes, TMDB link and dates
+- **Lists, notes, comments & reactions:** `favorite_lists`, collaborators, reactions, `comments`, `note_replies`, `list_replies`
+- **Episodes:** `episode_ratings`, season ratings and fan favourites
+- **Friends & notifications:** `friendships`, `notifications` (Realtime)
+- **Social:**
+  - polls and recommendations, with their replies
+  - `episode_chat`
+  - `movie_nights` and their members / options / votes
+  - `challenges`, `challenge_members`, `challenge_titles`
+- **Medals:** `user_badges` (medals) and `spotlight_views`
+- **Admin & safety:** `app_admins`, `blocked_words`, `moderation_flags`, `banned_users`, `picture_reviews`, plus language requests and rate limits
 
-**Security**
-Row Level Security is enabled on all tables. Users can only access their own data. Friends get read access to each other's entries, profiles, and comments. Public profiles are readable by anyone. Trigger functions are `SECURITY DEFINER` with a fixed `search_path` and have execute permissions revoked from all roles.
-
-**Triggers**
-- `handle_new_user()` — creates a profile row on signup, sanitizes and de-duplicates the username
-- `set_updated_at()` — keeps `updated_at` current on entries and profiles
+**Security:**
+- Row Level Security is on everywhere.
+- Most social data is reachable only through RPCs that check friendship or membership.
+- Rate limits are applied to anything people post.
 
 ---
 
-*Built by **Mohammad Rahimi** · & **Narimaan Samani***
+*Built by **Mohammad Rahimi** & **Narimaan Samani***
