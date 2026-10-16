@@ -380,6 +380,7 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
     <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:8px;">Description <span style="color:var(--text-3);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;">(optional, max 50 words)</span></div>
     <textarea id="favCustomListDescInput" class="list-desc-field" maxlength="500" placeholder="What's this list about?" oninput="_listsUpdateWordCount('favCustomListDescInput','favCustomListDescCount')" style="margin-bottom:4px;"></textarea>
     <div class="list-desc-count" id="favCustomListDescCount" style="margin-bottom:14px;">0 / 50 words</div>
+    <div id="favListRankWrap">
     <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;">Ranking</div>
     <div class="sf-choice-box" style="margin-bottom:18px;">
       <label class="sf-check-row">
@@ -392,6 +393,7 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
         <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
         <span class="sf-choice-text"><b>Unranked</b><small>Just a collection, no particular order</small></span>
       </label>
+    </div>
     </div>
     <div id="favCollabOptWrap">
       <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;">Collaborate</div>
@@ -1497,7 +1499,7 @@ function renderSocialLists() {
         <div class="social-list-avatar">${safeURL(l.avatar_url) ? `<img src="${safeURL(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
         <div class="social-list-username">@${esc(l.username || 'user')}</div>
       </div>
-      <div class="lc-title-row"><div class="lc-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l)}${MSSList.rankBadge(l.ranked)}</div>
+      <div class="lc-title-row"><div class="lc-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l) || MSSList.rankBadge(l.ranked)}</div>
       <div class="lc-meta">${MSSList.countHTML(items.length)}</div>
       ${MSSList.postersHTML(items, _resolveSocialItem)}
       <div class="social-list-reactions">
@@ -1610,11 +1612,11 @@ function _renderListPopup() {
 
   card.innerHTML = `
     <div class="lp-head">${head}<button class="lp-close" onclick="closeSocialListPopup()" aria-label="Close">${icon('x', 18)}</button></div>
-    <div class="lp-title-row"><div class="lp-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l)}${MSSList.rankBadge(l.ranked)}</div>
+    <div class="lp-title-row"><div class="lp-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l) || MSSList.rankBadge(l.ranked)}</div>
     ${l.description ? `<div class="lp-desc" translate="no">${esc(l.description)}</div>` : ''}
     <div class="lp-meta">${MSSList.countHTML(items.length)}</div>
     ${mine ? MSSList.collabLineHTML(l, _listsCollab[l.id]) : ''}
-    ${isOwn && l.ranked == null ? _rankChoiceHTML(l.id) : ''}
+    ${isOwn && l.ranked == null && !l.official ? _rankChoiceHTML(l.id) : ''}
     ${posters.length ? `<div class="lp-posters">
       ${posters.map(e => `<div class="lp-poster">${posterHTML(e, 'big')}</div>`).join('')}
       ${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}
@@ -2142,6 +2144,8 @@ function openFavCustomListModal(editId) {
   _favCustomListRankedValue = existingList?.ranked ?? null;
   document.getElementById('favListRankedYes').checked = _favCustomListRankedValue === true;
   document.getElementById('favListRankedNo').checked = _favCustomListRankedValue === false;
+  // the official account's lists are Official — no Ranked / Unranked
+  document.getElementById('favListRankWrap').hidden = !!(existingList ? existingList.official : window._navUserProfile?.is_official);
   _listsUpdateWordCount('favCustomListDescInput','favCustomListDescCount');
   _listsGuardWordLimit('favCustomListDescInput','favCustomListDescCount');
   document.getElementById('favCustomListCreate').disabled = !inp.value.trim();
