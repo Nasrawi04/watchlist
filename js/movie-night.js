@@ -14,7 +14,8 @@
 
    Uses friends.html's friends (_frAccepted, _frProfiles, _frEntries, _cmpLoad /
    _cmpMine) for the invite list and the watchlist suggestions. Option rows use
-   the Polls styles (poll-opt …), the search the poll form's (pf-r …).
+   the shared poster card (MSSCard.poster) for the ballot and the suggestion
+   rails, the search the poll form's (pf-r …).
 ═══════════════════════════════════════════════════════════════ */
 const MSSNight = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));
@@ -175,32 +176,41 @@ const MSSNight = (() => {
         ${!host && n.status !== 'cancelled' ? `<div class="pn-toggle soc-toggle soc-toggle-sm mn-rsvp" role="group" aria-label="Are you going?">${[['going', 'Going'], ['declined', 'Can’t make it']].map(([k, l]) =>
           `<button type="button" class="pn-toggle-btn${n.my_status === k ? ' active' : ''}" aria-pressed="${n.my_status === k}" onclick="MSSNight.rsvp(${id}, '${k}')">${l}</button>`).join('')}</div>` : ''}
       </div>`;
-    const optRow = o => {
+    const typeOf = o => o.tmdb_type === 'movie' ? 'movie' : 'tv';
+    // The ballot — a poster per title: votes on the poster, who voted, a bar under it
+    const optCard = o => {
       const pct = total ? Math.round((o.votes || 0) / total * 100) : 0, mine = n.my_vote === o.id, lead = open && total && o.votes === top && top > 0;
+      const isPick = !open && o.id === n.pick_id;
       const voters = (o.voters || []).map(v => n.members.find(m => m.id === v)).filter(Boolean);
-      const label = `<span class="poll-thumb">${o.poster_path ? `<img src="${img(o.poster_path, 'w92')}" alt="" loading="lazy">` : icon('film', 16)}</span>
-        <span class="poll-opt-text"><b translate="no">${esc(o.title)}</b><small>${[o.year, o.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small></span>
-        ${voters.length ? `<span class="mn-voters">${voters.slice(0, 4).map(m => av(m, 20)).join('')}</span>` : ''}
-        ${mine ? `<span class="poll-check" title="Your vote">${icon('check', 12)}</span>` : ''}
-        <span class="poll-opt-res"><b>${o.votes || 0}</b><small>${o.votes === 1 ? 'vote' : 'votes'}</small></span>`;
-      const rm = open && (o.mine || host) ? `<button type="button" class="rec-icon mn-rm" onclick="MSSNight.removeOption(${attrJSON(o.id)})" aria-label="Remove ${esc(o.title)}" title="Remove">${icon('x', 13)}</button>` : '';
-      return `<div class="mn-opt-wrap">${open
-        ? `<button type="button" class="poll-opt shown${mine ? ' mine' : ''}${lead ? ' top' : ''}" aria-pressed="${mine}" onclick="MSSNight.vote(${id}, ${attrJSON(mine ? null : o.id)})" aria-label="${esc(o.title)}${mine ? ' — your vote, tap to take it back' : ' — vote for this'}"><span class="poll-bar" style="width:${pct}%"></span>${label}</button>`
-        : `<div class="poll-opt shown${o.id === n.pick_id ? ' top' : ''}"><span class="poll-bar" style="width:${pct}%"></span>${label}</div>`}${rm}</div>`;
+      const over = `<span class="mn-b-votes"><b>${o.votes || 0}</b><small>${o.votes === 1 ? 'vote' : 'votes'}</small></span>
+        ${lead || isPick ? `<span class="mn-b-flag">${icon(isPick ? 'sparkles' : 'crown', 12)} ${isPick ? 'The pick' : 'Leading'}</span>` : ''}
+        ${voters.length ? `<span class="mn-voters">${voters.slice(0, 4).map(m => av(m, 22)).join('')}</span>` : ''}
+        ${open && (o.mine || host) ? `<button type="button" class="mn-b-rm" onclick="event.stopPropagation();MSSNight.removeOption(${attrJSON(o.id)})" onkeydown="event.stopPropagation()" aria-label="Remove ${esc(o.title)}" title="Remove">${icon('x', 13)}</button>` : ''}`;
+      const below = `<div class="mn-b-bar" aria-hidden="true"><span style="width:${pct}%"></span></div><div class="mn-b-pct">${mine ? `${icon('check', 12)} Your vote${total ? ` · ${pct}%` : ''}` : total ? `${pct}%` : open ? 'Tap to vote' : 'No votes'}</div>`;
+      const cls = `mn-b${mine ? ' mine' : ''}${lead ? ' lead' : ''}${isPick ? ' pick' : ''}${open ? '' : ' closed'}`;
+      return MSSCard.poster({ cls, title: o.title, year: o.year, poster: img(o.poster_path, 'w342'), type: typeOf(o), overPoster: over, below,
+        attrs: open ? `onclick="MSSNight.vote(${id}, ${attrJSON(mine ? null : o.id)})" aria-pressed="${mine}" aria-label="${esc(o.title)}, ${o.votes || 0} ${o.votes === 1 ? 'vote' : 'votes'}${mine ? ' — your vote, tap to take it back' : ' — vote for this'}"`
+          : `onclick="MSSNight._details(${attrJSON(o.id)})" aria-label="${esc(o.title)}, ${o.votes || 0} ${o.votes === 1 ? 'vote' : 'votes'} — details"` });
     };
+    const addTile = open ? `<button type="button" class="mn-b-add" onclick="MSSNight._add(${id})" aria-expanded="${!!adding[n.id]}">
+        <span class="mn-b-add-ic">${icon(adding[n.id] ? 'search' : 'plus', 22)}</span><b>Add a title</b><small>Search any movie or show</small></button>` : '';
+    // Suggestion rails: posters with a + on them
+    const rail = (ic, label, items) => items.length ? `<section class="mn-rail-sec"><div class="mn-rail-head">${icon(ic, 14)}<span>${label}</span><b>${items.length}</b></div>
+        <div class="mn-rail">${items.join('')}</div></section>` : '';
+    const suggCard = (title, year, poster, type, why, onclick) => MSSCard.poster({ cls: 'mn-s', title, year, poster, type,
+      overPoster: `<span class="mn-s-plus" aria-hidden="true">${icon('plus', 16)}</span>`, below: `<div class="mn-s-why">${why}</div>`,
+      attrs: `onclick="${onclick}" aria-label="Add ${esc(title)} to the vote"` });
     const sugg = open ? suggestions(n) : [];
     const bsugg = open ? blendSuggestions(n, sugg.map(t => `${t.e.tmdb_type}:${t.e.tmdb_id}`)) : [];
     const addBox = open ? `<div class="mn-add">
-        ${adding[n.id] ? `<div class="mn-search"><input id="mnQ-${n.id}" type="search" placeholder="Search a movie or show…" aria-label="Search a movie or show" autocomplete="off" oninput="MSSNight._q(${id}, this.value)">
-            <div class="mn-hits" id="mnH-${n.id}"></div></div>`
-          : `<button type="button" class="rec-btn" onclick="MSSNight._add(${id})">${icon('plus', 14)} Add a title</button>`}
-        ${sugg.length ? `<div class="mn-sugg"><span class="mn-sugg-label">${icon('bookmark', 12)} On your watchlists</span>${sugg.map(t =>
-          `<button type="button" class="rec-qr" onclick="MSSNight._addSugg(${id}, ${attrJSON(`${t.e.tmdb_type}:${t.e.tmdb_id}`)})" title="On ${t.who.size} of your watchlists">+ <span translate="no">${esc(t.e.title)}</span> <b>${t.who.size}</b></button>`).join('')}</div>` : ''}
-        ${bsugg.length ? `<div class="mn-sugg"><span class="mn-sugg-label">${icon('shuffle', 12)} From your Blend</span>${bsugg.map((t, k) =>
-          `<button type="button" class="rec-qr" onclick="MSSNight._addBlend(${id}, ${k})" title="${esc(t.why)}">+ <span translate="no">${esc(t.o.title)}</span></button>`).join('')}</div>` : ''}
+        ${adding[n.id] ? `<div class="mn-search"><input id="mnQ-${n.id}" type="search" placeholder="Search a movie or show…" aria-label="Search a movie or show" autocomplete="off" enterkeyhint="search" oninput="MSSNight._q(${id}, this.value)">
+            <div class="mn-hits" id="mnH-${n.id}"></div></div>` : ''}
+        ${rail('bookmark', 'On your watchlists', sugg.map(t => suggCard(t.e.title, t.e.year, t.e.poster_url, t.e.tmdb_type === 'movie' ? 'movie' : 'tv',
+          `On <b>${t.who.size}</b> watchlists`, `MSSNight._addSugg(${id}, ${attrJSON(`${t.e.tmdb_type}:${t.e.tmdb_id}`)})`)))}
+        ${rail('shuffle', 'From your Blend', bsugg.map((t, k) => suggCard(t.o.title, t.o.year, img(t.o.poster_path, 'w342'), typeOf(t.o), esc(t.why), `MSSNight._addBlend(${id}, ${k})`)))}
       </div>` : '';
     const decided = pick ? `<div class="mn-pick">
-        ${pick.poster_path ? `<img src="${img(pick.poster_path, 'w185')}" alt="" loading="lazy">` : `<span class="mn-pick-ph">${icon('film', 26)}</span>`}
+        ${pick.poster_path ? `<span class="mn-pick-bg" style="background-image:url('${img(pick.poster_path, 'w342')}')" aria-hidden="true"></span><img src="${img(pick.poster_path, 'w342')}" alt="" loading="lazy">` : `<span class="mn-pick-ph">${icon('film', 26)}</span>`}
         <div class="mn-pick-info"><span class="mn-pick-eyebrow">${icon('sparkles', 12)} You’re watching</span>
           <b translate="no">${esc(pick.title)}</b><small>${[pick.year, pick.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small>
           <div class="mn-pick-acts"><button type="button" class="btn-add-entry" onclick="MSSNight._details(${attrJSON(pick.id)})">${icon('info', 14)} Details & Watchlist</button></div>
@@ -220,9 +230,9 @@ const MSSNight = (() => {
       ${people}
       ${decided}
       ${pick && n.status === 'decided' ? afterHTML(n) : ''}
-      ${n.status !== 'cancelled' && n.options.length ? `<div class="mn-opts-head">${open ? `${icon('poll', 13)} Vote for one${total ? ` · <b>${total}</b> ${total === 1 ? 'vote' : 'votes'}` : ''}` : `${icon('poll', 13)} The votes`}</div>
-        <div class="poll-opts">${n.options.map(optRow).join('')}</div>` : ''}
-      ${open && !n.options.length ? `<div class="mn-none">No titles yet — add one, or pick from your watchlists below.</div>` : ''}
+      ${n.status !== 'cancelled' && (n.options.length || open) ? `<div class="mn-rail-head">${icon('poll', 14)}<span>${open ? 'Vote for one' : 'The votes'}</span>${total ? `<b>${total} ${total === 1 ? 'vote' : 'votes'}</b>` : ''}</div>
+        ${open && !n.options.length ? `<div class="mn-none">No titles yet — add one, or tap a poster below to put it up for a vote.</div>` : ''}
+        <div class="mn-ballot">${n.options.map(optCard).join('')}${addTile}</div>` : ''}
       ${addBox}
       ${open && host && n.options.length ? `<div class="mn-host">
           <button type="button" class="btn-add-entry" onclick="MSSNight.decide(${id}, false)" ${total ? '' : 'disabled title="No votes yet"'}>${icon('check', 14)} Lock in top pick</button>
@@ -359,7 +369,7 @@ const MSSNight = (() => {
 
   return { mount, create, edit, remove, rsvp, vote, decide, removeOption, redraw: draw,
     _take: openTake, _addBlend: (id, k) => { const t = blendFrom[id]?.[k]; if (t) addOption(id, t.o); }, _cmp: id => { cmpOpen[id] = !cmpOpen[id]; const n = find(id); const b = document.getElementById('mnA-' + id); if (n && b) b.outerHTML = afterHTML(n); },
-    _add: id => { adding[id] = true; draw(); document.getElementById('mnQ-' + id)?.focus(); },
+    _add: id => { adding[id] = !adding[id]; draw(); document.getElementById('mnQ-' + id)?.focus(); },
     _q: search, _pick: (id, k) => { const h = hits[id]?.[k]; if (h) addOption(id, h); }, _addSugg: addSugg, _details: details,
     _close: closeForm, _inv: inv, _save: save, _cancelNight: cancelNight };
 })();
