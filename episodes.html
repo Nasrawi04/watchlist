@@ -18,8 +18,8 @@
 /* ── Episodes page ── */
 /* ── One show: tall hero like the title page (sharp backdrop, big poster dipping into the sheet below) ── */
 .eg-hero {
-  --eg-dip:56px;
-  position:relative; min-height:clamp(380px, 42vw, 560px); display:flex; flex-direction:column; justify-content:flex-end;
+  --eg-dip:44px;
+  position:relative; min-height:clamp(320px, 34vw, 460px); display:flex; flex-direction:column; justify-content:flex-end;
   margin:calc(-1 * var(--page-pt)) calc(-1 * var(--page-px)) 0; padding-top:var(--page-pt); background:#0d1210; color:#EDEDED;
 }
 .eg-hero-img { position:absolute; inset:0; background-size:cover; background-position:center 22%; }
@@ -29,35 +29,38 @@
 .eg-back { position:absolute; top:calc(var(--page-pt) + 6px); inset-inline-start:calc(var(--page-px) + 1rem); z-index:3; display:inline-flex; align-items:center; gap:6px;
   font-size:13.5px; font-weight:600; color:#EDEDED; text-decoration:none; opacity:.85; transition:opacity .15s; }
 .eg-back:hover, .eg-back:focus-visible { opacity:1; }
-.eg-hero-inner { position:relative; z-index:2; display:flex; align-items:flex-end; gap:clamp(1rem, 3.5vw, 3rem); padding:4rem calc(var(--page-px) + 1rem) 0; }
-.eg-hero-poster { width:clamp(150px, 19vw, 260px); aspect-ratio:2/3; flex-shrink:0; border-radius:var(--radius); overflow:hidden; background:var(--bg-3);
+.eg-hero-inner { position:relative; z-index:2; display:flex; align-items:flex-end; gap:clamp(1rem, 3vw, 2.5rem); padding:3.5rem calc(var(--page-px) + 1rem) 0; }
+.eg-hero-poster { width:clamp(130px, 15vw, 205px); aspect-ratio:2/3; flex-shrink:0; border-radius:var(--radius); overflow:hidden; background:var(--bg-3);
   box-shadow:0 14px 34px rgba(0,0,0,.5); margin-bottom:calc(-1 * var(--eg-dip)); }
 .eg-hero-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.eg-hero-info { flex:1; min-width:0; padding-bottom:clamp(3rem, 6vw, 4.5rem); }
-.eg-hero-eyebrow { font-size:clamp(10.5px, 1.4vw, 13px); font-weight:600; letter-spacing:2.6px; text-transform:uppercase; color:#8FD177; margin-bottom:.6rem; }
-.eg-hero-title { font-family:var(--bebas); font-weight:400; font-size:clamp(40px, 7vw, 84px); line-height:.95; letter-spacing:.5px; margin:0 0 .7rem; color:#fff; overflow-wrap:anywhere; }
+.eg-hero-info { flex:1; min-width:0; padding-bottom:clamp(2.6rem, 5vw, 3.6rem); }
+.eg-hero-eyebrow { font-size:clamp(10.5px, 1.2vw, 12px); font-weight:600; letter-spacing:2.6px; text-transform:uppercase; color:#8FD177; margin-bottom:.6rem; }
+.eg-hero-title { font-family:var(--bebas); font-weight:400; font-size:clamp(36px, 5.4vw, 64px); line-height:.95; letter-spacing:.5px; margin:0 0 .7rem; color:#fff; overflow-wrap:anywhere; }
 .eg-hero-title.mss-logo-title:not(.mss-logo-failed) { margin-bottom:1rem; }
-.eg-hero-sub { font-size:clamp(13px, 1.6vw, 16px); color:rgba(237,237,237,.82); display:flex; flex-wrap:wrap; gap:4px 10px; }
+.eg-hero-sub { font-size:clamp(13px, 1.3vw, 14.5px); color:rgba(237,237,237,.82); display:flex; flex-wrap:wrap; gap:4px 10px; }
 .eg-hero-sub span + span::before { content:'·'; margin-inline-end:10px; opacity:.6; }
-.eg-hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:1.2rem; }
-.eg-hero-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:var(--radius-sm); font:600 13.5px 'Manrope',var(--sans); text-decoration:none;
+.eg-hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:1.1rem; }
+/* the series average, in its band colour (gold for a perfect 10) */
+.eg-hero-score { display:inline-flex; align-items:center; gap:8px; padding:6px 14px 6px 8px; border-radius:var(--radius-sm); font:600 12.5px 'Manrope',var(--sans); }
+.eg-hero-score b { font-family:var(--bebas); font-weight:400; font-size:24px; line-height:1; padding:3px 7px 1px; border-radius:6px; background:rgba(0,0,0,.16); }
+.eg-hero-btn { display:inline-flex; align-items:center; gap:8px; padding:9px 16px; border-radius:var(--radius-sm); font:600 13.5px 'Manrope',var(--sans); text-decoration:none;
   color:#fff; background:rgba(255,255,255,.1); border:0.5px solid rgba(255,255,255,.28); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); transition:background-color .15s, border-color .15s; }
 .eg-hero-btn:hover { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.45); }
 .eg-hero-btn:focus-visible, .eg-back:focus-visible { outline:2px solid #8FD177; outline-offset:3px; }
 .eg-hero-tag { display:inline-flex; align-items:center; gap:7px; padding:10px 16px; border-radius:var(--radius-sm); font:600 13px 'Manrope',var(--sans); color:#B8E0A8; background:rgba(126,184,108,.14); border:0.5px solid rgba(126,184,108,.4); }
 [dir=rtl] .eg-hero-img::after { background:linear-gradient(270deg, rgba(8,12,10,.94) 0%, rgba(8,12,10,.72) 38%, rgba(8,12,10,.18) 75%, rgba(8,12,10,.05) 100%), linear-gradient(0deg, rgba(8,12,10,.55) 0%, transparent 40%); }
 /* the page "sheet" rises over the hero with rounded top corners */
-.eg-sheet { position:relative; z-index:1; margin:-26px calc(-1 * var(--page-px)) 0; padding:calc(56px + 26px + 1.25rem) var(--page-px) 0; background:var(--bg); border-radius:28px 28px 0 0; }
+.eg-sheet { position:relative; z-index:1; margin:-26px calc(-1 * var(--page-px)) 0; padding:calc(44px + 26px + 1.25rem) var(--page-px) 0; background:var(--bg); border-radius:28px 28px 0 0; }
 
 /* Controls: one card — Ratings · View · Seasons, then Compare / Export */
-.eg-controls { display:flex; flex-wrap:wrap; gap:16px 26px; align-items:flex-end; margin:0 0 16px; padding:18px 20px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg, 16px); }
-.eg-ctl { display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
-.eg-ctl-label { font-size:11px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase; color:var(--olive-light); }
+.eg-controls { display:flex; flex-wrap:wrap; gap:14px 22px; align-items:flex-end; margin:0 0 16px; padding:14px 18px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg, 16px); }
+.eg-ctl { display:flex; flex-direction:column; align-items:flex-start; gap:7px; }
+.eg-ctl-label { font-size:10.5px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase; color:var(--olive-light); }
 .eg-controls .pn-toggle { margin:0; }
-.eg-controls .pn-toggle-btn { padding:9px 16px; font-size:13px; }
+.eg-controls .pn-toggle-btn { padding:8px 14px; font-size:13px; white-space:nowrap; }
 .eg-tools { display:flex; gap:8px; align-items:flex-end; margin-inline-start:auto; }
-.eg-layout { display:grid; grid-template-columns:minmax(0, 1fr) 300px; gap:16px; align-items:start; }
-.eg-board { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg, 16px); padding:18px 20px 20px; min-width:0; }
+.eg-layout { display:grid; grid-template-columns:minmax(0, 1fr) 290px; gap:16px; align-items:start; }
+.eg-board { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg, 16px); padding:16px; min-width:0; }
 
 /* Grid: seasons across, episodes down — wide cells in a lined table */
 .eg-grid-wrap { overflow-x:auto; border:0.5px solid var(--border-2); border-radius:var(--radius); scrollbar-width:thin; }
@@ -69,14 +72,16 @@
 .eg-grid th.eg-ep { position:sticky; inset-inline-start:0; z-index:1; background:var(--card); width:64px; min-width:56px; text-align:center; font-size:16px; color:var(--text-2); padding:4px 8px; }
 .eg-grid .eg-fill { width:100%; padding:0; }
 .eg-grid.eg-fit .eg-cell { width:100%; min-width:54px; }   /* 5+ seasons: columns share the width */
-.eg-cell { width:clamp(54px, 11vw, 168px); height:38px; border-radius:7px; padding:0; border:none; cursor:pointer; font-family:var(--bebas); font-size:19px; letter-spacing:.4px;
+.eg-cell { width:clamp(54px, 11vw, 168px); height:36px; border-radius:7px; padding:0; border:none; cursor:pointer; font-family:var(--bebas); font-size:18px; letter-spacing:.4px;
   display:flex; align-items:center; justify-content:center; transition:transform .12s, box-shadow .12s; box-shadow:inset 0 0 0 0.5px rgba(0,0,0,.06); }
 button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,0,0,.12); }
 .eg-cell:focus-visible { outline:2px solid var(--text); outline-offset:2px; }
 .eg-cell.eg-empty { background:transparent; border:1.5px dashed var(--border-2); color:var(--text-3); }
 .eg-cell.eg-unaired { background:var(--bg-3); opacity:.55; color:transparent; cursor:default; }
-.eg-cell.eg-best { box-shadow:0 0 0 2.5px #c9a227; }
-.eg-cell.eg-worst { box-shadow:0 0 0 2px var(--band-decent); }
+.eg-cell.eg-best { box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
+.eg-cell.eg-worst { box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--band-bad); }
+.eg-cell.ep-band-perfect { box-shadow:inset 0 0 0 1px rgba(255,240,190,.55), 0 2px 10px rgba(214,167,44,.35); }
+.eg-cell.ep-band-perfect.eg-best { box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--text), 0 2px 12px rgba(214,167,44,.45); }
 .eg-cell.eg-diff-up { background:#2f6e3a; color:#fff; } .eg-cell.eg-diff-down { background:#a8433b; color:#fff; } .eg-cell.eg-diff-same { background:var(--bg-3); color:var(--text-2); }
 .eg-avg { background:var(--bg-3); }
 .eg-avg th.eg-ep { background:var(--bg-3); color:var(--text); }
@@ -85,9 +90,13 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
 .eg-season-row th.eg-ep { font-family:'Manrope',var(--sans); font-size:10.5px; font-weight:700; letter-spacing:1.6px; color:var(--text-3); background:var(--card); }
 .eg-season-row .eg-cell.eg-empty { font-family:'Manrope',var(--sans); font-size:18px; font-weight:400; border-width:1px; }
 .eg-season-row button.eg-cell { cursor:pointer; }
-.eg-legend { display:flex; flex-wrap:wrap; gap:8px 18px; margin:16px 2px 0; font-size:12px; color:var(--text-2); }
-.eg-legend span { display:inline-flex; align-items:center; gap:7px; }
-.eg-legend i { width:14px; height:14px; border-radius:3px; display:inline-block; }
+.eg-legend { display:flex; flex-wrap:wrap; gap:8px 16px; margin:14px 2px 0; font-size:12.5px; color:var(--text-2); }
+.eg-legend span { display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
+.eg-legend small { color:var(--text-3); font-size:11.5px; }
+.eg-legend i { width:15px; height:15px; border-radius:4px; display:inline-block; flex-shrink:0; }
+.eg-legend i.ep-band-perfect { position:relative; } .eg-legend i.ep-band-perfect::after { content:'★'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:9px; font-style:normal; line-height:1; }
+.eg-legend i.eg-lg-best { box-shadow:0 0 0 2px var(--text); } .eg-legend i.eg-lg-worst { box-shadow:0 0 0 2px var(--band-bad); }
+.eg-legend-sep { flex-basis:100%; height:0; }
 .eg-legend i.eg-unaired-sw { background:var(--bg-3); border:0.5px solid var(--border-2); }
 /* graph */
 .eg-graph { width:100%; height:auto; display:block; }
@@ -97,18 +106,18 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
 .eg-graph .eg-pt { cursor:pointer; }
 /* list */
 .eg-list { display:flex; flex-direction:column; gap:10px; }
-.eg-row { display:flex; gap:14px; align-items:center; padding:12px; min-height:96px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); cursor:pointer; }
+.eg-row { display:flex; gap:14px; align-items:center; padding:10px 12px; min-height:88px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); cursor:pointer; }
 .eg-row:hover { border-color:var(--border-olive); }
-.eg-row-still { width:150px; aspect-ratio:16/9; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.eg-row-still { width:136px; aspect-ratio:16/9; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-3); flex-shrink:0; }
 .eg-row-still img { width:100%; height:100%; object-fit:cover; display:block; }
 .eg-row-info { flex:1; min-width:0; }
-.eg-row-title { font-family:var(--serif); font-size:15.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.eg-row-title { font-family:var(--serif); font-size:15px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .eg-row-meta { font-size:12px; color:var(--text-3); margin-top:2px; }
 .eg-row-desc { font-size:12.5px; color:var(--text-2); line-height:1.5; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .eg-row-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .eg-row-tags span { font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:3px; background:var(--olive); color:#fff; }
 .eg-row-chips { display:flex; gap:8px; flex-shrink:0; }
-.eg-chip { min-width:50px; padding:6px 8px; border-radius:6px; text-align:center; font-family:var(--bebas); font-size:19px; line-height:1; }
+.eg-chip { min-width:50px; padding:6px 8px; border-radius:6px; text-align:center; font-family:var(--bebas); font-size:18px; line-height:1; }
 .eg-chip-empty { background:var(--olive-faint); color:var(--olive-light); border:0.5px solid var(--border-olive); }
 .eg-chip small { display:block; font-family:'Manrope',var(--sans); font-size:8.5px; letter-spacing:1px; text-transform:uppercase; opacity:.85; margin-top:2px; }
 /* episode popup, view mode */
@@ -124,17 +133,24 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
 .eg-view-also { display:flex; gap:14px; font-size:12px; color:var(--text-3); margin-top:2px; }
 .eg-view-also b { font-family:var(--bebas); font-weight:400; font-size:17px; color:var(--text); margin-inline-start:3px; }
 /* stats panel */
-.eg-panel { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg, 16px); padding:20px 22px 10px; position:sticky; top:calc(var(--page-pt, 80px) + 16px); }
-.eg-panel-h { font-size:11px; font-weight:700; letter-spacing:2.6px; text-transform:uppercase; color:var(--olive-light); padding-bottom:14px; border-bottom:0.5px solid var(--border); }
-.eg-panel-row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:16px 0; border-top:0.5px solid var(--border); font-size:14px; color:var(--text); }
-.eg-panel-h + .eg-panel-row { border-top:none; }
-.eg-panel-row > span:first-child { padding-top:4px; }
-.eg-panel-row b, .eg-panel-v b { font-family:var(--bebas); font-weight:400; font-size:30px; line-height:1; color:var(--olive-light); white-space:nowrap; letter-spacing:.3px; }
-.eg-panel-v { text-align:end; display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
-.eg-panel-v small { font-size:12px; color:var(--text-3); }
-.eg-panel-ep { cursor:pointer; border-radius:6px; }
-.eg-panel-ep:hover b { color:var(--text); }
-.eg-panel-ep:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
+.eg-panel { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg, 16px); padding:16px; position:sticky; top:calc(var(--page-pt, 80px) + 16px); }
+.eg-panel-h { font-size:10.5px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase; color:var(--olive-light); margin-bottom:12px; }
+.eg-panel-empty { font-size:13px; color:var(--text-3); margin:0; }
+.eg-avg-tile { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:var(--radius); margin-bottom:10px; }
+.eg-avg-tile b { font-family:var(--bebas); font-weight:400; font-size:44px; line-height:.9; letter-spacing:.3px; }
+.eg-avg-tile span { display:flex; flex-direction:column; gap:2px; font-size:12px; font-weight:600; opacity:.92; }
+.eg-avg-tile span small { font-size:10.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; opacity:.8; }
+.eg-avg-tile.eg-avg-plain { background:var(--bg-3); color:var(--text); }
+.eg-tiles { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.eg-tile { display:flex; flex-direction:column; gap:4px; padding:11px 12px; border-radius:var(--radius-sm); background:var(--bg-3); text-align:start; font:inherit; color:var(--text); border:none; min-width:0; }
+.eg-tile > span { font-size:11.5px; color:var(--text-3); line-height:1.25; }
+.eg-tile b { font-family:var(--bebas); font-weight:400; font-size:24px; line-height:1; color:var(--text); white-space:nowrap; letter-spacing:.3px; }
+.eg-tile small { font-size:11px; color:var(--text-3); }
+button.eg-tile { cursor:pointer; transition:background-color .15s; }
+button.eg-tile:hover { background:var(--olive-faint); }
+button.eg-tile:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.eg-tiles > .eg-tile:last-child:nth-child(odd) { grid-column:1 / -1; }
+.eg-tile i { display:inline-block; width:9px; height:9px; border-radius:3px; margin-inline-end:6px; vertical-align:2px; }
 /* episode popup */
 #egEpOverlay { position:fixed; inset:0; z-index:904; background:var(--popup-backdrop); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
 #egEpOverlay.open { opacity:1; pointer-events:auto; }
@@ -189,27 +205,52 @@ button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,
 .eg-pick-av { aspect-ratio:1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--serif); color:var(--olive-light); }
 .eg-pick b { display:block; font-size:14px; } .eg-pick small { font-size:12px; color:var(--text-3); }
 .eg-home-sec + .eg-home-sec { margin-top:2.5rem; }
-.eg-ex-seg { width:100%; margin:0 0 1rem; } .eg-ex-seg .pn-toggle-btn { flex:1; padding:9px 6px; }
-.eg-ex-hint { font-size:12.5px; color:var(--text-3); margin:0; }
-@media(max-width:1000px) { .eg-layout { grid-template-columns:1fr; } .eg-panel { position:static; } .eg-cmp { grid-template-columns:1fr; } }
+.eg-dialog.eg-ex-dialog { max-width:min(96vw, 760px); }
+.eg-ex-body { display:grid; grid-template-columns:minmax(0, 1.1fr) minmax(0, 1fr); gap:20px; align-items:start; }
+.eg-ex-preview { position:relative; display:flex; align-items:center; justify-content:center; min-height:220px; padding:10px; border-radius:var(--radius); background:var(--bg-3); }
+.eg-ex-preview canvas { display:block; max-width:100%; max-height:min(52dvh, 460px); width:auto; height:auto; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.18); transition:opacity .15s; }
+.eg-ex-busy { position:absolute; inset:0; display:none; align-items:center; justify-content:center; }
+.eg-ex-preview.busy canvas { opacity:.35; } .eg-ex-preview.busy .eg-ex-busy { display:flex; }
+.eg-ex-opts { display:flex; flex-direction:column; gap:14px; }
+.eg-ex-opt .sf-section-label { margin-top:0; }
+.eg-ex-seg { width:100%; margin:0; } .eg-ex-seg .pn-toggle-btn { flex:1; padding:9px 6px; }
+.eg-ex-hint { display:flex; gap:7px; align-items:flex-start; font-size:12.5px; line-height:1.45; color:var(--text-3); margin:0; }
+.eg-ex-hint svg { flex-shrink:0; margin-top:2px; }
+@media(max-width:640px) { .eg-ex-body { grid-template-columns:1fr; gap:14px; } .eg-ex-preview { min-height:160px; } .eg-ex-preview canvas { max-height:38dvh; } }
+@media(prefers-reduced-motion:reduce) { .eg-ex-preview canvas, button.eg-tile { transition:none; } }
+@media(max-width:1000px) { .eg-layout { grid-template-columns:1fr; } .eg-panel { position:static; } .eg-cmp { grid-template-columns:1fr; }
+  .eg-panel-body { display:grid; grid-template-columns:minmax(200px, 1fr) 2fr; gap:10px; align-items:stretch; }
+  .eg-panel-body .eg-avg-tile { margin:0; flex-direction:column; align-items:flex-start; justify-content:center; }
+  .eg-panel-body .eg-tiles { grid-template-columns:repeat(3, 1fr); }
+  .eg-panel-body .eg-tiles > .eg-tile:last-child:nth-child(odd) { grid-column:auto; } }
 @media(max-width:640px) {
   .eg-hero { min-height:0; }
   .eg-hero-inner { flex-direction:column; align-items:center; text-align:center; padding:3.2rem calc(var(--page-px) + .5rem) 0; gap:1.1rem; }
-  .eg-hero-poster { width:clamp(130px, 44vw, 180px); margin-bottom:0; }
-  .eg-hero-info { width:100%; padding-bottom:2.6rem; }
+  .eg-hero-poster { width:clamp(110px, 34vw, 150px); margin-bottom:0; }
+  .eg-hero-info { width:100%; padding-bottom:2.4rem; }
+  .eg-hero-title { font-size:clamp(32px, 10vw, 44px); }
   .eg-hero-sub, .eg-hero-actions { justify-content:center; }
   .eg-hero-title .mss-logo { margin-inline:auto; }
   .eg-sheet { padding-top:1.4rem; margin-top:-20px; border-radius:22px 22px 0 0; }
-  .eg-controls { padding:14px; gap:14px; }
+  .eg-controls { padding:12px; gap:12px 10px; }
   .eg-ctl { width:100%; }
+  .eg-ctl.eg-ctl-half { width:auto; flex:1 1 0; min-width:0; }
   .eg-controls .pn-toggle { width:100%; }
-  .eg-controls .pn-toggle-btn { flex:1; padding:8px 6px; font-size:12.5px; }
+  .eg-controls .pn-toggle-btn { flex:1 1 auto; padding:8px 6px; font-size:12.5px; }
   .eg-tools { width:100%; margin:0; }
   .eg-tools .sf-icon-btn { flex:1; justify-content:center; }
   .eg-controls .sf-icon-btn { padding:9px 12px; justify-content:center; }
   .eg-controls .sf-icon-btn-label { display:inline; }   /* full-width buttons have room for their labels */
   .eg-season-btn { width:100%; }
-  .eg-board { padding:12px; }
+  .eg-board { padding:10px; }
+  .eg-panel { padding:14px; }
+  .eg-panel-body { display:block; }
+  .eg-panel-body .eg-avg-tile { margin-bottom:8px; flex-direction:row; align-items:center; justify-content:flex-start; }
+  .eg-panel-body .eg-tiles { grid-template-columns:1fr 1fr; }
+  .eg-panel-body .eg-tiles > .eg-tile:last-child:nth-child(odd) { grid-column:1 / -1; }
+  .eg-avg-tile b { font-size:38px; }
+  .eg-tile b { font-size:22px; }
+  .eg-legend { gap:6px 12px; font-size:12px; }
   .eg-cell { width:clamp(46px, 17vw, 96px); height:34px; font-size:17px; }
   .eg-grid th.eg-ep { width:44px; min-width:40px; font-size:14px; padding:4px; }
   .eg-grid td { padding:3px; }
@@ -453,6 +494,8 @@ function draw() {
   const poster = sh.poster_path ? `https://image.tmdb.org/t/p/w500${sh.poster_path}` : null;
   const years = [(sh.first_air_date || '').slice(0, 4), sh.status === 'Ended' ? (sh.last_air_date || '').slice(0, 4) : 'Present'].filter(Boolean).join('–');
   const mineCount = Object.keys(S.mine).filter(k => !k.endsWith(':0')).length;
+  const sAll = S2 || S.source === 'diff' ? [] : allScored(), sAvg = sAll.length ? avg(sAll.map(x => x.v)) : null;
+  const srcWord = { tmdb: 'TMDB', mine: S.readOnly ? esc(S.whoName) + '’s' : 'Your', community: 'Community' }[S.source];
   page.innerHTML = `
     <div class="eg-hero">
       ${sh.backdrop_path ? `<div class="eg-hero-img" style="background-image:url('https://image.tmdb.org/t/p/w1280${sh.backdrop_path}')"></div>` : ''}
@@ -464,6 +507,7 @@ function draw() {
           ${tmdbTitleHTML(sh, sh.name, 'eg-hero-title', 'h1')}
           <div class="eg-hero-sub">${years ? `<span>${esc(years)}</span>` : ''}<span>${S.seasons.length} season${S.seasons.length === 1 ? '' : 's'}</span>${mineCount ? `<span>${mineCount} rated${S.readOnly ? '' : ' by you'}</span>` : ''}</div>
           <div class="eg-hero-actions">
+            ${sAvg != null ? `<span class="eg-hero-score ${bandCls(sAvg)}" title="${srcWord} average across ${sAll.length} episodes"><b>${sAvg.toFixed(2)}</b>${srcWord} average</span>` : ''}
             <a class="eg-hero-btn" href="title.html?id=${sh.id}&type=tv">${icon('info', 15)} Title page</a>
             ${S.readOnly ? `<span class="eg-hero-tag">${icon('eye', 15)} View only</span>` : ''}
           </div>
@@ -476,11 +520,11 @@ function draw() {
       <div class="pn-toggle" role="group" aria-labelledby="egLblSrc">
         ${sourceOpts().map(([k, l]) => `<button type="button" class="pn-toggle-btn${S.source === k ? ' active' : ''}" aria-pressed="${S.source === k}" onclick="egSet('source','${k}')">${l}</button>`).join('')}
       </div></div>
-      <div class="eg-ctl"><div class="eg-ctl-label" id="egLblView">View</div>
+      <div class="eg-ctl${S.seasons.length > 1 ? ' eg-ctl-half' : ''}"><div class="eg-ctl-label" id="egLblView">View</div>
       <div class="pn-toggle" role="group" aria-labelledby="egLblView">
         ${[['grid', 'Grid'], ['graph', 'Graph'], ['list', 'List']].map(([k, l]) => `<button type="button" class="pn-toggle-btn${S.view === k ? ' active' : ''}" aria-pressed="${S.view === k}" onclick="egSet('view','${k}')">${l}</button>`).join('')}
       </div></div>
-      ${S.seasons.length > 1 ? `<div class="eg-ctl"><div class="eg-ctl-label">Seasons</div>
+      ${S.seasons.length > 1 ? `<div class="eg-ctl eg-ctl-half"><div class="eg-ctl-label">Seasons</div>
         <button type="button" class="sf-icon-btn eg-season-btn${S.sel && S.sel.size ? ' active' : ''}" onclick="egSeasonPick()" aria-haspopup="dialog">${icon('layers', 15)}<span class="sf-icon-btn-label">${esc(selLabel())}</span>${icon('chevdown', 13)}</button></div>` : ''}
       ${S.readOnly ? '' : `<div class="eg-tools">
         <button type="button" class="sf-icon-btn" onclick="egComparePick()">${icon('compare', 15)}<span class="sf-icon-btn-label">Compare</span></button>
@@ -509,7 +553,7 @@ function cellHTML(sn, ep, extra = '') {
   let cls = 'eg-cell ', txt = '';
   if (v == null) { cls += 'eg-empty'; txt = '·'; }
   else if (S.source === 'diff') { cls += Math.abs(v) < 0.3 ? 'eg-diff-same' : v > 0 ? 'eg-diff-up' : 'eg-diff-down'; txt = (v > 0 ? '+' : '') + v.toFixed(1); }
-  else { cls += bandCls(v); txt = v.toFixed(1); }
+  else { cls += bandCls(v); txt = v >= 10 ? '★ 10' : v.toFixed(1); }
   return `<button type="button" class="${cls}${extra}" onclick="egOpen(${sn},${ep.n})" title="${esc(label)}" aria-label="${esc(label)}">${txt}</button>`;
 }
 function gridHTML() {
@@ -532,7 +576,7 @@ function gridHTML() {
     const a = avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep)));
     if (a == null) return '<td><div class="eg-cell eg-empty">·</div></td>';
     const cls = S.source === 'diff' ? (Math.abs(a) < 0.3 ? 'eg-diff-same' : a > 0 ? 'eg-diff-up' : 'eg-diff-down') : bandCls(a);
-    return `<td><div class="eg-cell ${cls}" title="Season ${sn} average">${S.source === 'diff' && a > 0 ? '+' : ''}${a.toFixed(1)}</div></td>`;
+    return `<td><div class="eg-cell ${cls}" title="Season ${sn} average">${S.source === 'diff' ? (a > 0 ? '+' : '') + a.toFixed(1) : a >= 10 ? '★ 10' : a.toFixed(1)}</div></td>`;
   }).join('')}${fill}</tr>`;
   const canRate = !S.readOnly && S.entry;
   const seasonRow = `<tr class="eg-avg eg-season-row"><th class="eg-ep" scope="row" title="Whole-season rating">SEASON</th>${vis().map(sn => {
@@ -544,7 +588,8 @@ function gridHTML() {
   }).join('')}${fill}</tr>`;
   const legend = S.source === 'diff'
     ? `<span><i class="eg-diff-up"></i>You rated higher</span><span><i class="eg-diff-same"></i>About the same</span><span><i class="eg-diff-down"></i>You rated lower</span>`
-    : MSSEp.BANDS.map(b => `<span><i class="ep-band-${b.key}"></i>${b.name} ${b.min ? b.min.toFixed(1) + '+' : '< 5'}</span>`).join('') + `<span><i style="border:1.5px dashed var(--border-2)"></i>Not rated</span><span><i class="eg-unaired-sw"></i>Not aired</span>`;
+    : MSSEp.BANDS.map(b => `<span><i class="ep-band-${b.key}"></i>${b.name}${b.key === 'perfect' ? '' : ` <small>${b.min ? b.min.toFixed(1) + '+' : '< 5'}</small>`}</span>`).join('')
+      + `<span class="eg-legend-sep" aria-hidden="true"></span>${best ? `<span><i class="eg-lg-best"></i>Highest</span><span><i class="eg-lg-worst"></i>Lowest</span>` : ''}<span><i style="border:1.5px dashed var(--border-2)"></i>Not rated</span><span><i class="eg-unaired-sw"></i>Not aired</span>`;
   return `<div class="eg-grid-wrap"><table class="eg-grid${fit ? ' eg-fit' : ''}" aria-label="Episode ratings by season">
       <thead><tr><th class="eg-ep"></th>${vis().map(sn => `<th scope="col">S${sn}</th>`).join('')}${fit ? '' : '<th class="eg-fill"></th>'}</tr></thead>
       <tbody>${rows}${avgRow}${seasonRow}</tbody></table></div>
@@ -561,7 +606,8 @@ function graphHTML() {
   const X = x => L + (total <= 1 ? 0 : (x - 1) / (total - 1)) * (W - L - R);
   const Y = v => T + (1 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * (H - T - B);
   const stripes = diff ? '' : MSSEp.BANDS.map((b, k) => {
-    const top = k === 0 ? 10 : MSSEp.BANDS[k - 1].min, bot = Math.max(1, b.min);
+    if (b.min >= 10) return '';                       // a perfect 10 is a point, not a stripe — its dots are gold
+    const top = k === 0 ? 10 : Math.min(10, MSSEp.BANDS[k - 1].min), bot = Math.max(1, b.min);
     return `<rect x="${L}" y="${Y(top)}" width="${W - L - R}" height="${Y(bot) - Y(top)}" class="ep-band-${b.key}" style="opacity:.12" fill="currentColor"></rect>`;
   }).join('');
   // dots and line segments take the colour of their band (as in the grid)
@@ -597,30 +643,35 @@ function listHTML() {
 }
 function panelHTML() {
   const head = t => `<aside class="eg-panel" aria-label="${t}"><div class="eg-panel-h">${t}</div>`;
+  const tile = (label, val, sub = '') => `<div class="eg-tile"><span>${label}</span><b>${val}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
   if (S.source === 'diff') {
     const d = allScored(); const a = avg(d.map(x => x.v));
-    return `${head('You vs TMDB')}
-      <div class="eg-panel-row"><span>Average difference</span><b>${a == null ? '—' : (a > 0 ? '+' : '') + a.toFixed(2)}</b></div>
-      <div class="eg-panel-row"><span>Episodes compared</span><b>${d.length}</b></div></aside>`;
+    return `${head('You vs TMDB')}<div class="eg-panel-body">
+      <div class="eg-avg-tile eg-avg-plain"><b>${a == null ? '—' : (a > 0 ? '+' : '') + a.toFixed(2)}</b><span><small>Average difference</small>${a == null ? 'Nothing to compare yet' : a > 0 ? 'You rate higher than TMDB' : a < 0 ? 'You rate lower than TMDB' : 'Spot on with TMDB'}</span></div>
+      <div class="eg-tiles">${tile('Episodes compared', d.length)}</div></div></aside>`;
   }
   const title = (S.source === 'tmdb' ? 'TMDB' : S.source === 'mine' ? (S.readOnly ? esc(S.whoName) + '’s' : 'Your') : 'Community') + ' stats';
   const sc = allScored();
-  if (!sc.length) return `${head(title)}<div class="eg-panel-row"><span>No scores for this source yet.</span></div></aside>`;
-  const a = avg(sc.map(x => x.v));
+  if (!sc.length) return `${head(title)}<p class="eg-panel-empty">No scores for this source yet.</p></aside>`;
+  const a = avg(sc.map(x => x.v)), b = MSSEp.band(a);
   const best = sc.reduce((x, y) => (y.v > x.v ? y : x)), worst = sc.reduce((x, y) => (y.v < x.v ? y : x));
   const seasonAvgs = vis().map(sn => ({ sn, a: avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep))) })).filter(x => x.a != null);
   const bestS = seasonAvgs.reduce((x, y) => (y.a > x.a ? y : x));
   const great = Math.round(100 * sc.filter(x => x.v >= 8.5).length / sc.length);
+  const tens = sc.filter(x => x.v >= 10).length;
   const sd = Math.sqrt(avg(sc.map(x => (x.v - a) ** 2)));
-  const epLink = x => `<span class="eg-panel-v eg-panel-ep" role="button" tabindex="0" onclick="egOpen(${x.s},${x.ep.n})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" aria-label="${x.v.toFixed(1)}, season ${x.s} episode ${x.ep.n}"><b>${x.v.toFixed(1)}</b><small>S${x.s} · E${x.ep.n}</small></span>`;
-  return `${head(title)}
-    <div class="eg-panel-row"><span>Series average</span><b>★ ${a.toFixed(2)}</b></div>
-    <div class="eg-panel-row"><span>Best episode</span>${epLink(best)}</div>
-    <div class="eg-panel-row"><span>Lowest episode</span>${epLink(worst)}</div>
-    ${seasonAvgs.length > 1 ? `<div class="eg-panel-row"><span>Best season</span><b>S${bestS.sn} · ${bestS.a.toFixed(1)}</b></div>` : ''}
-    <div class="eg-panel-row"><span>Great or better</span><b>${great}%</b></div>
-    <div class="eg-panel-row"><span>Consistency (± spread)</span><b>${sd.toFixed(2)}</b></div>
-    <div class="eg-panel-row"><span>Episodes scored</span><b>${sc.length}</b></div></aside>`;
+  const epTile = (label, x) => `<button type="button" class="eg-tile" onclick="egOpen(${x.s},${x.ep.n})" aria-label="${label}: ${x.v.toFixed(1)}, season ${x.s} episode ${x.ep.n}">
+      <span>${label}</span><b><i class="${bandCls(x.v)}"></i>${x.v.toFixed(1)}</b><small>S${x.s} · E${x.ep.n}</small></button>`;
+  return `${head(title)}<div class="eg-panel-body">
+    <div class="eg-avg-tile ${bandCls(a)}"><b>${a.toFixed(2)}</b><span><small>Series average</small>${esc(b.name)}</span></div>
+    <div class="eg-tiles">
+      ${epTile('Best episode', best)}
+      ${epTile('Lowest episode', worst)}
+      ${seasonAvgs.length > 1 ? tile('Best season', `S${bestS.sn} · ${bestS.a.toFixed(1)}`) : tile('Episodes scored', sc.length)}
+      ${tile('Great or better', great + '%', tens ? `${tens} perfect 10${tens === 1 ? '' : 's'}` : '')}
+      ${tile('Consistency', '± ' + sd.toFixed(2), sd < 0.6 ? 'Very steady' : sd < 1.1 ? 'Fairly steady' : 'Up and down')}
+      ${seasonAvgs.length > 1 ? tile('Episodes scored', sc.length) : ''}
+    </div></div></aside>`;
 }
 
 /* ══ Episode popup ══ */
@@ -838,8 +889,10 @@ function egComparePick() {
 }
 function egPickClose() { MSSDialog.close(document.getElementById('egPickOverlay')); }
 
-/* ══ Export: SeriesGraph-style image (Square / Story / Wide · Light / Dark) + CSV ══ */
-const EX = { size: 'square', theme: 'dark', source: null };
+/* ══ Export: SeriesGraph-style image (Square / Story / Wide · Light / Dark) + CSV ══
+   The popup shows the real image as you change the options; Save Image hands that
+   picture to mssSaveImage (config.js) — the share sheet on phones, like Create Card. */
+const EX = { size: 'square', theme: 'dark', source: null, token: 0, imgs: null };
 function egExport() {
   if (S.readOnly) return;
   if (!EX.source || !['tmdb', 'mine', 'community'].includes(EX.source)) EX.source = S.source === 'diff' ? 'mine' : S.source;
@@ -849,30 +902,42 @@ function egExport() {
     MSSDialog.bind(ov, egExportClose);
     document.body.appendChild(ov);
   }
-  const seg = (k, opts) => `<div class="pn-toggle eg-ex-seg">${opts.map(([v, l]) => `<button type="button" class="pn-toggle-btn${EX[k] === v ? ' active' : ''}" onclick="EX.${k}='${v}';egExport()">${l}</button>`).join('')}</div>`;
-  ov.innerHTML = `<div class="eg-dialog" role="dialog" aria-modal="true" aria-label="Export">
-      <div class="sf-header"><div class="sf-title">Export</div><button class="sf-close" onclick="egExportClose()" aria-label="Close">${icon('x', 18)}</button></div>
-      <div class="sf-body">
-        <div class="sf-section-label">Image size</div>${seg('size', [['square', 'Square'], ['story', 'Story'], ['wide', 'Wide']])}
-        <div class="sf-section-label">Theme</div>${seg('theme', [['dark', 'Dark'], ['light', 'Light']])}
-        <div class="sf-section-label">Scores</div>${seg('source', [['tmdb', 'TMDB'], ['mine', 'Mine'], ['community', 'Community']])}
-        <p class="eg-ex-hint">Includes ${esc(selLabel().toLowerCase())} — change it with the Seasons button.</p>
+  const seg = (k, label, opts) => `<div class="eg-ex-opt"><div class="sf-section-label">${label}</div><div class="pn-toggle eg-ex-seg" role="group" aria-label="${label}">${opts.map(([v, l]) =>
+    `<button type="button" class="pn-toggle-btn${EX[k] === v ? ' active' : ''}" aria-pressed="${EX[k] === v}" data-ex="${k}" data-v="${v}" onclick="egExSet('${k}','${v}')">${l}</button>`).join('')}</div></div>`;
+  ov.innerHTML = `<div class="eg-dialog eg-ex-dialog" role="dialog" aria-modal="true" aria-labelledby="egExTitle">
+      <div class="sf-header"><div class="sf-title" id="egExTitle">Export</div><button class="sf-close" onclick="egExportClose()" aria-label="Close">${icon('x', 18)}</button></div>
+      <div class="sf-body eg-ex-body">
+        <div class="eg-ex-preview" id="egExPreview"><canvas id="egExCanvas" role="img" aria-label="Preview of the image"></canvas><div class="eg-ex-busy"><div class="spinner"></div></div></div>
+        <div class="eg-ex-opts">
+          ${seg('size', 'Size', [['square', 'Square'], ['story', 'Story'], ['wide', 'Wide']])}
+          ${seg('theme', 'Theme', [['dark', 'Dark'], ['light', 'Light']])}
+          ${seg('source', 'Scores', [['tmdb', 'TMDB'], ['mine', 'Mine'], ['community', 'Community']])}
+          <p class="eg-ex-hint">${icon('layers', 13)} Includes ${esc(selLabel().toLowerCase())} — change it with the Seasons button.</p>
+        </div>
       </div>
       <div class="sf-footer">
-        ${Object.keys(S.mine).length ? `<button type="button" class="sf-clear-btn" onclick="egCSV()">${icon('download', 14)} Download CSV</button>` : ''}
-        <button type="button" class="sf-apply-btn" onclick="egImage(this)">${icon('download', 14)} Download Image</button>
+        ${Object.keys(S.mine).length ? `<button type="button" class="sf-clear-btn" onclick="egCSV()">${icon('download', 14)} CSV</button>` : ''}
+        <button type="button" class="sf-apply-btn" id="egExSave" onclick="egSaveImage(this)" disabled>${icon('share', 14)} Save Image</button>
       </div></div>`;
-  MSSDialog.open(ov);
+  MSSDialog.open(ov, { focus: '.sf-close' });
+  egDraw();
 }
-function egExportClose() { MSSDialog.close(document.getElementById('egExportOverlay')); }
-async function egImage(btn) {
-  btn.disabled = true; btn.innerHTML = 'Drawing…';
+function egExSet(k, v) {
+  EX[k] = v;
+  document.querySelectorAll(`#egExportOverlay [data-ex="${k}"]`).forEach(b => { const on = b.dataset.v === v; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
+  egDraw();
+}
+function egExportClose() { EX.token++; MSSDialog.close(document.getElementById('egExportOverlay')); }
+// Draw the picture into the popup's canvas (full size; CSS scales it down to preview)
+async function egDraw() {
+  const cv = document.getElementById('egExCanvas'), box = document.getElementById('egExPreview'), save = document.getElementById('egExSave');
+  if (!cv) return;
+  const token = ++EX.token;
+  box.classList.add('busy'); box.dataset.size = EX.size; if (save) save.disabled = true;
   const viewSource = S.source;
-  S.source = EX.source || S.source;            // draw the scores picked in the export popup
   try {
     await document.fonts.ready;
     const [W, H] = { square: [1080, 1080], story: [1080, 1920], wide: [1600, 900] }[EX.size];
-    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const U = Math.min(W, H);   // type + spacing scale with the short side (Wide stays balanced)
     const g = cv.getContext('2d'), dark = EX.theme === 'dark';
     const css = getComputedStyle(document.documentElement), band = k => css.getPropertyValue('--band-' + k).trim();
@@ -897,14 +962,23 @@ async function egImage(btn) {
       return (await tryLoad(src + (src.includes('?') ? '&' : '?') + '_cb=' + Date.now(), true))
           || tryLoad('https://wsrv.nl/?url=' + encodeURIComponent(src.replace(/^https?:\/\//, '')), true);
     };
-    const { data: who } = await sb.from('profiles').select('username,avatar_url').eq('id', _egUser.id).maybeSingle();
-    const [backdrop, poster, logo, avatar] = await Promise.all([
-      load(S.show.backdrop_path ? `https://image.tmdb.org/t/p/w1280${S.show.backdrop_path}` : null),
-      load(S.show.poster_path ? `https://image.tmdb.org/t/p/w342${S.show.poster_path}` : null),
-      load('icons/icon-192.png', false),   // same site — no CORS needed
-      load(safeURL(who?.avatar_url)),
-    ]);
+    // pictures load once per show, then every preview reuses them
+    if (EX.imgs?.id !== S.show.id) {
+      const { data: who } = await sb.from('profiles').select('username,avatar_url').eq('id', _egUser.id).maybeSingle();
+      const [backdrop, poster, logo, avatar] = await Promise.all([
+        load(S.show.backdrop_path ? `https://image.tmdb.org/t/p/w1280${S.show.backdrop_path}` : null),
+        load(S.show.poster_path ? `https://image.tmdb.org/t/p/w342${S.show.poster_path}` : null),
+        load('icons/icon-192.png', false),   // same site — no CORS needed
+        load(safeURL(who?.avatar_url)),
+      ]);
+      EX.imgs = { id: S.show.id, who, backdrop, poster, logo, avatar };
+    }
+    const { who, backdrop, poster, logo, avatar } = EX.imgs;
+    if (token !== EX.token) return;           // a newer preview started meanwhile
+    S.source = EX.source || S.source;         // from here on it's drawn in one go: the scores picked in the popup
+    cv.width = W; cv.height = H;
     const pad = Math.round(U * 0.055);
+    const gold = (x, y, w, h) => { const gr = g.createLinearGradient(x, y, x + w, y + h); [[0, '#b9820f'], [0.28, '#e9b73a'], [0.44, '#fff0b3'], [0.58, '#efc24a'], [1, '#a8740c']].forEach(([o, c]) => gr.addColorStop(o, c)); return gr; };
     g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
 
     // ── Header: backdrop band (sharp, darkened), poster overlapping, title ──
@@ -939,8 +1013,8 @@ async function egImage(btn) {
     g.fillText(`${years} · ${selLabel()}`, tx, ty + Math.round(U * 0.035));
     if (sa != null && S.source !== 'diff' && seasons.length > 1) {   // average badge (one season → same as its AVG row)
       const b = MSSEp.band(sa), bw = Math.round(U * 0.12), bh = Math.round(U * 0.07), bx = W - pad - bw, by = bandH + Math.round(U * 0.012);
-      g.fillStyle = band(b.key); g.beginPath(); g.roundRect(bx, by, bw, bh, 12); g.fill();
-      g.fillStyle = ['good', 'decent', 'meh'].includes(b.key) ? '#1a1a1a' : '#fff'; g.textAlign = 'center';
+      g.fillStyle = b.key === 'perfect' ? gold(bx, by, bw, bh) : band(b.key); g.beginPath(); g.roundRect(bx, by, bw, bh, 12); g.fill();
+      g.fillStyle = b.ink ? '#1a1a1a' : '#fff'; g.textAlign = 'center';
       g.font = `400 ${Math.round(bh * 0.55)}px "Bebas Neue", sans-serif`; g.fillText(sa.toFixed(1), bx + bw / 2, by + bh * 0.62);
       g.font = `600 ${Math.round(bh * 0.17)}px Oswald, sans-serif`; g.fillText(b.name.toUpperCase(), bx + bw / 2, by + bh * 0.88); g.textAlign = 'left';
     }
@@ -956,8 +1030,9 @@ async function egImage(btn) {
     const cell = Math.max(4, Math.min(Math.floor(availW / Math.max(1, seasons.length)), Math.floor(availH / (maxEp + 2.6)), 92));
     const gap = Math.max(1, Math.round(cell * (cell >= 24 ? 0.09 : 0.07))), box = cell - gap;
     const gx = pad + labW + Math.max(0, (availW - cell * seasons.length) / 2);
-    const colorFor = v => S.source === 'diff' ? (Math.abs(v) < 0.3 ? C.empty : v > 0 ? '#2f6e3a' : '#a8433b') : band(MSSEp.band(v).key);
-    const textFor = v => S.source === 'diff' ? (Math.abs(v) < 0.3 ? C.text : '#fff') : (['good', 'decent', 'meh'].includes(MSSEp.band(v).key) ? '#1a1a1a' : '#fff');
+    const colorFor = (v, x, y, w, h) => S.source === 'diff' ? (Math.abs(v) < 0.3 ? C.empty : v > 0 ? '#2f6e3a' : '#a8433b')
+      : MSSEp.band(v).key === 'perfect' ? gold(x, y, w, h) : band(MSSEp.band(v).key);
+    const textFor = v => S.source === 'diff' ? (Math.abs(v) < 0.3 ? C.text : '#fff') : (MSSEp.band(v).ink ? (MSSEp.band(v).key === 'perfect' ? '#2b1e02' : '#1a1a1a') : '#fff');
     // numbers stay readable: Bebas at ~50% of the box (min 11px); hidden only on tiny boxes
     const numPx = Math.max(11, Math.round(Math.min(box, 46) * 0.5)), showNums = box >= 17;
     const labelEvery = cell >= 15 ? 1 : Math.ceil(15 / cell) * 5;
@@ -965,9 +1040,9 @@ async function egImage(btn) {
     g.font = `400 ${numPx}px "Bebas Neue", sans-serif`;
     seasons.forEach((sn, ci) => { if (cell >= 14 || ci % Math.ceil(14 / cell) === 0) { g.fillStyle = C.sub; g.fillText('S' + sn, gx + ci * cell + box / 2, gridTop + box / 2); } });
     const drawBox = (x, yy, v) => {
-      g.fillStyle = v == null ? C.empty : colorFor(v);
+      g.fillStyle = v == null ? C.empty : colorFor(v, x, yy, box, box);
       g.beginPath(); g.roundRect(x, yy, box, box, Math.max(1, box * 0.16)); g.fill();
-      if (v != null && showNums) { g.fillStyle = textFor(v); g.fillText((S.source === 'diff' && v > 0 ? '+' : '') + v.toFixed(1), x + box / 2, yy + box / 2 + 1); }
+      if (v != null && showNums) { g.fillStyle = textFor(v); g.fillText(S.source === 'diff' ? (v > 0 ? '+' : '') + v.toFixed(1) : v >= 10 ? '10' : v.toFixed(1), x + box / 2, yy + box / 2 + 1); }
     };
     for (let n = 1; n <= maxEp; n++) {
       const yy = gridTop + n * cell;
@@ -983,9 +1058,10 @@ async function egImage(btn) {
     const ly = H - pad - footH - legendH / 2;
     g.fillStyle = C.line; g.fillRect(pad, ly - legendH / 2 - 4, W - pad * 2, 1.5);            // divider: grid | legend
     g.font = `600 ${Math.round(U * 0.0125)}px Manrope, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
-    const items = S.source === 'diff' ? [['#2f6e3a', 'Higher than TMDB'], [C.empty, 'Same'], ['#a8433b', 'Lower than TMDB']] : MSSEp.BANDS.map(b => [band(b.key), b.name]);
-    const iw = (W - pad * 2) / items.length;
-    items.forEach(([c, l], i) => { const x = pad + i * iw; g.fillStyle = c; g.beginPath(); g.roundRect(x, ly - 8, 16, 16, 4); g.fill(); g.fillStyle = C.text; g.fillText(l, x + 22, ly + 1); });
+    const items = S.source === 'diff' ? [['#2f6e3a', 'Higher than TMDB'], [C.empty, 'Same'], ['#a8433b', 'Lower than TMDB']]
+      : MSSEp.BANDS.map(b => [b.key === 'perfect' ? 'gold' : band(b.key), b.name]);
+    const iw = (W - pad * 2) / items.length, sw = Math.round(U * 0.015);
+    items.forEach(([c, l], i) => { const x = pad + i * iw; g.fillStyle = c === 'gold' ? gold(x, ly - sw / 2, sw, sw) : c; g.beginPath(); g.roundRect(x, ly - sw / 2, sw, sw, 4); g.fill(); g.fillStyle = C.text; g.fillText(l, x + sw + 6, ly + 1); });
 
     // ── Footer: user (left) · MyScreenFolio logo + name (right) ──
     const fy = H - pad - footH / 2 + 6;
@@ -1005,13 +1081,16 @@ async function egImage(btn) {
     g.fillStyle = C.sub; g.font = `500 ${Math.round(U * 0.012)}px Manrope, sans-serif`; g.textAlign = 'center';
     g.fillText('Episode data: TMDB', W / 2, H - Math.round(pad * 0.45));
 
-    const a = document.createElement('a');
-    a.download = `${S.show.name.replace(/[^\w]+/g, '-').toLowerCase()}-episodes${S.sel && S.sel.size ? '-' + selLabel().replace(/[^\w]+/g, '-').toLowerCase() : ''}-${EX.size}.png`;
-    a.href = cv.toDataURL('image/png'); a.click();
-    showToast('Image downloaded.');
-  } catch (err) { console.error('Export:', err); showToast('Couldn’t make the image — try again.', 'err'); }
-  S.source = viewSource;
-  btn.disabled = false; btn.innerHTML = `${icon('download', 14)} Download Image`;
+  } catch (err) { console.error('Export:', err); if (token === EX.token) showToast('Couldn’t make the image — try again.', 'err'); }
+  finally { S.source = viewSource; }
+  if (token !== EX.token) return;
+  box.classList.remove('busy'); if (save) save.disabled = false;
+}
+async function egSaveImage(btn) {
+  const cv = document.getElementById('egExCanvas'); if (!cv || btn.disabled) return;
+  const name = `${S.show.name.replace(/[^\w]+/g, '-').toLowerCase()}-episodes${S.sel && S.sel.size ? '-' + selLabel().replace(/[^\w]+/g, '-').toLowerCase() : ''}-${EX.size}.png`;
+  try { await mssSaveImage(cv, name, document.getElementById('egExPreview')); }
+  catch (err) { console.error('Export:', err); showToast('Couldn’t save the image — try a different browser.', 'err'); }
 }
 function egCSV() {
   const rows = [['Show', 'Season', 'Episode', 'Title', 'Score', 'Band', 'Tags', 'Note', 'Rated']];
