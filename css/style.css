@@ -6042,6 +6042,18 @@ html[data-theme="light"] .chf-state.soon { color:#fff; }
   .spot-title { font-size:24px; }
 }
 @media(prefers-reduced-motion:reduce) { .spot-medal { animation:none; } }
+/* "You finished!" (spotlights.js complete, 067) — the spotlight's shell, with light rays behind the medal */
+.spot-done .spot-hero { overflow:hidden; padding-top:36px; }
+.spot-rays { position:absolute; left:50%; top:50%; width:520px; height:520px; margin:-260px 0 0 -260px; border-radius:50%; pointer-events:none;
+  background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--spot) 22%, transparent) 0deg 9deg, transparent 9deg 24deg);
+  -webkit-mask:radial-gradient(closest-side, #000 18%, transparent 72%); mask:radial-gradient(closest-side, #000 18%, transparent 72%);
+  animation:spotRays 26s linear infinite; }
+@keyframes spotRays { to { transform:rotate(360deg); } }
+.spot-done .spot-medal { animation:spotWin .8s var(--spring) both, spotFloat 4s ease-in-out .8s infinite; }
+@keyframes spotWin { 0% { transform:scale(.4) rotate(-14deg); opacity:0; } 70% { transform:scale(1.08) rotate(3deg); opacity:1; } 100% { transform:none; } }
+.spot-done-kicker { display:block; font-family:'Manrope',var(--sans); font-size:14px; font-weight:600; letter-spacing:.2px; color:var(--text-2); margin-bottom:4px; }
+.spot-foot a.sf-apply-btn { text-decoration:none; flex:1.4; }
+@media(prefers-reduced-motion:reduce) { .spot-rays, .spot-done .spot-medal { animation:none; } }
 /* "Let me choose" (061): picks on the card + the "Does this count?" popup (nav.js) */
 .ch-pick-tag { color:var(--olive-light); font-weight:600; }
 .ch-picks { padding:12px 0 2px; border-top:0.5px solid var(--border); }
