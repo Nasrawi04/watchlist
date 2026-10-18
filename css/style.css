@@ -1291,6 +1291,19 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 .mr-cc:empty { display:none; }
 .mr-cc .cc-strip { margin-top:4px; }
 #mssRatePopupActions { display:flex; gap:8px; padding:4px 24px 24px; flex-wrap:wrap; }
+/* Wider screens: 3 to a row — Edit · Rewatch · Add to List / Recommend · Share · Create Card —
+   then Delete across the bottom. Phones keep one full-width button per line (§43). */
+@media(min-width:601px) {
+  #mssRatePopupActions .popup-action-btn { flex:1 1 calc(33.333% - 6px); }
+  #mssRatePopupActions [data-act="edit"]         { order:1; }
+  #mssRatePopupActions [data-act="rewatch"]      { order:2; }
+  #mssRatePopupActions [data-act="lists"]        { order:3; }
+  #mssRatePopupActions [data-act="recommend"]    { order:4; }
+  #mssRatePopupActions [data-act="share"]        { order:5; }
+  #mssRatePopupActions [data-act="card"]         { order:6; }
+  #mssRatePopupActions [data-act="discoverCard"] { order:7; }
+  #mssRatePopupActions [data-act="delete"]       { order:9; flex-basis:100%; }
+}
 
 /* ── Picker header + list (.rf-*) — the "Link to TMDB" pickers (Create Card, Discover) and detail.html pickers ── */
 .rf-header { display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.25rem 0.75rem; flex-shrink:0; }
