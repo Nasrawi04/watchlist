@@ -2093,6 +2093,8 @@ function fitTitleYear(root) {
                  challenge (051)
                  ("notify me about @friend", 022 / 047), friend_queued, friend_poll,
                  poll_comment, friend_rec (Social, 045)
+     social    — comment (on your title / your comment / your note), like (your note, list or
+                 reply on a note) — 066
      lists     — list_invite, list_invite_accepted
      requests  — friend_request
    Rows are created by the database (021/022 SQL); here we list them,
@@ -2102,11 +2104,12 @@ let _notifUser = null;
 let _notifItems = [];
 let _notifTab = 'all';
 const NOTIF_SECTIONS = [
-  ['all', 'All'], ['episodes', 'New Releases'], ['activity', 'Friend Activity'], ['lists', 'Lists'], ['requests', 'Friend Requests'],
+  ['all', 'All'], ['episodes', 'New Releases'], ['social', 'Comments & Likes'], ['activity', 'Friend Activity'], ['lists', 'Lists'], ['requests', 'Friend Requests'],
 ];
 function _notifSection(n) {
   if (n.type === 'friend_request') return 'requests';
   if (n.type === 'new_episode' || n.type === 'new_release') return 'episodes';
+  if (n.type === 'comment' || n.type === 'like') return 'social';
   if (n.type === 'list_invite' || n.type === 'list_invite_accepted' || n.type === 'list_invite_declined') return 'lists';
   return 'activity';
 }
@@ -2328,6 +2331,13 @@ function _notifItemHTML(n, opts = {}) {
     icon2 = m.code ? ({ added: 'plus', had_it: 'check', started: 'play', finished: 'check', saved_list: 'layers' }[m.code] || 'inbox') : 'comment';
     if (!m.code && m.body) extra = `<div class="notif-quote" translate="no">${escHTML(m.body)}</div>`;
     href = m.rec_id ? `friends.html?s=recs&box=${m.box === 'sent' ? 'sent' : 'received'}&rec=${encodeURIComponent(m.rec_id)}` : 'friends.html?s=recs';
+  } else if (n.type === 'comment' || n.type === 'like') {
+    // Comments, replies and likes on your things (066)
+    const m = n.meta || {};
+    text = _notifSocialText(n, who); icon2 = n.type === 'like' ? 'thumbsUp' : m.kind === 'entry' ? 'comment' : 'reply';
+    if (m.excerpt) extra = `<div class="notif-quote" translate="no">${escHTML(m.excerpt)}</div>`;
+    if (m.kind !== 'list') extra += _notifTitleCard(m);
+    href = _notifSocialHref(m);
   } else if (n.type === 'friend_queued') {
     text = `${who} added something from your library to their watchlist`; icon2 = 'plus';
     extra = _notifTitleCard(n.meta);
@@ -2353,7 +2363,7 @@ function _notifTabsHTML(active, onclick) {
 }
 function _notifFiltered(tab) { return _notifItems.filter(n => tab === 'all' || _notifSection(n) === tab); }
 function _notifEmptyHTML(tab) {
-  const msg = { all: "You're all caught up", activity: 'No friend activity yet — turn on notifications from a friend\'s profile', lists: 'No list invites yet', requests: 'No friend requests' }[tab];
+  const msg = { all: "You're all caught up", activity: 'No friend activity yet — turn on notifications from a friend\'s profile', social: 'No comments or likes yet', lists: 'No list invites yet', requests: 'No friend requests' }[tab];
   return `<div class="notif-empty">${icon('bell', 26)}<div>${msg}</div></div>`;
 }
 
@@ -2558,9 +2568,27 @@ function _notifShortText(n) {
     case 'achievement':          return n.meta?.kind === 'welcome' ? 'Your Achievement Cabinet is open — take a look!' : `New medal: ${escHTML(n.meta?.name || 'Achievement')}`;
     case 'challenge':            return n.meta?.kind === 'finished' ? `${who} finished ${t}` : `${who} challenged you: ${t}`;
     case 'episode_chat':         return `${who} commented on S${escHTML(n.meta?.season)} · E${escHTML(n.meta?.episode)} of ${t}`;
+    case 'comment': case 'like': return _notifSocialText(n, who);
     case 'friend_rec':           return n.meta?.kind === 'entry' ? `${who} shared that they watched ${t}` : n.meta?.kind === 'list' ? `${who} shared a list` : `${who} recommended ${t} to you`;
   }
   return 'New notification';
+}
+
+// Comments, replies and likes (066) — what happened, and where tapping it goes
+function _notifSocialText(n, who) {
+  const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || (m.kind === 'list' ? 'a list' : 'a title'))}</b>`;
+  if (n.type === 'like') return m.kind === 'list' ? `${who} liked your list “${t}”` : m.kind === 'note_reply' ? `${who} liked your reply on a note about ${t}` : `${who} liked your note on ${t}`;
+  return m.kind === 'reply' ? `${who} replied to your comment on ${t}` : m.kind === 'note_reply' ? `${who} replied to your note on ${t}` : `${who} commented on your ${t}`;
+}
+function _notifSocialHref(m) {
+  if (m.kind === 'list') return m.list_id ? `list-view.html?list=${encodeURIComponent(m.list_id)}` : '';
+  if (m.kind === 'entry' || m.kind === 'reply') {   // comments on a library entry → the comments popup on its owner's page
+    if (!m.entry_id) return '';
+    return m.owner_id && m.owner_id !== _notifUser?.id ? `profile-view.html?id=${encodeURIComponent(m.owner_id)}&comments=${encodeURIComponent(m.entry_id)}`
+      : `library.html?comments=${encodeURIComponent(m.entry_id)}`;
+  }
+  if (!m.tmdb_id || !m.tmdb_type) return 'notes.html';   // notes live on the title page
+  return `title.html?type=${encodeURIComponent(m.tmdb_type)}&id=${encodeURIComponent(m.tmdb_id)}&${m.kind === 'note' ? 'note' : 'replies'}=${encodeURIComponent(m.entry_id)}`;
 }
 
 // Episodes that came out together share one notification (044):
