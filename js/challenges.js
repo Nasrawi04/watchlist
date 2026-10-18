@@ -68,6 +68,8 @@ const MSSChallenges = (() => {
     off = { me_official: !!b.value?.me_official, can_official: !!b.value?.can_official, list: b.value?.list || [] };
     const hb = document.getElementById('chHeadBtn'); if (hb) hb.innerHTML = newBtn();
     draw();
+    // opening this page can finish a challenge (get_challenges) → the "You finished!" popup (nav.js, 067)
+    if ((a.value || []).some(c => c.my_finished_at) && typeof _navFinishCheck === 'function') _navFinishCheck(500, true);
     if (focus) { requestAnimationFrame(() => document.getElementById('ch-' + focus)?.scrollIntoView({ block: 'start', behavior: 'smooth' })); focus = null; }
   }
   function draw() {
