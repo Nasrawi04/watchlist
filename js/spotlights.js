@@ -15,6 +15,7 @@
                    7 days before the challenge starts until it ends
           headline / pitch (optional) — by default the challenge's own
                    name and description are used
+          done (optional) — one line for the "You finished!" popup
      2. As the official account, pick it under "Spotlight" when you make
         (or edit) the official challenge. That's it.
 
@@ -25,15 +26,18 @@
    MSSSpotlight.preview(c)  the official account's "Preview spotlight"
    MSSSpotlight.tags(c) / posters(c)   the chips + poster strip (Challenges reuses them)
    MSSSpotlight.pickTeam(c)  → 'a' | 'b' | null — the "Pick your side" popup (064)
+   MSSSpotlight.complete(c) → Promise — the "You finished!" popup (067): the medal,
+            then "See my medals". Official challenges wear their spotlight's colours
+            and its `done` line; friends' challenges the site's own look.
 
    Requires config.js (icon, escHTML, MSSDialog, showToast), medals.js. Styles: §57.
 ═══════════════════════════════════════════════════════════════ */
 const MSSSpotlights = [
-  { key: 'halloween-2026', name: 'Halloween 2026', eyebrow: 'Spooky season',
+  { key: 'halloween-2026', name: 'Halloween 2026', eyebrow: 'Spooky season', done: 'You made it through the night.',
     accent: '#F59A3A', glow: 'rgba(245,154,58,.38)', light: { accent: '#B85A0C', glow: 'rgba(214,110,20,.22)' } },
-  { key: 'dune-part-three', name: 'Dune: Part Three', eyebrow: 'Dunesday · Dec 18',
+  { key: 'dune-part-three', name: 'Dune: Part Three', eyebrow: 'Dunesday · Dec 18', done: 'The desert remembers who crossed it.',
     accent: '#E9A94E', glow: 'rgba(226,138,62,.36)', light: { accent: '#A0601A', glow: 'rgba(200,128,50,.24)' } },
-  { key: 'avengers-doomsday', name: 'Avengers: Doomsday', eyebrow: 'Dunesday · Dec 18',
+  { key: 'avengers-doomsday', name: 'Avengers: Doomsday', eyebrow: 'Dunesday · Dec 18', done: 'You held the line. Ready for Doomsday.',
     accent: '#5FE39A', glow: 'rgba(90,230,150,.30)', light: { accent: '#17734A', glow: 'rgba(30,120,80,.18)' } },
 ];
 
@@ -170,6 +174,53 @@ const MSSSpotlight = (() => {
     if (done) done(team || null);
   }
 
+  /* ── "You finished!" (067) — one challenge; resolves when it's closed ── */
+  const ord = n => { const v = n % 100; return n + (v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'); };
+  let doneRes = null;
+  function complete(c) {
+    return new Promise(res => {
+      doneRes = res;
+      let ov = document.getElementById('spotDone');
+      if (!ov) {
+        ov = document.createElement('div'); ov.id = 'spotDone'; ov.className = 'soc-overlay spot-overlay';
+        ov.innerHTML = `<div class="soc-card spot-card spot-done" role="dialog" aria-modal="true" aria-labelledby="spotDoneTitle"><div id="spotDoneBody"></div></div>`;
+        MSSDialog.bind(ov, () => endDone());
+        document.body.appendChild(ov);
+      }
+      const card = ov.querySelector('.spot-card'), e = c.official ? entry(c.spotlight) : null;
+      const lt = document.documentElement.getAttribute('data-theme') === 'light';
+      const pal = e ? (lt && e.light ? e.light : e) : null;
+      card.style.setProperty('--spot', pal?.accent || (lt ? 'var(--olive)' : 'var(--olive-light)'));
+      card.style.setProperty('--spot-glow', pal?.glow || 'var(--olive-faint)');
+      card.style.setProperty('--spot-on', lt ? '#fff' : '#14110b');
+      const team = c.team_name ? { name: c.team_name, color: c.team_color } : null;
+      const medal = c.official ? MSSMedal.official(c.medal, { size: 168, team, label: `${c.title} medal` })
+        : MSSMedal.challenge(c.place || 3, c.cat, { size: 150, label: `${c.place === 1 ? 'Gold' : c.place === 2 ? 'Silver' : 'Bronze'} medal` });
+      const line = c.official ? (e?.done || 'Another one for the cabinet.')
+        : c.place === 1 ? `First to the finish — out of ${c.racers}!` : c.place ? `You came ${ord(c.place)} out of ${c.racers}.` : 'You reached the goal.';
+      const date = new Date(c.finished_at).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short' });
+      document.getElementById('spotDoneBody').innerHTML = `
+        <button type="button" class="spot-x" onclick="MSSSpotlight._doneEnd()" aria-label="Close">${icon('x', 18)}</button>
+        <div class="spot-hero"><div class="spot-rays" aria-hidden="true"></div><div class="spot-medal">${medal}</div></div>
+        <div class="spot-main">
+          <div class="spot-eyebrow">${icon(c.official ? 'crown' : 'trophy', 13)} ${c.official ? 'Official challenge · ' : ''}Complete</div>
+          <h2 class="spot-title" id="spotDoneTitle"><span class="spot-done-kicker">You finished</span><span translate="no">${esc(c.title)}</span></h2>
+          <p class="spot-desc">${esc(line)}</p>
+          <div class="spot-chips"><span>${icon('check', 13)} ${c.goal} watched · ${esc(date)}</span>
+            ${team ? `<span class="is-when" style="background:${esc(team.color)};color:#fff">${icon('users', 13)} <b translate="no">${esc(team.name)}</b></span>` : ''}
+            ${c.official ? `<span>${icon('users', 13)} ${c.finished} ${c.finished === 1 ? 'has' : 'have'} finished</span>` : ''}</div>
+        </div>
+        <div class="spot-foot"><button type="button" class="sf-clear-btn" onclick="MSSSpotlight._doneEnd()">Done</button>
+          <a class="sf-apply-btn spot-go" href="cabinet.html?tab=${c.official ? 'official' : 'challenge'}">${icon('trophy', 15)} See my medals</a></div>`;
+      MSSDialog.open(ov, { focus: '.spot-go' });
+    });
+  }
+  function endDone() {
+    const r = doneRes; doneRes = null;
+    MSSDialog.close(document.getElementById('spotDone'));
+    if (r) r();
+  }
+
   /* ── Each app open, on the home page (nav.js): one spotlight — taking turns when there are several ── */
   async function check() {
     const today = iso(new Date());
@@ -193,7 +244,7 @@ const MSSSpotlight = (() => {
     show(c, e, true);
   }
 
-  return { check, preview, tags, posters, when, entry, pickTeam, _close: close, _join: join,
+  return { check, preview, tags, posters, when, entry, pickTeam, complete, _close: close, _join: join, _doneEnd: endDone,
     _team: k => { const ov = document.getElementById('teamPick'); ov._sel = k; drawTeam(); ov.querySelector(`.team-card[aria-checked="true"]`)?.focus(); },
     _teamEnd: k => endTeam(k) };
 })();
