@@ -1571,10 +1571,23 @@ async function _tdLoadNotes() {
     }
 
     _tdRenderNotes();
+    _tdNoteLink();
   } catch (err) {
     console.error('Load notes error:', err);
     wrap.innerHTML = '<div class="td-notes-empty">Couldn\'t load notes right now.</div>';
   }
+}
+
+/* A notification about a note (066) links here with &note=<entry id> (a like →
+   open the note) or &replies=<entry id> (a reply → open its replies). Once. */
+function _tdNoteLink() {
+  const url = new URL(location.href), note = url.searchParams.get('note'), replies = url.searchParams.get('replies');
+  if (!note && !replies) return;
+  url.searchParams.delete('note'); url.searchParams.delete('replies');
+  history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+  const n = _tdNotesRaw.find(x => x.entry_id === (replies || note));
+  if (!n) { showToast('That note isn’t here anymore.', 'err'); return; }
+  if (replies) openReplyPopup('note', n.entry_id, n.username || ''); else _tdOpenNote(n.entry_id);
 }
 
 function _tdRenderNotes() {
