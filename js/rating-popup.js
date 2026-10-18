@@ -123,7 +123,7 @@ const MSSRate = (() => {
 
   /* ── Buttons ── */
   const btn = (key, ico, label, extra = '') =>
-    `<button type="button" class="popup-action-btn${extra}" onclick="MSSRate._act('${key}', this)">${icon(ico, 14)} ${label}</button>`;
+    `<button type="button" class="popup-action-btn${extra}" data-act="${key}" onclick="MSSRate._act('${key}', this)">${icon(ico, 14)} ${label}</button>`;
 
   function actionsHTML(e) {
     const watchingNow = e.status === 'watching' || e.status === 'up_next' || e.status === 'paused';
