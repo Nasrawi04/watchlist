@@ -2554,7 +2554,32 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   .mcm-form.cc-form { padding:12px 16px; }
   .mcm-form .cc-input { font-size:16px; }   /* no iOS zoom on focus */
 }
-@media(prefers-reduced-motion:reduce) { #mssCommentsOverlay, #mssCommentsCard { transition:none; } }
+/* Composer: a rounded field with a round send button beside it (same in the reply box) */
+#mssCommentsCard .cc-form, #mssCommentsCard .det-reply-form { align-items:center; }
+#mssCommentsCard .cc-input, #mssCommentsCard .det-reply-input {
+  min-width:0; height:44px; padding:0 16px; border-radius:999px; border:1px solid var(--border-2);
+  background:var(--bg-3); font-size:14px; line-height:44px;
+}
+#mssCommentsCard .det-reply-input { height:38px; line-height:38px; font-size:13px; padding:0 14px; }
+#mssCommentsCard .cc-input:focus, #mssCommentsCard .det-reply-input:focus { border-color:var(--olive-light); }
+#mssCommentsCard .mcm-send {
+  flex:none; width:44px; height:44px; padding:0; border-radius:50%; display:grid; place-items:center;
+  background:var(--olive); border:none; color:#fff; cursor:pointer; transition:background var(--trans) var(--ease), transform var(--trans) var(--ease);
+}
+#mssCommentsCard .mcm-send svg { margin-inline-start:-2px; }   /* the plane looks centred */
+#mssCommentsCard .mcm-send:hover { background:var(--olive-light); }
+#mssCommentsCard .mcm-send:active { transform:scale(.94); }
+#mssCommentsCard .det-reply-send.mcm-send { width:38px; height:38px; }
+#mssCommentsCard .det-reply-form { flex-wrap:nowrap; gap:6px; padding:8px; border-radius:var(--radius-sm); }
+#mssCommentsCard .mcm-cancel {
+  flex:none; width:34px; height:34px; padding:0; border-radius:50%; display:grid; place-items:center; font-size:inherit;
+}
+#mssCommentsCard .mcm-cancel:hover { background:var(--bg-3); color:var(--text); }
+#mssCommentsCard .mcm-cancel:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+@media(max-width:640px) {
+  #mssCommentsCard .cc-input, #mssCommentsCard .det-reply-input { font-size:16px; }   /* no iOS zoom on focus */
+}
+@media(prefers-reduced-motion:reduce) { #mssCommentsOverlay, #mssCommentsCard { transition:none; } #mssCommentsCard .mcm-send { transition:none; } }
 
 /* ── Friend comments inbox ── */
 
