@@ -23,6 +23,7 @@ function _navReleaseCheck(user) {
    title (a "No" is remembered on this device); already-counted ones show ticked. */
 document.addEventListener('mss:watched', async ev => {
   const e = ev.detail; if (!e?.id || !window._navUser) return;
+  _navFinishCheck(1200, true);
   let opts = [];
   try { const { data, error } = await sb.rpc('challenge_pick_options', { p_entry: e.id }); if (error) return; opts = Array.isArray(data) ? data : []; } catch { return; }
   let seen = {}; try { seen = JSON.parse(localStorage.getItem('mss_pick_asked') || '{}'); } catch {}
@@ -69,8 +70,44 @@ async function _navPickDone(save) {
     try { const { data, error } = await sb.rpc('set_challenge_pick', { p_ch: o.id, p_entry: st.e.id, p_on: true }); if (error) throw error; if (data?.finished) finished = o; }
     catch (err) { showToast(err?.hint || 'Couldn’t count it — try again.', 'err'); return; }
   }
-  showToast(finished ? `You finished “${finished.title}” — your medal’s in the Achievement Cabinet!` : `Counted for ${on.length === 1 ? `“${on[0].title}”` : `${on.length} challenges`}`);
+  if (finished) _navFinishCheck(300, true);   // the "You finished!" popup
+  else showToast(`Counted for ${on.length === 1 ? `“${on[0].title}”` : `${on.length} challenges`}`);
   if (typeof MSSChallenges !== 'undefined' && document.getElementById('chList')) MSSChallenges.reload();
+}
+
+/* "You finished!" (067): after you log something (and once in a while on app
+   open), the database finishes any challenge you've reached the goal on and
+   hands back the ones you haven't celebrated yet → one popup each
+   (MSSSpotlight.complete, loaded when needed). Waits while any popup is still
+   open, so it comes after you're done logging. */
+let _navFinTimer = null, _navFinBusy = false;
+function _navFinishCheck(delay, force) {
+  if (!force) {   // app open: every 5 minutes at most
+    try { if (Date.now() - Number(localStorage.getItem('mss_fin_chk') || 0) < 5 * 60000) return; } catch {}
+  }
+  clearTimeout(_navFinTimer);
+  _navFinTimer = setTimeout(_navFinRun, delay || 0);
+}
+async function _navFinRun() {
+  if (_navFinBusy || !window._navUser) return;
+  if (MSSDialog.top() || document.querySelector('.modal-overlay.open, .mss-views.open')) { _navFinTimer = setTimeout(_navFinRun, 1500); return; }
+  _navFinBusy = true;
+  try {
+    try { localStorage.setItem('mss_fin_chk', String(Date.now())); } catch {}
+    const { data, error } = await sb.rpc('challenge_finishes');
+    if (error || !Array.isArray(data) || !data.length) return;
+    if (typeof MSSMedal === 'undefined') await _navLoadScript('js/medals.js');
+    if (typeof MSSSpotlight === 'undefined') await _navLoadScript('js/spotlights.js');
+    for (const c of data) {
+      sb.rpc('challenge_finish_seen', { p_ch: c.id }).then(() => {}, () => {});   // shown once, even if the page is left
+      await MSSSpotlight.complete(c);
+    }
+    if (typeof MSSChallenges !== 'undefined' && document.getElementById('chList')) MSSChallenges.reload();
+  } catch (err) { console.warn('Challenge finish check:', err); }
+  finally { _navFinBusy = false; }
+}
+function _navLoadScript(src) {
+  return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.async = true; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
 }
 
 /* Switch account — every account signed in on this device, one tap to become
@@ -130,11 +167,10 @@ function _navSpotlight() {
   // Home page only, once each time the app is opened (sessionStorage resets when it's closed)
   if (!/\/(index\.html)?$/.test(location.pathname)) return;
   try { if (sessionStorage.getItem('mss_spot_open')) return; } catch { return; }
-  const load = src => new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.async = true; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
   setTimeout(async () => {
     try {
-      if (typeof MSSMedal === 'undefined') await load('js/medals.js');
-      if (typeof MSSSpotlight === 'undefined') await load('js/spotlights.js');
+      if (typeof MSSMedal === 'undefined') await _navLoadScript('js/medals.js');
+      if (typeof MSSSpotlight === 'undefined') await _navLoadScript('js/spotlights.js');
       MSSSpotlight.check();
     } catch {}
   }, 900);
@@ -157,6 +193,7 @@ async function _fillNavUser(user) {
   _navReleaseCheck(user);
   _navSpotlight();
   _navAchSync();
+  _navFinishCheck(2500);
   const username = profile?.username || user.email?.split('@')[0] || 'You';
   const initial  = username[0].toUpperCase();
 
