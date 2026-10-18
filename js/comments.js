@@ -50,7 +50,7 @@ const MSSComments = (() => {
         <div class="mcm-list" id="mssCommentsList" aria-live="polite"></div>
         <div class="mcm-form cc-form">
           <input class="cc-input" id="mssCommentsInput" maxlength="1000" placeholder="Write a comment…" aria-label="Write a comment" autocomplete="off">
-          <button type="button" class="cc-send" onclick="MSSComments._post()">Send</button>
+          <button type="button" class="cc-send mcm-send" onclick="MSSComments._post()" aria-label="Send comment">${icon('send', 18)}</button>
         </div>
       </div>`;
     MSSDialog.bind(el, close);
@@ -169,8 +169,8 @@ const MSSComments = (() => {
     replyFor = id;
     box.innerHTML = `<div class="det-reply-form">
         <input class="det-reply-input" id="mcmReplyInput" data-id="${escHTML(id)}" maxlength="1000" value="@${escHTML(user)} " aria-label="Reply to @${escHTML(user)}">
-        <button type="button" class="det-reply-send" data-mcm="send" data-id="${escHTML(id)}">Send</button>
-        <button type="button" class="det-comment-del" data-mcm="cancel" aria-label="Cancel reply">✕</button>
+        <button type="button" class="det-reply-send mcm-send" data-mcm="send" data-id="${escHTML(id)}" aria-label="Send reply">${icon('send', 16)}</button>
+        <button type="button" class="det-comment-del mcm-cancel" data-mcm="cancel" aria-label="Cancel reply">${icon('x', 16)}</button>
       </div>`;
     const inp = $('mcmReplyInput');
     inp.focus();
@@ -205,4 +205,21 @@ const MSSComments = (() => {
   }
 
   return { open, close, count, buttonHTML, _post: post };
+})();
+
+/* A notification about a comment (066) links here with ?comments=<entry id>:
+   once signed in, open that title's comments, then drop the parameter so a
+   refresh doesn't open it again. */
+(() => {
+  const id = new URLSearchParams(location.search).get('comments');
+  if (!id || !/^[\w-]{1,64}$/.test(id)) return;
+  const url = new URL(location.href); url.searchParams.delete('comments');
+  history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+  let tries = 0;
+  const go = async () => {
+    if (!window._navUser) { if (++tries < 40) setTimeout(go, 250); return; }
+    const { data } = await sb.from('entries').select('*').eq('id', id).maybeSingle();
+    if (data) MSSComments.open(data); else showToast('That title isn’t available anymore.', 'err');
+  };
+  go();
 })();
