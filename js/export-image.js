@@ -10,7 +10,8 @@
 
    MSSImage.draw(canvas, job) → Promise<boolean (false if a newer draw started)>
      job = { size: 'story' | 'square', theme, title, kicker, entries (≤ 10),
-             who: { username, avatar_url }, anon, taste (MSSTaste.compute — the taste profile instead of titles) }
+             who: { username, avatar_url }, anon, taste (MSSTaste.compute — the taste profile instead of titles),
+             year (MSSYear.compute) + slide ('overview' | 'top' | 'months') — story only }
    MSSImage.MAX = 10
    Requires config.js (mssFontsReady, safeURL, CAT_META), export.js (MSSPdf helpers).
 ══════════════════════════════════════════════════════════════ */
@@ -35,7 +36,7 @@ const MSSImage = (() => {
   const poster = u => u && /^https?:/.test(u) ? String(u).replace(/\/(w\d+|original)\//, '/w342/') : '';
   let token = 0;
 
-  function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  function rr(g, x, y, w, h, r) { r = Math.max(0, Math.min(r, w / 2, h / 2)); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
   function fit(g, s, w) { s = String(s || ''); if (g.measureText(s).width <= w) return s; while (s.length > 1 && g.measureText(s + '…').width > w) s = s.slice(0, -1); return s.trimEnd() + '…'; }
   function spaced(g, s, x, y, sp, align) {   // letter-spaced caps (canvas letterSpacing isn't everywhere)
     const w = [...s].reduce((t, c) => t + g.measureText(c).width + sp, -sp);
@@ -134,11 +135,102 @@ const MSSImage = (() => {
       label('SCORE SPREAD', y + 10); y += 30;
       const mx = Math.max(...t.spread, 1), cw = (W - P * 2 - 9 * 12) / 10, chH = Math.min(380, H - 210 - y - 40);   // fills what's left
       t.spread.forEach((c, k) => {
-        const x = P + k * (cw + 12), h = c ? Math.max(8, chH * c / mx) : 0;
+        const x = P + k * (cw + 12), h = c ? Math.max(20, chH * c / mx) : 0;   // never thinner than its rounded corners
         g.fillStyle = C.track; rr(g, x, y, cw, chH, 10); g.fill();
         if (h) { g.fillStyle = C.accent; rr(g, x, y + chH - h, cw, h, 10); g.fill(); }
         g.textAlign = 'center'; g.fillStyle = C.text2; g.font = '400 34px "Bebas Neue", sans-serif'; g.fillText(String(k + 1), x + cw / 2, y + chH + 38);
       });
+    }
+  }
+
+  // The year in review (year-review.js), story only, three slides:
+  //   overview — the year huge, 4 tiles, highlights · top — your best 5 with posters · months — month by month, genres, first & last
+  function yearBody(g, C, yv, slide, W, H, P, y, pics) {
+    const card = (x, yy, w, h) => { g.fillStyle = C.card; rr(g, x, yy, w, h, 20); g.fill(); g.strokeStyle = C.edge; g.lineWidth = 2; g.stroke(); };
+    const label = (s, yy) => { g.fillStyle = C.accent; g.font = '600 24px Oswald, sans-serif'; g.textAlign = 'left'; spaced(g, s, P, yy, 3.5); };
+    const tile = (x, yy, w, h, v, l, word) => {
+      card(x, yy, w, h); g.textAlign = 'left'; g.fillStyle = C.accent;
+      g.font = word ? '600 46px Oswald, sans-serif' : '400 84px "Bebas Neue", sans-serif';
+      g.fillText(fit(g, String(v), w - 48), x + 26, yy + h * (word ? 0.52 : 0.6));
+      g.fillStyle = C.text3; g.font = '600 19px Oswald, sans-serif'; spaced(g, l, x + 26, yy + h - 28, 2.5);
+    };
+    const gap = 18, half = (W - P * 2 - gap) / 2;
+    if (slide === 'top') {
+      label(`MY TOP ${yv.top.length} OF ${yv.year}`, y + 30);
+      const top = y + 60, rowH = Math.min(250, (H - 170 - top - gap * 4) / 5), ph = rowH - 36, pw = Math.round(ph * 2 / 3);
+      yv.top.forEach((x, i) => {
+        const ry = top + i * (rowH + gap); card(P, ry, W - P * 2, rowH);
+        g.fillStyle = i < 3 ? C.accent : C.text3; g.font = `400 ${i < 3 ? 76 : 64}px "Bebas Neue", sans-serif`; g.textAlign = 'center';
+        g.fillText(String(i + 1), P + 58, ry + rowH / 2 + 26);
+        const px = P + 112, py = ry + 18;
+        if (pics[i]) cover(g, pics[i], px, py, pw, ph, 12); else noPoster(g, C, x.e, px, py, pw, ph, 12);
+        const tx = px + pw + 30, tw = W - P - 200 - tx;
+        g.textAlign = 'left'; g.fillStyle = C.text; g.font = '600 46px Oswald, sans-serif'; g.fillText(fit(g, x.e.title || 'Untitled', tw), tx, ry + rowH / 2 - 4);
+        g.fillStyle = C.text2; g.font = '500 26px Manrope, sans-serif';
+        g.fillText(fit(g, [CAT_META?.[x.e.cat]?.singular, x.e.year ? String(x.e.year).slice(0, 4) : ''].filter(Boolean).join('  ·  '), tw), tx, ry + rowH / 2 + 40);
+        const bw = 160, bh = 110, bx = W - P - 26 - bw, by = ry + (rowH - bh) / 2;
+        g.strokeStyle = C.edge; g.lineWidth = 2; rr(g, bx, by, bw, bh, 16); g.stroke();
+        g.fillStyle = C.text3; g.font = '600 16px Oswald, sans-serif'; spaced(g, 'SCORE', bx + bw / 2, by + 30, 2.5, 'center');
+        g.fillStyle = C.accent; g.font = '400 64px "Bebas Neue", sans-serif'; g.textAlign = 'center'; g.fillText(x.s.toFixed(2), bx + bw / 2, by + bh - 18);
+      });
+      return;
+    }
+    if (slide === 'months') {
+      label('MONTH BY MONTH', y + 30);
+      const mx = Math.max(...yv.months, 1), cw = (W - P * 2 - 11 * 10) / 12, chH = 360, top = y + 60;
+      yv.months.forEach((c, k) => {
+        const x = P + k * (cw + 10), h = c ? Math.max(20, chH * c / mx) : 0;
+        g.fillStyle = C.track; rr(g, x, top, cw, chH, 10); g.fill();
+        if (h) { g.fillStyle = C.accent; rr(g, x, top + chH - h, cw, h, 10); g.fill(); }
+        g.textAlign = 'center';
+        if (c) { g.fillStyle = h > 50 ? (C.bg) : C.text; g.font = '400 32px "Bebas Neue", sans-serif'; g.fillText(String(c), x + cw / 2, h > 50 ? top + chH - h + 38 : top + chH - h - 10); }
+        g.fillStyle = k === yv.busiest.m ? C.accent : C.text2; g.font = '600 20px Oswald, sans-serif'; g.fillText(MSSYear.MONTHS[k][0], x + cw / 2, top + chH + 34);
+      });
+      y = top + chH + 90;
+      const gs = yv.genres.slice(0, 5);
+      if (gs.length) {
+        label('MOST WATCHED GENRES', y); y += 30;
+        const gmx = gs[0].n, lw = 260, bw = W - P * 2 - lw - 90;
+        gs.forEach((x, i) => {
+          const yy = y + i * 62;
+          g.textAlign = 'left'; g.fillStyle = C.text; g.font = '600 34px Oswald, sans-serif'; g.fillText(fit(g, x.name, lw - 20), P, yy + 40);
+          g.fillStyle = C.track; rr(g, P + lw, yy + 24, bw, 16, 8); g.fill();
+          g.fillStyle = C.accent; rr(g, P + lw, yy + 24, Math.max(16, bw * x.n / gmx), 16, 8); g.fill();
+          g.fillStyle = C.accent; g.font = '400 46px "Bebas Neue", sans-serif'; g.textAlign = 'right'; g.fillText(String(x.n), W - P, yy + 44);
+        });
+        y += gs.length * 62 + 40;
+      }
+      if (y + 190 < H - 150) {
+        [['FIRST OF THE YEAR', yv.first], ['LAST OF THE YEAR', yv.last]].forEach(([l, e], i) => {
+          const x = P + i * (half + gap); card(x, y, half, 170);
+          g.textAlign = 'left'; g.fillStyle = C.text3; g.font = '600 19px Oswald, sans-serif'; spaced(g, l, x + 26, y + 44, 2.5);
+          g.fillStyle = C.text; g.font = '600 36px Oswald, sans-serif'; g.fillText(fit(g, e.title || 'Untitled', half - 52), x + 26, y + 98);
+          g.fillStyle = C.text2; g.font = '500 24px Manrope, sans-serif'; g.fillText(new Date(e.completed_date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }), x + 26, y + 140);
+        });
+      }
+      return;
+    }
+    // overview
+    g.fillStyle = C.accent; g.font = '400 360px "Bebas Neue", sans-serif'; g.textAlign = 'left';
+    g.fillText(String(yv.year), P - 8, y + 330);
+    y += 380;
+    const th = 180;
+    [[yv.titles, 'TITLES FINISHED'], [yv.hours.toLocaleString('en-GB'), 'HOURS WATCHED'], [yv.avg != null ? yv.avg.toFixed(2) : '—', 'AVERAGE SCORE'], [yv.genres[0]?.name || '—', 'TOP GENRE', 1]]
+      .forEach(([v, l, w], i) => tile(P + (i % 2) * (half + gap), y + Math.floor(i / 2) * (th + gap), half, th, v, l, w));
+    y += 2 * (th + gap) + 30;
+    const hl = [[yv.movies, 'MOVIES'], [yv.shows, 'SHOWS'], [yv.episodes, 'EPISODES'], [yv.medals.length, 'MEDALS']];
+    const qw = (W - P * 2 - gap * 3) / 4;
+    hl.forEach(([v, l], i) => {
+      const x = P + i * (qw + gap); card(x, y, qw, 150);
+      g.textAlign = 'left'; g.fillStyle = C.accent; g.font = '400 66px "Bebas Neue", sans-serif'; g.fillText(fit(g, String(v), qw - 40), x + 22, y + 88);
+      g.fillStyle = C.text3; g.font = '600 17px Oswald, sans-serif'; spaced(g, l, x + 22, y + 124, 2.2);
+    });
+    y += 150 + 30;
+    if (yv.busiest.n && y + 120 < H - 150) {
+      card(P, y, W - P * 2, 120);
+      g.textAlign = 'left'; g.fillStyle = C.text3; g.font = '600 19px Oswald, sans-serif'; spaced(g, 'BUSIEST MONTH', P + 26, y + 46, 2.5);
+      g.fillStyle = C.text; g.font = '600 40px Oswald, sans-serif'; g.fillText(new Date(2000, yv.busiest.m, 1).toLocaleDateString('en-GB', { month: 'long' }), P + 26, y + 96);
+      g.fillStyle = C.accent; g.font = '400 64px "Bebas Neue", sans-serif'; g.textAlign = 'right'; g.fillText(`${yv.busiest.n} TITLES`, W - P - 26, y + 84);
     }
   }
 
@@ -148,7 +240,7 @@ const MSSImage = (() => {
     const list = (job.entries || []).slice(0, MAX), C = PAL[job.theme === 'light' ? 'light' : 'dark'];
     const [pics, av] = await Promise.all([Promise.all(list.map(e => load(poster(e.poster_url)))), job.anon || !job.who?.avatar_url ? null : load(safeURL(job.who.avatar_url))]);
     if (my !== token) return false;
-    const story = job.size !== 'square', W = 1080, H = story ? 1920 : 1080, P = story ? 72 : 60;
+    const story = job.year ? true : job.size !== 'square', W = 1080, H = story ? 1920 : 1080, P = story ? 72 : 60;
     cv.width = W; cv.height = H;
     const g = cv.getContext('2d');
     g.textBaseline = 'alphabetic';
@@ -177,7 +269,8 @@ const MSSImage = (() => {
     let y = ty + (story ? 40 : 28);
     const user = !job.anon && job.who?.username ? job.who.username : '';
 
-    if (job.taste) tasteBody(g, C, job.taste, W, H, P, story, y);
+    if (job.year) yearBody(g, C, job.year, job.slide, W, H, P, y, pics);
+    else if (job.taste) tasteBody(g, C, job.taste, W, H, P, story, y);
     else if (story) {
       // ten rows: rank · poster · title + details · score box
       const top = y + 24, bottom = H - 150, gap = 14, n = Math.max(list.length, 1);
@@ -238,7 +331,7 @@ const MSSImage = (() => {
       fx += g.measureText('@' + user).width + 14; g.fillStyle = C.text3; g.fillText('·', fx, fy); fx += 22;
     }
     g.fillStyle = C.text3; g.font = `600 ${story ? 24 : 20}px Oswald, sans-serif`; spaced(g, 'MYSCREENFOLIO', fx, fy, 3);
-    if (job.taste || list.some(e => scoreText(e))) { g.font = `500 ${story ? 22 : 19}px Manrope, sans-serif`; g.textAlign = 'right'; g.fillText('Scores out of 10', W - P, fy); }
+    if (job.taste || job.year || list.some(e => scoreText(e))) { g.font = `500 ${story ? 22 : 19}px Manrope, sans-serif`; g.textAlign = 'right'; g.fillText('Scores out of 10', W - P, fy); }
     return true;
   }
 
