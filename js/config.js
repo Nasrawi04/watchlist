@@ -547,6 +547,15 @@ function escHTML(s) {
 // the browser decodes the entities back before the JS runs.
 function attrJSON(v) { return escHTML(JSON.stringify(v == null ? '' : v)); }
 // Only http(s) URLs are allowed into src/href — blocks javascript:/data: payloads
+/* Canvas exports (Create Card, the episode chart) draw text with the site's
+   fonts — but a canvas silently falls back to a system font for any face
+   that hasn't downloaded yet. This loads every face they use first. */
+function mssFontsReady() {
+  if (!document.fonts?.load) return Promise.resolve();
+  return Promise.all(['500 20px Oswald', '600 20px Oswald', '700 20px Oswald', '400 20px "Bebas Neue"', '400 20px Manrope', '500 20px Manrope', '600 20px Manrope']
+    .map(f => document.fonts.load(f))).catch(() => {});
+}
+
 function safeURL(u) {
   return (typeof u === 'string' && /^https?:\/\//i.test(u.trim())) ? escHTML(u.trim()) : '';
 }
