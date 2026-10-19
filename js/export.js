@@ -380,11 +380,12 @@ const MSSPdf = (() => {
     const columns = (vals, labels, chH = 26) => {
       const mx = Math.max(...vals, 1), n = vals.length, colW = (CW - (n - 1) * 3) / n;
       vals.forEach((c, k) => {
-        const cx = M + k * (colW + 3), h = c ? Math.max(1.5, chH * c / mx) : 0;
+        const cx = M + k * (colW + 3), h = c ? Math.max(3, chH * c / mx) : 0;   // never thinner than its rounded corners
         fill(P.track); pdf.roundedRect(cx, y, colW, chH, 1.5, 1.5, 'F');
         if (h) { fill(P.accent); pdf.roundedRect(cx, y + chH - h, colW, h, 1.5, 1.5, 'F'); }
-        font('Bebas', 10); ink(c ? P.text : P.text3); pdf.text(String(c), cx + colW / 2, y + chH - h - 1.5 > y + 3 ? y + chH - h - 1.5 : y + 4, { align: 'center' });
-        font(labels[k].length > 2 ? 'Oswald' : 'Bebas', labels[k].length > 2 ? 7 : 12, 'bold'); ink(P.text2); pdf.text(labels[k], cx + colW / 2, y + chH + 5.5, { align: 'center' });
+        const above = y + chH - h - 1.5 > y + 3;   // no room above a full bar → the count goes inside it, in the page colour
+        font('Bebas', 10); ink(!c ? P.text3 : above ? P.text : P.page); pdf.text(String(c), cx + colW / 2, above ? y + chH - h - 1.5 : y + 4.5, { align: 'center' });
+        if (labels[k].length > 2) font('Oswald', 7, 'bold'); else font('Bebas', 12); ink(P.text2); pdf.text(labels[k], cx + colW / 2, y + chH + 5.5, { align: 'center' });
       });
       y += chH + 12;
     };
