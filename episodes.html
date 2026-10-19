@@ -936,7 +936,7 @@ async function egDraw() {
   box.classList.add('busy'); box.dataset.size = EX.size; if (save) save.disabled = true;
   const viewSource = S.source;
   try {
-    await document.fonts.ready;
+    await mssFontsReady();   // the site's fonts, every weight the picture uses (config.js)
     const [W, H] = { square: [1080, 1080], story: [1080, 1920], wide: [1600, 900] }[EX.size];
     const U = Math.min(W, H);   // type + spacing scale with the short side (Wide stays balanced)
     const g = cv.getContext('2d'), dark = EX.theme === 'dark';
