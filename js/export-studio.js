@@ -10,7 +10,7 @@
                    (one title = a full page: the whole note + episode ratings)
      A list      — yours, ones shared with you, or a community list
      (+ "as filtered here" when a page passes its own list)
-   As: PDF · For an AI (copy / .md) · Spreadsheet (.csv) · Letterboxd (.csv) · Full backup (.json)
+   As: PDF · Image (story / square, top 10 — export-image.js) · For an AI (copy / .md) · Spreadsheet (.csv) · Letterboxd (.csv) · Full backup (.json)
 
    MSSStudio.open({
      load: () => Promise<entries>,        // all of your library entries
@@ -22,7 +22,7 @@
 
    Look, include, privacy and grouping are remembered on this device.
    Requires config.js (icon, escHTML, MSSDialog, showToast, CAT_META,
-   liveScore, safeURL), export.js (MSSPdf), export-formats.js (MSSFormats), jsPDF; nav.js (tmdbFetch)
+   liveScore, safeURL, mssSaveImage), export.js (MSSPdf), export-formats.js (MSSFormats), export-image.js (MSSImage), jsPDF; nav.js (tmdbFetch)
    for list titles that aren't in anyone's library.
 ══════════════════════════════════════════════════════════════ */
 const MSSStudio = (() => {
@@ -40,7 +40,7 @@ const MSSStudio = (() => {
     watching:  [['recent', 'Recently watched'], ['title', 'A–Z']],
     mixed:     [['manual', 'As picked'], ['score', 'Score'], ['title', 'A–Z'], ['year', 'Year']],
   };
-  const FORMATS = [['pdf', 'PDF', 'download', 'To read, print or send'], ['ai', 'For an AI', 'sparkles', 'Paste into any AI chat'],
+  const FORMATS = [['pdf', 'PDF', 'download', 'To read, print or send'], ['image', 'Image', 'image', 'Story or square · top 10'], ['ai', 'For an AI', 'sparkles', 'Paste into any AI chat'],
     ['csv', 'Spreadsheet', 'list', '.csv for Excel / Sheets'], ['letterboxd', 'Letterboxd', 'film', 'Import your movies there'], ['backup', 'Full backup', 'layers', 'Everything, as .json']];
   const CATS = [['', 'All'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
   const LIMITS = [[0, 'All'], [10, '10'], [25, '25'], [50, '50']];
@@ -53,9 +53,9 @@ const MSSStudio = (() => {
                     //   pick: [ids], pq, pst, numbered, lists, listQ, list, listItems }
 
   function prefs() { try { return JSON.parse(localStorage.getItem(PREFS) || '{}') || {}; } catch { return {}; } }
-  function keep() { try { localStorage.setItem(PREFS, JSON.stringify({ theme: S.theme, include: S.include, privacy: S.privacy, group: S.group, format: S.format, ai: { length: S.ai.length, promptOn: S.ai.promptOn, watchlist: S.ai.watchlist } })); } catch {} }
+  function keep() { try { localStorage.setItem(PREFS, JSON.stringify({ theme: S.theme, include: S.include, privacy: S.privacy, group: S.group, format: S.format, img: S.img, ai: { length: S.ai.length, promptOn: S.ai.promptOn, watchlist: S.ai.watchlist } })); } catch {} }
   const fmt = f => S.format === f;
-  const usesWhat = () => ['pdf', 'ai', 'csv'].includes(S.format);
+  const usesWhat = () => ['pdf', 'image', 'ai', 'csv'].includes(S.format);
   function aiText(list) {
     const k = kindOf(), wl = S.ai.watchlist && S.what !== 'watchlist' ? S.all.filter(WHAT.watchlist.test) : [];
     return MSSFormats.ai(list, { include: S.include, privacy: S.privacy, length: S.ai.length, watchlist: wl, heading: title(),
@@ -85,7 +85,8 @@ const MSSStudio = (() => {
       year: (a, b) => (Number(String(b.year).slice(0, 4)) || 0) - (Number(String(a.year).slice(0, 4)) || 0),
     }[S.sort];
     if (cmp) l.sort(cmp);
-    if (S.limit && !mixed()) l = l.slice(0, S.limit);
+    if (S.limit && !mixed() && !fmt('image')) l = l.slice(0, S.limit);
+    if (fmt('image')) return l.slice(0, MSSImage.MAX);   // images: the first 10, never more
     if (S.group && !single()) l = CAT_ORDER.flatMap(c => l.filter(e => e.cat === c)).concat(l.filter(e => !CAT_ORDER.includes(e.cat)));
     return l;
   }
@@ -140,25 +141,27 @@ const MSSStudio = (() => {
       + (!mixed() ? sec('Category', `<div class="xs-chips">${CATS.map(([c, l]) => { const n = c ? base.filter(e => e.cat === c).length : base.length;
           return chip(S.cat === c, `MSSStudio._set('cat','${c}')`, `${l}<span>${n}</span>`, n || !c ? '' : ' disabled'); }).join('')}</div>`) : '')
       + (single() ? '' : sec('Order', `<div class="xs-chips">${SORTS[k].map(([s, l]) => chip(S.sort === s, `MSSStudio._set('sort','${s}')`, s === 'manual' && S.what === 'list' ? 'List order' : l)).join('')}</div>`))
-      + (!mixed() ? sec('How many', `<div class="xs-chips">${LIMITS.map(([n, l]) => chip(S.limit === n, `MSSStudio._set('limit',${n})`, n ? (S.sort === 'score' ? `Top ${l}` : `First ${l}`) : l)).join('')}</div>`) : '')
+      + (fmt('image') ? sec('Size', `<div class="xs-chips">${chip(S.img.size === 'story', "MSSStudio._img('story')", 'Story · 9:16')}${chip(S.img.size === 'square', "MSSStudio._img('square')", 'Square · 1:1')}</div>
+          <div class="xs-hint">Images hold your top 10 — the first 10 in the order above${S.what === 'picked' ? ' (or the ones you picked)' : ''}.</div>`) : '')
+      + (!mixed() && !fmt('image') ? sec('How many', `<div class="xs-chips">${LIMITS.map(([n, l]) => chip(S.limit === n, `MSSStudio._set('limit',${n})`, n ? (S.sort === 'score' ? `Top ${l}` : `First ${l}`) : l)).join('')}</div>`) : '')
       + (fmt('ai') ? sec('For the AI', `<div class="xs-chips">${chip(S.ai.length === 'short', "MSSStudio._ai('length','short')", 'Short')}${chip(S.ai.length === 'full', "MSSStudio._ai('length','full')", 'Full')}</div>
           <div class="xs-hint">${S.ai.length === 'short' ? 'One line per title — fits in any chat, even long libraries.' : 'Every rating, highlight and note — best for a detailed answer.'}</div>
           <div class="xs-switches xs-gap">${sw(S.ai.promptOn, "MSSStudio._ai('promptOn')", 'Start with a request', 'What you want the AI to do — edit it below')}
             ${S.what !== 'watchlist' ? sw(S.ai.watchlist, "MSSStudio._ai('watchlist')", 'Add my watchlist', 'So it doesn’t suggest what you already plan to watch') : ''}</div>
           ${S.ai.promptOn ? `<textarea class="xs-input xs-prompt" id="xsPrompt" rows="4" maxlength="1500" aria-label="Your request to the AI" oninput="MSSStudio._prompt(this.value)">${esc(S.ai.prompt ?? MSSFormats.DEFAULT_PROMPT[k === 'mixed' ? 'mixed' : k] ?? MSSFormats.DEFAULT_PROMPT.watched)}</textarea>` : ''}`) : '')
-      + (fmt('pdf') ? sec('Look', `<div class="xs-looks">${[['dark', 'Dark'], ['light', 'Light']].map(([th, l]) =>
+      + (fmt('pdf') || fmt('image') ? sec('Look', `<div class="xs-looks">${[['dark', 'Dark'], ['light', 'Light']].map(([th, l]) =>
           `<button type="button" class="xs-look xs-look-${th}${S.theme === th ? ' on' : ''}" aria-pressed="${S.theme === th}" onclick="MSSStudio._set('theme','${th}')"><i aria-hidden="true"></i>${l}</button>`).join('')}</div>`) : '')
-      + sec('Include', `<div class="xs-switches">
+      + (fmt('image') ? '' : sec('Include', `<div class="xs-switches">
           ${watchedish ? sw(S.include.breakdown, "MSSStudio._tog('include','breakdown')", 'Rating breakdown', 'Every category you rated, as bars') : ''}
           ${watchedish ? sw(S.include.highlights, "MSSStudio._tog('include','highlights')", 'Highlights', 'Favourite and least favourite character, episode, season') : ''}
           ${sw(S.include.notes, "MSSStudio._tog('include','notes')", 'Notes', single() ? 'The whole note' : 'Your note on each title')}
           ${k !== 'watching' && fmt('pdf') ? sw(S.include.dates, "MSSStudio._tog('include','dates')", 'Dates', k === 'watchlist' ? 'When you added it' : 'When you watched it') : ''}
           ${fmt('pdf') && mixed() && !single() && S.sort === 'manual' ? sw(S.numbered, "MSSStudio._tog('numbered')", 'Number them', S.what === 'list' ? '1, 2, 3… in the list’s order' : '1, 2, 3… in the order you picked') : ''}
-          ${single() || !fmt('pdf') ? '' : sw(S.group, "MSSStudio._tog('group')", 'Group by category', 'TV Shows, Movies, Anime and Cartoons in their own sections')}</div>`)
+          ${single() || !fmt('pdf') ? '' : sw(S.group, "MSSStudio._tog('group')", 'Group by category', 'TV Shows, Movies, Anime and Cartoons in their own sections')}</div>`))
       + sec('Privacy', `<div class="xs-switches">
-          ${sw(S.privacy.hideSpoilers, "MSSStudio._tog('privacy','hideSpoilers')", 'Hide spoiler notes', 'Notes you marked as spoilers say “hidden” instead')}
-          ${fmt('pdf') ? sw(S.privacy.anon, "MSSStudio._tog('privacy','anon')", 'Leave my name off', 'No name or @username anywhere in the file') : ''}</div>`)
-      + (fmt('csv') ? '' : sec(fmt('ai') ? 'Heading' : 'Cover title', `<input class="xs-input" id="xsTitle" maxlength="60" placeholder="${esc(title())}" value="${esc(S.title)}" aria-label="Cover title" oninput="MSSStudio._title(this.value)">`, 'optional'));
+          ${fmt('image') ? '' : sw(S.privacy.hideSpoilers, "MSSStudio._tog('privacy','hideSpoilers')", 'Hide spoiler notes', 'Notes you marked as spoilers say “hidden” instead')}
+          ${fmt('pdf') || fmt('image') ? sw(S.privacy.anon, "MSSStudio._tog('privacy','anon')", 'Leave my name off', 'No name or @username anywhere in the file') : ''}</div>`)
+      + (fmt('csv') ? '' : sec(fmt('pdf') ? 'Cover title' : 'Heading', `<input class="xs-input" id="xsTitle" maxlength="60" placeholder="${esc(title())}" value="${esc(S.title)}" aria-label="Cover title" oninput="MSSStudio._title(this.value)">`, 'optional'));
   }
 
   /* ── Pick titles: search + tick, then your picks in order ── */
@@ -312,6 +315,17 @@ const MSSStudio = (() => {
   function drawSide() {
     if (!S) return;
     const list = picked(), n = list.length;
+    if (fmt('image')) {
+      $('xsPvLabel').innerHTML = `Preview<span>${S.img.size === 'square' ? '1080 × 1080' : '1080 × 1920'}</span>`;
+      let cv = $('xsImg');
+      if (!cv) { $('xsPreview').innerHTML = '<canvas id="xsImg" class="xs-img" role="img" aria-label="Preview of the image"></canvas>'; cv = $('xsImg'); }
+      cv.classList.toggle('square', S.img.size === 'square');
+      clearTimeout(S.imgT); S.imgT = setTimeout(() => { if (S && fmt('image')) MSSImage.draw(cv, imgJob(list)); }, 120);
+      goLabel(); $('xsAlt').hidden = true;
+      $('xsSummary').innerHTML = n ? `<b>${n} ${n === 1 ? 'title' : 'titles'}</b>${pool().length > n ? ` · the first ${n} of ${pool().length}` : ''} · ${S.img.size === 'square' ? 'square, for posts' : 'story, for Instagram / TikTok'}` : 'Nothing to export with these options.';
+      if (!S.busy) $('xsGo').disabled = !n;
+      return;
+    }
     $('xsPvLabel').innerHTML = fmt('pdf') ? 'Preview<span>first page</span>' : fmt('backup') ? 'What’s inside' : `Preview<span>${fmt('ai') ? 'the text' : 'first rows'}</span>`;
     $('xsPreview').innerHTML = fmt('pdf') ? previewHTML(list) : textPreview(list);
     goLabel();
@@ -371,7 +385,7 @@ const MSSStudio = (() => {
       include: { breakdown: true, highlights: true, notes: true, dates: true, ...(p.include || {}) },
       privacy: { hideSpoilers: true, anon: false, ...(p.privacy || {}) }, title: '', busy: false,
       pick: [], pq: '', pst: '', numbered: true, lists: null, listQ: '', list: null, listItems: null,
-      format: pre.format || (['pdf', 'ai', 'csv'].includes(p.format) ? p.format : 'pdf'), ai: { length: 'full', promptOn: true, watchlist: true, ...(p.ai || {}), prompt: null } };
+      format: pre.format || (['pdf', 'image', 'ai', 'csv'].includes(p.format) ? p.format : 'pdf'), img: { size: p.img?.size === 'square' ? 'square' : 'story' }, ai: { length: 'full', promptOn: true, watchlist: true, ...(p.ai || {}), prompt: null } };
     if (!S.sort) S.sort = SORTS[kindOf()][0][0];
     const ov = overlay();
     $('xsOpts').innerHTML = '<div class="xs-loading">Loading your library…</div>'; $('xsPreview').innerHTML = ''; $('xsSummary').textContent = '';
@@ -436,8 +450,9 @@ const MSSStudio = (() => {
     $('xsProg').setAttribute('aria-valuenow', pct);
     if (label) $('xsProgLabel').textContent = label;
   }
+  const imgJob = list => ({ size: S.img.size, theme: S.theme, title: title(), kicker: kicker(), entries: list, who: S.o.who, anon: S.privacy.anon });
   function goLabel() {
-    const L = { pdf: ['download', 'Export PDF'], ai: ['copy', 'Copy for an AI'], csv: ['download', 'Download .csv'], letterboxd: ['download', 'Download for Letterboxd'], backup: ['download', 'Download backup'] }[S.format];
+    const L = { pdf: ['download', 'Export PDF'], image: ['image', 'Save image'], ai: ['copy', 'Copy for an AI'], csv: ['download', 'Download .csv'], letterboxd: ['download', 'Download for Letterboxd'], backup: ['download', 'Download backup'] }[S.format];
     $('xsGo').innerHTML = `${icon(ICONS[L[0]] ? L[0] : 'download', 15)} ${L[1]}`;
   }
   const slug = () => title().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'export';
@@ -479,6 +494,19 @@ const MSSStudio = (() => {
   async function go(mode) {
     if (!S || S.busy) return;
     const list = picked();
+    if (fmt('image')) {   // the studio stays open — make the other size too if you like
+      if (!list.length) { showToast('Nothing to export with these options.', 'err'); return; }
+      S.busy = true; $('xsOverlay').classList.add('is-busy'); progress(0.15, 'Getting posters…');
+      try {
+        const cv = document.createElement('canvas');
+        await MSSImage.draw(cv, imgJob(list));
+        progress(0.9, 'Saving…');
+        await mssSaveImage(cv, `myscreenfolio-${slug()}-${S.img.size}.png`, $('xsPreview'));
+        progress(1, 'Done!');
+      } catch (err) { console.error('Image export failed:', err); showToast('Couldn’t make the image — try again.', 'err'); }
+      setTimeout(() => { if (S) { S.busy = false; $('xsOverlay').classList.remove('is-busy'); progress(null); } }, 400);
+      return;
+    }
     if (!fmt('pdf')) {
       if (usesWhat() && !list.length) { showToast('Nothing to export with these options.', 'err'); return; }
       S.busy = true; $('xsOverlay').classList.add('is-busy'); progress(0, 'Starting…');
@@ -512,6 +540,7 @@ const MSSStudio = (() => {
   }
 
   return { open, close, _set: set, _tog: tog, _go: go,
+    _img: size => { if (!S || S.busy) return; S.img.size = size; keep(); draw(); },
     _ai: (k, v) => { if (!S || S.busy) return; S.ai[k] = v === undefined ? !S.ai[k] : v; keep(); draw(); },
     _prompt: v => { if (S) { S.ai.prompt = v; drawSide(); } },
     _title: v => { if (S) { S.title = v; drawSide(); } },
