@@ -106,10 +106,10 @@ const MSSPdf = (() => {
     const raw = e.notes && e.notes.trim() ? MSSRich.plain(e.notes) : '';
     return { note: raw.replace(/\n{3,}/g, '\n\n').trim(), spoiler: mssIsSpoiler(e) };
   }
-  function bars(e) {
+  function bars(e, coreOnly = false) {   // coreOnly: leave out the bonus ratings (and live-action Animation Quality)
     const r = e.ratings || {}, { core, bonus } = getRatings(e.cat, isMovie(e));
-    const extra = !['anime', 'cartoons'].includes(e.cat) && r.animation != null && r.animation !== '' ? [{ key: 'animation', label: 'Animation Quality' }] : [];
-    return [...core, ...extra, ...bonus].filter(x => r[x.key] != null && r[x.key] !== '').map(x => ({ label: x.label, v: Number(r[x.key]) }));
+    const extra = !coreOnly && !['anime', 'cartoons'].includes(e.cat) && r.animation != null && r.animation !== '' ? [{ key: 'animation', label: 'Animation Quality' }] : [];
+    return [...core, ...extra, ...(coreOnly ? [] : bonus)].filter(x => r[x.key] != null && r[x.key] !== '').map(x => ({ label: x.label, v: Number(r[x.key]) }));
   }
   function chips(e) {
     const f = e.ratings?._favorites || {}, l = e.ratings?._lowlights || f._lowlights || {}, mv = isMovie(e), out = [];
