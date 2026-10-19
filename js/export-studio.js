@@ -10,17 +10,19 @@
                    (one title = a full page: the whole note + episode ratings)
      A list      — yours, ones shared with you, or a community list
      (+ "as filtered here" when a page passes its own list)
+   As: PDF · For an AI (copy / .md) · Spreadsheet (.csv) · Letterboxd (.csv) · Full backup (.json)
 
    MSSStudio.open({
      load: () => Promise<entries>,        // all of your library entries
      who: { name, username, avatar_url }, // the cover ("by …") and the footer
-     preset: { what, cat, sort, limit, group },   // optional starting point
+     preset: { what, cat, sort, limit, group, format,   // optional starting point
+               list: { id, title, description, items, ranked, owner, mine } },   // what: 'list' — that list
      custom: { label, entries },          // optional: "As filtered here" (Watched page)
    })
 
    Look, include, privacy and grouping are remembered on this device.
    Requires config.js (icon, escHTML, MSSDialog, showToast, CAT_META,
-   liveScore, safeURL), export.js (MSSPdf), jsPDF; nav.js (tmdbFetch)
+   liveScore, safeURL), export.js (MSSPdf), export-formats.js (MSSFormats), jsPDF; nav.js (tmdbFetch)
    for list titles that aren't in anyone's library.
 ══════════════════════════════════════════════════════════════ */
 const MSSStudio = (() => {
@@ -38,6 +40,8 @@ const MSSStudio = (() => {
     watching:  [['recent', 'Recently watched'], ['title', 'A–Z']],
     mixed:     [['manual', 'As picked'], ['score', 'Score'], ['title', 'A–Z'], ['year', 'Year']],
   };
+  const FORMATS = [['pdf', 'PDF', 'download', 'To read, print or send'], ['ai', 'For an AI', 'sparkles', 'Paste into any AI chat'],
+    ['csv', 'Spreadsheet', 'list', '.csv for Excel / Sheets'], ['letterboxd', 'Letterboxd', 'film', 'Import your movies there'], ['backup', 'Full backup', 'layers', 'Everything, as .json']];
   const CATS = [['', 'All'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
   const LIMITS = [[0, 'All'], [10, '10'], [25, '25'], [50, '50']];
   const CAT_ORDER = ['tv', 'movies', 'anime', 'cartoons'];
@@ -49,7 +53,15 @@ const MSSStudio = (() => {
                     //   pick: [ids], pq, pst, numbered, lists, listQ, list, listItems }
 
   function prefs() { try { return JSON.parse(localStorage.getItem(PREFS) || '{}') || {}; } catch { return {}; } }
-  function keep() { try { localStorage.setItem(PREFS, JSON.stringify({ theme: S.theme, include: S.include, privacy: S.privacy, group: S.group })); } catch {} }
+  function keep() { try { localStorage.setItem(PREFS, JSON.stringify({ theme: S.theme, include: S.include, privacy: S.privacy, group: S.group, format: S.format, ai: { length: S.ai.length, promptOn: S.ai.promptOn, watchlist: S.ai.watchlist } })); } catch {} }
+  const fmt = f => S.format === f;
+  const usesWhat = () => ['pdf', 'ai', 'csv'].includes(S.format);
+  function aiText(list) {
+    const k = kindOf(), wl = S.ai.watchlist && S.what !== 'watchlist' ? S.all.filter(WHAT.watchlist.test) : [];
+    return MSSFormats.ai(list, { include: S.include, privacy: S.privacy, length: S.ai.length, watchlist: wl, heading: title(),
+      prompt: S.ai.promptOn ? (S.ai.prompt ?? MSSFormats.DEFAULT_PROMPT[k === 'mixed' ? 'mixed' : k] ?? MSSFormats.DEFAULT_PROMPT.watched) : '' });
+  }
+  const lbSource = () => S.all.filter(WHAT.watched.test);
 
   const mixed = () => S.what === 'picked' || S.what === 'list';
   const kindOf = () => S.what === 'custom' ? 'watched' : mixed() ? 'mixed' : S.what;
@@ -113,7 +125,14 @@ const MSSStudio = (() => {
       ['list', 'A list', 'layers', S.list ? S.list.title : 'Yours, shared or community']];
     const base = S.what === 'custom' ? S.o.custom.entries : WHAT[S.what] ? S.all.filter(WHAT[S.what].test) : [];
     const watchedish = k === 'watched' || k === 'mixed';
-    return sec('What to export', `<div class="xs-whats" role="radiogroup" aria-label="What to export">${whats.map(([w, l, ic, sub]) =>
+    const fmts = sec('Export as', `<div class="xs-fmts" role="radiogroup" aria-label="Export as">${FORMATS.map(([f, l, ic, sub]) =>
+        `<button type="button" role="radio" class="xs-fmt${S.format === f ? ' on' : ''}" aria-checked="${S.format === f}" onclick="MSSStudio._set('format','${f}')">
+          <span class="xs-what-ic">${icon(ic, 16)}</span><span class="xs-pk-text"><b>${l}</b><small>${sub}</small></span></button>`).join('')}</div>`);
+    if (fmt('backup')) return fmts + sec('What’s in it', `<div class="xs-info">${icon('info', 16)}<span>Every title in your library with all its ratings, highlights and notes, your lists and your episode ratings — one file to keep somewhere safe.</span></div>`);
+    if (fmt('letterboxd')) { const n = MSSFormats.lbMovies(lbSource()).length;
+      return fmts + sec('What’s in it', `<div class="xs-info">${icon('film', 16)}<span><b>${n} watched ${n === 1 ? 'movie' : 'movies'}</b> with your score as a rating (rounded to a whole number out of 10), the date you watched it and whether it was a rewatch. Shows aren’t on Letterboxd, so they’re left out. Import it at letterboxd.com → Settings → Import &amp; Export.</span></div>`)
+        + sec('Include', `<div class="xs-switches">${sw(S.include.notes, "MSSStudio._tog('include','notes')", 'Notes as reviews', 'Each note becomes that movie’s review')}${sw(S.privacy.hideSpoilers, "MSSStudio._tog('privacy','hideSpoilers')", 'Leave out spoiler notes', 'Notes you marked as spoilers aren’t sent')}</div>`); }
+    return fmts + sec('What to export', `<div class="xs-whats" role="radiogroup" aria-label="What to export">${whats.map(([w, l, ic, sub]) =>
         `<button type="button" role="radio" class="xs-what${S.what === w ? ' on' : ''}" aria-checked="${S.what === w}" onclick="MSSStudio._set('what','${w}')">
           <span class="xs-what-ic">${icon(ic, 18)}</span><b>${esc(l)}</b><small translate="no">${esc(sub)}</small></button>`).join('')}</div>`)
       + (S.what === 'picked' ? sec('Choose titles', `<input class="xs-input" id="xsPickQ" type="search" placeholder="Search your library…" aria-label="Search your library" value="${esc(S.pq)}" oninput="MSSStudio._pq(this.value)"><div id="xsPickBody">${pickHTML()}</div>`) : '')
@@ -122,19 +141,24 @@ const MSSStudio = (() => {
           return chip(S.cat === c, `MSSStudio._set('cat','${c}')`, `${l}<span>${n}</span>`, n || !c ? '' : ' disabled'); }).join('')}</div>`) : '')
       + (single() ? '' : sec('Order', `<div class="xs-chips">${SORTS[k].map(([s, l]) => chip(S.sort === s, `MSSStudio._set('sort','${s}')`, s === 'manual' && S.what === 'list' ? 'List order' : l)).join('')}</div>`))
       + (!mixed() ? sec('How many', `<div class="xs-chips">${LIMITS.map(([n, l]) => chip(S.limit === n, `MSSStudio._set('limit',${n})`, n ? (S.sort === 'score' ? `Top ${l}` : `First ${l}`) : l)).join('')}</div>`) : '')
-      + sec('Look', `<div class="xs-looks">${[['dark', 'Dark'], ['light', 'Light']].map(([th, l]) =>
-          `<button type="button" class="xs-look xs-look-${th}${S.theme === th ? ' on' : ''}" aria-pressed="${S.theme === th}" onclick="MSSStudio._set('theme','${th}')"><i aria-hidden="true"></i>${l}</button>`).join('')}</div>`)
+      + (fmt('ai') ? sec('For the AI', `<div class="xs-chips">${chip(S.ai.length === 'short', "MSSStudio._ai('length','short')", 'Short')}${chip(S.ai.length === 'full', "MSSStudio._ai('length','full')", 'Full')}</div>
+          <div class="xs-hint">${S.ai.length === 'short' ? 'One line per title — fits in any chat, even long libraries.' : 'Every rating, highlight and note — best for a detailed answer.'}</div>
+          <div class="xs-switches xs-gap">${sw(S.ai.promptOn, "MSSStudio._ai('promptOn')", 'Start with a request', 'What you want the AI to do — edit it below')}
+            ${S.what !== 'watchlist' ? sw(S.ai.watchlist, "MSSStudio._ai('watchlist')", 'Add my watchlist', 'So it doesn’t suggest what you already plan to watch') : ''}</div>
+          ${S.ai.promptOn ? `<textarea class="xs-input xs-prompt" id="xsPrompt" rows="4" maxlength="1500" aria-label="Your request to the AI" oninput="MSSStudio._prompt(this.value)">${esc(S.ai.prompt ?? MSSFormats.DEFAULT_PROMPT[k === 'mixed' ? 'mixed' : k] ?? MSSFormats.DEFAULT_PROMPT.watched)}</textarea>` : ''}`) : '')
+      + (fmt('pdf') ? sec('Look', `<div class="xs-looks">${[['dark', 'Dark'], ['light', 'Light']].map(([th, l]) =>
+          `<button type="button" class="xs-look xs-look-${th}${S.theme === th ? ' on' : ''}" aria-pressed="${S.theme === th}" onclick="MSSStudio._set('theme','${th}')"><i aria-hidden="true"></i>${l}</button>`).join('')}</div>`) : '')
       + sec('Include', `<div class="xs-switches">
           ${watchedish ? sw(S.include.breakdown, "MSSStudio._tog('include','breakdown')", 'Rating breakdown', 'Every category you rated, as bars') : ''}
           ${watchedish ? sw(S.include.highlights, "MSSStudio._tog('include','highlights')", 'Highlights', 'Favourite and least favourite character, episode, season') : ''}
           ${sw(S.include.notes, "MSSStudio._tog('include','notes')", 'Notes', single() ? 'The whole note' : 'Your note on each title')}
-          ${k !== 'watching' ? sw(S.include.dates, "MSSStudio._tog('include','dates')", 'Dates', k === 'watchlist' ? 'When you added it' : 'When you watched it') : ''}
-          ${mixed() && !single() && S.sort === 'manual' ? sw(S.numbered, "MSSStudio._tog('numbered')", 'Number them', S.what === 'list' ? '1, 2, 3… in the list’s order' : '1, 2, 3… in the order you picked') : ''}
-          ${single() ? '' : sw(S.group, "MSSStudio._tog('group')", 'Group by category', 'TV Shows, Movies, Anime and Cartoons in their own sections')}</div>`)
+          ${k !== 'watching' && fmt('pdf') ? sw(S.include.dates, "MSSStudio._tog('include','dates')", 'Dates', k === 'watchlist' ? 'When you added it' : 'When you watched it') : ''}
+          ${fmt('pdf') && mixed() && !single() && S.sort === 'manual' ? sw(S.numbered, "MSSStudio._tog('numbered')", 'Number them', S.what === 'list' ? '1, 2, 3… in the list’s order' : '1, 2, 3… in the order you picked') : ''}
+          ${single() || !fmt('pdf') ? '' : sw(S.group, "MSSStudio._tog('group')", 'Group by category', 'TV Shows, Movies, Anime and Cartoons in their own sections')}</div>`)
       + sec('Privacy', `<div class="xs-switches">
           ${sw(S.privacy.hideSpoilers, "MSSStudio._tog('privacy','hideSpoilers')", 'Hide spoiler notes', 'Notes you marked as spoilers say “hidden” instead')}
-          ${sw(S.privacy.anon, "MSSStudio._tog('privacy','anon')", 'Leave my name off', 'No name or @username anywhere in the file')}</div>`)
-      + sec('Cover title', `<input class="xs-input" id="xsTitle" maxlength="60" placeholder="${esc(title())}" value="${esc(S.title)}" aria-label="Cover title" oninput="MSSStudio._title(this.value)">`, 'optional');
+          ${fmt('pdf') ? sw(S.privacy.anon, "MSSStudio._tog('privacy','anon')", 'Leave my name off', 'No name or @username anywhere in the file') : ''}</div>`)
+      + (fmt('csv') ? '' : sec(fmt('ai') ? 'Heading' : 'Cover title', `<input class="xs-input" id="xsTitle" maxlength="60" placeholder="${esc(title())}" value="${esc(S.title)}" aria-label="Cover title" oninput="MSSStudio._title(this.value)">`, 'optional'));
   }
 
   /* ── Pick titles: search + tick, then your picks in order ── */
@@ -276,10 +300,31 @@ const MSSStudio = (() => {
     return n;
   }
 
+  // text formats: the actual text (first part), so you see exactly what you get
+  function textPreview(list) {
+    if (fmt('backup')) return `<div class="xs-bk">${[['Titles', S.all.length], ['Watched', S.all.filter(WHAT.watched.test).length], ['Watchlist', S.all.filter(WHAT.watchlist.test).length],
+      ['With notes', S.all.filter(e => e.notes && e.notes.trim()).length]].map(([l, v]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div><div class="xs-hint xs-center">Lists and episode ratings are added when you download.</div>`;
+    const txt = fmt('ai') ? aiText(list) : fmt('csv') ? MSSFormats.csv(list.slice(0, 12), { include: S.include, privacy: S.privacy }).replace(/^\uFEFF/, '')
+      : MSSFormats.letterboxd(lbSource().slice(0, 12), { include: S.include, privacy: S.privacy });
+    const lines = txt.split('\n'), cut = lines.slice(0, fmt('ai') ? 60 : 14).join('\n');
+    return `<pre class="xs-text" tabindex="0" aria-label="Preview">${esc(cut)}${lines.length > (fmt('ai') ? 60 : 14) ? '\n…' : ''}</pre>`;
+  }
   function drawSide() {
     if (!S) return;
     const list = picked(), n = list.length;
-    $('xsPreview').innerHTML = previewHTML(list);
+    $('xsPvLabel').innerHTML = fmt('pdf') ? 'Preview<span>first page</span>' : fmt('backup') ? 'What’s inside' : `Preview<span>${fmt('ai') ? 'the text' : 'first rows'}</span>`;
+    $('xsPreview').innerHTML = fmt('pdf') ? previewHTML(list) : textPreview(list);
+    goLabel();
+    if (!fmt('pdf')) {
+      const lb = fmt('letterboxd') ? MSSFormats.lbMovies(lbSource()).length : 0;
+      $('xsSummary').innerHTML = fmt('backup') ? `<b>${S.all.length} titles</b> · your lists · your episode ratings`
+        : fmt('letterboxd') ? (lb ? `<b>${lb} ${lb === 1 ? 'movie' : 'movies'}</b> · Letterboxd import file` : 'No watched movies yet.')
+        : n ? `<b>${n} ${n === 1 ? 'title' : 'titles'}</b>${fmt('ai') ? ` · about ${Math.max(1, Math.round(aiText(list).length / 1000))}k characters` : ' · one row each'}` : 'Nothing to export with these options.';
+      if (!S.busy) $('xsGo').disabled = fmt('backup') ? !S.all.length : fmt('letterboxd') ? !lb : !n;
+      $('xsAlt').hidden = !fmt('ai'); $('xsAlt').disabled = !n;
+      return;
+    }
+    $('xsAlt').hidden = true;
     $('xsSummary').innerHTML = !n ? (S.what === 'picked' ? 'Tick the titles you want in it.' : S.what === 'list' && !S.list ? 'Choose a list.' : 'Nothing to export with these options.')
       : single() ? `<b>1 title</b> · a full page — every rating, the whole note${MSSPdf.kindOf(list[0]) === 'watched' && list[0].cat !== 'movies' ? ' and your episode ratings' : ''}`
       : `<b>${n} ${n === 1 ? 'title' : 'titles'}</b> · about ${pages(list)} ${pages(list) === 1 ? 'page' : 'pages'} · ${MSSPdf.posters(n) ? 'with posters' : `no posters <span>(only for ${MSSPdf.POSTER_MAX} titles or fewer)</span>`}`;
@@ -302,10 +347,11 @@ const MSSStudio = (() => {
           <button type="button" class="sf-close" aria-label="Close" onclick="MSSStudio.close()">${icon('x', 18)}</button></div>
         <div class="xs-grid">
           <div class="xs-opts" id="xsOpts"></div>
-          <div class="xs-side"><div class="xs-sec-label xs-pv-label">Preview<span>first page</span></div><div id="xsPreview"></div><div class="xs-summary" id="xsSummary" aria-live="polite"></div></div>
+          <div class="xs-side"><div class="xs-sec-label xs-pv-label" id="xsPvLabel">Preview<span>first page</span></div><div id="xsPreview"></div><div class="xs-summary" id="xsSummary" aria-live="polite"></div></div>
         </div>
         <div class="sf-footer xs-foot" id="xsFoot">
           <button type="button" class="sf-clear-btn" id="xsCancel" onclick="MSSStudio.close()">Cancel</button>
+          <button type="button" class="sf-clear-btn xs-alt" id="xsAlt" hidden onclick="MSSStudio._go('file')">${icon('download', 15)} Download .md</button>
           <button type="button" class="sf-apply-btn" id="xsGo" onclick="MSSStudio._go()">${icon('download', 15)} Export PDF</button>
         </div>
         <div class="xs-progress" id="xsProg" hidden role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="xsProgLabel">
@@ -319,12 +365,13 @@ const MSSStudio = (() => {
   }
 
   async function open(o = {}) {
-    const p = prefs(), pre = o.preset || {};
+    const p = prefs(), pre = o.preset || {};   // the format is remembered — but not Letterboxd / backup, which are one-offs
     S = { o, all: [], what: o.custom ? 'custom' : pre.what || 'watched', cat: pre.cat || '', sort: pre.sort || null, limit: pre.limit || 0,
       group: pre.group != null ? pre.group : !!p.group, theme: p.theme === 'light' ? 'light' : p.theme === 'dark' ? 'dark' : (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'),
       include: { breakdown: true, highlights: true, notes: true, dates: true, ...(p.include || {}) },
       privacy: { hideSpoilers: true, anon: false, ...(p.privacy || {}) }, title: '', busy: false,
-      pick: [], pq: '', pst: '', numbered: true, lists: null, listQ: '', list: null, listItems: null };
+      pick: [], pq: '', pst: '', numbered: true, lists: null, listQ: '', list: null, listItems: null,
+      format: pre.format || (['pdf', 'ai', 'csv'].includes(p.format) ? p.format : 'pdf'), ai: { length: 'full', promptOn: true, watchlist: true, ...(p.ai || {}), prompt: null } };
     if (!S.sort) S.sort = SORTS[kindOf()][0][0];
     const ov = overlay();
     $('xsOpts').innerHTML = '<div class="xs-loading">Loading your library…</div>'; $('xsPreview').innerHTML = ''; $('xsSummary').textContent = '';
@@ -342,13 +389,19 @@ const MSSStudio = (() => {
   }
   async function pickWhat(w) {
     if (w === 'list' && !S.lists) { draw(); await loadLists().catch(() => { S.lists = []; }); if (S) draw(); }
+    // opened from a list's page: that list, chosen already (added if it isn't among the ones loaded)
+    const pl = S?.o.preset?.list;
+    if (w === 'list' && pl && !S.list && S.lists) {
+      if (!S.lists.some(l => l.id === pl.id)) S.lists.unshift({ id: pl.id, title: pl.title || 'Untitled list', description: pl.description || '', items: pl.items || [], ranked: !!pl.ranked, owner: pl.owner, mine: !!pl.mine, group: pl.mine ? 'mine' : 'community' });
+      chooseList(pl.id);
+    }
   }
   function set(key, v) {
     if (!S || S.busy) return;
     if (key === 'what' && S.what === v) return;
     S[key] = v;
     if (key === 'what') { S.cat = ''; S.sort = SORTS[kindOf()][0][0]; S.numbered = v === 'list' ? !!S.list?.ranked : true; }
-    if (key === 'theme' || key === 'group') keep();
+    if (key === 'theme' || key === 'group' || key === 'format') keep();
     draw();
     if (key === 'what') pickWhat(v);
   }
@@ -383,9 +436,56 @@ const MSSStudio = (() => {
     $('xsProg').setAttribute('aria-valuenow', pct);
     if (label) $('xsProgLabel').textContent = label;
   }
-  async function go() {
+  function goLabel() {
+    const L = { pdf: ['download', 'Export PDF'], ai: ['copy', 'Copy for an AI'], csv: ['download', 'Download .csv'], letterboxd: ['download', 'Download for Letterboxd'], backup: ['download', 'Download backup'] }[S.format];
+    $('xsGo').innerHTML = `${icon(ICONS[L[0]] ? L[0] : 'download', 15)} ${L[1]}`;
+  }
+  const slug = () => title().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'export';
+  const today = () => new Date().toISOString().slice(0, 10);
+  async function finish(msg) {
+    progress(1, 'Done!');
+    showToast(msg);
+    setTimeout(() => { if (S) { S.busy = false; $('xsOverlay').classList.remove('is-busy'); close(); } }, 500);
+  }
+  // .md / .csv / .json — quick, but still shows the bar (the backup fetches lists + episode ratings first)
+  async function goText(mode) {
+    const list = picked();
+    progress(0.1, 'Putting it together…');
+    await new Promise(r => setTimeout(r, 30));
+    if (fmt('ai')) {
+      const txt = aiText(list);
+      if (mode === 'file') { MSSFormats.save(`myscreenfolio-${slug()}.md`, txt, 'text/markdown;charset=utf-8'); return finish('Saved — attach it or paste it into any AI chat.'); }
+      progress(0.8, 'Copying…');
+      if (await MSSFormats.copy(txt)) return finish('Copied — paste it into any AI chat.');
+      MSSFormats.save(`myscreenfolio-${slug()}.md`, txt, 'text/markdown;charset=utf-8');
+      return finish('Couldn’t copy here, so it was downloaded instead.');
+    }
+    if (fmt('csv')) { MSSFormats.save(`myscreenfolio-${slug()}.csv`, MSSFormats.csv(list, { include: S.include, privacy: S.privacy }), 'text/csv;charset=utf-8'); return finish('Your spreadsheet is ready.'); }
+    if (fmt('letterboxd')) {
+      const txt = MSSFormats.letterboxd(lbSource(), { include: S.include, privacy: S.privacy });
+      MSSFormats.save(`myscreenfolio-letterboxd-${today()}.csv`, txt, 'text/csv;charset=utf-8');
+      return finish(txt.length > 1e6 ? 'Saved — but it’s over Letterboxd’s 1 MB limit; turn off notes and try again.' : 'Saved — import it on Letterboxd: Settings → Import & Export.');
+    }
+    const me = window._navUser?.id;
+    progress(0.3, 'Getting your lists…');
+    const lists = me ? ((await sb.from('favorite_lists').select('*').eq('user_id', me)).data || []) : [];
+    progress(0.6, 'Getting your episode ratings…');
+    const episodes = me ? ((await sb.from('episode_ratings').select('*').eq('user_id', me)).data || []) : [];
+    const pr = window._navUserProfile || {};
+    progress(0.9, 'Saving…');
+    MSSFormats.save(`myscreenfolio-backup-${today()}.json`, MSSFormats.backup({ profile: { username: pr.username, display_name: pr.display_name }, entries: S.all, lists, episodes }), 'application/json');
+    return finish('Your backup is saved — keep it somewhere safe.');
+  }
+  async function go(mode) {
     if (!S || S.busy) return;
     const list = picked();
+    if (!fmt('pdf')) {
+      if (usesWhat() && !list.length) { showToast('Nothing to export with these options.', 'err'); return; }
+      S.busy = true; $('xsOverlay').classList.add('is-busy'); progress(0, 'Starting…');
+      try { await goText(mode); }
+      catch (err) { console.error('Export failed:', err); showToast('Couldn’t export — try again.', 'err'); S.busy = false; $('xsOverlay').classList.remove('is-busy'); progress(null); }
+      return;
+    }
     if (!list.length) { showToast('Nothing to export with these options.', 'err'); return; }
     S.busy = true;
     $('xsOverlay').classList.add('is-busy');
@@ -400,13 +500,10 @@ const MSSStudio = (() => {
       const blob = await MSSPdf.build({ kind: kindOf(), title: title(), kicker: kicker(), entries: list, ranked: ranked(),
         group: S.group && !single(), theme: S.theme, include: S.include, privacy: S.privacy, who: S.o.who,
         byline: byline(), desc: S.what === 'list' ? S.list?.description : '', detail: single(), episodes }, (f, l) => progress(f, l));
-      const name = 'myscreenfolio-' + (title().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'export') + '.pdf';
       const url = URL.createObjectURL(blob), a = document.createElement('a');
-      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      a.href = url; a.download = `myscreenfolio-${slug()}.pdf`; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10000);
-      progress(1, 'Done!');
-      showToast('Your PDF is ready.');
-      setTimeout(() => { if (S) { S.busy = false; $('xsOverlay').classList.remove('is-busy'); close(); } }, 500);
+      finish('Your PDF is ready.');
     } catch (err) {
       console.error('Export failed:', err);
       showToast('Couldn’t make the PDF — try again.', 'err');
@@ -415,7 +512,9 @@ const MSSStudio = (() => {
   }
 
   return { open, close, _set: set, _tog: tog, _go: go,
-    _title: v => { if (S) { S.title = v; $('xsPreview').innerHTML = previewHTML(picked()); } },
+    _ai: (k, v) => { if (!S || S.busy) return; S.ai[k] = v === undefined ? !S.ai[k] : v; keep(); draw(); },
+    _prompt: v => { if (S) { S.ai.prompt = v; drawSide(); } },
+    _title: v => { if (S) { S.title = v; drawSide(); } },
     _pick: togglePick, _pq: v => { if (S) { S.pq = v; drawPick(); } }, _pst: k => { if (S) { S.pst = k; drawPick(); } },
     _pickAll: on => { if (!S) return; const ids = pickRows().slice(0, PICK_SHOW).map(e => e.id); S.pick = on ? [...S.pick, ...ids.filter(id => !S.pick.includes(id))] : S.pick.filter(id => !ids.includes(id)); refreshPicked(); },
     _pickClear: () => { if (S) { S.pick = []; refreshPicked(); } },
