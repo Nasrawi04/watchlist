@@ -468,13 +468,11 @@ function renderHomeWatchlist(entries) {
 }
 /* ── Recommended for You ── (pool: MSSRecs in discover-categories.js)
    Each visit draws a fresh mix from the strongest ~40 (stronger ones more
-   often), so it changes as you come back. 12 on laptops, 6 on phones (same
-   as the Discover rows). "See All" opens every one, ranked by rating. */
+   often), so it changes as you come back. 12 of them. "See All" opens every one, ranked by rating. */
 async function renderHomeRecs(entries, profile) {
   const top = (await MSSRecs.pool(entries, profile)).sort((a, b) => b.w - a.w).slice(0, 40);
-  const limit = window.matchMedia('(max-width:640px)').matches ? 6 : 12;
   const picks = [];
-  while (picks.length < limit && top.length) {                  // weighted draw, no repeats
+  while (picks.length < 12 && top.length) {                  // weighted draw, no repeats
     let r = Math.random() * top.reduce((a, p) => a + p.w * p.w, 0), j = 0;
     while (j < top.length - 1 && (r -= top[j].w * top[j].w) > 0) j++;
     picks.push(top.splice(j, 1)[0].it);
