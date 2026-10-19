@@ -1,339 +1,331 @@
-/* ══════════════════════════════════════════
-   export.js — Pure jsPDF
-   Fonts: times (serif) + helvetica (sans)
-   Colors: exact site design system values
+/* ══════════════════════════════════════════════════════════════
+   export.js — the PDF engine (jsPDF) behind the Export Studio
+   (export-studio.js). Same fonts and colours as the site: Oswald
+   (titles, labels), Manrope (text), Bebas Neue (every number), the
+   site's --bg / --card / --olive palette, dark or light. The fonts are
+   the site's own, kept in fonts/ as TTF (jsPDF can't use web fonts) and
+   fetched the first time something is exported.
 
-   MSSExport.open({ title, desc, iconName, categories, run(cat) })
-     → THE export popup (Profile exports, Completed): icon, title, text,
-       an optional category picker (All / TV Shows / Movies / Anime /
-       Cartoons → run(cat)), Dark / Light theme, Cancel · Download PDF.
-       run() builds the PDF (buildAndExportPDF) and returns false when
-       there's nothing to export.
-══════════════════════════════════════════ */
+   A cover block (wordmark, title, who, 4 stat tiles), then one card per
+   title — rank and poster (10 titles or fewer) centred on the left,
+   title + details, the score in an outlined box (like Create Card),
+   rating bars, highlights, the note — category sections when grouped,
+   and "avatar @username · MYSCREENFOLIO — Page x / y" on every page.
 
-let _exportTheme = 'dark';   // PDF theme — set by the export popup
+   MSSPdf.build(job, onProgress) → Promise<Blob>
+     job = { kind: 'watched' | 'watchlist' | 'watching', title, kicker,
+             entries (already filtered + sorted), ranked, group, theme,
+             include: { breakdown, highlights, notes, dates },
+             privacy: { hideSpoilers, anon }, who: { name, username, avatar_url } }
+     onProgress(fraction 0–1, label)
+   MSSPdf.stats / posters / text / bars / chips / meta / progress / score — shared with the studio's preview
 
-function _pdfStats(entries, exportCat, isWatchLater) {
-  const stats = [];
-
-  if (isWatchLater) {
-    // Watchlist: Titles, TV Shows, Movies, Anime, Cartoons, Seasons, Episodes, Watch Time
-    stats.push({ label: 'TITLES',   value: entries.length });
-    const tv       = entries.filter(e => e.cat === 'tv').length;
-    const movies   = entries.filter(e => e.cat === 'movies').length;
-    const anime    = entries.filter(e => e.cat === 'anime').length;
-    const cartoons = entries.filter(e => e.cat === 'cartoons').length;
-    stats.push({ label: 'TV SHOWS',  value: tv });
-    stats.push({ label: 'MOVIES',    value: movies });
-    stats.push({ label: 'ANIME',     value: anime });
-    stats.push({ label: 'CARTOONS',  value: cartoons });
-    const showEntries = entries.filter(e => e.cat !== 'movies' && (e.ratings?._type || 'show') !== 'movie');
-    const seasons = showEntries.reduce((s,e) => {
-      const bd = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.filter(n=>parseInt(n)>0) : [];
-      return s + (bd.length || Number(e.total_seasons) || 0);
-    }, 0);
-    const eps = showEntries.reduce((s,e) => s + (Number(e.total_eps) || Number(e.watched) || 0), 0);
-    stats.push({ label: 'SEASONS',  value: seasons.toLocaleString() });
-    stats.push({ label: 'EPISODES', value: eps.toLocaleString() });
-    const movieEntries = entries.filter(e => e.cat === 'movies' || e.ratings?._type === 'movie');
-    const mins = movieEntries.reduce((s,e) => s + (Number(e.runtime_h)||0)*60 + (Number(e.runtime_m)||0), 0);
-    const h = Math.floor(mins/60), m = mins%60;
-    stats.push({ label: 'WATCH TIME', value: mins ? (h ? `${h}h ${m}m` : `${m}m`) : '0m' });
-    return stats;
-  }
-
-  const cat = exportCat || '';
-
-  // Always: title count
-  stats.push({ label: 'TITLES', value: entries.length });
-
-  // Avg score
-  const rated = entries.filter(e => typeof liveScore === 'function' && liveScore(e) != null);
-  if (rated.length) {
-    const avg = (rated.reduce((s,e) => s + Number(liveScore(e)), 0) / rated.length).toFixed(2);
-    stats.push({ label: 'AVG SCORE', value: avg });
-    const scores = rated.map(e => Number(liveScore(e)));
-    stats.push({ label: 'HIGHEST', value: Math.max(...scores).toFixed(2) });
-    stats.push({ label: 'LOWEST',  value: Math.min(...scores).toFixed(2) });
-  }
-
-  const isMovieCat = cat === 'movies';
-  const isShowCat  = cat === 'tv' || cat === 'anime' || cat === 'cartoons';
-
-  const showEntries = entries.filter(e => e.cat !== 'movies' && (e.ratings?._type || 'show') !== 'movie');
-  if (showEntries.length && !isMovieCat) {
-    const eps = showEntries.reduce((s,e) => s + (Number(e.total_eps) || Number(e.watched) || 0), 0);
-    if (eps) stats.push({ label: 'EPISODES', value: eps.toLocaleString() });
-    const seasons = showEntries.reduce((s,e) => {
-      const bd = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.filter(n=>parseInt(n)>0) : [];
-      return s + (bd.length || Number(e.total_seasons) || 0);
-    }, 0);
-    if (seasons) stats.push({ label: 'SEASONS', value: seasons.toLocaleString() });
-  }
-
-  const movieEntries = entries.filter(e => e.cat === 'movies' || e.ratings?._type === 'movie');
-  if (movieEntries.length && !isShowCat) {
-    const mins = movieEntries.reduce((s,e) => s + (Number(e.runtime_h)||0)*60 + (Number(e.runtime_m)||0), 0);
-    if (mins) {
-      const h = Math.floor(mins/60), m = mins%60;
-      stats.push({ label: 'WATCH TIME', value: h ? `${h}h ${m}m` : `${m}m` });
-    }
-    stats.push({ label: 'MOVIES', value: movieEntries.length });
-  }
-
-  const genreMap = {};
-  entries.forEach(e => (e.genres||[]).forEach(g => { genreMap[g] = (genreMap[g]||0)+1; }));
-  const topGenre = Object.entries(genreMap).sort((a,b)=>b[1]-a[1])[0];
-  if (topGenre) stats.push({ label: 'TOP GENRE', value: topGenre[0] });
-
-  if (rated.length !== entries.length) {
-    stats.push({ label: 'RATED', value: rated.length });
-  }
-
-  return stats;
-}
-
-async function buildAndExportPDF({ subtitle, titleLine, statItems, entries, useRanked, filename, exportCat, isWatchLater }) {
-  const isDark = (typeof _exportTheme !== 'undefined') ? _exportTheme !== 'light' : true;
-
-  // Exact site colors from CSS variables
-  const BG    = isDark ? [10,10,14]      : [226,218,208];   // --bg
-  const BG2   = isDark ? [17,17,23]      : [216,208,197];   // --bg-2
-  const BG3   = isDark ? [25,25,31]      : [206,197,184];   // --bg-3
-  const ACC   = isDark ? [126,184,108]   : [30,92,38];      // --olive-light
-  const TEXT  = isDark ? [237,237,237]   : [26,26,26];      // --text
-  const TEXT2 = isDark ? [168,168,168]   : [74,74,74];      // --text-2
-  const TEXT3 = isDark ? [110,110,110]   : [106,106,106];   // --text-3
-  const SEP   = isDark ? [40,40,52]      : [188,180,168];   // border approx
-
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-  const W   = pdf.internal.pageSize.getWidth();
-  const H   = pdf.internal.pageSize.getHeight();
-  const ML  = 12, MR = 12, CW = W - ML - MR;
-  let y = 0;
-
-  const newPage = () => {
-    pdf.addPage();
-    pdf.setFillColor(...BG); pdf.rect(0,0,W,H,'F');
-    y = 12;
+   Requires config.js (liveScore, getRatings, CAT_META, MSSRich,
+   mssIsSpoiler, safeURL), rewatch.js (getRewatchCount), jsPDF.
+══════════════════════════════════════════════════════════════ */
+const MSSPdf = (() => {
+  const POSTER_MAX = 10;
+  // the site's colour tokens (style.css), as RGB; "edge" = --border-olive over the card
+  const PALETTE = {
+    dark:  { page: [10, 10, 14], card: [24, 24, 29], track: [33, 33, 38], text: [237, 237, 237], text2: [168, 168, 168], text3: [128, 128, 128],
+             accent: [126, 184, 108], low: [248, 113, 113], edge: [46, 59, 45], line: [42, 42, 48] },
+    light: { page: [226, 218, 208], card: [243, 237, 228], track: [216, 208, 197], text: [26, 26, 26], text2: [74, 74, 74], text3: [106, 106, 106],
+             accent: [30, 92, 38], low: [192, 57, 43], edge: [145, 161, 140], line: [206, 197, 184] },
   };
-  const need = (h) => { if (y + h > H - 10) newPage(); };
+  const FONTS = [['Oswald-500.ttf', 'Oswald', 'normal'], ['Oswald-600.ttf', 'Oswald', 'bold'], ['Manrope-400.ttf', 'Manrope', 'normal'],
+    ['Manrope-600.ttf', 'Manrope', 'bold'], ['BebasNeue-400.ttf', 'Bebas', 'normal']];
+  const EP_MIN = { tv: 42, anime: 24, cartoons: 22 };
+  let fontData = null;   // file → base64, fetched once
 
-  // ── PAGE 1 BACKGROUND ──
-  pdf.setFillColor(...BG); pdf.rect(0,0,W,H,'F');
+  // keep what the fonts can draw (Latin + common punctuation); other scripts are dropped
+  const safe = s => String(s == null ? '' : s).replace(/[^\x00-ɏ -⁯€™]/g, '').replace(/\s+/g, ' ').trim();
+  const isMovie = e => e.cat === 'movies' || e.ratings?._media_type === 'movie';
+  const score = e => { const s = typeof liveScore === 'function' ? liveScore(e) : null; return s == null ? null : Number(s); };
+  const fmtDate = d => d ? new Date(String(d).length === 10 ? d + 'T12:00:00' : d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const minutes = e => isMovie(e) ? (Number(e.runtime_h) || 0) * 60 + (Number(e.runtime_m) || 0)
+    : (Number(e.watched) || Number(e.total_eps) || 0) * (EP_MIN[e.cat] || 42);
+  const posters = n => n > 0 && n <= POSTER_MAX;
+  const num = v => v % 1 ? Number(v).toFixed(1) : String(v);
 
-  // ── HEADER — BG3 card ──
-  const HDR_H = 32;
-  pdf.setFillColor(...BG3); pdf.rect(0, 0, W, HDR_H, 'F');
+  function topGenre(entries) {
+    const m = {};
+    entries.forEach(e => (e.genres || []).forEach(g => { m[g] = (m[g] || 0) + 1; }));
+    return Object.entries(m).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+  }
+  function stats(kind, entries) {
+    if (kind === 'watchlist') {
+      const mv = entries.filter(isMovie).length;
+      return [{ value: entries.length, label: 'Titles' }, { value: mv, label: 'Movies' }, { value: entries.length - mv, label: 'Shows' }, { value: topGenre(entries), label: 'Top genre', word: true }];
+    }
+    if (kind === 'watching') {
+      const left = entries.reduce((s, e) => s + Math.max(0, (Number(e.total_eps) || 0) - (Number(e.watched) || 0)), 0);
+      const pcts = entries.filter(e => Number(e.total_eps) > 0).map(e => Math.min(1, (Number(e.watched) || 0) / Number(e.total_eps)));
+      return [{ value: entries.length, label: 'Titles' }, { value: left.toLocaleString('en-GB'), label: 'Episodes to go' },
+        { value: pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length * 100) + '%' : '—', label: 'Average progress' }, { value: topGenre(entries), label: 'Top genre', word: true }];
+    }
+    const sc = entries.map(score).filter(v => v != null);
+    const hrs = Math.round(entries.reduce((s, e) => s + minutes(e), 0) / 60);
+    return [{ value: entries.length, label: 'Titles' }, { value: sc.length ? (sc.reduce((a, b) => a + b, 0) / sc.length).toFixed(2) : '—', label: 'Average score' },
+      { value: hrs.toLocaleString('en-GB'), label: 'Hours watched' }, { value: topGenre(entries), label: 'Top genre', word: true }];
+  }
+  function text(e) {
+    const raw = e.notes && e.notes.trim() ? MSSRich.plain(e.notes) : '';
+    return { note: raw.replace(/\n{3,}/g, '\n\n').trim(), spoiler: mssIsSpoiler(e) };
+  }
+  function bars(e) {
+    const r = e.ratings || {}, { core, bonus } = getRatings(e.cat, isMovie(e));
+    const extra = !['anime', 'cartoons'].includes(e.cat) && r.animation != null && r.animation !== '' ? [{ key: 'animation', label: 'Animation Quality' }] : [];
+    return [...core, ...extra, ...bonus].filter(x => r[x.key] != null && r[x.key] !== '').map(x => ({ label: x.label, v: Number(r[x.key]) }));
+  }
+  function chips(e) {
+    const f = e.ratings?._favorites || {}, l = e.ratings?._lowlights || f._lowlights || {}, mv = isMovie(e), out = [];
+    const add = (lbl, v, low) => { if (v && String(v).trim()) out.push({ lbl, v: String(v).trim(), low }); };
+    add('Fav character', f.character); if (!mv) { add('Fav episode', f.episode); add('Fav season', f.season); }
+    add('Least fav character', l.character, 1); if (!mv) { add('Least fav episode', l.episode, 1); add('Least fav season', l.season, 1); }
+    return out;
+  }
+  function meta(kind, e, inc) {
+    const parts = [CAT_META?.[e.cat]?.singular || '', e.year ? String(e.year).slice(0, 4) : '', (e.genres || []).slice(0, 3).join(', ')];
+    if (inc.dates) {
+      if (kind === 'watched' && e.completed_date) parts.push('Watched ' + fmtDate(e.completed_date));
+      if (kind === 'watchlist' && e.created_at) parts.push('Added ' + fmtDate(e.created_at));
+    }
+    const rw = typeof getRewatchCount === 'function' ? getRewatchCount(e) : 1;
+    if (rw > 1) parts.push(`Watched ${rw} times`);
+    return parts.filter(Boolean).join('  ·  ');
+  }
+  function progress(e) {
+    const t = Number(e.total_eps) || 0, w = Number(e.watched) || 0;
+    if (isMovie(e)) return null;
+    const at = e.season && e.episode ? `Up to S${e.season} · E${e.episode}` : '';
+    return { label: [at, t ? `${w} of ${t} episodes` : ''].filter(Boolean).join('  ·  '), pct: t ? Math.min(1, w / t) : 0 };
+  }
 
-  // Title centered — times bold, MY + SCREEN(underlined) + FOLIO
-  pdf.setFont('times','bold'); pdf.setFontSize(24);
-  const wMY     = pdf.getTextWidth('MY');
-  const wSCREEN = pdf.getTextWidth('SCREEN');
-  const wFOLIO  = pdf.getTextWidth('FOLIO');
-  const totalTW = wMY + wSCREEN + wFOLIO;
-  let tx = (W - totalTW) / 2;
-  const tY = 16;
-
-  pdf.setTextColor(...TEXT);  pdf.text('MY', tx, tY); tx += wMY;
-  pdf.setTextColor(...ACC);   pdf.text('SCREEN', tx, tY);
-  pdf.setDrawColor(...ACC);   pdf.setLineWidth(0.8);
-  pdf.line(tx, tY + 1.5, tx + wSCREEN, tY + 1.5);
-  tx += wSCREEN;
-  pdf.setTextColor(...TEXT);  pdf.text('FOLIO', tx, tY);
-
-  // Subtitle — helvetica, centered
-  pdf.setFont('helvetica','normal'); pdf.setFontSize(7);
-  pdf.setTextColor(...TEXT3);
-  pdf.text(subtitle.toUpperCase(), W/2, tY + 10, { align:'center' });
-
-  // Accent line under header
-  pdf.setDrawColor(...ACC); pdf.setLineWidth(0.5);
-  pdf.line(0, HDR_H, W, HDR_H);
-  y = HDR_H + 5;
-
-  // ── STATS BLOCK ──
-  const computedStats = _pdfStats(entries, exportCat, isWatchLater);
-  const allStats = statItems && statItems.length ? statItems : computedStats;
-
-  if (allStats.length) {
-    // Stats card background — BG2
-    const statH = 22;
-    pdf.setFillColor(...BG2); pdf.rect(0, y, W, statH, 'F');
-
-    // Centered stats columns
-    const colW = CW / allStats.length;
-    allStats.forEach((s, i) => {
-      const cx = ML + colW * i + colW / 2;
-      // Value — times bold, accent color
-      pdf.setFont('times','bold'); pdf.setFontSize(13);
-      pdf.setTextColor(...ACC);
-      pdf.text(String(s.value), cx, y + 8, { align:'center' });
-      // Label — helvetica, text3
-      pdf.setFont('helvetica','normal'); pdf.setFontSize(5.5);
-      pdf.setTextColor(...TEXT3);
-      pdf.text((s.label||'').toUpperCase(), cx, y + 15, { align:'center' });
-      // Divider between stats
-      if (i < allStats.length - 1) {
-        pdf.setDrawColor(...SEP); pdf.setLineWidth(0.2);
-        pdf.line(ML + colW*(i+1), y+4, ML + colW*(i+1), y+statH-4);
-      }
+  async function loadFonts() {
+    if (fontData) return fontData;
+    const b64 = buf => { let s = ''; const a = new Uint8Array(buf); for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); };
+    const out = {};
+    await Promise.all(FONTS.map(async ([file]) => { const r = await fetch('fonts/' + file); if (!r.ok) throw new Error('font ' + file); out[file] = b64(await r.arrayBuffer()); }));
+    return (fontData = out);
+  }
+  // an image → a small JPEG (posters) or a round PNG (the avatar); null if it can't be fetched
+  function loadImage(url, round) {
+    return new Promise(res => {
+      if (!url) return res(null);
+      const img = new Image(); img.crossOrigin = 'anonymous';
+      const t = setTimeout(() => res(null), 8000);
+      img.onload = () => {
+        clearTimeout(t);
+        try {
+          const c = document.createElement('canvas'), g = c.getContext('2d');
+          if (round) {
+            c.width = c.height = 96; g.beginPath(); g.arc(48, 48, 48, 0, Math.PI * 2); g.clip();
+            const s = Math.min(img.naturalWidth, img.naturalHeight);
+            g.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, 96, 96);
+            res(c.toDataURL('image/png'));
+          } else { c.width = 200; c.height = 300; g.drawImage(img, 0, 0, 200, 300); res(c.toDataURL('image/jpeg', .82)); }
+        } catch { res(null); }
+      };
+      img.onerror = () => { clearTimeout(t); res(null); };
+      img.src = round ? url : String(url).replace(/\/(w\d+|original)\//, '/w185/');
     });
-
-    y += statH;
-    pdf.setDrawColor(...ACC); pdf.setLineWidth(0.3);
-    pdf.line(0, y, W, y);
-    y += 5;
   }
+  const tick = () => new Promise(r => setTimeout(r, 0));
 
-  // ── SECTION LABEL ──
-  if (titleLine) {
-    pdf.setFont('helvetica','normal'); pdf.setFontSize(7);
-    pdf.setTextColor(...TEXT3);
-    pdf.text(titleLine.toUpperCase(), W/2, y + 4, { align:'center' });
-    y += 9;
-    pdf.setDrawColor(...SEP); pdf.setLineWidth(0.2);
-    pdf.line(ML, y, W-MR, y); y += 3;
-  }
+  async function build(job, onProgress = () => {}) {
+    const P = PALETTE[job.theme === 'light' ? 'light' : 'dark'], inc = job.include || {}, priv = job.privacy || {};
+    const list = job.entries || [], withPosters = posters(list.length);
+    onProgress(0.02, 'Getting the fonts…');
+    const fonts = await loadFonts();
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    FONTS.forEach(([file, fam, style]) => { pdf.addFileToVFS(file, fonts[file]); pdf.addFont(file, fam, style); });
+    const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), M = 14, CW = W - M * 2, BOTTOM = H - 17;
+    const fill = c => pdf.setFillColor(...c), ink = c => pdf.setTextColor(...c), stroke = (c, w) => { pdf.setDrawColor(...c); pdf.setLineWidth(w); };
+    const font = (fam, size, style = 'normal') => { pdf.setFont(fam, style); pdf.setFontSize(size); };
+    const lh = size => size * 0.3528 * 1.32;
+    const spaced = (s, x, yy, sp, opt) => { pdf.setCharSpace(sp); pdf.text(s, x, yy, opt); pdf.setCharSpace(0); };
+    const clip = (s, w) => { s = safe(s); if (pdf.getTextWidth(s) <= w) return s; while (s.length > 1 && pdf.getTextWidth(s + '…') > w) s = s.slice(0, -1); return s.trimEnd() + '…'; };
+    const page = () => { fill(P.page); pdf.rect(0, 0, W, H, 'F'); };
+    let y;
 
-  // ── ENTRIES ──
-  const ROW = 13;
-  entries.forEach((e, i) => {
-    need(ROW + 2);
+    const img = {};
+    if (withPosters) {
+      for (let i = 0; i < list.length; i++) {
+        onProgress(0.05 + i / list.length * 0.35, 'Getting posters…');
+        img[list[i].id] = await loadImage(list[i].poster_url);
+      }
+    }
+    const avatar = !priv.anon && job.who?.avatar_url ? await loadImage(safeURL(job.who.avatar_url), true) : null;
 
-    // Row background: alternate BG (main) and BG2 (secondary)
-    pdf.setFillColor(...(i % 2 === 0 ? BG : BG2));
-    pdf.rect(0, y - 0.5, W, ROW + 1, 'F');
+    /* ── cover block ── */
+    page();
+    font('Oswald', 10.5, 'bold');
+    let x = M;
+    [['MY', P.text], ['SCREEN', P.accent], ['FOLIO', P.text]].forEach(([t, c]) => {
+      ink(c); spaced(t, x, 16, 0.5); const w = pdf.getTextWidth(t) + 0.5 * t.length;
+      if (t === 'SCREEN') { stroke(c, 0.5); pdf.line(x, 17.6, x + w - 0.5, 17.6); }
+      x += w;
+    });
+    font('Manrope', 8); ink(P.text3); pdf.text(fmtDate(new Date().toISOString()), W - M, 16, { align: 'right' });
+    font('Oswald', 8.5, 'bold'); ink(P.accent); spaced(safe(job.kicker).toUpperCase(), M, 32, 0.8);
+    font('Oswald', 26, 'bold'); ink(P.text);
+    const tl = pdf.splitTextToSize(safe(job.title) || 'My export', CW).slice(0, 2);
+    pdf.text(tl, M, 43); y = 43 + (tl.length - 1) * lh(26);
+    if (!priv.anon && job.who && (job.who.name || job.who.username)) {
+      font('Manrope', 10); ink(P.text2);
+      pdf.text(safe(`by ${job.who.name || job.who.username}${job.who.username && job.who.name && job.who.name !== job.who.username ? ` (@${job.who.username})` : ''}`), M, y + 8);
+      y += 8;
+    }
+    y += 8;
+    const st = stats(job.kind, list), tw = (CW - 3 * 4) / 4;
+    st.forEach((s, i) => {
+      const tx = M + i * (tw + 4);
+      fill(P.card); stroke(P.edge, 0.3); pdf.roundedRect(tx, y, tw, 21, 2.5, 2.5, 'FD');
+      if (s.word) { font('Oswald', 13, 'bold'); ink(P.accent); pdf.text(clip(s.value, tw - 8), tx + 4, y + 10.4); }
+      else { font('Bebas', 22); ink(P.accent); pdf.text(clip(s.value, tw - 8), tx + 4, y + 11.2); }
+      font('Oswald', 6.8, 'bold'); ink(P.text3); spaced(s.label.toUpperCase(), tx + 4, y + 17, 0.45);
+    });
+    y += 29;
 
-    const score = typeof liveScore === 'function' && liveScore(e) != null
-      ? Number(liveScore(e)).toFixed(2) : '—';
-    const date = e.completed_date
-      ? new Date(e.completed_date).toLocaleDateString(MSSI18n.locale,{month:'short',year:'numeric'}) : '';
-    const catLabel = typeof CAT_META !== 'undefined' ? CAT_META[e.cat]?.label : '';
-    const genres   = (e.genres||[]).slice(0,3).join(', ');
-
-    let textX = ML + 2;
-
-    // Rank number — times, accent for top 3
-    if (useRanked) {
-      pdf.setFont('times', i < 3 ? 'bold' : 'normal');
-      pdf.setFontSize(10);
-      pdf.setTextColor(...(i < 3 ? ACC : TEXT3));
-      pdf.text(`#${i+1}`, ML + 6, y + 8, { align:'center' });
-      textX = ML + 14;
+    /* ── one card per title: measure (draw = null), then draw at the measured height ── */
+    const PAD = 5, RANK = job.ranked ? 10 : 0, PW = withPosters ? 17 : 0, PH = 25.5, BOX = job.kind === 'watched' ? 20 : 0, BOXH = 19;
+    function card(e, rank, draw) {
+      const x0 = M, tx = x0 + PAD + RANK + (PW ? PW + 4 : 0), right = x0 + CW - PAD - (BOX ? BOX + 4 : 0), w = right - tx;
+      let cy = y + PAD;
+      font('Oswald', 13, 'bold');
+      const tLines = pdf.splitTextToSize(safe(e.title) || 'Untitled', w).slice(0, 2);
+      if (draw) {
+        const mid = y + draw.h / 2;
+        fill(P.card); stroke(P.edge, 0.3); pdf.roundedRect(x0, y, CW, draw.h, 3, 3, 'FD');
+        if (RANK) { font('Bebas', rank < 3 ? 20 : 16); ink(rank < 3 ? P.accent : P.text3); pdf.text(String(rank + 1), x0 + PAD + (RANK - 2) / 2, mid + (rank < 3 ? 2.6 : 2.1), { align: 'center' }); }
+        if (PW) {   // the poster sits in the middle of the card, on the left
+          const px = x0 + PAD + RANK, py = mid - PH / 2;
+          if (img[e.id]) pdf.addImage(img[e.id], 'JPEG', px, py, PW, PH);
+          else { fill(P.track); pdf.roundedRect(px, py, PW, PH, 1.5, 1.5, 'F'); font('Oswald', 14, 'bold'); ink(P.text3); pdf.text(safe(e.title || '?')[0] || '?', px + PW / 2, py + PH / 2 + 2.4, { align: 'center' }); }
+        }
+        font('Oswald', 13, 'bold'); ink(P.text); pdf.text(tLines, tx, cy + 4.6);
+      }
+      cy += 4.6 + (tLines.length - 1) * lh(13) + 1.6;
+      font('Manrope', 7.6); const m = clip(meta(job.kind, e, inc), w);
+      if (draw) { ink(P.text2); pdf.text(m, tx, cy + 3); }
+      cy += 5;
+      if (job.kind === 'watching') {
+        const pr = progress(e);
+        if (pr) {
+          if (draw) {
+            font('Manrope', 7.6, 'bold'); ink(P.accent); pdf.text(safe(pr.label), tx, cy + 3);
+            fill(P.track); pdf.roundedRect(tx, cy + 5, w, 2, 1, 1, 'F');
+            if (pr.pct > 0) { fill(P.accent); pdf.roundedRect(tx, cy + 5, Math.max(2, w * pr.pct), 2, 1, 1, 'F'); }
+          }
+          cy += 9;
+        }
+      }
+      // the score: an outlined box, like Create Card's
+      if (BOX && draw) {
+        const s = score(e), bx = x0 + CW - PAD - BOX, by = y + PAD;
+        stroke(P.edge, 0.35); pdf.roundedRect(bx, by, BOX, BOXH, 2.2, 2.2, 'S');
+        font('Oswald', 5.6, 'bold'); ink(P.text3); spaced('SCORE', bx + BOX / 2, by + 4.6, 0.4, { align: 'center' });
+        if (s == null) { font('Manrope', 7.5, 'bold'); ink(P.text3); pdf.text('Unrated', bx + BOX / 2, by + 11.4, { align: 'center' }); }
+        else { font('Bebas', 21); ink(P.accent); pdf.text(s.toFixed(2), bx + BOX / 2, by + 12.6, { align: 'center' }); }
+        font('Oswald', 5.2, 'bold'); ink(P.text3); spaced('OUT OF 10', bx + BOX / 2, by + 16.6, 0.3, { align: 'center' });
+      }
+      // rating bars, highlights and the note: in the text column, under the score box
+      const bx0 = tx, bw = x0 + CW - PAD - bx0, n0 = inc.notes ? text(e) : { note: '' };
+      if (BOX && ((inc.breakdown && bars(e).length) || (inc.highlights && chips(e).length) || n0.note)) cy = Math.max(cy, y + PAD + BOXH + 1.5);
+      if (inc.breakdown && job.kind === 'watched') {
+        const b = bars(e);
+        if (b.length) {
+          const cols = 3, gap = 5, colW = (bw - gap * (cols - 1)) / cols, rowH = 5.8;
+          cy += 1;
+          if (draw) b.forEach((r, k) => {
+            const cx = bx0 + (k % cols) * (colW + gap), ry = cy + Math.floor(k / cols) * rowH;
+            font('Manrope', 6.4); ink(P.text2); pdf.text(clip(r.label, colW - 8), cx, ry + 2.3);
+            font('Bebas', 9); ink(P.text); pdf.text(num(r.v), cx + colW, ry + 2.5, { align: 'right' });
+            fill(P.track); pdf.roundedRect(cx, ry + 3.5, colW, 1.2, 0.6, 0.6, 'F');
+            fill(P.accent); pdf.roundedRect(cx, ry + 3.5, Math.max(1.2, colW * Math.min(1, r.v / 10)), 1.2, 0.6, 0.6, 'F');
+          });
+          cy += Math.ceil(b.length / cols) * rowH + 1;
+        }
+      }
+      // highlights: outlined, with a coloured bar at the start (Create Card's favourites box)
+      if (inc.highlights && job.kind === 'watched') {
+        const c = chips(e);
+        if (c.length) {
+          cy += 2; let cx = bx0; const ch = 6;
+          c.forEach(k => {
+            font('Oswald', 6.2, 'bold'); const lt = safe(k.lbl).toUpperCase(), lw = pdf.getTextWidth(lt) + 0.3 * lt.length + 2;
+            font('Manrope', 7.4, 'bold'); const vt = clip(k.v, 60), cw = 4 + lw + pdf.getTextWidth(vt) + 3;
+            if (cx + cw > bx0 + bw) { cx = bx0; cy += ch + 1.8; }
+            if (draw) {
+              stroke(P.edge, 0.3); pdf.roundedRect(cx, cy, cw, ch, 1.4, 1.4, 'S');
+              fill(k.low ? P.low : P.accent); pdf.rect(cx + 1.6, cy + 1.3, 0.7, ch - 2.6, 'F');
+              font('Oswald', 6.2, 'bold'); ink(P.text3); spaced(lt, cx + 4, cy + 4, 0.3);
+              font('Manrope', 7.4, 'bold'); ink(P.text); pdf.text(vt, cx + 4 + lw, cy + 4.1);
+            }
+            cx += cw + 2;
+          });
+          cy += ch + 1;
+        }
+      }
+      if (n0.note) {
+        cy += 2.5;
+        if (n0.spoiler && priv.hideSpoilers) {
+          font('Manrope', 7.6); if (draw) { ink(P.text3); pdf.text('Note hidden — it has spoilers.', bx0 + 3, cy + 3); } cy += 4.5;
+        } else {
+          font('Manrope', 8);
+          let lines = pdf.splitTextToSize(safe(n0.note.replace(/\n+/g, ' ')), bw - 4);
+          if (lines.length > 6) { lines = lines.slice(0, 6); lines[5] = lines[5].replace(/\s*\S*$/, '') + '…'; }
+          const nh = lines.length * lh(8);
+          if (draw) { fill(P.accent); pdf.rect(bx0, cy, 0.8, nh + 0.6, 'F'); ink(P.text2); pdf.text(lines, bx0 + 3, cy + 2.9); }
+          cy += nh + 1;
+        }
+      }
+      return Math.max(cy + PAD - y, BOX ? BOXH + PAD * 2 : 0, PW ? PH + PAD * 2 : 0);
+    }
+    const pageBreak = h => { if (y + h > BOTTOM) { pdf.addPage(); page(); y = M; } };
+    let lastCat = null, rank = 0;   // grouped: each category ranks from 1
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i];
+      if (job.group && e.cat !== lastCat) {
+        lastCat = e.cat; rank = 0;
+        pageBreak(12 + 30);
+        const label = (CAT_META?.[e.cat]?.label || 'Other').toUpperCase();
+        font('Oswald', 9, 'bold'); ink(P.accent); spaced(label, M, y + 5, 0.8);
+        const lw = pdf.getTextWidth(label) + 0.8 * label.length;
+        font('Bebas', 11); ink(P.text3); pdf.text(String(list.filter(x => x.cat === e.cat).length), M + lw + 3, y + 5.3);
+        stroke(P.line, 0.25); pdf.line(M, y + 8, M + CW, y + 8);
+        y += 12;
+      }
+      const h = card(e, rank, null);
+      pageBreak(h);
+      card(e, rank++, { h });
+      y += h + 3.5;
+      if (i % 6 === 5) { onProgress((withPosters ? 0.4 : 0.05) + (i + 1) / list.length * (withPosters ? 0.55 : 0.9), `Building your PDF… ${i + 1} of ${list.length}`); await tick(); }
     }
 
-    const maxTW = CW - (useRanked ? 14 : 2) - 22;
-
-    // Title — times bold, white (TEXT)
-    pdf.setFont('times','bold'); pdf.setFontSize(10);
-    pdf.setTextColor(...TEXT);
-    pdf.text(pdf.splitTextToSize(e.title, maxTW)[0], textX, y + 6);
-
-    // Tags — category + date in ACC color (same as score), helvetica small
-    pdf.setFont('helvetica','normal'); pdf.setFontSize(6.5);
-    pdf.setTextColor(...ACC);
-    const tagParts = [catLabel, date].filter(Boolean).join('  ·  ');
-    pdf.text(tagParts, textX, y + 11);
-
-    // Genre — TEXT3, even smaller
-    if (genres) {
-      pdf.setFontSize(6); pdf.setTextColor(...TEXT3);
-      pdf.text(genres, textX + pdf.getTextWidth(tagParts) + 3, y + 11);
+    /* ── footer on every page: avatar @username · MYSCREENFOLIO — Page x / y ── */
+    const pages = pdf.getNumberOfPages(), user = !priv.anon && job.who?.username ? safe(job.who.username) : '';
+    for (let p = 1; p <= pages; p++) {
+      pdf.setPage(p);
+      stroke(P.line, 0.25); pdf.line(M, H - 12.5, W - M, H - 12.5);
+      let fx = M;
+      if (user) {
+        if (avatar) pdf.addImage(avatar, 'PNG', fx, H - 9.4, 5, 5);
+        else { fill(P.accent); pdf.circle(fx + 2.5, H - 6.9, 2.5, 'F'); font('Oswald', 6.5, 'bold'); ink(P.page); pdf.text(user[0].toUpperCase(), fx + 2.5, H - 5.9, { align: 'center' }); }
+        fx += 7;
+        font('Manrope', 7.4, 'bold'); ink(P.text2); pdf.text('@' + user, fx, H - 5.9); fx += pdf.getTextWidth('@' + user) + 2.2;
+        font('Manrope', 7.4); ink(P.text3); pdf.text('·', fx, H - 5.9); fx += 2.6;
+      }
+      font('Oswald', 7.4, 'bold'); ink(P.text3); spaced('MYSCREENFOLIO', fx, H - 5.9, 0.35);
+      font('Bebas', 9.5); ink(P.text2); pdf.text(`${p} / ${pages}`, W - M, H - 5.75, { align: 'right' });
+      const nw = pdf.getTextWidth(`${p} / ${pages}`);
+      font('Oswald', 7, 'bold'); ink(P.text3); pdf.text('PAGE', W - M - nw - 1.8, H - 5.9, { align: 'right' });
     }
-
-    // Score — times bold, right aligned, accent color
-    pdf.setFont('times','bold'); pdf.setFontSize(14);
-    pdf.setTextColor(...ACC);
-    pdf.text(score, W - MR, y + 8, { align:'right' });
-
-    y += ROW;
-
-    // Row separator
-    pdf.setDrawColor(...SEP); pdf.setLineWidth(0.15);
-    pdf.line(0, y, W, y);
-    y += 1;
-  });
-
-  // ── DOWNLOAD ──
-  const blob = pdf.output('blob');
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
-
-/* ══ Export popup — MSSExport (on the shared MSSDialog shell) ══ */
-const MSSExport = (() => {
-  const CATS = [['', 'All'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
-  const $ = id => document.getElementById(id);
-  let cur = null, cat = '';
-
-  function inject() {
-    if ($('exportOverlay')) return;
-    const el = document.createElement('div');
-    el.id = 'exportOverlay';
-    el.className = 'export-overlay';
-    el.innerHTML = `<div class="export-popup" role="dialog" aria-modal="true" aria-labelledby="exportPopupTitle" aria-describedby="exportPopupDesc">
-        <div class="export-popup-icon" id="exportPopupIcon" aria-hidden="true"></div>
-        <div class="export-popup-title" id="exportPopupTitle"></div>
-        <div class="export-popup-desc" id="exportPopupDesc"></div>
-        <div class="export-theme-row export-cat-row" id="exportCatRow">
-          <span class="export-theme-label" id="exportCatLabel">Category</span>
-          <div class="export-theme-btns" role="group" aria-labelledby="exportCatLabel">
-            ${CATS.map(([k, l]) => `<button type="button" class="eth-btn" data-cat="${k}" onclick="MSSExport._cat('${k}')">${l}</button>`).join('')}
-          </div>
-        </div>
-        <div class="export-theme-row">
-          <span class="export-theme-label" id="exportThemeLabel">Theme</span>
-          <div class="export-theme-btns" role="group" aria-labelledby="exportThemeLabel">
-            <button type="button" class="eth-btn" data-pdf-theme="dark" onclick="MSSExport._theme('dark')">Dark</button>
-            <button type="button" class="eth-btn" data-pdf-theme="light" onclick="MSSExport._theme('light')">Light</button>
-          </div>
-        </div>
-        <div class="export-popup-actions">
-          <button type="button" class="export-popup-cancel" onclick="MSSExport.close()">Cancel</button>
-          <button type="button" class="export-popup-confirm" id="exportPopupBtn" onclick="MSSExport._run()">${icon('download', 15)} Download PDF</button>
-        </div>
-      </div>`;
-    MSSDialog.bind(el, close);
-    document.body.appendChild(el);
+    onProgress(1, 'Saving…');
+    await tick();
+    return pdf.output('blob');
   }
-  const press = (sel, on) => document.querySelectorAll(sel).forEach(b => { const v = on(b); b.classList.toggle('active', v); b.setAttribute('aria-pressed', v); });
-  function setTheme(t) { _exportTheme = t; press('#exportOverlay [data-pdf-theme]', b => b.dataset.pdfTheme === t); }
-  function setCat(c) { cat = c; press('#exportOverlay [data-cat]', b => b.dataset.cat === c); }
 
-  function open(o) {
-    inject();
-    cur = o;
-    $('exportPopupIcon').innerHTML = icon(o.iconName || 'download', 44);
-    $('exportPopupTitle').textContent = o.title || 'Export PDF';
-    $('exportPopupDesc').textContent = o.desc || '';
-    $('exportCatRow').hidden = !o.categories;
-    setCat(''); setTheme(_exportTheme);
-    resetBtn();
-    MSSDialog.open($('exportOverlay'), { focus: '#exportPopupBtn' });
-  }
-  function close() { MSSDialog.close($('exportOverlay')); cur = null; }
-  function resetBtn() { const b = $('exportPopupBtn'); b.disabled = false; b.innerHTML = `${icon('download', 15)} Download PDF`; }
-
-  async function run() {
-    if (!cur) return;
-    const b = $('exportPopupBtn');
-    b.disabled = true; b.textContent = 'Generating…';
-    try {
-      const made = await cur.run(cat);
-      if (made === false) { showToast('Nothing to export.', 'err'); resetBtn(); return; }
-      showToast('PDF exported!');
-      close();
-    } catch (err) {
-      console.error('Export failed:', err);
-      showToast('Export failed. Try again.', 'err');
-      resetBtn();
-    }
-  }
-  return { open, close, _theme: setTheme, _cat: setCat, _run: run };
+  return { build, stats, posters, text, bars, chips, meta, progress, score, POSTER_MAX };
 })();
