@@ -1,10 +1,15 @@
 /* ══════════════════════════════════════════════════════════════
    export-studio.js — the Export Studio (MSSStudio): one popup for every
-   export. Options on one side (what · category · order · how many ·
-   layout · look · include · privacy · cover title), a live preview of
-   the first page on the other (under the options on phones), and a
-   progress bar in the site's style while it builds. The PDF itself is
-   drawn by export.js (MSSPdf).
+   export. Options on one side, a live preview of the first page on the
+   other (under the options on phones), and a progress bar in the site's
+   style while it builds. The PDF itself is drawn by export.js (MSSPdf).
+
+   What you can export:
+     Watched · Watchlist · Currently watching — whole, or by category, order, top N
+     Pick titles — search your library and tick exactly the ones you want
+                   (one title = a full page: the whole note + episode ratings)
+     A list      — yours, ones shared with you, or a community list
+     (+ "as filtered here" when a page passes its own list)
 
    MSSStudio.open({
      load: () => Promise<entries>,        // all of your library entries
@@ -15,7 +20,8 @@
 
    Look, include, privacy and grouping are remembered on this device.
    Requires config.js (icon, escHTML, MSSDialog, showToast, CAT_META,
-   liveScore), export.js (MSSPdf), jsPDF.
+   liveScore, safeURL), export.js (MSSPdf), jsPDF; nav.js (tmdbFetch)
+   for list titles that aren't in anyone's library.
 ══════════════════════════════════════════════════════════════ */
 const MSSStudio = (() => {
   const $ = id => document.getElementById(id);
@@ -30,19 +36,27 @@ const MSSStudio = (() => {
     watched:   [['score', 'Score'], ['recent', 'Recently watched'], ['title', 'A–Z'], ['year', 'Year']],
     watchlist: [['recent', 'Recently added'], ['title', 'A–Z'], ['year', 'Year']],
     watching:  [['recent', 'Recently watched'], ['title', 'A–Z']],
+    mixed:     [['manual', 'As picked'], ['score', 'Score'], ['title', 'A–Z'], ['year', 'Year']],
   };
   const CATS = [['', 'All'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
   const LIMITS = [[0, 'All'], [10, '10'], [25, '25'], [50, '50']];
   const CAT_ORDER = ['tv', 'movies', 'anime', 'cartoons'];
+  const PICK_SHOW = 150;    // rows drawn in the picker at once (search narrows it)
   const t = d => d ? new Date(d).getTime() || 0 : 0;
+  const thumb = u => u && /^https?:/.test(u) ? String(u).replace(/\/(w\d+|original)\//, '/w92/') : '';
 
-  let S = null;     // { o, all, what, cat, sort, limit, group, theme, include, privacy, title, busy }
+  let S = null;     // { o, all, what, cat, sort, limit, group, theme, include, privacy, title, busy,
+                    //   pick: [ids], pq, pst, numbered, lists, listQ, list, listItems }
 
   function prefs() { try { return JSON.parse(localStorage.getItem(PREFS) || '{}') || {}; } catch { return {}; } }
   function keep() { try { localStorage.setItem(PREFS, JSON.stringify({ theme: S.theme, include: S.include, privacy: S.privacy, group: S.group })); } catch {} }
 
-  const kindOf = () => S.what === 'custom' ? 'watched' : S.what;
+  const mixed = () => S.what === 'picked' || S.what === 'list';
+  const kindOf = () => S.what === 'custom' ? 'watched' : mixed() ? 'mixed' : S.what;
+  const single = () => S.what === 'picked' && S.pick.length === 1;
   function pool() {
+    if (S.what === 'picked') return S.pick.map(id => S.all.find(e => e.id === id)).filter(Boolean);
+    if (S.what === 'list') return S.listItems || [];
     const base = S.what === 'custom' ? S.o.custom.entries : S.all.filter(WHAT[S.what].test);
     return S.cat ? base.filter(e => e.cat === S.cat) : base;
   }
@@ -50,6 +64,7 @@ const MSSStudio = (() => {
     let l = [...pool()];
     const sc = e => { const v = liveScore(e); return v == null ? -1 : Number(v); };
     const cmp = {
+      manual: null,
       score: (a, b) => sc(b) - sc(a) || t(b.completed_date) - t(a.completed_date),
       recent: kindOf() === 'watched' ? (a, b) => t(b.completed_date || b.updated_at) - t(a.completed_date || a.updated_at)
         : kindOf() === 'watchlist' ? (a, b) => t(b.created_at) - t(a.created_at)
@@ -57,23 +72,33 @@ const MSSStudio = (() => {
       title: (a, b) => String(a.title || '').localeCompare(String(b.title || '')),
       year: (a, b) => (Number(String(b.year).slice(0, 4)) || 0) - (Number(String(a.year).slice(0, 4)) || 0),
     }[S.sort];
-    l.sort(cmp);
-    if (S.limit) l = l.slice(0, S.limit);
-    if (S.group) l = CAT_ORDER.flatMap(c => l.filter(e => e.cat === c)).concat(l.filter(e => !CAT_ORDER.includes(e.cat)));
+    if (cmp) l.sort(cmp);
+    if (S.limit && !mixed()) l = l.slice(0, S.limit);
+    if (S.group && !single()) l = CAT_ORDER.flatMap(c => l.filter(e => e.cat === c)).concat(l.filter(e => !CAT_ORDER.includes(e.cat)));
     return l;
   }
+  const ranked = () => !single() && (S.sort === 'score' && kindOf() !== 'watchlist' && kindOf() !== 'watching' || mixed() && S.sort === 'manual' && S.numbered);
   function title() {
     if (S.title.trim()) return S.title.trim();
     const cat = S.cat ? ' ' + (CATS.find(c => c[0] === S.cat)[1]).toLowerCase() : '';
     if (S.what === 'custom') return S.o.custom.label;
+    if (S.what === 'picked') return single() ? pool()[0]?.title || 'My pick' : 'My picks';
+    if (S.what === 'list') return S.list?.title || 'A list';
     if (S.what === 'watched') return S.limit && S.sort === 'score' ? `My top ${S.limit}${cat}` : `Everything I’ve watched${S.cat ? ` ·${cat}` : ''}`;
     if (S.what === 'watchlist') return `My watchlist${S.cat ? ` ·${cat}` : ''}`;
     return `Currently watching${S.cat ? ` ·${cat}` : ''}`;
   }
   function kicker() {
+    if (S.what === 'picked') {
+      const e = single() ? pool()[0] : null;
+      return e ? [CAT_META?.[e.cat]?.singular, e.year ? String(e.year).slice(0, 4) : ''].filter(Boolean).join(' · ') : `Hand-picked · ${S.pick.length} titles`;
+    }
+    if (S.what === 'list') return `List${S.list?.ranked ? ' · Ranked' : ''}`;
     const sortL = (SORTS[kindOf()].find(s => s[0] === S.sort) || [])[1];
     return [S.what === 'custom' ? 'Watched' : WHAT[S.what].label, S.cat ? CATS.find(c => c[0] === S.cat)[1] : 'All categories', sortL ? (S.sort === 'score' ? 'By score' : sortL) : ''].filter(Boolean).join(' · ');
   }
+  // a list that isn't yours says whose it is
+  const byline = () => S.what === 'list' && S.list && !S.list.mine ? `A list by @${S.list.owner || 'someone'}` : '';
 
   /* ── UI bits ── */
   const chip = (on, act, label, extra = '') => `<button type="button" class="xs-chip${on ? ' on' : ''}" aria-pressed="${on}" onclick="${act}"${extra}>${label}</button>`;
@@ -82,62 +107,154 @@ const MSSStudio = (() => {
 
   function optsHTML() {
     const k = kindOf(), counts = w => S.all.filter(WHAT[w].test).length;
-    const whats = [...(S.o.custom ? [['custom', S.o.custom.label, 'filter', S.o.custom.entries.length]] : []),
-      ...Object.keys(WHAT).map(w => [w, WHAT[w].label, WHAT[w].ic, counts(w)])];
-    const base = S.what === 'custom' ? S.o.custom.entries : S.all.filter(WHAT[S.what].test);
-    return sec('What to export', `<div class="xs-whats" role="radiogroup" aria-label="What to export">${whats.map(([w, l, ic, n]) =>
+    const whats = [...(S.o.custom ? [['custom', S.o.custom.label, 'filter', `${S.o.custom.entries.length} titles`]] : []),
+      ...Object.keys(WHAT).map(w => { const n = counts(w); return [w, WHAT[w].label, WHAT[w].ic, `${n} ${n === 1 ? 'title' : 'titles'}`]; }),
+      ['picked', 'Pick titles', 'plus', S.pick.length ? `${S.pick.length} picked` : 'Choose exactly which'],
+      ['list', 'A list', 'layers', S.list ? S.list.title : 'Yours, shared or community']];
+    const base = S.what === 'custom' ? S.o.custom.entries : WHAT[S.what] ? S.all.filter(WHAT[S.what].test) : [];
+    const watchedish = k === 'watched' || k === 'mixed';
+    return sec('What to export', `<div class="xs-whats" role="radiogroup" aria-label="What to export">${whats.map(([w, l, ic, sub]) =>
         `<button type="button" role="radio" class="xs-what${S.what === w ? ' on' : ''}" aria-checked="${S.what === w}" onclick="MSSStudio._set('what','${w}')">
-          <span class="xs-what-ic">${icon(ic, 18)}</span><b>${esc(l)}</b><small>${n} ${n === 1 ? 'title' : 'titles'}</small></button>`).join('')}</div>`)
-      + sec('Category', `<div class="xs-chips">${CATS.map(([c, l]) => { const n = c ? base.filter(e => e.cat === c).length : base.length;
-          return chip(S.cat === c, `MSSStudio._set('cat','${c}')`, `${l}<span>${n}</span>`, n || !c ? '' : ' disabled'); }).join('')}</div>`)
-      + sec('Order', `<div class="xs-chips">${SORTS[k].map(([s, l]) => chip(S.sort === s, `MSSStudio._set('sort','${s}')`, l)).join('')}</div>`)
-      + sec('How many', `<div class="xs-chips">${LIMITS.map(([n, l]) => chip(S.limit === n, `MSSStudio._set('limit',${n})`, n ? (S.sort === 'score' ? `Top ${l}` : `First ${l}`) : l)).join('')}</div>`)
+          <span class="xs-what-ic">${icon(ic, 18)}</span><b>${esc(l)}</b><small translate="no">${esc(sub)}</small></button>`).join('')}</div>`)
+      + (S.what === 'picked' ? sec('Choose titles', `<input class="xs-input" id="xsPickQ" type="search" placeholder="Search your library…" aria-label="Search your library" value="${esc(S.pq)}" oninput="MSSStudio._pq(this.value)"><div id="xsPickBody">${pickHTML()}</div>`) : '')
+      + (S.what === 'list' ? sec('Choose a list', `<div id="xsListBody">${listsHTML()}</div>`) : '')
+      + (!mixed() ? sec('Category', `<div class="xs-chips">${CATS.map(([c, l]) => { const n = c ? base.filter(e => e.cat === c).length : base.length;
+          return chip(S.cat === c, `MSSStudio._set('cat','${c}')`, `${l}<span>${n}</span>`, n || !c ? '' : ' disabled'); }).join('')}</div>`) : '')
+      + (single() ? '' : sec('Order', `<div class="xs-chips">${SORTS[k].map(([s, l]) => chip(S.sort === s, `MSSStudio._set('sort','${s}')`, s === 'manual' && S.what === 'list' ? 'List order' : l)).join('')}</div>`))
+      + (!mixed() ? sec('How many', `<div class="xs-chips">${LIMITS.map(([n, l]) => chip(S.limit === n, `MSSStudio._set('limit',${n})`, n ? (S.sort === 'score' ? `Top ${l}` : `First ${l}`) : l)).join('')}</div>`) : '')
       + sec('Look', `<div class="xs-looks">${[['dark', 'Dark'], ['light', 'Light']].map(([th, l]) =>
           `<button type="button" class="xs-look xs-look-${th}${S.theme === th ? ' on' : ''}" aria-pressed="${S.theme === th}" onclick="MSSStudio._set('theme','${th}')"><i aria-hidden="true"></i>${l}</button>`).join('')}</div>`)
       + sec('Include', `<div class="xs-switches">
-          ${k === 'watched' ? sw(S.include.breakdown, "MSSStudio._tog('include','breakdown')", 'Rating breakdown', 'Every category you rated, as bars') : ''}
-          ${k === 'watched' ? sw(S.include.highlights, "MSSStudio._tog('include','highlights')", 'Highlights', 'Favourite and least favourite character, episode, season') : ''}
-          ${sw(S.include.notes, "MSSStudio._tog('include','notes')", 'Notes', 'Your note on each title')}
-          ${k !== 'watching' ? sw(S.include.dates, "MSSStudio._tog('include','dates')", 'Dates', k === 'watched' ? 'When you watched it' : 'When you added it') : ''}
-          ${sw(S.group, "MSSStudio._tog('group')", 'Group by category', 'TV Shows, Movies, Anime and Cartoons in their own sections')}</div>`)
+          ${watchedish ? sw(S.include.breakdown, "MSSStudio._tog('include','breakdown')", 'Rating breakdown', 'Every category you rated, as bars') : ''}
+          ${watchedish ? sw(S.include.highlights, "MSSStudio._tog('include','highlights')", 'Highlights', 'Favourite and least favourite character, episode, season') : ''}
+          ${sw(S.include.notes, "MSSStudio._tog('include','notes')", 'Notes', single() ? 'The whole note' : 'Your note on each title')}
+          ${k !== 'watching' ? sw(S.include.dates, "MSSStudio._tog('include','dates')", 'Dates', k === 'watchlist' ? 'When you added it' : 'When you watched it') : ''}
+          ${mixed() && !single() && S.sort === 'manual' ? sw(S.numbered, "MSSStudio._tog('numbered')", 'Number them', S.what === 'list' ? '1, 2, 3… in the list’s order' : '1, 2, 3… in the order you picked') : ''}
+          ${single() ? '' : sw(S.group, "MSSStudio._tog('group')", 'Group by category', 'TV Shows, Movies, Anime and Cartoons in their own sections')}</div>`)
       + sec('Privacy', `<div class="xs-switches">
           ${sw(S.privacy.hideSpoilers, "MSSStudio._tog('privacy','hideSpoilers')", 'Hide spoiler notes', 'Notes you marked as spoilers say “hidden” instead')}
           ${sw(S.privacy.anon, "MSSStudio._tog('privacy','anon')", 'Leave my name off', 'No name or @username anywhere in the file')}</div>`)
       + sec('Cover title', `<input class="xs-input" id="xsTitle" maxlength="60" placeholder="${esc(title())}" value="${esc(S.title)}" aria-label="Cover title" oninput="MSSStudio._title(this.value)">`, 'optional');
   }
 
+  /* ── Pick titles: search + tick, then your picks in order ── */
+  const STATUS = [['', 'All'], ['watched', 'Watched'], ['watchlist', 'Watchlist'], ['watching', 'Watching']];
+  function pickRows() {
+    const q = S.pq.trim().toLowerCase();
+    return S.all.filter(e => (!S.pst || WHAT[S.pst].test(e)) && (!q || String(e.title || '').toLowerCase().includes(q)))
+      .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+  }
+  function pickHTML() {
+    const rows = pickRows(), shown = rows.slice(0, PICK_SHOW), on = new Set(S.pick);
+    const allOn = shown.length && shown.every(e => on.has(e.id));
+    const row = e => {
+      const s = liveScore(e), sel = on.has(e.id), th = thumb(e.poster_url);
+      const metaBits = [CAT_META?.[e.cat]?.singular, e.year ? String(e.year).slice(0, 4) : '', s != null ? `★ ${Number(s).toFixed(2)}` : ''].filter(Boolean).join(' · ');
+      return `<button type="button" role="checkbox" class="xs-pk-row${sel ? ' on' : ''}" aria-checked="${sel}" onclick="MSSStudio._pick('${e.id}')">
+        <span class="xs-pk-th">${th ? `<img src="${esc(th)}" alt="" loading="lazy">` : esc((e.title || '?')[0])}</span>
+        <span class="xs-pk-text"><b translate="no">${esc(e.title || 'Untitled')}</b><small>${esc(metaBits)}</small></span>
+        <span class="xs-pk-box" aria-hidden="true">${sel ? icon('check', 13) : ''}</span></button>`;
+    };
+    const mine = pool();
+    return `<div class="xs-chips xs-pk-filter">${STATUS.map(([k, l]) => chip(S.pst === k, `MSSStudio._pst('${k}')`, l)).join('')}</div>
+      <div class="xs-pk-bar"><span>${rows.length} ${rows.length === 1 ? 'title' : 'titles'}${rows.length > PICK_SHOW ? ` · showing ${PICK_SHOW}, search to find more` : ''}</span>
+        <span>${shown.length ? `<button type="button" class="poll-link" onclick="MSSStudio._pickAll(${!allOn})">${allOn ? 'Untick these' : 'Tick all these'}</button>` : ''}
+        ${S.pick.length ? `<button type="button" class="poll-link poll-danger" onclick="MSSStudio._pickClear()">Clear picks</button>` : ''}</span></div>
+      <div class="xs-pk-list" role="group" aria-label="Your library">${shown.map(row).join('') || '<div class="xs-pk-none">No titles match.</div>'}</div>
+      ${mine.length ? `<div class="xs-sec-label xs-pk-label">Your picks<span>${mine.length} · ${S.sort === 'manual' ? 'move them into the order you want' : 'sorted by the Order below'}</span></div>
+        <ol class="xs-pk-picks">${mine.map((e, i) => `<li><span class="xs-pk-n">${i + 1}</span><span class="xs-pk-pt" translate="no">${esc(e.title || 'Untitled')}</span>
+          ${S.sort === 'manual' ? `<button type="button" class="xs-pk-mv" aria-label="Move up" onclick="MSSStudio._move(${i},-1)"${i ? '' : ' disabled'}>${icon('chevup', 14)}</button>
+          <button type="button" class="xs-pk-mv" aria-label="Move down" onclick="MSSStudio._move(${i},1)"${i < mine.length - 1 ? '' : ' disabled'}>${icon('chevdown', 14)}</button>` : ''}
+          <button type="button" class="xs-pk-mv" aria-label="Remove ${esc(e.title || '')}" onclick="MSSStudio._pick('${e.id}')">${icon('x', 14)}</button></li>`).join('')}</ol>` : ''}`;
+  }
+  function drawPick() { const b = $('xsPickBody'); if (b) { const st = b.querySelector('.xs-pk-list')?.scrollTop || 0; b.innerHTML = pickHTML(); const l = b.querySelector('.xs-pk-list'); if (l) l.scrollTop = st; } drawSide(); }
+
+  /* ── A list: yours, shared with you, community ── */
+  async function loadLists() {
+    const me = window._navUser?.id, who = S.o.who || {};
+    if (!me) { S.lists = []; return; }
+    const [own, collab, social] = await Promise.all([
+      sb.from('favorite_lists').select('id, user_id, title, description, items, ranked').eq('user_id', me).order('created_at', { ascending: true }).then(r => r.data || [], () => []),
+      sb.from('list_collaborators').select('list_id').eq('user_id', me).eq('status', 'accepted').then(r => r.data || [], () => []),
+      sb.rpc('get_social_lists', { p_limit: 100 }).then(r => r.data || [], () => []),
+    ]);
+    const sharedIds = collab.map(r => r.list_id);
+    const shared = sharedIds.length ? ((await sb.from('favorite_lists').select('id, user_id, title, description, items, ranked, profiles(username)').in('id', sharedIds)).data || []) : [];
+    const seen = new Set();
+    const norm = (l, group, owner) => { seen.add(l.id); return { id: l.id, title: l.title || 'Untitled list', description: l.description || '', items: l.items || [], ranked: !!l.ranked, owner, mine: group === 'mine', group }; };
+    S.lists = [...own.map(l => norm(l, 'mine', who.username)), ...shared.map(l => norm(l, 'shared', l.profiles?.username)),
+      ...social.filter(l => !seen.has(l.id) && l.user_id !== me).map(l => norm(l, 'community', l.username))];
+  }
+  function listsHTML() {
+    if (!S.lists) return '<div class="xs-loading">Loading lists…</div>';
+    const q = (S.listQ || '').trim().toLowerCase();
+    const show = S.lists.filter(l => !q || l.title.toLowerCase().includes(q) || String(l.owner || '').toLowerCase().includes(q));
+    const grp = (g, label) => { const ls = show.filter(l => l.group === g); return ls.length ? `<div class="xs-ls-h">${label}</div>${ls.map(l =>
+      `<button type="button" role="radio" class="xs-ls-row${S.list?.id === l.id ? ' on' : ''}" aria-checked="${S.list?.id === l.id}" onclick="MSSStudio._list('${l.id}')">
+        <span class="xs-what-ic">${icon('layers', 16)}</span><span class="xs-pk-text"><b translate="no">${esc(l.title)}</b><small translate="no">${l.items.length} ${l.items.length === 1 ? 'title' : 'titles'}${l.mine ? '' : ` · @${esc(l.owner || '')}`}${l.ranked ? ' · ranked' : ''}</small></span>
+        <span class="xs-pk-box" aria-hidden="true">${S.list?.id === l.id ? icon('check', 13) : ''}</span></button>`).join('')}` : ''; };
+    return `${S.lists.length > 6 ? `<input class="xs-input xs-ls-q" type="search" placeholder="Search lists…" aria-label="Search lists" value="${esc(S.listQ || '')}" oninput="MSSStudio._lq(this.value)">` : ''}
+      <div class="xs-ls-list" role="radiogroup" aria-label="Lists">${grp('mine', 'Your lists') + grp('shared', 'Shared with you') + grp('community', 'Community') || '<div class="xs-pk-none">No lists yet — make one on the Lists page.</div>'}</div>
+      ${S.list && S.listItems && S.listItems.length < S.list.items.length ? `<div class="xs-ls-note">${S.list.items.length - S.listItems.length} of its titles can’t be read and are left out.</div>` : ''}`;
+  }
+  async function chooseList(id) {
+    const l = S.lists?.find(x => x.id === id); if (!l || S.busy) return;
+    S.list = l; S.listItems = null; S.numbered = l.ranked; S.sort = 'manual';
+    draw();
+    const ids = l.items.filter(x => !(typeof x === 'string' && x.startsWith('tmdb:')));
+    const known = Object.fromEntries(S.all.map(e => [e.id, e]));
+    const need = ids.filter(x => !known[x]);
+    if (need.length) { const { data } = await sb.from('entries').select('*').in('id', need); (data || []).forEach(e => { known[e.id] = e; }); }
+    const tm = {};
+    await Promise.all(l.items.filter(x => typeof x === 'string' && x.startsWith('tmdb:')).map(async pid => {
+      if (typeof tmdbFetch !== 'function') return;
+      const [, type, tid] = pid.split(':');
+      try {
+        const r = await tmdbFetch(`${TMDB_BASE}/${type}/${tid}?api_key=${TMDB_KEY}&language=en-US`); if (!r.ok) return;
+        const d = await r.json();
+        tm[pid] = { id: pid, title: type === 'movie' ? d.title : d.name, year: ((type === 'movie' ? d.release_date : d.first_air_date) || '').slice(0, 4),
+          cat: type === 'movie' ? 'movies' : 'tv', genres: (d.genres || []).map(g => g.name), poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null, tmdb_id: Number(tid), tmdb_type: type };
+      } catch {}
+    }));
+    if (S?.list !== l) return;
+    S.listItems = l.items.map(x => known[x] || tm[x]).filter(Boolean);
+    draw();
+  }
+
   // The first page, drawn in HTML with the PDF's palette (sizes in page-widths, so it scales)
   function previewHTML(list) {
-    const k = kindOf(), st = MSSPdf.stats(k, list), posters = MSSPdf.posters(list.length), ranked = S.sort === 'score' && k === 'watched';
-    const who = S.o.who || {};
+    const k = kindOf(), st = single() && list[0] ? MSSPdf.detailStats(list[0], null) : MSSPdf.stats(k, list), posters = MSSPdf.posters(list.length), rnk = ranked();
+    const who = S.o.who || {}, by = byline() || (S.privacy.anon || !(who.name || who.username) ? '' : `by ${who.name || who.username}${who.username && who.name && who.name !== who.username ? ` (@${who.username})` : ''}`);
     const rk = (e, i) => S.group ? list.slice(0, i + 1).filter(x => x.cat === e.cat).length : i + 1;   // grouped: ranks per category
     const card = (e, i) => {
-      const s = MSSPdf.score(e), b = S.include.breakdown && k === 'watched' ? MSSPdf.bars(e).slice(0, 6) : [];
-      const c = S.include.highlights && k === 'watched' ? MSSPdf.chips(e).slice(0, 3) : [];
-      const n = S.include.notes ? MSSPdf.text(e) : { note: '' }, pr = k === 'watching' ? MSSPdf.progress(e) : null;
+      const ek = k === 'mixed' ? MSSPdf.kindOf(e) : k;
+      const s = MSSPdf.score(e), b = S.include.breakdown && ek === 'watched' ? MSSPdf.bars(e).slice(0, single() ? 30 : 6) : [];
+      const c = S.include.highlights && ek === 'watched' ? MSSPdf.chips(e).slice(0, single() ? 6 : 3) : [];
+      const n = S.include.notes ? MSSPdf.text(e) : { note: '' }, pr = ek === 'watching' ? MSSPdf.progress(e) : null;
       const poster = e.poster_url && /^https?:/.test(e.poster_url) ? `<img src="${esc(e.poster_url)}" alt="" loading="lazy">` : esc((e.title || '?')[0]);
       return `<div class="xs-pv-card">
-        ${ranked ? `<span class="xs-pv-rank${rk(e, i) <= 3 ? ' top' : ''}">${rk(e, i)}</span>` : ''}
+        ${rnk ? `<span class="xs-pv-rank${rk(e, i) <= 3 ? ' top' : ''}">${rk(e, i)}</span>` : ''}
         ${posters ? `<span class="xs-pv-poster">${poster}</span>` : ''}
         <div class="xs-pv-main">
           <div class="xs-pv-title" translate="no">${esc(e.title || 'Untitled')}</div>
-          <div class="xs-pv-meta">${esc(MSSPdf.meta(k, e, S.include))}</div>
+          <div class="xs-pv-meta">${esc(MSSPdf.meta(ek, e, S.include))}</div>
           ${pr ? `<div class="xs-pv-prog"><b>${esc(pr.label)}</b><i><u style="width:${Math.round(pr.pct * 100)}%"></u></i></div>` : ''}
           ${b.length ? `<div class="xs-pv-bars">${b.map(r => `<span><em>${esc(r.label)}</em><b>${r.v % 1 ? r.v.toFixed(1) : r.v}</b><i><u style="width:${r.v * 10}%"></u></i></span>`).join('')}</div>` : ''}
           ${c.length ? `<div class="xs-pv-chips">${c.map(x => `<span class="${x.low ? 'low' : ''}"><em>${esc(x.lbl)}</em> ${esc(x.v)}</span>`).join('')}</div>` : ''}
-          ${n.note ? `<div class="xs-pv-note">${n.spoiler && S.privacy.hideSpoilers ? '<i>Note hidden — it has spoilers.</i>' : esc(n.note.slice(0, 160))}</div>` : ''}
+          ${n.note ? `<div class="xs-pv-note${single() ? ' full' : ''}">${n.spoiler && S.privacy.hideSpoilers ? '<i>Note hidden — it has spoilers.</i>' : esc(n.note.slice(0, single() ? 900 : 160))}</div>` : ''}
         </div>
-        ${k === 'watched' ? `<span class="xs-pv-badge${s == null ? ' none' : ''}"><small>Score</small><b>${s == null ? 'Unrated' : s.toFixed(2)}</b><small>Out of 10</small></span>` : ''}
+        ${ek === 'watched' ? `<span class="xs-pv-badge${s == null ? ' none' : ''}"><small>Score</small><b>${s == null ? 'Unrated' : s.toFixed(2)}</b><small>Out of 10</small></span>` : ''}
       </div>`;
     };
     return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in">
       <div class="xs-pv-top"><span class="xs-pv-wm">MY<u>SCREEN</u>FOLIO</span><span>${esc(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))}</span></div>
       <div class="xs-pv-kicker">${esc(kicker())}</div>
       <div class="xs-pv-h1">${esc(title())}</div>
-      ${S.privacy.anon || !(who.name || who.username) ? '' : `<div class="xs-pv-by">by ${esc(who.name || who.username)}${who.username && who.name && who.name !== who.username ? ` (@${esc(who.username)})` : ''}</div>`}
+      ${by ? `<div class="xs-pv-by">${esc(by)}</div>` : ''}
+      ${S.what === 'list' && S.list?.description ? `<div class="xs-pv-desc">${esc(S.list.description)}</div>` : ''}
       <div class="xs-pv-stats">${st.map(x => `<span><b${x.word ? ' class="word"' : ''}>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</div>
-      ${S.group && list[0] ? `<div class="xs-pv-group">${esc(CAT_META?.[list[0].cat]?.label || '')}</div>` : ''}
-      ${list.slice(0, 3).map(card).join('') || '<div class="xs-pv-empty">Nothing here yet — pick something else to export.</div>'}
+      ${S.group && !single() && list[0] ? `<div class="xs-pv-group">${esc(CAT_META?.[list[0].cat]?.label || '')}</div>` : ''}
+      ${list.slice(0, 3).map(card).join('') || `<div class="xs-pv-empty">${S.what === 'picked' ? 'Tick some titles to see them here.' : S.what === 'list' ? (S.list ? 'Loading the list…' : 'Choose a list to see it here.') : 'Nothing here yet — pick something else to export.'}</div>`}
       ${list.length > 3 ? `<div class="xs-pv-more">+ ${list.length - 3} more ${list.length - 3 === 1 ? 'title' : 'titles'}</div>` : ''}
     </div></div>`;
   }
@@ -146,10 +263,11 @@ const MSSStudio = (() => {
     const k = kindOf(), posters = MSSPdf.posters(list.length);
     let used = 95, n = 1;
     list.forEach(e => {
+      const ek = k === 'mixed' ? MSSPdf.kindOf(e) : k;
       let h = 22;
-      if (S.include.breakdown && k === 'watched') h += Math.ceil(MSSPdf.bars(e).length / 3) * 5.4 + 3;
-      if (S.include.highlights && k === 'watched' && MSSPdf.chips(e).length) h += 9;
-      if (S.include.notes && MSSPdf.text(e).note) h += Math.min(6, Math.ceil(MSSPdf.text(e).note.length / 110)) * 3.6 + 4;
+      if (S.include.breakdown && ek === 'watched') h += Math.ceil(MSSPdf.bars(e).length / 3) * 5.8 + 3;
+      if (S.include.highlights && ek === 'watched' && MSSPdf.chips(e).length) h += 9;
+      if (S.include.notes && MSSPdf.text(e).note) h += Math.min(single() ? 40 : 6, Math.ceil(MSSPdf.text(e).note.length / 110)) * 3.6 + 4;
       if (posters) h = Math.max(h, 36);
       h += 3.5;
       if (used + h > 281) { n++; used = 14; }
@@ -158,15 +276,21 @@ const MSSStudio = (() => {
     return n;
   }
 
-  function draw() {
+  function drawSide() {
     if (!S) return;
     const list = picked(), n = list.length;
+    $('xsPreview').innerHTML = previewHTML(list);
+    $('xsSummary').innerHTML = !n ? (S.what === 'picked' ? 'Tick the titles you want in it.' : S.what === 'list' && !S.list ? 'Choose a list.' : 'Nothing to export with these options.')
+      : single() ? `<b>1 title</b> · a full page — every rating, the whole note${MSSPdf.kindOf(list[0]) === 'watched' && list[0].cat !== 'movies' ? ' and your episode ratings' : ''}`
+      : `<b>${n} ${n === 1 ? 'title' : 'titles'}</b> · about ${pages(list)} ${pages(list) === 1 ? 'page' : 'pages'} · ${MSSPdf.posters(n) ? 'with posters' : `no posters <span>(only for ${MSSPdf.POSTER_MAX} titles or fewer)</span>`}`;
+    if (!S.busy) $('xsGo').disabled = !n;
+  }
+  function draw() {
+    if (!S) return;
     const scroll = $('xsOpts').scrollTop;
     $('xsOpts').innerHTML = optsHTML();
     $('xsOpts').scrollTop = scroll;
-    $('xsPreview').innerHTML = previewHTML(list);
-    $('xsSummary').innerHTML = n ? `<b>${n} ${n === 1 ? 'title' : 'titles'}</b> · about ${pages(list)} ${pages(list) === 1 ? 'page' : 'pages'} · ${MSSPdf.posters(n) ? 'with posters' : `no posters <span>(only for ${MSSPdf.POSTER_MAX} titles or fewer)</span>`}` : 'Nothing to export with these options.';
-    if (!S.busy) $('xsGo').disabled = !n;
+    drawSide();
   }
 
   function overlay() {
@@ -199,31 +323,54 @@ const MSSStudio = (() => {
     S = { o, all: [], what: o.custom ? 'custom' : pre.what || 'watched', cat: pre.cat || '', sort: pre.sort || null, limit: pre.limit || 0,
       group: pre.group != null ? pre.group : !!p.group, theme: p.theme === 'light' ? 'light' : p.theme === 'dark' ? 'dark' : (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'),
       include: { breakdown: true, highlights: true, notes: true, dates: true, ...(p.include || {}) },
-      privacy: { hideSpoilers: true, anon: false, ...(p.privacy || {}) }, title: '', busy: false };
+      privacy: { hideSpoilers: true, anon: false, ...(p.privacy || {}) }, title: '', busy: false,
+      pick: [], pq: '', pst: '', numbered: true, lists: null, listQ: '', list: null, listItems: null };
     if (!S.sort) S.sort = SORTS[kindOf()][0][0];
     const ov = overlay();
     $('xsOpts').innerHTML = '<div class="xs-loading">Loading your library…</div>'; $('xsPreview').innerHTML = ''; $('xsSummary').textContent = '';
     progress(null);
     MSSDialog.open(ov, { focus: '#xsGo' });
     try { S.all = o.load ? (await o.load()) || [] : []; } catch { S.all = []; }
-    if (S) draw();
+    if (!S) return;
+    draw();
+    if (S.what === 'list') pickWhat('list');
   }
   function close() {
     if (S?.busy) return;    // let it finish
     S = null;
     MSSDialog.close($('xsOverlay'));
   }
+  async function pickWhat(w) {
+    if (w === 'list' && !S.lists) { draw(); await loadLists().catch(() => { S.lists = []; }); if (S) draw(); }
+  }
   function set(key, v) {
     if (!S || S.busy) return;
+    if (key === 'what' && S.what === v) return;
     S[key] = v;
-    if (key === 'what') { S.cat = ''; S.sort = SORTS[kindOf()][0][0]; }
+    if (key === 'what') { S.cat = ''; S.sort = SORTS[kindOf()][0][0]; S.numbered = v === 'list' ? !!S.list?.ranked : true; }
     if (key === 'theme' || key === 'group') keep();
     draw();
+    if (key === 'what') pickWhat(v);
   }
   function tog(group, key) {
     if (!S || S.busy) return;
     if (key) S[group][key] = !S[group][key]; else S[group] = !S[group];
-    keep(); draw();
+    if (group === 'include' || group === 'privacy' || group === 'group') keep();
+    draw();
+  }
+  function togglePick(id) {
+    if (!S || S.busy) return;
+    const i = S.pick.indexOf(id);
+    if (i >= 0) S.pick.splice(i, 1); else S.pick.push(id);
+    refreshPicked();
+  }
+  // picking changes the "What" card's count and (one ↔ several) which options apply — redraw those, keep the search box
+  function refreshPicked() {
+    const q = $('xsPickQ'), had = document.activeElement === q, pos = q?.selectionStart;
+    const keepScroll = $('xsPickBody')?.querySelector('.xs-pk-list')?.scrollTop || 0;
+    draw();
+    const q2 = $('xsPickQ'); if (had && q2) { q2.focus(); try { q2.setSelectionRange(pos, pos); } catch {} }
+    const l = $('xsPickBody')?.querySelector('.xs-pk-list'); if (l) l.scrollTop = keepScroll;
   }
 
   // The progress bar takes the footer's place while it builds
@@ -244,8 +391,15 @@ const MSSStudio = (() => {
     $('xsOverlay').classList.add('is-busy');
     progress(0, 'Starting…');
     try {
-      const blob = await MSSPdf.build({ kind: kindOf(), title: title(), kicker: kicker(), entries: list, ranked: S.sort === 'score' && kindOf() === 'watched',
-        group: S.group, theme: S.theme, include: S.include, privacy: S.privacy, who: S.o.who }, (f, l) => progress(f, l));
+      let episodes = null;
+      if (single() && list[0].cat !== 'movies' && MSSPdf.kindOf(list[0]) !== 'title') {
+        progress(0.01, 'Getting your episode ratings…');
+        const { data } = await sb.from('episode_ratings').select('season_number, episode_number, score').eq('entry_id', list[0].id);
+        episodes = data || [];
+      }
+      const blob = await MSSPdf.build({ kind: kindOf(), title: title(), kicker: kicker(), entries: list, ranked: ranked(),
+        group: S.group && !single(), theme: S.theme, include: S.include, privacy: S.privacy, who: S.o.who,
+        byline: byline(), desc: S.what === 'list' ? S.list?.description : '', detail: single(), episodes }, (f, l) => progress(f, l));
       const name = 'myscreenfolio-' + (title().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'export') + '.pdf';
       const url = URL.createObjectURL(blob), a = document.createElement('a');
       a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
@@ -260,5 +414,11 @@ const MSSStudio = (() => {
     }
   }
 
-  return { open, close, _set: set, _tog: tog, _go: go, _title: v => { if (S) { S.title = v; $('xsPreview').innerHTML = previewHTML(picked()); } } };
+  return { open, close, _set: set, _tog: tog, _go: go,
+    _title: v => { if (S) { S.title = v; $('xsPreview').innerHTML = previewHTML(picked()); } },
+    _pick: togglePick, _pq: v => { if (S) { S.pq = v; drawPick(); } }, _pst: k => { if (S) { S.pst = k; drawPick(); } },
+    _pickAll: on => { if (!S) return; const ids = pickRows().slice(0, PICK_SHOW).map(e => e.id); S.pick = on ? [...S.pick, ...ids.filter(id => !S.pick.includes(id))] : S.pick.filter(id => !ids.includes(id)); refreshPicked(); },
+    _pickClear: () => { if (S) { S.pick = []; refreshPicked(); } },
+    _move: (i, d) => { if (!S) return; const j = i + d; if (j < 0 || j >= S.pick.length) return; const ids = pool().map(e => e.id); [ids[i], ids[j]] = [ids[j], ids[i]]; S.pick = ids; refreshPicked(); },
+    _list: id => chooseList(id), _lq: v => { if (S) { S.listQ = v; const b = $('xsListBody'); const q = b?.querySelector('.xs-ls-q'), pos = q?.selectionStart; if (b) { b.innerHTML = listsHTML(); const q2 = b.querySelector('.xs-ls-q'); if (q2) { q2.focus(); try { q2.setSelectionRange(pos, pos); } catch {} } } } } };
 })();
