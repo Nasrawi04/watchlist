@@ -2,346 +2,680 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="js/i18n.js"></script>
-<title>MyScreenFolio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
-<style>
-.pp-wrap { max-width:none; }
-.pp-back {
-  display:inline-flex; align-items:center; gap:6px;
-  font-size:13px; color:var(--text-3); text-decoration:none;
-  margin-bottom:1.5rem; transition:color .15s;
-}
-.pp-back:hover { color:var(--olive-light); }
-
-.pp-layout {
-  display:grid; grid-template-columns:280px 1fr; gap:clamp(1.25rem, 3vw, 2.5rem);
-  align-items:start;
-}
-/* Left column runs the full height of the page; the photo + Personal Info
-   scroll away normally and only the Acting / Directing box stays pinned, so
-   nothing floats over the credits. */
-.pp-sticky-col { align-self:stretch; }
-/* Jump-to box under Personal Info — same card style */
-.pp-nav-card { margin-top:1rem; position:sticky; top:calc(var(--page-pt, 80px) + 16px); z-index:2; }
-.pp-nav-btn {
-  /* same look as the Personal Info rows: label + value, no boxes */
-  display:flex; align-items:baseline; justify-content:space-between; gap:10px; width:100%;
-  padding:8px 0; margin:0; cursor:pointer; text-align:start;
-  background:none; border:none; border-top:0.5px solid var(--border); color:var(--text);
-  font-family:'Manrope',var(--sans); font-size:clamp(12.5px, 3vw, 13.5px); font-weight:500; transition:color .15s;
-}
-.pp-nav-btn:first-of-type { border-top:none; padding-top:0; }
-.pp-nav-btn span { display:inline-flex; align-items:center; gap:6px; }
-.pp-nav-btn span::after { content:'›'; color:var(--text-3); font-size:15px; line-height:1; transition:transform .15s, color .15s; }
-.pp-nav-btn:hover { color:var(--olive-light); }
-.pp-nav-btn:hover span::after { color:var(--olive-light); transform:translateX(2px); }
-.pp-nav-btn b { font-family:var(--bebas); font-weight:400; font-size:clamp(17px, 4vw, 20px); color:var(--text); letter-spacing:.5px; line-height:1.2; }
-.pp-nav-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.pp-from { font-weight:600; }
-.pp-section-title { scroll-margin-top:calc(var(--page-pt, 80px) + 24px); }
-
-/* ── Left column: photo + personal info ── */
-.pp-photo {
-  width:100%; aspect-ratio:2/3; border-radius:var(--radius-lg); overflow:hidden;
-  background:var(--bg-3); border:0.5px solid var(--border);
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--serif); font-size:clamp(36px, 8vw, 56px); color:var(--olive-light);
-  margin-bottom:1.5rem;
-}
-.pp-photo img { width:100%; height:100%; object-fit:cover; }
-
-.pp-info-card {
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:clamp(1rem, 3vw, 1.25rem);
-}
-.pp-info-title {
-  font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light);
-  margin-bottom:1rem; padding-bottom:.6rem; border-bottom:0.5px solid var(--border);
-}
-.pp-info-row { margin-bottom:1rem; }
-.pp-info-row:last-child { margin-bottom:0; }
-.pp-info-label { font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); margin-bottom:3px; }
-.pp-info-value { font-size:clamp(12.5px, 3vw, 13.5px); color:var(--text); line-height:1.5; }
-.pp-info-value.muted { color:var(--text-2); }
-.pp-info-num { font-family:var(--bebas); font-size:clamp(17px, 4vw, 20px); letter-spacing:.5px; line-height:1.2; }
-
-/* ── Right column: name + bio + credits ── */
-.pp-eyebrow { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:.5rem; }
-.pp-name { font-family:var(--serif); font-size:clamp(26px, 6vw, 46px); font-weight:500; margin-bottom:1.25rem; line-height:1.1; }
-
-.pp-section-title {
-  font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light);
-  margin:0 0 1rem; display:flex; align-items:center; gap:12px;
-}
-.pp-section-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
-.pp-section-title.pp-mt { margin-top:2.5rem; }
-.pp-mode-toggle-row { margin-top:2.5rem; display:flex; }
-.pp-mode-toggle-row .view-toggle { margin-inline-start:0; }
-.pp-mode-toggle-row .vt-btn { width:auto; height:auto; padding:8px 18px; font-size:13px; font-weight:500; font-family:var(--sans); white-space:nowrap; }
-
-.pp-bio { font-size:clamp(13.5px, 3vw, 14.5px); line-height:1.75; color:var(--text-2); white-space:pre-line; }
-.pp-bio.clamped { display:-webkit-box; -webkit-line-clamp:6; line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
-.pp-bio-toggle { font-size:12.5px; color:var(--olive-light); cursor:pointer; margin-top:8px; display:inline-block; background:none; border:none; padding:0; font-family:var(--sans); }
-
-/* ── Credits grid — self-contained, no shared-class dependency ── */
-.pp-grid {
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px;
-}
-@media(min-width:1024px) {
-  .pp-grid { grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
-}
-@media(min-width:1600px) {
-  .pp-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
-}
-@media(max-width:640px) {
-  .pp-grid { grid-template-columns:repeat(2,1fr); }
-}
-.pp-credit-role { margin-top:2px; font-size:clamp(10.5px, 2.6vw, 11.5px); color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-.pp-empty { padding:3rem 1rem; text-align:center; color:var(--text-3); font-size:14px; }
-
-@media(max-width:760px) {
-  .pp-layout { grid-template-columns:1fr; gap:1.5rem; }
-  /* Phone: a bigger photo with the Acting / Directing box under it,
-     Personal Info beside them */
-  .pp-sticky-col { position:static; align-self:start; display:grid; grid-template-columns:clamp(128px, 40vw, 172px) minmax(0, 1fr);
-                   grid-template-areas:"photo info" "nav info"; gap:1rem; align-items:start; }
-  .pp-photo { grid-area:photo; width:100%; margin-bottom:0; }
-  .pp-sticky-col > .pp-info-card:not(.pp-nav-card) { grid-area:info; min-width:0; }
-  .pp-nav-card { grid-area:nav; margin-top:0; position:static; }
-  .pp-info-row { margin-bottom:.7rem; }
-}
-@media(max-width:460px) {
-  .pp-info-card { padding:.85rem; }
-  .pp-info-title { font-size:10px; margin-bottom:.75rem; padding-bottom:.5rem; }
-  .pp-info-row { margin-bottom:.55rem; }
-  .pp-info-label { font-size:9.5px; }
-  .pp-info-value { font-size:12px; }
-}
-</style>
-  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1E5C26">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Profile — MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>@media(max-width:400px) {
+  .prof-header { padding:.85rem 0; }
+  .prof-header-top { flex-direction:column; align-items:center; gap:.5rem; margin-bottom:10px; }
+  .prof-header-info { align-items:center; text-align:center; width:100%; }
+  .prof-avatar { width:78px; height:78px; font-size:30px; }
+  .prof-username { font-size:27px; }
+  .prof-displayname { font-size:13px; }
+  .prof-stat-box-num { font-size:15px; }
+  .prof-stat-box { padding:.3rem .35rem; min-width:0; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:.5px; }
+  .prof-header-actions { gap:6px; }
+}
+
+
+.pv-section { margin-bottom:2.5rem; }
+
+.pv-eyebrow { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; }
+
+.pv-title { font-family:var(--serif); font-size:22px; font-weight:500; margin-bottom:1rem; }
+
+.pv-empty { text-align:center; padding:2rem; color:var(--text-3); font-size:13px; }
+
+.fav-edit-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);border:0.5px solid var(--border-olive);background:transparent;color:var(--olive-light);font-size:12px;cursor:pointer;transition:background .15s;}
+
+.fav-edit-btn:hover{background:var(--olive-faint);}
+/* ── Exports tab: the Export Studio + quick exports (export-studio.js) ── */
+.xp-hero{display:flex;align-items:center;gap:20px;padding:22px 24px;border-radius:var(--radius-lg);background:radial-gradient(120% 140% at 0% 0%,var(--olive-faint),transparent 60%),var(--bg-3);border:1px solid var(--border-olive);}
+.xp-hero-ic{flex:none;width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:var(--olive);color:#fff;}
+.xp-hero-text{flex:1;min-width:0;}
+.xp-hero-text b{display:block;font-size:17px;font-weight:700;color:var(--text);}
+.xp-hero-text span{display:block;margin-top:3px;font-size:13px;color:var(--text-2);line-height:1.5;}
+.xp-hero .btn-add-entry{flex:none;}
+.xp-label{margin:22px 0 10px;font-family:'Oswald',var(--sans);font-size:11.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--text-3);}
+.xp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
+.xp-card{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-2);background:var(--bg-3);color:var(--text);font:inherit;text-align:start;cursor:pointer;transition:border-color .15s,background .15s,transform .15s;}
+.xp-card:hover{border-color:var(--olive-light);background:var(--olive-faint);transform:translateY(-1px);}
+.xp-card:focus-visible{outline:2px solid var(--olive-light);outline-offset:2px;}
+.xp-card-ic{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--olive-faint);color:var(--olive-light);}
+.xp-card-text{flex:1;min-width:0;}
+.xp-card-text b{display:block;font-size:14px;font-weight:700;}
+.xp-card-text small{display:block;margin-top:2px;font-size:12px;color:var(--text-3);line-height:1.4;}
+.xp-card-go{flex:none;color:var(--text-3);transform:scaleX(-1);}
+[dir="rtl"] .xp-card-go{transform:none;}
+@media(prefers-reduced-motion:reduce){.xp-card{transition:none;}.xp-card:hover{transform:none;}}
+@media(max-width:560px){.xp-hero{flex-wrap:wrap;padding:18px;gap:14px;}.xp-hero .btn-add-entry{width:100%;justify-content:center;}.xp-grid{grid-template-columns:1fr;}}
+
+
+
+
+/* pv-friend-btn styling */
+
+@media(max-width:640px) {
+  
+  
+  
+  
+  
+}
+
+/* ══ Profile Header — Instagram style ══ */
+.prof-header {
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:0;
+  padding:1.75rem 0 1.5rem;
+  position:relative;
+  margin-bottom:1.5rem;
+}
+.prof-header::after {
+  content:'';
+  position:absolute;
+  bottom:0;
+  inset-inline-start:calc(-50vw + 50%);
+  width:100vw;
+  height:0.5px;
+  background:var(--border);
+}
+/* Top row: avatar left + info right */
+.prof-header-top {
+  display:flex;
+  flex-direction:row;
+  align-items:flex-start;
+  gap:1.5rem;
+  margin-bottom:14px;
+}
+.prof-avatar {
+  width:110px; height:110px; border-radius:50%; flex-shrink:0;
+  background:var(--olive-faint); border:2.5px solid var(--olive-light);
+  font-family:var(--serif); font-size:44px; color:var(--olive-light);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.prof-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.prof-header-info {
+  flex:1; min-width:0;
+  display:flex; flex-direction:column; justify-content:center;
+  padding-top:4px;
+}
+.prof-username {
+  font-family:var(--serif); font-size:30px; font-weight:600;
+  color:var(--text); line-height:1.1; margin-bottom:5px;
+}
+.prof-displayname { font-size:15px; color:var(--text-2); margin-bottom:10px; font-weight:400; }
+.prof-bio { font-size:14px; color:var(--text); line-height:1.6; margin-bottom:8px; }
+.prof-quote {
+  font-family:var(--sans); font-style:italic;
+  font-size:14px; font-weight:400; color:var(--text-2);
+  padding-inline-start:14px; border-inline-start:3px solid var(--olive-light);
+  margin-bottom:0; line-height:1.6;
+}
+/* Stat boxes — full width below avatar+info */
+.prof-stat-boxes {
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:6px;
+}
+.prof-stat-box {
+  background:var(--card); border:0.5px solid var(--border-olive); border-radius:var(--radius);
+  padding:.5rem .6rem; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  transition:border-color var(--trans) var(--ease);
+  grid-column:span 2; min-width:0; overflow:hidden;
+}
+.prof-stat-box:hover { border-color:var(--border-olive); }
+.prof-stat-box-num { font-family:var(--serif); font-size:22px; font-weight:500; color:var(--olive-light); line-height:1.15; text-align:center; }
+.prof-stat-box-label { font-size:8px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; margin-top:3px; white-space:nowrap; text-align:center; }
+/* Action buttons — full width, centered */
+.prof-header-actions {
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  justify-content:center; padding-top:10px; width:100%;
+}
+.prof-edit-btn {
+  padding:7px 18px; border-radius:var(--radius-sm);
+  border:0.5px solid var(--border-olive); background:transparent;
+  color:var(--olive-light); font-size:12px; font-weight:500; cursor:pointer;
+  text-decoration:none; display:inline-block; transition:background .15s;
+}
+.prof-edit-btn:hover { background:var(--olive-faint); }
+.prof-share-btn {
+  padding:7px 18px; border-radius:var(--radius-sm);
+  border:0.5px solid var(--border-2); background:transparent;
+  color:var(--text-2); font-size:12px; font-weight:500; cursor:pointer;
+  display:inline-flex; align-items:center; gap:5px; transition:all .15s;
+}
+.prof-share-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
+/* Share popup */
+.prof-share-popup {
+  position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,0.72);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity .2s var(--ease);
+}
+.prof-share-popup.open { opacity:1; pointer-events:auto; }
+.prof-share-card {
+  background:var(--bg-2); border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg);
+  padding:24px; width:100%; max-width:400px;
+  transform:translateY(16px); transition:transform .24s var(--ease);
+}
+.prof-share-popup.open .prof-share-card { transform:translateY(0); }
+.prof-share-title { font-family:var(--serif); font-size:20px; font-weight:500; margin-bottom:6px; }
+.prof-share-sub { font-size:12px; color:var(--text-3); margin-bottom:16px; }
+.prof-share-link {
+  display:flex; align-items:center; gap:8px;
+  background:var(--bg-3); border:0.5px solid var(--border-2);
+  border-radius:var(--radius-sm); padding:10px 14px;
+  font-size:12px; color:var(--text-2); word-break:break-all;
+  cursor:pointer; transition:border-color .15s; margin-bottom:14px;
+}
+.prof-share-link:hover { border-color:var(--border-olive); }
+.prof-share-link svg { flex-shrink:0; }
+.prof-share-actions { display:flex; gap:8px; }
+.prof-share-copy { flex:1; padding:10px; background:var(--olive); border:none; color:#fff; border-radius:var(--radius-sm); font-size:13px; font-weight:500; cursor:pointer; }
+.prof-share-copy:hover { background:var(--olive-2); }
+.prof-share-close { padding:10px 16px; background:transparent; border:0.5px solid var(--border-2); color:var(--text-2); border-radius:var(--radius-sm); font-size:13px; cursor:pointer; }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — full scaling for all screens
+   ══════════════════════════════════════════ */
+
+/* ── Large desktop (≥1280px) ── */
+@media(min-width:1280px) {
+  .prof-stat-box-num { font-size:28px; }
+}
+
+/* ── Tablet (≤900px) ── */
+@media(max-width:900px) {
+  .prof-header-top { gap:1.25rem; }
+  .prof-stat-box-num { font-size:24px; }
+  .prof-stat-box { padding:.45rem .6rem; min-width:0; }
+  .prof-bio { font-size:13px; } .prof-quote { font-size:14px; }
+  
+  
+  
+  
+  
+  
+}
+
+/* ── Mobile (≤640px) ── */
+@media(max-width:640px) {
+  .prof-header { padding:1rem 0; }
+  .prof-header-top { gap:1rem; margin-bottom:10px; }
+  .prof-avatar { width:82px; height:82px; font-size:32px; }
+  .prof-username { font-size:25px; }
+  .prof-displayname { font-size:14px; margin-bottom:8px; }
+  .prof-bio { font-size:13px; } .prof-quote { font-size:14px; }
+  .prof-stat-box-num { font-size:18px; }
+  .prof-stat-box { padding:.4rem .5rem; min-width:0; }
+  .prof-header-identity { margin-bottom:10px; }
+  .prof-username { font-size:22px; }
+  .prof-displayname { font-size:13px; margin-bottom:8px; }
+  .prof-stat-boxes { gap:4px; }
+  .prof-stat-box { padding:.3rem .4rem; }
+  .prof-stat-box-num { font-size:18px; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:0.8px; }
+  .prof-bio { font-size:12px; }
+  .prof-quote { font-size:13px; }
+  .prof-edit-btn, .prof-share-btn, .pv-friend-btn { font-size:11px; padding:6px 14px; }
+  
+  
+  
+  
+  
+  
+  
+  
+  .note-row { padding:12px 14px; gap:12px; border-radius:var(--radius); }
+  .note-poster { width:64px; height:90px; font-size:20px; }
+  .note-title { font-size:15px; }
+  .note-tags { gap:3px; margin-bottom:3px; }
+  .note-text { font-size:11px; margin-top:4px; }
+  .note-score { font-size:20px; }
+  .note-date { font-size:10px; }
+  .fav-slot { padding:10px 12px; min-height:64px; gap:10px; }
+  .fav-slot-title { font-size:13px; }
+  .fav-slot-num { font-size:20px; }
+  .fav-slot-score { font-size:15px; }
+  .fav-slot-poster { width:40px; height:56px; font-size:16px; }
+  .fav-edit-btn { font-size:11px; padding:6px 12px; }
+  .fav-picker-item { padding:11px 16px; gap:12px; }
+  .fav-picker-poster { width:44px; height:62px; font-size:17px; }
+  .fav-picker-name { font-size:14px; }
+  .fav-picker-sub { font-size:11px; }
+  .fav-picker-score { font-size:17px; }
+  .fav-picker-check { width:24px; height:24px; }
+  #favPickerSheet { max-height:88dvh; }
+
+  .prof-share-card { padding:18px; }
+  .prof-share-title { font-size:18px; }
+  .sort-bar { padding:8px 12px 10px; gap:4px; }
+  .sort-btn { font-size:10px; padding:4px 8px; }
+  .cf-btn { font-size:10px; padding:4px 9px; }
+  .section-block-title { font-size:12px; }
+}
+
+/* ── Small mobile (≤400px) ── */
+@media(max-width:400px) {
+  .prof-header { padding:.85rem 0; }
+  .prof-header-top { flex-direction:column; align-items:center; gap:.6rem; }
+  .prof-header-info { align-items:center; text-align:center; }
+  .prof-avatar { width:80px; height:80px; font-size:32px; }
+  .prof-username { font-size:22px; }
+  .prof-displayname { font-size:13px; }
+  .prof-stat-box-num { font-size:14px; }
+  .prof-stat-box { padding:.3rem .35rem; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:.5px; }
+  .prof-header-actions { gap:6px; }
+  .prof-header-identity { margin-bottom:8px; }
+  .fav-slot { padding:8px 10px; gap:8px; min-height:56px; }
+  .fav-slot-poster { width:36px; height:50px; font-size:14px; }
+  .fav-slot-title { font-size:12px; }
+  .fav-slot-num { font-size:17px; }
+
+  .fav-picker-item { padding:9px 12px; gap:10px; }
+  .fav-picker-poster { width:38px; height:54px; font-size:15px; }
+  .fav-picker-name { font-size:13px; }
+  .fav-picker-sub { font-size:10px; }
+  .fav-picker-score { font-size:15px; }
+  .fav-picker-check { width:22px; height:22px; }
+  .prof-username { font-size:20px; }
+  .prof-stat-boxes { gap:3px; }
+  .prof-stat-box { padding:.25rem .3rem; }
+  .prof-stat-box-num { font-size:13px; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:0.5px; }
+  .prof-header-actions { gap:6px; }
+  .prof-edit-btn, .prof-share-btn, .pv-friend-btn { font-size:10px; padding:5px 11px; }
+  
+  
+  
+  
+  
+  
+  .sort-btn { font-size:9px; padding:3px 6px; }
+  .cf-btn { font-size:9px; padding:3px 7px; }
+  .note-row { padding:10px 12px; gap:10px; }
+  .note-poster { width:54px; height:76px; font-size:18px; }
+  .note-title { font-size:13px; }
+  .note-text { font-size:10px; }
+  .note-score { font-size:17px; }
+}
+
+.prof-ov-grid {
+  display:grid; grid-template-columns:repeat(5,1fr); gap:12px;
+}
+.prof-ov-grid .q-card { width:100% !important; max-width:100% !important; min-width:0 !important; }
+@media(max-width:900px)  { .prof-ov-grid { grid-template-columns:repeat(4,1fr); gap:10px; } }
+@media(max-width:640px)  { .prof-ov-grid { grid-template-columns:repeat(3,1fr); gap:8px; } }
+@media(max-width:400px)  { .prof-ov-grid { grid-template-columns:repeat(2,1fr); gap:6px; } }
+
+
+</style>
 </head>
 <body>
 <div class="page-wrap">
-  <div class="pp-wrap">
-    <a class="pp-back" href="#" onclick="history.length>1?history.back():location.href='index.html';return false;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      Back
-    </a>
 
-    <div id="ppLoading" class="page-loading"><div class="spinner"></div></div>
-    <div id="ppContent" style="display:none"></div>
+    <div class="prof-header fade-up">
+      <div class="prof-header-top">
+        <div class="prof-avatar" id="profAvatar">?</div>
+        <div class="prof-header-info">
+          <div class="prof-username" id="profUsername" translate="no"></div>
+          <div class="prof-displayname" id="profDisplayName" translate="no"></div>
+          <div class="prof-bio" id="profBio" translate="no" style="display:none"></div>
+          <div class="prof-quote" id="profQuote" translate="no" style="display:none"></div>
+        </div>
+      </div>
+      <div class="prof-stat-boxes" id="profStats"></div>
+      <div class="prof-header-actions" id="profHeaderBtns">
+        <a href="settings.html" class="prof-edit-btn" id="profEditBtn" style="display:none">Edit Profile</a>
+        <button class="prof-share-btn" id="profShareBtn" onclick="openShareProfile()" style="display:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share</button>
+      </div>
+    </div>
+
+  <select class="prof-tab-select" id="profTabsSelect" aria-label="Profile tab" onchange="switchTab(+this.value)">
+    <option value="0">Overview</option>
+    <option value="1">Library</option>
+    <option value="2">Lists</option>
+    <option value="3">Notes</option>
+    <option value="5">Episodes</option>
+    <option value="6">Showcase</option>
+    <option value="4">Exports</option>
+  </select>
+
+  <div class="prof-tabs">
+    <div class="prof-tab active" id="tab0" onclick="switchTab(0)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span class="prof-tab-label">Overview</span>
+    </div>
+    <div class="prof-tab" id="tab1" onclick="switchTab(1)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span class="prof-tab-label">Library</span>
+    </div>
+    <div class="prof-tab" id="tab2" onclick="switchTab(2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+      <span class="prof-tab-label">Lists</span>
+    </div>
+    <div class="prof-tab" id="tab3" onclick="switchTab(3)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+      <span class="prof-tab-label">Notes</span>
+    </div>
+    <div class="prof-tab" id="tab5" onclick="switchTab(5)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 8h3"/><path d="M6 11h3"/><path d="M6 14h3"/><path d="M13 9l4 2-4 2z"/></svg>
+      <span class="prof-tab-label">Episodes</span>
+    </div>
+    <div class="prof-tab" id="tab6" onclick="switchTab(6)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+      <span class="prof-tab-label">Showcase</span>
+    </div>
+    <div class="prof-tab" id="tab4" onclick="switchTab(4)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="prof-tab-label">Exports</span>
+    </div>
   </div>
+
+  <div class="prof-panel active" id="panel0"><div id="overviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+  <div class="prof-panel" id="panel1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>
+  <div class="prof-panel" id="panel2"><div id="listsTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+  <div class="prof-panel" id="panel3"><div id="notesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+  <div class="prof-panel" id="panel4"><div id="exportsContent"></div></div>
+  <div class="prof-panel" id="panel5"><div id="episodesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+  <div class="prof-panel" id="panel6"><div id="profShowcase"><div class="page-loading"><div class="spinner"></div></div></div></div>
+
 </div>
 
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/sort-filter.js"></script>
+<script>window.LIB_SCOPE = 'prof';</script>
+<script src="js/library-view.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/create-card.js"></script>
 <script src="js/info-popup.js"></script>
+<script src="js/episode-ratings.js"></script>
+<script src="js/rating-popup.js"></script>
+<script src="js/comments.js"></script>
+<script src="js/note-popup.js"></script>
+<script src="js/list-popup.js"></script>
+<script src="js/profile-tabs.js"></script>
+<script src="js/export.js"></script>
+<script src="js/export-studio.js"></script>
+<script src="js/medals.js"></script>
+<script src="js/showcase.js"></script>
 <script>
-function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* ── State ── */
+var _pUser = null, _pProfile = null, _pEntries = [], _activeTab = 0;
+var _profFavLists = [];
+var _SVG_L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+var _SVG_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 
-const _ppParams = new URLSearchParams(location.search);
-const _ppId = _ppParams.get('id');
-let _ppMode = _ppParams.get('mode') === 'directing' ? 'directing' : 'acting';
-let _ppPerson = null;
-const TMDB_GENDER = { 0: '', 1: 'Female', 2: 'Male', 3: 'Non-binary' };
+/* ── Init ── */
+// Returning via browser back/forward can restore this page from the
+// bfcache with stale data (e.g. an entry just added/edited elsewhere
+// wouldn't show up here) instead of re-running this page's scripts.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
 
-document.addEventListener('DOMContentLoaded', () => {
-  initPageGuest(async () => {
-    if (!_ppId) { renderPpError('No person specified.'); return; }
-    loadPerson();
+document.addEventListener('DOMContentLoaded', function() {
+  initPage(async function(user, profile) {
+    if (!user) {
+      document.querySelector('.page-wrap').innerHTML = '<div class="guest-page-state fade-up"><div class="guest-page-icon">'+icon('user',36)+'</div><h2 class="guest-page-title">Profile</h2><p class="guest-page-sub">Sign in to view your profile, track your favorites, and more.</p><div class="guest-cta"><a href="login.html" class="guest-btn-primary">Sign In</a><a href="login.html#signup" class="guest-btn-secondary">Create Account</a></div></div>';
+      return;
+    }
+    _pUser = user;
+    _pProfile = profile;
+    // Entries and custom lists load together (was one after the other)
+    var both = await Promise.all([
+      getEntries(user.id),
+      sb.from('favorite_lists').select('*').eq('user_id',user.id).order('created_at',{ascending:true}).then(function(r){ return r.data || []; }, function(){ return []; })
+    ]);
+    _pEntries = both[0];
+    _profFavLists = both[1];
+    _pEntriesLoaded();
+    populateHeader();
+    renderTab0();
+    if (_activeTab === 1) renderLibrary();
   });
 });
 
-async function loadPerson() {
-  try {
-    const res = await tmdbFetch(`${TMDB_BASE}/person/${_ppId}?api_key=${TMDB_KEY}&language=en-US&append_to_response=combined_credits`);
-    if (!res.ok) { renderPpError('Could not load this person — they may not exist on TMDB.'); return; }
-    const p = await res.json();
-    _ppPerson = p;
-    renderPerson(p);
-  } catch (e) {
-    console.error(e);
-    renderPpError('Something went wrong loading this page.');
-  }
-}
-
-function renderPpError(msg) {
-  document.getElementById('ppLoading').style.display = 'none';
-  const c = document.getElementById('ppContent');
-  c.style.display = '';
-  c.innerHTML = `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('search', 44)}</div><div class="empty-text">${esc(msg)}</div></div>`;
-}
-
-function renderPerson(p) {
-  document.getElementById('ppLoading').style.display = 'none';
-  const c = document.getElementById('ppContent');
-  c.style.display = '';
-  document.title = p.name ? `${p.name} — MyScreenFolio` : 'MyScreenFolio';
-
-  const photo = p.profile_path ? `${TMDB_IMG.replace('w185','w342')}${p.profile_path}` : null;
-  const bio = (p.biography || '').trim();
-  const age = p.birthday ? _ppAge(p.birthday, p.deathday) : null;
-
-  // De-dupe cast credits (a person can appear twice for different roles),
-  // keep only ones with a poster, sort by release/air date — latest first,
-  // then split into Movies / TV Shows so each gets its own full section.
-  // In "directing" mode, source from crew instead (Director for movies,
-  // Creator for TV shows) rather than cast.
-  const seen = new Set();
-  const sourceCredits = _ppMode === 'directing'
-    ? (p.combined_credits?.crew || []).filter(cr => cr.job === 'Director' || cr.job === 'Creator')
-    : (p.combined_credits?.cast || []);
-  const allCredits = sourceCredits
-    .filter(cr => cr.poster_path)
-    .filter(cr => { const k = cr.media_type + cr.id; if (seen.has(k)) return false; seen.add(k); return true; })
-    .sort((a, b) => {
-      const da = (a.media_type === 'movie' ? a.release_date : a.first_air_date) || '';
-      const db = (b.media_type === 'movie' ? b.release_date : b.first_air_date) || '';
-      return db.localeCompare(da); // descending — latest first, undated items sink to bottom
-    });
-  const movieCredits = allCredits.filter(cr => cr.media_type === 'movie');
-  const tvCredits     = allCredits.filter(cr => cr.media_type === 'tv');
-
-  // Only worth a toggle when the person genuinely has both kinds of
-  // credits — most people are one or the other, and showing a toggle
-  // that just leads to an empty state isn't useful.
-  const hasActingCredits = (p.combined_credits?.cast || []).some(cr => cr.poster_path);
-  const hasDirectingCredits = (p.combined_credits?.crew || []).some(cr => (cr.job === 'Director' || cr.job === 'Creator') && cr.poster_path);
-  const showModeToggle = hasActingCredits && hasDirectingCredits;
-
-  const knownCreditsCount = (p.combined_credits?.cast?.length || 0) + (p.combined_credits?.crew?.length || 0);
-  const akaList = (p.also_known_as || []).filter(n => n && n !== p.name).slice(0, 4);
-
-  c.innerHTML = `
-    <div class="pp-layout fade-up">
-      <div class="pp-sticky-col">
-        <div class="pp-photo">${photo ? `<img src="${photo}" alt="">` : esc((p.name || '?')[0])}</div>
-        <div class="pp-info-card">
-          <div class="pp-info-title">Personal Info</div>
-          ${p.place_of_birth ? `<div class="pp-info-row"><div class="pp-info-label">From</div><div class="pp-info-value pp-from">${esc(p.place_of_birth.split(',').pop().trim())}</div></div>` : ''}
-          ${p.known_for_department ? `<div class="pp-info-row"><div class="pp-info-label">Known For</div><div class="pp-info-value">${esc(p.known_for_department)}</div></div>` : ''}
-          <div class="pp-info-row"><div class="pp-info-label">Known Credits</div><div class="pp-info-value pp-info-num">${knownCreditsCount}</div></div>
-          ${p.gender != null && TMDB_GENDER[p.gender] ? `<div class="pp-info-row"><div class="pp-info-label">Gender</div><div class="pp-info-value">${TMDB_GENDER[p.gender]}</div></div>` : ''}
-          ${p.birthday ? `<div class="pp-info-row"><div class="pp-info-label">${p.deathday ? 'Birthday' : 'Birthday'}</div><div class="pp-info-value">${esc(p.birthday)}${age != null ? ' (' + age + ' years old)' : ''}</div></div>` : ''}
-          ${p.deathday ? `<div class="pp-info-row"><div class="pp-info-label">Day of Death</div><div class="pp-info-value">${esc(p.deathday)}</div></div>` : ''}
-          ${p.place_of_birth ? `<div class="pp-info-row"><div class="pp-info-label">Place of Birth</div><div class="pp-info-value muted">${esc(p.place_of_birth)}</div></div>` : ''}
-          ${akaList.length ? `<div class="pp-info-row"><div class="pp-info-label">Also Known As</div><div class="pp-info-value muted">${akaList.map(esc).join('<br>')}</div></div>` : ''}
-        </div>
-        ${movieCredits.length || tvCredits.length ? `<div class="pp-info-card pp-nav-card" role="navigation" aria-label="Jump to">
-          <div class="pp-info-title">${_ppMode === 'directing' ? 'Directing' : 'Acting'}</div>
-          ${movieCredits.length ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppMovies')"><span>${_ppMode === 'directing' ? 'Movies Directed' : 'Movies'}</span><b>${movieCredits.length}</b></button>` : ''}
-          ${tvCredits.length ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppTv')"><span>${_ppMode === 'directing' ? 'Shows Created' : 'TV Shows'}</span><b>${tvCredits.length}</b></button>` : ''}
-        </div>` : ''}
-      </div>
-
-      <div>
-        ${p.known_for_department ? `<div class="pp-eyebrow">${esc(p.known_for_department)}</div>` : ''}
-        <div class="pp-name" translate="no">${esc(p.name)}</div>
-
-        ${bio ? `
-          <div class="pp-section-title">Biography</div>
-          <div class="pp-bio clamped" id="ppBio" translate="no">${esc(bio)}</div>
-          <button class="pp-bio-toggle" id="ppBioToggle" onclick="_ppToggleBio()">Read more</button>
-        ` : ''}
-
-        ${showModeToggle ? `
-          <div class="pp-mode-toggle-row pp-mt">
-            <div class="view-toggle">
-              <button class="vt-btn ${_ppMode==='acting'?'active':''}" onclick="_ppSetMode('acting')">Acting</button>
-              <button class="vt-btn ${_ppMode==='directing'?'active':''}" onclick="_ppSetMode('directing')">Directing</button>
-            </div>
-          </div>
-        ` : ''}
-
-        ${allCredits.length ? `
-          ${movieCredits.length ? `
-            <div class="pp-section-title pp-mt" id="ppMovies">${_ppMode === 'directing' ? 'Movies Directed' : 'Movies'}</div>
-            <div class="pp-grid">${_ppCreditGrid(movieCredits)}</div>
-          ` : ''}
-          ${tvCredits.length ? `
-            <div class="pp-section-title pp-mt" id="ppTv">${_ppMode === 'directing' ? 'Shows Created' : 'TV Shows'}</div>
-            <div class="pp-grid">${_ppCreditGrid(tvCredits)}</div>
-          ` : ''}
-        ` : `<div class="pp-empty">${_ppMode === 'directing' ? 'No directing/creator credits found.' : 'No known credits found.'}</div>`}
-      </div>
-    </div>
-  `;
-
-  // Only show the "Read more" toggle if the bio actually overflows
-  requestAnimationFrame(() => {
-    const bioEl = document.getElementById('ppBio');
-    const toggle = document.getElementById('ppBioToggle');
-    if (bioEl && toggle && bioEl.scrollHeight <= bioEl.clientHeight + 2) {
-      toggle.style.display = 'none';
-    }
+/* ── Lists + Notes tabs: the Personal sections of the Notes / Lists pages
+   (profile-tabs.js). They wait for your library, which their cards use. ── */
+function _renderPersonalTab(n) {
+  _pEntriesReady.then(function() {
+    if (n === 2) MSSTabs.lists(document.getElementById('listsTabContent'), { userId: _pUser.id, entries: _pEntries, owner: true });
+    else MSSTabs.notes(document.getElementById('notesTabContent'), { entries: _pEntries, owner: true, onDelete: _libRemove });
   });
 }
 
-// Same card as Discover: poster + type tag, title + year, role, ★ TMDB score.
-// Tapping opens the info popup (Add to Watchlist · Discover → title page).
-window._ppItems = {};
-function _ppCreditGrid(list) {
-  return list.map(cr => {
-    const isMovie = cr.media_type === 'movie';
-    const title = isMovie ? cr.title : cr.name;
-    const year = ((isMovie ? cr.release_date : cr.first_air_date) || '').split('-')[0];
-    const roleLabel = _ppMode === 'directing' ? (cr.job || '') : (cr.character || '');
-    const key = cr.media_type + ':' + cr.id;
-    window._ppItems[key] = {
-      id: cr.id, media_type: cr.media_type, title, year, overview: cr.overview,
-      poster_url: cr.poster_path ? TMDB_FULL + cr.poster_path : null, genre_ids: cr.genre_ids || [],
-      score: cr.vote_average, origin_country: cr.origin_country, original_language: cr.original_language,
-    };
-    const sc = cr.vote_count && cr.vote_average ? (Math.floor(cr.vote_average * 10) / 10).toFixed(1) : null;
-    return MSSCard.poster({ cls: 'pp-card', onclick: `MSSInfo.fromDiscover(window._ppItems['${key}'])`, title, year,
-      poster: TMDB_IMG.replace('w185', 'w500') + cr.poster_path, type: isMovie ? 'movie' : 'tv', score: sc,
-      below: roleLabel ? `<div class="pp-credit-role">${esc(roleLabel)}</div>` : '' });
-  }).join('');
+/* ── Profile stats (5 boxes) ── */
+
+
+/* ── Header ── */
+function populateHeader() {
+  var p = _pProfile, u = _pUser;
+  var un = (p && p.username) || (u.email ? u.email.split('@')[0] : '');
+  var st = computeStats(_pEntries);
+  var hours = Math.round(((st.movieMins)||0)/60);
+  var av = document.getElementById('profAvatar');
+  if (p && safeURL(p.avatar_url)) {
+    av.innerHTML = '<img src="'+safeURL(p.avatar_url)+'" alt="">';
+  } else {
+    av.textContent = (un[0]||'?').toUpperCase();
+  }
+  document.getElementById('profUsername').textContent = '@'+un;
+  var dn = document.getElementById('profDisplayName');
+  dn.textContent = (p && p.display_name) || '';
+  var bio = document.getElementById('profBio');
+  bio.textContent = (p && p.bio) || '';
+  bio.style.display = (p && p.bio) ? '' : 'none';
+  var q = document.getElementById('profQuote');
+  q.textContent = (p && p.quote) || '';
+  q.style.display = (p && p.quote) ? '' : 'none';
+  document.getElementById('profStats').innerHTML = MSSTabs.statsHTML(_pEntries);
+  document.getElementById('profEditBtn').style.display = '';
+  var sb=document.getElementById('profShareBtn'); if(sb) sb.style.display='';
 }
 
-function _ppJump(id) {
-  document.getElementById(id)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+/* ── Tabs ── */
+function switchTab(n) {
+  _activeTab = n;
+  var sel = document.getElementById('profTabsSelect');
+  if (sel && +sel.value !== n) sel.value = n;
+  [0,1,2,3,4,5,6].forEach(function(i) {
+    var t=document.getElementById('tab'+i), p=document.getElementById('panel'+i);
+    if(t) t.classList.toggle('active', i===n);
+    if(p) p.classList.toggle('active', i===n);
+  });
+  if (n===1) renderLibrary();
+  if (n===2 || n===3) _renderPersonalTab(n);
+  if (n===4) renderExports();
+  if (n===5) MSSTabs.episodes(document.getElementById('episodesTabContent'), { userId: _pUser.id, owner: true });
+  if (n===6) MSSShowcase.mount(document.getElementById('profShowcase'), _pUser.id, { own: true });
+  if (n===0) renderTab0();
 }
 
-function _ppSetMode(mode) {
-  if (mode === _ppMode || !_ppPerson) return;
-  _ppMode = mode;
-  const url = new URL(location.href);
-  url.searchParams.set('mode', mode);
-  history.replaceState(null, '', url);
-  renderPerson(_ppPerson);
+/* ── Popup ── */
+
+
+
+
+/* ── Tab 0: Overview ── */
+function _statsBoxHTML(entries, profile, favLists) {
+  entries = entries || [];
+  var watched = function(e){ return e.status==='completed'||e.status==='ongoing'; };
+  var byCat = function(c){ return entries.filter(function(e){return e.cat===c;}); };
+  var tv = byCat('tv'), movies = byCat('movies'), anime = byCat('anime'), cartoons = byCat('cartoons');
+  var watchlist = entries.filter(function(e){return e.status==='queue'||e.status==='up_next';});
+  var reviews = entries.filter(function(e){return e.notes && e.notes.trim();});
+
+  var favIds = {};
+  if (profile) {
+    ['top_picks','fav_tv','fav_movies','fav_anime','fav_cartoons'].forEach(function(k){
+      (Array.isArray(profile[k]) ? profile[k] : []).forEach(function(id){ favIds[id] = true; });
+    });
+  }
+  var favoritesCount = Object.keys(favIds).length;
+  var favListsArr = Array.isArray(favLists) ? favLists : [];
+  var favoriteListsCount = favListsArr.filter(function(l){ return l.cat !== 'custom'; }).length;
+  var listsCount = favListsArr.filter(function(l){ return l.cat === 'custom'; }).length;
+
+  var rows = [
+    { label:'All Items',        value:entries.length },
+    { label:'TV Shows',         value:tv.length },
+    { label:'TV Shows Watched', value:tv.filter(watched).length },
+    { label:'Movies',           value:movies.length },
+    { label:'Movies Watched',   value:movies.filter(watched).length },
+    { label:'Animes',           value:anime.length },
+    { label:'Animes Watched',   value:anime.filter(watched).length },
+    { label:'Cartoons',         value:cartoons.length },
+    { label:'Cartoons Watched', value:cartoons.filter(watched).length },
+    { label:'Watchlist',        value:watchlist.length },
+    { label:'Lists',            value:listsCount },
+    { label:'Reviews',          value:reviews.length },
+  ];
+
+  var chevronSvg = '<span class="stats-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>';
+  return '<div class="stats-box fade-up" id="statsBoxOwn">' + rows.map(function(r,i){
+    return '<div class="stats-row"' + (i===0 ? ' onclick="MSSTabs.toggleStats(\'statsBoxOwn\')"' : '') + '>'
+      + '<span class="stats-label">' + r.label + '</span>'
+      + '<span class="stats-value">' + r.value.toLocaleString() + (i===0 ? chevronSvg : '') + '</span>'
+      + '</div>';
+  }).join('') + '</div>';
 }
 
-function _ppToggleBio() {
-  const bioEl = document.getElementById('ppBio');
-  const toggle = document.getElementById('ppBioToggle');
-  const clamped = bioEl.classList.toggle('clamped');
-  toggle.textContent = clamped ? 'Read more' : 'Show less';
+function renderTab0() {
+  var el = document.getElementById('overviewContent');
+  if (!el) return;
+  if (!_pEntries || !_pEntries.length) {   // nothing added yet: say so (was a spinner forever)
+    el.innerHTML = '<div class="fr-empty prof-empty"><div class="fr-empty-ic">'+icon('film',26)+'</div><div class="fr-empty-title">Your profile is waiting</div>'
+      +'<div class="fr-empty-text">Add movies and shows you\u2019ve watched — your stats, favorites and top picks show up here.</div>'
+      +'<a class="btn-add-entry" style="display:inline-flex;width:auto;margin-top:14px;text-decoration:none" href="discover.html">'+icon('search',15)+' Find something to add</a></div>';
+    return;
+  }
+  var _statsHTML = _statsBoxHTML(_pEntries, _pProfile, _profFavLists);
+  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+'</div><div class="overview-main" id="profDashMain"></div></div>';
+  // Dashboard: Top Favorites, Would Recommend, Top 5 per type — editable here
+  if (!_pProfile) _pProfile = {};
+  MSSDash.render(document.getElementById('profDashMain'), {
+    entries: _pEntries, profile: _pProfile, editable: true,
+    openEntry: _libOpen,
+    save: function(key, ids){ var u = {}; u[key] = ids; return updateProfile(_pUser.id, u); }
+  });
 }
 
-function _ppAge(birthday, deathday) {
-  const end = deathday ? new Date(deathday) : new Date();
-  const start = new Date(birthday);
-  let age = end.getFullYear() - start.getFullYear();
-  const m = end.getMonth() - start.getMonth();
-  if (m < 0 || (m === 0 && end.getDate() < start.getDate())) age--;
-  return age;
+/* ── Tab 1: Library — js/library-view.js ── */
+
+/* ── Tab 4: Exports ── */
+// Exports is static, so its tab shows straight away; an export started
+// before your library has loaded simply waits for it.
+var _pEntriesLoaded; var _pEntriesReady = new Promise(function(res){ _pEntriesLoaded = res; });
+
+// Exports: the Export Studio (export-studio.js) — opened plain, or from a quick export
+var _PROF_EXPORTS = [
+  { icon:'check',    title:'Everything I’ve watched', desc:'Your whole watch history, ranked by score.', preset:{ what:'watched', sort:'score' } },
+  { icon:'trophy',   title:'My top 10',               desc:'Your ten best, with posters and every rating.', preset:{ what:'watched', sort:'score', limit:10 } },
+  { icon:'bookmark', title:'My watchlist',            desc:'Everything you plan to watch.',               preset:{ what:'watchlist' } },
+  { icon:'play',     title:'Currently watching',      desc:'What you’re in the middle of, and how far.',  preset:{ what:'watching' } },
+];
+function _profExport(i) {
+  var p = window._navUserProfile || _pProfile || {};
+  MSSStudio.open({ preset: i == null ? null : _PROF_EXPORTS[i].preset, who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' },
+    load: function(){ return _pEntriesReady.then(function(){ return _pEntries; }); } });
 }
+
+function renderExports(){
+  var el=document.getElementById('exportsContent');
+  if(el.innerHTML.trim())return;
+  el.innerHTML='<div class="pv-section"><div class="pv-eyebrow">Export</div><div class="pv-title">Take your library with you</div>'
+    +'<div class="xp-hero"><span class="xp-hero-ic">'+icon('download',26)+'</span><div class="xp-hero-text"><b>Export Studio</b><span>Choose what goes in, how it looks and what stays private — with a live preview before you download.</span></div>'
+    +'<button type="button" class="btn-add-entry" onclick="_profExport(null)">'+icon('sparkles',15)+' Open Export Studio</button></div>'
+    +'<div class="xp-label">Quick exports</div><div class="xp-grid">'+_PROF_EXPORTS.map(function(c,i){return '<button type="button" class="xp-card" onclick="_profExport('+i+')"><span class="xp-card-ic">'+icon(c.icon,18)+'</span><span class="xp-card-text"><b>'+escHTML(c.title)+'</b><small>'+escHTML(c.desc)+'</small></span><span class="xp-card-go">'+icon('back',16)+'</span></button>';}).join('')+'</div></div>';
+}
+
+
+
+
+
+
+
+
+
+
+/* ── Share Profile ── */
+function openShareProfile() {
+  var un = (_pProfile && _pProfile.username) || (_pUser && _pUser.email && _pUser.email.split('@')[0]) || '';
+  var base = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+  var url = base + 'profile-view.html?u=' + encodeURIComponent(un);
+  // Use navigator.share if available
+  if (navigator.share) {
+    navigator.share({ title: 'MyScreenFolio — @'+un, url: url }).catch(function(){});
+    return;
+  }
+  // Fallback: show popup
+  var popup = document.getElementById('profSharePopup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.className = 'prof-share-popup';
+    popup.id = 'profSharePopup';
+    popup.innerHTML = '<div class="prof-share-card">'
+      +'<div class="prof-share-title">Share Profile</div>'
+      +'<div class="prof-share-sub">Anyone with this link can view your profile and send you a friend request.</div>'
+      +'<div class="prof-share-link" id="profShareLink" onclick="profCopyLink()">'
+      +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+      +'<span id="profShareUrl"></span>'
+      +'</div>'
+      +'<div class="prof-share-actions">'
+      +'<button class="prof-share-copy" onclick="profCopyLink()">Copy Link</button>'
+      +'<button class="prof-share-close" onclick="closeShareProfile()">Close</button>'
+      +'</div></div>';
+    popup.addEventListener('click', function(e){ if(e.target===popup) closeShareProfile(); });
+    document.body.appendChild(popup);
+  }
+  document.getElementById('profShareUrl').textContent = url;
+  popup._url = url;
+  popup.classList.add('open');
+  mssLockScroll('profShare');
+}
+function closeShareProfile() {
+  var p = document.getElementById('profSharePopup');
+  if (p) { p.classList.remove('open'); mssUnlockScroll('profShare'); }
+}
+function profCopyLink() {
+  var p = document.getElementById('profSharePopup');
+  var url = p && p._url;
+  if (!url) return;
+  navigator.clipboard && navigator.clipboard.writeText(url).then(function(){ showToast('Link copied!'); });
+}
+
+// After a delete from either popup: drop it from this page and re-render
+
+
+// Your title: Info · Ratings · Note in one popup (MSSViews, info-popup.js). Opens on
+// Ratings once it's rated/watched, otherwise on Info.
+
+
+/* ── Action button stubs (implemented in later steps) ── */
+/* rewatchEntry defined in rewatch.js */
+/* createShareCard defined in create-card.js */
 </script>
 <script>
 if ('serviceWorker' in navigator) {
