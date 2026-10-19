@@ -13,10 +13,15 @@
    and "avatar @username · MYSCREENFOLIO — Page x / y" on every page.
 
    MSSPdf.build(job, onProgress) → Promise<Blob>
-     job = { kind: 'watched' | 'watchlist' | 'watching', title, kicker,
+     job = { kind: 'watched' | 'watchlist' | 'watching' | 'mixed', title, kicker,
              entries (already filtered + sorted), ranked, group, theme,
              include: { breakdown, highlights, notes, dates },
-             privacy: { hideSpoilers, anon }, who: { name, username, avatar_url } }
+             privacy: { hideSpoilers, anon }, who: { name, username, avatar_url },
+             byline (optional, replaces "by …" — a list's owner), desc (optional, under the title),
+             detail (one title: the whole note + episodes), episodes ([{ season_number, episode_number, score }]) }
+     'mixed' (hand-picked titles, lists): each card follows its own title — score for
+     watched ones, progress for ones you're watching, the basics for the rest.
+   MSSPdf.kindOf(e) → 'watched' | 'watchlist' | 'watching' | 'title' (not in a library)
      onProgress(fraction 0–1, label)
    MSSPdf.stats / posters / text / bars / chips / meta / progress / score — shared with the studio's preview
 
@@ -52,7 +57,17 @@ const MSSPdf = (() => {
     entries.forEach(e => (e.genres || []).forEach(g => { m[g] = (m[g] || 0) + 1; }));
     return Object.entries(m).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
   }
+  function kindOf(e) {
+    if (e.status === 'completed' || e.status === 'ongoing') return 'watched';
+    if (e.status === 'queue') return 'watchlist';
+    return ['watching', 'up_next', 'paused'].includes(e.status) ? 'watching' : 'title';
+  }
   function stats(kind, entries) {
+    if (kind === 'mixed') {
+      const sc = entries.map(score).filter(v => v != null), mv = entries.filter(isMovie).length;
+      return [{ value: entries.length, label: 'Titles' }, { value: sc.length ? (sc.reduce((a, b) => a + b, 0) / sc.length).toFixed(2) : '—', label: 'Average score' },
+        { value: mv, label: 'Movies' }, { value: entries.length - mv, label: 'Shows' }];
+    }
     if (kind === 'watchlist') {
       const mv = entries.filter(isMovie).length;
       return [{ value: entries.length, label: 'Titles' }, { value: mv, label: 'Movies' }, { value: entries.length - mv, label: 'Shows' }, { value: topGenre(entries), label: 'Top genre', word: true }];
@@ -67,6 +82,13 @@ const MSSPdf = (() => {
     const hrs = Math.round(entries.reduce((s, e) => s + minutes(e), 0) / 60);
     return [{ value: entries.length, label: 'Titles' }, { value: sc.length ? (sc.reduce((a, b) => a + b, 0) / sc.length).toFixed(2) : '—', label: 'Average score' },
       { value: hrs.toLocaleString('en-GB'), label: 'Hours watched' }, { value: topGenre(entries), label: 'Top genre', word: true }];
+  }
+  // one title: its own numbers instead of totals (epN: episodes rated, null = not known yet)
+  function detailStats(one, epN) {
+    return [{ value: score(one) != null ? score(one).toFixed(2) : '—', label: 'Score' },
+      { value: bars(one).length, label: 'Categories rated' },
+      isMovie(one) ? { value: one.runtime_h || one.runtime_m ? `${Number(one.runtime_h) || 0}h ${Number(one.runtime_m) || 0}m` : '—', label: 'Runtime' } : { value: epN == null ? '—' : epN, label: 'Episodes rated' },
+      { value: one.completed_date ? new Date(one.completed_date + 'T12:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '—', label: 'Watched', word: true }];
   }
   function text(e) {
     const raw = e.notes && e.notes.trim() ? MSSRich.plain(e.notes) : '';
@@ -172,13 +194,17 @@ const MSSPdf = (() => {
     font('Oswald', 26, 'bold'); ink(P.text);
     const tl = pdf.splitTextToSize(safe(job.title) || 'My export', CW).slice(0, 2);
     pdf.text(tl, M, 43); y = 43 + (tl.length - 1) * lh(26);
-    if (!priv.anon && job.who && (job.who.name || job.who.username)) {
-      font('Manrope', 10); ink(P.text2);
-      pdf.text(safe(`by ${job.who.name || job.who.username}${job.who.username && job.who.name && job.who.name !== job.who.username ? ` (@${job.who.username})` : ''}`), M, y + 8);
-      y += 8;
+    const by = job.byline || (!priv.anon && job.who && (job.who.name || job.who.username)
+      ? `by ${job.who.name || job.who.username}${job.who.username && job.who.name && job.who.name !== job.who.username ? ` (@${job.who.username})` : ''}` : '');
+    if (by) { font('Manrope', 10); ink(P.text2); pdf.text(safe(by), M, y + 8); y += 8; }
+    if (job.desc) {
+      font('Manrope', 9.5); ink(P.text2);
+      const dl = pdf.splitTextToSize(safe(job.desc), CW).slice(0, 3);
+      pdf.text(dl, M, y + 7); y += 7 + (dl.length - 1) * lh(9.5);
     }
     y += 8;
-    const st = stats(job.kind, list), tw = (CW - 3 * 4) / 4;
+    const epN = (job.episodes || []).filter(r => Number(r.episode_number) > 0 && r.score != null).length;
+    const st = job.detail && list[0] ? detailStats(list[0], epN) : stats(job.kind, list), tw = (CW - 3 * 4) / 4;
     st.forEach((s, i) => {
       const tx = M + i * (tw + 4);
       fill(P.card); stroke(P.edge, 0.3); pdf.roundedRect(tx, y, tw, 21, 2.5, 2.5, 'FD');
@@ -189,8 +215,9 @@ const MSSPdf = (() => {
     y += 29;
 
     /* ── one card per title: measure (draw = null), then draw at the measured height ── */
-    const PAD = 5, RANK = job.ranked ? 10 : 0, PW = withPosters ? 17 : 0, PH = 25.5, BOX = job.kind === 'watched' ? 20 : 0, BOXH = 19;
+    const PAD = 5, RANK = job.ranked ? 10 : 0, PW = withPosters ? 17 : 0, PH = 25.5, BOXH = 19;
     function card(e, rank, draw) {
+      const ek = job.kind === 'mixed' ? kindOf(e) : job.kind, BOX = ek === 'watched' ? 20 : 0;
       const x0 = M, tx = x0 + PAD + RANK + (PW ? PW + 4 : 0), right = x0 + CW - PAD - (BOX ? BOX + 4 : 0), w = right - tx;
       let cy = y + PAD;
       font('Oswald', 13, 'bold');
@@ -207,10 +234,10 @@ const MSSPdf = (() => {
         font('Oswald', 13, 'bold'); ink(P.text); pdf.text(tLines, tx, cy + 4.6);
       }
       cy += 4.6 + (tLines.length - 1) * lh(13) + 1.6;
-      font('Manrope', 7.6); const m = clip(meta(job.kind, e, inc), w);
+      font('Manrope', 7.6); const m = clip(meta(ek, e, inc), w);
       if (draw) { ink(P.text2); pdf.text(m, tx, cy + 3); }
       cy += 5;
-      if (job.kind === 'watching') {
+      if (ek === 'watching') {
         const pr = progress(e);
         if (pr) {
           if (draw) {
@@ -233,7 +260,7 @@ const MSSPdf = (() => {
       // rating bars, highlights and the note: in the text column, under the score box
       const bx0 = tx, bw = x0 + CW - PAD - bx0, n0 = inc.notes ? text(e) : { note: '' };
       if (BOX && ((inc.breakdown && bars(e).length) || (inc.highlights && chips(e).length) || n0.note)) cy = Math.max(cy, y + PAD + BOXH + 1.5);
-      if (inc.breakdown && job.kind === 'watched') {
+      if (inc.breakdown && ek === 'watched') {
         const b = bars(e);
         if (b.length) {
           const cols = 3, gap = 5, colW = (bw - gap * (cols - 1)) / cols, rowH = 5.8;
@@ -249,7 +276,7 @@ const MSSPdf = (() => {
         }
       }
       // highlights: outlined, with a coloured bar at the start (Create Card's favourites box)
-      if (inc.highlights && job.kind === 'watched') {
+      if (inc.highlights && ek === 'watched') {
         const c = chips(e);
         if (c.length) {
           cy += 2; let cx = bx0; const ch = 6;
@@ -275,7 +302,8 @@ const MSSPdf = (() => {
         } else {
           font('Manrope', 8);
           let lines = pdf.splitTextToSize(safe(n0.note.replace(/\n+/g, ' ')), bw - 4);
-          if (lines.length > 6) { lines = lines.slice(0, 6); lines[5] = lines[5].replace(/\s*\S*$/, '') + '…'; }
+          const cap = job.detail ? 40 : 6;   // one title: the whole note (within reason)
+          if (lines.length > cap) { lines = lines.slice(0, cap); lines[cap - 1] = lines[cap - 1].replace(/\s*\S*$/, '') + '…'; }
           const nh = lines.length * lh(8);
           if (draw) { fill(P.accent); pdf.rect(bx0, cy, 0.8, nh + 0.6, 'F'); ink(P.text2); pdf.text(lines, bx0 + 3, cy + 2.9); }
           cy += nh + 1;
@@ -304,6 +332,36 @@ const MSSPdf = (() => {
       if (i % 6 === 5) { onProgress((withPosters ? 0.4 : 0.05) + (i + 1) / list.length * (withPosters ? 0.55 : 0.9), `Building your PDF… ${i + 1} of ${list.length}`); await tick(); }
     }
 
+    /* ── one title: its episode ratings, season by season ── */
+    const eps = (job.episodes || []).filter(r => Number(r.episode_number) > 0 && r.score != null);
+    if (job.detail && eps.length) {
+      const bySeason = {};
+      eps.forEach(r => { (bySeason[r.season_number] ||= []).push(r); });
+      pageBreak(24);
+      font('Oswald', 9, 'bold'); ink(P.accent); spaced('EPISODE RATINGS', M, y + 5, 0.8);
+      stroke(P.line, 0.25); pdf.line(M, y + 8, M + CW, y + 8);
+      y += 13;
+      const cw = 15, ch = 11, gap = 2, per = Math.floor((CW + gap) / (cw + gap));
+      Object.keys(bySeason).map(Number).sort((a, b) => a - b).forEach(sn => {
+        const rows = bySeason[sn].sort((a, b) => a.episode_number - b.episode_number);
+        const avg = rows.reduce((t, r) => t + Number(r.score), 0) / rows.length;
+        pageBreak(8 + ch + 4);
+        font('Oswald', 8, 'bold'); ink(P.text); spaced(`SEASON ${sn}`, M, y + 3.5, 0.5);
+        font('Manrope', 7.4); ink(P.text3); const lbl = `${rows.length} rated  ·  average`; pdf.text(lbl, M + 26, y + 3.5);
+        const lw2 = pdf.getTextWidth(lbl);
+        font('Bebas', 11); ink(P.accent); pdf.text(avg.toFixed(1), M + 26 + lw2 + 1.6, y + 3.8);
+        y += 6;
+        rows.forEach((r, k) => {
+          if (k && k % per === 0) { y += ch + gap; pageBreak(ch + 4); }
+          const cx = M + (k % per) * (cw + gap);
+          stroke(P.edge, 0.3); pdf.roundedRect(cx, y, cw, ch, 1.6, 1.6, 'S');
+          font('Oswald', 5.6, 'bold'); ink(P.text3); pdf.text(`E${r.episode_number}`, cx + cw / 2, y + 3.6, { align: 'center' });
+          font('Bebas', 11); ink(P.accent); pdf.text(num(Number(r.score)), cx + cw / 2, y + 9, { align: 'center' });
+        });
+        y += ch + 6;
+      });
+    }
+
     /* ── footer on every page: avatar @username · MYSCREENFOLIO — Page x / y ── */
     const pages = pdf.getNumberOfPages(), user = !priv.anon && job.who?.username ? safe(job.who.username) : '';
     for (let p = 1; p <= pages; p++) {
@@ -327,5 +385,5 @@ const MSSPdf = (() => {
     return pdf.output('blob');
   }
 
-  return { build, stats, posters, text, bars, chips, meta, progress, score, POSTER_MAX };
+  return { build, stats, detailStats, posters, text, bars, chips, meta, progress, score, kindOf, POSTER_MAX };
 })();
