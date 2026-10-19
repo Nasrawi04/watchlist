@@ -53,22 +53,28 @@ const MSSStudio = (() => {
                     //   pick: [ids], pq, pst, numbered, lists, listQ, list, listItems }
 
   function prefs() { try { return JSON.parse(localStorage.getItem(PREFS) || '{}') || {}; } catch { return {}; } }
-  function keep() { try { localStorage.setItem(PREFS, JSON.stringify({ theme: S.theme, include: S.include, privacy: S.privacy, group: S.group, format: S.format, img: S.img, ai: { length: S.ai.length, promptOn: S.ai.promptOn, watchlist: S.ai.watchlist } })); } catch {} }
+  function keep() { try { localStorage.setItem(PREFS, JSON.stringify({ theme: S.theme, include: S.include, privacy: S.privacy, group: S.group, format: S.format, img: S.img, ai: { length: S.ai.length, promptOn: S.ai.promptOn, watchlist: S.ai.watchlist, taste: S.ai.taste } })); } catch {} }
   const fmt = f => S.format === f;
   const usesWhat = () => ['pdf', 'image', 'ai', 'csv'].includes(S.format);
+  const defaultPrompt = () => { const k = isTaste() ? 'taste' : kindOf(); return MSSFormats.DEFAULT_PROMPT[k] ?? MSSFormats.DEFAULT_PROMPT.watched; };
   function aiText(list) {
     const k = kindOf(), wl = S.ai.watchlist && S.what !== 'watchlist' ? S.all.filter(WHAT.watchlist.test) : [];
     return MSSFormats.ai(list, { include: S.include, privacy: S.privacy, length: S.ai.length, watchlist: wl, heading: title(),
-      prompt: S.ai.promptOn ? (S.ai.prompt ?? MSSFormats.DEFAULT_PROMPT[k === 'mixed' ? 'mixed' : k] ?? MSSFormats.DEFAULT_PROMPT.watched) : '' });
+      prompt: S.ai.promptOn ? (S.ai.prompt ?? defaultPrompt()) : '', taste: isTaste() || S.ai.taste ? taste() : null });
   }
   const lbSource = () => S.all.filter(WHAT.watched.test);
+  const has = list => S.what === 'taste' ? !!taste() : list.length > 0;   // anything to export?
+  const isTaste = () => S.what === 'taste';
+  const taste = () => (S.tasteData ??= MSSTaste.compute(S.all));   // worked out once per opening
+  const TASTE_FORMATS = ['pdf', 'image', 'ai'];
 
   const mixed = () => S.what === 'picked' || S.what === 'list';
-  const kindOf = () => S.what === 'custom' ? 'watched' : mixed() ? 'mixed' : S.what;
+  const kindOf = () => S.what === 'custom' || S.what === 'taste' ? 'watched' : mixed() ? 'mixed' : S.what;
   const single = () => S.what === 'picked' && S.pick.length === 1;
   function pool() {
     if (S.what === 'picked') return S.pick.map(id => S.all.find(e => e.id === id)).filter(Boolean);
     if (S.what === 'list') return S.listItems || [];
+    if (isTaste()) return [];
     const base = S.what === 'custom' ? S.o.custom.entries : S.all.filter(WHAT[S.what].test);
     return S.cat ? base.filter(e => e.cat === S.cat) : base;
   }
@@ -97,6 +103,7 @@ const MSSStudio = (() => {
     if (S.what === 'custom') return S.o.custom.label;
     if (S.what === 'picked') return single() ? pool()[0]?.title || 'My pick' : 'My picks';
     if (S.what === 'list') return S.list?.title || 'A list';
+    if (isTaste()) return 'My taste';
     if (S.what === 'watched') return S.limit && S.sort === 'score' ? `My top ${S.limit}${cat}` : `Everything I’ve watched${S.cat ? ` ·${cat}` : ''}`;
     if (S.what === 'watchlist') return `My watchlist${S.cat ? ` ·${cat}` : ''}`;
     return `Currently watching${S.cat ? ` ·${cat}` : ''}`;
@@ -107,6 +114,7 @@ const MSSStudio = (() => {
       return e ? [CAT_META?.[e.cat]?.singular, e.year ? String(e.year).slice(0, 4) : ''].filter(Boolean).join(' · ') : `Hand-picked · ${S.pick.length} titles`;
     }
     if (S.what === 'list') return `List${S.list?.ranked ? ' · Ranked' : ''}`;
+    if (isTaste()) return 'Taste profile';
     const sortL = (SORTS[kindOf()].find(s => s[0] === S.sort) || [])[1];
     return [S.what === 'custom' ? 'Watched' : WHAT[S.what].label, S.cat ? CATS.find(c => c[0] === S.cat)[1] : 'All categories', sortL ? (S.sort === 'score' ? 'By score' : sortL) : ''].filter(Boolean).join(' · ');
   }
@@ -123,7 +131,8 @@ const MSSStudio = (() => {
     const whats = [...(S.o.custom ? [['custom', S.o.custom.label, 'filter', `${S.o.custom.entries.length} titles`]] : []),
       ...Object.keys(WHAT).map(w => { const n = counts(w); return [w, WHAT[w].label, WHAT[w].ic, `${n} ${n === 1 ? 'title' : 'titles'}`]; }),
       ['picked', 'Pick titles', 'plus', S.pick.length ? `${S.pick.length} picked` : 'Choose exactly which'],
-      ['list', 'A list', 'layers', S.list ? S.list.title : 'Yours, shared or community']];
+      ['list', 'A list', 'layers', S.list ? S.list.title : 'Yours, shared or community'],
+      ...(TASTE_FORMATS.includes(S.format) ? [['taste', 'My taste profile', 'activity', taste() ? `From ${taste().rated} rated titles` : 'Rate some titles first']] : [])];
     const base = S.what === 'custom' ? S.o.custom.entries : WHAT[S.what] ? S.all.filter(WHAT[S.what].test) : [];
     const watchedish = k === 'watched' || k === 'mixed';
     const fmts = sec('Export as', `<div class="xs-fmts" role="radiogroup" aria-label="Export as">${FORMATS.map(([f, l, ic, sub]) =>
@@ -138,29 +147,31 @@ const MSSStudio = (() => {
           <span class="xs-what-ic">${icon(ic, 18)}</span><b>${esc(l)}</b><small translate="no">${esc(sub)}</small></button>`).join('')}</div>`)
       + (S.what === 'picked' ? sec('Choose titles', `<input class="xs-input" id="xsPickQ" type="search" placeholder="Search your library…" aria-label="Search your library" value="${esc(S.pq)}" oninput="MSSStudio._pq(this.value)"><div id="xsPickBody">${pickHTML()}</div>`) : '')
       + (S.what === 'list' ? sec('Choose a list', `<div id="xsListBody">${listsHTML()}</div>`) : '')
-      + (!mixed() ? sec('Category', `<div class="xs-chips">${CATS.map(([c, l]) => { const n = c ? base.filter(e => e.cat === c).length : base.length;
+      + (isTaste() ? sec('What’s in it', `<div class="xs-info">${icon('activity', 16)}<span>Worked out from your scores: your average and how generous you are, the genres and decades you score highest, the rating categories you’re kindest and toughest on${fmt('pdf') ? ', how your scores spread from 1 to 10, movies vs shows and your top 5' : ''}.</span></div>`) : '')
+      + (!mixed() && !isTaste() ? sec('Category', `<div class="xs-chips">${CATS.map(([c, l]) => { const n = c ? base.filter(e => e.cat === c).length : base.length;
           return chip(S.cat === c, `MSSStudio._set('cat','${c}')`, `${l}<span>${n}</span>`, n || !c ? '' : ' disabled'); }).join('')}</div>`) : '')
-      + (single() ? '' : sec('Order', `<div class="xs-chips">${SORTS[k].map(([s, l]) => chip(S.sort === s, `MSSStudio._set('sort','${s}')`, s === 'manual' && S.what === 'list' ? 'List order' : l)).join('')}</div>`))
+      + (single() || isTaste() ? '' : sec('Order', `<div class="xs-chips">${SORTS[k].map(([s, l]) => chip(S.sort === s, `MSSStudio._set('sort','${s}')`, s === 'manual' && S.what === 'list' ? 'List order' : l)).join('')}</div>`))
       + (fmt('image') ? sec('Size', `<div class="xs-chips">${chip(S.img.size === 'story', "MSSStudio._img('story')", 'Story · 9:16')}${chip(S.img.size === 'square', "MSSStudio._img('square')", 'Square · 1:1')}</div>
-          <div class="xs-hint">Images hold your top 10 — the first 10 in the order above${S.what === 'picked' ? ' (or the ones you picked)' : ''}.</div>`) : '')
-      + (!mixed() && !fmt('image') ? sec('How many', `<div class="xs-chips">${LIMITS.map(([n, l]) => chip(S.limit === n, `MSSStudio._set('limit',${n})`, n ? (S.sort === 'score' ? `Top ${l}` : `First ${l}`) : l)).join('')}</div>`) : '')
-      + (fmt('ai') ? sec('For the AI', `<div class="xs-chips">${chip(S.ai.length === 'short', "MSSStudio._ai('length','short')", 'Short')}${chip(S.ai.length === 'full', "MSSStudio._ai('length','full')", 'Full')}</div>
-          <div class="xs-hint">${S.ai.length === 'short' ? 'One line per title — fits in any chat, even long libraries.' : 'Every rating, highlight and note — best for a detailed answer.'}</div>
-          <div class="xs-switches xs-gap">${sw(S.ai.promptOn, "MSSStudio._ai('promptOn')", 'Start with a request', 'What you want the AI to do — edit it below')}
+          ${isTaste() ? '' : `<div class="xs-hint">Images hold your top 10 — the first 10 in the order above${S.what === 'picked' ? ' (or the ones you picked)' : ''}.</div>`}`) : '')
+      + (!mixed() && !fmt('image') && !isTaste() ? sec('How many', `<div class="xs-chips">${LIMITS.map(([n, l]) => chip(S.limit === n, `MSSStudio._set('limit',${n})`, n ? (S.sort === 'score' ? `Top ${l}` : `First ${l}`) : l)).join('')}</div>`) : '')
+      + (fmt('ai') ? sec('For the AI', `${isTaste() ? '' : `<div class="xs-chips">${chip(S.ai.length === 'short', "MSSStudio._ai('length','short')", 'Short')}${chip(S.ai.length === 'full', "MSSStudio._ai('length','full')", 'Full')}</div>
+          <div class="xs-hint">${S.ai.length === 'short' ? 'One line per title — fits in any chat, even long libraries.' : 'Every rating, highlight and note — best for a detailed answer.'}</div>`}
+          <div class="xs-switches${isTaste() ? '' : ' xs-gap'}">${sw(S.ai.promptOn, "MSSStudio._ai('promptOn')", 'Start with a request', 'What you want the AI to do — edit it below')}
+            ${isTaste() ? '' : sw(S.ai.taste, "MSSStudio._ai('taste')", 'Add my taste profile', 'A short summary of how you score, on top')}
             ${S.what !== 'watchlist' ? sw(S.ai.watchlist, "MSSStudio._ai('watchlist')", 'Add my watchlist', 'So it doesn’t suggest what you already plan to watch') : ''}</div>
-          ${S.ai.promptOn ? `<textarea class="xs-input xs-prompt" id="xsPrompt" rows="4" maxlength="1500" aria-label="Your request to the AI" oninput="MSSStudio._prompt(this.value)">${esc(S.ai.prompt ?? MSSFormats.DEFAULT_PROMPT[k === 'mixed' ? 'mixed' : k] ?? MSSFormats.DEFAULT_PROMPT.watched)}</textarea>` : ''}`) : '')
+          ${S.ai.promptOn ? `<textarea class="xs-input xs-prompt" id="xsPrompt" rows="4" maxlength="1500" aria-label="Your request to the AI" oninput="MSSStudio._prompt(this.value)">${esc(S.ai.prompt ?? defaultPrompt())}</textarea>` : ''}`) : '')
       + (fmt('pdf') || fmt('image') ? sec('Look', `<div class="xs-looks">${[['dark', 'Dark'], ['light', 'Light']].map(([th, l]) =>
           `<button type="button" class="xs-look xs-look-${th}${S.theme === th ? ' on' : ''}" aria-pressed="${S.theme === th}" onclick="MSSStudio._set('theme','${th}')"><i aria-hidden="true"></i>${l}</button>`).join('')}</div>`) : '')
-      + (fmt('image') ? '' : sec('Include', `<div class="xs-switches">
+      + (fmt('image') || isTaste() ? '' : sec('Include', `<div class="xs-switches">
           ${watchedish ? sw(S.include.breakdown, "MSSStudio._tog('include','breakdown')", 'Rating breakdown', 'Every category you rated, as bars') : ''}
           ${watchedish ? sw(S.include.highlights, "MSSStudio._tog('include','highlights')", 'Highlights', 'Favourite and least favourite character, episode, season') : ''}
           ${sw(S.include.notes, "MSSStudio._tog('include','notes')", 'Notes', single() ? 'The whole note' : 'Your note on each title')}
           ${k !== 'watching' && fmt('pdf') ? sw(S.include.dates, "MSSStudio._tog('include','dates')", 'Dates', k === 'watchlist' ? 'When you added it' : 'When you watched it') : ''}
           ${fmt('pdf') && mixed() && !single() && S.sort === 'manual' ? sw(S.numbered, "MSSStudio._tog('numbered')", 'Number them', S.what === 'list' ? '1, 2, 3… in the list’s order' : '1, 2, 3… in the order you picked') : ''}
           ${single() || !fmt('pdf') ? '' : sw(S.group, "MSSStudio._tog('group')", 'Group by category', 'TV Shows, Movies, Anime and Cartoons in their own sections')}</div>`))
-      + sec('Privacy', `<div class="xs-switches">
-          ${fmt('image') ? '' : sw(S.privacy.hideSpoilers, "MSSStudio._tog('privacy','hideSpoilers')", 'Hide spoiler notes', 'Notes you marked as spoilers say “hidden” instead')}
-          ${fmt('pdf') || fmt('image') ? sw(S.privacy.anon, "MSSStudio._tog('privacy','anon')", 'Leave my name off', 'No name or @username anywhere in the file') : ''}</div>`)
+      + (isTaste() && fmt('ai') ? '' : sec('Privacy', `<div class="xs-switches">
+          ${fmt('image') || isTaste() ? '' : sw(S.privacy.hideSpoilers, "MSSStudio._tog('privacy','hideSpoilers')", 'Hide spoiler notes', 'Notes you marked as spoilers say “hidden” instead')}
+          ${fmt('pdf') || fmt('image') ? sw(S.privacy.anon, "MSSStudio._tog('privacy','anon')", 'Leave my name off', 'No name or @username anywhere in the file') : ''}</div>`))
       + (fmt('csv') ? '' : sec(fmt('pdf') ? 'Cover title' : 'Heading', `<input class="xs-input" id="xsTitle" maxlength="60" placeholder="${esc(title())}" value="${esc(S.title)}" aria-label="Cover title" oninput="MSSStudio._title(this.value)">`, 'optional'));
   }
 
@@ -285,6 +296,20 @@ const MSSStudio = (() => {
       ${list.length > 3 ? `<div class="xs-pv-more">+ ${list.length - 3} more ${list.length - 3 === 1 ? 'title' : 'titles'}</div>` : ''}
     </div></div>`;
   }
+  // The taste profile's first page, in the PDF's look
+  function tastePreviewHTML() {
+    const t = taste(), who = S.o.who || {};
+    if (!t) return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in"><div class="xs-pv-empty">Rate a few titles first — your taste is worked out from your scores.</div></div></div>`;
+    const bar = (l, v, n, tag) => `<div class="xs-tp-row"><b>${esc(l)}</b><i><u style="width:${v * 10}%"></u></i><em>${v.toFixed(2)}</em><small>${n} ${n === 1 ? 'title' : 'titles'}</small>${tag ? `<span>${tag}</span>` : ''}</div>`;
+    return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in">
+      <div class="xs-pv-top"><span class="xs-pv-wm">MY<u>SCREEN</u>FOLIO</span><span>${esc(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))}</span></div>
+      <div class="xs-pv-kicker">${esc(kicker())}</div><div class="xs-pv-h1">${esc(title())}</div>
+      ${S.privacy.anon || !(who.name || who.username) ? '' : `<div class="xs-pv-by">by ${esc(who.name || who.username)}</div>`}
+      <div class="xs-pv-stats">${MSSPdf.tasteStats(t).map(x => `<span><b${x.word ? ' class="word"' : ''}>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</div>
+      ${t.genres.length ? `<div class="xs-pv-group">Genres</div>${t.genres.slice(0, 6).map(g => bar(g.name, g.avg, g.n)).join('')}` : ''}
+      ${t.categories.length ? `<div class="xs-pv-group xs-tp-gap">How you rate</div>${t.categories.slice(0, 6).map((c, k) => bar(c.label, c.avg, c.n, k === 0 ? 'Kindest' : '')).join('')}` : ''}
+    </div></div>`;
+  }
   // Rough page count: the cover block, then each card's height (as the PDF measures it, give or take)
   function pages(list) {
     const k = kindOf(), posters = MSSPdf.posters(list.length);
@@ -322,23 +347,26 @@ const MSSStudio = (() => {
       cv.classList.toggle('square', S.img.size === 'square');
       clearTimeout(S.imgT); S.imgT = setTimeout(() => { if (S && fmt('image')) MSSImage.draw(cv, imgJob(list)); }, 120);
       goLabel(); $('xsAlt').hidden = true;
+      if (isTaste()) { $('xsSummary').innerHTML = taste() ? `<b>Your taste</b> · from ${taste().rated} rated titles` : 'Rate a few titles first.'; if (!S.busy) $('xsGo').disabled = !taste(); return; }
       $('xsSummary').innerHTML = n ? `<b>${n} ${n === 1 ? 'title' : 'titles'}</b>${pool().length > n ? ` · the first ${n} of ${pool().length}` : ''} · ${S.img.size === 'square' ? 'square, for posts' : 'story, for Instagram / TikTok'}` : 'Nothing to export with these options.';
       if (!S.busy) $('xsGo').disabled = !n;
       return;
     }
     $('xsPvLabel').innerHTML = fmt('pdf') ? 'Preview<span>first page</span>' : fmt('backup') ? 'What’s inside' : `Preview<span>${fmt('ai') ? 'the text' : 'first rows'}</span>`;
-    $('xsPreview').innerHTML = fmt('pdf') ? previewHTML(list) : textPreview(list);
+    $('xsPreview').innerHTML = fmt('pdf') ? (isTaste() ? tastePreviewHTML() : previewHTML(list)) : textPreview(list);
     goLabel();
     if (!fmt('pdf')) {
       const lb = fmt('letterboxd') ? MSSFormats.lbMovies(lbSource()).length : 0;
       $('xsSummary').innerHTML = fmt('backup') ? `<b>${S.all.length} titles</b> · your lists · your episode ratings`
         : fmt('letterboxd') ? (lb ? `<b>${lb} ${lb === 1 ? 'movie' : 'movies'}</b> · Letterboxd import file` : 'No watched movies yet.')
+        : isTaste() ? (taste() ? `<b>Your taste</b> · from ${taste().rated} rated titles · about ${Math.max(1, Math.round(aiText(list).length / 1000))}k characters` : 'Rate a few titles first.')
         : n ? `<b>${n} ${n === 1 ? 'title' : 'titles'}</b>${fmt('ai') ? ` · about ${Math.max(1, Math.round(aiText(list).length / 1000))}k characters` : ' · one row each'}` : 'Nothing to export with these options.';
-      if (!S.busy) $('xsGo').disabled = fmt('backup') ? !S.all.length : fmt('letterboxd') ? !lb : !n;
-      $('xsAlt').hidden = !fmt('ai'); $('xsAlt').disabled = !n;
+      if (!S.busy) $('xsGo').disabled = fmt('backup') ? !S.all.length : fmt('letterboxd') ? !lb : !has(list);
+      $('xsAlt').hidden = !fmt('ai'); $('xsAlt').disabled = !has(list);
       return;
     }
     $('xsAlt').hidden = true;
+    if (isTaste()) { $('xsSummary').innerHTML = taste() ? `<b>Your taste</b> · from ${taste().rated} rated titles · about 2 pages` : 'Rate a few titles first — it’s worked out from your scores.'; if (!S.busy) $('xsGo').disabled = !taste(); return; }
     $('xsSummary').innerHTML = !n ? (S.what === 'picked' ? 'Tick the titles you want in it.' : S.what === 'list' && !S.list ? 'Choose a list.' : 'Nothing to export with these options.')
       : single() ? `<b>1 title</b> · a full page — every rating, the whole note${MSSPdf.kindOf(list[0]) === 'watched' && list[0].cat !== 'movies' ? ' and your episode ratings' : ''}`
       : `<b>${n} ${n === 1 ? 'title' : 'titles'}</b> · about ${pages(list)} ${pages(list) === 1 ? 'page' : 'pages'} · ${MSSPdf.posters(n) ? 'with posters' : `no posters <span>(only for ${MSSPdf.POSTER_MAX} titles or fewer)</span>`}`;
@@ -385,8 +413,9 @@ const MSSStudio = (() => {
       include: { breakdown: true, highlights: true, notes: true, dates: true, ...(p.include || {}) },
       privacy: { hideSpoilers: true, anon: false, ...(p.privacy || {}) }, title: '', busy: false,
       pick: [], pq: '', pst: '', numbered: true, lists: null, listQ: '', list: null, listItems: null,
-      format: pre.format || (['pdf', 'image', 'ai', 'csv'].includes(p.format) ? p.format : 'pdf'), img: { size: p.img?.size === 'square' ? 'square' : 'story' }, ai: { length: 'full', promptOn: true, watchlist: true, ...(p.ai || {}), prompt: null } };
+      format: pre.format || (['pdf', 'image', 'ai', 'csv'].includes(p.format) ? p.format : 'pdf'), img: { size: p.img?.size === 'square' ? 'square' : 'story' }, ai: { length: 'full', promptOn: true, watchlist: true, taste: true, ...(p.ai || {}), prompt: null } };
     if (!S.sort) S.sort = SORTS[kindOf()][0][0];
+    if (S.what === 'taste' && !TASTE_FORMATS.includes(S.format)) S.format = 'pdf';
     const ov = overlay();
     $('xsOpts').innerHTML = '<div class="xs-loading">Loading your library…</div>'; $('xsPreview').innerHTML = ''; $('xsSummary').textContent = '';
     progress(null);
@@ -414,7 +443,8 @@ const MSSStudio = (() => {
     if (!S || S.busy) return;
     if (key === 'what' && S.what === v) return;
     S[key] = v;
-    if (key === 'what') { S.cat = ''; S.sort = SORTS[kindOf()][0][0]; S.numbered = v === 'list' ? !!S.list?.ranked : true; }
+    if (key === 'format' && isTaste() && !TASTE_FORMATS.includes(v)) S.what = 'watched';   // the taste profile is PDF / image / AI only
+    if (key === 'what' || key === 'format' && S.what === 'watched' && !SORTS.watched.some(x => x[0] === S.sort)) { S.cat = ''; S.sort = SORTS[kindOf()][0][0]; S.numbered = v === 'list' ? !!S.list?.ranked : true; }
     if (key === 'theme' || key === 'group' || key === 'format') keep();
     draw();
     if (key === 'what') pickWhat(v);
@@ -450,7 +480,7 @@ const MSSStudio = (() => {
     $('xsProg').setAttribute('aria-valuenow', pct);
     if (label) $('xsProgLabel').textContent = label;
   }
-  const imgJob = list => ({ size: S.img.size, theme: S.theme, title: title(), kicker: kicker(), entries: list, who: S.o.who, anon: S.privacy.anon });
+  const imgJob = list => ({ size: S.img.size, theme: S.theme, title: title(), kicker: kicker(), entries: list, who: S.o.who, anon: S.privacy.anon, taste: isTaste() ? taste() : null });
   function goLabel() {
     const L = { pdf: ['download', 'Export PDF'], image: ['image', 'Save image'], ai: ['copy', 'Copy for an AI'], csv: ['download', 'Download .csv'], letterboxd: ['download', 'Download for Letterboxd'], backup: ['download', 'Download backup'] }[S.format];
     $('xsGo').innerHTML = `${icon(ICONS[L[0]] ? L[0] : 'download', 15)} ${L[1]}`;
@@ -495,7 +525,7 @@ const MSSStudio = (() => {
     if (!S || S.busy) return;
     const list = picked();
     if (fmt('image')) {   // the studio stays open — make the other size too if you like
-      if (!list.length) { showToast('Nothing to export with these options.', 'err'); return; }
+      if (!has(list)) { showToast('Nothing to export with these options.', 'err'); return; }
       S.busy = true; $('xsOverlay').classList.add('is-busy'); progress(0.15, 'Getting posters…');
       try {
         const cv = document.createElement('canvas');
@@ -508,13 +538,13 @@ const MSSStudio = (() => {
       return;
     }
     if (!fmt('pdf')) {
-      if (usesWhat() && !list.length) { showToast('Nothing to export with these options.', 'err'); return; }
+      if (usesWhat() && !has(list)) { showToast('Nothing to export with these options.', 'err'); return; }
       S.busy = true; $('xsOverlay').classList.add('is-busy'); progress(0, 'Starting…');
       try { await goText(mode); }
       catch (err) { console.error('Export failed:', err); showToast('Couldn’t export — try again.', 'err'); S.busy = false; $('xsOverlay').classList.remove('is-busy'); progress(null); }
       return;
     }
-    if (!list.length) { showToast('Nothing to export with these options.', 'err'); return; }
+    if (!has(list)) { showToast('Nothing to export with these options.', 'err'); return; }
     S.busy = true;
     $('xsOverlay').classList.add('is-busy');
     progress(0, 'Starting…');
@@ -527,7 +557,7 @@ const MSSStudio = (() => {
       }
       const blob = await MSSPdf.build({ kind: kindOf(), title: title(), kicker: kicker(), entries: list, ranked: ranked(),
         group: S.group && !single(), theme: S.theme, include: S.include, privacy: S.privacy, who: S.o.who,
-        byline: byline(), desc: S.what === 'list' ? S.list?.description : '', detail: single(), episodes }, (f, l) => progress(f, l));
+        byline: byline(), desc: S.what === 'list' ? S.list?.description : '', detail: single(), episodes, taste: isTaste() ? taste() : null }, (f, l) => progress(f, l));
       const url = URL.createObjectURL(blob), a = document.createElement('a');
       a.href = url; a.download = `myscreenfolio-${slug()}.pdf`; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10000);
