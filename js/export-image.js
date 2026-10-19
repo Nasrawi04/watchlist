@@ -10,7 +10,7 @@
 
    MSSImage.draw(canvas, job) → Promise<boolean (false if a newer draw started)>
      job = { size: 'story' | 'square', theme, title, kicker, entries (≤ 10),
-             who: { username, avatar_url }, anon }
+             who: { username, avatar_url }, anon, taste (MSSTaste.compute — the taste profile instead of titles) }
    MSSImage.MAX = 10
    Requires config.js (mssFontsReady, safeURL, CAT_META), export.js (MSSPdf helpers).
 ══════════════════════════════════════════════════════════════ */
@@ -85,6 +85,63 @@ const MSSImage = (() => {
     if (k === 'watching') { const p = MSSPdf.progress(e); return p && p.pct ? `${Math.round(p.pct * 100)}% watched` : 'Watching'; }
     return k === 'watchlist' ? 'On the watchlist' : k === 'watched' ? 'Not rated' : ''; }
 
+  // The taste profile (taste-profile.js): 4 tiles, top genres as bars, kindest / toughest, the score spread (story)
+  function tasteBody(g, C, t, W, H, P, story, y) {
+    const label = (s, yy) => { g.fillStyle = C.accent; g.font = `600 ${story ? 24 : 19}px Oswald, sans-serif`; spaced(g, s, P, yy, 3.5); };
+    const card = (x, yy, w, h) => { g.fillStyle = C.card; rr(g, x, yy, w, h, story ? 20 : 16); g.fill(); g.strokeStyle = C.edge; g.lineWidth = 2; g.stroke(); };
+    // tiles
+    const tiles = [[t.rated, 'TITLES RATED'], [t.avg.toFixed(2), 'AVERAGE SCORE'], [t.genres[0]?.name || '—', 'TOP GENRE', 1], [t.favDecade?.name || '—', 'FAVOURITE DECADE', 1]];
+    const cols = story ? 2 : 4, gap = story ? 18 : 14, tw = (W - P * 2 - gap * (cols - 1)) / cols, th = story ? 170 : 112;
+    y += story ? 26 : 12;
+    tiles.forEach(([v, l, word], i) => {
+      const x = P + (i % cols) * (tw + gap), yy = y + Math.floor(i / cols) * (th + gap);
+      card(x, yy, tw, th);
+      g.textAlign = 'left'; g.fillStyle = C.accent;
+      g.font = word ? `600 ${story ? 46 : 32}px Oswald, sans-serif` : `400 ${story ? 82 : 58}px "Bebas Neue", sans-serif`;
+      g.fillText(fit(g, String(v), tw - 48), x + 24, yy + th * (word ? 0.52 : 0.6));
+      g.fillStyle = C.text3; g.font = `600 ${story ? 19 : 15}px Oswald, sans-serif`; spaced(g, l, x + 24, yy + th - (story ? 26 : 20), 2.5);
+    });
+    y += Math.ceil(tiles.length / cols) * (th + gap) + (story ? 44 : 16);
+    // top genres
+    const gs = t.genres.slice(0, story ? 6 : 4);
+    if (gs.length) {
+      label('TOP GENRES', y + (story ? 10 : 6)); y += story ? 36 : 26;
+      const rowH = story ? 64 : 44, lw = story ? 250 : 220, bw = W - P * 2 - lw - (story ? 150 : 120);
+      gs.forEach((x, i) => {
+        const yy = y + i * rowH;
+        g.textAlign = 'left'; g.fillStyle = C.text; g.font = `600 ${story ? 32 : 26}px Oswald, sans-serif`; g.fillText(fit(g, x.name, lw - 20), P, yy + rowH * 0.62);
+        g.fillStyle = C.track; rr(g, P + lw, yy + rowH * 0.36, bw, story ? 16 : 12, story ? 8 : 6); g.fill();
+        g.fillStyle = C.accent; rr(g, P + lw, yy + rowH * 0.36, Math.max(16, bw * x.avg / 10), story ? 16 : 12, story ? 8 : 6); g.fill();
+        g.fillStyle = C.accent; g.font = `400 ${story ? 44 : 36}px "Bebas Neue", sans-serif`; g.textAlign = 'right'; g.fillText(x.avg.toFixed(2), W - P, yy + rowH * 0.7);
+      });
+      y += gs.length * rowH + (story ? 40 : 12);
+    }
+    // kindest · toughest
+    if (t.kindest && t.harshest) {
+      const cw = (W - P * 2 - gap) / 2, ch = story ? 196 : 130;
+      if (y + ch < H - (story ? 160 : 70)) {
+        [['KINDEST ON', t.kindest], ['TOUGHEST ON', t.harshest]].forEach(([l, c], i) => {
+          const x = P + i * (cw + gap); card(x, y, cw, ch);
+          g.textAlign = 'left'; g.fillStyle = C.text3; g.font = `600 ${story ? 19 : 15}px Oswald, sans-serif`; spaced(g, l, x + 24, y + (story ? 40 : 30), 2.5);
+          g.fillStyle = C.text; g.font = `600 ${story ? 34 : 26}px Oswald, sans-serif`; g.fillText(fit(g, c.label, cw - 48), x + 24, y + (story ? 86 : 64));
+          g.fillStyle = C.accent; g.font = `400 ${story ? 58 : 40}px "Bebas Neue", sans-serif`; g.fillText(c.avg.toFixed(2), x + 24, y + ch - (story ? 26 : 18));
+        });
+        y += ch + (story ? 48 : 0);
+      }
+    }
+    // the score spread (story only — the square has no room)
+    if (story && y + 260 < H - 150) {
+      label('SCORE SPREAD', y + 10); y += 30;
+      const mx = Math.max(...t.spread, 1), cw = (W - P * 2 - 9 * 12) / 10, chH = Math.min(380, H - 210 - y - 40);   // fills what's left
+      t.spread.forEach((c, k) => {
+        const x = P + k * (cw + 12), h = c ? Math.max(8, chH * c / mx) : 0;
+        g.fillStyle = C.track; rr(g, x, y, cw, chH, 10); g.fill();
+        if (h) { g.fillStyle = C.accent; rr(g, x, y + chH - h, cw, h, 10); g.fill(); }
+        g.textAlign = 'center'; g.fillStyle = C.text2; g.font = '400 34px "Bebas Neue", sans-serif'; g.fillText(String(k + 1), x + cw / 2, y + chH + 38);
+      });
+    }
+  }
+
   async function draw(cv, job) {
     const my = ++token;
     await mssFontsReady();
@@ -120,7 +177,8 @@ const MSSImage = (() => {
     let y = ty + (story ? 40 : 28);
     const user = !job.anon && job.who?.username ? job.who.username : '';
 
-    if (story) {
+    if (job.taste) tasteBody(g, C, job.taste, W, H, P, story, y);
+    else if (story) {
       // ten rows: rank · poster · title + details · score box
       const top = y + 24, bottom = H - 150, gap = 14, n = Math.max(list.length, 1);
       const rowH = Math.min(150, Math.floor((bottom - top - gap * (n - 1)) / n)), ph = rowH - 28, pw = Math.round(ph * 2 / 3);
@@ -180,7 +238,7 @@ const MSSImage = (() => {
       fx += g.measureText('@' + user).width + 14; g.fillStyle = C.text3; g.fillText('·', fx, fy); fx += 22;
     }
     g.fillStyle = C.text3; g.font = `600 ${story ? 24 : 20}px Oswald, sans-serif`; spaced(g, 'MYSCREENFOLIO', fx, fy, 3);
-    if (list.some(e => scoreText(e))) { g.font = `500 ${story ? 22 : 19}px Manrope, sans-serif`; g.textAlign = 'right'; g.fillText('Scores out of 10', W - P, fy); }
+    if (job.taste || list.some(e => scoreText(e))) { g.font = `500 ${story ? 22 : 19}px Manrope, sans-serif`; g.textAlign = 'right'; g.fillText('Scores out of 10', W - P, fy); }
     return true;
   }
 
