@@ -18,7 +18,8 @@
              include: { breakdown, highlights, notes, dates },
              privacy: { hideSpoilers, anon }, who: { name, username, avatar_url },
              byline (optional, replaces "by …" — a list's owner), desc (optional, under the title),
-             detail (one title: the whole note + episodes), episodes ([{ season_number, episode_number, score }]) }
+             detail (one title: the whole note + episodes), episodes ([{ season_number, episode_number, score }]),
+             taste (MSSTaste.compute — the taste profile instead of title cards) }
      'mixed' (hand-picked titles, lists): each card follows its own title — score for
      watched ones, progress for ones you're watching, the basics for the rest.
    MSSPdf.kindOf(e) → 'watched' | 'watchlist' | 'watching' | 'title' (not in a library)
@@ -89,6 +90,11 @@ const MSSPdf = (() => {
       { value: bars(one).length, label: 'Categories rated' },
       isMovie(one) ? { value: one.runtime_h || one.runtime_m ? `${Number(one.runtime_h) || 0}h ${Number(one.runtime_m) || 0}m` : '—', label: 'Runtime' } : { value: epN == null ? '—' : epN, label: 'Episodes rated' },
       { value: one.completed_date ? new Date(one.completed_date + 'T12:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '—', label: 'Watched', word: true }];
+  }
+  // the taste profile's own tiles
+  function tasteStats(t) {
+    return [{ value: t.rated, label: 'Titles rated' }, { value: t.avg.toFixed(2), label: 'Average score' },
+      { value: t.genres[0]?.name || '—', label: 'Top genre', word: true }, { value: t.favDecade?.name || '—', label: 'Favourite decade', word: true }];
   }
   function text(e) {
     const raw = e.notes && e.notes.trim() ? MSSRich.plain(e.notes) : '';
@@ -204,7 +210,7 @@ const MSSPdf = (() => {
     }
     y += 8;
     const epN = (job.episodes || []).filter(r => Number(r.episode_number) > 0 && r.score != null).length;
-    const st = job.detail && list[0] ? detailStats(list[0], epN) : stats(job.kind, list), tw = (CW - 3 * 4) / 4;
+    const st = job.taste ? tasteStats(job.taste) : job.detail && list[0] ? detailStats(list[0], epN) : stats(job.kind, list), tw = (CW - 3 * 4) / 4;
     st.forEach((s, i) => {
       const tx = M + i * (tw + 4);
       fill(P.card); stroke(P.edge, 0.3); pdf.roundedRect(tx, y, tw, 21, 2.5, 2.5, 'FD');
@@ -313,7 +319,7 @@ const MSSPdf = (() => {
     }
     const pageBreak = h => { if (y + h > BOTTOM) { pdf.addPage(); page(); y = M; } };
     let lastCat = null, rank = 0;   // grouped: each category ranks from 1
-    for (let i = 0; i < list.length; i++) {
+    for (let i = 0; i < (job.taste ? 0 : list.length); i++) {
       const e = list[i];
       if (job.group && e.cat !== lastCat) {
         lastCat = e.cat; rank = 0;
@@ -330,6 +336,72 @@ const MSSPdf = (() => {
       card(e, rank++, { h });
       y += h + 3.5;
       if (i % 6 === 5) { onProgress((withPosters ? 0.4 : 0.05) + (i + 1) / list.length * (withPosters ? 0.55 : 0.9), `Building your PDF… ${i + 1} of ${list.length}`); await tick(); }
+    }
+
+    /* ── taste profile (taste-profile.js): bars, the score spread, decades, top 5 ── */
+    if (job.taste) {
+      const t = job.taste;
+      const head = (label, sub, need = 20) => {   // need: room for the heading and what follows it, so it never sits alone
+        pageBreak(need);
+        font('Oswald', 9, 'bold'); ink(P.accent); spaced(label, M, y + 5, 0.8);
+        if (sub) { const lw = pdf.getTextWidth(label) + 0.8 * label.length; font('Manrope', 7.6); ink(P.text3); pdf.text(sub, M + lw + 3, y + 5); }
+        stroke(P.line, 0.25); pdf.line(M, y + 8, M + CW, y + 8);
+        y += 12;
+      };
+      // one bar per row: label · bar (out of 10) · value · how many titles · an optional tag
+      const barRows = (rows, tag) => rows.forEach((r2, k) => {
+        pageBreak(8);
+        const lx = M, bx = M + 46, bw = CW - 46 - 58;
+        font('Manrope', 8.4, 'bold'); ink(P.text); pdf.text(clip(r2.label || r2.name, 44), lx, y + 4.2);
+        fill(P.track); pdf.roundedRect(bx, y + 1.6, bw, 3.2, 1.6, 1.6, 'F');
+        fill(P.accent); pdf.roundedRect(bx, y + 1.6, Math.max(3.2, bw * Math.min(1, r2.avg / 10)), 3.2, 1.6, 1.6, 'F');
+        font('Bebas', 12); ink(P.accent); pdf.text(r2.avg.toFixed(2), bx + bw + 3, y + 4.6);
+        font('Manrope', 7); ink(P.text3); pdf.text(`${r2.n} ${r2.n === 1 ? 'title' : 'titles'}`, bx + bw + 16, y + 4.4);
+        const tg = tag && tag(r2, k);
+        if (tg) { font('Oswald', 5.8, 'bold'); const tw2 = pdf.getTextWidth(tg) + 0.3 * tg.length + 4;
+          stroke(P.edge, 0.3); pdf.roundedRect(M + CW - tw2, y + 0.6, tw2, 5, 1.2, 1.2, 'S'); ink(P.accent); spaced(tg, M + CW - tw2 + 2, y + 4, 0.3); }
+        y += 7.2;
+      });
+      if (t.genres.length) { head('GENRES', 'your average score in each (2+ titles)', 28); barRows(t.genres.slice(0, 10)); y += 4; }
+      if (t.categories.length) {
+        head('HOW YOU RATE', 'your average in each rating category', 28);
+        barRows(t.categories, (c, k) => k === 0 ? 'KINDEST' : k === t.categories.length - 1 && t.categories.length > 1 ? 'TOUGHEST' : '');
+        y += 4;
+      }
+      // the score spread: one column per score, 1 → 10
+      head('SCORE SPREAD', `${t.rated} titles · you’re a ${t.generous} scorer`, 58);
+      const mx = Math.max(...t.spread, 1), colW = (CW - 9 * 3) / 10, chH = 26;
+      t.spread.forEach((c, k) => {
+        const cx = M + k * (colW + 3), h = c ? Math.max(1.5, chH * c / mx) : 0;
+        fill(P.track); pdf.roundedRect(cx, y, colW, chH, 1.5, 1.5, 'F');
+        if (h) { fill(P.accent); pdf.roundedRect(cx, y + chH - h, colW, h, 1.5, 1.5, 'F'); }
+        font('Bebas', 10); ink(c ? P.text : P.text3); pdf.text(String(c), cx + colW / 2, y + chH - h - 1.5 > y + 3 ? y + chH - h - 1.5 : y + 4, { align: 'center' });
+        font('Bebas', 12); ink(P.text2); pdf.text(String(k + 1), cx + colW / 2, y + chH + 5.5, { align: 'center' });
+      });
+      y += chH + 12;
+      if (t.decades.length) { head('DECADES', 'your average by release decade', 28); barRows(t.decades, d => t.favDecade && d.name === t.favDecade.name ? 'FAVOURITE' : ''); y += 4; }
+      // movies vs shows, then the top 5
+      if (t.movies.n && t.shows.n) {
+        head('MOVIES VS SHOWS', '', 38);
+        [['Movies', t.movies], ['Shows', t.shows]].forEach(([l, v], k) => {
+          const tx2 = M + k * (CW / 2 + 2), tw2 = CW / 2 - 2;
+          fill(P.card); stroke(P.edge, 0.3); pdf.roundedRect(tx2, y, tw2, 18, 2.5, 2.5, 'FD');
+          font('Bebas', 22); ink(P.accent); pdf.text(v.avg.toFixed(2), tx2 + 5, y + 11.5);
+          font('Oswald', 6.8, 'bold'); ink(P.text3); spaced(`${l.toUpperCase()} · ${v.n} RATED`, tx2 + 5, y + 15.4, 0.45);
+        });
+        y += 24;
+      }
+      if (t.top.length) {
+        head('YOUR TOP 5', '', 30);
+        t.top.forEach((x, k) => {
+          pageBreak(9);
+          font('Bebas', 14); ink(k < 3 ? P.accent : P.text3); pdf.text(String(k + 1), M + 2, y + 5.4);
+          font('Oswald', 10.5, 'bold'); ink(P.text); pdf.text(clip(x.e.title || 'Untitled', CW - 40), M + 10, y + 5);
+          font('Manrope', 7.4); ink(P.text3); pdf.text(safe([CAT_META?.[x.e.cat]?.singular, x.e.year ? String(x.e.year).slice(0, 4) : ''].filter(Boolean).join(' · ')), M + 10, y + 9.2);
+          font('Bebas', 14); ink(P.accent); pdf.text(x.s.toFixed(2), M + CW, y + 5.4, { align: 'right' });
+          y += 11;
+        });
+      }
     }
 
     /* ── one title: its episode ratings, season by season ── */
@@ -385,5 +457,5 @@ const MSSPdf = (() => {
     return pdf.output('blob');
   }
 
-  return { build, stats, detailStats, posters, text, bars, chips, meta, progress, score, kindOf, POSTER_MAX };
+  return { build, stats, detailStats, tasteStats, posters, text, bars, chips, meta, progress, score, kindOf, POSTER_MAX };
 })();
