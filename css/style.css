@@ -3998,21 +3998,6 @@ body { font-size:15px; }
   .page-stat-num { font-size:22px; }
   .page-stat-label { font-size:9px; letter-spacing:1px; margin-top:4px; }
 
-  /* ── Grid views → 2-column compact wrap on mobile ── */
-  .watching-grid,
-  .queue-grid,
-  .completed-grid {
-    display:grid !important;
-    grid-template-columns:repeat(2,1fr) !important;
-    flex-direction:unset !important;
-    flex-wrap:unset !important;
-    overflow-x:visible !important;
-    overflow-y:visible !important;
-    gap:8px !important;
-    padding-bottom:0 !important;
-    scroll-snap-type:unset !important;
-  }
-
   .watching-grid ~ .grid-nav-wrap .grid-nav-btn,
   .queue-grid ~ .grid-nav-wrap .grid-nav-btn,
   .completed-grid ~ .grid-nav-wrap .grid-nav-btn,
@@ -4035,14 +4020,6 @@ body { font-size:15px; }
     max-width:100% !important;
     scroll-snap-align:unset !important;
   }
-  .accordion-body.open:has(.watching-grid),
-  .accordion-body.open:has(.queue-grid),
-  .accordion-body.open:has(.completed-grid) {
-    overflow-y:auto !important;
-    overflow-x:hidden !important;
-    max-height:80vh !important;
-    scrollbar-width:none !important;
-  }
 
   /* ── fav chips + all tag badges scaled for phone ── */
   .fav-chip {
@@ -4054,10 +4031,6 @@ body { font-size:15px; }
   .fav-chip-label { font-size:8px; letter-spacing:0; }
   .fav-chips { gap:3px; margin-top:4px; }
 
-  /* Latest Entries: badge in narrow horizontal-scroll cards. Added matching
-   rules for the Watchlist grid too, which had none. */
-  #homeRecentlyViewedGrid .w-ep-badge, #homeWatchlistGrid .w-ep-badge { font-size:7px; padding:1px 4px; }
-  #homeRecentlyViewedGrid .q-title, #homeWatchlistGrid .q-title { font-size:11px; }
   #homeRecentlyViewedGrid .genre-dot, #homeWatchlistGrid .genre-dot,
   #homeRecentlyViewedGrid .type-label, #homeWatchlistGrid .type-label { font-size:9px; }
   .w-ep-total { font-size:8px; }
@@ -4256,16 +4229,8 @@ body { font-size:15px; }
   .w-list-action-btn { width:22px; height:22px; }
   .w-list-action-btn svg { width:10px; height:10px; }
 
-  #homeRecentlyViewedGrid .w-ep-badge, #homeWatchlistGrid .w-ep-badge { font-size:6px; padding:1px 3px; }
-  #homeRecentlyViewedGrid .q-title, #homeWatchlistGrid .q-title { font-size:10px; }
-  #homeRecentlyViewedGrid .genre-dot, #homeWatchlistGrid .genre-dot,
-  #homeRecentlyViewedGrid .type-label, #homeWatchlistGrid .type-label { font-size:8px; }
   .w-ep-total { font-size:7px; }
   .w-ep-row { gap:4px; }
-  /* Grid: 2 col on phones. */
-  .watching-grid, .queue-grid, .completed-grid {
-    grid-template-columns:repeat(2,1fr) !important;
-  }
   .wg-card,
 .q-card,
 .watching-grid .wg-card,
@@ -4283,20 +4248,6 @@ body { font-size:15px; }
    ═════════════════════════════════════════════════════════════ */
 @media (min-width: 641px) and (max-width: 1024px) {
 
-  .watching-grid,
-  .queue-grid,
-  .completed-grid {
-    display:grid !important;
-    grid-template-columns:repeat(auto-fill, minmax(160px, 200px)) !important;
-    flex-direction:unset !important;
-    flex-wrap:unset !important;
-    overflow-x:visible !important;
-    overflow-y:visible !important;
-    gap:12px !important;
-    padding-bottom:0 !important;
-    scroll-snap-type:unset !important;
-    justify-content:start !important;
-  }
   .wg-card,
 .q-card {
     flex-shrink:unset !important;
@@ -4314,17 +4265,6 @@ body { font-size:15px; }
   .wg-card .genre-dot, .wg-card .type-label, .wg-card .w-ep-badge, .wg-card .cat-badge,
   .q-card .genre-dot, .q-card .type-label, .q-card .w-ep-badge, .q-card .cat-badge {
     font-size:9px;
-  }
-  /* Hide nav buttons on tablet since grid wraps */
-  .grid-nav-wrap .grid-nav-btn { display:none !important; }
-
-  .accordion-body.open:has(.watching-grid),
-  .accordion-body.open:has(.queue-grid),
-  .accordion-body.open:has(.completed-grid) {
-    overflow-y:auto !important;
-    overflow-x:hidden !important;
-    max-height:78vh !important;
-    scrollbar-width:none !important;
   }
 
   .home-title    { font-size:clamp(40px,6vw,60px); }
@@ -4412,7 +4352,7 @@ body { font-size:15px; }
 .grid-nav-btn.arr-left  { left: 6px; }
 .grid-nav-btn.arr-right { right: 6px; }
 
-/* Hide on mobile — grid wraps to columns so no scroll needed */
+/* Phones: swipe the rows — no arrows */
 @media (max-width: 640px) {
   .grid-nav-btn { display: none !important; }
 }
@@ -6469,7 +6409,7 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .xs-bk small { display:block; margin-top:4px; font-family:'Oswald',var(--sans); font-size:11px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-3); }
 .xs-foot .xs-alt { display:inline-flex; align-items:center; justify-content:center; gap:7px; }
 .xs-foot .xs-alt[hidden] { display:none; }
-@media(max-width:480px) { .xs-fmts { grid-template-columns:1fr 1fr; } .xs-fmt { padding:9px 10px; gap:8px; } .xs-fmt small { display:none; } .xs-foot { flex-wrap:wrap; } .xs-foot .xs-alt { order:2; } .xs-foot #xsCancel { order:1; } .xs-foot #xsGo { order:3; flex-basis:100%; } }
+@media(max-width:480px) { .xs-fmts { grid-template-columns:repeat(2, minmax(0, 1fr)); } .xs-fmt { padding:9px 10px; gap:8px; min-width:0; } .xs-fmt .xs-pk-text { min-width:0; } .xs-fmt b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .xs-fmt small { display:none; } .xs-foot { flex-wrap:wrap; } .xs-foot .xs-alt { order:2; } .xs-foot #xsCancel { order:1; } .xs-foot #xsGo { order:3; flex-basis:100%; } }
 /* Export Studio — the image preview (export-image.js draws it at full size; CSS scales it) */
 .xs-img { display:block; width:100%; max-width:280px; height:auto; margin:0 auto; border-radius:10px; box-shadow:0 6px 28px rgba(0,0,0,.28); }
 .xs-img.square { max-width:440px; }
@@ -6482,3 +6422,41 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .xs-tp-row small { font-size:calc(var(--u) * 2.4); color:var(--t3); }
 .xs-tp-row span { font-family:'Oswald',var(--sans); font-weight:600; font-size:calc(var(--u) * 2); letter-spacing:calc(var(--u) * .3); text-transform:uppercase; color:var(--ac); border:calc(var(--u) * .3) solid var(--ed); border-radius:calc(var(--u) * 1.2); padding:calc(var(--u) * .5) calc(var(--u) * 1.6); }
 .xs-tp-gap { margin-top:calc(var(--u) * 5); }
+/* Export Studio — the year in review preview */
+@media(max-width:360px) { .xs-fmt .xs-what-ic { width:26px; height:26px; } .xs-fmt { gap:5px; padding:9px 6px; } .xs-fmts .xs-fmt .xs-pk-text b { font-size:12.5px; } }
+.xs-yr-cols { display:grid; grid-template-columns:repeat(12, 1fr); gap:calc(var(--u) * 1.6); }
+.xs-yr-cols span { display:flex; flex-direction:column; align-items:center; gap:calc(var(--u) * 1.2); }
+.xs-yr-cols i { width:100%; height:calc(var(--u) * 22); border-radius:calc(var(--u) * 1.2); background:var(--tr); display:flex; align-items:flex-end; overflow:hidden; }
+.xs-yr-cols u { display:block; width:100%; background:var(--ac); border-radius:inherit; }
+.xs-yr-cols b { font-family:'Oswald',var(--sans); font-weight:600; font-size:calc(var(--u) * 2.2); color:var(--t2); text-transform:uppercase; }
+.xs-yr-top { display:grid; grid-template-columns:calc(var(--u) * 6) 1fr auto; align-items:baseline; gap:calc(var(--u) * 2); margin-bottom:calc(var(--u) * 2.2); }
+.xs-yr-top em { font-style:normal; font-family:var(--bebas); font-size:calc(var(--u) * 5); color:var(--ac); }
+.xs-yr-top b { font-family:'Oswald',var(--sans); font-weight:600; font-size:calc(var(--u) * 3.8); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.xs-yr-top span { font-family:var(--bebas); font-size:calc(var(--u) * 5); color:var(--ac); }
+/* Home — Friends Activity: the friend's avatar on the poster + "@name · 2h ago" */
+.hf-av { position:absolute; top:8px; left:8px; z-index:2; width:30px; height:30px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center;
+  background:var(--olive); color:#fff; font:600 13px/1 'Oswald',var(--sans); border:2px solid var(--bg); box-shadow:0 2px 6px rgba(0,0,0,.35); }
+.hf-av img { width:100%; height:100%; object-fit:cover; }
+.hf-who { font-size:12px; color:var(--text-2); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hf-who b { font-weight:600; color:var(--text); }
+@media(max-width:400px) { .hf-av { width:26px; height:26px; top:6px; left:6px; font-size:11px; } .hf-who { font-size:11px; } }
+
+/* Rows (home, Discover, category pages, Library, Watched) scroll left → right on
+   phones and tablets too, like on laptops: a little of the next card peeks in
+   so it's clear you can swipe. */
+@media (max-width: 1024px) {
+  .watching-grid, .queue-grid, .completed-grid {
+    display:flex !important; flex-wrap:nowrap !important; grid-template-columns:unset !important;
+    overflow-x:auto !important; overflow-y:visible !important; overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory !important; gap:12px !important; padding-bottom:6px !important;
+  }
+  .watching-grid > .wg-card, .watching-grid > .q-card, .queue-grid > .q-card, .completed-grid > .wg-card, .completed-grid > .q-card {
+    flex:0 0 auto !important; width:190px !important; max-width:none !important; scroll-snap-align:start !important;
+  }
+}
+@media (max-width: 640px) {
+  .watching-grid, .queue-grid, .completed-grid { gap:10px !important; }
+  .watching-grid > .wg-card, .watching-grid > .q-card, .queue-grid > .q-card, .completed-grid > .wg-card, .completed-grid > .q-card {
+    width:clamp(146px, 40vw, 200px) !important;
+  }
+}
