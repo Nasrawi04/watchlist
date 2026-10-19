@@ -133,7 +133,8 @@
 }
 .lv-import-row { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 1.25rem; padding:0 !important; }
 .lv-import-slot { display:contents; }
-#lvShareBtn[hidden] { display:none; }
+#lvShareBtn[hidden], #lvExportBtn[hidden] { display:none; }
+#lvExportLabel { display:inline-flex; align-items:center; gap:7px; }
 .lv-import-row .popup-action-btn { flex:0 0 auto; padding:11px 22px; font-size:13.5px; }
 .lv-import-row .popup-action-btn:disabled { opacity:.65; cursor:default; }
 .lv-controls {
@@ -223,6 +224,7 @@
         <button class="popup-action-btn" id="lvImportBtn" onclick="importList()"><span class="lv-import-btn-label">+ Import This List</span></button>
       </span>
       <button type="button" class="popup-action-btn" id="lvShareBtn" hidden onclick="_lvShare()"><span class="lv-import-btn-label">Share with Friends</span></button>
+      <button type="button" class="popup-action-btn" id="lvExportBtn" hidden onclick="_lvExport()"><span class="lv-import-btn-label" id="lvExportLabel">Export List</span></button>
     </div>
 
     <div class="lv-controls">
@@ -245,6 +247,11 @@
 <script src="js/rating-popup.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/sort-filter.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/export.js"></script>
+<script src="js/export-formats.js"></script>
+<script src="js/export-studio.js"></script>
 <script>
 function _lvEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -497,6 +504,16 @@ async function _lvSetRanked(value) {
 }
 
 // Send this list to friends (social.js, loaded on demand by mssRecommend)
+// Export this list — the Export Studio (export-studio.js), with this list already chosen
+function _lvExport() {
+  if (!_lvList || !_lvUser) return;
+  const p = window._navUserProfile || {};
+  MSSStudio.open({ who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' },
+    preset: { what: 'list', list: { id: _lvList.id, title: _lvList.title, description: _lvList.description, items: _lvList.items || [], ranked: !!_lvList.ranked,
+      owner: _lvList.profiles?.username, mine: _lvList.user_id === _lvUser.id } },
+    load: () => getEntries(_lvUser.id) });
+}
+
 function _lvShare() {
   if (!_lvList) return;
   mssRecommend({ kind: 'list', list_id: _lvList.id, title: _lvList.title, count: (_lvList.items || []).length });
@@ -607,6 +624,8 @@ async function _lvLoad() {
 
     const isOwn = _lvUser && list.user_id === _lvUser.id;
     document.getElementById('lvShareBtn').hidden = !_lvUser || list.cat !== 'custom';   // Social → Recommendations
+    document.getElementById('lvExportBtn').hidden = !_lvUser;
+    document.getElementById('lvExportLabel').innerHTML = `${icon('download', 15)} Export List`;
     document.getElementById('lvImportPopupActions').style.display = isOwn ? 'none' : '';
     if (!isOwn && _lvUser) {
       // Collaborators already have this list in their Lists — no Import
