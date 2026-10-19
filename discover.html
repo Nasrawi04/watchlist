@@ -149,8 +149,7 @@ function _discRenderCategory(cat, items) {
     document.getElementById(`disc-${cat.key}`).style.display = 'none';
     return;
   }
-  const limit = window.matchMedia('(max-width:640px)').matches ? 6 : 12;
-  grid.innerHTML = items.slice(0, limit).map(it => _discCardHTML(it)).join('');
+  grid.innerHTML = items.slice(0, 12).map(it => _discCardHTML(it)).join('');
 }
 
 async function _discLoadCategory(cat) {
@@ -163,12 +162,7 @@ async function _discLoadCategory(cat) {
       document.getElementById(`disc-${cat.key}`).style.display = 'none';
       return;
     }
-    // Phones wrap this row top-to-bottom instead of side-scrolling, so a
-    // shorter list keeps it from taking over the whole page — matches the
-    // same ≤640px breakpoint where the CSS switches .queue-grid to a
-    // 2-column wrap.
-    const limit = window.matchMedia('(max-width:640px)').matches ? 6 : 12;
-    grid.innerHTML = items.slice(0, limit).map(it =>
+    grid.innerHTML = items.slice(0, 12).map(it =>
       _discCardHTML(it)
     ).join('');
     _discRestoreScroll();
