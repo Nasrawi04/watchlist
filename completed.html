@@ -106,7 +106,7 @@
       <h1 class="cat-page-title">Watched</h1>
     </div>
     <div class="comp-controls">
-      <button class="export-btn" id="exportBtn" onclick="_compExport()" style="display:inline-flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export PDF</button>
+      <button class="export-btn" id="exportBtn" onclick="_compExport()" style="display:inline-flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export</button>
     </div>
   </div>
 
@@ -140,6 +140,7 @@
 <script src="js/nav.js"></script>
 <script src="js/sort-filter.js"></script>
 <script src="js/export.js"></script>
+<script src="js/export-studio.js"></script>
 <script src="js/rating-popup.js"></script>
 <script src="js/list-popup.js"></script>
 <script src="js/comments.js"></script>
@@ -516,45 +517,13 @@ function renderMain() {
   }
 }
 
-// Export: the shared export popup (MSSExport, export.js) — pick a category + theme
+// Export: the Export Studio (export-studio.js) — with "As filtered here" when filters are on
 function _compExport() {
-  MSSExport.open({ title: 'Export PDF', desc: 'Your watched titles as a PDF — All uses the filters you have on.', iconName: 'download', categories: true, run: doExport });
-}
-
-async function doExport(exportCat) {
-  const items = exportCat
-    ? _allCompleted.filter(e => e.cat === exportCat)
-    : filtered();
-  if (!items.length) return false;
-
-  const useRanked = _compSort === 'highest' || _compSort === 'lowest';
-  const sorted = useRanked
-    ? [...items].sort((a,b) => (liveScore(b)||0) - (liveScore(a)||0))
-    : [...items].sort((a,b) => new Date(b.completed_date||b.created_at||0) - new Date(a.completed_date||a.created_at||0));
-
-  const rated     = sorted.filter(e => liveScore(e) != null);
-  const avgScore  = rated.length ? (rated.reduce((s,e)=>s+Number(liveScore(e)),0)/rated.length).toFixed(2) : null;
-  const totalEps  = sorted.filter(e=>e.cat!=='movies'&&(e.ratings?._media_type||'show')!=='movie')
-    .reduce((s,e)=>s+(Number(e.total_eps)||Number(e.watched)||0),0);
-  const totalMins = sorted.filter(e=>e.cat==='movies'||e.ratings?._media_type==='movie')
-    .reduce((s,e)=>s+(Number(e.runtime_h)||0)*60+(Number(e.runtime_m)||0),0);
-  const wtH=Math.floor(totalMins/60), wtM=totalMins%60;
-  const watchTime = totalMins ? (wtH?`${wtH}h ${wtM}m`:`${wtM}m`) : null;
-  const catLabels    = {'':'All',tv:'TV Shows',movies:'Movies',anime:'Anime',cartoons:'Cartoons'};
-  const statusLabels = {'':'',completed:'Watched',ongoing:'To Be Continued'};
-  const filterLabel  = [catLabels[_catFilter]||'All', statusLabels[_statusFilter]].filter(Boolean).join(' · ');
-
-  await buildAndExportPDF({
-    subtitle: (() => {
-      const catLabels2 = {'':'All',tv:'TV Shows',movies:'Movies',anime:'Anime',cartoons:'Cartoons'};
-      const catPart = exportCat ? catLabels2[exportCat] : (filterLabel || 'All');
-      return `${useRanked?'Ranked List':'Watched List'} · ${catPart}`;
-    })(),
-    entries:   sorted,
-    useRanked,
-    exportCat: exportCat || '',
-    filename:  `myscreenfolio-${_compSort}.pdf`,
-  });
+  const shown = filtered(), p = window._navUserProfile || {};
+  MSSStudio.open({ who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' },
+    preset: { what: 'watched', sort: _compSort === 'highest' ? 'score' : 'recent' },
+    custom: shown.length && shown.length !== _allCompleted.length ? { label: 'Watched · as filtered here', entries: shown } : null,
+    load: () => getEntries(_compUser.id) });
 }
 
 </script>
