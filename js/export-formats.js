@@ -12,8 +12,9 @@
      backup(data)         → everything as JSON: entries, lists, episode ratings
      save(name, text, type) / copy(text)
    o = { include, privacy: { hideSpoilers }, length: 'short' | 'full',
-         prompt (text or ''), watchlist (entries to list as "already planned"), heading }
-   Requires config.js (liveScore, CAT_META), export.js (MSSPdf helpers).
+         prompt (text or ''), watchlist (entries to list as "already planned"), heading,
+         taste (MSSTaste.compute — "My taste" on top; with no titles, the whole profile) }
+   Requires config.js (liveScore, CAT_META), export.js (MSSPdf helpers), taste-profile.js (MSSTaste).
 ══════════════════════════════════════════════════════════════ */
 const MSSFormats = (() => {
   const STATUS = { completed: 'Watched', ongoing: 'To be continued', queue: 'Watchlist', watching: 'Watching', up_next: 'Up next', paused: 'Paused' };
@@ -33,6 +34,7 @@ const MSSFormats = (() => {
     watched: 'Here are movies and shows I’ve watched, with my scores out of 10 and what I thought of them. Based on my taste, recommend 10 titles I haven’t seen yet — a mix of movies and shows — and for each one, tell me in a sentence why it fits me. Don’t suggest anything listed below.',
     watchlist: 'This is my watchlist. Based on what’s on it, pick the 5 I should watch first and tell me why, then suggest 5 more I’d probably like that aren’t on it.',
     watching: 'These are the shows and movies I’m in the middle of. Help me decide which to finish first, and suggest what I could watch after each one.',
+    taste: 'Here’s a summary of my taste in movies and shows, worked out from how I score them. Recommend 10 titles that fit it — a mix of movies and shows — and for each one, tell me in a sentence why it fits me.',
     mixed: 'Here are some titles I picked from my library, with my scores out of 10 and what I thought. Based on these, recommend 10 titles I haven’t seen yet and tell me why each one fits me. Don’t suggest anything listed below.',
   };
   function aiLine(e, o) {
@@ -59,7 +61,17 @@ const MSSFormats = (() => {
     const groups = [['watched', 'Watched'], ['watching', 'In the middle of'], ['watchlist', 'On my watchlist'], ['title', 'Other titles']];
     const parts = [];
     if (o.prompt && o.prompt.trim()) parts.push(o.prompt.trim(), '');
-    parts.push(`# ${o.heading || 'My titles'}`, `From MyScreenFolio · ${list.length} ${list.length === 1 ? 'title' : 'titles'} · scores are out of 10`, '');
+    const t = o.taste;
+    parts.push(`# ${o.heading || 'My titles'}`, t && !list.length ? `From MyScreenFolio · based on ${t.rated} rated titles · scores are out of 10` : `From MyScreenFolio · ${list.length} ${list.length === 1 ? 'title' : 'titles'} · scores are out of 10`, '');
+    if (t) {   // the taste profile: a short summary on top of a list, or the whole thing on its own
+      parts.push('## My taste', '', ...MSSTaste.lines(t).map(l => `- ${l}`), '');
+      if (!list.length) {
+        if (t.genres.length) parts.push('### Genres — my average score', '', ...t.genres.map(g => `- ${g.name}: ${g.avg.toFixed(2)} (${g.n} titles)`), '');
+        if (t.categories.length) parts.push('### How I rate — my average in each category', '', ...t.categories.map(c => `- ${c.label}: ${c.avg.toFixed(2)}`), '');
+        if (t.decades.length) parts.push('### Decades — my average score', '', ...t.decades.map(d => `- ${d.name}: ${d.avg.toFixed(2)} (${d.n} titles)`), '');
+        if (t.top.length) parts.push('### My top 5', '', ...t.top.map((x, i) => `${i + 1}. ${x.e.title}${yr(x.e) ? ` (${yr(x.e)})` : ''} — ${x.s.toFixed(2)}/10`), '');
+      }
+    }
     const kinds = new Set(list.map(MSSPdf.kindOf));
     groups.forEach(([k, label]) => {
       const ls = list.filter(e => MSSPdf.kindOf(e) === k); if (!ls.length) return;
