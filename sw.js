@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v27';   // MyScreenFolio — restarted at v1 (was mss-v787)
+const CACHE_VERSION = 'msf-v30';   // MyScreenFolio — restarted at v1 (was mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -57,6 +57,12 @@ const STATIC_ASSETS = [
   'js/rewatch.js',
   'js/create-card.js',
   'js/export.js',
+  'js/export-studio.js',
+  'fonts/Oswald-500.ttf',
+  'fonts/Oswald-600.ttf',
+  'fonts/Manrope-400.ttf',
+  'fonts/Manrope-600.ttf',
+  'fonts/BebasNeue-400.ttf',
   'js/info-popup.js',
   'js/rating-popup.js',
   'js/comments.js',
