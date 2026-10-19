@@ -39,23 +39,26 @@
 .fav-edit-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);border:0.5px solid var(--border-olive);background:transparent;color:var(--olive-light);font-size:12px;cursor:pointer;transition:background .15s;}
 
 .fav-edit-btn:hover{background:var(--olive-faint);}
-/* ── Export cards ── */
-.export-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
-
-.export-card{font:inherit;color:inherit;text-align:start;width:100%;background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:1.25rem;cursor:pointer;transition:transform 150ms,box-shadow 150ms,background 200ms;display:flex;flex-direction:column;gap:8px;}
-
-.export-card:hover{background:var(--olive-faint);}
-
-.export-card:active{transform:translate(4px,4px);box-shadow:none;}
-.export-card:focus-visible{outline:2px solid var(--olive-light);outline-offset:3px;}
-
-.export-card-icon{display:flex;align-items:center;color:var(--olive-light);}
-
-.export-card-icon svg{width:28px;height:28px;stroke-width:1.5;}
-
-.export-card-title{font-size:14px;font-weight:600;color:var(--text);}
-
-.export-card-desc{font-size:11px;color:var(--text-2);line-height:1.5;}
+/* ── Exports tab: the Export Studio + quick exports (export-studio.js) ── */
+.xp-hero{display:flex;align-items:center;gap:20px;padding:22px 24px;border-radius:var(--radius-lg);background:radial-gradient(120% 140% at 0% 0%,var(--olive-faint),transparent 60%),var(--bg-3);border:1px solid var(--border-olive);}
+.xp-hero-ic{flex:none;width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:var(--olive);color:#fff;}
+.xp-hero-text{flex:1;min-width:0;}
+.xp-hero-text b{display:block;font-size:17px;font-weight:700;color:var(--text);}
+.xp-hero-text span{display:block;margin-top:3px;font-size:13px;color:var(--text-2);line-height:1.5;}
+.xp-hero .btn-add-entry{flex:none;}
+.xp-label{margin:22px 0 10px;font-family:'Oswald',var(--sans);font-size:11.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--text-3);}
+.xp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
+.xp-card{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-2);background:var(--bg-3);color:var(--text);font:inherit;text-align:start;cursor:pointer;transition:border-color .15s,background .15s,transform .15s;}
+.xp-card:hover{border-color:var(--olive-light);background:var(--olive-faint);transform:translateY(-1px);}
+.xp-card:focus-visible{outline:2px solid var(--olive-light);outline-offset:2px;}
+.xp-card-ic{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--olive-faint);color:var(--olive-light);}
+.xp-card-text{flex:1;min-width:0;}
+.xp-card-text b{display:block;font-size:14px;font-weight:700;}
+.xp-card-text small{display:block;margin-top:2px;font-size:12px;color:var(--text-3);line-height:1.4;}
+.xp-card-go{flex:none;color:var(--text-3);transform:scaleX(-1);}
+[dir="rtl"] .xp-card-go{transform:none;}
+@media(prefers-reduced-motion:reduce){.xp-card{transition:none;}.xp-card:hover{transform:none;}}
+@media(max-width:560px){.xp-hero{flex-wrap:wrap;padding:18px;gap:14px;}.xp-hero .btn-add-entry{width:100%;justify-content:center;}.xp-grid{grid-template-columns:1fr;}}
 
 
 
@@ -264,11 +267,6 @@
   .sort-btn { font-size:10px; padding:4px 8px; }
   .cf-btn { font-size:10px; padding:4px 9px; }
   .section-block-title { font-size:12px; }
-  .export-grid { grid-template-columns:repeat(2,1fr); }
-  .export-card { padding:1rem; gap:6px; }
-  .export-card-icon svg { width:22px; height:22px; }
-  .export-card-title { font-size:13px; }
-  .export-card-desc { font-size:11px; }
 }
 
 /* ── Small mobile (≤400px) ── */
@@ -315,12 +313,6 @@
   .note-title { font-size:13px; }
   .note-text { font-size:10px; }
   .note-score { font-size:17px; }
-  .export-grid { grid-template-columns:1fr; }
-  .export-card { padding:.875rem; flex-direction:row; align-items:center; gap:12px; }
-  .export-card-icon { flex-shrink:0; }
-  .export-card-icon svg { width:20px; height:20px; }
-  .export-card-title { font-size:13px; }
-  .export-card-desc { font-size:11px; }
 }
 
 .prof-ov-grid {
@@ -425,6 +417,8 @@
 <script src="js/list-popup.js"></script>
 <script src="js/profile-tabs.js"></script>
 <script src="js/export.js"></script>
+<script src="js/export-formats.js"></script>
+<script src="js/export-studio.js"></script>
 <script src="js/medals.js"></script>
 <script src="js/showcase.js"></script>
 <script>
@@ -596,34 +590,26 @@ function renderTab0() {
 // before your library has loaded simply waits for it.
 var _pEntriesLoaded; var _pEntriesReady = new Promise(function(res){ _pEntriesLoaded = res; });
 
-// Exports: the shared export popup (MSSExport, export.js)
-var _PROF_EXPORTS = {
-  ranked:     { title:'Ranked List',      desc:'All completed titles sorted by score.', iconName:'trophy' },
-  completed:  { title:'Watched List',     desc:'Full watch history chronologically.',   iconName:'check' },
-  profile:    { title:'Profile Overview', desc:'Stats, highlights and top titles.',     iconName:'user' },
-  watchlater: { title:'Watchlist',        desc:'Your full watchlist queue.',            iconName:'bookmark' },
-};
-function _profExport(type) {
-  var x = _PROF_EXPORTS[type];
-  MSSExport.open({ title:x.title, desc:x.desc, iconName:x.iconName, run: async function() {
-    await _pEntriesReady;
-    var done = _pEntries.filter(function(e){ return e.status==='completed'||e.status==='ongoing'; });
-    var byScore = function(a,b){ return (liveScore(b)||0)-(liveScore(a)||0); };
-    var list;
-    if (type==='ranked') list = { subtitle:'Ranked List', entries:done.sort(byScore), useRanked:true, filename:'myscreenfolio-ranked.pdf' };
-    else if (type==='completed') list = { subtitle:'Watched List', entries:done.sort(function(a,b){ return new Date(b.completed_date||0)-new Date(a.completed_date||0); }), useRanked:false, filename:'myscreenfolio-watched.pdf' };
-    else if (type==='watchlater') list = { subtitle:'Watchlist', entries:_pEntries.filter(function(e){ return e.status==='queue'; }).sort(function(a,b){ return new Date(b.created_at||0)-new Date(a.created_at||0); }), useRanked:false, isWatchLater:true, filename:'myscreenfolio-watchlist.pdf' };
-    else list = { subtitle:'Profile Overview', entries:done.sort(byScore).slice(0,10), useRanked:true, filename:'myscreenfolio-profile.pdf' };
-    if (!list.entries.length) return false;
-    await buildAndExportPDF(list);
-  }});
+// Exports: the Export Studio (export-studio.js) — opened plain, or from a quick export
+var _PROF_EXPORTS = [
+  { icon:'check',    title:'Everything I’ve watched', desc:'Your whole watch history, ranked by score.', preset:{ what:'watched', sort:'score' } },
+  { icon:'trophy',   title:'My top 10',               desc:'Your ten best, with posters and every rating.', preset:{ what:'watched', sort:'score', limit:10 } },
+  { icon:'bookmark', title:'My watchlist',            desc:'Everything you plan to watch.',               preset:{ what:'watchlist' } },
+  { icon:'play',     title:'Currently watching',      desc:'What you’re in the middle of, and how far.',  preset:{ what:'watching' } },
+];
+function _profExport(i) {
+  var p = window._navUserProfile || _pProfile || {};
+  MSSStudio.open({ preset: i == null ? null : _PROF_EXPORTS[i].preset, who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' },
+    load: function(){ return _pEntriesReady.then(function(){ return _pEntries; }); } });
 }
 
 function renderExports(){
   var el=document.getElementById('exportsContent');
   if(el.innerHTML.trim())return;
-  var cards=Object.keys(_PROF_EXPORTS).map(function(k){ var x=_PROF_EXPORTS[k]; return {type:k,icon:x.iconName,title:x.title,desc:x.desc}; });
-  el.innerHTML='<div class="pv-section"><div class="pv-eyebrow">Export</div><div class="pv-title">Download Your Data</div><div class="export-grid">'+cards.map(function(c){return '<button type="button" class="export-card" onclick="_profExport(\''+c.type+'\')"><div class="export-card-icon">'+icon(c.icon,28)+'</div><div class="export-card-title">'+escHTML(c.title)+'</div><div class="export-card-desc">'+c.desc+'</div></div>';}).join('')+'</div></div>';
+  el.innerHTML='<div class="pv-section"><div class="pv-eyebrow">Export</div><div class="pv-title">Take your library with you</div>'
+    +'<div class="xp-hero"><span class="xp-hero-ic">'+icon('download',26)+'</span><div class="xp-hero-text"><b>Export Studio</b><span>Choose what goes in, how it looks and what stays private — with a live preview before you download.</span></div>'
+    +'<button type="button" class="btn-add-entry" onclick="_profExport(null)">'+icon('sparkles',15)+' Open Export Studio</button></div>'
+    +'<div class="xp-label">Quick exports</div><div class="xp-grid">'+_PROF_EXPORTS.map(function(c,i){return '<button type="button" class="xp-card" onclick="_profExport('+i+')"><span class="xp-card-ic">'+icon(c.icon,18)+'</span><span class="xp-card-text"><b>'+escHTML(c.title)+'</b><small>'+escHTML(c.desc)+'</small></span><span class="xp-card-go">'+icon('back',16)+'</span></button>';}).join('')+'</div></div>';
 }
 
 
