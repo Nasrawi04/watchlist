@@ -6,7 +6,7 @@
    MSSTaste.compute(entries) → null when nothing is rated, else {
      rated, avg, median, hours, movies: { n, avg }, shows: { n, avg },
      genres:     [{ name, n, avg }]   genres with 2+ rated titles, best first
-     categories: [{ label, n, avg }]  every rating category, kindest first
+     categories: [{ label, n, avg }]  every core rating category (no bonus ones), kindest first
      kindest, harshest                 the category you score highest / lowest
      decades:    [{ name, n, avg }]   oldest first; favDecade (best average, 2+ titles), mostDecade (most titles)
      spread:     [count of scores 1–10]   (8.25 counts as 8)
@@ -35,7 +35,7 @@ const MSSTaste = (() => {
     const avg = avgOf(scores);
     const genres = group(rated.flatMap(x => (x.e.genres || []).map(g => ({ g, s: x.s }))), r => r.g, r => r.s)
       .filter(g => g.n >= 2).sort((a, b) => b.avg - a.avg || b.n - a.n);
-    const categories = group(rated.flatMap(x => MSSPdf.bars(x.e)), r => r.label, r => r.v)
+    const categories = group(rated.flatMap(x => MSSPdf.bars(x.e, true)), r => r.label, r => r.v)
       .filter(c => c.n >= 2).map(c => ({ label: c.name, n: c.n, avg: c.avg })).sort((a, b) => b.avg - a.avg);
     const decades = group(rated, x => { const y = Number(String(x.e.year || '').slice(0, 4)); return y > 1880 ? `${Math.floor(y / 10) * 10}s` : null; }, x => x.s)
       .sort((a, b) => a.name.localeCompare(b.name));
