@@ -105,18 +105,7 @@ let _cardRenderToken = 0;
 async function _drawCard() {
   const myToken = ++_cardRenderToken;
   try {
-    // Canvas text silently falls back to the fallback font if a webfont
-    // hasn't actually finished loading yet, even with the <link> tag
-    // already in the page — a stylesheet reference isn't the same as
-    // the font being ready to paint. Explicitly loading (or waiting on)
-    // all three fonts first avoids an inconsistent first render.
-    if (document.fonts && document.fonts.load) {
-      await Promise.all([
-        document.fonts.load('600 40px "Oswald"'),
-        document.fonts.load('400 40px "Bebas Neue"'),
-        document.fonts.load('500 40px "Manrope"'),
-      ]).catch(() => {});
-    }
+    await mssFontsReady();   // the site's fonts, every weight the card uses (config.js)
     if (_cardPage === 3) await _drawDiscoverCard(myToken);
     else await _drawCardPage1(myToken);
   } catch (err) {
