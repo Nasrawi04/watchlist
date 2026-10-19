@@ -6473,3 +6473,12 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 /* Export Studio — the image preview (export-image.js draws it at full size; CSS scales it) */
 .xs-img { display:block; width:100%; max-width:280px; height:auto; margin:0 auto; border-radius:10px; box-shadow:0 6px 28px rgba(0,0,0,.28); }
 .xs-img.square { max-width:440px; }
+/* Export Studio — the taste profile preview (rows = the PDF's bars) */
+.xs-tp-row { display:grid; grid-template-columns:calc(var(--u) * 42) 1fr auto calc(var(--u) * 14) auto; align-items:center; gap:calc(var(--u) * 3); margin-bottom:calc(var(--u) * 2.4); font-size:calc(var(--u) * 2.9); }
+.xs-tp-row b { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.xs-tp-row i { display:block; height:calc(var(--u) * 3.2); border-radius:999px; background:var(--tr); overflow:hidden; }
+.xs-tp-row u { display:block; height:100%; border-radius:inherit; background:var(--ac); }
+.xs-tp-row em { font-style:normal; font-family:var(--bebas); font-size:calc(var(--u) * 4.2); line-height:1; color:var(--ac); }
+.xs-tp-row small { font-size:calc(var(--u) * 2.4); color:var(--t3); }
+.xs-tp-row span { font-family:'Oswald',var(--sans); font-weight:600; font-size:calc(var(--u) * 2); letter-spacing:calc(var(--u) * .3); text-transform:uppercase; color:var(--ac); border:calc(var(--u) * .3) solid var(--ed); border-radius:calc(var(--u) * 1.2); padding:calc(var(--u) * .5) calc(var(--u) * 1.6); }
+.xs-tp-gap { margin-top:calc(var(--u) * 5); }
