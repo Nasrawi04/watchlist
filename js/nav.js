@@ -358,20 +358,20 @@ async function initPage(onReady) {
    stopping the instant you scroll yourself. Pages with their own
    restore (Discover) set window.MSS_OWN_SCROLL = true.
 ══════════════════════════════════════════ */
-const _MSS_SCROLL_KEY = 'mss_scroll:' + location.pathname + location.search;
+const _mssScrollKey = () => 'mss_scroll:' + location.pathname + location.search;   // read live: pages keep their tab in the URL
 const _mssNavType = (performance.getEntriesByType('navigation')[0] || {}).type;
 const _mssReturning = _mssNavType === 'back_forward' || _mssNavType === 'reload';
 if (_mssReturning && 'scrollRestoration' in history) history.scrollRestoration = 'manual';
 window.addEventListener('pagehide', () => {
   if (window.MSS_OWN_SCROLL) return;
-  try { sessionStorage.setItem(_MSS_SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
+  try { sessionStorage.setItem(_mssScrollKey(), String(Math.round(window.scrollY))); } catch {}
 });
 
 let _mssScrollRestored = false;
 function _mssRestoreScroll() {
   if (_mssScrollRestored || window.MSS_OWN_SCROLL || !_mssReturning) return;
   _mssScrollRestored = true;
-  const target = Number(sessionStorage.getItem(_MSS_SCROLL_KEY) || 0);
+  const target = Number(sessionStorage.getItem(_mssScrollKey()) || 0);
   if (!target) return;
   let stop = false;
   const end = () => { stop = true; obs.disconnect(); clearTimeout(timer); };
