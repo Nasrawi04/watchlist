@@ -420,6 +420,7 @@
 <script src="js/profile-tabs.js"></script>
 <script src="js/export.js"></script>
 <script src="js/taste-profile.js"></script>
+<script src="js/year-review.js"></script>
 <script src="js/export-formats.js"></script>
 <script src="js/export-image.js"></script>
 <script src="js/export-studio.js"></script>
@@ -458,7 +459,10 @@ document.addEventListener('DOMContentLoaded', function() {
     _pEntriesLoaded();
     populateHeader();
     renderTab0();
-    if (_activeTab === 1) renderLibrary();
+    var tab = parseInt(new URLSearchParams(location.search).get('tab'), 10);
+    if (tab > 0 && tab <= 6) switchTab(tab);
+    else if (_activeTab === 1) renderLibrary();
+    _libResume();
   });
 });
 
@@ -503,6 +507,10 @@ function populateHeader() {
 /* ── Tabs ── */
 function switchTab(n) {
   _activeTab = n;
+  // Keep the tab in the URL — Back / refresh come back to it (not Overview)
+  var u = new URL(location.href);
+  if (n) u.searchParams.set('tab', n); else u.searchParams.delete('tab');
+  history.replaceState(history.state, '', u.toString());
   var sel = document.getElementById('profTabsSelect');
   if (sel && +sel.value !== n) sel.value = n;
   [0,1,2,3,4,5,6].forEach(function(i) {
@@ -600,6 +608,7 @@ var _PROF_EXPORTS = [
   { icon:'trophy',   title:'My top 10',               desc:'Your ten best, with posters and every rating.', preset:{ what:'watched', sort:'score', limit:10 } },
   { icon:'image',    title:'Top 10 story',            desc:'Your ten best as an image for Instagram or TikTok.', preset:{ what:'watched', sort:'score', format:'image' } },
   { icon:'activity', title:'My taste profile',        desc:'How you score — your genres, decades and what you’re toughest on.', preset:{ what:'taste' } },
+  { icon:'clock',    title:'Year in Review',          desc:'Your year: what you finished, your best, month by month.', preset:{ what:'year' } },
   { icon:'bookmark', title:'My watchlist',            desc:'Everything you plan to watch.',               preset:{ what:'watchlist' } },
   { icon:'play',     title:'Currently watching',      desc:'What you’re in the middle of, and how far.',  preset:{ what:'watching' } },
 ];
