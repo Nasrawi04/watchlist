@@ -522,6 +522,8 @@ const MSSInfo = (() => {
        onChange(entry), onDelete(entry), onNoteSaved(entry), from,
        onReact(state, entry),  // someone else's note: after you like / dislike it
      })
+     MSSViews.resume() → { id, view } when you've just come Back to the page you
+       left from inside the popup (else null) — the page reopens that title.
 
    Lives in info-popup.js (always loaded with the popups — no extra file
    to forget). Needs rating-popup.js + note-popup.js on the page.
@@ -648,5 +650,24 @@ const MSSViews = (() => {
 
   const has = v => !!st && st.views.includes(v);   // e.g. a note popup's "See Ratings" button
 
-  return { open, show, close, has };
+  // Leaving the page from inside the popup (a director, an actor, the title page…)
+  // → remember which title and view, so Back reopens it right where you were.
+  const BACK_KEY = 'mss_views_back';
+  const here = () => location.pathname + location.search;
+  window.addEventListener('pagehide', () => {
+    try {
+      const open = st && document.querySelector('#mssInfoOverlay.open, #mssRateOverlay.open, #mssNoteOverlay.open');
+      if (open) sessionStorage.setItem(BACK_KEY, JSON.stringify({ url: here(), id: st.e.id, view: st.cur }));
+    } catch {}
+  });
+  // On Back: { id, view } of the title to reopen on this page, once — else null
+  function resume() {
+    try {
+      const r = JSON.parse(sessionStorage.getItem(BACK_KEY) || 'null');
+      sessionStorage.removeItem(BACK_KEY);
+      return r && r.url === here() && typeof _mssReturning !== 'undefined' && _mssReturning ? r : null;
+    } catch { return null; }
+  }
+
+  return { open, show, close, has, resume };
 })();
