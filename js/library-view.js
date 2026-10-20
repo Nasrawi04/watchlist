@@ -22,17 +22,24 @@ var LIB_READONLY = !!window.LIB_READONLY;
 var LIB_ENTRIES  = window.LIB_ENTRIES || function(){ return _pEntries; };
 
 // A title → Info · Ratings · Note (opens on Ratings once it's rated)
-function _libOpen(id) {
+function _libOpen(id, start) {
   var e = LIB_ENTRIES().filter(function(x){ return x.id === id; })[0];
   if (!e) return;
   var rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
-  if (LIB_READONLY) { MSSViews.open(e, { start: rated ? 'rate' : 'info', profile: (window.LIB_PROFILE && window.LIB_PROFILE()) || {} }); return; }
+  start = start || (rated ? 'rate' : 'info');
+  if (LIB_READONLY) { MSSViews.open(e, { start: start, profile: (window.LIB_PROFILE && window.LIB_PROFILE()) || {} }); return; }
   MSSViews.open(e, {
-    start: rated ? 'rate' : 'info', own: true, from: location.pathname.split('/').pop() || 'library.html',
+    start: start, own: true, from: location.pathname.split('/').pop() || 'library.html',
     addToList: (location.pathname.split('/').pop() || 'library.html') === 'library.html',   // only on the Library page
     onChange: function(){ renderLibrary(); }, onNoteSaved: function(){ renderLibrary(); },
     onDelete: _libRemove
   });
+}
+// Back from a page you opened inside a title's popup (a director, an actor…)
+// → reopen that title on the same view. Pages call this once their titles are in.
+function _libResume() {
+  var r = MSSViews.resume();
+  if (r) _libOpen(r.id, r.view);
 }
 // Your own title was deleted → drop it and redraw
 function _libRemove(x) {
