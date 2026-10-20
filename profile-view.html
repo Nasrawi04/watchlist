@@ -377,6 +377,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   _pvCmtUser = _pvMe;
   renderProfile();
+  var tab = parseInt(new URLSearchParams(location.search).get('tab'), 10);
+  if (tab > 0 && tab <= 5) pvTabSwitch(tab);
+  _libResume();
   // Friends: how your tastes line up — your own titles, quietly, then the pill by the buttons
   if (_pvFriendship && _pvFriendship.status === 'accepted') {
     getEntries(_pvMe.id).then(mine => {
@@ -510,6 +513,10 @@ function renderProfile() {
     var sel = document.getElementById('pvTabsSelect');
     if (sel && parseInt(sel.value) !== n) sel.value = n;
     if (n === 1) { renderLibrary(); }
+    // Keep the tab in the URL — Back / refresh come back to it (not Overview)
+    var u = new URL(location.href);
+    if (n) u.searchParams.set('tab', n); else u.searchParams.delete('tab');
+    history.replaceState(history.state, '', u.toString());
     // Lists + Notes: the Personal sections of the Notes / Lists pages, read-only (profile-tabs.js)
     var tabOpts = { userId: _pvUserId, entries: _pvEntries, owner: !!(_pvMe && _pvMe.id === _pvUserId), name: (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '' };
     if (n === 2) MSSTabs.lists(document.getElementById('pvListsContent'), tabOpts);
