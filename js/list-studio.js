@@ -258,14 +258,14 @@ const MSSListStudio = (() => {
     const n = S.ids.length, ranked = S.ranked === true, locked = S.locked;
     const label = MSSList.orderLabel(S.mode);
     const hintMode = ['watched_new', 'watched_old', 'release_new', 'release_old'].includes(S.mode) ? S.mode : '';
-    // every order laid out, grouped like the site's Sort menus — all shown, nothing to scroll
-    // buttons look like the genre tags on the edit page (.genre-opt)
+    // every order laid out, grouped like the site's Sort menus — all shown, nothing to scroll:
+    // My Order / Shuffle by the heading, a card per group (buttons like the edit page's genre tags)
     const chip = (k, l) => `<button type="button" class="genre-opt${S.mode === k ? ' selected' : ''}" aria-pressed="${S.mode === k}" ${locked ? 'disabled' : ''} onclick="MSSListStudio._mode('${k}')">${l}</button>`;
-    const row = (h, body) => `<div class="ls-order-row"><span class="ls-order-h">${h}</span><div class="ls-order-chips">${body}</div></div>`;
-    const chips = row('Order', chip('picked', 'My Order') + `<button type="button" class="genre-opt" ${locked || n < 2 ? 'disabled' : ''} onclick="MSSListStudio._shuffle()">${icon('shuffle', 12)} Shuffle</button>`)
-      + MSSList.ORDER_GROUPS.map(([h, opts]) => row(h, opts.map(([k, l]) => chip(k, l)).join(''))).join('');
+    const card = ([h, opts]) => `<div class="ls-og${opts.length > 2 ? ' ls-og-wide' : ''}${opts.some(o => o[0] === S.mode) ? ' on' : ''}" role="group" aria-label="${h}"><span class="ls-og-h">${h}</span><div class="ls-og-btns">${opts.map(([k, l]) => chip(k, l)).join('')}</div></div>`;
+    const head = `<div class="ls-order-top">${chip('picked', 'My Order')}<button type="button" class="genre-opt" ${locked || n < 2 ? 'disabled' : ''} onclick="MSSListStudio._shuffle()">${icon('shuffle', 12)} Shuffle</button></div>`;
+    const chips = MSSList.ORDER_GROUPS.map(card).join('');
     $('lsSide').innerHTML = `
-      <div class="xs-sec" id="lsSecOrder"><div class="xs-sec-label">Order by</div>
+      <div class="xs-sec" id="lsSecOrder"><div class="ls-order-head"><div class="xs-sec-label">Order by</div>${head}</div>
         <div class="ls-order">${chips}</div>
         ${locked ? `<div class="la-note" style="margin-top:10px">${icon('info', 14)}<span>The owner keeps this list sorted by <b>${esc(label)}</b> — titles you add slot into place.</span></div>`
           : S.shared ? '' : `<div class="xs-switches" style="margin-top:10px">${sw(S.auto && S.mode !== 'picked', S.mode === 'picked' ? "MSSListStudio._mode('highest')" : 'MSSListStudio._auto()', 'Keep sorted automatically',
