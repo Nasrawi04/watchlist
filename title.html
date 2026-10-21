@@ -1623,7 +1623,7 @@ function _tdRenderNotes() {
           <span class="td-note-username">@${esc(n.username || 'user')}</span>
           <span class="td-note-date">${dateStr}</span>
         </div>
-        ${mssIsSpoiler(n) && n.user_id !== _tdUser?.id ? mssSpoilerHTML(`<div class="td-note-text" translate="no">${esc(MSSNote.trim(MSSRich.plain(n.notes)))}</div>`, { compact: true }) : `<div class="td-note-text" translate="no">${esc(MSSNote.trim(MSSRich.plain(n.notes)))}</div>`}
+        ${mssIsSpoiler(n) && n.user_id !== _tdUser?.id ? mssSpoilerHTML(`<div class="td-note-text" translate="no">${esc(MSSNote.trim(MSSRich.plain(n.notes)))}</div>`, { compact: true, e: { tmdb_id: _tdId, tmdb_type: _tdType } }) : `<div class="td-note-text" translate="no">${esc(MSSNote.trim(MSSRich.plain(n.notes)))}</div>`}
         <div class="td-note-actions" onclick="event.stopPropagation()">
           <button type="button" class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="_tdReactToNote('${n.entry_id}', true)">
             ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
