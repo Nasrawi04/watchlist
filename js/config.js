@@ -98,6 +98,7 @@ const ICONS = {
   image:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>`,
   trash:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
   x:        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  drop:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><line x1="5.3" y1="5.3" x2="18.7" y2="18.7"/></svg>`,
   pause:    `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`,
   moon:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
   sun:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
@@ -274,6 +275,8 @@ function liveScore(e) {
   const calc = e.ratings ? calcFinal(e.ratings, e.cat) : null;
   return calc != null ? calc : (e.final_score != null ? Number(e.final_score) : null);
 }
+// A score that counts toward averages, matches and rankings — a dropped title's never does (071)
+function mssCountedScore(e) { return e && e.status !== 'dropped' ? liveScore(e) : null; }
 
 /* ── Taste match (Social → Compare, friend cards, friends' profiles) ──
    How closely two people's scores line up on the titles they've both rated:
@@ -287,7 +290,7 @@ function mssTasteMatch(mine, theirs) {
   const pairs = [];
   (theirs || []).forEach(t => {
     const m = idx[key(t)]; if (!m) return;
-    const a = liveScore(m), b = liveScore(t);
+    const a = mssCountedScore(m), b = mssCountedScore(t);
     pairs.push({ m, t, a: a != null ? Number(a) : null, b: b != null ? Number(b) : null });
   });
   const rated = pairs.filter(p => p.a != null && p.b != null);
@@ -1140,6 +1143,24 @@ function mssProfileLinkHTML(p, innerHTML) {
   if (!p || (!p.id && !p.username)) return innerHTML;
   const q = p.id ? 'id=' + encodeURIComponent(p.id) : 'u=' + encodeURIComponent(p.username);
   return `<a class="mss-user-link" href="profile-view.html?${q}" translate="no">${innerHTML}</a>`;
+}
+
+/* ── Dropped (071): titles you gave up on — shows and movies ──
+   Where you stopped: a show's season / episode; a movie's optional time
+   (ratings._dropped_at, minutes). A dropped title can be rated, but its score
+   never counts (averages, rankings, Top 10s, community score). */
+const mssIsMovieEntry = e => e?.cat === 'movies' || e?.ratings?._media_type === 'movie';
+function mssDroppedAt(e) {
+  if (mssIsMovieEntry(e)) {
+    const m = Number(e.ratings?._dropped_at) || 0;
+    return m ? (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`) : '';
+  }
+  return e.season != null && (e.episode ?? 0) > 0 ? `S${e.season} · E${e.episode}` : e.watched ? `Ep ${e.watched}` : '';
+}
+function mssDroppedLabel(e) { const at = mssDroppedAt(e); return at ? `Dropped at ${at}` : 'Dropped'; }
+// the small tag next to a dropped title (cards, friends' activity, a title's friends)
+function mssDroppedTagHTML(e, withAt = true) {
+  return `<span class="dropped-tag">${icon('drop', 11)} ${escHTML(withAt ? mssDroppedLabel(e) : 'Dropped')}</span>`;
 }
 
 // "Up Next" / "Taking a Break" cover on a poster: the poster softly
