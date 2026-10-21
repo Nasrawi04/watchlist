@@ -49,9 +49,11 @@ let _cardEntry = null;
 // device. A note that's Friends-only / Private (069) starts hidden on every card.
 let _cardPriv = (() => { try { return { hideNote: false, hideSpoiler: true, ...JSON.parse(localStorage.getItem('mss_card_priv') || '{}') }; } catch { return { hideNote: false, hideSpoiler: true }; } })();
 let _cardHideNote = false;
-function _cardNoteShown(e) {
-  if (!e?.notes || !e.notes.trim() || _cardHideNote) return false;
-  return !(_cardPriv.hideSpoiler && mssIsSpoiler(e));
+// the note on the card: 'off', 'show', or 'cover' — a spoiler note drawn blurred behind a spoiler
+// cover (the title's own wording if easter-egg.js has one), so friends see there's a take to go read
+function _cardNoteMode(e) {
+  if (!e?.notes || !e.notes.trim() || _cardHideNote) return 'off';
+  return _cardPriv.hideSpoiler && mssIsSpoiler(e) ? 'cover' : 'show';
 }
 function _cardPrivHTML() {
   const row = document.getElementById('createCardPrivRow'), e = _cardEntry;
@@ -62,7 +64,8 @@ function _cardPrivHTML() {
   const sw = (on, act, label, sub) => `<button type="button" class="xs-switch" role="switch" aria-checked="${on}" onclick="${act}"><span class="xs-switch-text"><b>${label}</b><small>${sub}</small></span><i aria-hidden="true"></i></button>`;
   const priv = e.note_visibility && e.note_visibility !== 'anyone';
   row.innerHTML = `<div class="xs-switches">${sw(_cardHideNote, "_cardTogPriv('hideNote')", 'Hide my note', priv ? 'Your note is ' + (e.note_visibility === 'friends' ? 'Friends-only' : 'Private') + ' — hidden unless you turn this off' : 'Leave it off the card — just your scores')}${
-    mssIsSpoiler(e) && !_cardHideNote ? sw(_cardPriv.hideSpoiler, "_cardTogPriv('hideSpoiler')", 'Hide spoiler notes', 'Your note is marked as a spoiler') : ''}</div>`;
+    mssIsSpoiler(e) && !_cardHideNote ? sw(_cardPriv.hideSpoiler, "_cardTogPriv('hideSpoiler')", 'Cover spoiler notes',
+      `Blurred behind ${MSSEgg.spoiler(e) ? 'the first rule' : 'a spoiler cover'} — nobody can read it on the card`) : ''}</div>`;
 }
 function _cardTogPriv(k) {
   if (k === 'hideNote') { _cardHideNote = !_cardHideNote; _cardPriv.hideNote = _cardHideNote; }
@@ -639,8 +642,10 @@ async function _drawCardPage1(myToken) {
     // original single-column look; longer ones switch to two columns with
     // slightly smaller text so the card grows gently instead of turning
     // into a long strip. Paragraph breaks from the note are kept.
-    const note = _cardNoteShown(e) ? MSSRich.plain(e.notes).trim() : '';     // the image shows the words, not the ** / > markers
-    if (note) {
+    const noteMode = _cardNoteMode(e);
+    const note = noteMode !== 'off' ? MSSRich.plain(e.notes).trim() : '';     // the image shows the words, not the ** / > markers
+    if (noteMode === 'cover') y = coveredNote(ctx, draw, y, note);
+    else if (note) {
       const boxPadTop = 34, boxPadBottom = 26, boxPadX = 30, colGap = 34;
       const wordCount = note.split(/\s+/).filter(Boolean).length;
       const twoCol = wordCount > 170;
@@ -708,6 +713,60 @@ async function _drawCardPage1(myToken) {
     }
 
     return y;
+  }
+
+  // A spoiler note, covered: the box as usual with the first lines blurred past reading
+  // (drawn tiny, then stretched back), and the spoiler pill on top
+  function coveredNote(ctx, draw, y, note) {
+    const boxPadTop = 36, boxPadX = 30, FS = 15, LINE_H = Math.round(FS * 1.62), boxH = 168;
+    const egg = MSSEgg.spoiler(e), RED = '#c8372d';
+    if (draw) {
+      const bx = PAD, bw = W - PAD * 2;
+      ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+      _rrect(ctx, bx, y, bw, boxH, 10); ctx.stroke();
+      ctx.fillStyle = egg ? RED : ACCENT; ctx.fillRect(bx, y, 4, boxH);
+      ctx.save();
+      ctx.font = '700 12.5px "Oswald", Arial, sans-serif'; ctx.fillStyle = TEXT; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText('PERSONAL NOTE', bx + boxPadX, y + 10);
+      ctx.restore();
+      // the blur: real lines, drawn at 1/8 size and scaled back up
+      const tw = bw - boxPadX * 2, th = boxH - boxPadTop - 18, k = 8;
+      const small = document.createElement('canvas'); small.width = Math.ceil(tw / k); small.height = Math.ceil(th / k);
+      const sc = small.getContext('2d');
+      sc.scale(1 / k, 1 / k); sc.font = `italic 400 ${FS}px "Manrope", Georgia, serif`; sc.fillStyle = TEXT; sc.textBaseline = 'top';
+      const rows = Math.floor(th / LINE_H), one = note.replace(/\s+/g, ' ');
+      let text = one; while (_wrap(sc, text, tw).length < rows && text.length < 4000) text += ' ' + one;   // a short note still fills the box
+      _wrap(sc, text, tw).slice(0, rows).forEach((ln, i) => sc.fillText(ln, 0, i * LINE_H));
+      ctx.save(); ctx.globalAlpha = 0.55; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(small, bx + boxPadX, y + boxPadTop, tw, th);
+      ctx.restore();
+      // the pill — like the site's spoiler cover
+      const title = egg ? egg.title : 'Spoiler', sub = egg ? egg.cardSub : 'Read it on MyScreenFolio';
+      ctx.save();
+      ctx.font = '700 17px "Manrope", Arial, sans-serif'; const t1 = ctx.measureText(title).width;
+      ctx.font = '500 13px "Manrope", Arial, sans-serif'; const t2 = ctx.measureText(sub).width;
+      const ic = 42, pw = 14 + ic + 14 + Math.max(t1, t2) + 26, ph = 64, px = W / 2 - pw / 2, py = y + boxPadTop + (boxH - boxPadTop) / 2 - ph / 2 - 4;
+      ctx.shadowColor = 'rgba(0,0,0,0.22)'; ctx.shadowBlur = 22; ctx.shadowOffsetY = 8;
+      ctx.fillStyle = BG_POST; _rrect(ctx, px, py, pw, ph, ph / 2); ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = egg ? 'rgba(200,55,45,0.6)' : BG_BORDER; ctx.lineWidth = 1.5; _rrect(ctx, px, py, pw, ph, ph / 2); ctx.stroke();
+      const cx = px + 14 + ic / 2, cy = py + ph / 2;
+      ctx.fillStyle = egg ? RED : INK; ctx.beginPath(); ctx.arc(cx, cy, ic / 2, 0, Math.PI * 2); ctx.fill();
+      if (egg) {   // "#1", like the cover on the site
+        ctx.font = '400 21px "Bebas Neue", Arial, sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(egg.tag.replace(/^Rule /, ''), cx, cy + 1);
+      } else {     // an eye with a slash
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.ellipse(cx, cy, 10, 6.5, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, 2.6, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - 11, cy - 10); ctx.lineTo(cx + 11, cy + 10); ctx.stroke();
+      }
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.font = '700 17px "Manrope", Arial, sans-serif'; ctx.fillStyle = TEXT; ctx.fillText(title, cx + ic / 2 + 14, cy - 3);
+      ctx.font = '500 13px "Manrope", Arial, sans-serif'; ctx.fillStyle = MUTED; ctx.fillText(sub, cx + ic / 2 + 14, cy + 16);
+      ctx.restore();
+    }
+    return y + boxH + 24;
   }
 
   const FOOTER_H = 56;
