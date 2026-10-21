@@ -3634,6 +3634,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 }
 .wg-card:hover { border-color:var(--border-olive); transform:translateY(-1px); box-shadow:var(--shadow); }
 .wg-card:active { transform:scale(0.97) translateY(0); }
+.wg-prog-label { font-size:10px; color:var(--text-3); margin-top:3px; }
 
 /* ═════════════════════════════════════════════════════════════
    §25  View: Facts Grid
