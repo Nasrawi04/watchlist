@@ -639,14 +639,14 @@ async function _tdLoadFriends(title) {
     if (!friends.length) return;
     friends.forEach(f => { if (f.friendProfile) profiles[f.friendId] = f.friendProfile; });
     const ids = friends.map(f => f.friendId);
-    const cols = 'id,user_id,title,year,cat,status,ratings,final_score,season,episode,watched,total_eps,total_seasons,completed_date,created_at,updated_at,poster_url,genres,notes,tmdb_id,tmdb_type,description';
+    const cols = 'id,user_id,title,year,cat,status,ratings,final_score,season,episode,watched,total_eps,total_seasons,completed_date,created_at,updated_at,poster_url,genres,notes,note_visibility,tmdb_id,tmdb_type,description';
     const like = String(title || '').replace(/[\\%_]/g, m => '\\' + m);
     const [linked, unlinked] = await Promise.all([
       sb.from('entries').select(cols).in('user_id', ids).eq('tmdb_id', Number(_tdId)).eq('tmdb_type', _tdType),
       like ? sb.from('entries').select(cols).in('user_id', ids).is('tmdb_id', null).ilike('title', like) : { data: [] },
     ]);
     const seen = new Set();
-    rows = [...(linked.data || []), ...(unlinked.data || [])].filter(e => !seen.has(e.user_id) && seen.add(e.user_id));
+    rows = await mssWithPrivateNotes([...(linked.data || []), ...(unlinked.data || [])].filter(e => !seen.has(e.user_id) && seen.add(e.user_id)));
   } catch (err) { console.error('Friends on this title:', err); return; }
   if (!rows.length) return;
   _tdFriendEntries = {};
