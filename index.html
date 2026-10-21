@@ -454,17 +454,20 @@ async function renderHomeFriends(user) {
   const ids = fr.map(f => f.friendId);
   if (!ids.length) { _homeHScrollSection('homeFriends', 'homeFriendsGrid', '', '', ''); return; }
   fr.forEach(f => { _homeFriendProfiles[f.friendId] = f.friendProfile || {}; });
-  const { data } = await sb.from('entries').select('*').in('user_id', ids).eq('status', 'completed')
+  // what they finished — and what they dropped (071: a muted "Dropped" tag instead of the score)
+  const { data } = await sb.from('entries').select('*').in('user_id', ids).in('status', ['completed', 'dropped'])
     .order('updated_at', { ascending: false }).limit(80);
-  const at = e => new Date(e.completed_at || e.created_at || e.updated_at);   // when they marked it watched
+  const at = e => new Date(e.status === 'dropped' ? (e.progress_at || e.updated_at) : (e.completed_at || e.created_at || e.updated_at));   // when they watched / dropped it
   const rows = (data || []).filter(e => !isNaN(at(e))).sort((a, b) => at(b) - at(a)).slice(0, 12);
   rows.forEach(e => { _homeFriendEntries[e.id] = e; });
   const cards = rows.map(e => {
-    const p = _homeFriendProfiles[e.user_id] || {}, u = safeURL(p.avatar_url), name = p.username || 'friend', sc = liveScore(e);
+    const p = _homeFriendProfiles[e.user_id] || {}, u = safeURL(p.avatar_url), name = p.username || 'friend', sc = liveScore(e), drop = e.status === 'dropped';
     return MSSCard.poster({ onclick: `_homeOpenFriend('${e.id}')`, title: e.title, year: e.year, posterHTML: posterHTML(e, 'big'), typeHTML: getTypeBadgeOverlay(e, 'latest'),
+      cls: drop ? 'is-dropped' : '',
       overPoster: `<span class="hf-av" aria-hidden="true">${u ? `<img src="${u}" alt="" loading="lazy">` : escHTML(name[0].toUpperCase())}</span>`,
-      below: `<div class="hf-who"><b translate="no">@${escHTML(name)}</b> · ${escHTML(_notifTimeAgo(at(e)))}</div>`,
-      score: sc != null ? Number(sc).toFixed(2) : '' });
+      below: `<div class="hf-who"><b translate="no">@${escHTML(name)}</b> · ${drop ? 'dropped · ' : ''}${escHTML(_notifTimeAgo(at(e)))}</div>`,
+      score: !drop && sc != null ? Number(sc).toFixed(2) : '',
+      scoreHTML: drop ? mssDroppedTagHTML(e) : '' });
   }).join('');
   _homeHScrollSection('homeFriends', 'homeFriendsGrid', 'Your friends', 'Friends Activity', cards, 'friends.html?s=activity');
 }
