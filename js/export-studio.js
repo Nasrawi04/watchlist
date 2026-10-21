@@ -86,7 +86,9 @@ const MSSStudio = (() => {
     S.epAll = rows.filter(r => Number(r.episode_number) > 0 && r.score != null);
     const n = {};
     S.epAll.forEach(r => { n[r.entry_id] = (n[r.entry_id] || 0) + 1; });
-    S.epShows = Object.entries(n).map(([id, count]) => ({ id, count, e: S.all.find(x => x.id === id) })).filter(x => x.e).sort((a, b) => b.count - a.count);
+    const sum = {}, last = {};
+    S.epAll.forEach(r => { sum[r.entry_id] = (sum[r.entry_id] || 0) + Number(r.score); if (String(r.updated_at || '') > (last[r.entry_id] || '')) last[r.entry_id] = String(r.updated_at || ''); });
+    S.epShows = Object.entries(n).map(([id, count]) => ({ id, count, avg: sum[id] / count, last: last[id] || '', e: S.all.find(x => x.id === id) })).filter(x => x.e).sort((a, b) => b.count - a.count);
     if (!S.epShows.some(x => x.id === S.epShow)) S.epShow = S.epShows[0]?.id || null;
     draw();
   }
@@ -257,11 +259,14 @@ const MSSStudio = (() => {
     return fmts + sec('What to export', `<div class="xs-whats" role="radiogroup" aria-label="What to export">${whats.map(([w, l, ic, sub]) =>
         `<button type="button" role="radio" class="xs-what${S.what === w ? ' on' : ''}" aria-checked="${S.what === w}" onclick="MSSStudio._set('what','${w}')">
           <span class="xs-what-ic">${icon(ic, 18)}</span><b>${esc(l)}</b><small translate="no">${esc(sub)}</small></button>`).join('')}</div>`)
-      + (S.what === 'picked' ? sec('Choose titles', `<input class="xs-input" id="xsPickQ" type="search" placeholder="Search your library…" aria-label="Search your library" value="${esc(S.pq)}" oninput="MSSStudio._pq(this.value)"><div id="xsPickBody">${pickHTML()}</div>`) : '')
+      + (S.what === 'picked' ? sec('Choose titles', `${searchBox('xsPickQ', 'Search your library…', S.pq, 'MSSStudio._pq(this.value)')}<div id="xsPickBody">${pickHTML()}</div>`) : '')
       + (S.what === 'list' ? sec('Choose a list', `<div id="xsListBody">${listsHTML()}</div>`) : '')
       + (isYear() ? sec('Which year', `<div class="xs-chips">${S.years.map(yy => chip(S.year === yy, `MSSStudio._year(${yy})`, String(yy))).join('') || '<span class="xs-hint">Nothing finished yet.</span>'}</div>
           <div class="xs-hint">${yearData() ? `${yearData().titles} titles finished in ${S.year}${yearData().prev ? ` · ${yearData().prev.titles} the year before` : ''}` : ''}</div>`) : '')
-      + (isEps() ? sec('Which show', S.epShows?.length ? `<div class="xs-chips">${S.epShows.map(x => chip(S.epShow === x.id, `MSSStudio._epShow(${attrJSON(x.id)})`, `<span translate="no" class="xs-ep-t">${esc(x.e.title)}</span><span>${x.count}</span>`)).join('')}</div>`
+      + (isEps() ? sec('Which show', S.epShows?.length ? `${searchBox('xsEpQ', 'Search your shows…', S.epQ, 'MSSStudio._epQ(this.value)')}
+          <div class="ls-tools xs-ep-tools"><div class="ls-dd"><span class="ls-dd-l">Sort</span>${SF.dd('xsEpSortDD', esc(EP_SORTS.find(o => o[0] === S.epSort)[1]), false,
+            EP_SORTS.map(([v, l]) => `<div class="td-dd-opt${S.epSort === v ? ' active' : ''}" role="option" aria-selected="${S.epSort === v}" onclick="event.stopPropagation();SF.closeDD();MSSStudio._epSort('${v}')">${esc(l)}</div>`).join(''))}</div></div>
+          <div id="xsEpBody">${epShowsHTML()}</div>`
           : `<div class="xs-hint">${S.epAll ? 'Rate episodes on a show’s Episodes page and they show up here.' : 'Loading your episode ratings…'}</div>`)
         + (fmt('image') || fmt('pdf') ? sec('Scores', `<div class="xs-chips">${[['mine', 'Mine'], ['tmdb', 'TMDB'], ['community', 'Community']].map(([k2, l]) => chip(S.epSrc === k2, `MSSStudio._epSet('epSrc','${k2}')`, l)).join('')}</div>
             <div class="xs-hint">The same chart as the Episodes page’s export${fmt('pdf') ? ' — the PDF’s first page, then every episode you rated' : ''}.</div>`) : '')
@@ -296,6 +301,31 @@ const MSSStudio = (() => {
           ${fmt('pdf') || fmt('image') ? sw(S.privacy.anon, "MSSStudio._tog('privacy','anon')", 'Leave my name off', 'No name or @username anywhere in the file') : ''}</div>`))
       + (fmt('csv') ? '' : sec(fmt('pdf') ? 'Cover title' : 'Heading', `<input class="xs-input" id="xsTitle" maxlength="60" placeholder="${esc(title())}" value="${esc(S.title)}" aria-label="Cover title" oninput="MSSStudio._title(this.value)">`, 'optional'));
   }
+
+  /* ── A search box like List Studio's: magnifier, clear ✕ (attachClearButton after drawing) ── */
+  const searchBox = (id, ph, v, on) => `<div class="fav-picker-search-wrap ls-search xs-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" id="${id}" class="fav-picker-search-input" autocomplete="off" aria-label="${esc(ph.replace('…', ''))}" placeholder="${esc(ph)}" value="${esc(v || '')}" oninput="${on}"></div>`;
+
+  /* ── Which show (episode ratings): search, sort, one to pick ── */
+  const EP_SORTS = [['count', 'Most episodes rated'], ['recent', 'Recently rated'], ['avg', 'Highest average'], ['az', 'A → Z']];
+  function epShowsHTML() {
+    const q = (S.epQ || '').trim().toLowerCase();
+    const by = { count: (a, b) => b.count - a.count, recent: (a, b) => b.last.localeCompare(a.last), avg: (a, b) => b.avg - a.avg,
+      az: (a, b) => String(a.e.title || '').localeCompare(String(b.e.title || '')) }[S.epSort];
+    const rows = S.epShows.filter(x => !q || String(x.e.title || '').toLowerCase().includes(q)).sort(by);
+    const row = x => {
+      const on = S.epShow === x.id, th = thumb(x.e.poster_url), yr = x.e.year ? String(x.e.year).slice(0, 4) : '';
+      return `<button type="button" role="radio" class="xs-ls-row xs-ep-row${on ? ' on' : ''}" aria-checked="${on}" onclick="MSSStudio._epShow(${attrJSON(x.id)})">
+        <span class="xs-pk-th">${th ? `<img src="${esc(th)}" alt="" loading="lazy">` : esc((x.e.title || '?')[0])}</span>
+        <span class="xs-pk-text"><b translate="no">${esc(x.e.title || 'Untitled')}</b><small>${[yr, `${x.count} ${x.count === 1 ? 'episode' : 'episodes'} rated`].filter(Boolean).join(' · ')}</small></span>
+        <span class="ls-score"><span aria-hidden="true">★</span> ${x.avg.toFixed(1)}<span class="sr-only"> average</span></span>
+        <span class="xs-pk-box" aria-hidden="true">${on ? icon('check', 13) : ''}</span></button>`;
+    };
+    return `<div class="xs-pk-bar"><span>${rows.length} of ${S.epShows.length} ${S.epShows.length === 1 ? 'show' : 'shows'}</span></div>
+      <div class="xs-pk-list" role="radiogroup" aria-label="Which show">${rows.map(row).join('') || '<div class="xs-pk-none">No shows match.</div>'}</div>`;
+  }
+  function drawEpShows() { const b = $('xsEpBody'); if (b) { const st = b.querySelector('.xs-pk-list')?.scrollTop || 0; b.innerHTML = epShowsHTML(); const l = b.querySelector('.xs-pk-list'); if (l) l.scrollTop = st; } }
 
   /* ── Pick titles: search + tick, then your picks in order ── */
   const STATUS = [['', 'All'], ['watched', 'Watched'], ['watchlist', 'Watchlist'], ['watching', 'Watching']];
@@ -542,6 +572,7 @@ const MSSStudio = (() => {
     const scroll = $('xsOpts').scrollTop;
     $('xsOpts').innerHTML = optsHTML();
     $('xsOpts').scrollTop = scroll;
+    ['xsPickQ', 'xsEpQ'].forEach(id => attachClearButton(id));
     drawSide();
   }
 
@@ -567,6 +598,15 @@ const MSSStudio = (() => {
         </div>
       </div>`;
     MSSDialog.bind(ov, () => close());
+    // the Sort dropdown floats over the popup — keep it on its button while the options
+    // scroll, and close it once the button scrolls out of view
+    ov.querySelector('#xsOpts').addEventListener('scroll', ev => {
+      const dd = ov.querySelector('.sf-dd.open');
+      if (!dd) return;
+      const r = dd.querySelector('.sf-dd-trigger').getBoundingClientRect(), box = ev.currentTarget.getBoundingClientRect(), m = dd.querySelector('.td-dd-menu');
+      if (r.bottom < box.top || r.top > box.bottom) { SF.closeDD(); return; }
+      if (m.style.top && m.style.top !== 'auto') m.style.top = r.bottom + 'px'; else m.style.bottom = (window.innerHeight - r.top) + 'px';
+    }, { passive: true });
     document.body.appendChild(ov);
     return ov;
   }
@@ -577,7 +617,7 @@ const MSSStudio = (() => {
       group: pre.group != null ? pre.group : !!p.group, theme: p.theme === 'light' ? 'light' : p.theme === 'dark' ? 'dark' : (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'),
       include: { breakdown: true, highlights: true, notes: true, dates: true, ...(p.include || {}) },
       privacy: { hideSpoilers: true, anon: false, ...(p.privacy || {}) }, title: '', busy: false,
-      years: [], year: null, ySlide: 'overview', yExtra: null, epAll: null, epShows: [], epShow: pre.show || null, epSize: 'square', epSrc: 'mine',
+      years: [], year: null, ySlide: 'overview', yExtra: null, epAll: null, epShows: [], epShow: pre.show || null, epQ: '', epSort: 'count', epSize: 'square', epSrc: 'mine',
       pick: [], pq: '', pst: '', numbered: true, lists: null, listQ: '', list: null, listItems: null,
       format: pre.format || (['pdf', 'image', 'ai', 'csv'].includes(p.format) ? p.format : 'pdf'), img: { size: p.img?.size === 'square' ? 'square' : 'story' }, ai: { length: 'full', promptOn: true, watchlist: true, taste: true, ...(p.ai || {}), prompt: null } };
     if (!S.sort) S.sort = SORTS[kindOf()][0][0];
@@ -754,7 +794,12 @@ const MSSStudio = (() => {
 
   return { open, close, _set: set, _tog: tog, _go: go,
     _year: yy => { if (!S || S.busy) return; S.year = yy; draw(); },
-    _epShow: id => { if (!S || S.busy) return; S.epShow = id; draw(); },
+    _epShow: id => {   // just the list + preview, so the search keeps what you typed and focus stays on the row
+      if (!S || S.busy) return; S.epShow = id; drawEpShows(); drawSide();
+      $('xsEpBody')?.querySelector('.xs-ep-row.on')?.focus();
+    },
+    _epQ: v => { if (S) { S.epQ = v; drawEpShows(); } },
+    _epSort: v => { if (S) { S.epSort = v; draw(); } },
     _epSet: (k, v) => { if (!S || S.busy) return; S[k] = v; draw(); },
     _slide: k => { if (!S || S.busy) return; S.ySlide = k; draw(); },
     _img: size => { if (!S || S.busy) return; S.img.size = size; keep(); draw(); },
