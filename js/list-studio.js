@@ -261,7 +261,7 @@ const MSSListStudio = (() => {
     // every order laid out, grouped like the site's Sort menus — all shown, nothing to scroll
     // buttons look like the genre tags on the edit page (.genre-opt)
     const chip = (k, l) => `<button type="button" class="genre-opt${S.mode === k ? ' selected' : ''}" aria-pressed="${S.mode === k}" ${locked ? 'disabled' : ''} onclick="MSSListStudio._mode('${k}')">${l}</button>`;
-    const row = (h, body) => `<div class="ls-order-row"><span class="ls-order-h">${h}</span><div class="ls-chips">${body}</div></div>`;
+    const row = (h, body) => `<div class="ls-order-row"><span class="ls-order-h">${h}</span><div class="ls-order-chips">${body}</div></div>`;
     const chips = row('Order', chip('picked', 'My Order') + `<button type="button" class="genre-opt" ${locked || n < 2 ? 'disabled' : ''} onclick="MSSListStudio._shuffle()">${icon('shuffle', 12)} Shuffle</button>`)
       + MSSList.ORDER_GROUPS.map(([h, opts]) => row(h, opts.map(([k, l]) => chip(k, l)).join(''))).join('');
     $('lsSide').innerHTML = `
