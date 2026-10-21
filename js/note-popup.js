@@ -111,8 +111,8 @@ const MSSNote = (() => {
       ${poster(e.poster_url, e.title, 'nc-poster')}
       <div class="nc-main">
         <div class="nc-top"><div class="nc-title" translate="no">${esc(e.title)}</div>${scorePill(liveScore(e))}</div>
-        <div class="nc-tags">${badges(e, { genres: 2, date: date(watchedDate(e), true) })}${mssIsSpoiler(e) ? mssSpoilerTag() : ''}</div>
-        ${blurSpoiler && mssIsSpoiler(e) ? mssSpoilerHTML(quote, { compact: true, id: e.id }) : quote}
+        <div class="nc-tags">${badges(e, { genres: 2, date: date(watchedDate(e), true) })}${mssIsSpoiler(e) ? mssSpoilerTag(e) : ''}</div>
+        ${blurSpoiler && mssIsSpoiler(e) ? mssSpoilerHTML(quote, { compact: true, id: e.id, e }) : quote}
         <div class="nc-foot">
           <div class="nc-reacts">
             <span class="snote-react-btn" style="cursor:default;">${icon('thumbsUp', 13)} <span>${c.like}</span></span>
@@ -156,7 +156,7 @@ const MSSNote = (() => {
           <div class="np-count" id="mssNoteCount">0 / ${NOTE_WORD_LIMIT} words</div>
         </div>
         <div class="np-footer" id="mssNoteEditFooter" style="display:none">
-          <div class="np-spoiler-wrap">${mssSpoilerToggleHTML('mssNoteSpoiler')}</div>
+          <div class="np-spoiler-wrap" id="mssNoteSpoilerWrap"></div>
           <div class="np-vis-wrap" id="mssNoteVisWrap"></div>
           <div class="np-actions" id="mssNoteEditPopupActions">
             <button type="button" class="popup-action-btn np-grow" id="mssNoteSave" onclick="MSSNote._save()">Save Note</button>
@@ -177,7 +177,7 @@ const MSSNote = (() => {
   function showView() {
     const e = current, $ = id => document.getElementById(id);
     const q = `<blockquote class="np-quote mss-rich" translate="no">${MSSRich.html(e.notes)}</blockquote>`;
-    $('mssNoteText').innerHTML = !opts.editable && mssIsSpoiler(e) ? mssSpoilerHTML(q, { id: e.id }) : q;
+    $('mssNoteText').innerHTML = !opts.editable && mssIsSpoiler(e) ? mssSpoilerHTML(q, { id: e.id, e }) : q;
     viewFooter();
     ['mssNoteViewBody', 'mssNoteViewFooter'].forEach(id => { $(id).style.display = ''; });
     ['mssNoteEditBody', 'mssNoteEditFooter'].forEach(id => { $(id).style.display = 'none'; });
@@ -209,6 +209,7 @@ const MSSNote = (() => {
     const e = current, $ = id => document.getElementById(id);
     const ta = $('mssNoteTextarea');
     ta.value = e.notes || '';
+    $('mssNoteSpoilerWrap').innerHTML = mssSpoilerToggleHTML('mssNoteSpoiler', e);   // per title — some word it their own way
     $('mssNoteSpoiler').checked = mssIsSpoiler(e);
     $('mssNoteVisWrap').innerHTML = mssNoteVisHTML('mssNoteVis', e.note_visibility, e.id);   // who can view (069)
     updateCount();
@@ -221,7 +222,7 @@ const MSSNote = (() => {
     const e = current, c = opts.counts || { like: 0, dislike: 0 }, n = words(e.notes);
     const el = document.getElementById('mssNoteStats');
     el.innerHTML = (opts.react ? '' : `<span>${icon('thumbsUp', 14)} <b>${c.like}</b></span><span>${icon('thumbsDown', 14)} <b>${c.dislike}</b></span>`)
-      + `<span><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span>${mssIsSpoiler(e) ? mssSpoilerTag() : ''}${mssVisBadge(e.note_visibility)}`;
+      + `<span><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span>${mssIsSpoiler(e) ? mssSpoilerTag(e) : ''}${mssVisBadge(e.note_visibility)}`;
     el.style.display = (e.notes && e.notes.trim()) ? 'flex' : 'none';
   }
 
