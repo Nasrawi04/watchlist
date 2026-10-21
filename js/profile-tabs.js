@@ -219,6 +219,7 @@ const MSSTabs = (() => {
     if (foreign.length) {
       const { data } = await sb.from('entries').select('*').in('id', foreign.slice(0, 1000));
       (data || []).forEach(e => { L.map[e.id] = e; });
+      await mssFillHiddenListItems(foreign.slice(0, 1000), L.map);   // hidden titles (073): name + poster only
       renderLists();
     }
     if (await MSSList.hydrate(L.lists, 8)) renderLists();
