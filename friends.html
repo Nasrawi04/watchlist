@@ -543,7 +543,7 @@ function _frTypeBadge(e) {
   const label = CAT_META[e.cat]?.singular || (movie ? 'Movie' : 'TV Show');
   return `<span class="${movie ? 'type-label' : 'type-label type-label-tv'}">${escHTML(label)}</span>`;
 }
-const _frScore = e => liveScore(e) != null ? Number(liveScore(e)) : null;
+const _frScore = e => mssCountedScore(e) != null ? Number(mssCountedScore(e)) : null;   // a dropped title's score doesn't count (071)
 const _frDate = x => x ? new Date(String(x).length <= 10 ? x + 'T12:00:00' : x) : null;
 // A friend's title: Info, Ratings and Note in one popup (MSSViews, info-popup.js).
 // Activity opens on Info (a "wrote a note" item opens on their note);
@@ -756,6 +756,7 @@ const _FR_ACT = {
   note:      { verb: 'wrote a note on',          color: '#7a3e78', ic: 'notebook', label: 'Note' },
   list:      { verb: 'made a list',              color: '#3d5a80', ic: 'layers',  label: 'New List' },
   rated_ep:  { verb: 'rated',                    color: '#1f4d2b', ic: 'ratingStar', label: 'Episode Rating' },
+  dropped:   { verb: 'dropped',                  color: '#6e5a55', ic: 'drop',    label: 'Dropped' },   // 071
 };
 // A show they're part-way through → its last watched episode, else null
 function _frEpOf(e) {
@@ -779,6 +780,7 @@ function _frEvents() {
     else if (e.status === 'watching') push(_frEpOf(e) ? 'episode' : 'started', e.progress_at || e.updated_at);
     else if (e.status === 'up_next') push('up_next', e.progress_at || e.updated_at);
     else if (e.status === 'queue') push('watchlist', e.created_at);
+    else if (e.status === 'dropped') push('dropped', e.progress_at || e.updated_at);   // "@sam dropped Lost at S3 · E2"
     if (e.notes && e.notes.trim()) push('note', e.updated_at);
   });
   // "made a list"
@@ -857,7 +859,7 @@ function _frRenderActivity() {
         <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}${x._ev === 'episode' ? ` S${_frEpOf(x).s} · E${_frEpOf(x).e} of` : ''}</div>
         <div class="fa-title" translate="no">${escHTML(x.title)}${x.year ? ` <span>${escHTML(String(x.year).slice(0, 4))}</span>` : ''}</div>
         ${x._ev === 'episode' && x.tmdb_id ? mssEpNameHTML(x.tmdb_id, _frEpOf(x).s, _frEpOf(x).e, 'fa-ep-name') : ''}
-        <div class="fa-meta">${_frTypeBadge(x)}<span>${x._ev === 'finished' || x._ev === 'logged' ? x._at.toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
+        <div class="fa-meta">${_frTypeBadge(x)}${x._ev === 'dropped' && mssDroppedAt(x) ? `<span class="w-ep-badge">at ${escHTML(mssDroppedAt(x))}</span>` : ''}<span>${x._ev === 'finished' || x._ev === 'logged' ? x._at.toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
         ${x._ev === 'note' ? `<div class="fa-note">${mssIsSpoiler(x) ? mssSpoilerTag(x) : `&ldquo;${escHTML(MSSRich.plain(x.notes).trim().split(/\s+/).slice(0, 30).join(' '))}${MSSRich.plain(x.notes).trim().split(/\s+/).length > 30 ? '…' : ''}&rdquo;`}</div>` : ''}
       </div>
       ${(x._ev === 'finished' || x._ev === 'logged' || x._ev === 'caught_up') && sc != null ? `<div class="fa-score">★ ${sc.toFixed(2)}</div>` : ''}
@@ -1209,7 +1211,7 @@ function _cmpToggle(uid) {
 function _cmpOpen(key) { _cmpKey = key; _frRender(); document.getElementById('frContent').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function _cmpBack() { _cmpKey = null; _frRender(); }
 
-const _CMP_STATUS = { completed: 'Watched', ongoing: 'To Be Continued', watching: 'Watching', paused: 'Taking a Break', up_next: 'Up Next', queue: 'Watchlist' };
+const _CMP_STATUS = { completed: 'Watched', ongoing: 'To Be Continued', watching: 'Watching', paused: 'Taking a Break', up_next: 'Up Next', queue: 'Watchlist', dropped: 'Dropped' };
 function _cmpFavTags(uid, e) {
   const p = _cmpProfiles[uid] || {}, tags = [], pos = arr => Array.isArray(arr) ? arr.indexOf(e.id) : -1;
   let i = pos(p.top_picks); if (i >= 0) tags.push(`Top Favorite #${i + 1}`);
