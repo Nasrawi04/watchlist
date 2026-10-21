@@ -1186,26 +1186,44 @@ async function mssCopyShareLink(kind, id, fresh) {
 }
 // The note "Who can view" dropdown (note editor, title edit page) + its private link
 // buttons (entryId: the title the note is on — no link before it's saved)
+const MSS_NOTE_VIS = [
+  ['anyone', 'globe', 'Anyone', 'Everyone can read it — it shows in Community notes.'],
+  ['friends', 'users', 'Friends', 'Only your friends can read it.'],
+  ['link', 'lock', 'Private', 'Only people you send it to, or who have the link.']];
+// The value lives in a hidden input #id (read it with .value), picked with a row of three buttons
 function mssNoteVisHTML(id, value, entryId) {
-  const v = value || 'anyone';
-  return `<div class="mss-vis-row">
-      <label class="mss-vis" for="${id}">${icon(v === 'anyone' ? 'globe' : v === 'friends' ? 'users' : 'lock', 14)}<span>Who can view</span>
-        <select id="${id}" onchange="mssNoteVisChanged('${id}')">
-          <option value="anyone"${v === 'anyone' ? ' selected' : ''}>Anyone</option>
-          <option value="friends"${v === 'friends' ? ' selected' : ''}>Friends</option>
-          <option value="link"${v === 'link' ? ' selected' : ''}>Private link</option>
-        </select></label>
-      <span class="mss-vis-links" id="${id}Link" data-entry="${escHTML(entryId || '')}"${v === 'anyone' || !entryId ? ' hidden' : ''}>
-        <button type="button" class="mss-vis-link" onclick="mssCopyShareLink('note', ${attrJSON(entryId || '')})">${icon('link', 13)} Copy link</button>
-        <button type="button" class="mss-vis-link" onclick="mssCopyShareLink('note', ${attrJSON(entryId || '')}, true)" aria-label="Make a new link">${icon('refresh', 13)}</button>
-      </span>
+  const v = MSS_NOTE_VIS.some(o => o[0] === value) ? value : 'anyone';
+  return `<div class="mss-vis-box" id="${id}Box">
+      <div class="mss-vis-head"><span class="mss-vis-l" id="${id}L">Who can view</span></div>
+      <div class="mss-vis-seg" role="radiogroup" aria-labelledby="${id}L" onkeydown="mssNoteVisKey(event, '${id}')">${MSS_NOTE_VIS.map(([k, ic, l]) =>
+        `<button type="button" role="radio" class="mss-vis-opt${v === k ? ' on' : ''}" aria-checked="${v === k}" tabindex="${v === k ? 0 : -1}" data-v="${k}" onclick="mssNoteVisSet('${id}', '${k}')">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
+      <input type="hidden" id="${id}" value="${v}">
+      <p class="mss-vis-hint" id="${id}Hint">${MSS_NOTE_VIS.find(o => o[0] === v)[3]}</p>
+      <div class="mss-vis-links" id="${id}Link" data-entry="${escHTML(entryId || '')}"${v === 'anyone' || !entryId ? ' hidden' : ''}>
+        <button type="button" class="mss-vis-link" onclick="mssCopyShareLink('note', ${attrJSON(entryId || '')})">${icon('link', 13)} Copy private link</button>
+        <button type="button" class="mss-vis-link mss-vis-new" aria-label="Make a new link" title="Make a new link — the old one stops working" onclick="mssCopyShareLink('note', ${attrJSON(entryId || '')}, true)">${icon('refresh', 13)}<span>New link</span></button>
+      </div>
     </div>`;
 }
-function mssNoteVisChanged(id) {
-  const v = document.getElementById(id).value, row = document.getElementById(id).closest('.mss-vis-row');
-  row.querySelector('.mss-vis svg').outerHTML = icon(v === 'anyone' ? 'globe' : v === 'friends' ? 'users' : 'lock', 14);
+function mssNoteVisSet(id, v, focus) {
+  document.getElementById(id).value = v;
+  document.querySelectorAll(`#${id}Box .mss-vis-opt`).forEach(b => {
+    const on = b.dataset.v === v;
+    b.classList.toggle('on', on); b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1;
+    if (on && focus) b.focus();
+  });
+  document.getElementById(id + 'Hint').textContent = MSS_NOTE_VIS.find(o => o[0] === v)[3];
   const links = document.getElementById(id + 'Link');
-  if (links) links.hidden = v === 'anyone' || !links.dataset.entry;
+  links.hidden = v === 'anyone' || !links.dataset.entry;
+}
+// arrow keys move between the three, like any radio group
+function mssNoteVisKey(ev, id) {
+  let d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[ev.key];
+  if (!d) return;
+  ev.preventDefault();
+  if (document.documentElement.dir === 'rtl' && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')) d = -d;   // right-to-left: left is "next"
+  const i = MSS_NOTE_VIS.findIndex(o => o[0] === document.getElementById(id).value);
+  mssNoteVisSet(id, MSS_NOTE_VIS[(i + d + 3) % 3][0], true);
 }
 
 // "Who can view" (lists 068, notes 069) as a small tag — none for Anyone
