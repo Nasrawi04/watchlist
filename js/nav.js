@@ -476,7 +476,7 @@ function injectChrome() {
       <div class="mobile-search-inner fused-search-wrap">
         <span class="mobile-search-icon-circle">${icon('search', 13)}</span>
         <input type="text" id="mobileSearchInput" placeholder="Search titles…" autocomplete="off">
-        <button class="mobile-search-close" onclick="toggleMobileSearch()">${icon('x', 16)}</button>
+        <button type="button" class="mobile-search-close" id="mobileSearchX" onclick="_mobileSearchX()" aria-label="Close search">${icon('x', 16)}</button>
       </div>
     </div>
     <!-- DESKTOP LINKS ROW -->
@@ -662,7 +662,10 @@ function injectChrome() {
   initDiscoverSearch('globalSearch', { max: 20, connected: true, includePersons: true });
   initDiscoverSearch('mobileSearchInput', { max: 20, connected: true, includePersons: true });
   attachClearButton('globalSearch');
-  attachClearButton('mobileSearchInput');
+  // one ✕ on the phone search bar: clears what you typed, then (empty) closes the bar
+  document.getElementById('mobileSearchInput')?.addEventListener('input', ev => {
+    document.getElementById('mobileSearchX').setAttribute('aria-label', ev.target.value ? 'Clear search' : 'Close search');
+  });
 }
 
 /* ── Link builders ── */
@@ -799,6 +802,14 @@ function toggleMobileSearch() {
   if (!bar.classList.contains('open')) _navCloseAll('search');
   bar.classList.toggle('open');
   if (bar.classList.contains('open')) document.getElementById('mobileSearchInput')?.focus();
+}
+
+function _mobileSearchX() {
+  const input = document.getElementById('mobileSearchInput');
+  if (!input?.value) { toggleMobileSearch(); return; }
+  input.value = '';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.focus();
 }
 
 function toggleMobileUser(e) {
