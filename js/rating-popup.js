@@ -65,6 +65,7 @@ const MSSRate = (() => {
             <div class="mr-score-inner">
               <div class="mr-score-lbl">Overall Score</div>
               <div class="mr-score-val" id="mssRateScoreVal"></div>
+              <div class="mr-score-note" id="mssRateScoreNote" hidden>Dropped · doesn’t count toward averages</div>
             </div>
           </div>
           <button type="button" class="mr-close" onclick="MSSRate.close()" aria-label="Close">✕</button>
@@ -131,7 +132,7 @@ const MSSRate = (() => {
     const B = {
       edit:         () => btn('edit', 'edit', 'Edit'),
       lists:        () => opts.addToList && typeof MSSList !== 'undefined' ? btn('lists', 'layers', 'Add to List') : '',
-      rewatch:      () => !watchingNow && typeof rewatchEntry === 'function' ? btn('rewatch', 'refresh', 'Rewatch') : '',
+      rewatch:      () => !watchingNow && e.status !== 'dropped' && typeof rewatchEntry === 'function' ? btn('rewatch', 'refresh', 'Rewatch') : '',   // dropped → Pick Back Up instead
       card:         () => typeof createShareCard === 'function' ? btn('card', 'image', 'Create Card') : '',
       discoverCard: () => !finished && typeof createShareCard === 'function' ? btn('discoverCard', 'idCard', 'Discover Card') : '',
       delete:       () => btn('delete', 'trash', 'Delete', ' popup-action-danger'),
@@ -188,7 +189,8 @@ const MSSRate = (() => {
       (e.genres || []).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('') +
       (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
     const dateRow = (e.completed_date ? `<span class="w-ep-badge">${MSS_WATCHED_ON} ${fmtDate(e.completed_date)}</span>` : '') +
-      (e.status === 'ongoing' && e.season != null && e.episode != null && !isMovie(e) ? `<span class="w-ep-badge">Left off: S${e.season} · E${e.episode}</span>` : '');
+      (e.status === 'ongoing' && e.season != null && e.episode != null && !isMovie(e) ? `<span class="w-ep-badge">Left off: S${e.season} · E${e.episode}</span>` : '') +
+      (e.status === 'dropped' ? mssDroppedTagHTML(e) : '');
     $('mssRatePopupDateRow').innerHTML = dateRow;
     $('mssRatePopupDateRow').style.display = dateRow ? '' : 'none';
     $('mssRateDesc').textContent = e.description || '';
@@ -196,6 +198,8 @@ const MSSRate = (() => {
     const sc = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
     $('mssRateScoreBox').style.display = sc != null ? '' : 'none';
     $('mssRateScoreVal').textContent = sc != null ? '★ ' + sc : '';
+    $('mssRateScoreBox').classList.toggle('is-dropped', e.status === 'dropped');   // a dropped title's score never counts (071)
+    $('mssRateScoreNote').hidden = e.status !== 'dropped';
     $('mssRateBody').innerHTML = bodyHTML(e, !o.owner, !!o.hideNotes);
     $('mssRateCc').innerHTML = o.onComments
       ? `<button type="button" class="cc-strip" onclick="MSSRate._comments()">${icon('comment', 11)}<span>Comments</span></button>` : '';
