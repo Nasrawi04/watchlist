@@ -659,9 +659,10 @@ async function _tdLoadFriends(title) {
     { key: 'watching', label: 'Watching', items: rows.filter(e => ['watching', 'up_next', 'paused'].includes(e.status))
         .sort((a, b) => by(a.updated_at, b.updated_at)) },
     { key: 'want', label: 'Want to Watch', items: rows.filter(e => e.status === 'queue').sort((a, b) => by(a.created_at, b.created_at)) },
+    { key: 'dropped', label: 'Dropped', items: rows.filter(e => e.status === 'dropped').sort((a, b) => by(a.updated_at, b.updated_at)) },   // 071
   ].filter(g => g.items.length);
   if (!_tdFriendGroups.length) return;
-  const scores = rows.map(liveScore).filter(v => v != null);
+  const scores = rows.map(mssCountedScore).filter(v => v != null);   // dropped scores don't count (071)
   const avg = scores.length ? scores.reduce((a, b) => a + Number(b), 0) / scores.length : null;
   document.getElementById('tdFriends').innerHTML = `<section class="td-related td-friends" aria-labelledby="tdFriendsTitle">
       <div class="td-friends-head">
@@ -702,6 +703,7 @@ function _tdFriendCard(e, key) {
         : e.status === 'paused' ? `<span class="td-friend-sub">Taking a break</span>`
         : e.season || e.episode ? `<span class="w-ep-badge">S${Number(e.season) || 1} · E${Number(e.episode) || 0}</span>`
         : e.watched ? `<span class="w-ep-badge">${Number(e.watched)} eps</span>` : `<span class="td-friend-sub">Just started</span>`)
+      : key === 'dropped' ? mssDroppedTagHTML(e)
       : `<span class="td-friend-sub">${e.created_at ? 'Added ' + esc(MSSNote.date(e.created_at, true)) : 'On their list'}</span>`;
   return `<button type="button" class="td-cast-card td-friend-card" onclick="_tdOpenFriend(${attrJSON(e.id)})" aria-label="@${esc(name)} — open their ${key === 'watched' ? 'ratings' : 'entry'}">
       <span class="td-cast-photo td-friend-photo">${av ? `<img src="${av}" alt="" loading="lazy">` : esc(name[0].toUpperCase())}</span>
@@ -712,7 +714,7 @@ function _tdFriendCard(e, key) {
 function _tdOpenFriend(id) {
   const e = _tdFriendEntries[id];
   if (!e) return;
-  const rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
+  const rated = e.status === 'completed' || e.status === 'ongoing' || e.status === 'dropped' || liveScore(e) != null;
   MSSViews.open(e, { start: rated ? 'rate' : 'info', profile: e._profile });
 }
 
@@ -1151,7 +1153,7 @@ function _tdAddControlsHTML(ownEntry) {
   if (ownEntry) {
     const statusLabel = {
       queue:'On your Watchlist', up_next:'Up Next', watching:'Currently Watching', paused:'Taking a Break',
-      completed:'Watched', ongoing:'To Be Continued'
+      completed:'Watched', ongoing:'To Be Continued', dropped:'Dropped'
     }[ownEntry.status] || ownEntry.status;
     return `<div class="td-in-library">
       ${icon('check', 16)} In your library — ${esc(statusLabel)}
@@ -1176,6 +1178,7 @@ function _tdAddControlsHTML(ownEntry) {
     ...(!isMovie ? [{ value:'paused', label:'Taking a Break' }] : []),
     { value:'completed', label:'Watched' },
     ...(!isMovie ? [{ value:'ongoing', label:'To Be Continued' }] : []),
+    { value:'dropped', label:'Dropped' },
   ];
   return `<div class="td-add-row">
     ${_tdDDHTML('tdCatDD', catOptions, null, 'Select category…')}
