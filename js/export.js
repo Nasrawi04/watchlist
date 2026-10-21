@@ -31,7 +31,7 @@
    mssIsSpoiler, safeURL), rewatch.js (getRewatchCount), jsPDF.
 ══════════════════════════════════════════════════════════════ */
 const MSSPdf = (() => {
-  const POSTER_MAX = 10;
+  const POSTER_MAX = 100;   // ~15–25 KB a poster → a 100-title PDF stays around 2–3 MB, fine on phones
   // the site's colour tokens (style.css), as RGB; "edge" = --border-olive over the card
   const PALETTE = {
     dark:  { page: [10, 10, 14], card: [24, 24, 29], track: [33, 33, 38], text: [237, 237, 237], text2: [168, 168, 168], text3: [128, 128, 128],
@@ -184,10 +184,11 @@ const MSSPdf = (() => {
     let y;
 
     const img = {};
-    if (withPosters) {
-      for (let i = 0; i < list.length; i++) {
-        onProgress(0.05 + i / list.length * 0.35, 'Getting posters…');
-        img[list[i].id] = await loadImage(list[i].poster_url);
+    if (withPosters) {   // 6 at a time
+      let done = 0;
+      for (let i = 0; i < list.length; i += 6) {
+        await Promise.all(list.slice(i, i + 6).map(async e => { img[e.id] = await loadImage(e.poster_url); done++; }));
+        onProgress(0.05 + done / list.length * 0.35, `Getting posters… ${done} of ${list.length}`);
       }
     }
     const avatar = !priv.anon && job.who?.avatar_url ? await loadImage(safeURL(job.who.avatar_url), true) : null;
