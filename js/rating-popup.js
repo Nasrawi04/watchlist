@@ -200,12 +200,31 @@ const MSSRate = (() => {
     $('mssRateScoreVal').textContent = sc != null ? '★ ' + sc : '';
     $('mssRateScoreBox').classList.toggle('is-dropped', e.status === 'dropped');   // a dropped title's score never counts (071)
     $('mssRateScoreNote').hidden = e.status !== 'dropped';
-    $('mssRateBody').innerHTML = bodyHTML(e, !o.owner, !!o.hideNotes);
+    $('mssRateBody').innerHTML = bodyHTML(e, !o.owner, !!o.hideNotes)
+      + (o.owner ? `<div class="mr-vis">${mssTitleVisHTML('mssRateVis', e.visibility, '_mssRateVisPick')}</div>` : '');   // yours: who can see it (073)
     $('mssRateCc').innerHTML = o.onComments
       ? `<button type="button" class="cc-strip" onclick="MSSRate._comments()">${icon('comment', 11)}<span>Comments</span></button>` : '';
     $('mssRatePopupActions').innerHTML = actionsHTML(e);
     MSSDialog.open($('mssRateOverlay'));
     $('mssRateCard').scrollTop = 0;
+  }
+
+  // Who can see this title (073) — saved straight away
+  async function saveVis(v) {
+    const e = current;
+    if (!e || e.visibility === v) return;
+    const prev = e.visibility || 'anyone';
+    try {
+      await updateProgress(e.id, window._navUser?.id || (await getCurrentUser()).id, { visibility: v });
+      e.visibility = v;
+      document.getElementById('mssRatePoster').innerHTML = posterHTML(e);
+      opts.onChange?.(e);
+      showToast(v === 'private' ? 'Only you can see this title now.' : v === 'friends' ? 'Only your friends can see this title now.' : 'Anyone can see this title now.');
+    } catch (err) {
+      console.error('MSSRate vis:', err);
+      showToast('Couldn’t save that — try again.', 'err');
+      mssVisSet('mssRateVis', prev);
+    }
   }
 
   function close() {
@@ -226,6 +245,8 @@ const MSSRate = (() => {
   return {
     forOwnEntry, forFriend, close, config: RATING_POPUP_CONFIG,
     isOpen: () => !!document.getElementById('mssRateOverlay')?.classList.contains('open'),
-    _act: act, _comments: () => { const e = current; if (e) opts.onComments(e); },
+    _act: act, _comments: () => { const e = current; if (e) opts.onComments(e); }, _vis: saveVis,
   };
 })();
+// the title-visibility control calls this by name (mssTitleVisHTML onPick)
+function _mssRateVisPick(v) { MSSRate._vis(v); }
