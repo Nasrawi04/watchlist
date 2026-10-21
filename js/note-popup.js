@@ -157,6 +157,7 @@ const MSSNote = (() => {
         </div>
         <div class="np-footer" id="mssNoteEditFooter" style="display:none">
           <div class="np-spoiler-wrap">${mssSpoilerToggleHTML('mssNoteSpoiler')}</div>
+          <div class="np-vis-wrap" id="mssNoteVisWrap"></div>
           <div class="np-actions" id="mssNoteEditPopupActions">
             <button type="button" class="popup-action-btn np-grow" id="mssNoteSave" onclick="MSSNote._save()">Save Note</button>
             <button type="button" class="popup-action-btn np-ghost" onclick="MSSNote._cancel()">Cancel</button>
@@ -208,6 +209,7 @@ const MSSNote = (() => {
     const ta = $('mssNoteTextarea');
     ta.value = e.notes || '';
     $('mssNoteSpoiler').checked = mssIsSpoiler(e);
+    $('mssNoteVisWrap').innerHTML = mssNoteVisHTML('mssNoteVis', e.note_visibility, e.id);   // who can view (069)
     updateCount();
     ['mssNoteViewBody', 'mssNoteViewFooter'].forEach(id => { $(id).style.display = 'none'; });
     ['mssNoteEditBody', 'mssNoteEditFooter'].forEach(id => { $(id).style.display = ''; });
@@ -218,7 +220,7 @@ const MSSNote = (() => {
     const e = current, c = opts.counts || { like: 0, dislike: 0 }, n = words(e.notes);
     const el = document.getElementById('mssNoteStats');
     el.innerHTML = (opts.react ? '' : `<span>${icon('thumbsUp', 14)} <b>${c.like}</b></span><span>${icon('thumbsDown', 14)} <b>${c.dislike}</b></span>`)
-      + `<span><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span>${mssIsSpoiler(e) ? mssSpoilerTag() : ''}`;
+      + `<span><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span>${mssIsSpoiler(e) ? mssSpoilerTag() : ''}${mssVisBadge(e.note_visibility)}`;
     el.style.display = (e.notes && e.notes.trim()) ? 'flex' : 'none';
   }
 
@@ -269,9 +271,10 @@ const MSSNote = (() => {
       const spoiler = !!document.getElementById('mssNoteSpoiler').checked;
       const ratings = { ...(e.ratings || {}), _notes_spoiler: spoiler && !!notes };
       const uid = window._navUser?.id || (await getCurrentUser()).id;
-      const { error } = await sb.from('entries').update({ notes, ratings }).eq('id', e.id).eq('user_id', uid);
+      const note_visibility = document.getElementById('mssNoteVis').value;
+      const { error } = await sb.from('entries').update({ notes, ratings, note_visibility }).eq('id', e.id).eq('user_id', uid);
       if (error) throw error;
-      e.notes = notes; e.ratings = ratings;
+      e.notes = notes; e.ratings = ratings; e.note_visibility = note_visibility;
       close();
       opts.onSaved?.(e);
       showToast('Note saved!');
