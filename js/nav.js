@@ -593,6 +593,7 @@ function injectChrome() {
           { value:'paused', label:'Taking a Break' },
           { value:'completed', label:'Watched' },
           { value:'ongoing', label:'To Be Continued' },
+          { value:'dropped', label:'Dropped' },
         ], null, null, 'Select status…')}</div></div>
       <div class="modal-row"><div class="modal-label">Year</div>
         <input class="modal-input" id="mYear" type="number" min="1900" max="2030" placeholder="e.g. 2024"></div>
@@ -888,6 +889,7 @@ function _updateModalStatus() {
     ...(!isMovie ? [{ value:'paused', label:'Taking a Break' }] : []),
     { value:'completed', label:'Watched' },
     ...(!isMovie ? [{ value:'ongoing', label:'To Be Continued' }] : []),
+    { value:'dropped', label:'Dropped' },
   ];
   wrap.innerHTML = _selDDHTML('mStatus', options, keep, '_updateAddModalValidation', 'Select status…');
   _updateAddModalValidation();
@@ -911,6 +913,7 @@ function _resetAddModalDropdowns() {
       { value:'paused', label:'Taking a Break' },
       { value:'completed', label:'Watched' },
       { value:'ongoing', label:'To Be Continued' },
+      { value:'dropped', label:'Dropped' },
     ], null, '_updateAddModalValidation', 'Select status…');
   }
   _updateAddModalValidation();
