@@ -78,6 +78,7 @@ async function saveEntry(payload, userId, existingId) {
     tmdb_type:      payload.tmdb_type || null,
   };
   if (payload.note_visibility) record.note_visibility = payload.note_visibility;
+  if (payload.visibility) record.visibility = payload.visibility;               // who can see this title (073)
 
   if (existingId) {
     const { data, error } = await sb.from('entries')
@@ -207,6 +208,22 @@ const MSSDrop = (() => {
   }
   return { drop, pickUp };
 })();
+
+/* ── Lists (073): a title you can't see still shows — name + poster only ──
+   For the list item ids missing from map after the normal entries read, ask
+   get_hidden_list_items (only ids in a list you can see) and add stand-ins:
+   no score, note or status, so the popups show just its Info. Returns how many. */
+async function mssFillHiddenListItems(ids, map) {
+  const missing = [...new Set(ids || [])].filter(id => id && !String(id).startsWith('tmdb:') && !map[id]);
+  if (!missing.length) return 0;
+  const { data } = await sb.rpc('get_hidden_list_items', { p_ids: missing }).then(r => r, () => ({ data: [] }));
+  (data || []).forEach(r => {
+    map[r.id] = { id: r.id, user_id: r.user_id, title: r.title, year: r.year, cat: r.cat, poster_url: r.poster_url,
+      tmdb_id: r.tmdb_id, tmdb_type: r.tmdb_type, ratings: r.media_type ? { _media_type: r.media_type } : {},
+      final_score: null, notes: null, status: null, genres: [], _hidden: true };
+  });
+  return (data || []).length;
+}
 
 /* ── Quick create (from modal) ── */
 async function quickCreate(payload, userId) {
