@@ -802,6 +802,7 @@
             <textarea class="field-input" id="dNotes" placeholder="Your thoughts…" oninput="_notesUpdateWordCount()"></textarea>
             <div class="list-desc-count" id="dNotesCount">0 / 500 words</div>
             <div id="dNotesSpoilerWrap"></div>
+            <div id="dNoteVisWrap"></div>
           </div>
 
           <div class="field-group" id="favSection" style="margin-bottom:0;">
@@ -2155,6 +2156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dNotes').value            = e?.notes         || '';
     document.getElementById('dNotesSpoilerWrap').innerHTML = mssSpoilerToggleHTML('dNotesSpoiler');
     document.getElementById('dNotesSpoiler').checked = mssIsSpoiler(e);
+    document.getElementById('dNoteVisWrap').innerHTML = mssNoteVisHTML('dNoteVis', e?.note_visibility, e?.id);   // who can view (069)
     _notesUpdateWordCount();
     _notesRichTools();
     // Rewatch count
@@ -2384,6 +2386,7 @@ async function doSave() {
     runtime_h:     isMovie ? _clampInt(document.getElementById('dRuntimeH')?.value, 0, 99) : null,
     runtime_m:     isMovie ? _clampInt(document.getElementById('dRuntimeM')?.value, 0, 59) : null,
     notes:         document.getElementById('dNotes').value,
+    note_visibility: document.getElementById('dNoteVis')?.value,
     completed_date: _parseCompletedDate(),
     ratings:       ratingsWithType,
     tmdb_id:       _pendingTmdbId,
