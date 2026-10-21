@@ -571,7 +571,7 @@ async function loadFriends() {
   const ids = _frAccepted.map(f => f.friendId);
   if (ids.length) {
     const [ents, lists, eps] = await Promise.all([
-      sb.from('entries').select('*').in('user_id', ids).order('updated_at', { ascending: false }).limit(3000).then(r => r.data || [], () => []),
+      sb.from('entries').select('*').in('user_id', ids).order('updated_at', { ascending: false }).limit(3000).then(r => mssWithPrivateNotes(r.data || []), () => []),
       sb.from('favorite_lists').select('*').in('user_id', ids).eq('cat', 'custom').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
       sb.from('episode_ratings').select('id,user_id,entry_id,season_number,episode_number,score,updated_at').in('user_id', ids).order('updated_at', { ascending: false }).limit(150).then(r => r.data || [], () => []),
     ]);
