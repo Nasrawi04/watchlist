@@ -542,7 +542,7 @@ const MSSShare = (() => {
       // "I watched this": the sender's entry itself (score, rating, note) for the popups
       const ids = recs.filter(r => r.kind === 'entry').map(r => r.entry_id);
       const { data } = ids.length ? await sb.from('entries').select('*').in('id', ids) : { data: [] };
-      const byId = Object.fromEntries((data || []).map(e => [e.id, e]));
+      const byId = Object.fromEntries((await mssWithPrivateNotes(data || [])).map(e => [e.id, e]));
       recs.forEach(r => { r.entry = byId[r.entry_id] || null; r.replies = r.replies || []; });
     } catch { recs = []; showToast('Couldn’t load your inbox — try again.', 'err'); }
     drawRecs();
