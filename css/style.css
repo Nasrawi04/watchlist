@@ -6561,18 +6561,28 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .la-help > span { flex:1; min-width:0; }
 #lpPopupActions .lp-del { flex:0 0 52px; }   /* delete: just its icon */
 /* Who can view a note (069) — note editor + the title's edit page */
-.mss-vis-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; }
-.mss-vis { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; color:var(--text-2); }
-.mss-vis svg { color:var(--olive-light); flex:none; }
-.mss-vis select { padding:6px 28px 6px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-2); background-color:var(--bg-3); color:var(--text); font:600 13px var(--sans); cursor:pointer; }
-.mss-vis select:focus-visible { outline:2px solid var(--olive-light); outline-offset:1px; }
-.mss-vis-links { display:inline-flex; gap:4px; }
+.mss-vis-box { margin-top:10px; padding:10px 12px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-3); }
+.mss-vis-head { margin-bottom:8px; }
+.mss-vis-l { font:600 11px/1 'Oswald',var(--sans); letter-spacing:1.4px; text-transform:uppercase; color:var(--olive-light); }
+.mss-vis-seg { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); padding:3px; gap:3px; border-radius:var(--radius-sm); background:var(--bg-2); border:0.5px solid var(--border-2); }
+.mss-vis-opt { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; min-width:0; padding:6px 8px; border:none; border-radius:calc(var(--radius-sm) - 2px); background:none; color:var(--text-3); font:600 13px 'Manrope',var(--sans); cursor:pointer; transition:background .15s, color .15s; }
+.mss-vis-opt span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mss-vis-opt svg { flex:none; }
+.mss-vis-opt:hover:not(.on) { color:var(--text); background:var(--olive-faint); }
+.mss-vis-opt.on { background:var(--olive); color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.18); }
+.mss-vis-opt:focus-visible { outline:2px solid var(--olive-light); outline-offset:1px; }
+.mss-vis-hint { margin:8px 2px 0; font-size:12px; line-height:1.45; color:var(--text-3); }
+.mss-vis-links { display:flex; gap:6px; margin-top:10px; }
 .mss-vis-links[hidden] { display:none; }
-.mss-vis-link { display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-olive); background:var(--olive-faint); color:var(--olive-light); font:600 12px var(--sans); cursor:pointer; }
+.mss-vis-link { display:inline-flex; align-items:center; justify-content:center; gap:6px; flex:1; min-height:34px; padding:6px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-olive); background:var(--olive-faint); color:var(--olive-light); font:600 12.5px 'Manrope',var(--sans); cursor:pointer; transition:border-color .15s; }
+.mss-vis-link.mss-vis-new { flex:0 0 auto; background:none; border-color:var(--border-2); color:var(--text-2); }
 .mss-vis-link:hover { border-color:var(--olive-light); }
 .mss-vis-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.np-vis-wrap .mss-vis-row { margin-top:4px; }
-.np-vis-wrap { margin:-4px 0 12px; }
+.np-vis-wrap { margin:0 0 12px; }
+@media (max-width:360px) {   /* small phones: icon over the word, so all three read in full */
+  .mss-vis-opt { flex-direction:column; gap:3px; min-height:46px; padding:6px 2px; font-size:12px; }
+  .mss-vis-new span { display:none; }
+}
 
 /* List Studio: Sort / Status / Type / Genre use the site's dropdowns (SF.dd) */
 .ls-tools { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px 10px; padding-top:10px; }
@@ -6614,7 +6624,7 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .xs-img.wide { aspect-ratio:16 / 9; }
 
 /* ── Easter eggs (js/easter-egg.js) ── a spliced-frame glitch, a rubber stamp on the note box, the stamp in a confirm */
-.mss-splice { animation:mssSplice .5s steps(1, end); }
+.mss-splice { animation:mssSplice 1s steps(1, end); }
 @keyframes mssSplice {
   0%   { transform:translate(0, 0); filter:none; }
   12%  { transform:translate(-3px, 1px) skewX(-2deg); filter:contrast(1.6) saturate(0); }
@@ -6633,8 +6643,8 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 }
 .mss-egg-stamp b { font:400 30px/1 var(--bebas); letter-spacing:2px; text-transform:uppercase; }
 .mss-egg-stamp span { font:700 11px/1.2 'Manrope',var(--sans); letter-spacing:.4px; color:var(--text-2); }
-.mss-egg-stamp.in { animation:mssStamp .32s cubic-bezier(.2, 1.6, .4, 1); }
-.mss-egg-stamp.out { opacity:0; transition:opacity .45s; }
+.mss-egg-stamp.in { animation:mssStamp .6s cubic-bezier(.2, 1.4, .4, 1); }
+.mss-egg-stamp.out { opacity:0; transition:opacity .8s; }
 @keyframes mssStamp { from { opacity:0; transform:rotate(-14deg) scale(1.9); } to { opacity:1; transform:rotate(-6deg) scale(1); } }
 @media (prefers-reduced-motion: reduce) {
   .mss-splice { animation:none; }
@@ -6642,5 +6652,5 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 }
 .confirm-overlay[data-tone="egg"] .confirm-icon { margin:4px 0 6px; }
 .mss-egg-confirm-stamp { display:inline-block; padding:5px 12px 4px; border:3px double #c8372d; border-radius:6px; color:#c8372d; font:400 26px/1 var(--bebas); letter-spacing:2px; text-transform:uppercase; transform:rotate(-6deg); }
-.confirm-overlay[data-tone="egg"].open .mss-egg-confirm-stamp { animation:mssStamp .32s cubic-bezier(.2, 1.6, .4, 1) .08s backwards; }
+.confirm-overlay[data-tone="egg"].open .mss-egg-confirm-stamp { animation:mssStamp .6s cubic-bezier(.2, 1.4, .4, 1) .15s backwards; }
 @media (prefers-reduced-motion: reduce) { .confirm-overlay[data-tone="egg"].open .mss-egg-confirm-stamp { animation:none; } }
