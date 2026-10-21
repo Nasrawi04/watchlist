@@ -366,7 +366,7 @@ nav {
   color:#fff; display:flex; align-items:center; justify-content:center;
 }
 .mobile-search-inner input {
-  flex:1; background:transparent; border:none; outline:none;
+  flex:1; min-width:0; background:transparent; border:none; outline:none;
   color:var(--text); font-size:16px; font-family:var(--sans);
 }
 .mobile-search-inner input::placeholder { color:var(--text-3); font-size:14px; }
