@@ -9,6 +9,9 @@
      Pick titles — search your library and tick exactly the ones you want
                    (one title = a full page: the whole note + episode ratings)
      A list      — yours, ones shared with you, or a community list
+     My taste profile (taste-profile.js) · Year in Review (year-review.js) — PDF / image / AI
+     Episode ratings — one show: the same chart as the Episodes page's export (ep-chart.js) as
+                       an image, or as the PDF's first page + every rated episode · AI · CSV
      (+ "as filtered here" when a page passes its own list)
    As: PDF · Image (story / square, top 10 — export-image.js) · For an AI (copy / .md) · Spreadsheet (.csv) · Letterboxd (.csv) · Full backup (.json)
 
@@ -56,25 +59,128 @@ const MSSStudio = (() => {
   function keep() { try { localStorage.setItem(PREFS, JSON.stringify({ theme: S.theme, include: S.include, privacy: S.privacy, group: S.group, format: S.format, img: S.img, ai: { length: S.ai.length, promptOn: S.ai.promptOn, watchlist: S.ai.watchlist, taste: S.ai.taste } })); } catch {} }
   const fmt = f => S.format === f;
   const usesWhat = () => ['pdf', 'image', 'ai', 'csv'].includes(S.format);
-  const defaultPrompt = () => { const k = isTaste() ? 'taste' : kindOf(); return MSSFormats.DEFAULT_PROMPT[k] ?? MSSFormats.DEFAULT_PROMPT.watched; };
+  const defaultPrompt = () => { const k = isEps() ? 'episodes' : isYear() ? 'year' : isTaste() ? 'taste' : kindOf(); return MSSFormats.DEFAULT_PROMPT[k] ?? MSSFormats.DEFAULT_PROMPT.watched; };
   function aiText(list) {
+    if (isEps()) return epText();
     const k = kindOf(), wl = S.ai.watchlist && S.what !== 'watchlist' ? S.all.filter(WHAT.watchlist.test) : [];
     return MSSFormats.ai(list, { include: S.include, privacy: S.privacy, length: S.ai.length, watchlist: wl, heading: title(),
-      prompt: S.ai.promptOn ? (S.ai.prompt ?? defaultPrompt()) : '', taste: isTaste() || S.ai.taste ? taste() : null });
+      prompt: S.ai.promptOn ? (S.ai.prompt ?? defaultPrompt()) : '', taste: isTaste() || (S.ai.taste && !isYear()) ? taste() : null, year: isYear() ? yearData() : null });
   }
   const lbSource = () => S.all.filter(WHAT.watched.test);
-  const has = list => S.what === 'taste' ? !!taste() : list.length > 0;   // anything to export?
+  const has = list => S.what === 'taste' ? !!taste() : S.what === 'year' ? !!yearData() : isEps() ? !!epData() : list.length > 0;   // anything to export?
   const isTaste = () => S.what === 'taste';
   const taste = () => (S.tasteData ??= MSSTaste.compute(S.all));   // worked out once per opening
-  const TASTE_FORMATS = ['pdf', 'image', 'ai'];
+  const TASTE_FORMATS = ['pdf', 'image', 'ai'];   // the taste profile and the year in review
+  const isYear = () => S.what === 'year';
+  const isEps = () => S.what === 'episodes';
+  const special = () => isTaste() || isYear() || isEps();     // not a list of titles
+  const EP_FORMATS = ['pdf', 'image', 'ai', 'csv'];   // episode ratings
+  const formatsFor = () => isEps() ? EP_FORMATS : TASTE_FORMATS;
+
+  /* ── Episode ratings: one show — your ratings, episode names from TMDB ── */
+  async function loadEpisodes() {
+    const me = window._navUser?.id;
+    if (!me || S.epAll) return;
+    const rows = await sb.from('episode_ratings').select('entry_id, season_number, episode_number, score, tags, note, updated_at').eq('user_id', me).then(r => r.data || [], () => []);
+    if (!S) return;
+    S.epAll = rows.filter(r => Number(r.episode_number) > 0 && r.score != null);
+    const n = {};
+    S.epAll.forEach(r => { n[r.entry_id] = (n[r.entry_id] || 0) + 1; });
+    S.epShows = Object.entries(n).map(([id, count]) => ({ id, count, e: S.all.find(x => x.id === id) })).filter(x => x.e).sort((a, b) => b.count - a.count);
+    if (!S.epShows.some(x => x.id === S.epShow)) S.epShow = S.epShows[0]?.id || null;
+    draw();
+  }
+  const epEntry = () => S.epShows?.find(x => x.id === S.epShow)?.e || null;
+  // the chosen show, as the Episodes page sees it (ep-chart.js: TMDB episodes + names, your ratings)
+  async function epLoad() {
+    const e = epEntry(), me = window._navUser?.id;
+    if (!e || !me || S.epSt?.id === e.id || S.epLoading === e.id) return;
+    if (!e.tmdb_id) { S.epSt = { id: e.id, st: null }; return; }   // not linked to TMDB: no chart (the PDF lists the episodes)
+    S.epLoading = e.id;
+    try {
+      if (typeof MSSEp === 'undefined') await _navLoadScript('js/episode-ratings.js');
+      if (typeof MSSEpChart === 'undefined') await _navLoadScript('js/ep-chart.js');
+      const st = await MSSEpChart.load(e.tmdb_id, me, me);
+      if (!S) return;
+      S.epSt = st ? { id: e.id, st } : { id: e.id, st: null };
+    } catch (err) { console.warn('Episode chart:', err); if (S) S.epSt = { id: e.id, st: null }; }
+    if (!S) return;
+    S.epLoading = null; S.epKey = null;
+    if (isEps()) drawSide();
+  }
+  const epSt = () => S.epSt?.id === S.epShow ? S.epSt.st : null;
+  // the chart (ep-chart.js) into a canvas: the image sizes, or 'a4' for the PDF's first page
+  const epChart = (cv, size) => MSSEpChart.draw(cv, epSt(), { size, theme: S.theme, source: S.epSrc, label: 'All seasons', userId: S.privacy.anon ? null : window._navUser?.id });
+  function epData() {
+    const e = epEntry();
+    if (!e) return null;
+    const key = `${e.id}:${!!epSt()}`;
+    if (S.epKey === key) return S.epD;
+    const st = epSt(), names = {}, by = {};
+    Object.entries(st?.eps || {}).forEach(([sn, eps]) => { names[sn] = Object.fromEntries(eps.map(x => [x.n, x.name])); });
+    S.epAll.filter(r => r.entry_id === e.id).forEach(r => {
+      (by[r.season_number] ||= []).push({ e: r.episode_number, name: names[r.season_number]?.[r.episode_number] || '', score: Number(r.score),
+        band: typeof MSSEp !== 'undefined' ? MSSEp.band(r.score).name : '', tags: r.tags || [], note: (r.note || '').trim(), s: r.season_number, at: r.updated_at });
+    });
+    const avgOf = a => a.reduce((t, x) => t + x.score, 0) / a.length;
+    const seasons = Object.keys(by).map(Number).sort((a, b) => a - b).map(n => { const rows = by[n].sort((a, b) => a.e - b.e); return { n, rows, avg: avgOf(rows) }; });
+    const all = seasons.flatMap(x => x.rows);
+    const best = all.reduce((b, x) => !b || x.score > b.score ? x : b, null);
+    S.epKey = key;
+    S.epD = !all.length ? null : { show: e, count: all.length, avg: avgOf(all), seasons,
+      best: best && { s: best.s, e: best.e, score: best.score, name: best.name },
+      bestSeason: seasons.length > 1 ? seasons.reduce((b, x) => !b || x.avg > b.avg ? x : b, null) : null };
+    return S.epD;
+  }
+  function epText() {
+    const d = epData();
+    if (!d) return '';
+    const out = [];
+    if (S.ai.promptOn) out.push((S.ai.prompt ?? defaultPrompt()).trim(), '');
+    out.push(`## ${d.show.title} — my episode ratings`, `${d.count} episodes rated · average ${d.avg.toFixed(2)} out of 10${d.best ? ` · best: S${d.best.s} E${d.best.e}${d.best.name ? ` “${d.best.name}”` : ''} (${d.best.score.toFixed(1)})` : ''}`);
+    d.seasons.forEach(sn => {
+      out.push('', `### Season ${sn.n} — average ${sn.avg.toFixed(2)}`);
+      sn.rows.forEach(r => out.push(`- E${r.e}${r.name ? ` · ${r.name}` : ''} — ${r.score.toFixed(1)}${r.tags.length ? ` (${r.tags.join(', ')})` : ''}${S.include.notes && r.note ? ` — ${r.note.replace(/\s+/g, ' ')}` : ''}`));
+    });
+    return out.join('\n');
+  }
+  function epCSV() {
+    const d = epData(), q = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+    const rows = [['Show', 'Season', 'Episode', 'Title', 'Score', 'Band', 'Tags', ...(S.include.notes ? ['Note'] : []), 'Rated']];
+    d?.seasons.forEach(sn => sn.rows.forEach(r => rows.push([d.show.title, sn.n, r.e, r.name, r.score.toFixed(1), r.band, r.tags.join('; '), ...(S.include.notes ? [r.note] : []), (r.at || '').slice(0, 10)])));
+    return '\uFEFF' + rows.map(r => r.map(q).join(',')).join('\r\n');
+  }
+  // PDF preview: its first page, the chart (drawn by drawSide into #xsEpPv)
+  function epPreviewHTML() {
+    if (!epData()) return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in"><div class="xs-pv-empty">${S.epAll ? 'Rate some episodes of a show first — on its Episodes page.' : 'Loading your episode ratings…'}</div></div></div>`;
+    return epSt() ? '<canvas id="xsEpPv" class="xs-img xs-ep-a4" role="img" aria-label="Preview of the first page"></canvas>'
+      : `<div class="xs-loading">${S.epSt?.id === S.epShow ? 'Not linked to TMDB — the PDF lists your rated episodes without the chart.' : 'Getting the episodes…'}</div>`;
+  }
+
+  const yearData = () => {   // worked out per year (again once the medals / episode ratings have loaded)
+    const key = `${S.year}:${!!S.yExtra}`;
+    if (S.yKey !== key) { S.yKey = key; S.yData = S.year ? MSSYear.compute(S.all, S.year, S.yExtra || {}) : null; }
+    return S.yData;
+  };
+  async function loadYearExtra() {
+    if (S.yExtra || S.yLoading) return;
+    S.yLoading = true;
+    const me = window._navUser?.id;
+    const [b, ep] = await Promise.all([
+      me ? sb.rpc('my_badges', { p_user: me }).then(r => r.data || [], () => []) : [],
+      me ? sb.from('episode_ratings').select('entry_id, season_number, episode_number, score, created_at, updated_at').eq('user_id', me).then(r => r.data || [], () => []) : []]);
+    if (!S) return;
+    S.yExtra = { badges: Array.isArray(b) ? b : [], episodes: ep }; S.yLoading = false;
+    if (isYear()) draw();
+  }
 
   const mixed = () => S.what === 'picked' || S.what === 'list';
-  const kindOf = () => S.what === 'custom' || S.what === 'taste' ? 'watched' : mixed() ? 'mixed' : S.what;
+  const kindOf = () => S.what === 'custom' || special() ? 'watched' : mixed() ? 'mixed' : S.what;
   const single = () => S.what === 'picked' && S.pick.length === 1;
   function pool() {
     if (S.what === 'picked') return S.pick.map(id => S.all.find(e => e.id === id)).filter(Boolean);
     if (S.what === 'list') return S.listItems || [];
-    if (isTaste()) return [];
+    if (special()) return [];
     const base = S.what === 'custom' ? S.o.custom.entries : S.all.filter(WHAT[S.what].test);
     return S.cat ? base.filter(e => e.cat === S.cat) : base;
   }
@@ -104,6 +210,8 @@ const MSSStudio = (() => {
     if (S.what === 'picked') return single() ? pool()[0]?.title || 'My pick' : 'My picks';
     if (S.what === 'list') return S.list?.title || 'A list';
     if (isTaste()) return 'My taste';
+    if (isYear()) return `My ${S.year || 'year'}`;
+    if (isEps()) return epEntry()?.title || 'Episode ratings';
     if (S.what === 'watched') return S.limit && S.sort === 'score' ? `My top ${S.limit}${cat}` : `Everything I’ve watched${S.cat ? ` ·${cat}` : ''}`;
     if (S.what === 'watchlist') return `My watchlist${S.cat ? ` ·${cat}` : ''}`;
     return `Currently watching${S.cat ? ` ·${cat}` : ''}`;
@@ -115,6 +223,8 @@ const MSSStudio = (() => {
     }
     if (S.what === 'list') return `List${S.list?.ranked ? ' · Ranked' : ''}`;
     if (isTaste()) return 'Taste profile';
+    if (isYear()) return 'Year in review';
+    if (isEps()) return 'Episode ratings';
     const sortL = (SORTS[kindOf()].find(s => s[0] === S.sort) || [])[1];
     return [S.what === 'custom' ? 'Watched' : WHAT[S.what].label, S.cat ? CATS.find(c => c[0] === S.cat)[1] : 'All categories', sortL ? (S.sort === 'score' ? 'By score' : sortL) : ''].filter(Boolean).join(' · ');
   }
@@ -132,7 +242,9 @@ const MSSStudio = (() => {
       ...Object.keys(WHAT).map(w => { const n = counts(w); return [w, WHAT[w].label, WHAT[w].ic, `${n} ${n === 1 ? 'title' : 'titles'}`]; }),
       ['picked', 'Pick titles', 'plus', S.pick.length ? `${S.pick.length} picked` : 'Choose exactly which'],
       ['list', 'A list', 'layers', S.list ? S.list.title : 'Yours, shared or community'],
-      ...(TASTE_FORMATS.includes(S.format) ? [['taste', 'My taste profile', 'activity', taste() ? `From ${taste().rated} rated titles` : 'Rate some titles first']] : [])];
+      ...(TASTE_FORMATS.includes(S.format) ? [['taste', 'My taste profile', 'activity', taste() ? `From ${taste().rated} rated titles` : 'Rate some titles first'],
+        ['year', 'Year in Review', 'clock', S.years.length ? `${S.years[S.years.length - 1]}–${S.years[0]}`.replace(/^(\d+)–\1$/, '$1') : 'Finish something first']] : []),
+      ...(EP_FORMATS.includes(S.format) ? [['episodes', 'Episode ratings', 'episodes', !S.epAll ? 'Loading…' : S.epShows.length ? `${S.epShows.length} ${S.epShows.length === 1 ? 'show' : 'shows'} rated` : 'Rate episodes first']] : [])];
     const base = S.what === 'custom' ? S.o.custom.entries : WHAT[S.what] ? S.all.filter(WHAT[S.what].test) : [];
     const watchedish = k === 'watched' || k === 'mixed';
     const fmts = sec('Export as', `<div class="xs-fmts" role="radiogroup" aria-label="Export as">${FORMATS.map(([f, l, ic, sub]) =>
@@ -147,30 +259,40 @@ const MSSStudio = (() => {
           <span class="xs-what-ic">${icon(ic, 18)}</span><b>${esc(l)}</b><small translate="no">${esc(sub)}</small></button>`).join('')}</div>`)
       + (S.what === 'picked' ? sec('Choose titles', `<input class="xs-input" id="xsPickQ" type="search" placeholder="Search your library…" aria-label="Search your library" value="${esc(S.pq)}" oninput="MSSStudio._pq(this.value)"><div id="xsPickBody">${pickHTML()}</div>`) : '')
       + (S.what === 'list' ? sec('Choose a list', `<div id="xsListBody">${listsHTML()}</div>`) : '')
+      + (isYear() ? sec('Which year', `<div class="xs-chips">${S.years.map(yy => chip(S.year === yy, `MSSStudio._year(${yy})`, String(yy))).join('') || '<span class="xs-hint">Nothing finished yet.</span>'}</div>
+          <div class="xs-hint">${yearData() ? `${yearData().titles} titles finished in ${S.year}${yearData().prev ? ` · ${yearData().prev.titles} the year before` : ''}` : ''}</div>`) : '')
+      + (isEps() ? sec('Which show', S.epShows?.length ? `<div class="xs-chips">${S.epShows.map(x => chip(S.epShow === x.id, `MSSStudio._epShow(${attrJSON(x.id)})`, `<span translate="no" class="xs-ep-t">${esc(x.e.title)}</span><span>${x.count}</span>`)).join('')}</div>`
+          : `<div class="xs-hint">${S.epAll ? 'Rate episodes on a show’s Episodes page and they show up here.' : 'Loading your episode ratings…'}</div>`)
+        + (fmt('image') || fmt('pdf') ? sec('Scores', `<div class="xs-chips">${[['mine', 'Mine'], ['tmdb', 'TMDB'], ['community', 'Community']].map(([k2, l]) => chip(S.epSrc === k2, `MSSStudio._epSet('epSrc','${k2}')`, l)).join('')}</div>
+            <div class="xs-hint">The same chart as the Episodes page’s export${fmt('pdf') ? ' — the PDF’s first page, then every episode you rated' : ''}.</div>`) : '')
+        + (fmt('image') ? sec('Size', `<div class="xs-chips">${[['square', 'Square'], ['story', 'Story'], ['wide', 'Wide']].map(([k2, l]) => chip(S.epSize === k2, `MSSStudio._epSet('epSize','${k2}')`, l)).join('')}</div>`)
+          : sec('Include', `<div class="xs-switches">${sw(S.include.notes, "MSSStudio._tog('include','notes')", 'Episode notes', 'What you wrote about each episode')}</div>`)) : '')
       + (isTaste() ? sec('What’s in it', `<div class="xs-info">${icon('activity', 16)}<span>Worked out from your scores: your average and how generous you are, the genres and decades you score highest, the rating categories you’re kindest and toughest on${fmt('pdf') ? ', how your scores spread from 1 to 10, movies vs shows and your top 5' : ''}.</span></div>`) : '')
-      + (!mixed() && !isTaste() ? sec('Category', `<div class="xs-chips">${CATS.map(([c, l]) => { const n = c ? base.filter(e => e.cat === c).length : base.length;
+      + (!mixed() && !special() ? sec('Category', `<div class="xs-chips">${CATS.map(([c, l]) => { const n = c ? base.filter(e => e.cat === c).length : base.length;
           return chip(S.cat === c, `MSSStudio._set('cat','${c}')`, `${l}<span>${n}</span>`, n || !c ? '' : ' disabled'); }).join('')}</div>`) : '')
-      + (single() || isTaste() ? '' : sec('Order', `<div class="xs-chips">${SORTS[k].map(([s, l]) => chip(S.sort === s, `MSSStudio._set('sort','${s}')`, s === 'manual' && S.what === 'list' ? 'List order' : l)).join('')}</div>`))
-      + (fmt('image') ? sec('Size', `<div class="xs-chips">${chip(S.img.size === 'story', "MSSStudio._img('story')", 'Story · 9:16')}${chip(S.img.size === 'square', "MSSStudio._img('square')", 'Square · 1:1')}</div>
-          ${isTaste() ? '' : `<div class="xs-hint">Images hold your top 10 — the first 10 in the order above${S.what === 'picked' ? ' (or the ones you picked)' : ''}.</div>`}`) : '')
-      + (!mixed() && !fmt('image') && !isTaste() ? sec('How many', `<div class="xs-chips">${LIMITS.map(([n, l]) => chip(S.limit === n, `MSSStudio._set('limit',${n})`, n ? (S.sort === 'score' ? `Top ${l}` : `First ${l}`) : l)).join('')}</div>`) : '')
-      + (fmt('ai') ? sec('For the AI', `${isTaste() ? '' : `<div class="xs-chips">${chip(S.ai.length === 'short', "MSSStudio._ai('length','short')", 'Short')}${chip(S.ai.length === 'full', "MSSStudio._ai('length','full')", 'Full')}</div>
+      + (single() || special() ? '' : sec('Order', `<div class="xs-chips">${SORTS[k].map(([s, l]) => chip(S.sort === s, `MSSStudio._set('sort','${s}')`, s === 'manual' && S.what === 'list' ? 'List order' : l)).join('')}</div>`))
+      + (fmt('image') && isYear() ? sec('Slide', `<div class="xs-chips">${[['overview', 'Overview'], ['top', 'Top 5'], ['months', 'Months']].map(([k2, l]) => chip(S.ySlide === k2, `MSSStudio._slide('${k2}')`, l)).join('')}</div>
+          <div class="xs-hint">Three story slides (9:16) — save each one, then post them in order.</div>`) : '')
+      + (fmt('image') && !isYear() ? sec('Size', `<div class="xs-chips">${chip(S.img.size === 'story', "MSSStudio._img('story')", 'Story · 9:16')}${chip(S.img.size === 'square', "MSSStudio._img('square')", 'Square · 1:1')}</div>
+          ${special() ? '' : `<div class="xs-hint">Images hold your top 10 — the first 10 in the order above${S.what === 'picked' ? ' (or the ones you picked)' : ''}.</div>`}`) : '')
+      + (!mixed() && !fmt('image') && !special() ? sec('How many', `<div class="xs-chips">${LIMITS.map(([n, l]) => chip(S.limit === n, `MSSStudio._set('limit',${n})`, n ? (S.sort === 'score' ? `Top ${l}` : `First ${l}`) : l)).join('')}</div>`) : '')
+      + (fmt('ai') ? sec('For the AI', `${special() ? '' : `<div class="xs-chips">${chip(S.ai.length === 'short', "MSSStudio._ai('length','short')", 'Short')}${chip(S.ai.length === 'full', "MSSStudio._ai('length','full')", 'Full')}</div>
           <div class="xs-hint">${S.ai.length === 'short' ? 'One line per title — fits in any chat, even long libraries.' : 'Every rating, highlight and note — best for a detailed answer.'}</div>`}
-          <div class="xs-switches${isTaste() ? '' : ' xs-gap'}">${sw(S.ai.promptOn, "MSSStudio._ai('promptOn')", 'Start with a request', 'What you want the AI to do — edit it below')}
-            ${isTaste() ? '' : sw(S.ai.taste, "MSSStudio._ai('taste')", 'Add my taste profile', 'A short summary of how you score, on top')}
-            ${S.what !== 'watchlist' ? sw(S.ai.watchlist, "MSSStudio._ai('watchlist')", 'Add my watchlist', 'So it doesn’t suggest what you already plan to watch') : ''}</div>
+          <div class="xs-switches${special() ? '' : ' xs-gap'}">${sw(S.ai.promptOn, "MSSStudio._ai('promptOn')", 'Start with a request', 'What you want the AI to do — edit it below')}
+            ${special() ? '' : sw(S.ai.taste, "MSSStudio._ai('taste')", 'Add my taste profile', 'A short summary of how you score, on top')}
+            ${S.what !== 'watchlist' && !isEps() ? sw(S.ai.watchlist, "MSSStudio._ai('watchlist')", 'Add my watchlist', 'So it doesn’t suggest what you already plan to watch') : ''}</div>
           ${S.ai.promptOn ? `<textarea class="xs-input xs-prompt" id="xsPrompt" rows="4" maxlength="1500" aria-label="Your request to the AI" oninput="MSSStudio._prompt(this.value)">${esc(S.ai.prompt ?? defaultPrompt())}</textarea>` : ''}`) : '')
       + (fmt('pdf') || fmt('image') ? sec('Look', `<div class="xs-looks">${[['dark', 'Dark'], ['light', 'Light']].map(([th, l]) =>
           `<button type="button" class="xs-look xs-look-${th}${S.theme === th ? ' on' : ''}" aria-pressed="${S.theme === th}" onclick="MSSStudio._set('theme','${th}')"><i aria-hidden="true"></i>${l}</button>`).join('')}</div>`) : '')
-      + (fmt('image') || isTaste() ? '' : sec('Include', `<div class="xs-switches">
+      + (fmt('image') || special() ? '' : sec('Include', `<div class="xs-switches">
           ${watchedish ? sw(S.include.breakdown, "MSSStudio._tog('include','breakdown')", 'Rating breakdown', 'Every category you rated, as bars') : ''}
           ${watchedish ? sw(S.include.highlights, "MSSStudio._tog('include','highlights')", 'Highlights', 'Favourite and least favourite character, episode, season') : ''}
           ${sw(S.include.notes, "MSSStudio._tog('include','notes')", 'Notes', single() ? 'The whole note' : 'Your note on each title')}
           ${k !== 'watching' && fmt('pdf') ? sw(S.include.dates, "MSSStudio._tog('include','dates')", 'Dates', k === 'watchlist' ? 'When you added it' : 'When you watched it') : ''}
           ${fmt('pdf') && mixed() && !single() && S.sort === 'manual' ? sw(S.numbered, "MSSStudio._tog('numbered')", 'Number them', S.what === 'list' ? '1, 2, 3… in the list’s order' : '1, 2, 3… in the order you picked') : ''}
           ${single() || !fmt('pdf') ? '' : sw(S.group, "MSSStudio._tog('group')", 'Group by category', 'TV Shows, Movies, Anime and Cartoons in their own sections')}</div>`))
-      + (isTaste() && fmt('ai') ? '' : sec('Privacy', `<div class="xs-switches">
-          ${fmt('image') || isTaste() ? '' : sw(S.privacy.hideSpoilers, "MSSStudio._tog('privacy','hideSpoilers')", 'Hide spoiler notes', 'Notes you marked as spoilers say “hidden” instead')}
+      + (special() && fmt('ai') || isEps() && !fmt('pdf') ? '' : sec('Privacy', `<div class="xs-switches">
+          ${fmt('image') || special() ? '' : sw(S.privacy.hideSpoilers, "MSSStudio._tog('privacy','hideSpoilers')", 'Hide spoiler notes', 'Notes you marked as spoilers say “hidden” instead')}
           ${fmt('pdf') || fmt('image') ? sw(S.privacy.anon, "MSSStudio._tog('privacy','anon')", 'Leave my name off', 'No name or @username anywhere in the file') : ''}</div>`))
       + (fmt('csv') ? '' : sec(fmt('pdf') ? 'Cover title' : 'Heading', `<input class="xs-input" id="xsTitle" maxlength="60" placeholder="${esc(title())}" value="${esc(S.title)}" aria-label="Cover title" oninput="MSSStudio._title(this.value)">`, 'optional'));
   }
@@ -296,6 +418,28 @@ const MSSStudio = (() => {
       ${list.length > 3 ? `<div class="xs-pv-more">+ ${list.length - 3} more ${list.length - 3 === 1 ? 'title' : 'titles'}</div>` : ''}
     </div></div>`;
   }
+  // "Up from 12 titles in 2025" — under the year in review's title
+  function yearCompare() {
+    const yv = yearData(); if (!yv?.prev) return '';
+    const d = yv.titles - yv.prev.titles;
+    return d > 0 ? `Up from ${yv.prev.titles} titles in ${yv.year - 1}.` : d < 0 ? `Down from ${yv.prev.titles} titles in ${yv.year - 1}.` : `The same as ${yv.year - 1}: ${yv.titles} titles.`;
+  }
+  // The year in review's first page, in the PDF's look
+  function yearPreviewHTML() {
+    const yv = yearData(), who = S.o.who || {};
+    if (!yv) return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in"><div class="xs-pv-empty">Nothing finished in that year.</div></div></div>`;
+    const mx = Math.max(...yv.months, 1);
+    return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in">
+      <div class="xs-pv-top"><span class="xs-pv-wm">MY<u>SCREEN</u>FOLIO</span><span>${esc(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))}</span></div>
+      <div class="xs-pv-kicker">${esc(kicker())}</div><div class="xs-pv-h1">${esc(title())}</div>
+      ${S.privacy.anon || !(who.name || who.username) ? '' : `<div class="xs-pv-by">by ${esc(who.name || who.username)}</div>`}
+      ${yearCompare() ? `<div class="xs-pv-desc">${esc(yearCompare())}</div>` : ''}
+      <div class="xs-pv-stats">${MSSPdf.yearStats(yv).map(x => `<span><b${x.word ? ' class="word"' : ''}>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</div>
+      <div class="xs-pv-group">Month by month</div>
+      <div class="xs-yr-cols">${yv.months.map((n, i) => `<span><i><u style="height:${n / mx * 100}%"></u></i><b>${MSSYear.MONTHS[i]}</b></span>`).join('')}</div>
+      ${yv.top.length ? `<div class="xs-pv-group xs-tp-gap">Your top ${yv.top.length} of ${yv.year}</div>${yv.top.map((x, i) => `<div class="xs-yr-top"><em>${i + 1}</em><b translate="no">${esc(x.e.title)}</b><span>${x.s.toFixed(2)}</span></div>`).join('')}` : ''}
+    </div></div>`;
+  }
   // The taste profile's first page, in the PDF's look
   function tastePreviewHTML() {
     const t = taste(), who = S.o.who || {};
@@ -332,7 +476,7 @@ const MSSStudio = (() => {
   function textPreview(list) {
     if (fmt('backup')) return `<div class="xs-bk">${[['Titles', S.all.length], ['Watched', S.all.filter(WHAT.watched.test).length], ['Watchlist', S.all.filter(WHAT.watchlist.test).length],
       ['With notes', S.all.filter(e => e.notes && e.notes.trim()).length]].map(([l, v]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div><div class="xs-hint xs-center">Lists and episode ratings are added when you download.</div>`;
-    const txt = fmt('ai') ? aiText(list) : fmt('csv') ? MSSFormats.csv(list.slice(0, 12), { include: S.include, privacy: S.privacy }).replace(/^\uFEFF/, '')
+    const txt = fmt('ai') ? aiText(list) : fmt('csv') && isEps() ? epCSV().replace(/^\uFEFF/, '') : fmt('csv') ? MSSFormats.csv(list.slice(0, 12), { include: S.include, privacy: S.privacy }).replace(/^\uFEFF/, '')
       : MSSFormats.letterboxd(lbSource().slice(0, 12), { include: S.include, privacy: S.privacy });
     const lines = txt.split('\n'), cut = lines.slice(0, fmt('ai') ? 60 : 14).join('\n');
     return `<pre class="xs-text" tabindex="0" aria-label="Preview">${esc(cut)}${lines.length > (fmt('ai') ? 60 : 14) ? '\n…' : ''}</pre>`;
@@ -340,25 +484,44 @@ const MSSStudio = (() => {
   function drawSide() {
     if (!S) return;
     const list = picked(), n = list.length;
+    if (isEps()) epLoad();
+    if (fmt('image') && isEps()) {   // the Episodes page's chart, drawn here
+      const d = epData();
+      $('xsPvLabel').innerHTML = `Preview<span>${{ square: '1080 × 1080', story: '1080 × 1920', wide: '1600 × 900' }[S.epSize]}</span>`;
+      if (!epSt()) $('xsPreview').innerHTML = `<div class="xs-loading">${!d ? '' : S.epSt?.id === S.epShow ? 'This show isn’t linked to TMDB, so there’s no chart — link it from its page.' : 'Getting the episodes…'}</div>`;
+      else {
+        let cv = $('xsImg');
+        if (!cv) { $('xsPreview').innerHTML = '<canvas id="xsImg" class="xs-img" role="img" aria-label="Preview of the image"></canvas>'; cv = $('xsImg'); }
+        cv.classList.toggle('square', S.epSize === 'square'); cv.classList.toggle('wide', S.epSize === 'wide');
+        clearTimeout(S.imgT); S.imgT = setTimeout(() => { if (S && fmt('image') && isEps() && epSt()) epChart(cv, S.epSize).catch(err => console.warn(err)); }, 120);
+      }
+      $('xsSummary').innerHTML = d ? `<b>${esc(d.show.title)}</b> · ${d.count} episodes rated · ${{ square: 'square, for posts', story: 'story, for Instagram / TikTok', wide: 'wide' }[S.epSize]}` : 'Pick a show you’ve rated episodes of.';
+      goLabel(); $('xsAlt').hidden = true; if (!S.busy) $('xsGo').disabled = !epSt();
+      return;
+    }
     if (fmt('image')) {
       $('xsPvLabel').innerHTML = `Preview<span>${S.img.size === 'square' ? '1080 × 1080' : '1080 × 1920'}</span>`;
       let cv = $('xsImg');
       if (!cv) { $('xsPreview').innerHTML = '<canvas id="xsImg" class="xs-img" role="img" aria-label="Preview of the image"></canvas>'; cv = $('xsImg'); }
-      cv.classList.toggle('square', S.img.size === 'square');
+      cv.classList.toggle('square', S.img.size === 'square' && !isYear());
       clearTimeout(S.imgT); S.imgT = setTimeout(() => { if (S && fmt('image')) MSSImage.draw(cv, imgJob(list)); }, 120);
       goLabel(); $('xsAlt').hidden = true;
       if (isTaste()) { $('xsSummary').innerHTML = taste() ? `<b>Your taste</b> · from ${taste().rated} rated titles` : 'Rate a few titles first.'; if (!S.busy) $('xsGo').disabled = !taste(); return; }
+      if (isYear()) { $('xsPvLabel').innerHTML = 'Preview<span>1080 × 1920</span>'; $('xsSummary').innerHTML = yearData() ? `<b>Your ${S.year}</b> · slide ${['overview', 'top', 'months'].indexOf(S.ySlide) + 1} of 3` : 'Nothing finished that year.'; if (!S.busy) $('xsGo').disabled = !yearData(); return; }
       $('xsSummary').innerHTML = n ? `<b>${n} ${n === 1 ? 'title' : 'titles'}</b>${pool().length > n ? ` · the first ${n} of ${pool().length}` : ''} · ${S.img.size === 'square' ? 'square, for posts' : 'story, for Instagram / TikTok'}` : 'Nothing to export with these options.';
       if (!S.busy) $('xsGo').disabled = !n;
       return;
     }
     $('xsPvLabel').innerHTML = fmt('pdf') ? 'Preview<span>first page</span>' : fmt('backup') ? 'What’s inside' : `Preview<span>${fmt('ai') ? 'the text' : 'first rows'}</span>`;
-    $('xsPreview').innerHTML = fmt('pdf') ? (isTaste() ? tastePreviewHTML() : previewHTML(list)) : textPreview(list);
+    $('xsPreview').innerHTML = fmt('pdf') ? (isTaste() ? tastePreviewHTML() : isYear() ? yearPreviewHTML() : isEps() ? epPreviewHTML() : previewHTML(list)) : textPreview(list);
+    if (fmt('pdf') && isEps() && $('xsEpPv')) { const cv = $('xsEpPv'); clearTimeout(S.imgT); S.imgT = setTimeout(() => { if (S && isEps() && epSt()) epChart(cv, 'a4').catch(err => console.warn(err)); }, 120); }
     goLabel();
     if (!fmt('pdf')) {
       const lb = fmt('letterboxd') ? MSSFormats.lbMovies(lbSource()).length : 0;
       $('xsSummary').innerHTML = fmt('backup') ? `<b>${S.all.length} titles</b> · your lists · your episode ratings`
         : fmt('letterboxd') ? (lb ? `<b>${lb} ${lb === 1 ? 'movie' : 'movies'}</b> · Letterboxd import file` : 'No watched movies yet.')
+        : isEps() ? (epData() ? `<b>${esc(epData().show.title)}</b> · ${epData().count} episodes${fmt('ai') ? ` · about ${Math.max(1, Math.round(aiText(list).length / 1000))}k characters` : ' · one row each'}` : 'Pick a show you’ve rated episodes of.')
+        : isYear() ? (yearData() ? `<b>Your ${S.year}</b> · ${yearData().titles} titles · about ${Math.max(1, Math.round(aiText(list).length / 1000))}k characters` : 'Nothing finished that year.')
         : isTaste() ? (taste() ? `<b>Your taste</b> · from ${taste().rated} rated titles · about ${Math.max(1, Math.round(aiText(list).length / 1000))}k characters` : 'Rate a few titles first.')
         : n ? `<b>${n} ${n === 1 ? 'title' : 'titles'}</b>${fmt('ai') ? ` · about ${Math.max(1, Math.round(aiText(list).length / 1000))}k characters` : ' · one row each'}` : 'Nothing to export with these options.';
       if (!S.busy) $('xsGo').disabled = fmt('backup') ? !S.all.length : fmt('letterboxd') ? !lb : !has(list);
@@ -366,6 +529,8 @@ const MSSStudio = (() => {
       return;
     }
     $('xsAlt').hidden = true;
+    if (isYear()) { $('xsSummary').innerHTML = yearData() ? `<b>Your ${S.year}</b> · ${yearData().titles} titles · about 2 pages` : 'Nothing finished that year.'; if (!S.busy) $('xsGo').disabled = !yearData(); return; }
+    if (isEps()) { const d = epData(), n2 = 1 + Math.max(1, Math.ceil((d?.count || 0) / 22)); $('xsSummary').innerHTML = d ? `<b>${esc(d.show.title)}</b> · the chart, then all ${d.count} episodes · about ${n2} pages` : 'Pick a show you’ve rated episodes of.'; if (!S.busy) $('xsGo').disabled = !d || S.epSt?.id !== S.epShow; return; }
     if (isTaste()) { $('xsSummary').innerHTML = taste() ? `<b>Your taste</b> · from ${taste().rated} rated titles · about 2 pages` : 'Rate a few titles first — it’s worked out from your scores.'; if (!S.busy) $('xsGo').disabled = !taste(); return; }
     $('xsSummary').innerHTML = !n ? (S.what === 'picked' ? 'Tick the titles you want in it.' : S.what === 'list' && !S.list ? 'Choose a list.' : 'Nothing to export with these options.')
       : single() ? `<b>1 title</b> · a full page — every rating, the whole note${MSSPdf.kindOf(list[0]) === 'watched' && list[0].cat !== 'movies' ? ' and your episode ratings' : ''}`
@@ -412,16 +577,20 @@ const MSSStudio = (() => {
       group: pre.group != null ? pre.group : !!p.group, theme: p.theme === 'light' ? 'light' : p.theme === 'dark' ? 'dark' : (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'),
       include: { breakdown: true, highlights: true, notes: true, dates: true, ...(p.include || {}) },
       privacy: { hideSpoilers: true, anon: false, ...(p.privacy || {}) }, title: '', busy: false,
+      years: [], year: null, ySlide: 'overview', yExtra: null, epAll: null, epShows: [], epShow: pre.show || null, epSize: 'square', epSrc: 'mine',
       pick: [], pq: '', pst: '', numbered: true, lists: null, listQ: '', list: null, listItems: null,
       format: pre.format || (['pdf', 'image', 'ai', 'csv'].includes(p.format) ? p.format : 'pdf'), img: { size: p.img?.size === 'square' ? 'square' : 'story' }, ai: { length: 'full', promptOn: true, watchlist: true, taste: true, ...(p.ai || {}), prompt: null } };
     if (!S.sort) S.sort = SORTS[kindOf()][0][0];
-    if (S.what === 'taste' && !TASTE_FORMATS.includes(S.format)) S.format = 'pdf';
+    if (special() && !formatsFor().includes(S.format)) S.format = 'pdf';
     const ov = overlay();
     $('xsOpts').innerHTML = '<div class="xs-loading">Loading your library…</div>'; $('xsPreview').innerHTML = ''; $('xsSummary').textContent = '';
     progress(null);
     MSSDialog.open(ov, { focus: '#xsGo' });
     try { S.all = o.load ? (await o.load()) || [] : []; } catch { S.all = []; }
     if (!S) return;
+    S.years = MSSYear.years(S.all); S.year = S.years[0] || null;
+    if (isYear()) loadYearExtra();
+    loadEpisodes();   // the "Episode ratings" card needs the count
     draw();
     if (S.what === 'list') pickWhat('list');
   }
@@ -443,11 +612,13 @@ const MSSStudio = (() => {
     if (!S || S.busy) return;
     if (key === 'what' && S.what === v) return;
     S[key] = v;
-    if (key === 'format' && isTaste() && !TASTE_FORMATS.includes(v)) S.what = 'watched';   // the taste profile is PDF / image / AI only
+    if (key === 'format' && special() && !formatsFor().includes(v)) S.what = 'watched';   // the taste profile is PDF / image / AI only, episodes + CSV
     if (key === 'what' || key === 'format' && S.what === 'watched' && !SORTS.watched.some(x => x[0] === S.sort)) { S.cat = ''; S.sort = SORTS[kindOf()][0][0]; S.numbered = v === 'list' ? !!S.list?.ranked : true; }
     if (key === 'theme' || key === 'group' || key === 'format') keep();
     draw();
     if (key === 'what') pickWhat(v);
+    if (key === 'what' && v === 'year') loadYearExtra();
+    if (key === 'what' && v === 'episodes') loadEpisodes();
   }
   function tog(group, key) {
     if (!S || S.busy) return;
@@ -480,7 +651,8 @@ const MSSStudio = (() => {
     $('xsProg').setAttribute('aria-valuenow', pct);
     if (label) $('xsProgLabel').textContent = label;
   }
-  const imgJob = list => ({ size: S.img.size, theme: S.theme, title: title(), kicker: kicker(), entries: list, who: S.o.who, anon: S.privacy.anon, taste: isTaste() ? taste() : null });
+  const imgJob = list => ({ size: S.img.size, theme: S.theme, title: title(), kicker: kicker(), entries: isYear() ? (yearData()?.top || []).map(x => x.e) : list, who: S.o.who, anon: S.privacy.anon,
+    taste: isTaste() ? taste() : null, year: isYear() ? yearData() : null, slide: S.ySlide });
   function goLabel() {
     const L = { pdf: ['download', 'Export PDF'], image: ['image', 'Save image'], ai: ['copy', 'Copy for an AI'], csv: ['download', 'Download .csv'], letterboxd: ['download', 'Download for Letterboxd'], backup: ['download', 'Download backup'] }[S.format];
     $('xsGo').innerHTML = `${icon(ICONS[L[0]] ? L[0] : 'download', 15)} ${L[1]}`;
@@ -505,6 +677,7 @@ const MSSStudio = (() => {
       MSSFormats.save(`myscreenfolio-${slug()}.md`, txt, 'text/markdown;charset=utf-8');
       return finish('Couldn’t copy here, so it was downloaded instead.');
     }
+    if (fmt('csv') && isEps()) { MSSFormats.save(`myscreenfolio-${slug()}-episodes.csv`, epCSV(), 'text/csv;charset=utf-8'); return finish('Your spreadsheet is ready.'); }
     if (fmt('csv')) { MSSFormats.save(`myscreenfolio-${slug()}.csv`, MSSFormats.csv(list, { include: S.include, privacy: S.privacy }), 'text/csv;charset=utf-8'); return finish('Your spreadsheet is ready.'); }
     if (fmt('letterboxd')) {
       const txt = MSSFormats.letterboxd(lbSource(), { include: S.include, privacy: S.privacy });
@@ -529,9 +702,9 @@ const MSSStudio = (() => {
       S.busy = true; $('xsOverlay').classList.add('is-busy'); progress(0.15, 'Getting posters…');
       try {
         const cv = document.createElement('canvas');
-        await MSSImage.draw(cv, imgJob(list));
+        if (isEps()) await epChart(cv, S.epSize); else await MSSImage.draw(cv, imgJob(list));
         progress(0.9, 'Saving…');
-        await mssSaveImage(cv, `myscreenfolio-${slug()}-${S.img.size}.png`, $('xsPreview'));
+        await mssSaveImage(cv, `myscreenfolio-${slug()}-${isEps() ? 'episodes-' + S.epSize : isYear() ? `${['overview', 'top', 'months'].indexOf(S.ySlide) + 1}-${S.ySlide}` : S.img.size}.png`, $('xsPreview'));
         progress(1, 'Done!');
       } catch (err) { console.error('Image export failed:', err); showToast('Couldn’t make the image — try again.', 'err'); }
       setTimeout(() => { if (S) { S.busy = false; $('xsOverlay').classList.remove('is-busy'); progress(null); } }, 400);
@@ -549,6 +722,16 @@ const MSSStudio = (() => {
     $('xsOverlay').classList.add('is-busy');
     progress(0, 'Starting…');
     try {
+      if (isEps()) {   // page 1 = the chart (as the image), then every rated episode
+        progress(0.05, 'Drawing the chart…');
+        let chart = null;
+        if (epSt()) { const cv = document.createElement('canvas'); await epChart(cv, 'a4'); chart = cv.toDataURL('image/jpeg', 0.92); }
+        const blob = await MSSPdf.build({ kind: 'watched', title: title(), kicker: kicker(), entries: [], theme: S.theme, include: S.include, privacy: S.privacy, who: S.o.who, ep: epData(), epChart: chart }, (f, l) => progress(0.1 + f * 0.9, l));
+        const url = URL.createObjectURL(blob), a = document.createElement('a');
+        a.href = url; a.download = `myscreenfolio-${slug()}-episodes.pdf`; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        return finish('Your PDF is ready.');
+      }
       let episodes = null;
       if (single() && list[0].cat !== 'movies' && MSSPdf.kindOf(list[0]) !== 'title') {
         progress(0.01, 'Getting your episode ratings…');
@@ -557,7 +740,7 @@ const MSSStudio = (() => {
       }
       const blob = await MSSPdf.build({ kind: kindOf(), title: title(), kicker: kicker(), entries: list, ranked: ranked(),
         group: S.group && !single(), theme: S.theme, include: S.include, privacy: S.privacy, who: S.o.who,
-        byline: byline(), desc: S.what === 'list' ? S.list?.description : '', detail: single(), episodes, taste: isTaste() ? taste() : null }, (f, l) => progress(f, l));
+        byline: byline(), desc: S.what === 'list' ? S.list?.description : isYear() ? yearCompare() : '', detail: single(), episodes, taste: isTaste() ? taste() : null, year: isYear() ? yearData() : null }, (f, l) => progress(f, l));
       const url = URL.createObjectURL(blob), a = document.createElement('a');
       a.href = url; a.download = `myscreenfolio-${slug()}.pdf`; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10000);
@@ -570,6 +753,10 @@ const MSSStudio = (() => {
   }
 
   return { open, close, _set: set, _tog: tog, _go: go,
+    _year: yy => { if (!S || S.busy) return; S.year = yy; draw(); },
+    _epShow: id => { if (!S || S.busy) return; S.epShow = id; draw(); },
+    _epSet: (k, v) => { if (!S || S.busy) return; S[k] = v; draw(); },
+    _slide: k => { if (!S || S.busy) return; S.ySlide = k; draw(); },
     _img: size => { if (!S || S.busy) return; S.img.size = size; keep(); draw(); },
     _ai: (k, v) => { if (!S || S.busy) return; S.ai[k] = v === undefined ? !S.ai[k] : v; keep(); draw(); },
     _prompt: v => { if (S) { S.ai.prompt = v; drawSide(); } },
