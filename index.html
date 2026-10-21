@@ -70,11 +70,13 @@
   .xp-sub { font-size:12.5px; color:rgba(255,255,255,.82); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .xp-cta {
     margin-top:auto; align-self:flex-start; display:inline-flex; align-items:center; gap:7px;
-    padding:8px 14px; border-radius:999px; background:#fff; color:var(--xp-b);
-    font-family:var(--sans); font-size:12.5px; font-weight:700; transition:gap .2s, padding .2s;
+    padding:8px 14px; border-radius:999px; color:#fff;   /* frosted glass, like the badge above it */
+    background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.32); box-shadow:0 4px 14px rgba(0,0,0,.18);
+    -webkit-backdrop-filter:blur(10px) saturate(1.4); backdrop-filter:blur(10px) saturate(1.4);
+    font-family:var(--sans); font-size:12.5px; font-weight:700; transition:gap .2s, padding .2s, background .2s;
   }
   .xp-cta svg { width:13px; height:13px; }
-  .xp-card:hover .xp-cta { gap:11px; padding-inline-end:12px; }
+  .xp-card:hover .xp-cta { gap:11px; padding-inline-end:12px; background:rgba(255,255,255,.28); }
   /* Fanned stack of the category's top 3 posters */
   .xp-fan { position:absolute; top:0; inset-inline-end:0; bottom:0; width:140px; z-index:0; pointer-events:none; }
   .xp-p {
