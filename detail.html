@@ -965,6 +965,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
+<script src="js/easter-egg.js"></script>
 <script src="js/db.js"></script>
 <script src="js/comments.js"></script>
 <script src="js/rewatch.js"></script>
@@ -1292,6 +1293,7 @@ let _tmdbLockState = { title: true, year: true, genres: true, desc: true, season
 // fallback then silently wiped tmdb_id/tmdb_type to null on every single
 // save of an already-linked entry — not just the entries actually added
 // with a bug, but any of them the person ever so much as re-saved after.
+let _detNotesSaved = '';
 let _pendingTmdbId = null;
 let _pendingTmdbType = null;
 
@@ -2123,6 +2125,8 @@ async function handlePosterUpload(event) {
 
 /* ── Load entry ── */
 document.addEventListener('DOMContentLoaded', () => {
+  // easter-egg.js — the title as it stands, even before the first save
+  MSSEgg.noteBox(document.getElementById('dNotes'), () => ({ id: _detId || 'new', title: document.getElementById('dTitle').value, tmdb_id: _pendingTmdbId, tmdb_type: _pendingTmdbType }));
   _makeShadowDD('dCat', 'dCatDD');
   _makeShadowDD('dMediaType', 'dMediaTypeDD');
   _makeShadowDD('dStatus', 'dStatusDD');
@@ -2157,6 +2161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dNotesSpoilerWrap').innerHTML = mssSpoilerToggleHTML('dNotesSpoiler');
     document.getElementById('dNotesSpoiler').checked = mssIsSpoiler(e);
     document.getElementById('dNoteVisWrap').innerHTML = mssNoteVisHTML('dNoteVis', e?.note_visibility, e?.id);   // who can view (069)
+    _detNotesSaved = e?.notes || '';   // what's saved — an easter egg's confirm only asks about a new or changed note
     _notesUpdateWordCount();
     _notesRichTools();
     // Rewatch count
@@ -2324,6 +2329,9 @@ async function doSave() {
     if (!totalEps) { showToast('Please add at least one season with episodes.', 'err'); return; }
   }
 
+  // easter-egg.js: some titles ask before a new or changed note goes up
+  const egg = { id: _detId || 'new', title, tmdb_id: _pendingTmdbId, tmdb_type: _pendingTmdbType };
+  if (!(await MSSEgg.beforeNoteSave(egg, document.getElementById('dNotes').value, _detNotesSaved))) return;
   const btn = document.getElementById('btnSave');
   btn.classList.add('saving'); btn.textContent = 'Saving…';
 
@@ -2397,12 +2405,14 @@ async function doSave() {
   const isNewlyCompleted = (status === 'completed' || status === 'ongoing') && _originalStatus !== 'completed' && _originalStatus !== 'ongoing';
 
   try {
+    const savedMsg = payload.notes ? MSSEgg.savedMsg(egg, 'Saved!') : 'Saved!';
     const saved = await saveEntry(payload, _detUser.id, _detId);
     _detId = saved.id;
     _originalStatus = status; // update so re-saves don't re-trigger popup
+    _detNotesSaved = payload.notes || '';
     btn.classList.remove('saving'); btn.textContent = 'Save Entry';
     document.getElementById('dDeleteBtn').style.display = 'block';
-    showToast('Saved!');
+    showToast(savedMsg);
   } catch(e) {
     showToast('Error saving. Please try again.', 'err');
     btn.classList.remove('saving'); btn.textContent = 'Save Entry';
