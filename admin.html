@@ -197,7 +197,7 @@ button.adm-row:hover { border-color:var(--border-olive); }
 <script src="js/nav.js"></script>
 <script>
 const esc = s => escHTML(s == null ? '' : String(s));
-const ADM_STATUS = [['watching', 'Watching'], ['up_next', 'Up Next'], ['paused', 'Taking a Break'], ['ongoing', 'To Be Continued'], ['completed', 'Watched'], ['queue', 'Watchlist']];
+const ADM_STATUS = [['watching', 'Watching'], ['up_next', 'Up Next'], ['paused', 'Taking a Break'], ['ongoing', 'To Be Continued'], ['completed', 'Watched'], ['queue', 'Watchlist'], ['dropped', 'Dropped']];
 const ADM_TABS = [['overview', 'Overview'], ['members', 'Members'], ['titles', 'Titles'], ['safety', 'Safety'], ['activity', 'Activity'], ['langs', 'Languages']];
 const ADM_KIND = { comment: 'Comment', note_reply: 'Note reply', list_reply: 'List reply' };
 const _admNum = n => Number(n || 0).toLocaleString(MSSI18n.locale);
