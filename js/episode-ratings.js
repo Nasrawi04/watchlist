@@ -341,7 +341,7 @@ const MSSEp = (() => {
      (Episodes page cards and profile Episodes tabs) ──
      o = { title, poster, tmdbId, status, rows:[{season_number, episode_number, score, updated_at}],
            total, userId (someone else's), whoName } */
-  const STATUS_LABEL = { watching: 'Watching', ongoing: 'To Be Continued', completed: 'Watched', up_next: 'Up Next', paused: 'Taking a Break', queue: 'Watchlist' };
+  const STATUS_LABEL = { watching: 'Watching', ongoing: 'To Be Continued', completed: 'Watched', up_next: 'Up Next', paused: 'Taking a Break', queue: 'Watchlist', dropped: 'Dropped' };
   function showPopup(o) {
     const rows = (o.rows || []).filter(r => r.episode_number > 0).sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
     const avg = rows.length ? rows.reduce((x, r) => x + Number(r.score), 0) / rows.length : null;
