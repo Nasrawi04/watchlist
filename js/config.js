@@ -636,17 +636,21 @@ function mssIsSpoiler(e) { return !!(e && (e.spoiler === true || (e.ratings && e
 // opts.id: the note's entry id — once revealed (on its card or in its popup)
 // it stays revealed everywhere for the rest of the visit
 const _mssRevealed = new Set();
+// opts: compact, id (remembered once revealed), e (the title — some have their own wording, easter-egg.js)
 function mssSpoilerHTML(innerHTML, opts = {}) {
   const id = opts.id != null ? String(opts.id) : '';
   if (id && _mssRevealed.has(id)) return `<div class="spoiler revealed${opts.compact ? ' spoiler-compact' : ''}"><div class="spoiler-text">${innerHTML}</div></div>`;
-  return `<div class="spoiler${opts.compact ? ' spoiler-compact' : ''}"${id ? ` data-sid="${escHTML(id)}"` : ''}>
+  const egg = _mssEggSpoiler(opts.e);
+  return `<div class="spoiler${opts.compact ? ' spoiler-compact' : ''}${egg ? ' spoiler-egg' : ''}"${id ? ` data-sid="${escHTML(id)}"` : ''}>
     <div class="spoiler-text" aria-hidden="true">${innerHTML}</div>
     <button type="button" class="spoiler-reveal" onclick="mssRevealSpoiler(event, this)">
-      <span class="spoiler-ic">${icon('eyeOff', 15)}</span>
-      <span><b>Spoiler</b><small>Tap to reveal</small></span>
+      ${egg ? `<span class="spoiler-ic" aria-hidden="true">${escHTML(egg.tag.replace(/^Rule /, ''))}</span><span><b>${escHTML(egg.title)}</b><small>${escHTML(egg.sub)}</small></span>`
+        : `<span class="spoiler-ic">${icon('eyeOff', 15)}</span><span><b>Spoiler</b><small>Tap to reveal</small></span>`}
     </button>
   </div>`;
 }
+// a title's own spoiler wording (easter-egg.js — every page that shows spoilers loads it)
+const _mssEggSpoiler = e => (e ? MSSEgg.spoiler(e) : null);
 function mssRevealSpoiler(ev, btn) {
   ev.stopPropagation(); ev.preventDefault();
   const wrap = btn.closest('.spoiler');
@@ -655,13 +659,16 @@ function mssRevealSpoiler(ev, btn) {
   wrap.querySelector('.spoiler-text')?.removeAttribute('aria-hidden');
   btn.blur();   // the button disappears — don't leave keyboard focus stranded on it
 }
-function mssSpoilerTag() { return `<span class="spoiler-tag">${icon('eyeOff', 11)} Spoiler</span>`; }
+function mssSpoilerTag(e) {
+  const egg = _mssEggSpoiler(e);
+  return `<span class="spoiler-tag${egg ? ' spoiler-tag-egg' : ''}">${icon('eyeOff', 11)} ${escHTML(egg ? egg.tag : 'Spoiler')}</span>`;
+}
 // The "Mark as spoiler" switch shown under note editors
-function mssSpoilerToggleHTML(id) {
+function mssSpoilerToggleHTML(id, e) {
   return `<label class="spoiler-toggle" for="${id}">
     <input type="checkbox" id="${id}">
     <span class="spoiler-toggle-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-    <span class="spoiler-toggle-text"><b>Mark as spoiler</b></span>
+    <span class="spoiler-toggle-text"><b>${escHTML(_mssEggSpoiler(e)?.toggle || 'Mark as spoiler')}</b></span>
   </label>`;
 }
 
