@@ -1342,6 +1342,8 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 .sf-title { font-family:'Oswald',var(--sans); font-weight:600; font-size:18px; color:var(--text); }
 .sf-close { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:18px; line-height:1; padding:0; transition:color .15s; }
 .sf-close:hover { color:var(--text); }
+.sf-close:focus { outline:none; }
+.sf-close:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; border-radius:6px; }   /* keyboard only, in the site's colour */
 .sf-body { overflow-y:auto; overscroll-behavior-y:contain; padding:8px 20px 4px; flex:1; min-height:0; scrollbar-gutter:stable; }
 
 .sf-section-label {
@@ -6600,7 +6602,9 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 @media(max-width:340px) { .ls-og .genre-opt { font-size:11.5px; padding:7px 3px; } }
 .ls-search svg { z-index:1; }
 /* Export Studio — Episode ratings (the chart preview, the show chips) */
-.xs-ep-t { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:inherit !important; font-weight:inherit !important; color:inherit !important; }
+/* Export Studio: search boxes like List Studio's; Which show = search, sort, a list to pick from */
+.xs-search { margin-bottom:8px; }
+.xs-ep-tools { grid-template-columns:minmax(0, 1fr); padding-top:2px; margin-bottom:10px; }
 /* Create Card — hide the note / a spoiler note (export plan step 9) */
 #createCardPrivRow { margin:0 0 14px; }
 #createCardPrivRow[hidden] { display:none; }
