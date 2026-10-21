@@ -41,6 +41,8 @@
   .np-page-list .notif-av { width:38px; height:38px; font-size:15px; }
   .np-page-list .notif-text { font-size:13px; }
 }
+.np-hear-link { display:inline-block; margin-top:8px; font-size:12.5px; font-weight:600; color:var(--olive-light); text-decoration:none; }
+.np-hear-link:hover { text-decoration:underline; }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -58,6 +60,7 @@
     <div>
       <h1 class="np-page-title">Notifications</h1>
       <div class="np-page-sub" id="npSub">New releases, comments and likes, friend activity, list invites and friend requests — all in one place.</div>
+      <a class="np-hear-link" href="settings.html#friendHear">What my friends hear about →</a>
     </div>
     <div class="np-page-actions">
       <button class="np-page-btn primary" id="npReadAll" onclick="npMarkAllRead()">Mark all read</button>
