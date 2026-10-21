@@ -438,6 +438,7 @@ async function loadListsPage() {
   if (foreignIds.length) {
     const { data: foreignRows } = await sb.from('entries').select('*').in('id', foreignIds);
     (foreignRows || []).forEach(e => { _listsEntryMap[e.id] = e; });
+    await mssFillHiddenListItems(foreignIds, _listsEntryMap);   // a collaborator's hidden title (073)
   }
   if (_listsMode === 'personal') renderListsPage();
   if (await MSSList.hydrate(_listsAll) && _listsMode === 'personal') renderListsPage();
@@ -1308,6 +1309,7 @@ function _fetchSocialLists(force) {
     ]);
     _socialEntryMap = {};
     (entryRes.data || []).forEach(e => { _socialEntryMap[e.id] = e; });
+    await mssFillHiddenListItems(entryItemIds, _socialEntryMap);   // hidden titles (073): name + poster only
     _socialListsMyReactions = {};
     (reactRes.data || []).forEach(r => { _socialListsMyReactions[r.list_id] = r.is_like ? 'like' : 'dislike'; });
     _socialListsCache = lists;
