@@ -1169,6 +1169,52 @@ function mssToolbarHTML(label, count, barHTML = '', noun = 'item') {
      })
    Cards are keyboard-usable: links, or role="button" + Enter / Space.
 ══════════════════════════════════════════ */
+// "Who can view" (lists 068, notes 069): the private link — copies it, or a fresh one
+// (fresh = the old link stops working). kind: 'list' → list-view.html, 'note' → notes.html
+async function mssCopyShareLink(kind, id, fresh) {
+  if (fresh && !(await showConfirm({ title: 'Make a new link?', message: 'The old link stops working — people who only had the old link lose access.', confirmText: 'New link', iconName: 'link' }))) return;
+  const fn = { list: ['list_share_link', 'reset_list_share_link', 'p_list', 'list-view.html?list='], note: ['note_share_link', 'reset_note_share_link', 'p_entry', 'notes.html?note='] }[kind];
+  try {
+    const { data: token, error } = await sb.rpc(fresh ? fn[1] : fn[0], { [fn[2]]: id });
+    if (error || !token) throw error || new Error('no link');
+    await navigator.clipboard.writeText(new URL(`${fn[3]}${encodeURIComponent(id)}&k=${encodeURIComponent(token)}`, location.href).toString());
+    showToast(fresh ? 'New link copied — the old one no longer works.' : 'Private link copied!');
+  } catch (e) {
+    console.error('Share link:', e);
+    showToast('Couldn’t get the link — try again.', 'err');
+  }
+}
+// The note "Who can view" dropdown (note editor, title edit page) + its private link
+// buttons (entryId: the title the note is on — no link before it's saved)
+function mssNoteVisHTML(id, value, entryId) {
+  const v = value || 'anyone';
+  return `<div class="mss-vis-row">
+      <label class="mss-vis" for="${id}">${icon(v === 'anyone' ? 'globe' : v === 'friends' ? 'users' : 'lock', 14)}<span>Who can view</span>
+        <select id="${id}" onchange="mssNoteVisChanged('${id}')">
+          <option value="anyone"${v === 'anyone' ? ' selected' : ''}>Anyone</option>
+          <option value="friends"${v === 'friends' ? ' selected' : ''}>Friends</option>
+          <option value="link"${v === 'link' ? ' selected' : ''}>Private link</option>
+        </select></label>
+      <span class="mss-vis-links" id="${id}Link" data-entry="${escHTML(entryId || '')}"${v === 'anyone' || !entryId ? ' hidden' : ''}>
+        <button type="button" class="mss-vis-link" onclick="mssCopyShareLink('note', ${attrJSON(entryId || '')})">${icon('link', 13)} Copy link</button>
+        <button type="button" class="mss-vis-link" onclick="mssCopyShareLink('note', ${attrJSON(entryId || '')}, true)" aria-label="Make a new link">${icon('refresh', 13)}</button>
+      </span>
+    </div>`;
+}
+function mssNoteVisChanged(id) {
+  const v = document.getElementById(id).value, row = document.getElementById(id).closest('.mss-vis-row');
+  row.querySelector('.mss-vis svg').outerHTML = icon(v === 'anyone' ? 'globe' : v === 'friends' ? 'users' : 'lock', 14);
+  const links = document.getElementById(id + 'Link');
+  if (links) links.hidden = v === 'anyone' || !links.dataset.entry;
+}
+
+// "Who can view" (lists 068, notes 069) as a small tag — none for Anyone
+function mssVisBadge(visibility) {
+  if (visibility === 'friends') return `<span class="list-vis-badge" title="Only friends can view">${icon('users', 11)} Friends</span>`;
+  if (visibility === 'link') return `<span class="list-vis-badge" title="Only people with the link">${icon('lock', 11)} Private</span>`;
+  return '';
+}
+
 const MSSCard = (() => {
   const RANK = r => r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other';
   const KEYS = `onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"`;
