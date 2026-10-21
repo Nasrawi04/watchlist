@@ -28,7 +28,7 @@ const MSSListStudio = (() => {
   const $ = id => document.getElementById(id);
   const esc = s => escHTML(s == null ? '' : String(s));
   const STATUS = { watched: ['completed', 'ongoing'], watching: ['watching', 'paused'], watchlist: ['queue', 'up_next'] };
-  const STATUS_TAG = { watching: 'Watching', paused: 'Taking a Break', queue: 'Watchlist', up_next: 'Up Next', ongoing: 'Caught Up' };
+  const STATUS_TAG = { watching: 'Watching', paused: 'Taking a Break', queue: 'Watchlist', up_next: 'Up Next', ongoing: 'Caught Up', dropped: 'Dropped' };
   // The picker's Sort, named like the site's Sort menus ("Ratings: Highest")
   const PICK_SORTS = [['Ratings', [['highest', 'Highest'], ['lowest', 'Lowest']]], ['Date Watched', [['watched_new', 'Latest'], ['watched_old', 'Earliest']]],
     ['Added', [['added_new', 'Latest'], ['added_old', 'Earliest']]], ['Release Date', [['release_new', 'Latest'], ['release_old', 'Earliest']]], ['Alphabetical', [['az', 'A → Z'], ['za', 'Z → A']]]];
