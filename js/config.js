@@ -1657,7 +1657,7 @@ const MSSPicker = (() => {
 // danger (default true) → solid red confirm button; danger:false → solid olive
 // (for non-destructive actions like signing out or starting a rewatch).
 // cancelText:null → a single-button notice (resolves true when dismissed).
-function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', cancelText = 'Cancel', iconName = 'x', danger = true } = {}) {
+function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', cancelText = 'Cancel', iconName = 'x', iconHTML = '', tone = '', danger = true } = {}) {
   return new Promise((resolve) => {
     const overlay  = document.getElementById('confirmOverlay');
     if (!overlay) { resolve(window.confirm(message || title)); return; }
@@ -1667,7 +1667,8 @@ function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Con
     const btnCancel = document.getElementById('confirmCancel');
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMsg').textContent   = message;
-    document.getElementById('confirmIcon').innerHTML    = icon(iconName, 36);
+    document.getElementById('confirmIcon').innerHTML    = iconHTML || icon(iconName, 36);
+    overlay.dataset.tone = tone;           // a one-off look (e.g. 'egg' — easter-egg.js)
     btnOk.textContent = confirmText;
     btnOk.classList.toggle('is-safe', !danger);
     btnCancel.textContent = notice ? '' : cancelText;
