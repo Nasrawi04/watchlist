@@ -10,8 +10,9 @@
                   every time you come back to it empty — box = the box you're typing in
      confirm      { title, message, ok, cancel, stamp } — asked before a new or changed note is saved
      saved        the toast after the note is saved
-     spoiler      { title, sub, tag, toggle } — its spoiler notes: the cover's button, the small
-                  tag and the "Mark as spoiler" switch say this instead
+     spoiler      { title, sub, cardSub, tag, toggle } — its spoiler notes: the cover's button,
+                  the covered note on Create Card, the small tag and the "Mark as spoiler"
+                  switch say this instead
 
    Hooks the app calls:
      MSSEgg.noteBox(textarea, getEntry)          — the Notes popup and the detail page's note box
@@ -56,7 +57,7 @@ const MSSEgg = (() => {
         message: 'Posting this note means talking about it — that’s rule #1 and rule #2 gone. Save it anyway?' },
       saved: 'Saved. Nobody talks about it.',
       spoiler: { title: 'The first rule of Fight Club', sub: 'You do not talk about Fight Club. Tap to break it.',
-        tag: 'Rule #1', toggle: 'Mark as spoiler — Rule #1' },
+        cardSub: 'You do not talk about Fight Club.', tag: 'Rule #1', toggle: 'Mark as spoiler — Rule #1' },
     },
   ];
 
