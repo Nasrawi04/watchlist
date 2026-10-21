@@ -16,7 +16,8 @@
          your lists — and lists shared with you — one under another as list
          cards; tap one to add the title (tap again to take it out). Ranked
          lists with a set order (Highest, A–Z…) re-sort themselves.
-     MSSList.reorder(list, mode, resolve) → puts a ranked list in its saved order
+     MSSList.reorder(list, mode, resolve) → puts a list in its saved order (sort_mode)
+     MSSList.ORDERS · sortBy(rows, mode) · orderValue(e, mode) · orderHint(e, mode)
      MSSList.rankBadge(ranked) · countHTML(n) · postersHTML(items, resolve) ·
      collabLineHTML(list, collaborators) · avatarHTML(profile)
 
@@ -58,6 +59,7 @@ const MSSList = (() => {
           poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null,
           tmdb_id: Number(tid), tmdb_type: type,
           year: ((type === 'movie' ? d.release_date : d.first_air_date) || '').split('-')[0],
+          released: (type === 'movie' ? d.release_date : d.first_air_date) || '',
           genres: tmdbGenreNames(d.genres),
           cat: type === 'movie' ? 'movies' : 'tv', _t: Date.now(),
         };
@@ -107,7 +109,7 @@ const MSSList = (() => {
   function cardInnerHTML(list, o = {}) {
     const items = list.items || [];
     return `${o.ownerHTML || ''}
-    <div class="lc-title-row"><div class="lc-title" translate="no">${esc(list.title)}</div>${officialBadge(list) || rankBadge(list.ranked)}</div>
+    <div class="lc-title-row"><div class="lc-title" translate="no">${esc(list.title)}</div>${officialBadge(list) || rankBadge(list.ranked)}${mssVisBadge(list.visibility)}</div>
     <div class="lc-meta">${countHTML(items.length)}${o.metaExtra || ''}</div>
     ${o.collabLine || ''}
     ${list.description ? `<div class="lc-desc" translate="no">${esc(list.description)}</div>` : ''}
@@ -136,7 +138,7 @@ const MSSList = (() => {
     const url = `list-view.html?list=${encodeURIComponent(list.id)}`;
     document.getElementById('mssListCard').innerHTML = `
       <div class="lp-head">${head}<button type="button" class="lp-close" onclick="MSSList.close()" aria-label="Close">${icon('x', 18)}</button></div>
-      <div class="lp-title-row"><div class="lp-title" translate="no">${esc(list.title)}</div>${officialBadge(list) || rankBadge(list.ranked)}</div>
+      <div class="lp-title-row"><div class="lp-title" translate="no">${esc(list.title)}</div>${officialBadge(list) || rankBadge(list.ranked)}${mssVisBadge(list.visibility)}</div>
       ${list.description ? `<div class="lp-desc" translate="no">${esc(list.description)}</div>` : ''}
       <div class="lp-meta">${countHTML(items.length)}</div>
       ${o.collabLine || ''}
@@ -217,8 +219,25 @@ const MSSList = (() => {
     }
   }
 
-  /* ── Ranked list order (sort_mode): Highest / Lowest score, A–Z / Z–A or a
-     rating (story, enjoyment, acting, ending); 'picked' keeps the order as is ── */
+  /* ── List order (sort_mode) — ranked and unranked lists ──
+     'picked' (or none) = your own order. Any other mode keeps the list in that
+     order automatically: titles added later slot into place. Titles without the
+     value (e.g. a Discover pick you haven't watched has no watch date) go last. */
+  const ORDERS = [
+    ['picked',      'My order'],
+    ['highest',     'Highest score'],
+    ['lowest',      'Lowest score'],
+    ['watched_new', 'Recently watched'],
+    ['watched_old', 'First watched'],
+    ['release_new', 'Newest release'],
+    ['release_old', 'Oldest release'],
+    ['az',          'Title A → Z'],
+    ['za',          'Title Z → A'],
+    ['enjoyment',   'Best Enjoyment'],
+    ['story',       'Best Story & Plot'],
+    ['acting',      'Best Acting'],
+    ['ending',      'Best Ending & Payoff'],
+  ];
   function subRating(e, concept) {
     if (!e || !e.ratings) return null;
     const animated = e.cat === 'anime' || e.cat === 'cartoons';
@@ -226,18 +245,38 @@ const MSSList = (() => {
     const v = key ? e.ratings[key] : null;
     return typeof v === 'number' ? v : null;
   }
+  const watchedOn = e => String(e?.completed_date || e?.completed_at || '').slice(0, 10) || null;
+  const releasedOn = e => String(e?.released || e?.release_date || e?.first_air_date || e?.year || '').slice(0, 10) || null;
+  // The value a mode sorts by (null = unknown → last); desc = bigger first
+  function orderValue(e, mode) {
+    if (mode === 'highest' || mode === 'lowest') return liveScore(e) != null ? Number(liveScore(e)) : null;
+    if (mode === 'watched_new' || mode === 'watched_old') return watchedOn(e);
+    if (mode === 'release_new' || mode === 'release_old') return releasedOn(e);
+    if (mode === 'az' || mode === 'za') return (e?.title || '').toLowerCase();
+    return subRating(e, mode);
+  }
+  const DESC = new Set(['highest', 'watched_new', 'release_new', 'za', 'enjoyment', 'story', 'acting', 'ending']);
+  // Sorts [{ id, item }] by mode (stable); returns a new array
+  function sortBy(rows, mode) {
+    if (!mode || mode === 'picked') return rows.slice();
+    return rows.map((r, i) => ({ r, i, v: orderValue(r.item, mode) })).sort((a, b) => {
+      if (a.v == null || b.v == null) return (a.v == null) - (b.v == null) || a.i - b.i;
+      const c = typeof a.v === 'number' ? a.v - b.v : String(a.v).localeCompare(String(b.v));
+      return (DESC.has(mode) ? -c : c) || a.i - b.i;
+    }).map(x => x.r);
+  }
   function reorder(list, mode, resolve) {
     if (!mode || mode === 'picked') return;
-    const resolved = (list.items || []).map(id => ({ id, item: resolve(id) })).filter(x => x.item);
-    resolved.sort((a, b) => {
-      if (mode === 'az') return (a.item.title || '').localeCompare(b.item.title || '');
-      if (mode === 'za') return (b.item.title || '').localeCompare(a.item.title || '');
-      if (['enjoyment', 'story', 'acting', 'ending'].includes(mode)) return (subRating(b.item, mode) ?? -Infinity) - (subRating(a.item, mode) ?? -Infinity);
-      const sa = liveScore(a.item) ?? -Infinity, sb_ = liveScore(b.item) ?? -Infinity;
-      return mode === 'highest' ? sb_ - sa : sa - sb_;
-    });
+    const resolved = sortBy((list.items || []).map(id => ({ id, item: resolve(id) })).filter(x => x.item), mode);
     const known = new Set(resolved.map(x => x.id));
     list.items = [...resolved.map(x => x.id), ...(list.items || []).filter(id => !known.has(id))];   // unresolved ones stay, at the end
+  }
+  // Short line for a title under a mode ("Watched 3 Mar 2026", "Released 2014", "8.25")
+  function orderHint(e, mode) {
+    const v = orderValue(e, mode);
+    if (mode === 'watched_new' || mode === 'watched_old') return v ? 'Watched ' + new Date(v + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not watched yet';
+    if (mode === 'release_new' || mode === 'release_old') return v ? 'Released ' + (v.length > 4 ? new Date(v + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { month: 'short', year: 'numeric' }) : v) : 'Release date unknown';
+    return '';
   }
 
   /* ── "Add to List" picker ── */
@@ -309,7 +348,7 @@ const MSSList = (() => {
     if (!l || btn.disabled) return;
     const e = c.entry, had = holds(l, e), before = (l.items || []).slice();
     l.items = had ? before.filter(id => id !== e.id && id !== tmdbKey(e)) : [...before, e.id];
-    if (!had && l.ranked === true) reorder(l, l.sort_mode, addResolve);
+    if (!had) reorder(l, l.sort_mode, addResolve);   // a list kept in order: the new title slots into place
     btn.disabled = true;
     try {
       const { error } = l._collab
@@ -325,5 +364,5 @@ const MSSList = (() => {
     if (add === c) drawAdd();
   }
 
-  return { _react: react, _import: importList, addTo, reorder, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, open, close, rankBadge, officialBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
+  return { _react: react, _import: importList, addTo, reorder, sortBy, orderValue, orderHint, ORDERS, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, open, close, rankBadge, officialBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
 })();
