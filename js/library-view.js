@@ -56,7 +56,9 @@ var _LIB_ARROW_L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 var _LIB_ARROW_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 
 var _libSort = {watching:'newest',queue:'newest',completed:'newest',dropped:'newest'};
-var _libCollapsed = {watching:false,queue:false,completed:false,dropped:false};
+// Dropped starts closed every time you come to the page — opening it lasts only while you're here
+var _libCollapsed = {watching:false,queue:false,completed:false,dropped:true};
+window.addEventListener('pageshow', function(ev){ if (ev.persisted && !_libCollapsed.dropped) _libToggleSec('dropped'); });   // Back / Forward restore → closed again
 var _libWatchView = localStorage.getItem(LIB_KEY+'libWatchView')||'list';
 var _libQueueView = localStorage.getItem(LIB_KEY+'libQueueView')||'grid';
 var _libCompView  = localStorage.getItem(LIB_KEY+'libCompView')||'list';
@@ -209,6 +211,8 @@ function _libToggleSec(key){
   _libCollapsed[key]=!_libCollapsed[key];
   var el=document.getElementById('libbody-'+key);
   if(el)el.classList.toggle('open',!_libCollapsed[key]);
+  var ch=document.querySelector('#libsec-'+key+' .chevron-btn svg');   // the arrow follows open / closed
+  if(ch)ch.style.transform=_libCollapsed[key]?'rotate(-90deg)':'';
 }
 function _libViewToggle(vk){
   if(vk==='watch'){_libWatchView=_libWatchView==='list'?'grid':'list';localStorage.setItem(LIB_KEY+'libWatchView',_libWatchView);}
