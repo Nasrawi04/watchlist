@@ -166,6 +166,7 @@ const MSSNote = (() => {
       </div>`;
     MSSDialog.bind(el, close);
     document.body.appendChild(el);
+    MSSEgg.noteBox(document.getElementById('mssNoteTextarea'), () => current);   // easter-egg.js
     MSSRich.attach(document.getElementById('mssNoteTextarea'), { maxWords: NOTE_WORD_LIMIT, onLimit: () => {
       const c = document.getElementById('mssNoteCount');
       c.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`;
@@ -266,6 +267,7 @@ const MSSNote = (() => {
     if (!e) return;
     const btn = document.getElementById('mssNoteSave');
     const notes = document.getElementById('mssNoteTextarea').value.trim();
+    if (!(await MSSEgg.beforeNoteSave(e, notes, e.notes))) return;   // easter-egg.js
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
       const spoiler = !!document.getElementById('mssNoteSpoiler').checked;
@@ -277,7 +279,7 @@ const MSSNote = (() => {
       e.notes = notes; e.ratings = ratings; e.note_visibility = note_visibility;
       close();
       opts.onSaved?.(e);
-      showToast('Note saved!');
+      showToast(MSSEgg.savedMsg(e, 'Note saved!'));
     } catch (err) {
       console.error('MSSNote save:', err);
       showToast('Error saving note.', 'err');
