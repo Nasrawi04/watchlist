@@ -18,7 +18,7 @@
    Requires config.js (liveScore, CAT_META), export.js (MSSPdf helpers), taste-profile.js (MSSTaste), year-review.js (MSSYear).
 ══════════════════════════════════════════════════════════════ */
 const MSSFormats = (() => {
-  const STATUS = { completed: 'Watched', ongoing: 'To be continued', queue: 'Watchlist', watching: 'Watching', up_next: 'Up next', paused: 'Paused' };
+  const STATUS = { completed: 'Watched', ongoing: 'To be continued', queue: 'Watchlist', watching: 'Watching', up_next: 'Up next', paused: 'Paused', dropped: 'Dropped' };
   const isMovie = e => e.cat === 'movies' || e.ratings?._media_type === 'movie' || e.tmdb_type === 'movie';
   const yr = e => e.year ? String(e.year).slice(0, 4) : '';
   const sc = e => { const v = MSSPdf.score(e); return v == null ? null : v; };
