@@ -381,33 +381,50 @@ function _tmdbCardHTML(posterUrl, title, year, onclick) {
   return MSSCard.poster({ poster: posterUrl, title, year, onclick });
 }
 
-/* Currently Watching — only what you're watching right now (not Up Next or Taking a Break) */
+/* Currently Watching — only what you're watching right now (not Up Next or Taking a Break).
+   One title: the wide list card. More: the Library's Watching grid cards, scrolling sideways. */
 function renderHomeWatching(entries) {
   const watching = entries.filter(e => e.status === 'watching');
   const el = document.getElementById('homeWatching');
   if (!watching.length) { el.innerHTML = ''; return; }
-  el.innerHTML = `
-    <div class="section-eyebrow">In Progress</div>
-    <div class="section-title">Currently Watching</div>
-    <div class="watch-list">
-      ${watching.slice(0, 6).map(e => {
-        const isM = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-        const pct = e.total_eps ? Math.round(((e.watched||0) / e.total_eps) * 100) : 0;
-        const epStr = isM ? '' : (e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : ''));
-        const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
-        const rtStr = isM && (rtH||rtM) ? (rtH ? `${rtH}h ${rtM}m` : `${rtM}m`) : '';
-        const typeBadge = `<span class="${isM ? 'type-label' : 'type-label type-label-tv'}">${isM ? 'Movie' : 'TV Show'}</span>`;
-        return `<div class="w-card" onclick="_homeOpenInfo('${e.id}')">
-          <div class="w-poster" style="position:relative">${posterHTML(e)}</div>
-          <div class="w-body">
-            <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div></div>
-            ${epStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${epStr}</span></div>` : ''}
-            ${rtStr ? `<div class="w-ep-row">${typeBadge}<span class="w-ep-badge">${rtStr}</span></div>` : ''}
-            ${!epStr && !rtStr ? `<div class="w-ep-row">${typeBadge}</div>` : ''}
-            ${(!isM && e.total_eps) ? `<div class="w-prog-track" style="margin-top:6px;"><div class="w-prog-fill" style="width:${pct}%"></div></div><div class="w-prog-label">${e.watched||0} / ${e.total_eps} eps · ${pct}%</div>` : (!isM && e.watched ? `<div class="w-prog-label">${e.watched} watched</div>` : '')}
-          </div>
-        </div>`;
-      }).join('')}
+  const info = e => {
+    const isM = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+    const pct = e.total_eps ? Math.round(((e.watched || 0) / e.total_eps) * 100) : 0;
+    const rtH = Number(e.runtime_h) || 0, rtM = Number(e.runtime_m) || 0;
+    const ep = isM ? (rtH || rtM ? (rtH ? `${rtH}h ${rtM}m` : `${rtM}m`) : '')
+      : (e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : ''));
+    return { isM, pct, ep, rewatch: typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 };
+  };
+  const head = `<div class="section-eyebrow">In Progress</div><div class="section-title">Currently Watching</div>`;
+  if (watching.length === 1) {
+    const e = watching[0], { isM, pct, ep, rewatch } = info(e);
+    const typeBadge = `<span class="${isM ? 'type-label' : 'type-label type-label-tv'}">${isM ? 'Movie' : 'TV Show'}</span>`;
+    el.innerHTML = `${head}
+      <div class="watch-list"><div class="w-card" onclick="_homeOpenInfo('${e.id}')">
+        <div class="w-poster" style="position:relative">${posterHTML(e)}</div>
+        <div class="w-body">
+          <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${rewatch ? rewatchBadgeHTML(e) : ''}</div></div>
+          <div class="w-ep-row">${typeBadge}${ep ? `<span class="w-ep-badge">${ep}</span>` : ''}</div>
+          ${(!isM && e.total_eps) ? `<div class="w-prog-track" style="margin-top:6px;"><div class="w-prog-fill" style="width:${pct}%"></div></div><div class="w-prog-label">${e.watched || 0} / ${e.total_eps} eps · ${pct}%</div>` : (!isM && e.watched ? `<div class="w-prog-label">${e.watched} watched</div>` : '')}
+        </div>
+      </div></div>`;
+    return;
+  }
+  const cards = watching.slice(0, 12).map(e => {
+    const { isM, pct, ep, rewatch } = info(e);
+    return `<div class="wg-card" onclick="_homeOpenInfo('${e.id}')">
+        <div class="wg-poster" style="position:relative">${posterHTML(e, 'big')}${rewatch ? `<div class="rewatch-card-icon">${icon('refresh', 9)}${getRewatchCount(e)}</div>` : ''}
+          <span class="${isM ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${isM ? 'Movie' : 'TV Show'}</span></div>
+        <div class="wg-info"><div class="title-year-row"><div class="wg-title" translate="no">${escHTML(e.title)}</div>${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}</div>
+          ${ep ? `<div class="wg-genre"><span class="w-ep-badge">${ep}</span></div>` : ''}
+          ${!isM && e.total_eps ? `<div class="fv-w-prog-track" style="margin-top:6px;"><div class="fv-w-prog-fill" style="width:${pct}%"></div></div><div class="wg-prog-label">${e.watched || 0} / ${e.total_eps} eps · ${pct}%</div>` : ''}
+        </div></div>`;
+  }).join('');
+  el.innerHTML = `${head}
+    <div class="grid-nav-wrap">
+      <button class="grid-nav-btn arr-left" onclick="event.stopPropagation();document.getElementById('homeWatchingGrid').scrollBy({left:-660,behavior:'smooth'})" aria-label="Scroll left">${_NAV_LEFT_SVG}</button>
+      <button class="grid-nav-btn arr-right" onclick="event.stopPropagation();document.getElementById('homeWatchingGrid').scrollBy({left:660,behavior:'smooth'})" aria-label="Scroll right">${_NAV_RIGHT_SVG}</button>
+      <div class="watching-grid" id="homeWatchingGrid">${cards}</div>
     </div>`;
 }
 
