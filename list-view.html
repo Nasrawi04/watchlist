@@ -618,6 +618,7 @@ async function _lvLoad() {
       if (entryItemIds.length) {
         const { data: entryRows } = await sb.from('entries').select('*').in('id', entryItemIds);
         (entryRows || []).forEach(e => { map[e.id] = e; });
+        await mssFillHiddenListItems(entryItemIds, map);   // titles hidden from you (073): name + poster only
       }
       await _hydrateTmdbItems(items);
       entries = items.map(id => (typeof id === 'string' && id.startsWith('tmdb:')) ? _tmdbItemCache[id] : map[id]).filter(Boolean);
