@@ -100,7 +100,7 @@ const MSSNight = (() => {
       return `<${open ? 'button type="button"' : 'div'} class="mn-take${p.me ? ' me' : ''}${e ? '' : ' empty'}" ${open ? `onclick="${open}"` : ''}>
           <span class="mn-take-top">${av(p, 30)}<span class="mn-take-who"><b translate="no">${who(p)}</b><small>${status(e)}</small></span>
             ${p.score != null ? `<span class="mn-take-score${p === hi && rated.length > 1 ? ' top' : ''}">${p.score.toFixed(1)}</span>` : `<span class="mn-take-score none">—</span>`}</span>
-          ${note ? (mssIsSpoiler(e) && !p.me ? mssSpoilerHTML(quote, { compact: true, id: e.id }) : quote) : ''}
+          ${note ? (mssIsSpoiler(e) && !p.me ? mssSpoilerHTML(quote, { compact: true, id: e.id, e }) : quote) : ''}
           ${tags ? `<span class="mn-tags">${tags}</span>` : ''}
           ${p.me && (!e || p.score == null) ? `<span class="mn-take-cta">${icon('ratingStar', 12)} ${e ? 'Rate it' : 'Log it & rate it'}</span>` : ''}
         </${open ? 'button' : 'div'}>`;
