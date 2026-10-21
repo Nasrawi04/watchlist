@@ -149,6 +149,40 @@
 .push-switch[aria-checked="true"] span { transform:translateX(20px); }
 .push-switch:disabled { opacity:.45; cursor:default; }
 .push-link { display:inline-block; margin-top:12px; font-size:12.5px; font-weight:600; color:var(--olive-light); text-decoration:none; }
+/* What my friends hear about (072): a switch per activity + "Except…" friends */
+.fh-jump { margin-inline-start:14px; }
+.fh-list { display:flex; flex-direction:column; }
+.fh-row { padding:14px 0; border-top:0.5px solid var(--border); }
+.fh-row:first-child { border-top:none; padding-top:2px; }
+.fh-row:last-child { padding-bottom:0; }
+.fh-loading { font-size:13px; color:var(--text-3); }
+.fh-except { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:9px; }
+.fh-except-btn {
+  display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:5px 12px; border-radius:999px; cursor:pointer;
+  border:1px solid var(--border-2); background:var(--bg-3); color:var(--text-2); font:600 12px 'Manrope',var(--sans);
+  transition:border-color .15s, color .15s;
+}
+.fh-except-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.fh-except-btn.has { border-color:var(--border-olive); color:var(--olive-light); background:var(--olive-faint); }
+.fh-except-btn:focus-visible, .fh-pick-row:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.fh-except-note { font-size:11.5px; color:var(--text-3); }
+.fh-chips { display:flex; flex-wrap:wrap; gap:5px; width:100%; }
+.fh-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 9px 3px 3px; border-radius:999px; background:var(--bg-3); border:0.5px solid var(--border-2); font-size:11.5px; font-weight:600; color:var(--text-2); }
+.fh-av { width:20px; height:20px; border-radius:50%; overflow:hidden; flex:none; display:grid; place-items:center; background:var(--olive); color:#fff; font-size:10px; font-weight:700; }
+.fh-av img { width:100%; height:100%; object-fit:cover; }
+/* the friend picker */
+.fh-pick-card { max-width:440px; }
+.fh-pick-body { padding:14px 18px; display:flex; flex-direction:column; gap:10px; min-height:0; overflow:hidden; }
+.fh-pick-hint { font-size:12.5px; color:var(--text-2); line-height:1.5; margin:0; }
+.fh-pick-list { max-height:min(46vh, 360px); overflow-y:auto; overscroll-behavior:contain; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-3); }
+.fh-pick-row { display:flex; align-items:center; gap:10px; width:100%; padding:9px 12px; border:none; background:none; color:var(--text); font:inherit; text-align:start; cursor:pointer; }
+.fh-pick-row + .fh-pick-row { border-top:0.5px solid var(--border); }
+.fh-pick-row:hover, .fh-pick-row.on { background:var(--olive-faint); }
+.fh-pick-row .fh-av { width:32px; height:32px; font-size:13px; }
+.fh-pick-name { flex:1; min-width:0; font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fh-pick-box { flex:none; width:22px; height:22px; border-radius:6px; border:1.5px solid var(--border-2); display:grid; place-items:center; color:#fff; }
+.fh-pick-row.on .fh-pick-box { background:var(--olive); border-color:var(--olive); }
+.fh-pick-none { padding:16px; font-size:13px; color:var(--text-3); text-align:center; }
 /* Episode Ratings toggle: on phones the three choices share the width (never wider than the screen) */
 @media(max-width:640px) {
   .ep-mode-toggle { width:100%; }
@@ -247,6 +281,7 @@
               <button type="button" class="push-switch" id="pushSwitch" role="switch" aria-checked="true" aria-labelledby="notifPopupsLabel" aria-describedby="pushStatus" title="New notification alerts" onclick="toggleNotifPopupsSetting()"><span aria-hidden="true"></span></button>
             </div>
             <a href="notifications.html" class="push-link">Open notifications →</a>
+            <a href="#friendHear" class="push-link fh-jump">What my friends hear about →</a>
           </div>
         </div>
 
@@ -328,6 +363,12 @@
           <p class="settings-desc" id="epModeHint" style="margin-top:.6rem;margin-bottom:0"></p>
         </div>
 
+        <div class="settings-section fade-up fade-up-2" id="friendHear">
+          <div class="settings-title">What My Friends Hear About</div>
+          <p class="settings-desc">Friends who turned on your bell get a ping when you do these. Turn any off — or use <b>Except</b> to keep it to a few friends. Friends Activity still shows what you watch.</p>
+          <div class="fh-list" id="fhList"><div class="fh-loading">Loading…</div></div>
+        </div>
+
         <div class="settings-section fade-up fade-up-2">
           <div class="settings-title">Sessions</div>
           <p class="settings-desc">Signed in on a shared or lost device? Sign out of MyScreenFolio everywhere, including this browser.</p>
@@ -390,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _sProfile = profile;
     populateSettings();
     syncThemeButtons();
+    MSSHear.load().catch(err => { console.error(err); document.getElementById('fhList').innerHTML = '<div class="fh-loading">Couldn’t load these — try again later.</div>'; });
   });
 });
 
@@ -836,6 +878,135 @@ async function setEpisodeMode(m) {
   catch (err) { console.error(err); showToast('Couldn’t save that — try again.', 'err'); }
 }
 document.addEventListener('DOMContentLoaded', () => { MSSEp.mode().then(_paintEpisodeMode); });
+
+/* ── What my friends hear about (072) ──
+   One switch per activity (all on by default). "Except…" picks friends:
+   switch on → they don't get it; switch off → only they still do.
+   Saved straight away with set_activity_pref; the database decides every ping. */
+const FH_KINDS = [
+  ['started',   'Started watching',   'When you start a movie or show'],
+  ['episodes',  'Episodes',           'Each episode you watch — a run of them counts as one'],
+  ['finished',  'Finished',           'When you finish something or catch up on a show'],
+  ['rated',     'Rated something',    'The first time you score a title'],
+  ['note',      'Wrote a note',       'When a title gets your note'],
+  ['watchlist', 'Added to watchlist', 'New titles on your Watchlist or Up Next'],
+  ['dropped',   'Dropped',            'When you drop a show or movie'],
+  ['list',      'Made a list',        'A new list (not private-link lists)'],
+  ['poll',      'Posted a poll',      'Goes to all your friends, bell or not'],
+];
+const MSSHear = (() => {
+  let prefs = {}, friends = [], picking = null, ov = null;
+  const st = k => prefs[k] || (prefs[k] = { on: true, ex: [] });
+  const fr = id => friends.find(f => f.id === id);
+  const av = f => `<span class="fh-av" aria-hidden="true">${safeURL(f?.avatar_url) ? `<img src="${safeURL(f.avatar_url)}" alt="">` : escHTML(((f?.username || '?')[0]).toUpperCase())}</span>`;
+
+  async function load() {
+    const me = _sUser.id;
+    const [p, x, f] = await Promise.all([
+      sb.from('activity_prefs').select('kind, is_on').eq('user_id', me).then(r => r.data || [], () => []),
+      sb.from('activity_pref_exceptions').select('kind, friend_id').eq('user_id', me).then(r => r.data || [], () => []),
+      getFriendships(me).then(r => r.filter(z => z.status === 'accepted'), () => []),
+    ]);
+    friends = f.map(z => ({ id: z.friendId, username: z.friendProfile?.username || 'friend', avatar_url: z.friendProfile?.avatar_url || null }))
+      .sort((a, b) => a.username.localeCompare(b.username));
+    prefs = {};
+    p.forEach(r => { st(r.kind).on = r.is_on; });
+    x.forEach(r => { if (fr(r.friend_id)) st(r.kind).ex.push(r.friend_id); });    // ex-friends drop out
+    draw();
+  }
+  function rowHTML([k, name, sub]) {
+    const s = st(k), n = s.ex.length;
+    return `<div class="fh-row" id="fh-${k}">
+        <div class="push-row">
+          <div class="push-text"><div class="push-name" id="fhL-${k}">${name}</div><div class="push-sub" id="fhS-${k}">${sub}</div></div>
+          <button type="button" class="push-switch" role="switch" aria-checked="${s.on}" aria-labelledby="fhL-${k}" aria-describedby="fhS-${k}" onclick="MSSHear._toggle('${k}')"><span aria-hidden="true"></span></button>
+        </div>
+        ${friends.length ? `<div class="fh-except">
+          <button type="button" class="fh-except-btn${n ? ' has' : ''}" onclick="MSSHear._pick('${k}')">${icon('users', 13)} Except${n ? ` · ${n}` : '…'}</button>
+          <span class="fh-except-note">${n ? (s.on ? 'These friends won’t get it' : 'Only these friends still get it') : (s.on ? 'Everyone with your bell on gets it' : 'Nobody gets it')}</span>
+          ${n ? `<div class="fh-chips">${s.ex.map(id => `<span class="fh-chip" translate="no">${av(fr(id))}@${escHTML(fr(id)?.username || '')}</span>`).join('')}</div>` : ''}
+        </div>` : ''}
+      </div>`;
+  }
+  function draw() { document.getElementById('fhList').innerHTML = FH_KINDS.map(rowHTML).join(''); }
+  async function save(k) {
+    const s = st(k);
+    const { error } = await sb.rpc('set_activity_pref', { p_kind: k, p_on: s.on, p_except: s.ex });
+    if (error) { console.error(error); showToast('Couldn’t save that — try again.', 'err'); await load(); }
+  }
+  // flipping a switch flips what "Except" means — so its friends are cleared
+  async function toggle(k) {
+    const s = st(k);
+    const hadEx = s.ex.length;
+    s.on = !s.on; s.ex = [];
+    draw();
+    document.querySelector(`#fh-${k} .push-switch`)?.focus();
+    await save(k);
+    if (hadEx) showToast('Switched — pick “Except” friends again if you want some.');
+  }
+
+  /* the friend picker */
+  function overlay() {
+    if (ov) return ov;
+    ov = document.createElement('div');
+    ov.className = 'soc-overlay'; ov.id = 'fhPickOverlay';
+    ov.innerHTML = `<div class="soc-card fh-pick-card" role="dialog" aria-modal="true" aria-labelledby="fhPickTitle">
+        <div class="sf-header"><div class="sf-title" id="fhPickTitle"></div>
+          <button type="button" class="sf-close" aria-label="Close" onclick="MSSHear._close()">${icon('x', 18)}</button></div>
+        <div class="fh-pick-body">
+          <p class="fh-pick-hint" id="fhPickHint"></p>
+          <div class="fav-picker-search-wrap ls-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="search" id="fhPickQ" class="fav-picker-search-input" autocomplete="off" placeholder="Search your friends…" aria-label="Search your friends" oninput="MSSHear._list()">
+          </div>
+          <div class="fh-pick-list" id="fhPickList" role="group" aria-labelledby="fhPickTitle"></div>
+        </div>
+        <div class="sf-footer">
+          <button type="button" class="sf-clear-btn" onclick="MSSHear._clear()">Clear</button>
+          <button type="button" class="sf-apply-btn" onclick="MSSHear._done()">Done</button>
+        </div>
+      </div>`;
+    MSSDialog.bind(ov, () => close());
+    document.body.appendChild(ov);
+    attachClearButton('fhPickQ');
+    return ov;
+  }
+  function pick(k) {
+    const el = overlay(), s = st(k), name = FH_KINDS.find(x => x[0] === k)[1];
+    picking = { k, sel: new Set(s.ex) };
+    el.querySelector('#fhPickTitle').textContent = `${name} — except…`;
+    el.querySelector('#fhPickHint').textContent = s.on ? 'Tick the friends who shouldn’t get this ping.' : 'This is off — tick the friends who should still get it.';
+    el.querySelector('#fhPickQ').value = '';
+    list();
+    MSSDialog.open(el, { focus: '#fhPickQ' });
+  }
+  function list() {
+    const q = (document.getElementById('fhPickQ').value || '').trim().toLowerCase();
+    const rows = friends.filter(f => !q || f.username.toLowerCase().includes(q));
+    document.getElementById('fhPickList').innerHTML = rows.map(f => {
+      const on = picking.sel.has(f.id);
+      return `<button type="button" class="fh-pick-row${on ? ' on' : ''}" role="checkbox" aria-checked="${on}" onclick="MSSHear._tick(${attrJSON(f.id)}, this)">
+          ${av(f)}<span class="fh-pick-name" translate="no">@${escHTML(f.username)}</span><span class="fh-pick-box" aria-hidden="true">${on ? icon('check', 13) : ''}</span></button>`;
+    }).join('') || '<div class="fh-pick-none">No friends match.</div>';
+  }
+  function tick(id, btn) {
+    const on = !picking.sel.has(id);
+    on ? picking.sel.add(id) : picking.sel.delete(id);
+    btn.classList.toggle('on', on); btn.setAttribute('aria-checked', on);
+    btn.querySelector('.fh-pick-box').innerHTML = on ? icon('check', 13) : '';
+  }
+  function close() { if (ov) MSSDialog.close(ov); picking = null; }
+  async function done() {
+    if (!picking) return;
+    const k = picking.k;
+    st(k).ex = friends.filter(f => picking.sel.has(f.id)).map(f => f.id);
+    close(); draw();
+    document.querySelector(`#fh-${k} .fh-except-btn`)?.focus();
+    await save(k);
+  }
+  function clear() { if (!picking) return; picking.sel.clear(); list(); }
+  return { load, _toggle: toggle, _pick: pick, _list: list, _tick: tick, _close: close, _done: done, _clear: clear };
+})();
 </script>
 <script>
 if ('serviceWorker' in navigator) {
