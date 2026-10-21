@@ -8,7 +8,7 @@
      Watched · Watchlist · Currently watching — whole, or by category, order, top N
      Pick titles — search your library and tick exactly the ones you want
                    (one title = a full page: the whole note + episode ratings)
-     A list      — yours, ones shared with you, or a community list
+     A list      — yours or one shared with you (someone else's list: its Export button on list-view.html)
      My taste profile (taste-profile.js) · Year in Review (year-review.js) — PDF / image / AI
      Episode ratings — one show: the same chart as the Episodes page's export (ep-chart.js) as
                        an image, or as the PDF's first page + every rated episode · AI · CSV
@@ -243,7 +243,7 @@ const MSSStudio = (() => {
     const whats = [...(S.o.custom ? [['custom', S.o.custom.label, 'filter', `${S.o.custom.entries.length} titles`]] : []),
       ...Object.keys(WHAT).map(w => { const n = counts(w); return [w, WHAT[w].label, WHAT[w].ic, `${n} ${n === 1 ? 'title' : 'titles'}`]; }),
       ['picked', 'Pick titles', 'plus', S.pick.length ? `${S.pick.length} picked` : 'Choose exactly which'],
-      ['list', 'A list', 'layers', S.list ? S.list.title : 'Yours, shared or community'],
+      ['list', 'A list', 'layers', S.list ? S.list.title : 'Yours or shared with you'],
       ...(TASTE_FORMATS.includes(S.format) ? [['taste', 'My taste profile', 'activity', taste() ? `From ${taste().rated} rated titles` : 'Rate some titles first'],
         ['year', 'Year in Review', 'clock', S.years.length ? `${S.years[S.years.length - 1]}–${S.years[0]}`.replace(/^(\d+)–\1$/, '$1') : 'Finish something first']] : []),
       ...(EP_FORMATS.includes(S.format) ? [['episodes', 'Episode ratings', 'episodes', !S.epAll ? 'Loading…' : S.epShows.length ? `${S.epShows.length} ${S.epShows.length === 1 ? 'show' : 'shows'} rated` : 'Rate episodes first']] : [])];
@@ -359,21 +359,18 @@ const MSSStudio = (() => {
   }
   function drawPick() { const b = $('xsPickBody'); if (b) { const st = b.querySelector('.xs-pk-list')?.scrollTop || 0; b.innerHTML = pickHTML(); const l = b.querySelector('.xs-pk-list'); if (l) l.scrollTop = st; } drawSide(); }
 
-  /* ── A list: yours, shared with you, community ── */
+  /* ── A list: yours or shared with you — anyone else's is exported from its own page (list-view.html) ── */
   async function loadLists() {
     const me = window._navUser?.id, who = S.o.who || {};
     if (!me) { S.lists = []; return; }
-    const [own, collab, social] = await Promise.all([
+    const [own, collab] = await Promise.all([
       sb.from('favorite_lists').select('id, user_id, title, description, items, ranked').eq('user_id', me).order('created_at', { ascending: true }).then(r => r.data || [], () => []),
       sb.from('list_collaborators').select('list_id').eq('user_id', me).eq('status', 'accepted').then(r => r.data || [], () => []),
-      sb.rpc('get_social_lists', { p_limit: 100 }).then(r => r.data || [], () => []),
     ]);
     const sharedIds = collab.map(r => r.list_id);
     const shared = sharedIds.length ? ((await sb.from('favorite_lists').select('id, user_id, title, description, items, ranked, profiles(username)').in('id', sharedIds)).data || []) : [];
-    const seen = new Set();
-    const norm = (l, group, owner) => { seen.add(l.id); return { id: l.id, title: l.title || 'Untitled list', description: l.description || '', items: l.items || [], ranked: !!l.ranked, owner, mine: group === 'mine', group }; };
-    S.lists = [...own.map(l => norm(l, 'mine', who.username)), ...shared.map(l => norm(l, 'shared', l.profiles?.username)),
-      ...social.filter(l => !seen.has(l.id) && l.user_id !== me).map(l => norm(l, 'community', l.username))];
+    const norm = (l, group, owner) => ({ id: l.id, title: l.title || 'Untitled list', description: l.description || '', items: l.items || [], ranked: !!l.ranked, owner, mine: group === 'mine', group });
+    S.lists = [...own.map(l => norm(l, 'mine', who.username)), ...shared.map(l => norm(l, 'shared', l.profiles?.username))];
   }
   function listsHTML() {
     if (!S.lists) return '<div class="xs-loading">Loading lists…</div>';
@@ -384,7 +381,7 @@ const MSSStudio = (() => {
         <span class="xs-what-ic">${icon('layers', 16)}</span><span class="xs-pk-text"><b translate="no">${esc(l.title)}</b><small translate="no">${l.items.length} ${l.items.length === 1 ? 'title' : 'titles'}${l.mine ? '' : ` · @${esc(l.owner || '')}`}${l.ranked ? ' · ranked' : ''}</small></span>
         <span class="xs-pk-box" aria-hidden="true">${S.list?.id === l.id ? icon('check', 13) : ''}</span></button>`).join('')}` : ''; };
     return `${S.lists.length > 6 ? `<input class="xs-input xs-ls-q" type="search" placeholder="Search lists…" aria-label="Search lists" value="${esc(S.listQ || '')}" oninput="MSSStudio._lq(this.value)">` : ''}
-      <div class="xs-ls-list" role="radiogroup" aria-label="Lists">${grp('mine', 'Your lists') + grp('shared', 'Shared with you') + grp('community', 'Community') || '<div class="xs-pk-none">No lists yet — make one on the Lists page.</div>'}</div>
+      <div class="xs-ls-list" role="radiogroup" aria-label="Lists">${grp('page', 'This list') + grp('mine', 'Your lists') + grp('shared', 'Shared with you') || '<div class="xs-pk-none">No lists yet — make one on the Lists page.</div>'}</div>
       ${S.list && S.listItems && S.listItems.length < S.list.items.length ? `<div class="xs-ls-note">${S.list.items.length - S.listItems.length} of its titles can’t be read and are left out.</div>` : ''}`;
   }
   async function chooseList(id) {
@@ -644,7 +641,7 @@ const MSSStudio = (() => {
     // opened from a list's page: that list, chosen already (added if it isn't among the ones loaded)
     const pl = S?.o.preset?.list;
     if (w === 'list' && pl && !S.list && S.lists) {
-      if (!S.lists.some(l => l.id === pl.id)) S.lists.unshift({ id: pl.id, title: pl.title || 'Untitled list', description: pl.description || '', items: pl.items || [], ranked: !!pl.ranked, owner: pl.owner, mine: !!pl.mine, group: pl.mine ? 'mine' : 'community' });
+      if (!S.lists.some(l => l.id === pl.id)) S.lists.unshift({ id: pl.id, title: pl.title || 'Untitled list', description: pl.description || '', items: pl.items || [], ranked: !!pl.ranked, owner: pl.owner, mine: !!pl.mine, group: pl.mine ? 'mine' : 'page' });
       chooseList(pl.id);
     }
   }
