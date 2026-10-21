@@ -39,7 +39,7 @@ const MSSFriendPop = (() => {
         <div class="nc-top"><div class="nc-author">${profileAv(p, 22)}<span>@${esc(p?.username || 'friend')}</span></div></div>
         <div class="nc-top"><div class="nc-title" translate="no">${esc(e.title)}</div>${scorePill(e)}</div>
         <div class="nc-tags">${typeBadge(e)}${(e.completed_date || e.updated_at) ? `<span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">${fmtDate(e.completed_date || e.updated_at)}</span>` : ''}</div>
-        ${mssIsSpoiler(e) ? mssSpoilerHTML(quote, { compact: true, id: e.id }) : quote}
+        ${mssIsSpoiler(e) ? mssSpoilerHTML(quote, { compact: true, id: e.id, e }) : quote}
         <div class="nc-foot"><span></span><span class="nc-words"><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span></div>
       </div>
     </article>`;
