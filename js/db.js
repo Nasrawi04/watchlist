@@ -4,13 +4,27 @@
 ══════════════════════════════════════════ */
 
 /* ── Fetch entries ── */
+/* Friends / Private notes (069) aren't in entries.notes — fetch their text for the
+   ones you're allowed to read (the database decides) and put it back on the rows.
+   Rows need id + note_visibility. Mutates and returns rows. */
+async function mssWithPrivateNotes(rows) {
+  const need = (rows || []).filter(e => e && e.note_visibility && e.note_visibility !== 'anyone' && !e.notes);
+  if (!need.length) return rows;
+  try {
+    const { data } = await sb.from('entry_private_notes').select('entry_id, notes').in('entry_id', need.map(e => e.id).slice(0, 1000));
+    const by = Object.fromEntries((data || []).map(r => [r.entry_id, r.notes]));
+    need.forEach(e => { if (by[e.id]) e.notes = by[e.id]; });
+  } catch (err) { console.warn('Private notes:', err); }
+  return rows;
+}
+
 async function getEntries(userId, filters = {}) {
   let q = sb.from('entries').select('*').eq('user_id', userId);
   if (filters.cat)    q = q.eq('cat', filters.cat);
   if (filters.status) q = q.eq('status', filters.status);
   const { data, error } = await q.order('created_at', { ascending: false });
   if (error) { console.error('getEntries:', error); return []; }
-  return data || [];
+  return mssWithPrivateNotes(data || []);
 }
 
 async function getPublicEntries(userId) {
@@ -19,13 +33,13 @@ async function getPublicEntries(userId) {
     .eq('user_id', userId)
     .order('final_score', { ascending: false });
   if (error) { console.error('getPublicEntries:', error); return []; }
-  return data || [];
+  return mssWithPrivateNotes(data || []);
 }
 
 async function getEntry(id) {
   const { data, error } = await sb.from('entries').select('*').eq('id', id).single();
   if (error) return null;
-  return data;
+  return (await mssWithPrivateNotes([data]))[0];
 }
 
 async function searchEntries(userId, query) {
@@ -55,7 +69,7 @@ async function saveEntry(payload, userId, existingId) {
     total_eps:      payload.total_eps || null,
     watched:        payload.watched || 0,
     completed_date: payload.completed_date || null,
-    notes:          payload.notes || null,
+    notes:          payload.notes != null ? payload.notes : null,   // '' deletes a note; NULL leaves a Friends / Private one as it is (069)
     ratings:        payload.ratings || {},
     final_score:    score,
     runtime_h:      payload.runtime_h || null,
@@ -63,6 +77,7 @@ async function saveEntry(payload, userId, existingId) {
     tmdb_id:        payload.tmdb_id || null,
     tmdb_type:      payload.tmdb_type || null,
   };
+  if (payload.note_visibility) record.note_visibility = payload.note_visibility;
 
   if (existingId) {
     const { data, error } = await sb.from('entries')
