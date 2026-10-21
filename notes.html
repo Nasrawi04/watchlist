@@ -291,12 +291,31 @@ document.addEventListener('DOMContentLoaded', () => {
             <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
           </div>
         </div>`;
+      _notesOpenLink();
       return;
     }
     _notesUser = user;
     await loadNotesPage();
+    _notesOpenLink();
   });
 });
+
+/* A shared note: notes.html?note=<entry id> (sent to you, a friend's) or with
+   &k=<token> — its private link (069), which opens it for anyone, guests too. */
+async function _notesOpenLink() {
+  const q = new URLSearchParams(location.search), id = q.get('note');
+  if (!id) return;
+  let e = null;
+  if (q.get('k')) e = (await sb.rpc('open_note_link', { p_entry: id, p_token: q.get('k') })).data || null;
+  if (!e) {
+    const { data } = await sb.from('entries').select('*').eq('id', id).maybeSingle();
+    e = data ? (await mssWithPrivateNotes([data]))[0] : null;
+  }
+  if (!e || !(e.notes || '').trim()) { showToast('This note is private, or it doesn’t exist anymore.', 'err'); return; }
+  const own = _notesUser && e.user_id === _notesUser.id;
+  const profile = own ? null : (await sb.from('profiles').select('id, username, display_name, avatar_url').eq('id', e.user_id).maybeSingle()).data || {};
+  MSSViews.open(e, own ? { start: 'note', own: true } : { start: 'note', profile });
+}
 
 let _notesReactionCounts = {}; // entry_id -> { like, dislike }
 
@@ -658,13 +677,13 @@ async function _nuLoadTitleNotes(title) {
 
   try {
     const { data: entries, error } = await sb.from('entries')
-      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, completed_date, user_id, ratings')
+      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, note_visibility, final_score, created_at, completed_date, user_id, ratings')
       .ilike('title', title)
-      .not('notes', 'is', null)
+      .or('notes.not.is.null,note_visibility.neq.anyone')       // Friends / Private notes (069) live elsewhere
       .order('created_at', { ascending: false });
     if (error) throw error;
 
-    const withNotes = (entries || []).filter(e => e.notes && e.notes.trim());
+    const withNotes = (await mssWithPrivateNotes(entries || [])).filter(e => e.notes && e.notes.trim());
     const userIds = [...new Set(withNotes.map(e => e.user_id))];
     const { data: profiles } = userIds.length
       ? await sb.from('profiles').select('id, username, avatar_url').in('id', userIds)
@@ -721,13 +740,13 @@ async function _nuLoadUserNotes() {
 
   try {
     const { data: entries, error } = await sb.from('entries')
-      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, final_score, created_at, completed_date, user_id, ratings')
+      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, note_visibility, final_score, created_at, completed_date, user_id, ratings')
       .eq('user_id', _nuFilterUser.id)
-      .not('notes', 'is', null)
+      .or('notes.not.is.null,note_visibility.neq.anyone')       // Friends / Private notes (069) live elsewhere
       .order('created_at', { ascending: false });
     if (error) throw error;
 
-    const withNotes = (entries || []).filter(e => e.notes && e.notes.trim());
+    const withNotes = (await mssWithPrivateNotes(entries || [])).filter(e => e.notes && e.notes.trim());
     _socialNotesRaw = withNotes.map(e => ({
       entry_id: e.id, user_id: e.user_id, username: _nuFilterUser.username, avatar_url: _nuFilterUser.avatar_url,
       title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
