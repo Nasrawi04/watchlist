@@ -317,7 +317,10 @@ const MSSList = (() => {
       const lists = [...(own.data || []), ...theirs.sort((a, b) => a.sort_order - b.sort_order)];
       // titles of shared lists that aren't yours (their posters on the cards)
       const foreign = [...new Set(lists.flatMap(l => (l.items || []).slice(0, 5)))].filter(id => !isTmdbId(id) && !cur.map[id]);
-      if (foreign.length) ((await sb.from('entries').select('*').in('id', foreign)).data || []).forEach(e => { cur.map[e.id] = e; });
+      if (foreign.length) {
+        ((await sb.from('entries').select('*').in('id', foreign)).data || []).forEach(e => { cur.map[e.id] = e; });
+        await mssFillHiddenListItems(foreign, cur.map);   // a collaborator's hidden title (073)
+      }
       if (add !== cur) return;
       cur.lists = lists;
       drawAdd();
@@ -362,4 +365,4 @@ const MSSList = (() => {
   }
 
   return { _react: react, _import: importList, addTo, reorder, sortBy, orderValue, orderHint, ORDER_GROUPS, orderLabel, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, open, close, rankBadge, officialBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
-})();
+})();s
