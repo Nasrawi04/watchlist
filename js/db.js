@@ -123,6 +123,91 @@ async function updateProgress(id, userId, updates) {
   return _mssWatched(data);
 }
 
+/* ── Dropped (071): drop a title / pick it back up ──
+   MSSDrop.drop(e, { onChange })   asks first ("Drop it?"; a movie can note where you
+                                    stopped, optional), saves, Undo in the toast
+   MSSDrop.pickUp(e, { onChange }) back to Watching, right where you stopped */
+const MSSDrop = (() => {
+  let ov = null;
+  function dialog() {
+    if (ov) return ov;
+    ov = document.createElement('div');
+    ov.className = 'confirm-overlay'; ov.id = 'mssDropOverlay';
+    ov.innerHTML = `<div class="confirm-card drop-card" role="dialog" aria-modal="true" aria-labelledby="mssDropTitle" aria-describedby="mssDropMsg">
+        <div class="confirm-icon" aria-hidden="true">${icon('drop', 36)}</div>
+        <div class="confirm-title" id="mssDropTitle"></div>
+        <div class="confirm-msg" id="mssDropMsg"></div>
+        <fieldset class="drop-at" id="mssDropAt" hidden>
+          <legend>Where did you stop? <small>optional</small></legend>
+          <label><input type="number" id="mssDropH" min="0" max="9" inputmode="numeric" placeholder="0"><span>h</span></label>
+          <label><input type="number" id="mssDropM" min="0" max="59" inputmode="numeric" placeholder="0"><span>m</span></label>
+        </fieldset>
+        <div class="confirm-actions">
+          <button type="button" class="confirm-cancel" id="mssDropNo">Keep watching</button>
+          <button type="button" class="confirm-ok is-safe" id="mssDropYes">Drop it</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    return ov;
+  }
+  // → { at: minutes | null } or null when you change your mind
+  function ask(e) {
+    return new Promise(resolve => {
+      const el = dialog(), $ = id => el.querySelector('#' + id), movie = mssIsMovieEntry(e);
+      const at = mssDroppedAt(e);
+      $('mssDropTitle').textContent = `Drop “${e.title || 'this'}”?`;
+      $('mssDropMsg').textContent = movie
+        ? 'It moves to Dropped. You can still rate it — that score won’t count toward your averages.'
+        : `It moves to Dropped${at ? `, at ${at}` : ''}. You can pick it back up any time — a score you give it won’t count toward your averages.`;
+      $('mssDropAt').hidden = !movie;
+      const m0 = Number(e.ratings?._dropped_at) || 0;
+      $('mssDropH').value = m0 ? Math.floor(m0 / 60) : ''; $('mssDropM').value = m0 ? m0 % 60 : '';
+      const done = v => { MSSDialog.close(el); el._mssClose = null; resolve(v); };
+      $('mssDropNo').onclick = () => done(null);
+      $('mssDropYes').onclick = () => {
+        const h = Math.max(0, Math.min(9, parseInt($('mssDropH').value) || 0)), m = Math.max(0, Math.min(59, parseInt($('mssDropM').value) || 0));
+        done({ at: movie && (h || m) ? h * 60 + m : null });
+      };
+      el._mssClose = () => done(null);
+      if (!el._mssBound) { el._mssBound = true; el.addEventListener('click', ev => { if (ev.target === el) el._mssClose?.(); }); }
+      MSSDialog.open(el, { focus: movie ? '#mssDropH' : '#mssDropNo' });
+    });
+  }
+  async function save(e, status, ratings, o) {
+    const uid = window._navUser?.id || (await getCurrentUser()).id;
+    const prev = { status: e.status, ratings: e.ratings };
+    await updateProgress(e.id, uid, { status, ratings });
+    Object.assign(e, { status, ratings });
+    o.onChange?.(e);
+    return { uid, prev };
+  }
+  async function drop(e, o = {}) {
+    const a = await ask(e);
+    if (!a) return false;
+    const ratings = { ...(e.ratings || {}) };
+    if (a.at) ratings._dropped_at = a.at; else delete ratings._dropped_at;
+    try {
+      const { uid, prev } = await save(e, 'dropped', ratings, o);
+      showUndoToast(`Dropped “${e.title}”`, async () => {
+        await updateProgress(e.id, uid, prev);
+        Object.assign(e, prev);
+        o.onChange?.(e);
+      });
+      return true;
+    } catch (err) { console.error('MSSDrop.drop:', err); showToast('Couldn’t drop it — try again.', 'err'); return false; }
+  }
+  async function pickUp(e, o = {}) {
+    const ratings = { ...(e.ratings || {}) };
+    delete ratings._dropped_at;
+    try {
+      await save(e, 'watching', ratings, o);
+      showToast(`Picked “${e.title}” back up`);
+      return true;
+    } catch (err) { console.error('MSSDrop.pickUp:', err); showToast('Couldn’t update it — try again.', 'err'); return false; }
+  }
+  return { drop, pickUp };
+})();
+
 /* ── Quick create (from modal) ── */
 async function quickCreate(payload, userId) {
   // Check for duplicates two ways: by tmdb_id+type when we have one (more
@@ -570,5 +655,6 @@ function computeStats(entries) {
   const wtH = Math.floor(movieMins / 60);
   const wtM = movieMins % 60;
   const watchTime = movieMins ? (wtH ? `${wtH}h ${wtM}m` : `${wtM}m`) : null;
-  return { total: entries.length, completed: completed.length, watching: watching.length, queue: queue.length, avgScore, totalEps: totalEps || 0, watchTime, movieMins };
+  const dropped = entries.filter(e => e.status === 'dropped').length;
+  return { total: entries.length, completed: completed.length, watching: watching.length, queue: queue.length, dropped, avgScore, totalEps: totalEps || 0, watchTime, movieMins };
 }
