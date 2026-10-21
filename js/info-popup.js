@@ -631,7 +631,7 @@ const MSSViews = (() => {
     if (!id || String(id).startsWith('tmdb:')) return e;
     try {
       const { data } = await sb.from('entries').select('*').eq('id', id).single();
-      return data ? Object.assign({}, e, data) : e;
+      return data ? Object.assign({}, e, (await mssWithPrivateNotes([data]))[0]) : e;
     } catch { return e; }
   }
 
