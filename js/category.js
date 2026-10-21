@@ -5,8 +5,8 @@
 
 let _catUser   = null;
 let _catAll    = [];
-const collapsed   = { watching: false, queue: false, completed: false };
-const _sort = { watching: 'newest', queue: 'newest', completed: 'newest', ongoing: 'newest' };
+const collapsed   = { watching: false, queue: false, completed: false, dropped: false };
+const _sort = { watching: 'newest', queue: 'newest', completed: 'newest', ongoing: 'newest', dropped: 'newest' };
 
 /* ── Info popup: the shared MSSInfo popup (info-popup.js), with your
    own entry's actions (Start Watching / Up Next / Edit / Discover /
@@ -22,7 +22,7 @@ function openCatInfoPopup(id) {
   const e = _catAll.find(en => en.id === id);
   if (!e) return;
   MSSInfo.forOwnEntry(e, {
-    onChange: renderSections,
+    onChange: _catRenderStatsAndSections,   // a status change (Drop / Pick Back Up…) moves it between sections + counts
     onDelete: _catRemoveEntry,
     handlers: { start: x => (e.status === 'up_next' ? resumeEntry(x) : startWatching(x)), upnext: markUpNext },
   });
@@ -115,6 +115,7 @@ function _sfBaseEntries(section) {
   if (section === 'watching') return _catAll.filter(e => e.status === 'watching' || e.status === 'up_next' || e.status === 'paused');
   if (section === 'queue')    return _catAll.filter(e => e.status === 'queue');
   if (section === 'ongoing')  return _catAll.filter(e => e.status === 'ongoing');
+  if (section === 'dropped')  return _catAll.filter(e => e.status === 'dropped');
   return _catAll.filter(e => e.status === 'completed');
 }
 
@@ -122,6 +123,7 @@ function _catSectionContent(section, sorted) {
   return section === 'watching' ? buildWatchingContent(sorted)
        : section === 'queue'    ? buildQueue(sorted)
        : section === 'ongoing'  ? buildCompleted(sorted, 'ongoing')
+       : section === 'dropped'  ? buildDropped(sorted)
        :                          buildCompleted(sorted, 'completed');
 }
 
@@ -298,6 +300,9 @@ function _catRenderStatsAndSections() {
   const queue     = _catAll.filter(e => e.status === 'queue');
   const completed = _catAll.filter(e => e.status === 'completed');
   const ongoing   = _catAll.filter(e => e.status === 'ongoing');
+  const dropped   = _catAll.filter(e => e.status === 'dropped');
+  // Dropped (071): its count only once something's been dropped
+  const droppedStat = dropped.length ? `<div class="page-stat"><div class="page-stat-num">${dropped.length}</div><div class="page-stat-label">Dropped</div></div>` : '';
   const isMovies  = IS_MOVIE_CAT();
   const onBreak   = watching.filter(e => e.status === 'paused').length;
 
@@ -322,12 +327,13 @@ function _catRenderStatsAndSections() {
       <div class="page-stat"><div class="page-stat-num">${watching.filter(e=>e.status==='watching').length}</div><div class="page-stat-label">Watching</div></div>
       <div class="page-stat"><div class="page-stat-num">${queue.length}</div><div class="page-stat-label">Watchlist</div></div>
       <div class="page-stat"><div class="page-stat-num">${completed.length}</div><div class="page-stat-label">Watched</div></div>
+      ${droppedStat}
       ${totalMins ? `<div class="page-stat"><div class="page-stat-num">${wtLabel}</div><div class="page-stat-label">Watch Time</div></div>` : ''}`;
   } else {
     const isTv = window.PAGE_CAT === 'tv';
     const isAnimated = window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
     const totalEpsWatched = _catAll
-      .filter(e => e.status === 'watching' || e.status === 'up_next' || e.status === 'paused' || e.status === 'completed' || e.status === 'ongoing')
+      .filter(e => e.status === 'watching' || e.status === 'up_next' || e.status === 'paused' || e.status === 'completed' || e.status === 'ongoing' || e.status === 'dropped')   // a dropped show's episodes still count
       .reduce((sum, e) => {
         const mtype = e.ratings?._media_type || 'show';
         if (mtype === 'movie') return sum;
@@ -350,6 +356,7 @@ function _catRenderStatsAndSections() {
         <div class="page-stat"><div class="page-stat-num">${queue.length}</div><div class="page-stat-label">Watchlist</div></div>
         <div class="page-stat"><div class="page-stat-num">${completed.length}</div><div class="page-stat-label">Watched</div></div>
         <div class="page-stat"><div class="page-stat-num">${ongoing.length}</div><div class="page-stat-label">To Be Continued</div></div>
+        ${droppedStat}
         <div class="page-stat"><div class="page-stat-num">${totalEpsWatched ? totalEpsWatched.toLocaleString() : '0'}</div><div class="page-stat-label">Episodes</div></div>
         <div class="page-stat"><div class="page-stat-num">${wtLabel2}</div><div class="page-stat-label">Movie Watch Time</div></div>`;
     } else {
@@ -360,6 +367,7 @@ function _catRenderStatsAndSections() {
         <div class="page-stat"><div class="page-stat-num">${queue.length}</div><div class="page-stat-label">Watchlist</div></div>
         <div class="page-stat"><div class="page-stat-num">${completed.length}</div><div class="page-stat-label">Watched</div></div>
         <div class="page-stat"><div class="page-stat-num">${ongoing.length}</div><div class="page-stat-label">To Be Continued</div></div>
+        ${droppedStat}
         <div class="page-stat"><div class="page-stat-num">${totalEpsWatched ? totalEpsWatched.toLocaleString() : '0'}</div><div class="page-stat-label">Episodes</div></div>`;
     }
   }
@@ -373,6 +381,7 @@ function renderSections(
   queue     = _catAll.filter(e => e.status === 'queue'),
   completed = _catAll.filter(e => e.status === 'completed'),
   ongoing   = _catAll.filter(e => e.status === 'ongoing'),
+  dropped   = _catAll.filter(e => e.status === 'dropped'),
 ) {
   // Sorted AND filtered via the shared module — previously any re-render
   // (after an edit, a progress tick, etc.) silently dropped active filters.
@@ -380,11 +389,12 @@ function renderSections(
   const sq = SF.list('cat', 'queue');
   const sc = SF.list('cat', 'completed');
   const so = SF.list('cat', 'ongoing');
+  const sd = SF.list('cat', 'dropped');
   let html = '';
 
   // Searching: each section shows only its matches (count = matches) and sections without any step aside
   const q = SF.query('cat');
-  if (q) { watching = sw; queue = sq; completed = sc; ongoing = so; }
+  if (q) { watching = sw; queue = sq; completed = sc; ongoing = so; dropped = sd; }
   html += buildSection('watching', icon('play',15) + ' Currently Watching', watching.length, buildWatchingContent(sw));
   html += buildSection('queue',    icon('bookmark',15) + ' Watchlist', queue.length,     buildQueue(sq));
 
@@ -399,6 +409,8 @@ function renderSections(
   }
 
   html += buildSection('completed',icon('check',15)   + ' Watched',    completed.length, buildCompleted(sc));
+  // Dropped (071) — only once you've dropped something here
+  if (dropped.length) html += buildSection('dropped', icon('drop',15) + ' Dropped', dropped.length, buildDropped(sd));
   if (q && !html) html = `<div class="sf-search-empty">${icon('search', 22)}<b>Nothing matches “${escHTML(q)}”</b><span>Try another title or year.</span></div>`;
 
   document.getElementById('sectionsWrap').innerHTML = html;
@@ -712,6 +724,68 @@ function renderQueueGrid(items) {
       <div class="start-watching-wrap" onclick="event.stopPropagation()">
         <button type="button" onclick="startWatching('${e.id}')" class="continue-btn">Start</button>
         <button type="button" onclick="markUpNext('${e.id}')" class="up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="14" y2="6"/><line x1="3" y1="12" x2="11" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="16 14 20 18 16 22"/><line x1="14" y1="18" x2="20" y2="18"/></svg></button>
+      </div>
+    </div>`;
+  }).join('');
+  return _navWrap(gid, `<div class="watching-grid" id="${gid}">${cards}</div>`);
+}
+
+/* ════════ DROPPED (071) ════════
+   Where you stopped (frozen progress), the score greyed with "doesn't count",
+   and Pick Back Up → Watching right where you left off. */
+function _catPickUp(id) {
+  const e = _catAll.find(en => en.id === id);
+  if (e) MSSDrop.pickUp(e, { onChange: _catRenderStatsAndSections });
+}
+function _droppedProgress(e, cls) {
+  if (mssIsMovieEntry(e) || !e.total_eps) return '';
+  const pct = Math.min(100, Math.round(((e.watched ?? 0) / e.total_eps) * 100));
+  return `<div class="${cls}-track dropped-track"><div class="${cls}-fill" style="width:${pct}%"></div></div>
+    <div class="dropped-prog-label">${e.watched ?? 0} / ${e.total_eps} eps · ${pct}%</div>`;
+}
+function _droppedScore(e) {
+  const sc = liveScore(e);
+  return sc != null ? `<div class="dropped-score"><span>★ ${Number(sc).toFixed(2)}</span><small>doesn’t count</small></div>` : '';
+}
+function buildDropped(items) {
+  if (!items.length) return `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('drop',40)}</div><div class="empty-text">Nothing here yet.</div></div>`;
+  const pick = e => `onclick="_catPickUp('${e.id}')" title="Pick back up" aria-label="Pick “${escHTML(e.title)}” back up"`;
+  if (getView('dropped') !== 'grid') {
+    return `<div class="watch-list">${items.map(e => {
+      const _ctx = catContext();
+      return `<div class="w-card is-dropped" onclick="openCatInfoPopup('${e.id}')">
+        <div class="w-poster" style="position:relative">${posterHTML(e)}</div>
+        <div class="w-body">
+          <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}</div></div>
+          <div class="w-ep-row">${_ctx ? getTypeBadge(e, _ctx) : ''}${mssDroppedTagHTML(e)}</div>
+          ${_droppedProgress(e, 'w-prog')}
+          ${_droppedScore(e)}
+        </div>
+        <div class="w-ep-controls" onclick="event.stopPropagation()">
+          <button type="button" class="w-list-action-btn" ${pick(e)}>${icon('play',14)}</button>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+  const gid = 'wg-dropped';
+  const cards = items.map(e => {
+    const isM = mssIsMovieEntry(e);
+    return `<div class="wg-card is-dropped" onclick="openCatInfoPopup('${e.id}')">
+      <div class="wg-poster" style="position:relative;">
+        ${posterHTML(e, 'big')}
+        ${SHOW_TYPE_TAG() ? `<span class="${isM ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${isM ? 'Movie' : 'TV Show'}</span>` : ''}
+      </div>
+      <div class="wg-info">
+        <div class="title-year-row">
+          <div class="wg-title" translate="no">${escHTML(e.title)}</div>
+          ${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}
+        </div>
+        <div class="wg-genre">${mssDroppedTagHTML(e)}</div>
+        ${_droppedProgress(e, 'wg-prog')}
+        ${_droppedScore(e)}
+        <div class="wg-controls" onclick="event.stopPropagation()">
+          <button type="button" class="ep-btn ep-btn-resume" ${pick(e)}>Pick back up</button>
+        </div>
       </div>
     </div>`;
   }).join('');
