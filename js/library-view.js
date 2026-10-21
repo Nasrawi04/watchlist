@@ -25,7 +25,7 @@ var LIB_ENTRIES  = window.LIB_ENTRIES || function(){ return _pEntries; };
 function _libOpen(id, start) {
   var e = LIB_ENTRIES().filter(function(x){ return x.id === id; })[0];
   if (!e) return;
-  var rated = e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
+  var rated = e.status === 'completed' || e.status === 'ongoing' || e.status === 'dropped' || liveScore(e) != null;
   start = start || (rated ? 'rate' : 'info');
   if (LIB_READONLY) { MSSViews.open(e, { start: start, profile: (window.LIB_PROFILE && window.LIB_PROFILE()) || {} }); return; }
   MSSViews.open(e, {
@@ -41,6 +41,11 @@ function _libResume() {
   var r = MSSViews.resume();
   if (r) _libOpen(r.id, r.view);
 }
+// Dropped (071): back to Watching, right where you stopped
+function _libPickUp(id) {
+  var e = _pEntries.filter(function(x){ return x.id === id; })[0];
+  if (e) MSSDrop.pickUp(e, { onChange: function(){ renderLibrary(); } });
+}
 // Your own title was deleted → drop it and redraw
 function _libRemove(x) {
   _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
@@ -50,11 +55,12 @@ var LIB_KEY      = LIB_SCOPE === 'pv' ? 'pv_' : 'prof_';    // remembered list /
 var _LIB_ARROW_L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
 var _LIB_ARROW_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 
-var _libSort = {watching:'newest',queue:'newest',completed:'newest'};
-var _libCollapsed = {watching:false,queue:false,completed:false};
+var _libSort = {watching:'newest',queue:'newest',completed:'newest',dropped:'newest'};
+var _libCollapsed = {watching:false,queue:false,completed:false,dropped:false};
 var _libWatchView = localStorage.getItem(LIB_KEY+'libWatchView')||'list';
 var _libQueueView = localStorage.getItem(LIB_KEY+'libQueueView')||'grid';
 var _libCompView  = localStorage.getItem(LIB_KEY+'libCompView')||'list';
+var _libDropView  = localStorage.getItem(LIB_KEY+'libDropView')||'list';
 var _libCatFilter = '';
 var _libEntries = [];
 
@@ -167,6 +173,7 @@ function _libBaseEntries(sec){
   };
   if(sec==='watching') return _libEntries.filter(function(e){return (e.status==='watching'||e.status==='up_next'||e.status==='paused')&&inCat(e);});
   if(sec==='queue') return _libEntries.filter(function(e){return e.status==='queue'&&inCat(e);});
+  if(sec==='dropped') return _libEntries.filter(function(e){return e.status==='dropped'&&inCat(e);});
   return _libEntries.filter(function(e){return (e.status==='completed'||e.status==='ongoing')&&inCat(e);});
 }
 SF.register(LIB_SCOPE, {
@@ -206,6 +213,7 @@ function _libToggleSec(key){
 function _libViewToggle(vk){
   if(vk==='watch'){_libWatchView=_libWatchView==='list'?'grid':'list';localStorage.setItem(LIB_KEY+'libWatchView',_libWatchView);}
   else if(vk==='queue'){_libQueueView=_libQueueView==='list'?'grid':'list';localStorage.setItem(LIB_KEY+'libQueueView',_libQueueView);}
+  else if(vk==='drop'){_libDropView=_libDropView==='list'?'grid':'list';localStorage.setItem(LIB_KEY+'libDropView',_libDropView);}
   else{_libCompView=_libCompView==='list'?'grid':'list';localStorage.setItem(LIB_KEY+'libCompView',_libCompView);}
   renderLibrary();
 }
@@ -213,7 +221,7 @@ function _libSection(key,title,count,vk,sk,content){
   var searching=!!SF.query(LIB_SCOPE);
   if(searching&&!count)return '';                 // no matches in this section
   var isOpen=searching||!_libCollapsed[key];
-  var cv=vk==='watch'?_libWatchView:vk==='queue'?_libQueueView:_libCompView;
+  var cv=vk==='watch'?_libWatchView:vk==='queue'?_libQueueView:vk==='drop'?_libDropView:_libCompView;
   var chevRot=isOpen?'':'transform:rotate(-90deg);';
   return '<div class="section-block" id="libsec-'+key+'" style="margin-bottom:16px;">'
     +'<div class="section-block-header" onclick="_libToggleSec(\''+key+'\')" style="cursor:pointer;">'
@@ -268,6 +276,7 @@ function _libRender(){
     + '<div class="page-stat"><div class="page-stat-num">'+_fSt.completed+'</div><div class="page-stat-label">Watched</div></div>'
     + (_fSt.avgScore ? '<div class="page-stat"><div class="page-stat-num">'+_fSt.avgScore+'</div><div class="page-stat-label">Avg Score</div></div>' : '')
     + (_fSt.totalEps ? '<div class="page-stat"><div class="page-stat-num">'+_fSt.totalEps.toLocaleString()+'</div><div class="page-stat-label">Episodes</div></div>' : '')
+    + (_fSt.dropped ? '<div class="page-stat"><div class="page-stat-num">'+_fSt.dropped+'</div><div class="page-stat-label">Dropped</div></div>' : '')
     + (_fSt.watchTime ? '<div class="page-stat"><div class="page-stat-num">'+_fSt.watchTime+'</div><div class="page-stat-label">Movie Watch Time</div></div>' : '')
     + '</div>';
 
@@ -384,6 +393,39 @@ function _libRender(){
     }).join('')+'</div>';
   }
 
+  // Dropped (071) — where they stopped, the score greyed ("doesn't count"); yours: Pick Back Up
+  var dropped=SF.list(LIB_SCOPE,'dropped');
+  var dprog=function(e,cls){
+    if(mssIsMovieEntry(e)||!e.total_eps)return '';
+    var pct=Math.min(100,Math.round(((e.watched||0)/e.total_eps)*100));
+    return '<div class="'+cls+'-track dropped-track"><div class="'+cls+'-fill" style="width:'+pct+'%"></div></div><div class="dropped-prog-label">'+(e.watched||0)+' / '+e.total_eps+' eps · '+pct+'%</div>';
+  };
+  var dscore=function(e){ var s=liveScore(e); return s!=null?'<div class="dropped-score"><span>★ '+Number(s).toFixed(2)+'</span><small>doesn’t count</small></div>':''; };
+  var dpick=function(e,cls,inner){ return LIB_READONLY?'':'<button type="button" class="'+cls+'" onclick="event.stopPropagation();_libPickUp(\''+e.id+'\')" title="Pick back up" aria-label="Pick “'+esc(e.title)+'” back up">'+inner+'</button>'; };
+  var dc;
+  if(!dropped.length){dc='<div class="fv-empty">Nothing here yet.</div>';}
+  else if(_libDropView==='grid'){
+    dc=_libGridWrap('libdg','<div class="watching-grid" id="libdg">'+dropped.map(function(e){
+      var isM=mssIsMovieEntry(e);
+      return '<div class="wg-card is-dropped" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')
+        +'<span class="'+(isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom">'+(isM?'Movie':'TV Show')+'</span></div>'
+        +'<div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
+        +'<div class="wg-genre">'+mssDroppedTagHTML(e)+'</div>'+dprog(e,'wg-prog')+dscore(e)
+        +(LIB_READONLY?'':'<div class="wg-controls">'+dpick(e,'ep-btn ep-btn-resume','Pick back up')+'</div>')
+        +'</div></div>';
+    }).join('')+'</div>');
+  } else {
+    dc='<div class="fv-watch-list">'+dropped.map(function(e){
+      return '<div class="fv-w-card is-dropped" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
+        +'<div class="fv-w-poster">'+posterHTML(e)+'</div>'
+        +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
+        +'<div class="fv-w-ep">'+_libTypeBadge(mssIsMovieEntry(e))+mssDroppedTagHTML(e)+'</div>'
+        +dprog(e,'fv-w-prog')+dscore(e)+'</div>'
+        +dpick(e,'w-list-action-btn fv-drop-pick',icon('play',14))
+        +'</div>';
+    }).join('')+'</div>';
+  }
+
   // Stats + type filter on top, then the search box (drawn once, so typing keeps
   // its focus), then the sections — only the top and the sections redraw
   if(!el.querySelector('#libSecs')){
@@ -392,7 +434,8 @@ function _libRender(){
   var q=SF.query(LIB_SCOPE);
   var secs=_libSection('watching',icon('play',14)+' Currently Watching',watching.length,'watch','watching',wc)
     +_libSection('queue',icon('bookmark',14)+' Watchlist',queue.length,'queue','queue',qc)
-    +_libSection('completed',icon('check',14)+' Watched',completed.length,'comp','completed',cc);
+    +_libSection('completed',icon('check',14)+' Watched',completed.length,'comp','completed',cc)
+    +(dropped.length?_libSection('dropped',icon('drop',14)+' Dropped',dropped.length,'drop','dropped',dc):'');   // only once something's dropped
   if(q&&!secs) secs='<div class="sf-search-empty">'+icon('search',22)+'<b>Nothing matches “'+escHTML(q)+'”</b><span>Try another title or year.</span></div>';
   el.querySelector('#libTop').innerHTML = statsHTML;
   el.querySelector('#libTypeSlot').innerHTML = _libCatFilterBar();      // the Type filter sits beside the search
