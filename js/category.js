@@ -5,7 +5,9 @@
 
 let _catUser   = null;
 let _catAll    = [];
-const collapsed   = { watching: false, queue: false, completed: false, dropped: false };
+// Dropped starts closed every time you come to the page — opening it lasts only while you're here
+const collapsed   = { watching: false, queue: false, completed: false, dropped: true };
+window.addEventListener('pageshow', ev => { if (ev.persisted && !collapsed.dropped) toggleSection('dropped'); });   // Back / Forward restore → closed again
 const _sort = { watching: 'newest', queue: 'newest', completed: 'newest', ongoing: 'newest', dropped: 'newest' };
 
 /* ── Info popup: the shared MSSInfo popup (info-popup.js), with your
