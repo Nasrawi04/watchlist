@@ -13,8 +13,9 @@
      save(name, text, type) / copy(text)
    o = { include, privacy: { hideSpoilers }, length: 'short' | 'full',
          prompt (text or ''), watchlist (entries to list as "already planned"), heading,
-         taste (MSSTaste.compute — "My taste" on top; with no titles, the whole profile) }
-   Requires config.js (liveScore, CAT_META), export.js (MSSPdf helpers), taste-profile.js (MSSTaste).
+         taste (MSSTaste.compute — "My taste" on top; with no titles, the whole profile),
+         year (MSSYear.compute — the year in review) }
+   Requires config.js (liveScore, CAT_META), export.js (MSSPdf helpers), taste-profile.js (MSSTaste), year-review.js (MSSYear).
 ══════════════════════════════════════════════════════════════ */
 const MSSFormats = (() => {
   const STATUS = { completed: 'Watched', ongoing: 'To be continued', queue: 'Watchlist', watching: 'Watching', up_next: 'Up next', paused: 'Paused' };
@@ -34,7 +35,9 @@ const MSSFormats = (() => {
     watched: 'Here are movies and shows I’ve watched, with my scores out of 10 and what I thought of them. Based on my taste, recommend 10 titles I haven’t seen yet — a mix of movies and shows — and for each one, tell me in a sentence why it fits me. Don’t suggest anything listed below.',
     watchlist: 'This is my watchlist. Based on what’s on it, pick the 5 I should watch first and tell me why, then suggest 5 more I’d probably like that aren’t on it.',
     watching: 'These are the shows and movies I’m in the middle of. Help me decide which to finish first, and suggest what I could watch after each one.',
+    year: 'Here’s my year in movies and shows. Give me a fun, short review of my year — what my taste says about me — then recommend 10 titles to start next year with, and say why each fits.',
     taste: 'Here’s a summary of my taste in movies and shows, worked out from how I score them. Recommend 10 titles that fit it — a mix of movies and shows — and for each one, tell me in a sentence why it fits me.',
+    episodes: 'Here are my ratings for every episode I’ve rated of this show, season by season. Tell me what my ratings say about which parts of the show I loved and which I didn’t, then recommend 5 other shows I’d probably enjoy and say why each fits.',
     mixed: 'Here are some titles I picked from my library, with my scores out of 10 and what I thought. Based on these, recommend 10 titles I haven’t seen yet and tell me why each one fits me. Don’t suggest anything listed below.',
   };
   function aiLine(e, o) {
@@ -61,8 +64,14 @@ const MSSFormats = (() => {
     const groups = [['watched', 'Watched'], ['watching', 'In the middle of'], ['watchlist', 'On my watchlist'], ['title', 'Other titles']];
     const parts = [];
     if (o.prompt && o.prompt.trim()) parts.push(o.prompt.trim(), '');
-    const t = o.taste;
-    parts.push(`# ${o.heading || 'My titles'}`, t && !list.length ? `From MyScreenFolio · based on ${t.rated} rated titles · scores are out of 10` : `From MyScreenFolio · ${list.length} ${list.length === 1 ? 'title' : 'titles'} · scores are out of 10`, '');
+    const t = o.taste, yv = o.year;
+    parts.push(`# ${o.heading || 'My titles'}`, yv ? `From MyScreenFolio · ${yv.titles} titles finished in ${yv.year} · scores are out of 10` : t && !list.length ? `From MyScreenFolio · based on ${t.rated} rated titles · scores are out of 10` : `From MyScreenFolio · ${list.length} ${list.length === 1 ? 'title' : 'titles'} · scores are out of 10`, '');
+    if (yv) {   // the year in review
+      parts.push(`## My ${yv.year}`, '', ...MSSYear.lines(yv).map(l => `- ${l}`), '');
+      if (yv.top.length) parts.push(`### My top ${yv.top.length} of ${yv.year}`, '', ...yv.top.map((x, i) => `${i + 1}. ${x.e.title}${yr(x.e) ? ` (${yr(x.e)})` : ''} — ${x.s.toFixed(2)}/10`), '');
+      parts.push('### Month by month', '', yv.months.map((n, i) => `${MSSYear.MONTHS[i]} ${n}`).join(' · '), '');
+      parts.push(`First of the year: ${yv.first.title} · last: ${yv.last.title}`, '');
+    }
     if (t) {   // the taste profile: a short summary on top of a list, or the whole thing on its own
       parts.push('## My taste', '', ...MSSTaste.lines(t).map(l => `- ${l}`), '');
       if (!list.length) {
