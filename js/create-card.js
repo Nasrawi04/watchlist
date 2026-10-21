@@ -21,6 +21,7 @@ function _injectCreateCardOverlay() {
             <span class="card-theme-swatch light"></span> Light
           </button>
         </div>
+        <div id="createCardPrivRow"></div>
         <div id="createCardPreviewWrap">
           <canvas id="createCardCanvas"></canvas>
         </div>
@@ -44,6 +45,33 @@ function _injectCreateCardOverlay() {
 }
 
 let _cardEntry = null;
+// Privacy (export plan step 9): hide the note, or only a spoiler note — remembered on this
+// device. A note that's Friends-only / Private (069) starts hidden on every card.
+let _cardPriv = (() => { try { return { hideNote: false, hideSpoiler: true, ...JSON.parse(localStorage.getItem('mss_card_priv') || '{}') }; } catch { return { hideNote: false, hideSpoiler: true }; } })();
+let _cardHideNote = false;
+function _cardNoteShown(e) {
+  if (!e?.notes || !e.notes.trim() || _cardHideNote) return false;
+  return !(_cardPriv.hideSpoiler && mssIsSpoiler(e));
+}
+function _cardPrivHTML() {
+  const row = document.getElementById('createCardPrivRow'), e = _cardEntry;
+  if (!row) return;
+  const has = e?.notes && e.notes.trim() && _cardPage === 1;
+  row.hidden = !has;
+  if (!has) { row.innerHTML = ''; return; }
+  const sw = (on, act, label, sub) => `<button type="button" class="xs-switch" role="switch" aria-checked="${on}" onclick="${act}"><span class="xs-switch-text"><b>${label}</b><small>${sub}</small></span><i aria-hidden="true"></i></button>`;
+  const priv = e.note_visibility && e.note_visibility !== 'anyone';
+  row.innerHTML = `<div class="xs-switches">${sw(_cardHideNote, "_cardTogPriv('hideNote')", 'Hide my note', priv ? 'Your note is ' + (e.note_visibility === 'friends' ? 'Friends-only' : 'Private') + ' — hidden unless you turn this off' : 'Leave it off the card — just your scores')}${
+    mssIsSpoiler(e) && !_cardHideNote ? sw(_cardPriv.hideSpoiler, "_cardTogPriv('hideSpoiler')", 'Hide spoiler notes', 'Your note is marked as a spoiler') : ''}</div>`;
+}
+function _cardTogPriv(k) {
+  if (k === 'hideNote') { _cardHideNote = !_cardHideNote; _cardPriv.hideNote = _cardHideNote; }
+  else _cardPriv.hideSpoiler = !_cardPriv.hideSpoiler;
+  try { localStorage.setItem('mss_card_priv', JSON.stringify(_cardPriv)); } catch {}
+  _cardPrivHTML();
+  if (!document.getElementById('createCardCanvas')) _resetCanvas();
+  _drawCard();
+}
 let _cardTheme = 'light';
 let _cardPage = 1;
 let _cardDiscoverData = null;
@@ -65,6 +93,8 @@ async function createShareCard(id, startPage, restrictToStartPage) {
     b.style.display = restrictToStartPage && b.dataset.page !== String(_cardPage) ? 'none' : '';
   });
   if (pageRow) pageRow.style.display = restrictToStartPage ? 'none' : '';
+  _cardHideNote = _cardPriv.hideNote || (!!e.note_visibility && e.note_visibility !== 'anyone');
+  _cardPrivHTML();
   MSSDialog.open(document.getElementById('createCardOverlay'));
   _resetCanvas();
   await _drawCard();
@@ -96,6 +126,7 @@ function setCardPage(page, btn) {
   _cardPage = page;
   document.querySelectorAll('.card-page-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  _cardPrivHTML();
   if (!document.getElementById('createCardCanvas')) _resetCanvas();
   _drawCard();
 }
@@ -608,7 +639,7 @@ async function _drawCardPage1(myToken) {
     // original single-column look; longer ones switch to two columns with
     // slightly smaller text so the card grows gently instead of turning
     // into a long strip. Paragraph breaks from the note are kept.
-    const note = MSSRich.plain(e.notes).trim();     // the image shows the words, not the ** / > markers
+    const note = _cardNoteShown(e) ? MSSRich.plain(e.notes).trim() : '';     // the image shows the words, not the ** / > markers
     if (note) {
       const boxPadTop = 34, boxPadBottom = 26, boxPadX = 30, colGap = 34;
       const wordCount = note.split(/\s+/).filter(Boolean).length;
