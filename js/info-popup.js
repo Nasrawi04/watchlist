@@ -36,7 +36,7 @@
 const INFO_POPUP_CONFIG = {
   // Buttons, left → right. Remove / reorder here.
   actions: ['queue', 'chart', 'recommend', 'discover'],                          // someone else's / TMDB title
-  ownerActions: ['start', 'upnext', 'rateEps', 'chart', 'edit', 'recommend', 'share', 'discover', 'card', 'delete'], // your own entry
+  ownerActions: ['start', 'upnext', 'pickup', 'rateEps', 'chart', 'edit', 'drop', 'recommend', 'share', 'discover', 'card', 'delete'], // your own entry
   addStatus: 'queue',      // status used by "Add to Watchlist"
   showTmdbScore: true,     // TMDB community rating in the tags row
   showCrew: true,          // Director (movies) / Created By (TV)
@@ -225,6 +225,9 @@ const MSSInfo = (() => {
       share:  () => user && e && (e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null) ? btn('share', 'share', 'Share') : '',
       start:  () => e && (e.status === 'queue' || e.status === 'up_next') ? btn('start', 'play', 'Start Watching') : '',
       upnext: () => e && e.status === 'queue' ? btn('upnext', 'skipForward', 'Up Next') : '',
+      // Dropped (071): drop what you're watching; a dropped title can be picked back up
+      drop:   () => e && ['watching', 'up_next', 'paused'].includes(e.status) ? btn('drop', 'drop', 'Drop') : '',
+      pickup: () => e && e.status === 'dropped' ? btn('pickup', 'play', 'Pick Back Up') : '',
       rateEps: () => e && typeof MSSEp !== 'undefined' && MSSEp.isShow(e) ? btn('rateEps', 'ratingStar', 'Rate Episodes') : '',
       // shows: straight to their Episode Chart (episodes.html)
       chart:  () => it.tmdb_id && (e?.tmdb_type || it.media_type) === 'tv'
@@ -248,6 +251,11 @@ const MSSInfo = (() => {
     if (key === 'share' && e) return mssRecommend({ kind: 'entry', entry_id: e.id, title: e.title, poster_url: e.poster_url, year: e.year, media_type: it.media_type });
     if (!e) return;
     if (key === 'edit') { goToDetail(e.id, opts.from || thisFile()); return; }
+    if (key === 'drop' || key === 'pickup') {
+      const onChange = opts.onChange;
+      close();
+      return key === 'drop' ? MSSDrop.drop(e, { onChange }) : MSSDrop.pickUp(e, { onChange });
+    }
     if (key === 'rateEps') { close(); MSSEp.rate(e, e.season || 1, Math.max(1, e.episode || 1)); return; }
     if (key === 'card') { close(); createShareCard(e.id, 3, true); return; }
     if (key === 'delete') {
@@ -537,7 +545,7 @@ const MSSViews = (() => {
   };
   let st = null;   // { e, views, cur, o, refreshed }
 
-  const isRated = e => e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null;
+  const isRated = e => e.status === 'completed' || e.status === 'ongoing' || e.status === 'dropped' || liveScore(e) != null;   // a dropped title can be rated too
   const hasNote = e => !!(e.notes && e.notes.trim());
   // writeNote: your own entry gets the Note view even before it has one (to write it)
   const ORDER = ['info', 'rate', 'note'];
