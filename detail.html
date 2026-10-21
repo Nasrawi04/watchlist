@@ -656,6 +656,9 @@
         </div>
         <div class="det-field-hint" id="yearHint" role="status" aria-live="polite"></div>
 
+        <!-- Who can see this title (073) — saved with the entry -->
+        <div id="dTitleVisWrap" class="det-title-vis"></div>
+
         <div class="field-group" id="completedOnGroup" style="display:none;margin-top:1.25rem;margin-bottom:0;">
           <div class="field-label">Watched On</div>
           <div class="date-3box" id="completedDateWrap">
@@ -2175,6 +2178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dNotesSpoilerWrap').innerHTML = mssSpoilerToggleHTML('dNotesSpoiler', e);
     document.getElementById('dNotesSpoiler').checked = mssIsSpoiler(e);
     document.getElementById('dNoteVisWrap').innerHTML = mssNoteVisHTML('dNoteVis', e?.note_visibility, e?.id);   // who can view (069)
+    document.getElementById('dTitleVisWrap').innerHTML = mssTitleVisHTML('dTitleVis', e?.visibility);           // who can see this title (073)
     _detNotesSaved = e?.notes || '';   // what's saved — an easter egg's confirm only asks about a new or changed note
     _notesUpdateWordCount();
     _notesRichTools();
@@ -2415,6 +2419,7 @@ async function doSave() {
     runtime_m:     isMovie ? _clampInt(document.getElementById('dRuntimeM')?.value, 0, 59) : null,
     notes:         document.getElementById('dNotes').value,
     note_visibility: document.getElementById('dNoteVis')?.value,
+    visibility:    document.getElementById('dTitleVis')?.value,
     completed_date: _parseCompletedDate(),
     ratings:       ratingsWithType,
     tmdb_id:       _pendingTmdbId,
