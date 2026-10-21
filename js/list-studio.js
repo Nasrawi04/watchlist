@@ -19,8 +19,9 @@
      collab: (listId, then) → opens Collaborate,
    })
    MSSListStudio.open({ id })   no id = new list
-   Requires config.js, nav.js (tmdbFetch), list-popup.js (MSSList.ORDERS / sortBy /
-   orderHint / reorder / cache), MSSDialog, showConfirm, showToast.
+   Requires config.js, nav.js (tmdbFetch, attachClearButton), sort-filter.js (SF.dd — the
+   site's dropdowns), list-popup.js (MSSList.ORDER_GROUPS / orderLabel / sortBy / orderHint /
+   reorder / cache), MSSDialog, showConfirm, showToast.
 ══════════════════════════════════════════════════════════════ */
 const MSSListStudio = (() => {
   let C = null, S = null;
@@ -28,7 +29,9 @@ const MSSListStudio = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));
   const STATUS = { watched: ['completed', 'ongoing'], watching: ['watching', 'paused'], watchlist: ['queue', 'up_next'] };
   const STATUS_TAG = { watching: 'Watching', paused: 'Taking a Break', queue: 'Watchlist', up_next: 'Up Next', ongoing: 'Caught Up' };
-  const PICK_SORTS = [['score', 'Highest score'], ['watched_new', 'Recently watched'], ['added', 'Recently added'], ['release_new', 'Newest release'], ['release_old', 'Oldest release'], ['az', 'Title A → Z']];
+  // The picker's Sort, named like the site's Sort menus ("Ratings: Highest")
+  const PICK_SORTS = [['Ratings', [['highest', 'Highest'], ['lowest', 'Lowest']]], ['Date Watched', [['watched_new', 'Latest'], ['watched_old', 'Earliest']]],
+    ['Added', [['added_new', 'Latest'], ['added_old', 'Earliest']]], ['Release Date', [['release_new', 'Latest'], ['release_old', 'Earliest']]], ['Alphabetical', [['az', 'A → Z'], ['za', 'Z → A']]]];
   const MAX_WORDS = 50, SHOW_STEP = 60;
   const GRIP = '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true"><circle cx="2" cy="2" r="1.4"/><circle cx="8" cy="2" r="1.4"/><circle cx="2" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="2" cy="14" r="1.4"/><circle cx="8" cy="14" r="1.4"/></svg>';
   const words = s => (s || '').trim() ? s.trim().split(/\s+/).length : 0;
@@ -46,7 +49,7 @@ const MSSListStudio = (() => {
       list, isNew: !list, shared: !!list?._collab, official: !!(list ? list.official : window._navUserProfile?.is_official),
       title: list?.title || '', desc: list?.description || '', ranked: list ? list.ranked ?? null : null, collab: false, vis: list?.visibility || 'anyone',
       ids: (list?.items || []).slice(), mode, auto: mode !== 'picked',
-      src: 'library', q: '', f: { sort: 'score', status: 'watched', type: '', genre: '', onlySel: false }, shown: SHOW_STEP,
+      src: 'library', q: '', f: { sort: 'highest', status: 'watched', type: '', genre: '', onlySel: false }, shown: SHOW_STEP,
       disc: null, tab: 'opts', busy: false,
     };
     S.start = JSON.stringify(snap());
@@ -84,6 +87,16 @@ const MSSListStudio = (() => {
         </div>
       </div>`;
     MSSDialog.bind(ov, () => close());
+    // an open dropdown floats over the popup — keep it on its button while a panel
+    // scrolls, and close it once the button scrolls out of view
+    const follow = ev => {
+      const dd = ov.querySelector('.sf-dd.open');
+      if (!dd) return;
+      const r = dd.querySelector('.sf-dd-trigger').getBoundingClientRect(), box = ev.currentTarget.getBoundingClientRect(), m = dd.querySelector('.td-dd-menu');
+      if (r.bottom < box.top || r.top > box.bottom) { SF.closeDD(); return; }
+      if (m.style.top && m.style.top !== 'auto') m.style.top = r.bottom + 'px'; else m.style.bottom = (window.innerHeight - r.top) + 'px';
+    };
+    ['lsOpts', 'lsSide', 'lsGrid'].forEach(id => ov.querySelector('#' + id).addEventListener('scroll', follow, { passive: true }));
     document.body.appendChild(ov);
     return ov;
   }
@@ -155,6 +168,7 @@ const MSSListStudio = (() => {
         <div id="lsTools"></div>
         <div class="ls-results" id="lsResults" aria-live="polite"></div>`);
     if (!S.shared) descCount();
+    attachClearButton('lsSearch');
     drawTools(); drawResults();
   }
   function descCount() {
@@ -166,12 +180,15 @@ const MSSListStudio = (() => {
     const pool = C.entries();
     const genres = [...new Set(pool.flatMap(e => e.genres || []))].sort();
     const f = S.f;
-    const sel = (key, label, opts) => `<label class="fp-sel"><span>${label}</span><select aria-label="${label}" onchange="MSSListStudio._f('${key}', this.value)">${opts.map(([v, l]) => `<option value="${esc(v)}"${f[key] === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
-    $('lsTools').innerHTML = `<div class="fp-tools ls-tools">
-        ${sel('sort', 'Sort', PICK_SORTS)}
-        ${sel('status', 'Status', [['watched', 'Watched'], ['watching', 'Watching'], ['watchlist', 'Watchlist'], ['all', 'All titles']])}
-        ${sel('type', 'Type', [['', 'All types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']])}
-        ${sel('genre', 'Genre', [['', 'All genres'], ...genres.map(g => [g, g])])}
+    // the site's dropdowns (sort-filter.js SF.dd)
+    const opt = (key, v, l) => `<div class="td-dd-opt${f[key] === v ? ' active' : ''}" role="option" aria-selected="${f[key] === v}" onclick="event.stopPropagation();SF.closeDD();MSSListStudio._f('${key}', ${attrJSON(v)})">${esc(l)}</div>`;
+    const dd = (key, label, opts) => `<div class="ls-dd"><span class="ls-dd-l">${label}</span>${SF.dd(`lsDD-${key}`, esc((opts.find(o => o[0] === f[key]) || opts[0])[1]), false, opts.map(([v, l]) => opt(key, v, l)).join(''))}</div>`;
+    const sortCur = PICK_SORTS.map(([h, o]) => o.filter(x => x[0] === f.sort).map(x => `${h}: ${x[1]}`)[0]).find(Boolean);
+    $('lsTools').innerHTML = `<div class="ls-tools">
+        <div class="ls-dd"><span class="ls-dd-l">Sort</span>${SF.dd('lsDD-sort', esc(sortCur), false, PICK_SORTS.map(([h, o]) => `<div class="sf-dd-subgroup-label">${h}</div>` + o.map(([v, l]) => opt('sort', v, l)).join('')).join(''))}</div>
+        ${dd('status', 'Status', [['watched', 'Watched'], ['watching', 'Watching'], ['watchlist', 'Watchlist'], ['all', 'All Titles']])}
+        ${dd('type', 'Type', [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']])}
+        ${dd('genre', 'Genre', [['', 'All Genres'], ...genres.map(g => [g, g])])}
       </div>
       <div class="fp-bar ls-bar"><span id="lsShown"></span>
         <button type="button" class="fp-chip${f.onlySel ? ' on' : ''}" aria-pressed="${f.onlySel}" onclick="MSSListStudio._f('onlySel', ${!f.onlySel})">${icon('check', 12)} In the list only</button>
@@ -185,9 +202,12 @@ const MSSListStudio = (() => {
     if (f.type) rows = rows.filter(e => e.cat === f.type);
     if (f.genre) rows = rows.filter(e => (e.genres || []).includes(f.genre));
     if (S.q) rows = rows.filter(e => [e.title, ...(e.genres || []), CAT_META[e.cat]?.label].filter(Boolean).join(' ').toLowerCase().includes(S.q));
-    const mode = f.sort === 'score' ? 'highest' : f.sort === 'added' ? null : f.sort;
     const wrapped = rows.map(e => ({ id: e.id, item: e }));
-    return (mode ? MSSList.sortBy(wrapped, mode) : wrapped.sort((a, b) => String(b.item.created_at || '').localeCompare(String(a.item.created_at || '')))).map(r => r.item);
+    if (f.sort === 'added_new' || f.sort === 'added_old') {   // when it went into your library
+      const d = f.sort === 'added_new' ? -1 : 1;
+      return wrapped.sort((a, b) => d * String(a.item.created_at || '').localeCompare(String(b.item.created_at || ''))).map(r => r.item);
+    }
+    return MSSList.sortBy(wrapped, f.sort).map(r => r.item);
   }
   function rowHTML(e, id, sub, score) {
     const on = S.ids.includes(id), img = safeURL(e.thumb || e.poster_url);
@@ -209,7 +229,7 @@ const MSSListStudio = (() => {
     }
     const rows = libraryRows();
     if ($('lsShown')) $('lsShown').textContent = `${rows.length} ${rows.length === 1 ? 'title' : 'titles'}`;
-    const hintMode = ['watched_new', 'release_new', 'release_old'].includes(S.f.sort) ? S.f.sort : '';
+    const hintMode = ['watched_new', 'watched_old', 'release_new', 'release_old'].includes(S.f.sort) ? S.f.sort : '';
     box.innerHTML = rows.length ? rows.slice(0, S.shown).map(e => {
       const sc = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
       return rowHTML(e, e.id, [CAT_META[e.cat]?.label, STATUS_TAG[e.status], hintMode && MSSList.orderHint(e, hintMode)].filter(Boolean).join(' · '), sc);
@@ -236,17 +256,21 @@ const MSSListStudio = (() => {
   /* ── right: your list ── */
   function drawSide() {
     const n = S.ids.length, ranked = S.ranked === true, locked = S.locked;
-    const label = (MSSList.ORDERS.find(o => o[0] === S.mode) || [])[1] || 'My order';
+    const label = MSSList.orderLabel(S.mode);
     const hintMode = ['watched_new', 'watched_old', 'release_new', 'release_old'].includes(S.mode) ? S.mode : '';
-    const chips = MSSList.ORDERS.map(([k, l]) => `<button type="button" class="xs-chip${S.mode === k ? ' on' : ''}" aria-pressed="${S.mode === k}" ${locked ? 'disabled' : ''} onclick="MSSListStudio._mode('${k}')">${l}</button>`).join('')
-      + `<button type="button" class="xs-chip" ${locked || n < 2 ? 'disabled' : ''} onclick="MSSListStudio._shuffle()">${icon('shuffle', 13)} Shuffle</button>`;
+    // every order laid out, grouped like the site's Sort menus — all shown, nothing to scroll
+    // buttons look like the genre tags on the edit page (.genre-opt)
+    const chip = (k, l) => `<button type="button" class="genre-opt${S.mode === k ? ' selected' : ''}" aria-pressed="${S.mode === k}" ${locked ? 'disabled' : ''} onclick="MSSListStudio._mode('${k}')">${l}</button>`;
+    const row = (h, body) => `<div class="ls-order-row"><span class="ls-order-h">${h}</span><div class="ls-chips">${body}</div></div>`;
+    const chips = row('Order', chip('picked', 'My Order') + `<button type="button" class="genre-opt" ${locked || n < 2 ? 'disabled' : ''} onclick="MSSListStudio._shuffle()">${icon('shuffle', 12)} Shuffle</button>`)
+      + MSSList.ORDER_GROUPS.map(([h, opts]) => row(h, opts.map(([k, l]) => chip(k, l)).join(''))).join('');
     $('lsSide').innerHTML = `
       <div class="xs-sec" id="lsSecOrder"><div class="xs-sec-label">Order by</div>
-        <div class="xs-chips ls-chips">${chips}</div>
+        <div class="ls-order">${chips}</div>
         ${locked ? `<div class="la-note" style="margin-top:10px">${icon('info', 14)}<span>The owner keeps this list sorted by <b>${esc(label)}</b> — titles you add slot into place.</span></div>`
           : S.shared ? '' : `<div class="xs-switches" style="margin-top:10px">${sw(S.auto && S.mode !== 'picked', S.mode === 'picked' ? "MSSListStudio._mode('highest')" : 'MSSListStudio._auto()', 'Keep sorted automatically',
             S.mode === 'picked' ? 'Pick an order above — for now it’s your own order, new titles go at the end.'
-            : S.auto ? `Titles added later slot into place by ${esc(label.toLowerCase())}.` : 'Sorted once — after this it’s your own order, new titles go at the end.')}</div>`}
+            : S.auto ? `Titles added later slot into place (${esc(label)}).` : 'Sorted once — after this it’s your own order, new titles go at the end.')}</div>`}
       </div>
       <div class="xs-sec"><div class="xs-sec-label">Your list<span>${n} ${n === 1 ? 'title' : 'titles'}${S.ranked === true ? ' · ranked' : S.ranked === false ? ' · unranked' : ''}</span></div>
         ${n > 1 && !locked ? `<div class="la-help"><span>Move a title by hand: drag it by <span class="la-help-grip">${GRIP}</span>, use the arrows${ranked ? ' or type its position' : ''}.</span></div>` : ''}
@@ -267,8 +291,7 @@ const MSSListStudio = (() => {
             <button type="button" class="la-mv la-x" onclick="MSSListStudio._remove(${i})" aria-label="Remove ${esc(e.title)}">${icon('x', 13)}</button>
           </div>`;
         }).join('') : `<div class="ls-empty">${icon('layers', 30)}<b>Your list is empty</b><span>Add titles from the left${phone() ? ' (Options tab)' : ''} — they show up here.</span></div>`}</div>
-      </div>`;  if (phone()) document.querySelector('#lsSide .ls-chips .xs-chip.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }
+      </div>`;  }
 
   /* ── changes ── */
   function changed(side = true) { if (side) drawSide(); drawTabs(); drawFoot(); }
