@@ -251,6 +251,7 @@
 <script src="js/rewatch.js"></script>
 <script src="js/export.js"></script>
 <script src="js/taste-profile.js"></script>
+<script src="js/year-review.js"></script>
 <script src="js/export-formats.js"></script>
 <script src="js/export-image.js"></script>
 <script src="js/export-studio.js"></script>
@@ -451,6 +452,8 @@ SF.register('lv', {
   base: () => _lvItems,
   render: () => _lvRenderGrid(),
   defaultSort: 'rank',
+  // a ranked list reads "Rank · Top First"; any other list shows in the owner's order
+  get presets() { return _lvList?.ranked === true ? {} : { rank: { header: 'Order', opts: [['rank', 'List Order'], ['rankRev', 'Reversed']] } }; },
   sorts: () => ['rank', 'alpha', 'release', 'ratings', 'runtime', 'seasons', 'episodes'],
   filters: () => ['genre', 'year', 'score', 'length'],
   choiceFilters: () => [{
@@ -497,7 +500,7 @@ async function _lvSetRanked(value) {
     const { error } = await sb.from('favorite_lists').update({ ranked: value }).eq('id', _lvList.id).eq('user_id', _lvUser.id);
     if (error) throw error;
     _lvList.ranked = value;
-    document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML();
+    document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML() + mssVisBadge(_lvList.visibility);
     showToast(value ? 'Marked as ranked!' : 'Marked as unranked.');
   } catch (err) {
     console.error('Set ranked error:', err);
@@ -590,11 +593,20 @@ async function _lvLoad() {
     return;
   }
   try {
-    const { data: list, error } = await sb.from('favorite_lists')
+    let { data: list } = await sb.from('favorite_lists')
       .select('*, profiles(username, avatar_url)')
       .eq('id', _lvListId)
-      .single();
-    if (error || !list) throw error || new Error('List not found');
+      .maybeSingle();
+    // A private list (068) opened from its link: list-view.html?list=…&k=<token>
+    if (!list && _lvParams.get('k')) {
+      const { data } = await sb.rpc('open_list_link', { p_list: _lvListId, p_token: _lvParams.get('k') });
+      list = (data || [])[0] || null;
+      if (list) list.profiles = (await sb.from('profiles').select('username, avatar_url').eq('id', list.user_id).maybeSingle()).data;
+    }
+    if (!list) {
+      document.getElementById('lvLoading').innerHTML = `<div class="lv-empty">${icon('lock', 28)}<div>This list is private, or it doesn’t exist anymore.</div></div>`;
+      return;
+    }
     _lvList = list;
 
     const items = list.items || [];
@@ -612,7 +624,7 @@ async function _lvLoad() {
     _lvItems = entries.map((e, i) => Object.assign({}, e, { _rank: i + 1 }));
 
     document.title = `${list.title} — MyScreenFolio`;
-    document.getElementById('lvTitle').textContent = list.title; document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML();
+    document.getElementById('lvTitle').textContent = list.title; document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML() + mssVisBadge(list.visibility);
     document.getElementById('lvDesc').textContent = list.description || '';
     document.getElementById('lvDesc').style.display = list.description ? '' : 'none';
     const username = list.profiles?.username || 'user';
@@ -625,7 +637,8 @@ async function _lvLoad() {
     document.getElementById('lvCountLabel').textContent = entries.length === 1 ? 'title' : 'titles';
 
     const isOwn = _lvUser && list.user_id === _lvUser.id;
-    document.getElementById('lvShareBtn').hidden = !_lvUser || list.cat !== 'custom';   // Social → Recommendations
+    // Social → Recommendations; a private list (068) is only sent on by its owner
+    document.getElementById('lvShareBtn').hidden = !_lvUser || list.cat !== 'custom' || (list.visibility !== 'anyone' && list.user_id !== _lvUser.id);
     document.getElementById('lvExportBtn').hidden = !_lvUser;
     document.getElementById('lvExportLabel').innerHTML = `${icon('download', 15)} Export List`;
     document.getElementById('lvImportPopupActions').style.display = isOwn ? 'none' : '';
