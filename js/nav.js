@@ -2140,6 +2140,8 @@ function fitTitleYear(root) {
      episodes  — new_episode, new_release (tv-schedule.js → add_new_episode_notifications /
                  add_release_notifications, 033 / 042)
      activity  — friend_started, friend_episode, friend_finished, friend_note, friend_list,
+                 friend_rated, friend_watchlist, friend_dropped (072 — each follows the actor's
+                 "What my friends hear about" switches, enforced in the database),
                  rec_reply (Inbox conversations, 048), episode_chat (049), movie_night (050),
                  challenge (051)
                  ("notify me about @friend", 022 / 047), friend_queued, friend_poll,
@@ -2309,7 +2311,7 @@ function _notifItemHTML(n, opts = {}) {
   } else if (n.type === 'list_invite_declined') {
     text = `${who} declined your invite to ${title}`; icon2 = 'layers';
     href = n.list ? `list-view.html?list=${encodeURIComponent(n.list_id)}` : '';
-  } else if (n.type === 'friend_started' || n.type === 'friend_finished' || n.type === 'friend_episode' || n.type === 'friend_note') {
+  } else if (['friend_started', 'friend_finished', 'friend_episode', 'friend_note', 'friend_rated', 'friend_watchlist', 'friend_dropped'].includes(n.type)) {
     // "Notify me about @friend" (047): what they're watching, the moment they do it
     const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'something')}</b>`;
     const titleHref = m.tmdb_id && m.tmdb_type ? `title.html?type=${m.tmdb_type}&id=${m.tmdb_id}` : (n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : '');
@@ -2317,8 +2319,13 @@ function _notifItemHTML(n, opts = {}) {
     if (n.type === 'friend_started') { text = `${who} started watching ${t}`; icon2 = 'play'; }
     if (n.type === 'friend_finished') {
       const movie = m.cat === 'movies' || m.media_type === 'movie' || m.tmdb_type === 'movie';
-      text = m.kind === 'ongoing' ? `${who} is caught up on ${t}` : movie ? `${who} watched ${t}` : `${who} finished ${t}`; icon2 = 'check';
+      text = (m.kind === 'ongoing' ? `${who} is caught up on ${t}` : movie ? `${who} watched ${t}` : `${who} finished ${t}`)
+        + (m.score != null ? ` · ★ ${Number(m.score).toFixed(2)}` : ''); icon2 = 'check';   // finished + rated at once (072)
     }
+    // 072: rated · added to watchlist · dropped
+    if (n.type === 'friend_rated') { text = `${who} rated ${t} ★ ${Number(m.score).toFixed(2)}${m.dropped ? ' (dropped)' : ''}`; icon2 = 'ratingStar'; }
+    if (n.type === 'friend_watchlist') { text = `${who} added ${t} to their watchlist`; icon2 = 'bookmark'; }
+    if (n.type === 'friend_dropped') { text = `${who} dropped ${t}${_notifDroppedAt(m)}`; icon2 = 'drop'; }
     if (n.type === 'friend_episode') {
       text = `${who} ${_notifFriendEpText(m, t)}`; icon2 = 'tv';
       if (m.tmdb_id) href = `episodes.html?show=${encodeURIComponent(m.tmdb_id)}${n.actor_id ? `&user=${encodeURIComponent(n.actor_id)}` : ''}`;
@@ -2594,6 +2601,12 @@ function _notifRingBell() {
   });
 }
 
+// " at S2 · E4" / " at 1h 10m" for a friend's drop (072)
+function _notifDroppedAt(m) {
+  if (m.minutes) return ` at ${m.minutes >= 60 ? `${Math.floor(m.minutes / 60)}h ${m.minutes % 60}m` : `${m.minutes}m`}`;
+  return m.episode > 0 ? ` at S${Number(m.season) || 1} · E${Number(m.episode)}` : '';
+}
+
 // One short line describing a notification
 function _notifShortText(n) {
   const who = `<b translate="no">${escHTML(n.actor ? (n.actor.display_name || n.actor.username) : 'Someone')}</b>`;
@@ -2606,8 +2619,11 @@ function _notifShortText(n) {
     case 'list_invite_declined': return `${who} declined your invite to ${list}`;
     case 'friend_started':       return `${who} started watching ${t}`;
     case 'friend_episode':       return `${who} ${_notifFriendEpText(n.meta || {}, t)}`;
-    case 'friend_finished':      return n.meta?.kind === 'ongoing' ? `${who} is caught up on ${t}` : `${who} finished ${t}`;
+    case 'friend_finished':      return (n.meta?.kind === 'ongoing' ? `${who} is caught up on ${t}` : `${who} finished ${t}`) + (n.meta?.score != null ? ` · ★ ${Number(n.meta.score).toFixed(2)}` : '');
     case 'friend_note':          return `${who} wrote a note on ${t}`;
+    case 'friend_rated':         return `${who} rated ${t} ★ ${Number(n.meta?.score).toFixed(2)}`;
+    case 'friend_watchlist':     return `${who} added ${t} to their watchlist`;
+    case 'friend_dropped':       return `${who} dropped ${t}${_notifDroppedAt(n.meta || {})}`;
     case 'friend_list':          return `${who} made a new list “${escHTML(n.meta?.title || '')}”`;
     case 'friend_queued':        return `${who} added ${t} from your library`;
     case 'new_episode':          return _notifEpText(n.meta || {}, t);
