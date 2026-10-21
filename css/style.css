@@ -6524,10 +6524,10 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .ls-results .fav-picker-item { padding:10px 14px; gap:12px; }
 .ls-results .fav-picker-poster { width:40px; height:58px; font-size:16px; }
 .ls-more { display:flex; margin:10px auto; }
-.ls-chips { display:flex; flex-wrap:wrap; gap:6px; }
-.ls-chips .genre-opt { display:inline-flex; align-items:center; gap:5px; padding:6px 11px; font-size:12px; }
-.ls-chips .genre-opt:disabled { opacity:.45; cursor:default; }
-.ls-chips .genre-opt:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.ls-order-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.ls-order-chips .genre-opt { display:inline-flex; align-items:center; gap:5px; padding:6px 11px; font-size:12px; }
+.ls-order-chips .genre-opt:disabled { opacity:.45; cursor:default; }
+.ls-order-chips .genre-opt:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 /* scores: the site's number font with the star, compact */
 .ls-score { flex:none; display:inline-flex; align-items:baseline; gap:3px; font-family:var(--bebas); font-size:16px; line-height:1; color:var(--olive-light); white-space:nowrap; letter-spacing:.3px; }
 .ls-score span { font-size:.85em; }
