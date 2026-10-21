@@ -17,7 +17,7 @@
          cards; tap one to add the title (tap again to take it out). Ranked
          lists with a set order (Highest, A–Z…) re-sort themselves.
      MSSList.reorder(list, mode, resolve) → puts a list in its saved order (sort_mode)
-     MSSList.ORDERS · sortBy(rows, mode) · orderValue(e, mode) · orderHint(e, mode)
+     MSSList.ORDER_GROUPS · orderLabel(mode) · sortBy(rows, mode) · orderValue(e, mode) · orderHint(e, mode)
      MSSList.rankBadge(ranked) · countHTML(n) · postersHTML(items, resolve) ·
      collabLineHTML(list, collaborators) · avatarHTML(profile)
 
@@ -223,21 +223,18 @@ const MSSList = (() => {
      'picked' (or none) = your own order. Any other mode keeps the list in that
      order automatically: titles added later slot into place. Titles without the
      value (e.g. a Discover pick you haven't watched has no watch date) go last. */
-  const ORDERS = [
-    ['picked',      'My order'],
-    ['highest',     'Highest score'],
-    ['lowest',      'Lowest score'],
-    ['watched_new', 'Recently watched'],
-    ['watched_old', 'First watched'],
-    ['release_new', 'Newest release'],
-    ['release_old', 'Oldest release'],
-    ['az',          'Title A → Z'],
-    ['za',          'Title Z → A'],
-    ['enjoyment',   'Best Enjoyment'],
-    ['story',       'Best Story & Plot'],
-    ['acting',      'Best Acting'],
-    ['ending',      'Best Ending & Payoff'],
+  // Named like the site's Sort menus (sort-filter.js): "Ratings: Highest", "Release Date: Latest"…
+  const ORDER_GROUPS = [
+    ['Ratings',         [['highest', 'Highest'], ['lowest', 'Lowest']]],
+    ['Date Watched',    [['watched_new', 'Latest'], ['watched_old', 'Earliest']]],
+    ['Release Date',    [['release_new', 'Latest'], ['release_old', 'Earliest']]],
+    ['Alphabetical',    [['az', 'A → Z'], ['za', 'Z → A']]],
+    ['Specific Rating', [['enjoyment', 'Enjoyment'], ['story', 'Story & Plot'], ['acting', 'Acting'], ['ending', 'Ending & Payoff']]],
   ];
+  function orderLabel(mode) {
+    for (const [h, opts] of ORDER_GROUPS) { const o = opts.find(x => x[0] === mode); if (o) return `${h}: ${o[1]}`; }
+    return 'My Order';
+  }
   function subRating(e, concept) {
     if (!e || !e.ratings) return null;
     const animated = e.cat === 'anime' || e.cat === 'cartoons';
@@ -364,5 +361,5 @@ const MSSList = (() => {
     if (add === c) drawAdd();
   }
 
-  return { _react: react, _import: importList, addTo, reorder, sortBy, orderValue, orderHint, ORDERS, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, open, close, rankBadge, officialBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
+  return { _react: react, _import: importList, addTo, reorder, sortBy, orderValue, orderHint, ORDER_GROUPS, orderLabel, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, open, close, rankBadge, officialBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
 })();
