@@ -897,7 +897,7 @@ function egExport() {
         ${Object.keys(S.mine).length ? `<button type="button" class="sf-clear-btn" onclick="egCSV()">${icon('download', 14)} CSV</button>` : ''}
         <button type="button" class="sf-apply-btn" id="egExSave" onclick="egSaveImage(this)" disabled>${icon('share', 14)} Save Image</button>
       </div></div>`;
-  MSSDialog.open(ov, { focus: '.sf-close' });
+  MSSDialog.open(ov);   // focus goes to the popup itself — not a ring on the X
   egDraw();
 }
 function egExSet(k, v) {
