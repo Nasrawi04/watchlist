@@ -937,12 +937,12 @@ const MSSRich = (() => {
 
 function posterHTML(entry, size) {
   const letter = escHTML((entry.title || '?')[0].toUpperCase());
-  const url = safeURL(entry.poster_url);
+  const url = safeURL(entry.poster_url), lock = mssHiddenBadgeHTML(entry);   // your Friends / Only-me titles (073)
   if (url) {
-    return `<img src="${url}" alt="" loading="lazy" data-letter="${letter}" onerror="mssImgError(this)">`;
+    return `<img src="${url}" alt="" loading="lazy" data-letter="${letter}" onerror="mssImgError(this)">${lock}`;
   }
   const sz = size === 'big' ? '52px' : size === 'sm' ? '22px' : '36px';
-  return `<span style="font-size:${sz};display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--olive-light);font-family:var(--serif)">${letter}</span>`;
+  return `<span style="font-size:${sz};display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--olive-light);font-family:var(--serif)">${letter}</span>${lock}`;
 }
 
 function genreHTML(genres, max) {
@@ -1218,40 +1218,61 @@ const MSS_NOTE_VIS = [
   ['anyone', 'globe', 'Anyone', 'Everyone can read it — it shows in Community notes.'],
   ['friends', 'users', 'Friends', 'Only your friends can read it.'],
   ['link', 'lock', 'Private', 'Only people you send it to, or who have the link.']];
-// The value lives in a hidden input #id (read it with .value), picked with a row of three buttons
-function mssNoteVisHTML(id, value, entryId) {
-  const v = MSS_NOTE_VIS.some(o => o[0] === value) ? value : 'anyone';
-  return `<div class="mss-vis-box" id="${id}Box">
-      <div class="mss-vis-head"><span class="mss-vis-l" id="${id}L">Who can view</span></div>
-      <div class="mss-vis-seg" role="radiogroup" aria-labelledby="${id}L" onkeydown="mssNoteVisKey(event, '${id}')">${MSS_NOTE_VIS.map(([k, ic, l]) =>
-        `<button type="button" role="radio" class="mss-vis-opt${v === k ? ' on' : ''}" aria-checked="${v === k}" tabindex="${v === k ? 0 : -1}" data-v="${k}" onclick="mssNoteVisSet('${id}', '${k}')">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
+// Who can see a title (073) — same control, its own three choices
+const MSS_TITLE_VIS = [
+  ['anyone', 'globe', 'Anyone', 'Anyone can see you have it — your profile, friends’ feeds, the title’s page.'],
+  ['friends', 'users', 'Friends', 'Only your friends see it. Nobody else knows you have it.'],
+  ['private', 'lock', 'Only me', 'Nobody sees it. Your rating still counts in the community score — anonymously.']];
+const _MSS_VIS_SETS = { note: MSS_NOTE_VIS, title: MSS_TITLE_VIS };
+
+// A "who can see" control: a row of three buttons; the value lives in a hidden input #id
+// (read it with .value). kind 'note' (069) adds the private-link buttons; o.onPick names a
+// global function called with the new value (e.g. to save straight away).
+function _mssVisHTML(kind, id, value, o = {}) {
+  const set = _MSS_VIS_SETS[kind], v = set.some(x => x[0] === value) ? value : 'anyone';
+  return `<div class="mss-vis-box" id="${id}Box" data-kind="${kind}"${o.onPick ? ` data-pick="${o.onPick}"` : ''}>
+      <div class="mss-vis-head"><span class="mss-vis-l" id="${id}L">${o.label || 'Who can view'}</span></div>
+      <div class="mss-vis-seg" role="radiogroup" aria-labelledby="${id}L" onkeydown="mssVisKey(event, '${id}')">${set.map(([k, ic, l]) =>
+        `<button type="button" role="radio" class="mss-vis-opt${v === k ? ' on' : ''}" aria-checked="${v === k}" tabindex="${v === k ? 0 : -1}" data-v="${k}" onclick="mssVisSet('${id}', '${k}')">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
       <input type="hidden" id="${id}" value="${v}">
-      <p class="mss-vis-hint" id="${id}Hint">${MSS_NOTE_VIS.find(o => o[0] === v)[3]}</p>
-      <div class="mss-vis-links" id="${id}Link" data-entry="${escHTML(entryId || '')}"${v === 'anyone' || !entryId ? ' hidden' : ''}>
-        <button type="button" class="mss-vis-link" onclick="mssCopyShareLink('note', ${attrJSON(entryId || '')})">${icon('link', 13)} Copy private link</button>
-        <button type="button" class="mss-vis-link mss-vis-new" aria-label="Make a new link" title="Make a new link — the old one stops working" onclick="mssCopyShareLink('note', ${attrJSON(entryId || '')}, true)">${icon('refresh', 13)}<span>New link</span></button>
-      </div>
+      <p class="mss-vis-hint" id="${id}Hint">${set.find(x => x[0] === v)[3]}</p>
+      ${o.entryId !== undefined ? `<div class="mss-vis-links" id="${id}Link" data-entry="${escHTML(o.entryId || '')}"${v === 'anyone' || !o.entryId ? ' hidden' : ''}>
+        <button type="button" class="mss-vis-link" onclick="mssCopyShareLink('note', ${attrJSON(o.entryId || '')})">${icon('link', 13)} Copy private link</button>
+        <button type="button" class="mss-vis-link mss-vis-new" aria-label="Make a new link" title="Make a new link — the old one stops working" onclick="mssCopyShareLink('note', ${attrJSON(o.entryId || '')}, true)">${icon('refresh', 13)}<span>New link</span></button>
+      </div>` : ''}
     </div>`;
 }
-function mssNoteVisSet(id, v, focus) {
+function mssNoteVisHTML(id, value, entryId) { return _mssVisHTML('note', id, value, { entryId: entryId || '' }); }
+function mssTitleVisHTML(id, value, onPick) { return _mssVisHTML('title', id, value, { label: 'Who can see this title', onPick }); }
+function mssVisSet(id, v, focus) {
+  const box = document.getElementById(id + 'Box'), set = _MSS_VIS_SETS[box.dataset.kind];
+  if (document.getElementById(id).value === v && !focus) return;
   document.getElementById(id).value = v;
-  document.querySelectorAll(`#${id}Box .mss-vis-opt`).forEach(b => {
+  box.querySelectorAll('.mss-vis-opt').forEach(b => {
     const on = b.dataset.v === v;
     b.classList.toggle('on', on); b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1;
     if (on && focus) b.focus();
   });
-  document.getElementById(id + 'Hint').textContent = MSS_NOTE_VIS.find(o => o[0] === v)[3];
+  document.getElementById(id + 'Hint').textContent = set.find(x => x[0] === v)[3];
   const links = document.getElementById(id + 'Link');
-  links.hidden = v === 'anyone' || !links.dataset.entry;
+  if (links) links.hidden = v === 'anyone' || !links.dataset.entry;
+  if (box.dataset.pick) window[box.dataset.pick]?.(v);
 }
 // arrow keys move between the three, like any radio group
-function mssNoteVisKey(ev, id) {
+function mssVisKey(ev, id) {
   let d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[ev.key];
   if (!d) return;
   ev.preventDefault();
   if (document.documentElement.dir === 'rtl' && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')) d = -d;   // right-to-left: left is "next"
-  const i = MSS_NOTE_VIS.findIndex(o => o[0] === document.getElementById(id).value);
-  mssNoteVisSet(id, MSS_NOTE_VIS[(i + d + 3) % 3][0], true);
+  const set = _MSS_VIS_SETS[document.getElementById(id + 'Box').dataset.kind];
+  const i = set.findIndex(x => x[0] === document.getElementById(id).value);
+  mssVisSet(id, set[(i + d + 3) % 3][0], true);
+}
+// your own hidden title gets a small lock on its poster (073) — nobody else ever sees one
+function mssHiddenBadgeHTML(e) {
+  if (!e || !e.visibility || e.visibility === 'anyone' || e.user_id !== window._navUser?.id) return '';
+  const only = e.visibility === 'private';
+  return `<span class="mss-hidden-badge" title="${only ? 'Only you can see this title' : 'Only your friends can see this title'}" aria-label="${only ? 'Only you can see this' : 'Friends only'}">${icon(only ? 'lock' : 'users', 11)}</span>`;
 }
 
 // "Who can view" (lists 068, notes 069) as a small tag — none for Anyone
