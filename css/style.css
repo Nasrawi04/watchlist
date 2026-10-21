@@ -6612,3 +6612,35 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 
 .xs-img.xs-ep-a4 { aspect-ratio:1240 / 1754; }
 .xs-img.wide { aspect-ratio:16 / 9; }
+
+/* ── Easter eggs (js/easter-egg.js) ── a spliced-frame glitch, a rubber stamp on the note box, the stamp in a confirm */
+.mss-splice { animation:mssSplice .5s steps(1, end); }
+@keyframes mssSplice {
+  0%   { transform:translate(0, 0); filter:none; }
+  12%  { transform:translate(-3px, 1px) skewX(-2deg); filter:contrast(1.6) saturate(0); }
+  24%  { transform:translate(4px, -1px); filter:invert(1) contrast(1.4); }
+  36%  { transform:translate(-2px, 0) skewX(1deg); filter:contrast(1.3) saturate(0); }
+  48%  { transform:translate(2px, 1px); filter:none; }
+  60%  { transform:translate(0, 0); }
+}
+.mss-egg-stamp {
+  --stamp:#c8372d;
+  position:fixed; z-index:1400; pointer-events:none;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:8px 16px 9px; border:3px double var(--stamp); border-radius:6px;
+  background:var(--bg-2); color:var(--stamp); box-shadow:var(--shadow-lg);
+  transform:rotate(-6deg);
+}
+.mss-egg-stamp b { font:400 30px/1 var(--bebas); letter-spacing:2px; text-transform:uppercase; }
+.mss-egg-stamp span { font:700 11px/1.2 'Manrope',var(--sans); letter-spacing:.4px; color:var(--text-2); }
+.mss-egg-stamp.in { animation:mssStamp .32s cubic-bezier(.2, 1.6, .4, 1); }
+.mss-egg-stamp.out { opacity:0; transition:opacity .45s; }
+@keyframes mssStamp { from { opacity:0; transform:rotate(-14deg) scale(1.9); } to { opacity:1; transform:rotate(-6deg) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .mss-splice { animation:none; }
+  .mss-egg-stamp.in { animation:none; }
+}
+.confirm-overlay[data-tone="egg"] .confirm-icon { margin:4px 0 6px; }
+.mss-egg-confirm-stamp { display:inline-block; padding:5px 12px 4px; border:3px double #c8372d; border-radius:6px; color:#c8372d; font:400 26px/1 var(--bebas); letter-spacing:2px; text-transform:uppercase; transform:rotate(-6deg); }
+.confirm-overlay[data-tone="egg"].open .mss-egg-confirm-stamp { animation:mssStamp .32s cubic-bezier(.2, 1.6, .4, 1) .08s backwards; }
+@media (prefers-reduced-motion: reduce) { .confirm-overlay[data-tone="egg"].open .mss-egg-confirm-stamp { animation:none; } }
