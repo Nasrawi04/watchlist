@@ -2158,7 +2158,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateRuntimeDisplay();
     }
     document.getElementById('dNotes').value            = e?.notes         || '';
-    document.getElementById('dNotesSpoilerWrap').innerHTML = mssSpoilerToggleHTML('dNotesSpoiler');
+    document.getElementById('dNotesSpoilerWrap').innerHTML = mssSpoilerToggleHTML('dNotesSpoiler', e);
     document.getElementById('dNotesSpoiler').checked = mssIsSpoiler(e);
     document.getElementById('dNoteVisWrap').innerHTML = mssNoteVisHTML('dNoteVis', e?.note_visibility, e?.id);   // who can view (069)
     _detNotesSaved = e?.notes || '';   // what's saved — an easter egg's confirm only asks about a new or changed note
