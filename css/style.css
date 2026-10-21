@@ -1639,6 +1639,12 @@ body.notif-sheet-open { overflow:hidden; }
   background:var(--bg-3); color:var(--text-2); border:1px solid var(--border-2);
 }
 .spoiler-tag svg { width:11px; height:11px; }
+/* a title's own spoiler wording (easter-egg.js) — Fight Club's: a red stamp, "#1" */
+.spoiler-egg .spoiler-reveal { border-color:rgba(200,55,45,.55); }
+.spoiler-egg .spoiler-reveal:hover { border-color:#c8372d; }
+.spoiler-egg .spoiler-ic { background:#c8372d; font:400 15px/1 var(--bebas); letter-spacing:.5px; padding-top:2px; }
+.spoiler-egg .spoiler-reveal small { max-width:240px; white-space:normal; }
+.spoiler-tag-egg { color:#c8372d; border-color:rgba(200,55,45,.5); background:rgba(200,55,45,.08); }
 .spoiler-toggle { display:flex; align-items:center; gap:10px; margin-top:10px; padding:10px 12px; border-radius:var(--radius-sm); cursor:pointer; border:1px solid var(--border); background:var(--bg-3); transition:border-color .15s, background .15s; }
 .spoiler-toggle:hover { border-color:var(--border-olive); }
 .spoiler-toggle input { position:absolute; opacity:0; pointer-events:none; }
