@@ -143,30 +143,6 @@
 .social-list-add-btn:disabled { opacity:.5; cursor:default; }
 .social-list-row { position:relative; }
 
-/* Picker */
-#favListPickerOverlay {
-  position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.65);
-  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:flex;align-items:center;
-  justify-content:center;padding:16px;box-sizing:border-box;
-  opacity:0;pointer-events:none;transition:opacity .22s;
-}
-#favListPickerOverlay.open{opacity:1;pointer-events:auto;}
-#favListPickerSheet {
-  width:97%;max-width:540px;background:var(--bg-2);
-  border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);
-  box-shadow:4px 4px 0 var(--olive);display:flex;flex-direction:column;
-  max-height:85dvh;transform:translateY(16px);
-  transition:transform .26s cubic-bezier(.4,0,.2,1);
-}
-#favListPickerOverlay.open #favListPickerSheet{transform:translateY(0);}
-.fav-picker-list { min-height:0; } /* lets it actually scroll within max-height instead of overflowing the sheet */
-#favPickerModeToggle { flex-shrink:0; }
-
-@media(max-width:600px){
-  #favPickerModeToggle .pn-toggle-btn { padding:8px 20px; font-size:12.5px; }
-  #favPickerModeToggle { margin-bottom:10px !important; }
-}
-
 @media(max-width:600px){
   .fav-h-grid .q-card{flex:0 0 120px;min-width:120px;}
   .fav-h-nav{display:none;}
@@ -174,21 +150,6 @@
 @media(max-width:400px){
   .fav-h-grid .q-card{flex:0 0 105px;min-width:105px;}
 }
-
-/* ── Custom List Modal ── */
-#favCustomListModal {
-  position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,0.72);
-  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;
-  padding:16px;box-sizing:border-box;opacity:0;pointer-events:none;transition:opacity .2s;
-}
-#favCustomListModal.open { opacity:1;pointer-events:auto; }
-#favCustomListCard {
-  background:var(--bg-2);border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
-  width:97%;max-width:420px;padding:24px 24px 20px;box-sizing:border-box;
-  transform:translateY(16px);transition:transform .25s cubic-bezier(.4,0,.2,1);
-}
-#favCustomListModal.open #favCustomListCard { transform:translateY(0); }
 
 .lists-page-header-right { display:flex; flex-direction:row; align-items:center; gap:8px; flex-wrap:wrap; }
 @media(max-width:520px){
@@ -322,7 +283,7 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
       <div class="cat-page-sub" id="listsPageSub"></div>
     </div>
     <div class="cat-page-header-right lists-page-header-right">
-      <button class="btn-add-entry" id="listsCustomBtn" onclick="openFavCustomListModal()">+ New List</button>
+      <button class="btn-add-entry" id="listsCustomBtn" onclick="MSSListStudio.open()">+ New List</button>
     </div>
   </div>
 
@@ -363,82 +324,6 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
 </div>
 
 <!-- Custom List Modal -->
-<div id="favCustomListModal" onclick="if(event.target===this)closeFavCustomListModal()">
-  <div id="favCustomListCard">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-      <div style="font-family:var(--serif);font-size:20px;font-weight:500;color:var(--text);" id="favCustomListModalTitle">New List</div>
-      <button onclick="closeFavCustomListModal()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:20px;line-height:1;">✕</button>
-    </div>
-    <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:8px;">List Title</div>
-    <input id="favCustomListInput" type="text" maxlength="60" placeholder="e.g. Comfort Shows"
-      style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:var(--radius-sm);
-             border:1px solid var(--border);background:var(--bg-3);color:var(--text);
-             font-family:var(--sans);font-size:16px;outline:none;margin-bottom:18px;
-             transition:border-color .15s;" onfocus="this.style.borderColor='var(--olive-light)'" onblur="this.style.borderColor='var(--border)'"
-      oninput="document.getElementById('favCustomListCreate').disabled=!this.value.trim()"
-      onkeydown="if(event.key==='Enter'&&event.target===this)document.getElementById('favCustomListCreate').click()">
-    <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:8px;">Description <span style="color:var(--text-3);font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;">(optional, max 50 words)</span></div>
-    <textarea id="favCustomListDescInput" class="list-desc-field" maxlength="500" placeholder="What's this list about?" oninput="_listsUpdateWordCount('favCustomListDescInput','favCustomListDescCount')" style="margin-bottom:4px;"></textarea>
-    <div class="list-desc-count" id="favCustomListDescCount" style="margin-bottom:14px;">0 / 50 words</div>
-    <div id="favListRankWrap">
-    <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;">Ranking</div>
-    <div class="sf-choice-box" style="margin-bottom:18px;">
-      <label class="sf-check-row">
-        <input type="checkbox" id="favListRankedYes" onchange="_favListRankedChange(this.checked ? true : null)">
-        <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-        <span class="sf-choice-text"><b>Ranked</b><small>Numbered in order — #1 is your top pick</small></span>
-      </label>
-      <label class="sf-check-row">
-        <input type="checkbox" id="favListRankedNo" onchange="_favListRankedChange(this.checked ? false : null)">
-        <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-        <span class="sf-choice-text"><b>Unranked</b><small>Just a collection, no particular order</small></span>
-      </label>
-    </div>
-    </div>
-    <div id="favCollabOptWrap">
-      <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--olive-light);margin-bottom:10px;">Collaborate</div>
-      <div class="sf-choice-box" style="margin-bottom:18px;">
-        <label class="sf-check-row">
-          <input type="checkbox" id="favListCollabOpt">
-          <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-          <span class="sf-choice-text"><b>Invite friends to this list</b><small>They can add and remove titles with you — only you can rename or delete it</small></span>
-        </label>
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;">
-      <button onclick="closeFavCustomListModal()" style="flex:1;padding:10px;border-radius:var(--radius-sm);background:var(--bg-3);color:var(--text-2);border:0.5px solid var(--border);font-family:var(--sans);font-size:14px;cursor:pointer;">Cancel</button>
-      <button id="favCustomListCreate" onclick="createFavCustomList()" disabled
-        style="flex:2;padding:10px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;">Create List</button>
-    </div>
-  </div>
-</div>
-
-<!-- List Picker Overlay -->
-<div id="favListPickerOverlay" onclick="if(event.target===this)closeFavListPicker()">
-  <div id="favListPickerSheet">
-    <div class="fav-picker-hd">
-      <div>
-        <span class="fav-picker-title" id="favListPickerTitle">Edit List</span>
-        <span class="fav-picker-count" id="favListPickerCount"></span>
-      </div>
-      <button onclick="closeFavListPicker()" class="fav-picker-close">✕</button>
-    </div>
-    <div class="pn-toggle" id="favPickerModeToggle" style="margin:14px auto 14px;">
-      <button class="pn-toggle-btn active" data-mode="library" onclick="_favPickerSetMode('library')">My Library</button>
-      <button class="pn-toggle-btn" data-mode="discover" onclick="_favPickerSetMode('discover')">Discover</button>
-    </div>
-    <div class="fav-picker-search-wrap">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="text" id="favListPickerSearch" class="fav-picker-search-input" placeholder="Search…" autocomplete="off" oninput="_favPickerSearch(this.value)">
-    </div>
-    <div class="fav-picker-list" id="favListPickerList"></div>
-    <div class="fav-picker-footer">
-      <button class="fav-picker-cancel" onclick="closeFavListPicker()">Cancel</button>
-      <button class="fav-picker-save" id="favListPickerSave" onclick="saveFavList()">Save</button>
-    </div>
-  </div>
-</div>
-
 <!-- Popup injected dynamically -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -447,6 +332,7 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
 <script src="js/nav.js"></script>
 <script src="js/sort-filter.js"></script>
 <script src="js/list-popup.js"></script>
+<script src="js/list-studio.js"></script>
 <script>
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -492,12 +378,6 @@ let _socialListsRaw = [];
 let _socialListsMyReactions = {}; // list_id -> 'like' | 'dislike'
 
 // Picker state
-let _favListPickerListId = null;
-let _favListPickerCat = null;
-let _favListPickerGenre = null;
-let _favListPickerSelected = [];
-let _favListPickerPool = [];
-let _favListPickerMax  = Infinity;
 
 // Popup state
 let _favPopupId = null;
@@ -511,7 +391,6 @@ window.addEventListener('pageshow', (event) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   attachClearButton('listsSearchInput');
-  attachClearButton('favListPickerSearch');
   initPage(async (user) => {
     if (!user) {
       document.querySelector('.page-wrap').innerHTML = `
@@ -527,6 +406,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     _listsUser = user;
+    MSSListStudio.init({
+      lists: () => _listsAll, entries: () => _listsEntries, resolve: _resolveListItem, save: saveFavoriteList,
+      afterSave: (list, isNew) => { if (isNew) _listsAll.push(list); renderListsPage(); },
+      collab: id => openCollabPicker(id),
+    });
     await loadListsPage();
   });
 });
@@ -606,6 +490,7 @@ async function saveFavoriteList(list) {
     if (list.description !== undefined) upd.description = list.description;
     if (list.ranked !== undefined) upd.ranked = list.ranked;
     if (list.sort_mode !== undefined) upd.sort_mode = list.sort_mode;
+    if (list.visibility !== undefined) upd.visibility = list.visibility;
     const { data, error } = await sb.from('favorite_lists')
       .update(upd)
       .eq('id', list.id)
@@ -615,7 +500,7 @@ async function saveFavoriteList(list) {
     return data;
   } else {
     const { data, error } = await sb.from('favorite_lists')
-      .insert({ user_id: _listsUser.id, cat: list.cat, genre: list.genre, title: list.title, description: list.description || null, items: list.items || [], ranked: list.ranked ?? null, sort_mode: list.sort_mode ?? null })
+      .insert({ user_id: _listsUser.id, cat: list.cat, genre: list.genre, title: list.title, description: list.description || null, items: list.items || [], ranked: list.ranked ?? null, sort_mode: list.sort_mode ?? null, visibility: list.visibility || 'anyone' })
       .select().single();
     if (error) throw error;
     return data;
@@ -663,8 +548,6 @@ async function setListRanked(listId, value) {
 }
 
 const _LIST_ICONS = {
-  rename: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`,
-  edit:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>`,
   del:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
 };
 
@@ -1583,15 +1466,14 @@ function _renderListPopup() {
   if (mine && l._collab) {
     // Collaborator: can add/remove titles and leave — never rename/delete
     actions = `<div id="lpPopupActions" class="lp-actions">
-      <button class="popup-action-btn" style="flex:2 1 0;" onclick="_lpThen(openFavListPicker)">${_LIST_ICONS.edit}Edit Titles</button>
+      <button class="popup-action-btn" style="flex:2 1 0;" onclick="_lpThen(id => MSSListStudio.open({ id }))">${icon('edit', 14)}Edit</button>
       <button class="popup-action-btn popup-action-danger" onclick="leaveSharedList(${id})">Leave</button>
     </div>`;
   } else if (mine) {
     actions = `<div id="lpPopupActions" class="lp-actions">
-      <button class="popup-action-btn" onclick="_lpThen(openFavListPicker)">${_LIST_ICONS.edit}Edit Titles</button>
-      <button class="popup-action-btn" onclick="_lpThen(openFavCustomListModal)">${_LIST_ICONS.rename}Rename</button>
+      <button class="popup-action-btn" onclick="_lpThen(id => MSSListStudio.open({ id }))">${icon('edit', 14)}Edit</button>
       <button class="popup-action-btn" onclick="_lpThen(openCollabPicker)">${icon('users', 14)}Collaborate</button>
-      <button class="popup-action-btn popup-action-danger" onclick="_lpThen(deleteFavListConfirm)" aria-label="Delete list">${_LIST_ICONS.del}</button>
+      <button class="popup-action-btn popup-action-danger lp-del" onclick="_lpThen(deleteFavListConfirm)" aria-label="Delete list">${_LIST_ICONS.del}</button>
     </div>`;
   } else {
     const myReaction = _socialListsMyReactions[l.id];
@@ -1612,7 +1494,7 @@ function _renderListPopup() {
 
   card.innerHTML = `
     <div class="lp-head">${head}<button class="lp-close" onclick="closeSocialListPopup()" aria-label="Close">${icon('x', 18)}</button></div>
-    <div class="lp-title-row"><div class="lp-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l) || MSSList.rankBadge(l.ranked)}</div>
+    <div class="lp-title-row"><div class="lp-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l) || MSSList.rankBadge(l.ranked)}${mssVisBadge(l.visibility)}</div>
     ${l.description ? `<div class="lp-desc" translate="no">${esc(l.description)}</div>` : ''}
     <div class="lp-meta">${MSSList.countHTML(items.length)}</div>
     ${mine ? MSSList.collabLineHTML(l, _listsCollab[l.id]) : ''}
@@ -1672,45 +1554,6 @@ async function forkSocialList(listId) {
 }
 
 
-// 50-word cap on description fields. _listsGuardWordLimit blocks further
-// typing once the limit is reached (deletions and replacing a selection
-// still work) instead of letting extra words in and yanking them back
-// after the fact. _listsUpdateWordCount stays as a safety-net fallback
-// for input paths that bypass beforeinput (e.g. some IME flows).
-function _listsCountWords(s) {
-  return s.trim() ? s.trim().split(/\s+/).length : 0;
-}
-function _listsUpdateWordCount(inputId, countId) {
-  const el = document.getElementById(inputId);
-  const words = el.value.trim().split(/\s+/).filter(Boolean);
-  const countEl = document.getElementById(countId);
-  if (words.length > 50) {
-    el.value = words.slice(0, 50).join(' ');
-    if (countEl) { countEl.textContent = 'Reached max word limit (50/50 words)'; countEl.classList.add('over'); }
-    return;
-  }
-  const count = words.length;
-  if (countEl) {
-    countEl.textContent = `${count} / 50 words`;
-    countEl.classList.toggle('over', count >= 50);
-  }
-}
-function _listsGuardWordLimit(inputId, countId) {
-  const el = document.getElementById(inputId);
-  if (!el || el.dataset.wordLimitGuarded) return;
-  el.dataset.wordLimitGuarded = '1';
-  el.addEventListener('beforeinput', e => {
-    if (e.inputType && e.inputType.startsWith('delete')) return;
-    if (el.selectionStart !== el.selectionEnd) return;
-    const count = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
-    if (count >= 50) {
-      e.preventDefault();
-      const countEl = document.getElementById(countId);
-      if (countEl) { countEl.textContent = 'Reached max word limit (50/50 words)'; countEl.classList.add('over'); }
-    }
-  });
-}
-
 async function deleteFavListConfirm(id) {
   const list = _listsAll.find(l => l.id === id);
   const ok = await showConfirm({ title: 'Delete List?', message: '"'+(list?.title||'this list')+'" will be permanently deleted.', confirmText: 'Delete', iconName: 'x' });
@@ -1736,386 +1579,11 @@ async function deleteFavListConfirm(id) {
 // ══════════════════════════════════════════
 // LIST PICKER (edit a list's items)
 // ══════════════════════════════════════════
-function openFavListPicker(listId) {
-  _favListPickerListId = listId;
-  const list = _listsAll.find(l => l.id === listId);
-  if (!list) return;
-  const cat = list.cat, genre = list.genre, title = list.title;
-  const currentItems = (list.items || []).slice();
-  _favListPickerMax = Infinity;
-
-  _favListPickerCat = cat;
-  _favListPickerGenre = genre;
-  _favListPickerSelected = currentItems.filter(id => !!_resolveListItem(id));
-
-  let pool = _listsEntries.filter(e => e.status === 'completed' || e.status === 'ongoing');
-  if (cat && cat !== 'custom') {
-    pool = pool.filter(e => {
-      if (cat === 'movies') return e.cat === 'movies' || (e.ratings?._media_type === 'movie');
-      if (cat === 'tv') return e.cat === 'tv' || ((e.cat === 'anime' || e.cat === 'cartoons') && e.ratings?._media_type !== 'movie');
-      return e.cat === cat;
-    });
-  }
-  if (genre) pool = pool.filter(e => (e.genres || []).includes(genre));
-  _favListPickerPool = pool;
-
-  document.getElementById('favListPickerTitle').textContent = title;
-  _favPickerSetMode('library');
-  _favPickerResetSearch();
-  _favUpdateCount();
-  _favRenderPickerList();
-
-  document.getElementById('favListPickerOverlay').classList.add('open');
-  mssLockScroll('favListPicker');
-}
-
-function _favRankCls(i) {
-  return i === 0 ? 'cg-rank-1' : i === 1 ? 'cg-rank-2' : i === 2 ? 'cg-rank-3' : 'cg-rank-other';
-}
-
-function _favUpdateCount() {
-  const maxLabel = _favListPickerMax === Infinity ? '∞' : String(_favListPickerMax);
-  document.getElementById('favListPickerCount').textContent = `${_favListPickerSelected.length} / ${maxLabel}`;
-}
-
-function _favDragHandleSVG() {
-  return '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2" cy="2" r="1.4"/><circle cx="8" cy="2" r="1.4"/><circle cx="2" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="2" cy="14" r="1.4"/><circle cx="8" cy="14" r="1.4"/></svg>';
-}
-
-let _favPickerSearchQuery = '';
-let _favPickerMode = 'library';
-let _favDiscoverSearchTimer = null;
-
-function _favPickerSetMode(mode) {
-  _favPickerMode = mode;
-  document.querySelectorAll('#favPickerModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-  const inp = document.getElementById('favListPickerSearch');
-  inp.value = '';
-  inp.placeholder = mode === 'discover' ? 'Search movies & shows on TMDB…' : 'Search…';
-  _favPickerSearchQuery = '';
-  if (mode === 'discover') {
-    document.getElementById('favListPickerList').innerHTML = `<div class="fav-picker-empty">Search for a movie or show to add it — no personal rating required.</div>`;
-  } else {
-    _favRenderPickerList();
-  }
-}
-
-function _favPickerSearch(q) {
-  _favPickerSearchQuery = q.trim().toLowerCase();
-  if (_favPickerMode === 'discover') {
-    clearTimeout(_favDiscoverSearchTimer);
-    if (!_favPickerSearchQuery) {
-      document.getElementById('favListPickerList').innerHTML = `<div class="fav-picker-empty">Search for a movie or show to add it — no personal rating required.</div>`;
-      return;
-    }
-    document.getElementById('favListPickerList').innerHTML = `<div class="fav-picker-empty">Searching…</div>`;
-    _favDiscoverSearchTimer = setTimeout(() => _favRunDiscoverSearch(_favPickerSearchQuery), 350);
-  } else {
-    _favRenderPickerList();
-  }
-}
-function _favPickerResetSearch() {
-  _favPickerSearchQuery = '';
-  const inp = document.getElementById('favListPickerSearch');
-  if (inp) inp.value = '';
-}
-
-async function _favRunDiscoverSearch(q) {
-  try {
-    const [movRes, tvRes] = await Promise.all([
-      tmdbFetch(`${TMDB_BASE}/search/movie?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`).then(r => r.json()),
-      tmdbFetch(`${TMDB_BASE}/search/tv?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(q)}`).then(r => r.json()),
-    ]);
-    const movies = (movRes.results || []).slice(0, 8).map(r => ({ pseudoId: `tmdb:movie:${r.id}`, title: r.title, poster_url: r.poster_path ? TMDB_FULL + r.poster_path : null, thumb: r.poster_path ? TMDB_IMG + r.poster_path : null, year: (r.release_date||'').split('-')[0], tmdb_id: r.id, tmdb_type: 'movie' }));
-    const shows  = (tvRes.results || []).slice(0, 8).map(r => ({ pseudoId: `tmdb:tv:${r.id}`, title: r.name, poster_url: r.poster_path ? TMDB_FULL + r.poster_path : null, thumb: r.poster_path ? TMDB_IMG + r.poster_path : null, year: (r.first_air_date||'').split('-')[0], tmdb_id: r.id, tmdb_type: 'tv' }));
-    const merged = [];
-    const max = Math.max(movies.length, shows.length);
-    for (let i = 0; i < max; i++) { if (movies[i]) merged.push(movies[i]); if (shows[i]) merged.push(shows[i]); }
-
-    if (!merged.length) {
-      document.getElementById('favListPickerList').innerHTML = `<div class="fav-picker-empty">No results for "${esc(q)}"</div>`;
-      return;
-    }
-
-    // Cache immediately so selecting one resolves everywhere
-    // (list-view.html, etc.) without waiting on a separate hydrate call.
-    // Full-size (w500) poster goes in the cache — that's what the list's
-    // grid cards render. Never overwrite an item already hydrated from
-    // the details endpoint (it also carries genres/cat).
-    merged.forEach(m => { if (MSSList.cache[m.pseudoId]) return; MSSList.cache[m.pseudoId] = { id: m.pseudoId, title: m.title, poster_url: m.poster_url, tmdb_id: m.tmdb_id, tmdb_type: m.tmdb_type, year: m.year }; });
-
-    document.getElementById('favListPickerList').innerHTML = merged.map(m => {
-      const isSel = _favListPickerSelected.includes(m.pseudoId);
-      const slotNum = _favListPickerSelected.indexOf(m.pseudoId);
-      const rankCls = _favRankCls(slotNum);
-      return `<div class="fav-picker-item ${isSel?'selected':''}" onmousedown="toggleFavListItem(this)" data-id="${m.pseudoId}">
-        ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onmousedown="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
-        <div class="fav-picker-poster">${safeURL(m.thumb || m.poster_url) ? `<img src="${safeURL(m.thumb || m.poster_url)}" loading="lazy">` : esc((m.title[0]||'?').toUpperCase())}
-          ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
-        </div>
-        <div class="fav-picker-info"><div class="fav-picker-name" translate="no">${esc(m.title)}</div><div class="fav-picker-sub">${m.tmdb_type==='movie'?'Movie':'TV'}${m.year?' · '+m.year:''}</div></div>
-        <div class="fav-picker-check">${isSel ? '✓' : ''}</div>
-      </div>`;
-    }).join('');
-  } catch (e) {
-    console.error('Discover search error:', e);
-    document.getElementById('favListPickerList').innerHTML = `<div class="fav-picker-empty">Search failed.</div>`;
-  }
-}
-
-function _favRenderPickerList() {
-  const listEl = document.getElementById('favListPickerList');
-  const prevScroll = listEl.scrollTop;
-
-  const selSet = new Set(_favListPickerSelected);
-  const inSel  = _favListPickerSelected.map(id => _resolveListItem(id)).filter(Boolean);
-  const rest   = _favListPickerPool.filter(e => !selSet.has(e.id)).sort((a,b) => (liveScore(b)||0)-(liveScore(a)||0));
-  let sorted = [...inSel, ...rest];
-
-  if (_favPickerSearchQuery) {
-    const q = _favPickerSearchQuery;
-    sorted = sorted.filter(e => {
-      const hay = [e.title, ...(e.genres||[]), CAT_META[e.cat]?.label].filter(Boolean).join(' ').toLowerCase();
-      return hay.includes(q);
-    });
-  }
-
-  if (!sorted.length) {
-    listEl.innerHTML = `<div class="fav-picker-empty">No matches for "${esc(_favPickerSearchQuery)}"</div>`;
-    listEl.scrollTop = 0;
-    return;
-  }
-
-  listEl.innerHTML = sorted.map(e => {
-    const isSel   = selSet.has(e.id);
-    const slotNum = _favListPickerSelected.indexOf(e.id);
-    const sc      = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
-    const rankCls = _favRankCls(slotNum);
-    return `<div class="fav-picker-item ${isSel?'selected':''}" onmousedown="toggleFavListItem(this)" data-id="${e.id}">
-      ${isSel ? `<div class="fav-drag-handle" title="Drag to reorder" onmousedown="event.stopPropagation()">${_favDragHandleSVG()}</div>` : ''}
-      <div class="fav-picker-poster">${safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" loading="lazy">` : esc((e.title[0]||'?').toUpperCase())}
-        ${isSel ? `<div class="cg-rank-badge ${rankCls}">${slotNum+1}</div>` : ''}
-      </div>
-      <div class="fav-picker-info"><div class="fav-picker-name" translate="no">${esc(e.title)}</div><div class="fav-picker-sub">${(CAT_META[e.cat]?.label)||''}</div></div>
-      ${sc ? `<div class="fav-picker-score">${sc}</div>` : ''}
-      <div class="fav-picker-check">${isSel ? '✓' : ''}</div>
-    </div>`;
-  }).join('');
-
-  listEl.scrollTop = prevScroll;
-}
-
-function toggleFavListItem(el) {
-  const id = el.dataset.id;
-  const idx = _favListPickerSelected.indexOf(id);
-
-  if (idx >= 0) {
-    _favListPickerSelected.splice(idx, 1);
-  } else {
-    if (_favListPickerSelected.length >= _favListPickerMax) {
-      showToast(`Max ${_favListPickerMax} items.`, 'err'); return;
-    }
-    _favListPickerSelected.push(id);
-  }
-
-  _favUpdateCount();
-  if (_favPickerMode === 'discover') {
-    _favRunDiscoverSearch(_favPickerSearchQuery);
-  } else {
-    _favRenderPickerList();
-  }
-}
-
-/* ── Drag to reorder selected items ── */
-let _favDrag = null;
-
-document.addEventListener('pointerdown', e => {
-  const handle = e.target.closest('.fav-drag-handle');
-  if (!handle) return;
-  const item = handle.closest('.fav-picker-item');
-  if (!item) return;
-  e.preventDefault();
-
-  const list = document.getElementById('favListPickerList');
-  const selectedEls = Array.from(list.querySelectorAll('.fav-picker-item.selected'));
-  const startIndex = selectedEls.indexOf(item);
-  if (startIndex < 0) return;
-
-  _favDrag = {
-    item, startIndex, currentIndex: startIndex,
-    startY: e.clientY,
-    itemHeight: item.getBoundingClientRect().height,
-    selectedEls,
-  };
-
-  item.classList.add('dragging');
-  item.style.position = 'relative';
-  item.style.zIndex = '5';
-
-  document.addEventListener('pointermove', _favDragMove);
-  document.addEventListener('pointerup', _favDragEnd);
-  document.addEventListener('pointercancel', _favDragEnd);
-});
-
-function _favDragMove(e) {
-  if (!_favDrag) return;
-  const d = _favDrag;
-  const deltaY = e.clientY - d.startY;
-  d.item.style.transform = `translateY(${deltaY}px)`;
-
-  const shift = Math.round(deltaY / d.itemHeight);
-  const newIndex = Math.min(Math.max(d.startIndex + shift, 0), d.selectedEls.length - 1);
-
-  if (newIndex !== d.currentIndex) {
-    d.selectedEls.forEach((el, i) => {
-      if (el === d.item) return;
-      el.style.transition = 'transform .15s ease';
-      if (i > d.startIndex && i <= newIndex)      el.style.transform = `translateY(-${d.itemHeight}px)`;
-      else if (i < d.startIndex && i >= newIndex) el.style.transform = `translateY(${d.itemHeight}px)`;
-      else                                        el.style.transform = '';
-    });
-    d.currentIndex = newIndex;
-  }
-}
-
-function _favDragEnd() {
-  if (!_favDrag) return;
-  const d = _favDrag;
-  document.removeEventListener('pointermove', _favDragMove);
-  document.removeEventListener('pointerup', _favDragEnd);
-  document.removeEventListener('pointercancel', _favDragEnd);
-
-  if (d.currentIndex !== d.startIndex) {
-    const [movedId] = _favListPickerSelected.splice(d.startIndex, 1);
-    _favListPickerSelected.splice(d.currentIndex, 0, movedId);
-  }
-
-  d.selectedEls.forEach(el => {
-    el.style.transform = '';
-    el.style.transition = '';
-    el.style.zIndex = '';
-    el.style.position = '';
-    el.classList.remove('dragging');
-  });
-
-  _favDrag = null;
-  _favRenderPickerList();
-}
-
-async function saveFavList() {
-  try {
-    const list = _listsAll.find(l => l.id === _favListPickerListId);
-    if (!list) return;
-    list.items = _favListPickerSelected.slice();
-
-    if (list.ranked === true && list.sort_mode) {
-      // Already decided how this list is ordered — just re-apply that
-      // same order to the (possibly changed) item set automatically,
-      // instead of asking again every time items are added or edited.
-      _reorderListItems(list, list.sort_mode);
-    }
-
-    if (list._collab) {
-      const { error } = await sb.rpc('update_list_items', { p_list_id: list.id, p_items: list.items });
-      if (error) throw error;
-    } else {
-      await saveFavoriteList(list);
-    }
-    closeFavListPicker();
-    renderListsPage();
-    showToast('Saved!');
-    if (list.ranked === true && !list.sort_mode) _openRankOrderPrompt(list.id);
-  } catch(e) { showToast('Error saving.', 'err'); console.error(e); }
-}
-
-/* ── Ranked-list ordering prompt — shown right after saving a ranked
-   list's items, so the rank numbers (1, 2, 3...) reflect a real,
-   permanent choice instead of whatever order items happened to get
-   clicked in the picker. This actually reorders list.items and saves
-   it, unlike the view-only Default/Highest/Lowest sort buttons under
-   each list, which never persist. ── */
-function _injectRankOrderOverlay() {
-  if (document.getElementById('rankOrderOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'rankOrderOverlay';
-  el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.65);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:16px;';
-  el.innerHTML = `
-    <div style="width:97%;max-width:420px;height:480px;max-height:85vh;display:flex;flex-direction:column;background:var(--bg-2);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);box-shadow:4px 4px 0 var(--olive);padding:1.75rem;">
-      <div style="font-family:var(--serif);font-size:20px;font-weight:400;margin-bottom:.4rem;flex-shrink:0;">Order this ranked list</div>
-      <div id="rankOrderSubtitle" style="font-size:12.5px;color:var(--text-3);margin-bottom:1.25rem;flex-shrink:0;"></div>
-      <div id="rankOrderOptions" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:0;flex:1;"></div>
-    </div>`;
-  el.addEventListener('click', e => { if (e.target === el) _closeRankOrderPrompt(); });
-  document.body.appendChild(el);
-}
-
-const _RANK_ORDER_OPTS = [
-  ['picked',    'The order I just picked them in'],
-  ['highest',   'Highest rated overall'],
-  ['lowest',    'Lowest rated overall'],
-  ['enjoyment', 'Best Enjoyment'],
-  ['story',     'Best Story & Plot'],
-  ['acting',    'Best Acting'],
-  ['ending',    'Best Ending & Payoff'],
-  ['az',        'Title A → Z'],
-  ['za',        'Title Z → A'],
-];
-
-function _openRankOrderPrompt(listId) {
-  _injectRankOrderOverlay();
-  const list = _listsAll.find(l => l.id === listId);
-  if (!list) return;
-  document.querySelector('#rankOrderSubtitle').textContent = `How should the ${ (list.items||[]).length } items be ordered?`;
-  document.getElementById('rankOrderOptions').innerHTML = _RANK_ORDER_OPTS.map(([val, label]) =>
-    `<button class="fav-edit-btn" style="justify-content:flex-start;padding:11px 16px;" onclick="_applyRankOrder('${listId}','${val}')">${label}</button>`
-  ).join('');
-  document.getElementById('rankOrderOverlay').style.display = 'flex';
-  mssLockScroll('rankOrder');
-}
-
-function _closeRankOrderPrompt() {
-  const ov = document.getElementById('rankOrderOverlay');
-  if (ov) ov.style.display = 'none';
-  mssUnlockScroll('rankOrder');
-}
-
-// Actually reorders list.items in place according to `mode` — shared by
-// the first-time ordering prompt and by automatic re-application on
-// later edits. Mutates list.items directly; caller is responsible for
-// saving.
-function _reorderListItems(list, mode) { MSSList.reorder(list, mode, _resolveListItem); }   // list-popup.js
-
-async function _applyRankOrder(listId, mode) {
-  const list = _listsAll.find(l => l.id === listId);
-  if (!list) return;
-  try {
-    _reorderListItems(list, mode);
-    list.sort_mode = mode;
-    await saveFavoriteList(list);
-    _closeRankOrderPrompt();
-    renderListsPage();
-    showToast('Order saved!');
-  } catch (err) {
-    console.error('Apply rank order error:', err);
-    showToast('Failed to save order.', 'err');
-  }
-}
-
-function closeFavListPicker() {
-  document.getElementById('favListPickerOverlay').classList.remove('open');
-  mssUnlockScroll('favListPicker');
-}
-
 // ══════════════════════════════════════════
 // RATINGS POPUP
 // ══════════════════════════════════════════
 
 
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
-  if (document.getElementById('favListPickerOverlay')?.classList.contains('open')) closeFavListPicker();
-  else if (document.getElementById('favCustomListModal')?.classList.contains('open')) closeFavCustomListModal();
-});
 </script>
 <script>
 if ('serviceWorker' in navigator) {
@@ -2124,75 +1592,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-/* ── Custom List Modal (title only, no cat/genre) ── */
-var _favCustomListEditId = null;
-
-let _favCustomListRankedValue = null;
-function _favListRankedChange(val) {
-  _favCustomListRankedValue = val;
-  document.getElementById('favListRankedYes').checked = val === true;
-  document.getElementById('favListRankedNo').checked = val === false;
-}
-
-function openFavCustomListModal(editId) {
-  _favCustomListEditId = editId || null;
-  var inp = document.getElementById('favCustomListInput');
-  var descInp = document.getElementById('favCustomListDescInput');
-  const existingList = editId ? _listsAll.find(l => l.id === editId) : null;
-  inp.value = existingList?.title || '';
-  descInp.value = existingList?.description || '';
-  _favCustomListRankedValue = existingList?.ranked ?? null;
-  document.getElementById('favListRankedYes').checked = _favCustomListRankedValue === true;
-  document.getElementById('favListRankedNo').checked = _favCustomListRankedValue === false;
-  // the official account's lists are Official — no Ranked / Unranked
-  document.getElementById('favListRankWrap').hidden = !!(existingList ? existingList.official : window._navUserProfile?.is_official);
-  _listsUpdateWordCount('favCustomListDescInput','favCustomListDescCount');
-  _listsGuardWordLimit('favCustomListDescInput','favCustomListDescCount');
-  document.getElementById('favCustomListCreate').disabled = !inp.value.trim();
-  document.getElementById('favListCollabOpt').checked = false;
-  document.getElementById('favCollabOptWrap').style.display = editId ? 'none' : '';   // new lists only; existing ones use Collaborate in the popup
-  document.getElementById('favCustomListModalTitle').textContent = editId ? 'Edit List' : 'New List';
-  document.getElementById('favCustomListCreate').textContent = editId ? 'Save' : 'Create List';
-  document.getElementById('favCustomListModal').classList.add('open');
-  mssLockScroll('favCustomList');
-  setTimeout(() => inp.focus(), 100);
-}
-function closeFavCustomListModal() {
-  document.getElementById('favCustomListModal').classList.remove('open');
-  mssUnlockScroll('favCustomList');
-  _favCustomListEditId = null;
-}
-async function createFavCustomList() {
-  const title = document.getElementById('favCustomListInput').value.trim();
-  const description = document.getElementById('favCustomListDescInput').value.trim();
-  const ranked = _favCustomListRankedValue;
-  if (!title) return;
-  try {
-    if (_favCustomListEditId) {
-      const list = _listsAll.find(l => l.id === _favCustomListEditId);
-      if (list) {
-        list.title = title;
-        list.description = description;
-        list.ranked = ranked;
-        await saveFavoriteList(list);
-        closeFavCustomListModal();
-        renderListsPage();
-        showToast('List updated!');
-      }
-    } else {
-      const wantsCollab = document.getElementById('favListCollabOpt').checked;
-      const newList = await saveFavoriteList({ cat: 'custom', genre: '', title, description, items: [], ranked });
-      _listsAll.push(newList);
-      closeFavCustomListModal();
-      renderListsPage();
-      showToast(`"${title}" created!`);
-      // Collaborate first (if picked), then add titles
-      setTimeout(() => wantsCollab
-        ? openCollabPicker(newList.id, () => openFavListPicker(newList.id))
-        : openFavListPicker(newList.id), 300);
-    }
-  } catch(e) { showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Error saving list.', 'err'); console.error(e); }
-}
 </script>
 </body>
 </html>
