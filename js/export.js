@@ -20,7 +20,10 @@
              byline (optional, replaces "by …" — a list's owner), desc (optional, under the title),
              detail (one title: the whole note + episodes), episodes ([{ season_number, episode_number, score }]),
              taste (MSSTaste.compute — the taste profile instead of title cards),
-             year (MSSYear.compute — the year in review instead of title cards) }
+             year (MSSYear.compute — the year in review instead of title cards),
+             ep (one show's episode ratings instead of title cards: { count, avg, best, bestSeason,
+                 seasons: [{ n, avg, rows: [{ e, name, score, band, tags, note }] }] }),
+             epChart (with ep: the chart picture as a JPEG data URL — page 1, full page) }
      'mixed' (hand-picked titles, lists): each card follows its own title — score for
      watched ones, progress for ones you're watching, the basics for the rest.
    MSSPdf.kindOf(e) → 'watched' | 'watchlist' | 'watching' | 'title' (not in a library)
@@ -96,6 +99,12 @@ const MSSPdf = (() => {
   function yearStats(yv) {
     return [{ value: yv.titles, label: 'Titles finished' }, { value: yv.hours.toLocaleString('en-GB'), label: 'Hours watched' },
       { value: yv.avg != null ? yv.avg.toFixed(2) : '—', label: 'Average score' }, { value: yv.genres[0]?.name || '—', label: 'Top genre', word: true }];
+  }
+  // a show's episode ratings (ep: { count, avg, best: { s, e, score }, bestSeason: { n, avg } })
+  function epStats(ep) {
+    return [{ value: ep.count, label: 'Episodes rated' }, { value: ep.avg != null ? ep.avg.toFixed(2) : '—', label: 'Average score' },
+      { value: ep.best ? `S${ep.best.s} · E${ep.best.e}` : '—', label: ep.best ? `Best episode · ${ep.best.score.toFixed(1)}` : 'Best episode', word: true },
+      { value: ep.bestSeason ? `Season ${ep.bestSeason.n}` : '—', label: ep.bestSeason ? `Best season · ${ep.bestSeason.avg.toFixed(2)}` : 'Best season', word: true }];
   }
   // the taste profile's own tiles
   function tasteStats(t) {
@@ -193,39 +202,50 @@ const MSSPdf = (() => {
     }
     const avatar = !priv.anon && job.who?.avatar_url ? await loadImage(safeURL(job.who.avatar_url), true) : null;
 
-    /* ── cover block ── */
-    page();
-    font('Oswald', 10.5, 'bold');
-    let x = M;
-    [['MY', P.text], ['SCREEN', P.accent], ['FOLIO', P.text]].forEach(([t, c]) => {
-      ink(c); spaced(t, x, 16, 0.5); const w = pdf.getTextWidth(t) + 0.5 * t.length;
-      if (t === 'SCREEN') { stroke(c, 0.5); pdf.line(x, 17.6, x + w - 0.5, 17.6); }
-      x += w;
-    });
-    font('Manrope', 8); ink(P.text3); pdf.text(fmtDate(new Date().toISOString()), W - M, 16, { align: 'right' });
-    font('Oswald', 8.5, 'bold'); ink(P.accent); spaced(safe(job.kicker).toUpperCase(), M, 32, 0.8);
-    font('Oswald', 26, 'bold'); ink(P.text);
-    const tl = pdf.splitTextToSize(safe(job.title) || 'My export', CW).slice(0, 2);
-    pdf.text(tl, M, 43); y = 43 + (tl.length - 1) * lh(26);
-    const by = job.byline || (!priv.anon && job.who && (job.who.name || job.who.username)
-      ? `by ${job.who.name || job.who.username}${job.who.username && job.who.name && job.who.name !== job.who.username ? ` (@${job.who.username})` : ''}` : '');
-    if (by) { font('Manrope', 10); ink(P.text2); pdf.text(safe(by), M, y + 8); y += 8; }
-    if (job.desc) {
-      font('Manrope', 9.5); ink(P.text2);
-      const dl = pdf.splitTextToSize(safe(job.desc), CW).slice(0, 3);
-      pdf.text(dl, M, y + 7); y += 7 + (dl.length - 1) * lh(9.5);
+    /* ── cover block ── (a show's episode ratings: page 1 is its chart, the same picture as the
+       Episodes page's export, then the episodes start on a fresh page under a small heading) */
+    if (job.epChart) {
+      page();
+      pdf.addImage(job.epChart, 'JPEG', 0, 0, W, H);
+      pdf.addPage(); page();
+      font('Oswald', 8.5, 'bold'); ink(P.accent); spaced(safe(job.kicker).toUpperCase(), M, 18, 0.8);
+      font('Oswald', 18, 'bold'); ink(P.text); pdf.text(clip(safe(job.title), CW), M, 27);
+      font('Manrope', 8.5); ink(P.text3); pdf.text(`Every episode you rated · ${job.ep.count} in all`, M, 33);
+      y = 40;
+    } else {
+      page();
+      font('Oswald', 10.5, 'bold');
+      let x = M;
+      [['MY', P.text], ['SCREEN', P.accent], ['FOLIO', P.text]].forEach(([t, c]) => {
+        ink(c); spaced(t, x, 16, 0.5); const w = pdf.getTextWidth(t) + 0.5 * t.length;
+        if (t === 'SCREEN') { stroke(c, 0.5); pdf.line(x, 17.6, x + w - 0.5, 17.6); }
+        x += w;
+      });
+      font('Manrope', 8); ink(P.text3); pdf.text(fmtDate(new Date().toISOString()), W - M, 16, { align: 'right' });
+      font('Oswald', 8.5, 'bold'); ink(P.accent); spaced(safe(job.kicker).toUpperCase(), M, 32, 0.8);
+      font('Oswald', 26, 'bold'); ink(P.text);
+      const tl = pdf.splitTextToSize(safe(job.title) || 'My export', CW).slice(0, 2);
+      pdf.text(tl, M, 43); y = 43 + (tl.length - 1) * lh(26);
+      const by = job.byline || (!priv.anon && job.who && (job.who.name || job.who.username)
+        ? `by ${job.who.name || job.who.username}${job.who.username && job.who.name && job.who.name !== job.who.username ? ` (@${job.who.username})` : ''}` : '');
+      if (by) { font('Manrope', 10); ink(P.text2); pdf.text(safe(by), M, y + 8); y += 8; }
+      if (job.desc) {
+        font('Manrope', 9.5); ink(P.text2);
+        const dl = pdf.splitTextToSize(safe(job.desc), CW).slice(0, 3);
+        pdf.text(dl, M, y + 7); y += 7 + (dl.length - 1) * lh(9.5);
+      }
+      y += 8;
+      const epN = (job.episodes || []).filter(r => Number(r.episode_number) > 0 && r.score != null).length;
+      const st = job.ep ? epStats(job.ep) : job.year ? yearStats(job.year) : job.taste ? tasteStats(job.taste) : job.detail && list[0] ? detailStats(list[0], epN) : stats(job.kind, list), tw = (CW - 3 * 4) / 4;
+      st.forEach((s, i) => {
+        const tx = M + i * (tw + 4);
+        fill(P.card); stroke(P.edge, 0.3); pdf.roundedRect(tx, y, tw, 21, 2.5, 2.5, 'FD');
+        if (s.word) { font('Oswald', 13, 'bold'); ink(P.accent); pdf.text(clip(s.value, tw - 8), tx + 4, y + 10.4); }
+        else { font('Bebas', 22); ink(P.accent); pdf.text(clip(s.value, tw - 8), tx + 4, y + 11.2); }
+        font('Oswald', 6.8, 'bold'); ink(P.text3); spaced(s.label.toUpperCase(), tx + 4, y + 17, 0.45);
+      });
+      y += 29;
     }
-    y += 8;
-    const epN = (job.episodes || []).filter(r => Number(r.episode_number) > 0 && r.score != null).length;
-    const st = job.year ? yearStats(job.year) : job.taste ? tasteStats(job.taste) : job.detail && list[0] ? detailStats(list[0], epN) : stats(job.kind, list), tw = (CW - 3 * 4) / 4;
-    st.forEach((s, i) => {
-      const tx = M + i * (tw + 4);
-      fill(P.card); stroke(P.edge, 0.3); pdf.roundedRect(tx, y, tw, 21, 2.5, 2.5, 'FD');
-      if (s.word) { font('Oswald', 13, 'bold'); ink(P.accent); pdf.text(clip(s.value, tw - 8), tx + 4, y + 10.4); }
-      else { font('Bebas', 22); ink(P.accent); pdf.text(clip(s.value, tw - 8), tx + 4, y + 11.2); }
-      font('Oswald', 6.8, 'bold'); ink(P.text3); spaced(s.label.toUpperCase(), tx + 4, y + 17, 0.45);
-    });
-    y += 29;
 
     /* ── one card per title: measure (draw = null), then draw at the measured height ── */
     const PAD = 5, RANK = job.ranked ? 10 : 0, PW = withPosters ? 17 : 0, PH = 25.5, BOXH = 19;
@@ -355,14 +375,14 @@ const MSSPdf = (() => {
       y += 12;
     };
     // one bar per row: label · bar (avg out of 10, or n out of the most) · value · how many titles · an optional tag
-    const barRows = (rows, tag, counts) => { const mx = Math.max(1, ...rows.map(x => x.n)); rows.forEach((r2, k) => {
+    const barRows = (rows, tag, counts, unit = 'title') => { const mx = Math.max(1, ...rows.map(x => x.n)); rows.forEach((r2, k) => {
       pageBreak(8);
       const lx = M, bx = M + 46, bw = CW - 46 - 58, f = counts ? r2.n / mx : r2.avg / 10;
       font('Manrope', 8.4, 'bold'); ink(P.text); pdf.text(clip(r2.label || r2.name, 44), lx, y + 4.2);
       fill(P.track); pdf.roundedRect(bx, y + 1.6, bw, 3.2, 1.6, 1.6, 'F');
       fill(P.accent); pdf.roundedRect(bx, y + 1.6, Math.max(3.2, bw * Math.min(1, f)), 3.2, 1.6, 1.6, 'F');
       font('Bebas', 12); ink(P.accent); pdf.text(counts ? String(r2.n) : r2.avg.toFixed(2), bx + bw + 3, y + 4.6);
-      if (!counts) { font('Manrope', 7); ink(P.text3); pdf.text(`${r2.n} ${r2.n === 1 ? 'title' : 'titles'}`, bx + bw + 16, y + 4.4); }
+      if (!counts) { font('Manrope', 7); ink(P.text3); pdf.text(`${r2.n} ${r2.n === 1 ? unit : unit + 's'}`, bx + bw + 16, y + 4.4); }
       const tg = tag && tag(r2, k);
       if (tg) { font('Oswald', 5.8, 'bold'); const tw2 = pdf.getTextWidth(tg) + 0.3 * tg.length + 4;
         stroke(P.edge, 0.3); pdf.roundedRect(M + CW - tw2, y + 0.6, tw2, 5, 1.2, 1.2, 'S'); ink(P.accent); spaced(tg, M + CW - tw2 + 2, y + 4, 0.3); }
@@ -449,6 +469,35 @@ const MSSPdf = (() => {
       }
     }
 
+    /* ── a show's episode ratings (the studio's "Episode ratings"): seasons at a glance,
+       then every rated episode — number, name, tags, the band and score, the note ── */
+    if (job.ep) {
+      const ep = job.ep;
+      if (ep.seasons.length > 1) { head('SEASONS', 'your average in each season', 26); barRows(ep.seasons.map(sn => ({ name: `Season ${sn.n}`, avg: sn.avg, n: sn.rows.length })), null, false, 'episode'); y += 4; }
+      ep.seasons.forEach((sn, si) => {
+        head(`SEASON ${sn.n}`, `${sn.rows.length} rated · average ${sn.avg.toFixed(2)}`, 26);
+        sn.rows.forEach(r => {
+          const note = inc.notes !== false && r.note ? safe(r.note) : '';
+          font('Manrope', 7.6); const nl = note ? pdf.splitTextToSize(note, CW - 34) : [];
+          const tags = (r.tags || []).join('  ·  ');
+          const h = 9 + (tags ? 3.6 : 0) + (nl.length ? nl.length * 3.4 + 1.5 : 0);
+          pageBreak(h + 2);
+          font('Bebas', 13); ink(P.text3); pdf.text(`E${r.e}`, M, y + 5.6);
+          font('Oswald', 9.6, 'bold'); ink(P.text); pdf.text(clip(safe(r.name) || `Episode ${r.e}`, CW - 46), M + 13, y + 5.2);
+          let ty = y + 5.2;
+          if (tags) { ty += 3.6; font('Manrope', 6.8); ink(P.accent); pdf.text(clip(safe(tags), CW - 46), M + 13, ty); }
+          if (nl.length) { ty += 3.6; font('Manrope', 7.6); ink(P.text2); pdf.text(nl, M + 13, ty); }
+          font('Bebas', 15); ink(P.accent); pdf.text(r.score >= 10 ? '10' : r.score.toFixed(1), M + CW, y + 5.8, { align: 'right' });
+          if (r.band) { font('Oswald', 5.6, 'bold'); ink(P.text3); spaced(r.band.toUpperCase(), M + CW - 22 - 0.3 * r.band.length - pdf.getTextWidth(r.band.toUpperCase()), y + 5.4, 0.3); }
+          y += h;
+          stroke(P.line, 0.2); pdf.line(M + 13, y, M + CW, y);
+          y += 2;
+        });
+        y += 4;
+        if (si % 2 === 1) onProgress(0.2 + (si + 1) / ep.seasons.length * 0.75, `Building your PDF… season ${si + 1} of ${ep.seasons.length}`);
+      });
+    }
+
     /* ── one title: its episode ratings, season by season ── */
     const eps = (job.episodes || []).filter(r => Number(r.episode_number) > 0 && r.score != null);
     if (job.detail && eps.length) {
@@ -481,7 +530,7 @@ const MSSPdf = (() => {
 
     /* ── footer on every page: avatar @username · MYSCREENFOLIO — Page x / y ── */
     const pages = pdf.getNumberOfPages(), user = !priv.anon && job.who?.username ? safe(job.who.username) : '';
-    for (let p = 1; p <= pages; p++) {
+    for (let p = job.epChart ? 2 : 1; p <= pages; p++) {   // the chart page has its own footer
       pdf.setPage(p);
       stroke(P.line, 0.25); pdf.line(M, H - 12.5, W - M, H - 12.5);
       let fx = M;
@@ -502,5 +551,5 @@ const MSSPdf = (() => {
     return pdf.output('blob');
   }
 
-  return { build, stats, detailStats, tasteStats, yearStats, posters, text, bars, chips, meta, progress, score, kindOf, POSTER_MAX };
+  return { build, stats, detailStats, tasteStats, yearStats, epStats, posters, text, bars, chips, meta, progress, score, kindOf, POSTER_MAX };
 })();
