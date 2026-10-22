@@ -19,7 +19,7 @@ const MSSShowcase = (() => {
   let S = null;        // { el, uid, own, slots: [badge|null ×9], bg, scheme, all }
   let E = null;        // editor: { slots, bg, scheme, sel, view: 'medals' | 'bg', hits, imgs }
 
-  const medal = (b, size) => b.kind === 'member' ? MSSMedal.member(b.earned_at, { size: Math.round(size * .82) })
+  const medal = (b, size) => b.kind === 'member' ? MSSMedal.member({ size: Math.round(size * .85) })
     : b.kind === 'achievement' ? MSSMedal.achievement(b.ach_key, b.ach_level, { size, at: b.at })
     : b.kind === 'official' ? MSSMedal.official(b.medal, { size, team: b.team_color ? { color: b.team_color } : null })
     : MSSMedal.challenge(b.place, b.cat, { size: Math.round(size * .8) });
