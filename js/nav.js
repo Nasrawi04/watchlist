@@ -441,15 +441,17 @@ function injectChrome() {
   const navEl = document.createElement('nav');
   navEl.id = 'mainNav';
   navEl.innerHTML = `
-    <!-- PHONE / TABLET ROW: logo | icons -->
+    <!-- PHONE / TABLET ROW: search | logo (centred) | bell + avatar -->
     <div class="nav-top" id="navTop">
+      <div class="nav-top-left">
+        <button class="nav-icon-btn" onclick="toggleMobileSearch()" aria-label="Search">
+          ${icon('search', 17)}
+        </button>
+      </div>
       <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenFolio" class="nav-logo-img"></a>
       <div class="nav-top-controls">
-<button class="nav-icon-btn" onclick="toggleMobileSearch()" aria-label="Search">
-          ${icon('search', 15)}
-        </button>
         <button class="notif-btn notif-btn-mobile nav-auth-only" onclick="toggleNotifPanel(event)" aria-label="Notifications">
-          ${icon('bell', 16)}<span class="notif-badge" data-notif-badge></span>
+          ${icon('bell', 17)}<span class="notif-badge" data-notif-badge></span>
         </button>
         <div class="nav-top-user" id="navTopUser" onclick="toggleMobileUser(event)">
           <div class="nav-user-avatar" id="navUserInitialMobile">?</div>
