@@ -2854,6 +2854,9 @@ function _notifPeek(fresh) {
     el.addEventListener('click', e => { e.stopPropagation(); toggleNotifPanel(); });
     el.addEventListener('mouseenter', () => clearTimeout(_notifPeekTimer));
     el.addEventListener('mouseleave', () => _notifPeekLater(3000));
+    let y0 = null;                                       // swipe the banner up to put it away
+    el.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; }, { passive: true });
+    el.addEventListener('touchmove', e => { if (y0 != null && y0 - e.touches[0].clientY > 24) { y0 = null; _notifPeekHide(); } }, { passive: true });
     document.body.appendChild(el);
   }
   const n = fresh[0], a = n.actor;
@@ -2862,14 +2865,18 @@ function _notifPeek(fresh) {
     : `<b>${fresh.length > 99 ? '99+' : fresh.length}</b>`;
   const text = fresh.length === 1 ? _notifShortText(n) : `<b>${fresh.length} new notifications</b>`;
   el.innerHTML = `<span class="np-lead">${lead}</span><span class="np-text">${text}</span><span class="np-go">${icon('arrowRight', 13)}</span>`;
-  // Just below the top bar (even if the bar has scrolled away), lined up
-  // under the bell with a small pointer at it
-  const r = bell.getBoundingClientRect();
-  const right = Math.max(10, window.innerWidth - r.right);
-  el.style.top = (_notifSheetTop() + 10) + 'px';
-  el.style.right = right + 'px';
-  el.style.setProperty('--peek-max', Math.min(380, window.innerWidth - 20) + 'px');
-  el.style.setProperty('--peek-caret', Math.max(14, r.width / 2 - 6) + 'px');
+  // Phones / tablets: a banner that drops down over the top bar (swipe it up to
+  // dismiss). Computers: just below the top bar, pointing at the bell.
+  const banner = matchMedia('(max-width:1380px)').matches;
+  el.classList.toggle('banner', banner);
+  if (banner) { el.style.top = el.style.right = ''; }
+  else {
+    const r = bell.getBoundingClientRect();
+    el.style.top = (_notifSheetTop() + 10) + 'px';
+    el.style.right = Math.max(10, window.innerWidth - r.right) + 'px';
+    el.style.setProperty('--peek-max', Math.min(380, window.innerWidth - 20) + 'px');
+    el.style.setProperty('--peek-caret', Math.max(14, r.width / 2 - 6) + 'px');
+  }
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   _notifPeekLater(5500);
 }
