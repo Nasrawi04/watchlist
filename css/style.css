@@ -1722,6 +1722,14 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .dash-grid { grid-template-columns:repeat(5, minmax(0, 1fr)) !important; gap:16px !important; }
 @media(max-width:1100px) { .dash-grid { grid-template-columns:repeat(3, minmax(0, 1fr)) !important; } }
 @media(max-width:640px)  { .dash-grid { grid-template-columns:repeat(2, minmax(0, 1fr)) !important; gap:12px !important; } }
+/* Phones: each section is one row you swipe left / right (back to the grid while you re-rank) */
+@media(max-width:640px) {
+  .dash-section:not(.is-editing) .dash-grid {
+    grid-template-columns:none !important; grid-auto-flow:column; grid-auto-columns:calc((100% - 12px) / 2.3);
+    overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x proximity; padding-bottom:4px;
+  }
+  .dash-section:not(.is-editing) .dash-grid > * { scroll-snap-align:start; }
+}
 .dash-card.dash-editing { outline:2px solid #d0342c; outline-offset:2px; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
 .dash-card.dash-editing:active { cursor:grabbing; }
 .dash-card.dash-dragging { z-index:20; box-shadow:0 18px 40px rgba(0,0,0,.3); transition:none; }
@@ -1889,9 +1897,8 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 /* Same backdrop as the Info + Ratings popups: dimmed, not blurred */
 .note-popup-overlay2 { background:var(--popup-backdrop) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .np-card { max-width:min(97vw, var(--popup-w)) !important; background:var(--bg-2) !important; border:0.5px solid var(--border) !important; box-shadow:0 28px 70px rgba(0,0,0,.4) !important; display:flex; flex-direction:column; max-height:90dvh; }
-/* The whole card scrolls (header, note and buttons together), so long notes
-   get the full height instead of a small inner box. */
-.np-card { overflow-y:auto; overscroll-behavior-y:contain; scrollbar-width:thin; }
+/* Header and buttons stay put; only the note itself scrolls */
+.np-card { overflow:hidden; }
 .np-card > * { flex-shrink:0; }
 .np-hero { position:relative; height:340px; flex-shrink:0; overflow:hidden; background:linear-gradient(135deg, var(--olive) 0%, var(--olive-faint) 70%); }
 /* Header image: a blurred poster until the TMDB backdrop loads */
@@ -1935,6 +1942,9 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .np-stats span { display:inline-flex; align-items:center; gap:5px; }
 .np-stats b { font-family:var(--bebas); font-weight:400; font-size:15px; color:var(--text-2); letter-spacing:.3px; }
 .np-body { padding:16px 22px 18px; display:flex; flex-direction:column; gap:8px; }
+.np-card > .np-body { flex:1 1 auto; min-height:120px; overflow-y:auto; overscroll-behavior-y:contain; scrollbar-width:thin; }
+/* short screens: a smaller backdrop so the note gets the room */
+@media(max-height:760px) { .np-hero { height:200px; } }
 /* Long notes */
 .np-long .np-poster { width:96px; }
 .np-long .np-quote { font-style:normal; font-size:15px; line-height:1.8; padding-inline-start:16px; }
@@ -1976,6 +1986,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   .np-footer { padding:12px 16px 16px; }
   .np-actions .popup-action-btn { padding:10px 10px; font-size:13px; }
 }
+@media(max-width:640px) and (max-height:760px) { .np-hero { height:150px; } }
 @media(max-width:380px) {
   .np-poster { width:82px; }
   .np-actions .np-react { min-width:58px; }
@@ -6788,3 +6799,20 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .mr-vis { margin-top:18px; }
 .det-title-vis { margin-top:1rem; }
 .det-title-vis .mss-vis-box { margin-top:0; }
+
+/* ── Phones turned sideways (nav.js _navPortraitOnPhones): ask to turn back.
+   Phone-sized only — iPads and other tablets work both ways. ── */
+.mss-rotate { display:none; }
+@media (orientation:landscape) and (max-height:500px) and (hover:none) and (pointer:coarse) {
+  .mss-rotate {
+    position:fixed; inset:0; z-index:100000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    padding:24px; text-align:center; background:var(--bg); color:var(--text-2); font-family:'Manrope',var(--sans);
+  }
+  .mss-rotate b { font-size:17px; color:var(--text); }
+  .mss-rotate span { font-size:13px; color:var(--text-3); }
+  .mss-rotate-ic { width:64px; height:64px; border-radius:50%; display:grid; place-items:center; margin-bottom:6px;
+    background:var(--olive); color:#fff; animation:mssRotate 1.6s cubic-bezier(.6,0,.3,1) infinite; }
+  html:has(.mss-rotate) body { overflow:hidden; }
+}
+@keyframes mssRotate { 0%, 20% { transform:rotate(0); } 60%, 100% { transform:rotate(-90deg); } }
+@media (prefers-reduced-motion: reduce) { .mss-rotate-ic { animation:none; } }
