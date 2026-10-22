@@ -514,13 +514,13 @@ const MSSStudio = (() => {
     if (isEps()) epLoad();
     if (fmt('image') && isEps()) {   // the Episodes page's chart, drawn here
       const d = epData();
-      $('xsPvLabel').innerHTML = `Preview<span>${{ square: '1080 × 1080', story: '1080 × 1920', wide: '1600 × 900' }[S.epSize]}</span>`;
+      $('xsPvLabel').innerHTML = 'Preview';     // the size follows the show (ep-chart.js) — shown once it's drawn
       if (!epSt()) $('xsPreview').innerHTML = `<div class="xs-loading">${!d ? '' : S.epSt?.id === S.epShow ? 'This show isn’t linked to TMDB, so there’s no chart — link it from its page.' : 'Getting the episodes…'}</div>`;
       else {
         let cv = $('xsImg');
         if (!cv) { $('xsPreview').innerHTML = '<canvas id="xsImg" class="xs-img" role="img" aria-label="Preview of the image"></canvas>'; cv = $('xsImg'); }
         cv.classList.toggle('square', S.epSize === 'square'); cv.classList.toggle('wide', S.epSize === 'wide');
-        clearTimeout(S.imgT); S.imgT = setTimeout(() => { if (S && fmt('image') && isEps() && epSt()) epChart(cv, S.epSize).catch(err => console.warn(err)); }, 120);
+        clearTimeout(S.imgT); S.imgT = setTimeout(() => { if (S && fmt('image') && isEps() && epSt()) epChart(cv, S.epSize).then(() => { if (S && $('xsImg') === cv) $('xsPvLabel').innerHTML = `Preview<span>${cv.width} × ${cv.height}</span>`; }).catch(err => console.warn(err)); }, 120);
       }
       $('xsSummary').innerHTML = d ? `<b>${esc(d.show.title)}</b> · ${d.count} episodes rated · ${{ square: 'square, for posts', story: 'story, for Instagram / TikTok', wide: 'wide' }[S.epSize]}` : 'Pick a show you’ve rated episodes of.';
       goLabel(); $('xsAlt').hidden = true; if (!S.busy) $('xsGo').disabled = !epSt();
