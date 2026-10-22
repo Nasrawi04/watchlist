@@ -163,6 +163,28 @@ function _navAchSync() {
   setTimeout(() => sb.rpc('sync_achievements').then(({ error }) => { if (!error && typeof _notifLoad === 'function') _notifLoad(); }), 3000);
 }
 
+/* The MSF Member medal's one-time popup (075) — new accounts and everyone who
+   was already here. Waits for any other popup to close first; once it's been
+   seen (on any device) it's remembered here so the check stops. */
+function _navMemberMedal(uid) {
+  if (/(login|cabinet)\.html$/.test(location.pathname)) return;
+  const key = 'mss_member_seen_' + uid;
+  try { if (localStorage.getItem(key)) return; } catch { return; }
+  setTimeout(async () => {
+    let b = null;
+    try { const r = await sb.rpc('member_medal'); if (r.error) return; b = r.data; } catch { return; }
+    if (!b || b.seen) { try { localStorage.setItem(key, '1'); } catch {} return; }
+    for (let i = 0; i < 40 && (MSSDialog.top() || document.querySelector('.soc-overlay.open')); i++) await new Promise(r => setTimeout(r, 1500));
+    if (MSSDialog.top()) return;                            // still busy — next page
+    try {
+      if (typeof MSSMedal === 'undefined') await _navLoadScript('js/medals.js');
+      if (typeof MSSSpotlight === 'undefined') await _navLoadScript('js/spotlights.js');
+      MSSSpotlight.member(b);
+      localStorage.setItem(key, '1');
+    } catch {}
+  }, 2200);
+}
+
 function _navSpotlight() {
   // Home page only, once each time the app is opened (sessionStorage resets when it's closed)
   if (!/\/(index\.html)?$/.test(location.pathname)) return;
@@ -192,6 +214,7 @@ async function _fillNavUser(user) {
   _navAccountCheck(profile);
   _navReleaseCheck(user);
   _navSpotlight();
+  _navMemberMedal(user.id);
   _navAchSync();
   _navFinishCheck(2500);
   const username = profile?.username || user.email?.split('@')[0] || 'You';
