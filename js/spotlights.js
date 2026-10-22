@@ -245,7 +245,7 @@ const MSSSpotlight = (() => {
     document.getElementById('spotMemberBody').innerHTML = `
       <button type="button" class="spot-x" onclick="MSSDialog.close(document.getElementById('spotMember'))" aria-label="Close">${icon('x', 18)}</button>
       <div class="spot-hero"><div class="spot-rays" aria-hidden="true"></div><div class="spot-confetti" aria-hidden="true">${bits}</div>
-        <div class="spot-medal spot-shine">${MSSMedal.member(b.earned_at, { size: 150, label: 'MSF Member medal' })}</div></div>
+        <div class="spot-medal spot-shine">${MSSMedal.member({ size: 150, label: 'MSF Member medal' })}</div></div>
       <div class="spot-main">
         <div class="spot-eyebrow">${icon('sparkles', 13)} A medal just for you</div>
         <h2 class="spot-title" id="spotMemberTitle"><span class="spot-done-kicker">${fresh ? 'Welcome to MyScreenFolio' : 'Thank you for being here'}</span>MSF Member</h2>
