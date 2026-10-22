@@ -734,11 +734,7 @@ function renderQueueGrid(items) {
 
 /* ════════ DROPPED (071) ════════
    Where you stopped (frozen progress), the score greyed with "doesn't count",
-   and Pick Back Up → Watching right where you left off. */
-function _catPickUp(id) {
-  const e = _catAll.find(en => en.id === id);
-  if (e) MSSDrop.pickUp(e, { onChange: _catRenderStatsAndSections });
-}
+   Pick Back Up lives in the title's popup (tap the card). */
 function _droppedProgress(e, cls) {
   if (mssIsMovieEntry(e) || !e.total_eps) return '';
   const pct = Math.min(100, Math.round(((e.watched ?? 0) / e.total_eps) * 100));
@@ -751,7 +747,6 @@ function _droppedScore(e) {
 }
 function buildDropped(items) {
   if (!items.length) return `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('drop',40)}</div><div class="empty-text">Nothing here yet.</div></div>`;
-  const pick = e => `onclick="_catPickUp('${e.id}')" title="Pick back up" aria-label="Pick “${escHTML(e.title)}” back up"`;
   if (getView('dropped') !== 'grid') {
     return `<div class="watch-list">${items.map(e => {
       const _ctx = catContext();
@@ -762,9 +757,6 @@ function buildDropped(items) {
           <div class="w-ep-row">${_ctx ? getTypeBadge(e, _ctx) : ''}${mssDroppedTagHTML(e)}</div>
           ${_droppedProgress(e, 'w-prog')}
           ${_droppedScore(e)}
-        </div>
-        <div class="w-ep-controls" onclick="event.stopPropagation()">
-          <button type="button" class="w-list-action-btn" ${pick(e)}>${icon('play',14)}</button>
         </div>
       </div>`;
     }).join('')}</div>`;
@@ -785,9 +777,6 @@ function buildDropped(items) {
         <div class="wg-genre">${mssDroppedTagHTML(e)}</div>
         ${_droppedProgress(e, 'wg-prog')}
         ${_droppedScore(e)}
-        <div class="wg-controls" onclick="event.stopPropagation()">
-          <button type="button" class="ep-btn ep-btn-resume" ${pick(e)}>Pick back up</button>
-        </div>
       </div>
     </div>`;
   }).join('');
