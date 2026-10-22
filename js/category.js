@@ -415,8 +415,12 @@ function renderSections(
   if (dropped.length) html += buildSection('dropped', icon('drop',15) + ' Dropped', dropped.length, buildDropped(sd));
   if (q && !html) html = `<div class="sf-search-empty">${icon('search', 22)}<b>Nothing matches “${escHTML(q)}”</b><span>Try another title or year.</span></div>`;
 
-  document.getElementById('sectionsWrap').innerHTML = html;
-  if (typeof fitTitleYear === 'function') fitTitleYear(document.getElementById('sectionsWrap'));
+  const wrap = document.getElementById('sectionsWrap');
+  mssKeepScroll(wrap, () => {              // a redraw keeps your place (rows scrolled sideways too)
+    wrap.innerHTML = html;
+    if (typeof fitTitleYear === 'function') fitTitleYear(wrap);
+  });
+  mssScrollReturn(wrap);                   // back from a title's Edit page → where you were
 }
 
 /* ════════ SECTION ACCORDION ════════ */
