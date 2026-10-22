@@ -6765,7 +6765,10 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
   display:grid; place-items:center; background:rgba(10,10,14,.74); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.3);
   -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); pointer-events:auto;
 }
-.mss-hidden-badge svg { width:11px; height:11px; }
+.mss-hidden-badge { line-height:0; font-size:0; }
+/* the icon pinned to the exact middle (Safari can nudge a grid-centred inline svg down / right);
+   -54% lifts the lock a touch, since its heavy body sits low in the icon */
+.mss-hidden-badge svg { display:block; position:absolute; top:50%; left:50%; width:12px; height:12px; transform:translate(-50%, -54%); }
 .lp-poster .mss-hidden-badge, .lc-poster .mss-hidden-badge { display:none; }   /* the tiny list collages */
 .mr-vis { margin-top:18px; }
 .det-title-vis { margin-top:1rem; }
