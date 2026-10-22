@@ -300,20 +300,22 @@ nav {
 @media(min-width:1381px) { nav { border-bottom:0.5px solid var(--border); } }
 
 .nav-top {
-  display:none;
-  align-items:center;
+  display:none;                         /* grid on phones / tablets (§20) */
+  grid-template-columns:1fr auto 1fr; align-items:center;
   height:64px;
   position:relative;
-  padding:0 10px;
+  padding:0 12px;
 }
-.nav-top .nav-logo { margin-inline-end:auto; white-space:nowrap; }
+.nav-top-left { justify-self:start; display:flex; align-items:center; }
+.nav-top .nav-logo { justify-self:center; white-space:nowrap; }
 
 .nav-top-controls {
-  margin-inline-start:auto; flex-shrink:0;
-  display:flex; align-items:center; gap:4px;
+  justify-self:end; flex-shrink:0;
+  display:flex; align-items:center; gap:8px;
 }
+/* search · bell · avatar are all 40px on phones / tablets */
 .nav-icon-btn {
-  width:36px; height:36px; border:2px solid var(--olive-light); background:var(--olive);
+  width:40px; height:40px; border:0.5px solid var(--border-olive); background:var(--olive);
   color:#fff; display:flex; align-items:center; justify-content:center;
   cursor:pointer; border-radius:50%;
   transition:opacity var(--trans) var(--ease);
@@ -321,7 +323,7 @@ nav {
 .nav-icon-btn:hover { opacity:.85; }
 
 .nav-top-user { cursor:pointer; position:relative; }
-.nav-top-user .nav-user-avatar { width:32px; height:32px; font-size:13px; }
+.nav-top-user .nav-user-avatar { width:40px; height:40px; font-size:15px; }
 .nav-top-user .nav-user-dropdown {
   position:fixed; top:60px; inset-inline-end:10px;
   background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius);
@@ -508,12 +510,12 @@ nav {
 
 .nav-user-wrap {
   position:relative; display:flex; align-items:center; gap:8px;
-  cursor:pointer; padding:5px 10px; border-radius:var(--radius-sm);
+  cursor:pointer; padding:3px 10px 3px 3px; border-radius:999px;
   border:0.5px solid transparent; transition:all var(--trans) var(--ease); -webkit-user-select:none; user-select:none;
 }
 .nav-user-wrap:hover { border-color:var(--border-2); background:var(--card); }
 .nav-user-avatar {
-  width:29px; height:29px; border-radius:50%;
+  width:38px; height:38px; border-radius:50%;          /* same as the bell */
   background:var(--olive-faint); border:1.5px solid var(--border-olive);
   font-family:var(--serif); font-size:14px; color:var(--olive-light);
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
@@ -1450,22 +1452,15 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 
 /* ── Notifications (bell in the top bar) ── */
 .notif-btn { position:relative; }
-/* Mobile bell — same look as the search button, but its own class so pages
-   that hide the nav search button (Home, Discover) keep the bell */
-.notif-btn-mobile {
-  width:36px; height:36px; border:2px solid var(--olive-light); background:var(--olive); color:#fff;
-  display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:50%; flex-shrink:0;
-  transition:opacity var(--trans) var(--ease);
-}
-.notif-btn-mobile:hover { opacity:.85; }
-@media(max-width:640px) { .notif-btn-mobile { width:40px; height:40px; } }
-.notif-btn-desktop {
+/* Phone / tablet bell — the same look as the computer one, 40px like the search button */
+.notif-btn-mobile, .notif-btn-desktop {
   width:38px; height:38px; border-radius:50%; flex-shrink:0; cursor:pointer;
   display:inline-flex; align-items:center; justify-content:center;
   background:var(--card); border:0.5px solid var(--border); color:var(--text-2);
   transition:border-color .15s, color .15s, background .15s;
 }
-.notif-btn-desktop:hover { border-color:var(--border-olive); color:var(--olive-light); }
+.notif-btn-mobile { width:40px; height:40px; }
+.notif-btn-mobile:hover, .notif-btn-desktop:hover { border-color:var(--border-olive); color:var(--olive-light); }
 .notif-badge {
   position:absolute; top:-3px; inset-inline-end:-3px; min-width:17px; height:17px; padding:0 4px; box-sizing:border-box;
   border-radius:999px; background:#c0392b; color:#fff; border:2px solid var(--bg);
@@ -3478,7 +3473,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
    §20  Responsive
    ═════════════════════════════════════════════════════════════ */
 @media(max-width:1380px) {
-  .nav-top   { display:flex !important; }
+  .nav-top   { display:grid !important; }
   .nav-inner { display:none !important; }
   .btn-add { display:none; }
   .nav-user-name, .nav-chevron { display:none; }
@@ -4338,7 +4333,6 @@ body { font-size:15px; }
 
   .vt-btn     { width:34px; height:30px; }
 
-  .nav-icon-btn { width:40px; height:40px; }
 
   .field-input,
 .modal-input,
