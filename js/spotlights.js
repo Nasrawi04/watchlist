@@ -43,6 +43,8 @@ const MSSSpotlights = [
     accent: '#E9A94E', glow: 'rgba(226,138,62,.36)', light: { accent: '#A0601A', glow: 'rgba(200,128,50,.24)' } },
   { key: 'avengers-doomsday', name: 'Avengers: Doomsday', eyebrow: 'Dunesday · Dec 18', done: 'You held the line. Ready for Doomsday.',
     accent: '#5FE39A', glow: 'rgba(90,230,150,.30)', light: { accent: '#17734A', glow: 'rgba(30,120,80,.18)' } },
+  { key: 'clayface-2026', name: 'Clayface', eyebrow: 'Now in cinemas', done: 'Take a bow. The mask is yours.',
+    accent: '#D98A52', glow: 'rgba(200,60,50,.34)', light: { accent: '#9A4E22', glow: 'rgba(170,70,40,.20)' } },
 ];
 
 const MSSSpotlight = (() => {
