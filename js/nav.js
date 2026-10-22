@@ -216,6 +216,7 @@ async function _fillNavUser(user) {
       el.innerHTML += `<span class="nav-badge">${pending}</span>`;
     });
   }
+  _bnavDot(pending);
   return profile;
 }
 
@@ -321,17 +322,15 @@ function _navRenamePopup(uid, name) {
 }
 
 function _updateMobileNavForGuest() {
-  document.querySelectorAll('.mobile-auth-only').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.mobile-guest-only').forEach(el => el.style.display = '');
   document.querySelectorAll('.nav-auth-only').forEach(el => el.style.display = 'none');
-  document.querySelector('.fab')?.setAttribute('style', 'display:none');
+  document.getElementById('bnav')?.classList.add('guest');    // (+) → Sign In
 }
 
 async function initPage(onReady) {
   injectChrome();
   const user = await getCurrentUser();
   if (!user) {
-    // Guest nav: swap avatar → Sign In, hide Add/FAB
+    // Guest nav: swap avatar → Sign In, hide Add
     const userWrap = document.querySelector('.nav-user-wrap');
     if (userWrap) userWrap.outerHTML =
       `<a href="login.html" class="btn-add" style="text-decoration:none">${icon('logout',14)} Sign In</a>`;
@@ -339,7 +338,6 @@ async function initPage(onReady) {
     if (mobileUser) mobileUser.outerHTML =
       `<a href="login.html" style="text-decoration:none;font-size:12px;font-weight:600;padding:0 10px;color:var(--olive-light);white-space:nowrap">Sign In</a>`;
     document.querySelector('.btn-add:not([href])')?.remove();
-    document.querySelector('.fab')?.setAttribute('style', 'display:none');
     _updateMobileNavForGuest();
     // Still call callback with null so pages can render their own empty/guest state
     if (typeof onReady === 'function') await onReady(null, null);
@@ -424,9 +422,8 @@ async function initPageGuest(onReady) {
     const mobileUser = document.getElementById('navTopUser');
     if (mobileUser) mobileUser.outerHTML =
       `<a href="login.html" style="text-decoration:none;font-size:12px;font-weight:600;padding:0 10px;color:var(--olive-light);white-space:nowrap">Sign In</a>`;
-    // Hide Add button + FAB (no watchlist to add to)
+    // Hide the Add button (no watchlist to add to)
     document.querySelector('.btn-add:not([href])')?.remove();
-    document.querySelector('.fab')?.setAttribute('style', 'display:none');
     _updateMobileNavForGuest();
     try { if (typeof onReady === 'function') await onReady(null, null); }
     finally { _mssRestoreScroll(); }
@@ -444,11 +441,8 @@ function injectChrome() {
   const navEl = document.createElement('nav');
   navEl.id = 'mainNav';
   navEl.innerHTML = `
-    <!-- MOBILE ROW: hamburger | logo | icons -->
+    <!-- PHONE / TABLET ROW: logo | icons -->
     <div class="nav-top" id="navTop">
-      <button class="nav-hamburger" id="navHamburger" onclick="toggleMobileNav()" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
       <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenFolio" class="nav-logo-img"></a>
       <div class="nav-top-controls">
 <button class="nav-icon-btn" onclick="toggleMobileSearch()" aria-label="Search">
@@ -479,6 +473,8 @@ function injectChrome() {
         <button type="button" class="mobile-search-close" id="mobileSearchX" onclick="_mobileSearchX()" aria-label="Close search">${icon('x', 16)}</button>
       </div>
     </div>
+    <!-- PHONE / TABLET TOP TOGGLES (filled by _mtogRender) -->
+    <div class="mtog" id="mtog" hidden><div class="mtog-in" id="mtogIn"></div></div>
     <!-- DESKTOP LINKS ROW -->
     <div class="nav-inner">
       <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenFolio" class="nav-logo-img"></a>
@@ -520,43 +516,8 @@ function injectChrome() {
       </div>
     </div>`;
 
-  /* ── MOBILE DRAWER ── */
-  const mobileNavEl = document.createElement('div');
-  mobileNavEl.className = 'mobile-nav';
-  mobileNavEl.id = 'mobileNav';
-  mobileNavEl.innerHTML = `
-    ${mobileNavLink('index.html',     page, 'home',     'Home')}
-    ${mobileNavLink('discover.html',  page, 'compass',  'Discover')}
-    ${mobileLibraryGroup(page)}
-    ${mobileNavLink('lists.html',     page, 'layers',   'Lists')}
-    ${mobileNavLink('notes.html',     page, 'notebook',     'Notes')}
-    ${mobileNavLink('episodes.html',  page, 'episodes', 'Episodes')}
-    ${mobileNavLink('friends.html',   page, 'users',    'Social')}
-    ${mobileNavLink('profile.html',   page, 'user',     'Profile')}
-    ${mobileNavLink('settings.html',  page, 'settings', 'Settings')}
-    <hr>
-    <a class="mobile-nav-link mobile-auth-only" href="#" onclick="openAddModal();return false">${icon('plus', 18)} Add Entry</a>
-    <a class="mobile-nav-link mobile-auth-only" href="#" onclick="_navAccounts();return false">${icon('users', 18)} Switch Account</a>
-    <a class="mobile-nav-link mobile-auth-only" href="#" onclick="handleLogout();return false">${icon('logout', 18)} Sign Out</a>
-    <a class="mobile-nav-link mobile-guest-only" href="login.html" style="display:none">${icon('logout', 18)} Sign In</a>`;
-
-  /* ── BOTTOM NAV ── */
-  const bottomNavEl = document.createElement('nav');
-  bottomNavEl.className = 'bottom-nav';
-  bottomNavEl.id = 'bottomNav';
-  bottomNavEl.innerHTML = `
-    ${bnItem('index.html',    page, 'home',     'Home')}
-    ${bnItem('tv-shows.html', page, 'tv',       'TV')}
-    ${bnItem('movies.html',   page, 'film',     'Movies')}
-    ${bnItem('anime.html',    page, 'animeFace', 'Anime')}
-    ${bnItem('cartoons.html', page, 'crown',    'Cartoons')}`;
-
-  /* ── FAB ── */
-  const fabEl = document.createElement('button');
-  fabEl.className = 'fab';
-  fabEl.setAttribute('aria-label', 'Add entry');
-  fabEl.onclick = openAddModal;
-  fabEl.innerHTML = icon('plus', 24);
+  /* ── BOTTOM BAR (phones / tablets) ── */
+  const bottomNavEl = _bnavEl();
 
   /* ── THEME TOGGLE ── */
   const curTheme = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -635,9 +596,7 @@ function injectChrome() {
   setTimeout(_initTMDBOnModal, 300);
   document.body.insertBefore(themeEl,    first);
   _navInitBackToTop(themeEl);
-  document.body.insertBefore(fabEl,      first);
   document.body.insertBefore(bottomNavEl,first);
-  document.body.insertBefore(mobileNavEl,first);
   document.body.insertBefore(navEl,      first);
 
   /* ── FOOTER ── */
@@ -658,6 +617,7 @@ function injectChrome() {
   document.body.appendChild(footerEl);
 
   markActiveNav();
+  _mtogInit();
 
   // Discover dropdown on both nav search inputs (desktop + mobile)
   initDiscoverSearch('globalSearch', { max: 20, connected: true, includePersons: true });
@@ -674,15 +634,6 @@ function navLink(href, currentPage, iconName, label) {
   const active = currentPage === href ? ' active' : '';
   return `<a class="nav-link${active}" href="${href}" data-page="${href}">${icon(iconName, 14)} ${label}</a>`;
 }
-function mobileNavLink(href, currentPage, iconName, label) {
-  const active = currentPage === href ? ' active' : '';
-  return `<a class="mobile-nav-link${active}" href="${href}" data-page="${href}">${icon(iconName, 18)} ${label}</a>`;
-}
-function bnItem(href, currentPage, iconName, label) {
-  const active = currentPage === href ? ' active' : '';
-  return `<a class="bn-item${active}" href="${href}" data-page="${href}">${icon(iconName, 22)} <span>${label}</span></a>`;
-}
-
 /* ── Library group (TV Shows / Movies / Anime / Cartoons combined) ── */
 const LIBRARY_PAGES = [
   { href: 'library.html', iconName: 'list',     label: 'Library'  },
@@ -711,21 +662,6 @@ function navLibraryDropdown(page) {
       <div class="nav-lib-dropdown" id="navLibDropdown">${items}</div>
     </div>`;
 }
-
-/* Mobile: collapsible "Library" accordion inside the hamburger drawer */
-function mobileLibraryGroup(page) {
-  const isActive = _isLibraryPage(page);
-  const items = LIBRARY_PAGES.map(p => mobileNavLink(p.href, page, p.iconName, p.label)).join('');
-  return `
-    <div class="mobile-nav-group${isActive ? ' open' : ''}" id="mobileLibGroup">
-      <button type="button" class="mobile-nav-link mobile-nav-group-trigger${isActive ? ' active' : ''}" onclick="toggleMobileLibrary(event)">
-        ${icon('grid', 18)} Library
-        <span class="mobile-nav-group-chev">${icon('chevdown', 14)}</span>
-      </button>
-      <div class="mobile-nav-submenu${isActive ? ' open' : ''}" id="mobileLibSubmenu">${items}</div>
-    </div>`;
-}
-
 
 /* ── Back to top ──
    A round olive button that floats just above the dark / light toggle once
@@ -773,12 +709,10 @@ function _navInitBackToTop(themeEl) {
 }
 
 /* ── Toggle functions ──
-   Only one top-bar panel is open at a time: opening the menu (☰), search,
-   notifications or the profile menu closes the others first — otherwise the
-   profile / search panels opened *underneath* the full-screen phone menu
-   and looked like they did nothing. */
+   Only one top-bar panel is open at a time: opening search, notifications,
+   the profile menu or the (+) sheet closes the others first. */
 function _navCloseAll(except) {
-  if (except !== 'nav')    document.getElementById('mobileNav')?.classList.remove('open');
+  if (except !== 'add')    _bnavSheet(false);
   if (except !== 'search') document.getElementById('mobileSearchBar')?.classList.remove('open');
   if (except !== 'user') {
     document.getElementById('userMenuDropdown')?.classList.remove('open');
@@ -787,14 +721,6 @@ function _navCloseAll(except) {
   if (except !== 'notif' && typeof closeNotifPanel === 'function') closeNotifPanel();
   document.getElementById('navLibDropdown')?.classList.remove('open');
   document.getElementById('navLibGroup')?.classList.remove('menu-open');
-  document.getElementById('mobileLibGroup')?.classList.remove('menu-open');
-}
-
-function toggleMobileNav() {
-  const nav = document.getElementById('mobileNav');
-  if (!nav) return;
-  if (!nav.classList.contains('open')) _navCloseAll('nav');
-  nav.classList.toggle('open');
 }
 
 function toggleMobileSearch() {
@@ -839,16 +765,6 @@ function toggleLibraryMenu(e) {
   if (grp) grp.classList.toggle('menu-open', dd?.classList.contains('open'));
 }
 
-/* ── Library accordion (mobile hamburger) ── */
-function toggleMobileLibrary(e) {
-  e.stopPropagation();
-  const grp = document.getElementById('mobileLibGroup');
-  const sub = document.getElementById('mobileLibSubmenu');
-  if (!grp || !sub) return;
-  const isOpen = grp.classList.toggle('open');
-  sub.classList.toggle('open', isOpen);
-}
-
 /* Close dropdowns when clicking outside */
 document.addEventListener('click', () => {
   document.getElementById('userMenuDropdown')?.classList.remove('open');
@@ -862,6 +778,197 @@ function markActiveNav() {
   document.querySelectorAll('[data-page]').forEach(el => {
     el.classList.toggle('active', el.dataset.page === page);
   });
+}
+
+/* ═════════════════════════════════════════════════════════════
+   Phones / tablets (≤1380px) — bottom bar + top toggles (bottom-nav-plan.md)
+
+   Bottom bar: Home · Library · (+) · Social · You. The open tab sits in an
+   olive circle that rises out of a cut-out in the bar; moving to another tab
+   slides it across (it starts where the last page's tab was).
+   (+) opens a small menu: Add a title · Write a note · New list · New poll.
+
+   Top toggles: the Lists / Notes toggle made for phones — full width, pinned
+   under the top bar, one row per tab (Social: two even rows of four).
+   Lists, Notes and Compare get a second, joined row. Every item is a link to
+   a real page (or a ?s= / ?mode= of one); a page can switch in place instead
+   by setting window.mssTabGo(url) → true. Pages that change their own URL
+   call mssTabsRefresh(). Scrolling down folds the toggles away; scrolling up
+   brings them back.
+
+   Pages outside the tabs (a title, a person, a list…) keep the tab you came
+   from lit (sessionStorage); Notifications and Settings light You.
+═════════════════════════════════════════════════════════════ */
+const MSS_TABS = [
+  { k: 'home', label: 'Home', icon: 'home', href: 'index.html', items: [
+    { label: 'Home', icon: 'home', href: 'index.html' },
+    { label: 'Discover', icon: 'compass', href: 'discover.html' },
+  ] },
+  { k: 'lib', label: 'Library', icon: 'grid', href: 'library.html',
+    items: LIBRARY_PAGES.map(p => ({ label: p.label === 'TV Shows' ? 'TV' : p.label, icon: p.iconName, href: p.href })) },
+  { k: 'add' },
+  { k: 'social', label: 'Social', icon: 'users', href: 'friends.html', rows: 4, items: [
+    { label: 'Friends', icon: 'users', href: 'friends.html' },
+    { label: 'Activity', icon: 'activity', href: 'friends.html?s=activity' },
+    { label: 'Compare', icon: 'compare', href: 'friends.html?s=compare', sub: [['Compare', 'friends.html?s=compare'], ['Blend', 'friends.html?s=blend']] },
+    { label: 'Inbox', icon: 'inbox', href: 'friends.html?s=recs' },
+    { label: 'Ep Chat', icon: 'comment', href: 'friends.html?s=epchat' },
+    { label: 'Movie Night', icon: 'film', href: 'friends.html?s=night' },
+    { label: 'Challenges', icon: 'trophy', href: 'friends.html?s=challenges' },
+    { label: 'Polls', icon: 'poll', href: 'friends.html?s=polls' },
+  ] },
+  { k: 'you', label: 'You', icon: 'user', href: 'profile.html', items: [
+    { label: 'Profile', icon: 'user', href: 'profile.html' },
+    { label: 'Lists', icon: 'layers', href: 'lists.html', sub: [['Personal', 'lists.html'], ['Friends', 'friends.html?s=lists'], ['Community', 'lists.html?mode=community']] },
+    { label: 'Notes', icon: 'notebook', href: 'notes.html', sub: [['Personal', 'notes.html'], ['Friends', 'friends.html?s=notes'], ['Community', 'notes.html?mode=community']] },
+    { label: 'Episodes', icon: 'episodes', href: 'episodes.html' },
+    { label: 'Medals', icon: 'trophy', href: 'cabinet.html' },
+  ] },
+];
+const _BNAV_YOU_PAGES = ['notifications.html', 'settings.html'];
+
+/* Where this URL sits: { tab, item, sub } (item / sub are indexes, -1 = none) */
+function _mtabKey(u) {
+  const page = u.pathname.split('/').pop() || 'index.html', q = u.searchParams;
+  if (page === 'friends.html' && q.get('s') && q.get('s') !== 'friends') return page + '?s=' + q.get('s');
+  if ((page === 'lists.html' || page === 'notes.html') && q.get('mode') === 'community') return page + '?mode=community';
+  return page;
+}
+function _mtabWhere(href = location.href) {
+  const key = _mtabKey(new URL(href, location.href));
+  for (const t of MSS_TABS) {
+    if (!t.items) continue;
+    for (let i = 0; i < t.items.length; i++) {
+      const it = t.items[i];
+      const si = (it.sub || []).findIndex(([, h]) => h === key);
+      if (si >= 0) return { tab: t.k, item: i, sub: si };
+      if (it.href === key) return { tab: t.k, item: i, sub: it.sub ? 0 : -1 };
+    }
+  }
+  if (_BNAV_YOU_PAGES.includes(key)) return { tab: 'you', item: -1, sub: -1 };
+  let last = null; try { last = sessionStorage.getItem('mss_tab'); } catch {}
+  return { tab: MSS_TABS.some(t => t.k === last) ? last : 'home', item: -1, sub: -1 };
+}
+const _bnavX = k => (MSS_TABS.findIndex(t => t.k === k) * 20 + 10) + '%';
+
+function _bnavEl() {
+  const el = document.createElement('nav');
+  el.className = 'bnav'; el.id = 'bnav';
+  el.setAttribute('aria-label', 'Main');
+  el.innerHTML = `<div class="bnav-bg" aria-hidden="true"></div><div class="bnav-ring" aria-hidden="true"></div><span class="bnav-orb" aria-hidden="true"></span>
+    ${MSS_TABS.map(t => t.k === 'add'
+      ? `<button type="button" class="bnav-item bnav-add" id="bnavAdd" aria-label="Add" aria-haspopup="menu" aria-expanded="false" aria-controls="bnavSheet" onclick="_bnavAdd(event)"><span class="bnav-ic">${icon('plus', 24)}</span></button>`
+      : `<a class="bnav-item" href="${t.href}" data-tab="${t.k}"><span class="bnav-ic">${icon(t.icon, 23)}</span><span class="bnav-lb">${t.label}</span></a>`).join('')}
+    <div class="bnav-sheet" id="bnavSheet" role="menu" aria-label="Add" hidden>
+      ${[['title', 'film', 'Add a title', 'Search TMDB or type it in'], ['note', 'edit', 'Write a note', 'Pick a title from your library'],
+         ['list', 'layers', 'New list', 'Opens List Studio'], ['poll', 'poll', 'New poll', 'Ask your friends']].map(([k, ic, l, sub]) =>
+        `<button type="button" role="menuitem" class="bnav-sheet-item" onclick="_bnavDo('${k}')"><span class="bnav-sheet-ic" aria-hidden="true">${icon(ic, 18)}</span><span><b>${l}</b><small>${sub}</small></span></button>`).join('')}
+    </div>`;
+  const where = _mtabWhere();
+  let from = null; try { from = sessionStorage.getItem('mss_tab'); sessionStorage.setItem('mss_tab', where.tab); } catch {}
+  const lit = k => {
+    el.style.setProperty('--x', _bnavX(k));
+    el.querySelectorAll('[data-tab]').forEach(a => a.classList.toggle('on', a.dataset.tab === k));
+  };
+  el.querySelector(`[data-tab="${where.tab}"]`)?.setAttribute('aria-current', 'page');
+  // slide in from the last page's tab (no slide when motion is turned down)
+  const slide = from && from !== where.tab && MSS_TABS.some(t => t.k === from) && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  lit(slide ? from : where.tab);
+  if (slide) requestAnimationFrame(() => requestAnimationFrame(() => lit(where.tab)));
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('bnavSheet').hidden) { e.stopPropagation(); _bnavSheet(false, true); }
+    const items = [...el.querySelectorAll('.bnav-sheet-item')], i = items.indexOf(document.activeElement);
+    if (i < 0 || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const n = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    items[n].focus();
+  });
+  return el;
+}
+function _bnavSheet(open, refocus) {
+  const sh = document.getElementById('bnavSheet'), btn = document.getElementById('bnavAdd');
+  if (!sh || sh.hidden === !open) return;
+  sh.hidden = !open;
+  btn.setAttribute('aria-expanded', open);
+  btn.classList.toggle('open', open);
+  if (open) sh.querySelector('.bnav-sheet-item')?.focus();
+  else if (refocus) btn.focus();
+}
+function _bnavAdd(e) {
+  e.stopPropagation();
+  if (document.getElementById('bnav').classList.contains('guest')) { location.href = 'login.html'; return; }
+  const open = document.getElementById('bnavSheet').hidden;
+  if (open) _navCloseAll('add');
+  _bnavSheet(open, !open);
+}
+document.addEventListener('click', e => { if (!e.target.closest?.('#bnavSheet')) _bnavSheet(false); });
+function _bnavDo(k) {
+  _bnavSheet(false);
+  const page = location.pathname.split('/').pop() || 'index.html';
+  if (k === 'title') return openAddModal();
+  if (k === 'note') return page === 'notes.html' && typeof openNotesSearchPopup === 'function' ? openNotesSearchPopup('add') : (location.href = 'notes.html?add=1');
+  if (k === 'list') return page === 'lists.html' && typeof MSSListStudio !== 'undefined' ? MSSListStudio.open() : (location.href = 'lists.html?new=1');
+  if (k === 'poll') {
+    if (page === 'friends.html' && typeof setSocialSection === 'function') { setSocialSection('polls'); MSSPolls.create(); return; }
+    location.href = 'friends.html?s=polls&new=1';
+  }
+}
+/* Red dot on Social while friend requests are waiting */
+function _bnavDot(n) {
+  const a = document.querySelector('#bnav [data-tab="social"]'); if (!a) return;
+  a.querySelector('.bnav-dot')?.remove();
+  if (n > 0) a.insertAdjacentHTML('beforeend', `<span class="bnav-dot"><span class="sr-only">, ${n} friend request${n === 1 ? '' : 's'}</span></span>`);
+}
+
+/* ── Top toggles ── */
+function _mtogRender() {
+  const box = document.getElementById('mtog'), inner = document.getElementById('mtogIn');
+  if (!box) return;
+  const w = _mtabWhere(), t = MSS_TABS.find(x => x.k === w.tab);
+  if (w.item < 0 || !t?.items) { box.hidden = true; inner.innerHTML = ''; _mtogSize(); return; }
+  const cur = (i, on) => on ? ` class="mtog-btn on" aria-current="page"` : ` class="mtog-btn"`;
+  const btn = (it, i) => `<a href="${it.href}"${cur(i, i === w.item)} onclick="return _mtogGo(event, this)">${icon(it.icon, 18)}<span>${it.label}</span></a>`;
+  const rows = t.rows ? [t.items.slice(0, t.rows), t.items.slice(t.rows)] : [t.items];
+  const it = t.items[w.item];
+  inner.innerHTML = `<div class="mtog-main${t.rows ? ' grid' : ''}${t.items.length === 2 ? ' two' : ''}" role="navigation" aria-label="${t.label}">
+      ${rows.map((r, ri) => `<div class="mtog-row">${r.map((x, i) => btn(x, i + (ri ? t.rows : 0))).join('')}</div>`).join('')}
+    </div>
+    ${it.sub ? `<div class="mtog-sub" role="navigation" aria-label="${it.label}">${it.sub.map(([l, h], i) =>
+      `<a href="${h}"${cur(i, i === w.sub)} onclick="return _mtogGo(event, this)">${l}</a>`).join('')}</div>` : ''}`;
+  box.hidden = false;
+  _mtogSize();
+}
+window.mssTabsRefresh = _mtogRender;
+function _mtogGo(e, a) {
+  if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return true;
+  const url = new URL(a.href, location.href);
+  if (url.pathname !== location.pathname || typeof window.mssTabGo !== 'function') return true;
+  if (!window.mssTabGo(url)) return true;
+  _mtogRender();
+  return false;
+}
+/* --mtog-h: the toggles' full height (pages leave room for it);
+   --mtog-vis: what's showing right now (sticky headers sit under it). */
+function _mtogSize() {
+  const box = document.getElementById('mtog'), root = document.documentElement;
+  const h = box && !box.hidden && getComputedStyle(box).display !== 'none' ? document.getElementById('mtogIn').scrollHeight : 0;
+  root.style.setProperty('--mtog-h', h + 'px');
+  root.style.setProperty('--mtog-vis', (root.classList.contains('mtog-up') ? 0 : h) + 'px');
+}
+function _mtogInit() {
+  _mtogRender();
+  window.addEventListener('resize', _mtogSize);
+  if (window.ResizeObserver) new ResizeObserver(_mtogSize).observe(document.getElementById('mtogIn'));
+  let lastY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY, dy = y - lastY, root = document.documentElement;
+    if (Math.abs(dy) < 6 && y > 0) return;
+    lastY = y;
+    const up = y > 120 && dy > 0;
+    if (up === root.classList.contains('mtog-up')) return;
+    root.classList.toggle('mtog-up', up);
+    _mtogSize();
+  }, { passive: true });
 }
 
 function _updateAddModalValidation() {
@@ -927,7 +1034,6 @@ function openAddModal(cat) {
     _resetAddModalDropdowns();
     const m = document.getElementById('mCat');
     if (cat && m) _selSelectDD('mCat', cat);
-    document.getElementById('mobileNav')?.classList.remove('open');
     MSSDialog.open(modal, { focus: '#mTitle' });
   });
 }
@@ -1106,7 +1212,7 @@ document.addEventListener('keydown', e => {
   document.addEventListener('touchstart', e => {
     startY = null;                          // only a touch that starts on the page itself can pull
     if (window.scrollY > 0) return;
-    if (_mssLocks.size || MSSDialog.top() || e.target.closest('.hc-card, .modal-wrap, [class*="overlay"], .mobile-nav')) return;
+    if (_mssLocks.size || MSSDialog.top() || e.target.closest('.hc-card, .modal-wrap, [class*="overlay"], .bnav')) return;
     startY = e.touches[0].clientY;
     pulling = false;
     triggered = false;
@@ -2544,6 +2650,7 @@ async function _notifFriend(ev, friendshipId, accept) {
     if (_notifUser) {
       const pending = await countPendingRequests(_notifUser.id).catch(() => 0);
       document.querySelectorAll('[data-page="friends.html"] .nav-badge').forEach(b => { b.textContent = pending; b.style.display = pending ? '' : 'none'; });
+      _bnavDot(pending);
     }
   } catch (e) { btns.forEach(b => b.disabled = false); showToast('Something went wrong — try again.', 'err'); }
 }
