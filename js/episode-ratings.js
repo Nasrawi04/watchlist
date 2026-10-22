@@ -207,6 +207,7 @@ const MSSEp = (() => {
         ${st.queue?.length ? '<span></span>' : `<button type="button" class="ep-nav-btn" onclick="MSSEp._go(1)" aria-label="Next">Next ›</button>`}
       </div>
       <div class="ep-actions" id="mssEpPopupActions">
+        ${st.prev ? `<button type="button" class="popup-action-btn popup-action-danger ep-del" onclick="MSSEp._remove()" aria-label="Remove this rating" title="Remove this rating">${icon('trash', 15)}</button>` : ''}
         <button type="button" class="popup-action-btn np-ghost" onclick="MSSEp._skip()">Skip</button>
         <button type="button" class="popup-action-btn ep-save" onclick="MSSEp._save(this)">Save</button>
       </div>`);
@@ -296,6 +297,43 @@ const MSSEp = (() => {
       btn.disabled = false; btn.textContent = 'Save';
     }
   }
+  /* Remove one rating (an episode, or a whole season when n = 0) — Undo puts it back */
+  const lbl = (s, n) => n ? `S${s} · E${n}` : `Season ${s}`;
+  const restoreRows = async rows => {
+    const back = rows.map(({ id, created_at, updated_at, ...r }) => r);
+    const { error } = await sb.from('episode_ratings').upsert(back, { onConflict: 'user_id,entry_id,season_number,episode_number' });
+    if (error) throw error;
+  };
+  async function remove(e, s, n, o = {}) {
+    const prev = o.prev || await existing(e, s, n).catch(() => null);
+    if (!prev) return;
+    const { error } = await sb.from('episode_ratings').delete().eq('entry_id', e.id).eq('season_number', s).eq('episode_number', n);
+    if (error) { console.error('Remove rating:', error); showToast('Couldn’t remove that rating — try again.', 'err'); return; }
+    o.onSaved?.(null);
+    showUndoToast(`Removed your ${lbl(s, n)} rating`, async () => { await restoreRows([prev]); o.onSaved?.(prev); });
+  }
+  function removeHere() {
+    if (!st?.prev) return;
+    const { e, s, n, prev, onSaved } = st;
+    close();
+    remove(e, s, n, { prev, onSaved });
+  }
+  /* Remove every episode + season rating you gave a show (asks first; Undo puts them all back) */
+  async function removeAll(e, o = {}) {
+    const { data, error } = await sb.from('episode_ratings').select('*').eq('entry_id', e.id).eq('user_id', uid());
+    if (error) { showToast('Couldn’t load your ratings — try again.', 'err'); return; }
+    const rows = data || [];
+    if (!rows.length) return;
+    const eps = rows.filter(r => r.episode_number > 0).length, seasons = rows.length - eps;
+    const what = [eps ? `${eps} episode rating${eps === 1 ? '' : 's'}` : '', seasons ? `${seasons} season rating${seasons === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ');
+    const ok = await showConfirm({ title: 'Remove all your ratings?', message: `This removes your ${what} for ${e.title}. Notes and tags on them go too.`, confirmText: 'Remove all', iconName: 'trash' });
+    if (!ok) return;
+    const { error: er } = await sb.from('episode_ratings').delete().eq('entry_id', e.id).eq('user_id', uid());
+    if (er) { console.error('Remove all ratings:', er); showToast('Couldn’t remove them — try again.', 'err'); return; }
+    o.onSaved?.(null);
+    showUndoToast(`Removed ${rows.length} rating${rows.length === 1 ? '' : 's'}`, async () => { await restoreRows(rows); o.onSaved?.(rows); }, 8000);
+  }
+
   // Skip: the next queued episode, if any
   function skip() {
     if (!st) return;
@@ -449,7 +487,8 @@ const MSSEp = (() => {
     statusLabel: st => STATUS_LABEL[st] || st,
     _ask: answerAsk, _slide: setScore, _typed: typed, _typedDone: typedDone, _step: d => st && setScore(st.score + d), _tag: toggleTag, _note: onNote,
     _toggle: k => { if (!st) return; st[k === 'tags' ? 'showTags' : 'showNote'] = !st[k === 'tags' ? 'showTags' : 'showNote']; render(st.eps?.find(x => x.n === st.n)); },
-    _go: go, _save: save, _stop: stop, _skip: skip,
+    remove, removeAll,
+    _go: go, _save: save, _stop: stop, _skip: skip, _remove: removeHere,
     _rateSeason: sn => { const e = lastEntry; close(); if (e) open(e, sn, 0); },
   };
 })();
