@@ -411,9 +411,18 @@ document.addEventListener('DOMContentLoaded', () => {
       afterSave: (list, isNew) => { if (isNew) _listsAll.push(list); renderListsPage(); },
       collab: id => openCollabPicker(id),
     });
+    const q = new URLSearchParams(location.search);
+    if (q.get('mode') === 'community') setListsMode('social');
+    if (q.get('new')) {                                 // (+) → New list, from another page
+      const url = new URL(location.href); url.searchParams.delete('new');
+      history.replaceState(history.state, '', url.pathname + url.search);
+      MSSListStudio.open();
+    }
     await loadListsPage();
   });
 });
+// Personal ↔ Community from the phone toggles: switch in place
+window.mssTabGo = url => { setListsMode(url.searchParams.get('mode') === 'community' ? 'social' : 'personal'); return true; };
 
 /* Personal loads first and shows as soon as YOUR lists + entries arrive.
    Shared lists, other people's entries and titles added from Discover
@@ -1082,6 +1091,10 @@ SF.register('social', {
 
 function setListsMode(mode) {
   _listsMode = mode;
+  const url = new URL(location.href);                 // ?mode=community — the phone toggles link to it
+  if (mode === 'social') url.searchParams.set('mode', 'community'); else url.searchParams.delete('mode');
+  history.replaceState(history.state, '', url.pathname + url.search);
+  window.mssTabsRefresh?.();
   document.querySelectorAll('#listsModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
   document.getElementById('listsPageTitle').textContent = mode === 'personal' ? 'My Lists' : 'Community Lists';
   document.getElementById('listsSearchWrap').style.display = mode === 'social' ? '' : 'none';
