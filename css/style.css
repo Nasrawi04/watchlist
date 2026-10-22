@@ -6448,7 +6448,7 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .xs-foot .xs-alt[hidden] { display:none; }
 @media(max-width:480px) { .xs-fmts { grid-template-columns:repeat(2, minmax(0, 1fr)); } .xs-fmt { padding:9px 10px; gap:8px; min-width:0; } .xs-fmt .xs-pk-text { min-width:0; } .xs-fmt b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .xs-fmt small { display:none; } .xs-foot { flex-wrap:wrap; } .xs-foot .xs-alt { order:2; } .xs-foot #xsCancel { order:1; } .xs-foot #xsGo { order:3; flex-basis:100%; } }
 /* Export Studio — the image preview (export-image.js draws it at full size; CSS scales it) */
-.xs-img { display:block; width:100%; max-width:280px; height:auto; margin:0 auto; border-radius:10px; box-shadow:0 6px 28px rgba(0,0,0,.28); }
+.xs-img { display:block; width:100%; max-width:280px; height:auto; max-height:min(70vh, 640px); object-fit:contain; margin:0 auto; border-radius:10px; box-shadow:0 6px 28px rgba(0,0,0,.28); }   /* episode charts grow with the show */
 .xs-img.square { max-width:440px; }
 /* Export Studio — the taste profile preview (rows = the PDF's bars) */
 .xs-tp-row { display:grid; grid-template-columns:calc(var(--u) * 42) 1fr auto calc(var(--u) * 14) auto; align-items:center; gap:calc(var(--u) * 3); margin-bottom:calc(var(--u) * 2.4); font-size:calc(var(--u) * 2.9); }
@@ -6656,7 +6656,7 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 #createCardPrivRow .xs-switch { padding:9px 12px; }
 
 .xs-img.xs-ep-a4 { aspect-ratio:1240 / 1754; }
-.xs-img.wide { aspect-ratio:16 / 9; }
+.xs-img.wide { max-width:100%; }
 
 /* ── Easter eggs (js/easter-egg.js) ── a spliced-frame glitch, a rubber stamp on the note box, the stamp in a confirm */
 .mss-splice { animation:mssSplice 1s steps(1, end); }
