@@ -308,6 +308,9 @@ nav {
 }
 .nav-top-left { justify-self:start; display:flex; align-items:center; }
 .nav-top .nav-logo { justify-self:center; white-space:nowrap; }
+/* the logo file has empty space around the artwork — crop it so it sits inside the 64px row */
+.nav-top .nav-logo { display:flex; line-height:0; }
+.nav-top .nav-logo-img { height:44px; width:auto; aspect-ratio:467 / 198; object-fit:cover; object-position:50% 50%; }
 
 .nav-top-controls {
   justify-self:end; flex-shrink:0;
