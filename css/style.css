@@ -6172,6 +6172,20 @@ html[data-theme="light"] .chf-state.soon { color:#fff; }
 .spot-done-kicker { display:block; font-family:'Manrope',var(--sans); font-size:14px; font-weight:600; letter-spacing:.2px; color:var(--text-2); margin-bottom:4px; }
 .spot-foot a.sf-apply-btn { text-decoration:none; flex:1.4; }
 @media(prefers-reduced-motion:reduce) { .spot-rays, .spot-done .spot-medal { animation:none; } }
+/* The MSF Member medal's popup (spotlights.js member, 075): gold, confetti, a shine across the medal */
+.spot-member { box-shadow:4px 4px 0 var(--spot), 0 0 60px var(--spot-glow); }
+.spot-confetti { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.spot-confetti i { position:absolute; top:-12px; left:var(--x); width:7px; height:12px; border-radius:2px; background:var(--c); opacity:0;
+  transform:rotate(var(--r)); animation:spotConfetti 2.6s cubic-bezier(.25,.6,.4,1) var(--d) both; }
+.spot-confetti i:nth-child(3n) { width:6px; height:6px; border-radius:50%; }
+@keyframes spotConfetti { 0% { opacity:0; transform:translateY(0) rotate(var(--r)); } 12% { opacity:1; } 100% { opacity:0; transform:translateY(260px) rotate(calc(var(--r) + 540deg)); } }
+.spot-shine { overflow:hidden; border-radius:50% 50% 12px 12px; }
+.spot-shine::after { content:''; position:absolute; inset:-10% -60%; pointer-events:none;
+  background:linear-gradient(105deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%); transform:translateX(-70%);
+  animation:spotShine 2.8s ease-in-out 1s infinite; mix-blend-mode:overlay; }
+@keyframes spotShine { 0%, 55% { transform:translateX(-70%); } 85%, 100% { transform:translateX(70%); } }
+.spot-member .spot-desc b { color:var(--text); }
+@media(prefers-reduced-motion:reduce) { .spot-confetti, .spot-shine::after { animation:none; display:none; } }
 /* "Let me choose" (061): picks on the card + the "Does this count?" popup (nav.js) */
 .ch-pick-tag { color:var(--olive-light); font-weight:600; }
 .ch-picks { padding:12px 0 2px; border-top:0.5px solid var(--border); }
