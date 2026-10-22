@@ -41,11 +41,6 @@ function _libResume() {
   var r = MSSViews.resume();
   if (r) _libOpen(r.id, r.view);
 }
-// Dropped (071): back to Watching, right where you stopped
-function _libPickUp(id) {
-  var e = _pEntries.filter(function(x){ return x.id === id; })[0];
-  if (e) MSSDrop.pickUp(e, { onChange: function(){ renderLibrary(); } });
-}
 // Your own title was deleted → drop it and redraw
 function _libRemove(x) {
   _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
@@ -397,7 +392,7 @@ function _libRender(){
     }).join('')+'</div>';
   }
 
-  // Dropped (071) — where they stopped, the score greyed ("doesn't count"); yours: Pick Back Up
+  // Dropped (071) — where they stopped, the score greyed ("doesn't count"); Pick Back Up is in the title's popup
   var dropped=SF.list(LIB_SCOPE,'dropped');
   var dprog=function(e,cls){
     if(mssIsMovieEntry(e)||!e.total_eps)return '';
@@ -405,7 +400,6 @@ function _libRender(){
     return '<div class="'+cls+'-track dropped-track"><div class="'+cls+'-fill" style="width:'+pct+'%"></div></div><div class="dropped-prog-label">'+(e.watched||0)+' / '+e.total_eps+' eps · '+pct+'%</div>';
   };
   var dscore=function(e){ var s=liveScore(e); return s!=null?'<div class="dropped-score"><span>★ '+Number(s).toFixed(2)+'</span><small>doesn’t count</small></div>':''; };
-  var dpick=function(e,cls,inner){ return LIB_READONLY?'':'<button type="button" class="'+cls+'" onclick="event.stopPropagation();_libPickUp(\''+e.id+'\')" title="Pick back up" aria-label="Pick “'+esc(e.title)+'” back up">'+inner+'</button>'; };
   var dc;
   if(!dropped.length){dc='<div class="fv-empty">Nothing here yet.</div>';}
   else if(_libDropView==='grid'){
@@ -415,7 +409,6 @@ function _libRender(){
         +'<span class="'+(isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom">'+(isM?'Movie':'TV Show')+'</span></div>'
         +'<div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
         +'<div class="wg-genre">'+mssDroppedTagHTML(e)+'</div>'+dprog(e,'wg-prog')+dscore(e)
-        +(LIB_READONLY?'':'<div class="wg-controls">'+dpick(e,'ep-btn ep-btn-resume','Pick back up')+'</div>')
         +'</div></div>';
     }).join('')+'</div>');
   } else {
@@ -425,7 +418,6 @@ function _libRender(){
         +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
         +'<div class="fv-w-ep">'+_libTypeBadge(mssIsMovieEntry(e))+mssDroppedTagHTML(e)+'</div>'
         +dprog(e,'fv-w-prog')+dscore(e)+'</div>'
-        +dpick(e,'w-list-action-btn fv-drop-pick',icon('play',14))
         +'</div>';
     }).join('')+'</div>';
   }
