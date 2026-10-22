@@ -4,7 +4,7 @@
   "description": "Your screen portfolio — track, rate and curate everything you watch.",
   "start_url": ".",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#E2DAD0",
   "theme_color": "#1E5C26",
   "scope": ".",
