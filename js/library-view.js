@@ -433,10 +433,13 @@ function _libRender(){
     +_libSection('completed',icon('check',14)+' Watched',completed.length,'comp','completed',cc)
     +(dropped.length?_libSection('dropped',icon('drop',14)+' Dropped',dropped.length,'drop','dropped',dc):'');   // only once something's dropped
   if(q&&!secs) secs='<div class="sf-search-empty">'+icon('search',22)+'<b>Nothing matches “'+escHTML(q)+'”</b><span>Try another title or year.</span></div>';
-  el.querySelector('#libTop').innerHTML = statsHTML;
-  el.querySelector('#libTypeSlot').innerHTML = _libCatFilterBar();      // the Type filter sits beside the search
-  el.querySelector('#libSecs').innerHTML = secs;
-  if (typeof fitTitleYear === 'function') fitTitleYear(el);
   if(loading)loading.style.display='none';
   el.style.display='block';
+  mssKeepScroll(el, function(){            // a redraw keeps your place (rows scrolled sideways too)
+    el.querySelector('#libTop').innerHTML = statsHTML;
+    el.querySelector('#libTypeSlot').innerHTML = _libCatFilterBar();      // the Type filter sits beside the search
+    el.querySelector('#libSecs').innerHTML = secs;
+    if (typeof fitTitleYear === 'function') fitTitleYear(el);
+  });
+  mssScrollReturn(el);                     // back from a title's Edit page → where you were
 }
