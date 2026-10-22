@@ -59,6 +59,7 @@
 .eg-controls .pn-toggle { margin:0; }
 .eg-controls .pn-toggle-btn { padding:8px 14px; font-size:13px; white-space:nowrap; }
 .eg-tools { display:flex; gap:8px; align-items:flex-end; margin-inline-start:auto; }
+.eg-tools .eg-clear:hover, .eg-tools .eg-clear:focus-visible { color:#e5484d; border-color:rgba(229,72,77,.5); }
 .eg-layout { display:grid; grid-template-columns:minmax(0, 1fr) 290px; gap:16px; align-items:start; }
 .eg-board { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg, 16px); padding:16px; min-width:0; }
 
@@ -238,7 +239,9 @@ button.eg-tile:focus-visible { outline:2px solid var(--olive-light); outline-off
   .eg-controls .pn-toggle { width:100%; }
   .eg-controls .pn-toggle-btn { flex:1 1 auto; padding:8px 6px; font-size:12.5px; }
   .eg-tools { width:100%; margin:0; }
-  .eg-tools .sf-icon-btn { flex:1; justify-content:center; }
+  .eg-tools .sf-icon-btn { flex:1 1 auto; justify-content:center; padding-inline:10px; }
+  .eg-tools { flex-wrap:wrap; }
+  .eg-tools .sf-icon-btn-label { white-space:nowrap; }
   .eg-controls .sf-icon-btn { padding:9px 12px; justify-content:center; }
   .eg-controls .sf-icon-btn-label { display:inline; }   /* full-width buttons have room for their labels */
   .eg-season-btn { width:100%; }
@@ -507,6 +510,7 @@ function draw() {
       ${S.readOnly ? '' : `<div class="eg-tools">
         <button type="button" class="sf-icon-btn" onclick="egComparePick()">${icon('compare', 15)}<span class="sf-icon-btn-label">Compare</span></button>
         <button type="button" class="sf-icon-btn" onclick="egExport()">${icon('download', 15)}<span class="sf-icon-btn-label">Export</span></button>
+        ${S.entry && Object.keys(S.mine).length ? `<button type="button" class="sf-icon-btn eg-clear" onclick="egRemoveAll()">${icon('trash', 15)}<span class="sf-icon-btn-label">Remove all</span></button>` : ''}
       </div>`}
     </div>
     ${S.source === 'mine' && !S.entry ? `<div class="mss-empty" style="margin-bottom:1rem">${S.readOnly ? 'No episode ratings for this show yet.' : 'Add this show to your library to rate its episodes.'}</div>` : ''}
@@ -698,6 +702,7 @@ function egOpen(sn, n) {
       <button type="button" class="ep-nav-btn" onclick="egStep(1)" aria-label="Next episode">Next ›</button>
     </div>
     <div class="ep-actions">
+      ${mine && S.entry && !S.readOnly ? `<button type="button" class="popup-action-btn popup-action-danger ep-del" onclick="egRemove(${sn},${n})" aria-label="Remove this rating" title="Remove this rating">${icon('trash', 15)}</button>` : ''}
       <button type="button" class="popup-action-btn np-ghost" onclick="egClose()">Close</button>
       <button type="button" class="popup-action-btn eg-chat-btn" onclick="egChat(${sn},${n})">${icon(S.chat?.[k] && !S.chat[k].unlocked ? 'lock' : 'comment', 14)} Friends’ Chat${S.chat?.[k]?.count ? ` · ${S.chat[k].count}` : ''}</button>
       ${S.entry && !S.readOnly ? `<button type="button" class="popup-action-btn ep-save" onclick="egRate(${sn},${n})">${mine ? 'Edit Rating' : 'Rate'}</button>` : ''}
@@ -718,6 +723,13 @@ function egStep(d) {
   else if (n > (S.eps[sn] || []).length) { const i = vis().indexOf(sn); if (i < vis().length - 1) { sn = vis()[i + 1]; n = 1; } else return; }
   egOpen(sn, n);
 }
+// Remove one rating (from the episode popup) / all of them (the chart's toolbar) — both with Undo
+const egAfterRemove = async () => { await loadMine(); draw(); };
+function egRemove(sn, n) {
+  egClose();
+  MSSEp.remove(S.entry, sn, n, { prev: S.mine[key(sn, n)], onSaved: egAfterRemove });
+}
+function egRemoveAll() { MSSEp.removeAll(S.entry, { onSaved: egAfterRemove }); }
 function egRate(sn, n) {
   egClose();
   if (S.readOnly || !S.entry) return;
