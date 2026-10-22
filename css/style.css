@@ -4992,6 +4992,7 @@ body { font-size:15px; }
 .ep-actions .popup-action-btn { flex:1; width:auto; margin:0; }
 .ep-actions .np-ghost { background:transparent; border:1px solid var(--border-2); color:var(--text-2); }
 .ep-actions .np-ghost:hover { border-color:var(--border-olive); color:var(--text); }
+.ep-actions .ep-del { flex:0 0 auto; min-width:46px; padding-inline:12px; }   /* remove this rating */
 .ep-actions-3 { flex-wrap:wrap; }
 .ep-actions-3 .popup-action-btn { flex:1 1 140px; }
 .ep-hero-season { aspect-ratio:16/6; display:flex; align-items:center; justify-content:center; }
