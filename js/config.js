@@ -1010,9 +1010,56 @@ function getTypeBadgeOverlay(entry, context) {
   return '<span class="' + cls + '">' + label + '</span>';
 }
 
+/* ── Keep your place ──
+   Redrawing a page's sections (a title edited, hidden, moved…) or going to a
+   title's Edit page and back leaves you where you were: the page's scroll and
+   every row / box scrolled inside it (watchlist rows, list boxes…).
+     mssKeepScroll(root, draw)  run draw(), then put root's scrolled boxes + the page back
+     mssScrollReturn(root)      after a page's first draw: back from Edit → same place
+   Boxes are matched by their nearest id'd parent + class + order, so a redraw finds them again. */
+function _mssScrollBoxes(root, each) {
+  const seen = {};
+  root.querySelectorAll('*').forEach(el => {
+    if (el.scrollWidth <= el.clientWidth && el.scrollHeight <= el.clientHeight) return;
+    const k = (el.parentElement?.closest('[id]')?.id || '') + '|' + el.className;
+    seen[k] = (seen[k] || 0) + 1;
+    each(el, k + '|' + seen[k]);
+  });
+}
+function mssScrollSnap(root) {
+  const boxes = {};
+  if (root) _mssScrollBoxes(root, (el, k) => { if (el.scrollLeft || el.scrollTop) boxes[k] = [el.scrollLeft, el.scrollTop]; });
+  return { y: window.scrollY, boxes };
+}
+function mssScrollApply(root, snap) {
+  if (!snap) return;
+  if (root && Object.keys(snap.boxes).length) _mssScrollBoxes(root, (el, k) => { const b = snap.boxes[k]; if (b) el.scrollTo({ left: b[0], top: b[1], behavior: 'instant' }); });
+  window.scrollTo({ top: snap.y, behavior: 'instant' });
+}
+function mssKeepScroll(root, draw) {
+  const snap = mssScrollSnap(root);
+  draw();
+  mssScrollApply(root, snap);
+}
+const _mssHere = () => (location.pathname.split('/').pop() || 'index.html') + location.search;
+function mssScrollReturn(root) {
+  let s; try { s = JSON.parse(sessionStorage.getItem('mssScrollBack') || 'null'); } catch {}
+  if (!s || s.page !== _mssHere()) return;
+  sessionStorage.removeItem('mssScrollBack');
+  if (Date.now() - s.t > 30 * 60e3) return;
+  mssScrollApply(root, s);
+  requestAnimationFrame(() => mssScrollApply(root, s));     // once more after layout settles
+}
+// a place saved for another page (you went somewhere else instead) is dropped
+try {
+  const s = JSON.parse(sessionStorage.getItem('mssScrollBack') || 'null'), page = location.pathname.split('/').pop() || 'index.html';
+  if (s && page !== 'detail.html' && s.page.split('?')[0] !== page) sessionStorage.removeItem('mssScrollBack');
+} catch {}
+
 /* ── Navigation helpers ── */
 function goToDetail(id, fromFile) {
   sessionStorage.setItem('detailId', id);
+  try { sessionStorage.setItem('mssScrollBack', JSON.stringify({ page: _mssHere(), t: Date.now(), ...mssScrollSnap(document.body) })); } catch {}
   // Coming from this very page → keep its ?query too, so Back returns to the
   // same title / list / profile (title.html without ?type&id showed nothing)
   const here = location.pathname.split('/').pop() || 'index.html';
