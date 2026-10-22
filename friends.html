@@ -1570,7 +1570,16 @@ function setSocialSection(k, opts = {}) {
   if (sec.key === 'epchat') MSSEpChat.mount(document.getElementById('socEp'), _fUser, { open: opts.ep });
   if (sec.key === 'recs') MSSShare.inbox(document.getElementById('socRecs'), _fUser, { rec: opts.rec, box: opts.box });
   if (!opts.noScroll) window.scrollTo({ top: 0, behavior: 'instant' });
+  window.mssTabsRefresh?.();
 }
+// The phone toggles switch sections in place (their Lists / Notes are your friends' —
+// Community has its own pages there)
+window.mssTabGo = url => {
+  const s = url.searchParams.get('s') || 'friends';
+  if (s in _frScopeMode) _frScopeMode[s] = 'friends';
+  setSocialSection(s);
+  return true;
+};
 
 /* ── Start ── */
 document.addEventListener('DOMContentLoaded', () => {
@@ -1586,6 +1595,11 @@ document.addEventListener('DOMContentLoaded', () => {
     _frAuthKnown = true;
     if (q.get('with')) _cmpWith = [q.get('with')];          // from a profile's taste match pill
     setSocialSection(_socSection, { keepPoll: true, poll: q.get('poll'), rec: q.get('rec'), box: q.get('box'), ep: q.get('ep'), night: q.get('night'), ch: q.get('ch'), noScroll: true });
+    if (q.get('new') && _socSection === 'polls' && user) {      // (+) → New poll, from another page
+      const url = new URL(location.href); url.searchParams.delete('new');
+      history.replaceState(history.state, '', url.pathname + url.search);
+      MSSPolls.create();
+    }
     if (user) { _frRender(); MSSShare.refreshCount(user).then(_socNav); MSSEpChat.unread(user).then(n => { MSSEpChat.count = n; _socNav(); }); }        // signed in: nav + spinner while friends load
     if (!user) { document.getElementById('friendsPageSub').textContent = 'Search for someone above to view their profile.'; _frRender(); return; }
     await loadFriends();
