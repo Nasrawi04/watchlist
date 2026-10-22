@@ -520,6 +520,7 @@ function injectChrome() {
 
   /* ── BOTTOM BAR (phones / tablets) ── */
   const bottomNavEl = _bnavEl();
+  _navPortraitOnPhones();
 
   /* ── THEME TOGGLE ── */
   const curTheme = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -708,6 +709,22 @@ function _navInitBackToTop(themeEl) {
     else if (dy > 0) { upFor = 0; if (dy > 4) show(false); }          // scrolling on down
   }, { passive: true });
   window.addEventListener('resize', () => { if (shown) place(); });
+}
+
+/* ── Phones stay upright ──
+   Tablets (iPad) turn both ways. A phone turned sideways gets a "turn it
+   back" screen (style.css .mss-rotate — phone-sized landscape only); the
+   installed app on Android also locks itself upright where the browser allows. */
+function _navPortraitOnPhones() {
+  const el = document.createElement('div');
+  el.className = 'mss-rotate';
+  el.setAttribute('role', 'status');
+  el.innerHTML = `<div class="mss-rotate-ic" aria-hidden="true">${icon('refresh', 30)}</div>
+    <b>Turn your phone upright</b><span>MyScreenFolio works in portrait on phones.</span>`;
+  document.body.appendChild(el);
+  const phone = Math.min(screen.width, screen.height) < 600;
+  const app = matchMedia('(display-mode: standalone)').matches;
+  if (phone && app) screen.orientation?.lock?.('portrait').catch(() => {});
 }
 
 /* ── Toggle functions ──
