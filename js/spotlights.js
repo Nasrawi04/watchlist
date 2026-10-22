@@ -26,6 +26,10 @@
    MSSSpotlight.preview(c)  the official account's "Preview spotlight"
    MSSSpotlight.tags(c) / posters(c)   the chips + poster strip (Challenges reuses them)
    MSSSpotlight.pickTeam(c)  → 'a' | 'b' | null — the "Pick your side" popup (064)
+   MSSSpotlight.member(b)   the MSF Member medal's one-time popup (075): gold rays,
+            confetti and a shine across the medal — new accounts get a welcome,
+            everyone else a thank-you with how long they've been here.
+            Marked seen as soon as it opens (member_medal_seen).
    MSSSpotlight.complete(c) → Promise — the "You finished!" popup (067): the medal,
             then "See my medals". Official challenges wear their spotlight's colours
             and its `done` line; friends' challenges the site's own look.
@@ -221,6 +225,40 @@ const MSSSpotlight = (() => {
     if (r) r();
   }
 
+  /* ── The MSF Member medal (075): once per person, extra special ── */
+  function member(b) {
+    let ov = document.getElementById('spotMember');
+    if (!ov) {
+      ov = document.createElement('div'); ov.id = 'spotMember'; ov.className = 'soc-overlay spot-overlay';
+      ov.innerHTML = `<div class="soc-card spot-card spot-done spot-member" role="dialog" aria-modal="true" aria-labelledby="spotMemberTitle"><div id="spotMemberBody"></div></div>`;
+      MSSDialog.bind(ov, () => MSSDialog.close(ov));
+      document.body.appendChild(ov);
+    }
+    const lt = document.documentElement.getAttribute('data-theme') === 'light', card = ov.querySelector('.spot-card');
+    card.style.setProperty('--spot', lt ? '#8a5f0a' : '#E9B73A');
+    card.style.setProperty('--spot-glow', lt ? 'rgba(214,160,40,.28)' : 'rgba(233,183,58,.36)');
+    card.style.setProperty('--spot-on', lt ? '#fff' : '#14110b');
+    const long = MSSMedal.memberFor(b.earned_at), fresh = Date.now() - new Date(b.earned_at) < 7 * 86400000;
+    const since = new Date(b.earned_at).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' });
+    // a burst of confetti behind the medal (decoration only)
+    const bits = [...Array(26)].map((_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i * 0.13 % 1.6).toFixed(2)}s;--r:${(i * 47) % 360}deg;--c:${['#F3CE63', '#7EB86C', '#FFF4D2', '#E09A68', '#3E7A38'][i % 5]}"></i>`).join('');
+    document.getElementById('spotMemberBody').innerHTML = `
+      <button type="button" class="spot-x" onclick="MSSDialog.close(document.getElementById('spotMember'))" aria-label="Close">${icon('x', 18)}</button>
+      <div class="spot-hero"><div class="spot-rays" aria-hidden="true"></div><div class="spot-confetti" aria-hidden="true">${bits}</div>
+        <div class="spot-medal spot-shine">${MSSMedal.member(b.earned_at, { size: 150, label: 'MSF Member medal' })}</div></div>
+      <div class="spot-main">
+        <div class="spot-eyebrow">${icon('sparkles', 13)} A medal just for you</div>
+        <h2 class="spot-title" id="spotMemberTitle"><span class="spot-done-kicker">${fresh ? 'Welcome to MyScreenFolio' : 'Thank you for being here'}</span>MSF Member</h2>
+        <p class="spot-desc">${fresh ? 'You’re officially one of us. This medal grows with you — it counts every day you’re here.'
+          : `You’ve been with us for <b>${esc(long)}</b>. This one’s yours — and it keeps counting every day you’re here.`}</p>
+        <div class="spot-chips"><span class="is-when">${icon('crown', 13)} ${esc(long)}</span><span>${icon('clock', 13)} Since ${esc(since)}</span></div>
+      </div>
+      <div class="spot-foot"><button type="button" class="sf-clear-btn" onclick="MSSDialog.close(document.getElementById('spotMember'))">Close</button>
+        <a class="sf-apply-btn spot-go" href="cabinet.html">${icon('trophy', 15)} See it in my cabinet</a></div>`;
+    MSSDialog.open(ov, { focus: '.spot-go' });
+    sb.rpc('member_medal_seen').then(() => {}, () => {});
+  }
+
   /* ── Each app open, on the home page (nav.js): one spotlight — taking turns when there are several ── */
   async function check() {
     const today = iso(new Date());
@@ -244,7 +282,7 @@ const MSSSpotlight = (() => {
     show(c, e, true);
   }
 
-  return { check, preview, tags, posters, when, entry, pickTeam, complete, _close: close, _join: join, _doneEnd: endDone,
+  return { check, preview, tags, posters, when, entry, pickTeam, complete, member, _close: close, _join: join, _doneEnd: endDone,
     _team: k => { const ov = document.getElementById('teamPick'); ov._sel = k; drawTeam(); ov.querySelector(`.team-card[aria-checked="true"]`)?.focus(); },
     _teamEnd: k => endTeam(k) };
 })();
