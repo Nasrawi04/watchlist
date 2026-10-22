@@ -10,6 +10,7 @@
      Someone else's title / a TMDB title → Add to Watchlist · Discover
      Your own entry → Start Watching · Up Next (when they apply) ·
                       Rate Episodes (shows) · Edit · Discover · Discover Card · Delete
+                      + "Who can see this title" while it isn't rated yet (watchlist, watching…)
 
    Also owns the shared "Discover" action: a linked title opens its
    title page; an unlinked one searches TMDB and shows the "Which one
@@ -88,6 +89,7 @@ const MSSInfo = (() => {
           <div id="mssInfoDetails"></div>
           <div id="mssInfoCrew"></div>
           <div id="mssInfoCast"></div>
+          <div id="mssInfoVis" class="mr-vis" hidden></div>
         </div>
         <div class="mss-info-actions" id="mssInfoPopupActions"></div>
       </div>`;
@@ -303,6 +305,26 @@ const MSSInfo = (() => {
     document.getElementById('mssInfoCrew').innerHTML = loading && it.tmdb_id && INFO_POPUP_CONFIG.showCrew ? skeleton(isMovieType(it.media_type) ? 'Directed By' : 'Created By', 1) : crewHTML(it, d);
     if (loading) document.getElementById('mssInfoCast').innerHTML = it.tmdb_id && INFO_POPUP_CONFIG.showCast ? skeleton('Top Cast', INFO_POPUP_CONFIG.castCount) : '';
     document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, own, user);
+    // yours and not rated yet (watchlist, watching…): who can see it lives here (073) — rated ones have it in Ratings
+    const e = opts.owner ? it.entry : null, vis = document.getElementById('mssInfoVis');
+    vis.hidden = !e || isRated(e);
+    vis.innerHTML = vis.hidden ? '' : mssTitleVisHTML('mssInfoVisSel', e.visibility, '_mssInfoVisPick');
+  }
+  const isRated = e => e.status === 'completed' || e.status === 'ongoing' || e.status === 'dropped' || liveScore(e) != null;
+  async function saveVis(v) {
+    const e = opts.owner ? current?.entry : null;
+    if (!e || (e.visibility || 'anyone') === v) return;
+    const prev = e.visibility || 'anyone';
+    try {
+      await updateProgress(e.id, window._navUser?.id || (await getCurrentUser()).id, { visibility: v });
+      e.visibility = v;
+      opts.onChange?.(e);
+      showToast(v === 'private' ? 'Only you can see this title now.' : v === 'friends' ? 'Only your friends can see this title now.' : 'Anyone can see this title now.');
+    } catch (err) {
+      console.error('MSSInfo vis:', err);
+      showToast('Couldn’t save that — try again.', 'err');
+      mssVisSet('mssInfoVisSel', prev);
+    }
   }
 
   async function fetchDetails(it) {
@@ -503,10 +525,12 @@ const MSSInfo = (() => {
   }
 
   return {
-    open, close, fromDiscover, fromEntry, forOwnEntry, discover, quickAdd, config: INFO_POPUP_CONFIG,
+    open, close, fromDiscover, fromEntry, forOwnEntry, discover, quickAdd, config: INFO_POPUP_CONFIG, _vis: saveVis,
     _act: act, _closePicker: closePicker,
   };
 })();
+// the title-visibility control calls this by name (mssTitleVisHTML onPick)
+function _mssInfoVisPick(v) { MSSInfo._vis(v); }
 
 
 /* ═══════════════════════════════════════════════════════════════
