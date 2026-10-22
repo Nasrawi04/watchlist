@@ -165,7 +165,7 @@ function badgeCard(b) {
 function memberCard(b) {
   const long = MSSMedal.memberFor(b.earned_at);
   return `<button type="button" class="cab-card cab-member" onclick="cabMember()" aria-label="MSF Member — ${esc(long)}, since ${when(b.earned_at)}">
-    ${MSSMedal.member(b.earned_at, { size: 96 })}<span class="cab-card-name">MSF Member</span>
+    ${MSSMedal.member({ size: 96 })}<span class="cab-card-name">MSF Member</span>
     <span class="cab-card-lv"><b>${esc(long)}</b></span><span class="cab-card-lv">Since ${when(b.earned_at)}</span></button>`;
 }
 function cabDraw() {
@@ -243,7 +243,7 @@ function cabAch(key) {
 function cabMember() {
   const b = CAB.member; if (!b) return;
   cabPopup(`<div class="cab-pop-hero">
-      <div class="cab-medal-in">${MSSMedal.member(b.earned_at, { size: 140, label: 'MSF Member medal' })}</div>
+      <div class="cab-medal-in">${MSSMedal.member({ size: 140, label: 'MSF Member medal' })}</div>
       <h3 class="cab-pop-title" id="cabPopTitle">MSF Member</h3>
       <div class="cab-pop-sub"><b style="color:var(--text)">${esc(MSSMedal.memberFor(b.earned_at))}</b> on MyScreenFolio</div>
       <div class="cab-pop-sub">Joined ${when(b.earned_at)}</div>
