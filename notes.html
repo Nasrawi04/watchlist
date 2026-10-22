@@ -296,8 +296,15 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     _notesUser = user;
+    const q = new URLSearchParams(location.search);
+    if (q.get('mode') === 'community') setNotesMode('social');
     await loadNotesPage();
     _notesOpenLink();
+    if (q.get('add')) {                                 // (+) → Write a note, from another page
+      const url = new URL(location.href); url.searchParams.delete('add');
+      history.replaceState(history.state, '', url.pathname + url.search);
+      openNotesSearchPopup('add');
+    }
   });
 });
 
@@ -462,8 +469,14 @@ function _notesOpen(id) {
 
 function setNotesSort(order) { SF.setSort('notesMine', 'all', { latest: 'newest', earliest: 'oldest', az: 'alpha', za: 'zalpha', longest: 'note_long' }[order] || order); }
 
+// Personal ↔ Community from the phone toggles: switch in place
+window.mssTabGo = url => { setNotesMode(url.searchParams.get('mode') === 'community' ? 'social' : 'personal'); return true; };
 function setNotesMode(mode) {
   _notesMode = mode;
+  const url = new URL(location.href);                 // ?mode=community — the phone toggles link to it
+  if (mode === 'social') url.searchParams.set('mode', 'community'); else url.searchParams.delete('mode');
+  history.replaceState(history.state, '', url.pathname + url.search);
+  window.mssTabsRefresh?.();
   document.querySelectorAll('#notesModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
   document.getElementById('notesPageTitle').textContent = mode === 'personal' ? 'My Notes' : 'Community Notes';
   document.getElementById('notesUserSearchWrap').style.display = mode === 'social' ? '' : 'none';
