@@ -82,6 +82,7 @@ const MSSMedal = (() => {
     halloween:        { name: 'Halloween',      rim: '#F59A3A', rim2: '#7A3A0E', hi: '#4A2A78', lo: '#2B1748', em: '#F7A24A' },
     arrakis:          { name: 'Arrakis · Dune', rim: '#F0BE5C', rim2: '#8A4E1C', hi: '#E28A3E', lo: '#A4501F', em: '#FFE7B8' },
     'doomsday-clock': { name: 'Doomsday Clock', rim: '#C9D1D8', rim2: '#3E474F', hi: '#1F3A2C', lo: '#122219', em: '#7CFFB0' },
+    'melting-mask':   { name: 'Melting Mask',   rim: '#D3925C', rim2: '#5E3620', hi: '#4A1418', lo: '#330D10', em: '#C9824F' },
   };
   const dune = (T, y) => `<path d="M18 ${y}c9-5 19-6 29-2 11 4 21 3 31-2 7-3 15-4 24-1v${124 - y}H18Z" fill="${T.lo}"/>
     <path d="M18 ${y}c9-5 19-6 29-2 11 4 21 3 31-2 7-3 15-4 24-1" fill="none" stroke="${T.em}" stroke-width="1.6" opacity=".7"/>`;
@@ -109,6 +110,20 @@ const MSSMedal = (() => {
       <line x1="60" y1="64" x2="58.2" y2="52.5" stroke="${T.em}" stroke-width="3.4" stroke-linecap="round"/>
       <circle cx="60" cy="64" r="2.6" fill="${T.em}"/>
       <path d="M84 50 72 60l5 3-9 9 4 2-8 10" fill="none" stroke="#EAFBF0" stroke-width="1.4" stroke-linejoin="round" opacity=".9"/>`,
+    // a sad theatre mask melting into clay under a stage spotlight, red curtain behind
+    'melting-mask': T => `<rect width="120" height="124" fill="${T.hi}"/>
+      <g fill="${T.lo}">${[22, 34, 46, 70, 82, 94].map(x => `<path d="M${x} 0h5v124h-5Z"/>`).join('')}</g>
+      <path d="M18 18q21 14 42 4 21 10 42-4v-18H18Z" fill="${T.lo}"/>
+      <path d="M60 22 30 108h60Z" fill="#F6E3C4" opacity=".12"/>
+      <ellipse cx="60" cy="100" rx="21" ry="4.2" fill="#7A4427"/><ellipse cx="57" cy="99" rx="12" ry="2.2" fill="#A2603A"/>
+      <path d="M60 37c12.5 0 21 7.5 21 19 0 8-3 14-6 18v9c0 3.4-3.6 3.4-3.6 0v-6c-2.6 3-5.4 5.6-7 6.6v12.4c0 3.6-4.4 3.6-4.4 0V86c-3.2-1-6.2-3.2-9-6.2v4.4c0 2.2-1.4 3.2-2.6 3.2s-2.6-1-2.6-3.2V75.4C42.6 70.4 39 64 39 56c0-11.5 8.5-19 21-19Z" fill="${T.em}"/>
+      <path d="M60 37c12.5 0 21 7.5 21 19 0 8-3 14-6 18v9c0 3.4-3.6 3.4-3.6 0v-6c-2.6 3-5.4 5.6-7 6.6v12.4c0 3.6-4.4 3.6-4.4 0Z" fill="#A2603A"/>
+      <path d="M46.5 46.5c4-3.2 9-3.2 12.4.2M73.5 46.5c-4-3.2-9-3.2-12.4.2" fill="none" stroke="#7A4427" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M45.6 56.4q6.4-6.6 12.8 1.2-6.4 3-12.8-1.2ZM74.4 56.4q-6.4-6.6-12.8 1.2 6.4 3 12.8-1.2Z" fill="#240A0C"/>
+      <path d="M50.6 74.6q9.4-7.6 18.8 0-9.4-3.2-18.8 0Z" fill="#240A0C"/>
+      <path d="M48.6 42.4c3-2.2 7-3.2 10.6-3.2M44 52c-.4 3 0 6 1 8.4" fill="none" stroke="#E7AA78" stroke-width="1.7" stroke-linecap="round"/>
+      <circle cx="49" cy="66" r="1.5" fill="#E7AA78" opacity=".8"/>
+      <circle cx="60" cy="104.6" r="1.7" fill="${T.em}"/><circle cx="48.6" cy="91" r="1.1" fill="${T.em}"/>`,
   };
   const wrap = (svg, o) => o.label ? svg.replace('<svg ', `<svg role="img" aria-label="${escHTML(o.label)}" `) : svg.replace('<svg ', '<svg aria-hidden="true" ');
 
