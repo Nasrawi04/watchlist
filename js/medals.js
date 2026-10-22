@@ -17,10 +17,10 @@
                                        2 silver, 3 gold, 4 green (the top). o.at = the
                                        number on the plate (e.g. 1000 → "1K").
    MSSMedal.ACH                        { key: { name, em, about } } — the achievements
-   MSSMedal.member(since, o)           the MSF Member medal (075): everyone's, from the
+   MSSMedal.member(o)                  the MSF Member medal (075): everyone's, from the
                                        day they joined — a gold rosette, a film-strip ring, the
-                                       site's logo in the middle, two ribbon tails; "SINCE <year>"
-                                       on the plate.
+                                       site's logo on a light face (so all of it shows), two ribbon
+                                       tails — the same for everyone.
    MSSMedal.memberFor(since)           how long they've been here — "12 days" → "5 months"
                                        → "1.5 years" (months as a decimal of a year)
    o = { size (px, default 120), locked (grey), label (aria-label — omit for
@@ -161,22 +161,19 @@ const MSSMedal = (() => {
   }
 
   // The MSF Member medal — gold rosette edge, a film-strip ring, the logo in the middle, ribbon tails
-  function member(since, o = {}) {
-    const size = o.size || 120, id = 'mdm' + (++uid), d = since ? new Date(since) : null;
-    const G = { gold: '#F3CE63', gold2: '#B8862A', hi: '#3E7A38', lo: '#2B5A27', em: '#FFF4D2' };
+  function member(o = {}) {
+    const size = o.size || 120, id = 'mdm' + (++uid);
+    const G = { gold: '#F3CE63', gold2: '#B8862A', lo: '#2B5A27' };
     const teeth = [...Array(24)].map((_, i) => { const a = i * Math.PI / 12, r = i % 2 ? 46 : 51; return `${(60 + r * Math.sin(a)).toFixed(1)},${(56 - r * Math.cos(a)).toFixed(1)}`; }).join(' ');
     const holes = [...Array(20)].map((_, i) => { const a = i * Math.PI / 10; return `<rect x="-1.6" y="-1.1" width="3.2" height="2.2" rx=".6" transform="translate(${(60 + 36.5 * Math.sin(a)).toFixed(1)} ${(56 - 36.5 * Math.cos(a)).toFixed(1)}) rotate(${i * 18})"/>`; }).join('');
-    return wrap(`<svg class="mss-medal" viewBox="0 0 120 150" width="${size}" height="${size * 1.25}">
+    return wrap(`<svg class="mss-medal" viewBox="0 0 120 140" width="${size}" height="${(size * 140 / 120).toFixed(1)}">
       <defs><clipPath id="${id}"><circle cx="60" cy="56" r="33"/></clipPath></defs>
       <path d="M38 88 30 132l12-7 7 12 9-46Z" fill="${G.lo}"/><path d="M82 88l8 44-12-7-7 12-9-46Z" fill="${G.gold2}"/>
       <polygon points="${teeth}" fill="${G.gold2}"/><circle cx="60" cy="56" r="44" fill="${G.gold}"/>
       <circle cx="60" cy="56" r="40" fill="${G.lo}"/><g fill="${G.gold}" opacity=".85">${holes}</g>
-      <g clip-path="url(#${id})"><rect width="120" height="56" fill="${G.hi}"/><rect y="56" width="120" height="40" fill="${G.lo}"/></g>
+      <g clip-path="url(#${id})"><rect width="120" height="56" fill="#FBF7EE"/><rect y="56" width="120" height="40" fill="#F2EBDB"/></g>
       <circle cx="60" cy="56" r="33" fill="none" stroke="${G.gold}" stroke-width="1.4"/>
-      <path d="m60 29 1.6 3.3 3.6.5-2.6 2.5.6 3.6L60 37.2l-3.2 1.7.6-3.6-2.6-2.5 3.6-.5Z" fill="${G.gold}"/>
-      <svg x="34" y="44" width="52" height="22" viewBox="20 61 467 198"><image href="icons/logo-nav.png" width="507" height="320"/></svg>
-      <rect x="25" y="122" width="70" height="22" rx="6" fill="${G.gold2}"/><rect x="27" y="124" width="66" height="18" rx="5" fill="${G.lo}"/>
-      <text x="60" y="138.5" text-anchor="middle" font-family="Bebas Neue, Oswald, sans-serif" font-size="15" letter-spacing=".8" fill="${G.em}">${d && !isNaN(d) ? 'SINCE ' + d.getFullYear() : 'MEMBER'}</text>
+      <svg x="30" y="43.5" width="60" height="25" viewBox="20 61 467 198"><image href="icons/logo-nav.png" width="507" height="320"/></svg>
     </svg>`, o);
   }
   // How long someone's been here: days, then months, then years (months as a decimal)
