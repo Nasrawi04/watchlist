@@ -452,6 +452,8 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .td-friend-score { font-family:var(--bebas); font-size:clamp(17px, 2.2vw, 20px); letter-spacing:.4px; color:var(--olive-light); line-height:1.1; }
 .td-friend-sub { font-size:clamp(10.5px, 1.5vw, 12.5px); color:var(--text-3); line-height:1.3; }
 .td-friend-info .w-ep-badge, .td-friend-info .up-next-tag { font-size:11px; }
+.td-friend-info { max-width:100%; }
+.td-friend-info .dropped-tag { max-width:100%; box-sizing:border-box; }
 @media(max-width:640px) {
   .td-friends-tabs { width:100%; }
   .td-friends-tabs .pn-toggle-btn { flex:1; justify-content:center; font-size:12.5px; padding:9px 6px; }
@@ -703,7 +705,8 @@ function _tdFriendCard(e, key) {
         : e.status === 'paused' ? `<span class="td-friend-sub">Taking a break</span>`
         : e.season || e.episode ? `<span class="w-ep-badge">S${Number(e.season) || 1} · E${Number(e.episode) || 0}</span>`
         : e.watched ? `<span class="w-ep-badge">${Number(e.watched)} eps</span>` : `<span class="td-friend-sub">Just started</span>`)
-      : key === 'dropped' ? mssDroppedTagHTML(e)
+      : key === 'dropped' ? (mssDroppedAt(e)            // the tab already says Dropped — just where they stopped, so it fits the card
+        ? `<span class="dropped-tag">${icon('drop', 11)}<span class="sr-only">Dropped at</span> ${esc(mssDroppedAt(e))}</span>` : mssDroppedTagHTML(e, false))
       : `<span class="td-friend-sub">${e.created_at ? 'Added ' + esc(MSSNote.date(e.created_at, true)) : 'On their list'}</span>`;
   return `<button type="button" class="td-cast-card td-friend-card" onclick="_tdOpenFriend(${attrJSON(e.id)})" aria-label="@${esc(name)} — open their ${key === 'watched' ? 'ratings' : 'entry'}">
       <span class="td-cast-photo td-friend-photo">${av ? `<img src="${av}" alt="" loading="lazy">` : esc(name[0].toUpperCase())}</span>
