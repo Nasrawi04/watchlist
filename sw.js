@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v83';   // MyScreenFolio — restarted at v1 (was mss-v787)
+const CACHE_VERSION = 'msf-v96';   // MyScreenFolio — restarted at v1 (was mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -38,6 +38,7 @@ const STATIC_ASSETS = [
   'notes.html',
   'notifications.html',
   'cabinet.html',
+  'export.html',
   'detail.html',
   'title.html',
   'person.html',
