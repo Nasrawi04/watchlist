@@ -1059,6 +1059,16 @@ try {
 /* Profile photos: saved as a 400px JPEG at 0.82 (~30–50 kB). Shown at ~80px at most,
    so 400 stays sharp on 3× screens. Settings uses it for uploads, nav.js to shrink old ones. */
 const MSS_AVATAR = { px: 400, q: 0.82, max: 80 * 1024 };   // max = a saved photo bigger than this gets redone
+// Older versions saved avatar.png / avatar.jpeg, so a new photo left the old file behind.
+// Removes every file in your avatars folder except the one your profile uses (keepUrl;
+// null = remove them all, for deleting the account).
+async function mssAvatarTidy(uid, keepUrl) {
+  const keep = decodeURIComponent(String(keepUrl || '').split('?')[0].split('/').pop());
+  if (!uid) return;
+  const { data } = await sb.storage.from('avatars').list(uid);
+  const old = (data || []).map(f => f.name).filter(n => n && n !== keep);
+  if (old.length) await sb.storage.from('avatars').remove(old.map(n => `${uid}/${n}`));
+}
 
 /* ── Navigation helpers ── */
 function goToDetail(id, fromFile) {
