@@ -641,6 +641,7 @@ async function _avatarCropConfirm() {
       const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
       const bustedUrl = publicUrl + '?t=' + Date.now();
       await updateProfile(_sUser.id, { avatar_url: bustedUrl });
+      mssAvatarTidy(_sUser.id, bustedUrl).catch(() => {});   // old avatar.png / .jpeg files go
       MSSImageCheck.review(verdict, 'avatar', bustedUrl);
       if (_sProfile) _sProfile.avatar_url = bustedUrl;
       ['navUserInitial','navUserInitialMobile'].forEach(id => {
@@ -703,7 +704,7 @@ async function confirmDeleteAccount() {
     // Re-check the password before anything is deleted
     const { error: pwErr } = await sb.auth.signInWithPassword({ email: _sUser.email, password: document.getElementById('delAccPassword').value });
     if (pwErr) throw new Error('bad_password');
-    await sb.storage.from('avatars').remove([`${_sUser.id}/avatar.jpg`]).catch(() => {});
+    await mssAvatarTidy(_sUser.id, null).catch(() => {});   // every photo file, old names too
     const { error } = await sb.rpc('delete_my_account');
     if (error) throw error;
     try { await sb.auth.signOut(); } catch {}
