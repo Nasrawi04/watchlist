@@ -567,7 +567,7 @@ nav {
 .mtog-in::after { content:''; display:block; height:10px; }
 .mtog-main { display:flex; flex-direction:column; gap:3px; padding:4px; border-radius:16px; background:var(--bg-3); border:0.5px solid var(--border-2); }
 .mtog-row { display:flex; gap:2px; }
-.mtog-main.grid .mtog-row { display:grid; grid-template-columns:repeat(4, 1fr); }
+.mtog-main.grid .mtog-row { display:grid; grid-template-columns:repeat(var(--cols, 4), 1fr); }
 .mtog-btn {
   flex:1 1 auto; min-width:max-content; border-radius:12px; padding:9px 3px 8px;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
@@ -3390,6 +3390,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .detail-poster-wrap:hover .poster-upload-overlay { opacity:1; }
 
 .field-group { display:flex; flex-direction:column; }
+.field-group[hidden] { display:none; }
 .field-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:6px; }
 .field-input {
   width:100%; background:var(--bg-3); border:0.5px solid var(--border-2);
