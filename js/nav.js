@@ -189,27 +189,30 @@ function _navMemberMedal(uid) {
    some ~250 kB+). Once per device: if yours is over MSS_AVATAR.max, it's redrawn
    at the new size and saved over the old file — nothing changes on screen. */
 function _navAvatarShrink(uid, profile) {
-  const url = safeURL(profile?.avatar_url), key = 'mss_ava_small_' + uid;
+  const url = safeURL(profile?.avatar_url), key = 'mss_ava_tidy_' + uid;
   if (!url || !url.includes('/storage/v1/object/public/avatars/')) return;   // only photos in our own storage
   try { if (localStorage.getItem(key) === url) return; } catch { return; }
   setTimeout(async () => {
     try {
       const old = await (await fetch(url, { cache: 'no-store' })).blob();
       if (old.size > MSS_AVATAR.max) {
+        // redraw it smaller; kept as it is if that wouldn't save anything
         const img = await createImageBitmap(old), n = Math.min(MSS_AVATAR.px, img.width, img.height);
         const c = document.createElement('canvas'); c.width = c.height = n;
         c.getContext('2d').drawImage(img, (img.width - Math.min(img.width, img.height)) / 2, (img.height - Math.min(img.width, img.height)) / 2,
           Math.min(img.width, img.height), Math.min(img.width, img.height), 0, 0, n, n);
         const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', MSS_AVATAR.q));
-        if (!blob || blob.size >= old.size) { localStorage.setItem(key, url); return; }
-        const path = `${uid}/avatar.jpg`;
-        const { error } = await sb.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
-        if (error) return;                                   // try again next time
-        const fresh = sb.storage.from('avatars').getPublicUrl(path).data.publicUrl + '?t=' + Date.now();
-        await updateProfile(uid, { avatar_url: fresh });
-        profile.avatar_url = fresh;
-        localStorage.setItem(key, fresh);
-      } else localStorage.setItem(key, url);
+        if (blob && blob.size < old.size) {
+          const path = `${uid}/avatar.jpg`;
+          const { error } = await sb.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+          if (error) return;                                 // try again next time
+          const fresh = sb.storage.from('avatars').getPublicUrl(path).data.publicUrl + '?t=' + Date.now();
+          await updateProfile(uid, { avatar_url: fresh });
+          profile.avatar_url = fresh;
+        }
+      }
+      await mssAvatarTidy(uid, profile.avatar_url);         // and drop old files left behind
+      localStorage.setItem(key, profile.avatar_url);
     } catch {}
   }, 6000);                                                  // after the page has settled
 }
