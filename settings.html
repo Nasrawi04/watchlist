@@ -511,7 +511,6 @@ let _avatarCropX = 0, _avatarCropY = 0; // pan offset in screen px, relative to 
 let _avatarCropDragging = false;
 let _avatarCropDragStart = { x: 0, y: 0, panX: 0, panY: 0 };
 const _AVATAR_VIEWPORT = 240; // matches #avatarCropViewport width/height
-const _AVATAR_OUTPUT = 500;   // exported image size in px
 
 function _avatarCropStart(event) {
   MSSImageCheck.preload();          // start loading the picture check while they crop
@@ -614,13 +613,13 @@ async function _avatarCropConfirm() {
   const srcSize = _AVATAR_VIEWPORT / _avatarCropZoom;
 
   const canvas = document.createElement('canvas');
-  canvas.width = _AVATAR_OUTPUT;
-  canvas.height = _AVATAR_OUTPUT;
+  canvas.width = MSS_AVATAR.px;
+  canvas.height = MSS_AVATAR.px;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(
     img,
     srcCenterX - srcSize / 2, srcCenterY - srcSize / 2, srcSize, srcSize,
-    0, 0, _AVATAR_OUTPUT, _AVATAR_OUTPUT
+    0, 0, MSS_AVATAR.px, MSS_AVATAR.px
   );
 
   canvas.toBlob(async (blob) => {
@@ -656,7 +655,7 @@ async function _avatarCropConfirm() {
       showToast('Upload failed — check Supabase Storage is set up.', 'err');
       console.error(e);
     }
-  }, 'image/jpeg', 0.92);
+  }, 'image/jpeg', MSS_AVATAR.q);
 }
 
 async function doSignOutEverywhere() {
