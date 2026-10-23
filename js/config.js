@@ -1056,6 +1056,10 @@ try {
   if (s && page !== 'detail.html' && s.page.split('?')[0] !== page) sessionStorage.removeItem('mssScrollBack');
 } catch {}
 
+/* Profile photos: saved as a 400px JPEG at 0.82 (~30–50 kB). Shown at ~80px at most,
+   so 400 stays sharp on 3× screens. Settings uses it for uploads, nav.js to shrink old ones. */
+const MSS_AVATAR = { px: 400, q: 0.82, max: 80 * 1024 };   // max = a saved photo bigger than this gets redone
+
 /* ── Navigation helpers ── */
 function goToDetail(id, fromFile) {
   sessionStorage.setItem('detailId', id);
