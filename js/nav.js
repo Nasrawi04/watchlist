@@ -185,6 +185,35 @@ function _navMemberMedal(uid) {
   }, 2200);
 }
 
+/* Photos uploaded before msf-v95 were saved bigger than needed (500px at 0.92,
+   some ~250 kB+). Once per device: if yours is over MSS_AVATAR.max, it's redrawn
+   at the new size and saved over the old file — nothing changes on screen. */
+function _navAvatarShrink(uid, profile) {
+  const url = safeURL(profile?.avatar_url), key = 'mss_ava_small_' + uid;
+  if (!url || !url.includes('/storage/v1/object/public/avatars/')) return;   // only photos in our own storage
+  try { if (localStorage.getItem(key) === url) return; } catch { return; }
+  setTimeout(async () => {
+    try {
+      const old = await (await fetch(url, { cache: 'no-store' })).blob();
+      if (old.size > MSS_AVATAR.max) {
+        const img = await createImageBitmap(old), n = Math.min(MSS_AVATAR.px, img.width, img.height);
+        const c = document.createElement('canvas'); c.width = c.height = n;
+        c.getContext('2d').drawImage(img, (img.width - Math.min(img.width, img.height)) / 2, (img.height - Math.min(img.width, img.height)) / 2,
+          Math.min(img.width, img.height), Math.min(img.width, img.height), 0, 0, n, n);
+        const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', MSS_AVATAR.q));
+        if (!blob || blob.size >= old.size) { localStorage.setItem(key, url); return; }
+        const path = `${uid}/avatar.jpg`;
+        const { error } = await sb.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+        if (error) return;                                   // try again next time
+        const fresh = sb.storage.from('avatars').getPublicUrl(path).data.publicUrl + '?t=' + Date.now();
+        await updateProfile(uid, { avatar_url: fresh });
+        profile.avatar_url = fresh;
+        localStorage.setItem(key, fresh);
+      } else localStorage.setItem(key, url);
+    } catch {}
+  }, 6000);                                                  // after the page has settled
+}
+
 function _navSpotlight() {
   // Home page only, once each time the app is opened (sessionStorage resets when it's closed)
   if (!/\/(index\.html)?$/.test(location.pathname)) return;
@@ -215,6 +244,7 @@ async function _fillNavUser(user) {
   _navReleaseCheck(user);
   _navSpotlight();
   _navMemberMedal(user.id);
+  _navAvatarShrink(user.id, profile);
   _navAchSync();
   _navFinishCheck(2500);
   const username = profile?.username || user.email?.split('@')[0] || 'You';
@@ -481,6 +511,7 @@ function injectChrome() {
           <div class="nav-user-dropdown" id="userMenuDropdownMobile">
             <a href="profile.html">${icon('user', 15)} Profile</a>
             <a href="cabinet.html">${icon('trophy', 15)} Achievement Cabinet</a>
+            <a href="export.html">${icon('download', 15)} Export</a>
             <a href="notifications.html">${icon('bell', 15)} Notifications</a>
             <a href="settings.html">${icon('settings', 15)} Settings</a>
             <a href="admin.html" class="nav-admin-link" hidden>${icon('lock', 15)} Admin</a>
@@ -531,6 +562,7 @@ function injectChrome() {
           <div class="nav-user-dropdown" id="userMenuDropdown">
             <a href="profile.html">${icon('user', 15)} Profile</a>
             <a href="cabinet.html">${icon('trophy', 15)} Achievement Cabinet</a>
+            <a href="export.html">${icon('download', 15)} Export</a>
             <a href="notifications.html">${icon('bell', 15)} Notifications</a>
             <a href="settings.html">${icon('settings', 15)} Settings</a>
             <a href="admin.html" class="nav-admin-link" hidden>${icon('lock', 15)} Admin</a>
@@ -831,7 +863,7 @@ function markActiveNav() {
    (+) opens a small menu: Add a title · Write a note · New list · New poll.
 
    Top toggles: the Lists / Notes toggle made for phones — full width, pinned
-   under the top bar, one row per tab (Social: two even rows of four).
+   under the top bar, one row per tab (Social: two even rows of four; You: two of three).
    Lists, Notes and Compare get a second, joined row. Every item is a link to
    a real page (or a ?s= / ?mode= of one); a page can switch in place instead
    by setting window.mssTabGo(url) → true. Pages that change their own URL
@@ -859,12 +891,13 @@ const MSS_TABS = [
     { label: 'Challenges', icon: 'trophy', href: 'friends.html?s=challenges' },
     { label: 'Polls', icon: 'poll', href: 'friends.html?s=polls' },
   ] },
-  { k: 'you', label: 'You', icon: 'user', href: 'profile.html', items: [
+  { k: 'you', label: 'You', icon: 'user', href: 'profile.html', rows: 3, items: [
     { label: 'Profile', icon: 'user', href: 'profile.html' },
     { label: 'Lists', icon: 'layers', href: 'lists.html', sub: [['Personal', 'lists.html'], ['Friends', 'friends.html?s=lists'], ['Community', 'lists.html?mode=community']] },
     { label: 'Notes', icon: 'notebook', href: 'notes.html', sub: [['Personal', 'notes.html'], ['Friends', 'friends.html?s=notes'], ['Community', 'notes.html?mode=community']] },
     { label: 'Episodes', icon: 'episodes', href: 'episodes.html' },
     { label: 'Medals', icon: 'trophy', href: 'cabinet.html' },
+    { label: 'Export', icon: 'download', href: 'export.html' },
   ] },
 ];
 const _BNAV_YOU_PAGES = ['notifications.html', 'settings.html'];
@@ -972,7 +1005,7 @@ function _mtogRender() {
   const btn = (it, i) => `<a href="${it.href}"${cur(i, i === w.item)} onclick="return _mtogGo(event, this)">${icon(it.icon, 18)}<span>${it.label}</span></a>`;
   const rows = t.rows ? [t.items.slice(0, t.rows), t.items.slice(t.rows)] : [t.items];
   const it = t.items[w.item];
-  inner.innerHTML = `<div class="mtog-main${t.rows ? ' grid' : ''}${t.items.length === 2 ? ' two' : ''}" role="navigation" aria-label="${t.label}">
+  inner.innerHTML = `<div class="mtog-main${t.rows ? ' grid' : ''}${t.items.length === 2 ? ' two' : ''}"${t.rows ? ` style="--cols:${t.rows}"` : ''} role="navigation" aria-label="${t.label}">
       ${rows.map((r, ri) => `<div class="mtog-row">${r.map((x, i) => btn(x, i + (ri ? t.rows : 0))).join('')}</div>`).join('')}
     </div>
     ${it.sub ? `<div class="mtog-sub" role="navigation" aria-label="${it.label}">${it.sub.map(([l, h], i) =>
