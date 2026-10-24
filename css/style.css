@@ -3787,35 +3787,30 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 }
 
 /* Ratings curve (rating-curve.js) — under the side stats on profiles, and on top of ratings.html.
-   Classes are rc-* only (the site's own .empty has big padding). Heights are pixels: --rc-h is a column, --k each bar's share (no % heights — Safari
+   20 half-point bars. Classes are rc-* only (the site's own .empty has big padding). Heights are pixels: --rc-h is a column, --k each bar's share (no % heights — Safari
    resolved them against the wrong box and drew the bars below the line). */
 .rc-box { --rc-h:84px; margin-top:14px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:14px 16px 12px; }
 .rc-here { --rc-h:120px; }
-.rc-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:4px; }
+.rc-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:12px; }
 .rc-title { font-family:'Oswald',var(--sans); font-size:12px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--olive-light); }
-.rc-total { font-size:12px; color:var(--text-3); }
-.rc-plot { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; align-items:end; padding-top:26px; }
-.rc-col { position:relative; display:block; box-sizing:border-box; width:100%; min-width:0; margin:0; padding:0; height:var(--rc-h); text-decoration:none; border-radius:6px; outline-offset:3px; }
-.rc-track { position:absolute; inset:0; border-radius:6px; background:var(--olive-faint); }
-.rc-bar { position:absolute; left:0; right:0; bottom:0; height:calc(var(--rc-h) * var(--k, 0)); border-radius:6px; background:var(--olive); transition:background var(--trans) var(--ease); }
-.rc-n { position:absolute; left:-8px; right:-8px; bottom:calc(var(--rc-h) * var(--k, 0) + 5px); text-align:center; white-space:nowrap; font-family:var(--bebas); font-size:17px; letter-spacing:.3px; line-height:1; color:var(--olive-light); opacity:0; transform:translateY(3px); transition:opacity .15s, transform .15s; pointer-events:none; }
-/* a bar that reaches the top: its count sits inside it, in white */
-.rc-col.rc-tall .rc-n { bottom:auto; top:7px; color:#fff; }
+/* the total — or, on a hovered / tapped bar, "8.5–8.99 · ★ 46" in the score style */
+.rc-total { font-family:var(--bebas); font-size:17px; letter-spacing:.3px; line-height:1; color:var(--olive-light); white-space:nowrap; }
+/* the bars touch: one rounded panel behind them all */
+.rc-plot { display:grid; grid-template-columns:repeat(20,minmax(0,1fr)); align-items:end; border-radius:6px; overflow:hidden; background:var(--olive-faint); }
+.rc-col { position:relative; display:block; box-sizing:border-box; width:100%; min-width:0; margin:0; padding:0; height:var(--rc-h); text-decoration:none; outline-offset:-2px; }
+.rc-bar { position:absolute; left:0; right:0; bottom:0; height:calc(var(--rc-h) * var(--k, 0)); background:var(--olive); transition:background var(--trans) var(--ease); }
 a.rc-col { cursor:pointer; }
-a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar { background:var(--olive-light); }
-a.rc-col:hover .rc-n, a.rc-col:focus-visible .rc-n, .rc-here .rc-n { opacity:1; transform:none; }
-.rc-col.rc-empty .rc-n { display:none; }
-.rc-axis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; margin-top:7px; }
-.rc-axis span { text-align:center; font-family:var(--bebas); font-size:14px; letter-spacing:.4px; color:var(--text-3); }
-.rc-axis span.rc-on { color:var(--olive-light); }
-/* ratings.html: every count shows, the range you're on stands out */
-.rc-here .rc-col:not(.rc-on) .rc-bar { background:var(--border-olive); }
+/* a hairline between bars — drawn on the bars only, so the empty space above stays one piece */
+.rc-col + .rc-col .rc-bar { box-shadow:inset 1px 0 0 var(--card); }
+a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar, .rc-col.rc-sel .rc-bar { background:var(--olive-light); }
+.rc-axis { display:flex; justify-content:space-between; margin-top:7px; }
+.rc-axis span { font-family:var(--bebas); font-size:14px; letter-spacing:.4px; color:var(--text-3); }
+/* ratings.html: the range you're on stands out */
+.rc-here .rc-col:not(.rc-on):not(.rc-sel) .rc-bar { background:var(--border-olive); }
 .rc-here a.rc-col:hover .rc-bar, .rc-here a.rc-col:focus-visible .rc-bar { background:var(--olive); }
 .rc-here .rc-col.rc-on .rc-bar { background:var(--olive-light); }
 .rc-none { font-size:12.5px; color:var(--text-3); padding:6px 0 2px; }
-/* no hover on phones / tablets: every count shows */
-@media (hover:none) { .rc-n { opacity:1; transform:none; } }
-@media (prefers-reduced-motion:reduce) { .rc-n, .rc-bar { transition:none; } }
+@media (prefers-reduced-motion:reduce) { .rc-bar { transition:none; } }
 /* Laptops: the side stats scroll inside themselves so the curve under them is always in view */
 @media(min-width:901px) {
   .overview-side { display:flex; flex-direction:column; max-height:calc(100vh - 194px); }
