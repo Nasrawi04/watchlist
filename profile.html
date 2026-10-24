@@ -39,28 +39,6 @@
 .fav-edit-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);border:0.5px solid var(--border-olive);background:transparent;color:var(--olive-light);font-size:12px;cursor:pointer;transition:background .15s;}
 
 .fav-edit-btn:hover{background:var(--olive-faint);}
-/* ── Exports tab: the Export Studio + quick exports (export-studio.js) ── */
-.xp-hero{display:flex;align-items:center;gap:20px;padding:22px 24px;border-radius:var(--radius-lg);background:radial-gradient(120% 140% at 0% 0%,var(--olive-faint),transparent 60%),var(--bg-3);border:1px solid var(--border-olive);}
-.xp-hero-ic{flex:none;width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:var(--olive);color:#fff;}
-.xp-hero-text{flex:1;min-width:0;}
-.xp-hero-text b{display:block;font-size:17px;font-weight:700;color:var(--text);}
-.xp-hero-text span{display:block;margin-top:3px;font-size:13px;color:var(--text-2);line-height:1.5;}
-.xp-hero .btn-add-entry{flex:none;}
-.xp-label{margin:22px 0 10px;font-family:'Oswald',var(--sans);font-size:11.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--text-3);}
-/* quick exports: the original export cards (olive outline, offset shadow, pressed on tap) */
-.xp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;}
-.xp-card{font:inherit;color:inherit;text-align:start;width:100%;background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:1.25rem;cursor:pointer;transition:transform 150ms,box-shadow 150ms,background 200ms;display:flex;flex-direction:column;gap:8px;}
-.xp-card:hover{background:var(--olive-faint);}
-.xp-card:active{transform:translate(4px,4px);box-shadow:none;}
-.xp-card:focus-visible{outline:2px solid var(--olive-light);outline-offset:3px;}
-.xp-card-ic{display:flex;align-items:center;color:var(--olive-light);}
-.xp-card-ic svg{width:28px;height:28px;stroke-width:1.5;}
-.xp-card-text b{display:block;font-size:14px;font-weight:600;color:var(--text);}
-.xp-card-text small{display:block;margin-top:4px;font-size:11.5px;color:var(--text-2);line-height:1.5;}
-[dir="rtl"] .xp-card:active{transform:translate(-4px,4px);}
-@media(prefers-reduced-motion:reduce){.xp-card{transition:none;}.xp-card:active{transform:none;}}
-@media(max-width:600px){.xp-hero{flex-wrap:wrap;padding:18px;gap:14px;}.xp-hero .btn-add-entry{width:100%;justify-content:center;}.xp-grid{grid-template-columns:repeat(2,1fr);}.xp-card{padding:1rem;gap:6px;}.xp-card-ic svg{width:22px;height:22px;}.xp-card-text b{font-size:13px;}}
-@media(max-width:400px){.xp-grid{grid-template-columns:1fr;}.xp-card{padding:.875rem;flex-direction:row;align-items:center;gap:12px;}.xp-card-ic{flex-shrink:0;}.xp-card-ic svg{width:20px;height:20px;}}
 
 
 
@@ -355,7 +333,6 @@
     <option value="3">Notes</option>
     <option value="5">Episodes</option>
     <option value="6">Showcase</option>
-    <option value="4">Exports</option>
   </select>
 
   <div class="prof-tabs">
@@ -383,17 +360,12 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>
       <span class="prof-tab-label">Showcase</span>
     </div>
-    <div class="prof-tab" id="tab4" onclick="switchTab(4)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <span class="prof-tab-label">Exports</span>
-    </div>
   </div>
 
   <div class="prof-panel active" id="panel0"><div id="overviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>
   <div class="prof-panel" id="panel2"><div id="listsTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel3"><div id="notesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
-  <div class="prof-panel" id="panel4"><div id="exportsContent"></div></div>
   <div class="prof-panel" id="panel5"><div id="episodesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
   <div class="prof-panel" id="panel6"><div id="profShowcase"><div class="page-loading"><div class="spinner"></div></div></div></div>
 
@@ -401,7 +373,6 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
@@ -419,12 +390,6 @@
 <script src="js/note-popup.js"></script>
 <script src="js/list-popup.js"></script>
 <script src="js/profile-tabs.js"></script>
-<script src="js/export.js"></script>
-<script src="js/taste-profile.js"></script>
-<script src="js/year-review.js"></script>
-<script src="js/export-formats.js"></script>
-<script src="js/export-image.js"></script>
-<script src="js/export-studio.js"></script>
 <script src="js/medals.js"></script>
 <script src="js/showcase.js"></script>
 <script>
@@ -461,6 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
     populateHeader();
     renderTab0();
     var tab = parseInt(new URLSearchParams(location.search).get('tab'), 10);
+    if (tab === 4) { location.replace('export.html'); return; }   // Exports moved to its own page (avatar menu)
     if (tab > 0 && tab <= 6) switchTab(tab);
     else if (_activeTab === 1) renderLibrary();
     _libResume();
@@ -514,14 +480,13 @@ function switchTab(n) {
   history.replaceState(history.state, '', u.toString());
   var sel = document.getElementById('profTabsSelect');
   if (sel && +sel.value !== n) sel.value = n;
-  [0,1,2,3,4,5,6].forEach(function(i) {
+  [0,1,2,3,5,6].forEach(function(i) {
     var t=document.getElementById('tab'+i), p=document.getElementById('panel'+i);
     if(t) t.classList.toggle('active', i===n);
     if(p) p.classList.toggle('active', i===n);
   });
   if (n===1) renderLibrary();
   if (n===2 || n===3) _renderPersonalTab(n);
-  if (n===4) renderExports();
   if (n===5) MSSTabs.episodes(document.getElementById('episodesTabContent'), { userId: _pUser.id, owner: true });
   if (n===6) MSSShowcase.mount(document.getElementById('profShowcase'), _pUser.id, { own: true });
   if (n===0) renderTab0();
@@ -598,44 +563,8 @@ function renderTab0() {
 
 /* ── Tab 1: Library — js/library-view.js ── */
 
-/* ── Tab 4: Exports ── */
-// Exports is static, so its tab shows straight away; an export started
-// before your library has loaded simply waits for it.
+// Lists / Notes tabs wait for your library before drawing
 var _pEntriesLoaded; var _pEntriesReady = new Promise(function(res){ _pEntriesLoaded = res; });
-
-// Exports: the Export Studio (export-studio.js) — opened plain, or from a quick export
-var _PROF_EXPORTS = [
-  { icon:'check',    title:'Everything I’ve watched', desc:'Your whole watch history, ranked by score.', preset:{ what:'watched', sort:'score' } },
-  { icon:'trophy',   title:'My top 10',               desc:'Your ten best, with posters and every rating.', preset:{ what:'watched', sort:'score', limit:10 } },
-  { icon:'image',    title:'Top 10 story',            desc:'Your ten best as an image for Instagram or TikTok.', preset:{ what:'watched', sort:'score', format:'image' } },
-  { icon:'activity', title:'My taste profile',        desc:'How you score — your genres, decades and what you’re toughest on.', preset:{ what:'taste' } },
-  { icon:'clock',    title:'Year in Review',          desc:'Your year: what you finished, your best, month by month.', preset:{ what:'year' } },
-  { icon:'bookmark', title:'My watchlist',            desc:'Everything you plan to watch.',               preset:{ what:'watchlist' } },
-  { icon:'play',     title:'Currently watching',      desc:'What you’re in the middle of, and how far.',  preset:{ what:'watching' } },
-];
-function _profExport(i) {
-  var p = window._navUserProfile || _pProfile || {};
-  MSSStudio.open({ preset: i == null ? null : _PROF_EXPORTS[i].preset, who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' },
-    load: function(){ return _pEntriesReady.then(function(){ return _pEntries; }); } });
-}
-
-function renderExports(){
-  var el=document.getElementById('exportsContent');
-  if(el.innerHTML.trim())return;
-  el.innerHTML='<div class="pv-section"><div class="pv-eyebrow">Export</div><div class="pv-title">Take your library with you</div>'
-    +'<div class="xp-hero"><span class="xp-hero-ic">'+icon('download',26)+'</span><div class="xp-hero-text"><b>Export Studio</b><span>Choose what goes in, how it looks and what stays private — with a live preview before you download.</span></div>'
-    +'<button type="button" class="btn-add-entry" onclick="_profExport(null)">'+icon('download',15)+' Open Export Studio</button></div>'
-    +'<div class="xp-label">Quick exports</div><div class="xp-grid">'+_PROF_EXPORTS.map(function(c,i){return '<button type="button" class="xp-card" onclick="_profExport('+i+')"><span class="xp-card-ic">'+icon(c.icon,28)+'</span><span class="xp-card-text"><b>'+escHTML(c.title)+'</b><small>'+escHTML(c.desc)+'</small></span></button>';}).join('')+'</div></div>';
-}
-
-
-
-
-
-
-
-
-
 
 /* ── Share Profile ── */
 function openShareProfile() {
