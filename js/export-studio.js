@@ -623,13 +623,24 @@ const MSSStudio = (() => {
     $('xsOpts').innerHTML = '<div class="xs-loading">Loading your library…</div>'; $('xsPreview').innerHTML = ''; $('xsSummary').textContent = '';
     progress(null);
     MSSDialog.open(ov, { focus: '#xsGo' });
-    try { S.all = o.load ? (await o.load()) || [] : []; } catch { S.all = []; }
-    if (!S) return;
-    S.years = MSSYear.years(S.all); S.year = S.years[0] || null;
-    if (isYear()) loadYearExtra();
-    loadEpisodes();   // the "Episode ratings" card needs the count
-    draw();
-    if (S.what === 'list') pickWhat('list');
+    const me = S;
+    try {
+      // never wait forever: after 30 s say so (a slow or dropped connection)
+      const all = o.load ? await Promise.race([o.load(), new Promise((_, no) => setTimeout(() => no(new Error('Your library took too long to load')), 30000))]) : [];
+      if (S !== me) return;                 // closed (or reopened) while it loaded
+      S.all = Array.isArray(all) ? all : [];
+      S.years = MSSYear.years(S.all); S.year = S.years[0] || null;
+      if (isYear()) loadYearExtra();
+      loadEpisodes().catch(err => console.warn('Export Studio episodes:', err));   // the "Episode ratings" card needs the count
+      draw();
+      if (S.what === 'list') pickWhat('list');
+    } catch (err) {
+      // something went wrong — say what, instead of "Loading…" forever
+      console.error('Export Studio:', err);
+      if (S !== me) return;
+      $('xsOpts').innerHTML = `<div class="xs-loading xs-failed" role="alert">${icon('info', 20)}<b>Couldn’t open the Studio</b><span>${escHTML(String(err?.message || err))}</span>
+        <button type="button" class="sf-apply-btn" onclick="MSSStudio._retry()">Try again</button></div>`;
+    }
   }
   function close() {
     if (S?.busy) return;    // let it finish
@@ -789,7 +800,7 @@ const MSSStudio = (() => {
     }
   }
 
-  return { open, close, _set: set, _tog: tog, _go: go,
+  return { open, close, _set: set, _tog: tog, _go: go, _retry: () => { const o = S?.o; if (o) open(o); },
     _year: yy => { if (!S || S.busy) return; S.year = yy; draw(); },
     _epShow: id => {   // just the list + preview, so the search keeps what you typed and focus stays on the row
       if (!S || S.busy) return; S.epShow = id; drawEpShows(); drawSide();
