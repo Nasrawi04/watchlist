@@ -3786,24 +3786,29 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   .stats-chevron { display:none; }
 }
 
-/* Ratings curve (rating-curve.js) — under the side stats on profiles, and on top of ratings.html */
-.rc-box { margin-top:14px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:14px 16px 12px; }
-.rc-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:6px; }
+/* Ratings curve (rating-curve.js) — under the side stats on profiles, and on top of ratings.html.
+   Heights are pixels: --rc-h is the tallest bar, --k each bar's share (no % heights — Safari
+   resolved them against the wrong box and drew the bars below the line). */
+.rc-box { --rc-h:84px; margin-top:14px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:14px 16px 12px; }
+.rc-here { --rc-h:120px; }
+.rc-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:4px; }
 .rc-title { font-family:'Oswald',var(--sans); font-size:12px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--olive-light); }
 .rc-total { font-size:12px; color:var(--text-3); }
-.rc-plot { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; height:96px; padding-top:20px; border-bottom:1px solid var(--border-olive); }
-.rc-col { position:relative; display:flex; align-items:flex-end; height:100%; text-decoration:none; border-radius:5px 5px 0 0; outline-offset:3px; }
-.rc-bar { display:block; width:100%; background:var(--olive); border-radius:5px 5px 0 0; transition:background var(--trans) var(--ease); }
-.rc-n { position:absolute; left:-8px; right:-8px; text-align:center; white-space:nowrap; font-family:var(--bebas); font-size:17px; letter-spacing:.3px; line-height:1; color:var(--olive-light); opacity:0; transform:translateY(3px); transition:opacity .15s, transform .15s; pointer-events:none; }
+.rc-plot { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; align-items:end; padding-top:26px; }
+.rc-col { position:relative; display:block; height:var(--rc-h); text-decoration:none; border-radius:6px; outline-offset:3px; }
+.rc-track { position:absolute; inset:0; border-radius:6px; background:var(--olive-faint); }
+.rc-bar { position:absolute; left:0; right:0; bottom:0; height:calc(var(--rc-h) * var(--k, 0)); border-radius:6px; background:var(--olive); transition:background var(--trans) var(--ease); }
+.rc-n { position:absolute; left:-8px; right:-8px; bottom:calc(var(--rc-h) * var(--k, 0) + 5px); text-align:center; white-space:nowrap; font-family:var(--bebas); font-size:17px; letter-spacing:.3px; line-height:1; color:var(--olive-light); opacity:0; transform:translateY(3px); transition:opacity .15s, transform .15s; pointer-events:none; }
+/* a bar that reaches the top: its count sits inside it, in white */
+.rc-col.full .rc-n { bottom:auto; top:7px; color:#fff; }
 a.rc-col { cursor:pointer; }
 a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar { background:var(--olive-light); }
 a.rc-col:hover .rc-n, a.rc-col:focus-visible .rc-n, .rc-here .rc-n { opacity:1; transform:none; }
 .rc-col.empty .rc-n { display:none; }
-.rc-axis { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:5px; }
-.rc-axis span { text-align:center; font-family:var(--bebas); font-size:13px; letter-spacing:.4px; color:var(--text-3); }
+.rc-axis { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:7px; }
+.rc-axis span { text-align:center; font-family:var(--bebas); font-size:14px; letter-spacing:.4px; color:var(--text-3); }
 .rc-axis span.on { color:var(--olive-light); }
 /* ratings.html: every count shows, the range you're on stands out */
-.rc-here .rc-plot { height:130px; padding-top:24px; }
 .rc-here .rc-col:not(.on) .rc-bar { background:var(--border-olive); }
 .rc-here a.rc-col:hover .rc-bar, .rc-here a.rc-col:focus-visible .rc-bar { background:var(--olive); }
 .rc-here .rc-col.on .rc-bar { background:var(--olive-light); }
@@ -3811,6 +3816,13 @@ a.rc-col:hover .rc-n, a.rc-col:focus-visible .rc-n, .rc-here .rc-n { opacity:1; 
 /* no hover on phones / tablets: every count shows */
 @media (hover:none) { .rc-n { opacity:1; transform:none; } }
 @media (prefers-reduced-motion:reduce) { .rc-n, .rc-bar { transition:none; } }
+/* Laptops: the side stats scroll inside themselves so the curve under them is always in view */
+@media(min-width:901px) {
+  .overview-side { display:flex; flex-direction:column; max-height:calc(100vh - 194px); }
+  .overview-side .stats-box { flex:1 1 auto; min-height:140px; overflow-y:auto; overscroll-behavior-y:contain; scrollbar-width:thin; }
+  .overview-side .rc-box { flex:none; }
+}
+@media(min-width:901px) and (max-width:1380px) { .overview-side { max-height:calc(100vh - 194px - 84px); } }   /* room for the bottom bar */
 @media(max-width:640px) {
   .stats-row { padding:10px 16px; }
   .stats-label { font-size:13px; }
