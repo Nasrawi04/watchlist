@@ -283,6 +283,7 @@
 <script src="js/nav.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/sort-filter.js"></script>
+<script src="js/rating-curve.js"></script>
 <script>window.LIB_SCOPE = 'pv'; window.LIB_READONLY = true; window.LIB_ENTRIES = function(){ return _pvEntries; }; window.LIB_PROFILE = function(){ return _pvProfile; };</script>
 <script src="js/library-view.js"></script>
 <script src="js/rewatch.js"></script>
@@ -580,7 +581,7 @@ function renderPvOverview() {
     return;
   }
   var _statsHTML = _pvStatsBoxHTML();
-  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+'</div><div class="overview-main" id="pvDashMain"></div></div>';
+  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+MSSCurve.html(_pvEntries, { user: _pvUserId })+'</div><div class="overview-main" id="pvDashMain"></div></div>';
   // Their picks: Top Favorites, Would Recommend, Top 5 per type (read-only)
   MSSDash.render(document.getElementById('pvDashMain'), {
     entries: _pvEntries, profile: _pvProfile || {}, editable: false,
