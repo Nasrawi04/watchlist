@@ -378,6 +378,7 @@
 <script src="js/nav.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/sort-filter.js"></script>
+<script src="js/rating-curve.js"></script>
 <script>window.LIB_SCOPE = 'prof';</script>
 <script src="js/library-view.js"></script>
 <script src="js/rewatch.js"></script>
@@ -551,7 +552,7 @@ function renderTab0() {
     return;
   }
   var _statsHTML = _statsBoxHTML(_pEntries, _pProfile, _profFavLists);
-  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+'</div><div class="overview-main" id="profDashMain"></div></div>';
+  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+MSSCurve.html(_pEntries)+'</div><div class="overview-main" id="profDashMain"></div></div>';
   // Dashboard: Top Favorites, Would Recommend, Top 5 per type — editable here
   if (!_pProfile) _pProfile = {};
   MSSDash.render(document.getElementById('profDashMain'), {
