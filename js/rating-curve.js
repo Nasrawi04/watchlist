@@ -37,12 +37,13 @@ const MSSCurve = (() => {
     list.forEach(e => { const k = of(e); if (k) n[k] = (n[k] || 0) + 1; });
     const max = Math.max(1, ...RANGES.map(r => n[r.key] || 0));
     const bars = RANGES.map(r => {
-      const c = n[r.key] || 0, h = c ? Math.max(6, Math.round(c / max * 100)) : 0, on = o.current === r.key;
+      // --k = the bar's share of the tallest one; the CSS turns it into pixels (no % heights — Safari drew them below the line)
+      const c = n[r.key] || 0, k = c ? Math.max(0.06, c / max).toFixed(3) : 0, on = o.current === r.key;
       const label = `${r.label}: ${plural(c)}`;
-      const inner = `<span class="rc-n" style="bottom:calc(${h}% + 3px)">★ ${c.toLocaleString()}</span><span class="rc-bar" style="height:${h}%"></span>`;
+      const inner = `<span class="rc-track"></span><span class="rc-bar"></span><span class="rc-n">★ ${c.toLocaleString()}</span>`;
       return c && !on
-        ? `<a class="rc-col" href="${href(r.key, o.user)}" aria-label="${label} — see them">${inner}</a>`
-        : `<span class="rc-col${on ? ' on' : ''}${c ? '' : ' empty'}" role="img" aria-label="${label}${on ? ' (showing)' : ''}">${inner}</span>`;
+        ? `<a class="rc-col${c === max ? ' full' : ''}" style="--k:${k}" href="${href(r.key, o.user)}" aria-label="${label} — see them">${inner}</a>`
+        : `<span class="rc-col${on ? ' on' : ''}${c ? '' : ' empty'}${c && c === max ? ' full' : ''}" style="--k:${k}" role="img" aria-label="${label}${on ? ' (showing)' : ''}">${inner}</span>`;
     }).join('');
     return `<div class="rc-box${o.current ? ' rc-here' : ''}">
       <div class="rc-head"><span class="rc-title">Ratings</span><span class="rc-total">${plural(list.length)}</span></div>
