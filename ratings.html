@@ -67,10 +67,10 @@
 <script src="js/note-popup.js"></script>
 <script>
 /* Every watched title one person scored in a range (from the Ratings curve's bars).
-   ?range=8-10 (default 8–10) · ?user=<id> for someone else's (read-only; the
+   ?range=8.5-9 (default the top bar, 9.5–10) · ?user=<id> for someone else's (read-only; the
    database leaves out titles they've hidden from you). */
 var _rtQ = new URLSearchParams(location.search);
-var _rtRange = MSSCurve.RANGES.find(function(r){ return r.key === _rtQ.get('range'); }) || MSSCurve.RANGES[4];
+var _rtRange = MSSCurve.RANGES.find(function(r){ return r.key === _rtQ.get('range'); }) || MSSCurve.RANGES[MSSCurve.RANGES.length - 1];
 var _rtOwner = _rtQ.get('user') || null;
 var _rtProfile = null, _rtAll = [];
 var _rtView = localStorage.getItem('rt_view') || 'list';
@@ -128,7 +128,7 @@ function _rtHead() {
   document.getElementById('rtAvatar').innerHTML = safeURL(p.avatar_url) ? '<img src="' + safeURL(p.avatar_url) + '" alt="">' : escHTML((name || '?')[0].toUpperCase());
   document.getElementById('rtUsername').textContent = name ? '@' + name : '';
   document.getElementById('rtTitle').textContent = 'Rated ' + _rtRange.label;
-  document.getElementById('rtDesc').textContent = (_rtOwner ? 'Every title @' + name + ' scored' : 'Every title you scored') + ' from ' + _rtRange.lo + ' to ' + _rtRange.hi + ' out of 10'
+  document.getElementById('rtDesc').textContent = (_rtOwner ? 'Every title @' + name + ' scored' : 'Every title you scored') + ' from ' + _rtRange.lo + ' to ' + _rtRange.to + ' out of 10'
     + (avg != null ? ' · average ' + avg.toFixed(2) : '') + '.';
   document.getElementById('rtCurve').innerHTML = MSSCurve.html(_rtAll, { user: _rtOwner, current: _rtRange.key });   // the other bars switch range
 }
