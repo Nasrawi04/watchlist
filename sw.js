@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v97';   // MyScreenFolio — restarted at v1 (was mss-v787)
+const CACHE_VERSION = 'msf-v106';   // MyScreenFolio — restarted at v1 (was mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -39,6 +39,7 @@ const STATIC_ASSETS = [
   'notifications.html',
   'cabinet.html',
   'export.html',
+  'ratings.html',
   'detail.html',
   'title.html',
   'person.html',
@@ -64,6 +65,7 @@ const STATIC_ASSETS = [
   'js/export-image.js',
   'js/taste-profile.js',
   'js/year-review.js',
+  'js/rating-curve.js',
   'fonts/Oswald-500.ttf',
   'fonts/Oswald-600.ttf',
   'fonts/Manrope-400.ttf',
