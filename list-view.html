@@ -9,90 +9,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
-.lv-back {
-  display:inline-flex; align-items:center; gap:6px;
-  font-size:13px; color:var(--text-3); text-decoration:none;
-  margin-bottom:1.5rem; transition:color .15s;
-}
-.lv-back:hover { color:var(--olive-light); }
-
-.lv-head { margin-bottom:.5rem; }
-.lv-title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:nowrap; margin-bottom:.5rem; }
-.lv-title-inner { display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
-.lv-title-wrap { min-width:0; }
-
-/* ── Ranked/Unranked choice checkboxes — adapted from Uiverse (vishnupprajapat) ── */
-.lv-owner { display:flex; align-items:center; gap:8px; margin-bottom:.6rem; }
-.lv-avatar {
-  width:26px; height:26px; border-radius:50%; overflow:hidden; flex-shrink:0;
-  background:var(--olive-faint); color:var(--olive-light); font-family:var(--serif); font-size:12px;
-  display:flex; align-items:center; justify-content:center;
-}
-.lv-avatar img { width:100%; height:100%; object-fit:cover; }
-.lv-username { font-size:13px; color:var(--text-3); }
-.lv-desc {
-  font-size:13.5px; color:var(--text-2); line-height:1.6; margin-bottom:14px;
-  padding-inline-start:12px; border-inline-start:2px solid var(--border-olive); white-space:pre-line; overflow-wrap:anywhere;
-}
-.lv-import-btn {
-  font-size:13px; font-weight:600; padding:9px 20px; border-radius:999px; flex-shrink:0;
-  background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light);
-  cursor:pointer; transition:all .15s; white-space:nowrap;
-}
-.lv-import-btn:hover { background:var(--olive-light); color:var(--bg); }
-.lv-import-btn:disabled { opacity:.5; cursor:default; }
-@media(max-width:520px) {
-  .lv-import-btn { padding:8px 14px; font-size:12px; }
-}
-.lv-controls { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:1.5rem 0 2rem; flex-wrap:wrap; }
-.lv-count { font-size:13px; color:var(--text-3); }
-
-/* ── Grid view ── */
-/* same card sizes as the Discover lists (.dl-grid) */
-.lv-grid {
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
-  gap:14px;
-  align-items:start; grid-auto-rows:max-content;
-}
-@media(min-width:1024px) {
-  .lv-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
-}
-@media(min-width:1600px) {
-  .lv-grid { grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); }
-}
-@media(max-width:640px) {
-  .lv-grid { grid-template-columns:repeat(2,1fr); }
-}
-.lv-card {
-  opacity:0; transform:translateY(18px); width:100%; box-sizing:border-box;
-  transition:opacity .5s var(--ease), transform .5s var(--ease);
-}
-.lv-card.lv-in-view { opacity:1; transform:none; }
-
-/* ── List view ── */
-.lv-list { display:flex; flex-direction:column; gap:8px; }
-.lv-list-row {
-  display:grid; grid-template-columns:96px 1fr auto; align-items:center; gap:22px;
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
-  padding-block:16px;
-  padding-inline:16px 24px; cursor:pointer;
-  opacity:0; transform:translateX(-10px);
-  transition:opacity .4s var(--ease), transform .4s var(--ease), border-color .15s, background .15s;
-}
-.lv-list-row.lv-in-view { opacity:1; transform:none; }
-.lv-list-row:hover { border-color:var(--border-olive); background:var(--card-2); }
-/* Taller card per request — 96×136 keeps the same 2:3 poster ratio as
-   before (80×112), just scaled up, rather than distorting it. */
-.lv-list-poster { width:96px; height:136px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
-.lv-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.lv-list-title-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; min-width:0; }
-.lv-list-title { font-family:var(--serif); font-size:18px; font-weight:500; color:var(--text); }
-.lv-list-badges-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-/* Own MSF score's dedicated column — a real standout element, not a
-   line sharing space with year/genre text the way it used to. */
-.lv-list-score-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
-.lv-list-score-wrap .home-tmdb-score { font-size:clamp(13px, 3vw, 15px); }
-
 .home-tmdb-poster-fallback {
   width:100%; height:100%; display:flex; align-items:center; justify-content:center;
   background:var(--bg-3); font-family:var(--serif); color:var(--olive-light);
@@ -101,56 +17,6 @@
 .home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
 .home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
 .home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
-/* Your own MSF rating — a genuine standout now, not just "slightly
-   bigger": large serif numerals matching the same treatment
-   completed.html gives its own rank/recent scores, in its own
-   dedicated column rather than sharing a line with other text. */
-.lv-own-score { color:var(--olive-light); font-family:var(--serif); font-size:clamp(28px, 6vw, 36px); font-weight:500; white-space:nowrap; line-height:1; }
-.lv-empty { text-align:center; padding:3rem 0; color:var(--text-3); font-size:14px; }
-
-@media(max-width:560px) {
-  .lv-grid { gap:10px; }
-  .lv-list-row { grid-template-columns:64px 1fr auto; gap:14px; padding-block:10px; padding-inline:10px 16px; }
-  .lv-list-poster { width:64px; height:92px; }
-  .lv-list-title { font-size:15px; }
-}
-/* ── v572: plain page layout (like Discover's See All) ── */
-.lv-owner-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:.9rem; }
-.lv-owner-row .lv-owner { margin-bottom:0; }
-.lv-title-row { display:flex; align-items:center; justify-content:flex-start; column-gap:16px; row-gap:8px; flex-wrap:wrap; margin-bottom:1.1rem; }
-.lv-title {
-  font-family:var(--serif); font-size:clamp(26px, 6vw, 44px); font-weight:600; line-height:1.25;
-  margin:0; min-width:0; overflow-wrap:anywhere; white-space:normal;
-  overflow:visible; text-overflow:clip; padding-bottom:2px;   /* keep descenders (g, y, p) from clipping */
-}
-.lv-badge-slot { display:inline-flex; flex-shrink:0; align-self:center; gap:8px; }
-.lv-badge-slot:empty { display:none; }
-.lv-title-row .list-rank-badge { height:24px; padding:0 12px; font-size:11px; }
-@media(max-width:640px) { .lv-title-row .list-rank-badge { height:21px; padding:0 10px; font-size:10px; } }
-.lv-desc {
-  font-size:clamp(13px, 3.4vw, 14.5px); color:var(--text-2); line-height:1.65; max-width:none; width:100%;
-  margin:0 0 1.4rem; white-space:pre-line; overflow-wrap:anywhere; padding:0; border:none;
-}
-.lv-import-row { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 1.25rem; padding:0 !important; }
-.lv-import-slot { display:contents; }
-#lvShareBtn[hidden], #lvExportBtn[hidden] { display:none; }
-#lvExportLabel { display:inline-flex; align-items:center; gap:7px; }
-.lv-import-row .popup-action-btn { flex:0 0 auto; padding:11px 22px; font-size:13.5px; }
-.lv-import-row .popup-action-btn:disabled { opacity:.65; cursor:default; }
-.lv-controls {
-  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-  margin:0 0 1.5rem; padding-bottom:12px; border-bottom:0.5px solid var(--border);
-}
-.lv-count { font-size:13px; color:var(--text-3); }
-.lv-count b { font-family:var(--bebas); font-weight:400; font-size:18px; color:var(--text-2); letter-spacing:.3px; }
-.lv-controls-right { display:flex; align-items:center; gap:8px; margin-inline-start:auto; }
-.lv-sf-bar:empty { display:none; }
-.lv-sf-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
-.lv-sf-bar .sort-bar::before { content:none; }
-@media(max-width:600px) {
-  .lv-import-row .popup-action-btn { width:100%; }
-  .lv-controls { gap:10px; }
-}
 /* ── Invite-link popup ── */
 #lvJoinOverlay {
   position:fixed; inset:0; z-index:1300; display:flex; align-items:center; justify-content:center; padding:16px;
@@ -183,9 +49,6 @@
 .lvj-actions .lvj-ghost { background:transparent !important; color:var(--text-2) !important; border-color:var(--border-2) !important; }
 .lvj-actions .lvj-ghost:hover { color:var(--text) !important; border-color:var(--border-olive) !important; background:var(--olive-faint) !important; }
 .lvj-actions .popup-action-btn:disabled { opacity:.6; }
-/* Scores are numbers → Bebas Neue, like every other page */
-.lv-card .home-tmdb-score, .lv-list-row .home-tmdb-score { font-family:var(--bebas); font-weight:400; letter-spacing:.3px; font-size:18px; color:var(--olive-light); }
-.lv-list-row .home-tmdb-score { font-size:20px; }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
