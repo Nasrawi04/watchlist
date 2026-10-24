@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Export — MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ── Export (export.html): the Export Studio + quick exports ── */
+.ex-wrap { max-width:1120px; margin:0 auto; }
+.ex-eyebrow { font-size:11px; font-weight:700; letter-spacing:2.6px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
+.ex-title { font-family:var(--serif); font-size:clamp(28px, 5.5vw, 42px); font-weight:600; line-height:1.1; margin:0; color:var(--text); }
+.ex-sub { font-size:14px; color:var(--text-2); margin:8px 0 1.5rem; max-width:620px; line-height:1.55; }
+
+/* the Studio: a big card — words and the button on the left, every format on the right */
+.ex-hero { position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0, 1.15fr) minmax(0, 1fr); gap:28px; align-items:center;
+  padding:30px 32px; border-radius:22px; border:1px solid var(--border-olive);
+  background:radial-gradient(120% 140% at 0% 0%, var(--olive-faint), transparent 60%), radial-gradient(90% 120% at 100% 100%, rgba(126,184,108,.10), transparent 60%), var(--card); }
+.ex-hero-ic { width:54px; height:54px; border-radius:16px; display:grid; place-items:center; background:var(--olive); color:#fff; margin-bottom:16px; box-shadow:0 8px 20px rgba(30,92,38,.28); }
+.ex-hero h2 { margin:0 0 6px; font-family:'Oswald',var(--sans); font-size:26px; font-weight:600; color:var(--text); letter-spacing:.2px; }
+.ex-hero p { margin:0 0 20px; font-size:14px; line-height:1.6; color:var(--text-2); }
+.ex-points { display:flex; flex-wrap:wrap; gap:6px 14px; margin:0 0 22px; padding:0; list-style:none; font-size:12.5px; color:var(--text-2); }
+.ex-points li { display:inline-flex; align-items:center; gap:6px; }
+.ex-points svg { color:var(--olive-light); }
+.ex-go { display:inline-flex; align-items:center; gap:9px; padding:13px 22px; border:none; border-radius:999px; cursor:pointer;
+  background:var(--olive); color:#fff; font:700 14.5px 'Manrope',var(--sans); box-shadow:0 8px 22px rgba(30,92,38,.3); transition:transform .15s, filter .15s; }
+.ex-go:hover { filter:brightness(1.08); transform:translateY(-1px); }
+.ex-go:active { transform:scale(.97); }
+.ex-go:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
+.ex-formats { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+.ex-fmt { all:unset; box-sizing:border-box; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:7px; padding:16px 8px 14px; text-align:center;
+  border-radius:16px; background:var(--bg-2); border:0.5px solid var(--border); transition:border-color .15s, transform .15s, background .15s; }
+.ex-fmt:hover { border-color:var(--border-olive); transform:translateY(-2px); background:var(--card-2); }
+.ex-fmt:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.ex-fmt-ic { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:var(--olive-faint); color:var(--olive-light); }
+.ex-fmt b { font-size:13px; font-weight:700; color:var(--text); }
+.ex-fmt small { font-size:11px; color:var(--text-3); line-height:1.3; }
+
+/* quick exports: one tap, the Studio opens set up for it */
+.ex-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:2.25rem 0 .9rem; }
+.ex-head h3 { margin:0; font-family:'Oswald',var(--sans); font-size:13px; font-weight:600; letter-spacing:1.8px; text-transform:uppercase; color:var(--text-2); }
+.ex-head span { font-size:12.5px; color:var(--text-3); }
+.ex-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; }
+.ex-card { all:unset; box-sizing:border-box; cursor:pointer; position:relative; display:flex; gap:14px; align-items:flex-start; padding:18px 18px 16px;
+  border-radius:18px; background:var(--card); border:0.5px solid var(--border); transition:border-color .15s, transform .15s, box-shadow .15s; }
+.ex-card:hover { border-color:var(--border-olive); transform:translateY(-2px); box-shadow:var(--shadow); }
+.ex-card:active { transform:scale(.985); }
+.ex-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.ex-card-ic { flex:none; width:46px; height:46px; border-radius:14px; display:grid; place-items:center; color:#fff; background:var(--ic, var(--olive)); }
+.ex-card-main { min-width:0; flex:1; }
+.ex-card-main b { display:block; font-size:15px; font-weight:700; color:var(--text); line-height:1.3; }
+.ex-card-main small { display:block; margin-top:4px; font-size:12.5px; color:var(--text-2); line-height:1.5; }
+.ex-card-foot { display:flex; align-items:center; gap:8px; margin-top:10px; }
+.ex-pill { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; background:var(--olive-faint); color:var(--olive-light); font-size:11px; font-weight:700; letter-spacing:.3px; }
+.ex-count { font-size:11.5px; color:var(--text-3); }
+.ex-arrow { position:absolute; top:16px; inset-inline-end:14px; color:var(--text-3); opacity:0; transform:translateX(-4px); transition:opacity .15s, transform .15s; }
+.ex-card:hover .ex-arrow, .ex-card:focus-visible .ex-arrow { opacity:1; transform:none; color:var(--olive-light); }
+[dir="rtl"] .ex-arrow svg { transform:scaleX(-1); }
+.ex-note { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:1.5rem; padding:14px 16px; border-radius:14px; background:var(--bg-2); border:0.5px dashed var(--border-2); font-size:12.5px; color:var(--text-2); }
+.ex-note a { color:var(--olive-light); text-decoration:none; font-weight:600; }
+.ex-note a:hover { text-decoration:underline; }
+.ex-note span { display:block; }
+.ex-note span > svg { vertical-align:-2px; margin-inline-end:6px; }
+@media(prefers-reduced-motion:reduce) { .ex-go, .ex-fmt, .ex-card, .ex-arrow { transition:none; } }
+@media(max-width:1024px) { .ex-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media(max-width:860px) { .ex-hero { grid-template-columns:1fr; padding:24px 20px; gap:22px; } }
+@media(max-width:600px) {
+  .ex-grid { grid-template-columns:1fr; gap:10px; }
+  .ex-card { padding:14px; gap:12px; align-items:center; }
+  .ex-card-ic { width:42px; height:42px; border-radius:12px; }
+  .ex-card-main b { font-size:14.5px; }
+  .ex-card-foot { margin-top:6px; }
+  .ex-arrow { opacity:1; transform:none; top:50%; margin-top:-8px; }
+  .ex-card-main { padding-inline-end:18px; }
+  .ex-go { width:100%; justify-content:center; }
+  .ex-fmt { padding:12px 6px; } .ex-fmt-ic { width:36px; height:36px; }
+}
+</style>
+</head>
+<body>
+<div class="page-wrap" id="exPage">
+  <div class="page-loading"><div class="spinner"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/export.js"></script>
+<script src="js/taste-profile.js"></script>
+<script src="js/year-review.js"></script>
+<script src="js/export-formats.js"></script>
+<script src="js/export-image.js"></script>
+<script src="js/export-studio.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   export.html — Export (avatar menu · You → Export on phones)
+   The Export Studio (export-studio.js) and one-tap quick exports that open it
+   set up: what, how it's sorted and which format. Your library loads once and
+   every export reuses it.
+═══════════════════════════════════════════════════════════════ */
+const esc = s => escHTML(s == null ? '' : String(s));
+let _exAll = null, _exReady = null;
+// Every format the Studio makes (format = its preset; the Studio picks what fits when there's nothing chosen)
+const EX_FORMATS = [
+  ['pdf', 'download', 'PDF', 'To read or print'], ['image', 'image', 'Image', 'Story or square'], ['ai', 'sparkles', 'For an AI', 'Paste into a chat'],
+  ['csv', 'list', 'Spreadsheet', 'Excel / Sheets'], ['letterboxd', 'film', 'Letterboxd', 'Import your movies'], ['backup', 'layers', 'Full backup', 'Everything, as .json'],
+];
+const EX_QUICK = [
+  { ic: 'check', col: '#3d7a38', t: 'Everything I’ve watched', d: 'Your whole watch history, ranked by score.', f: 'PDF', n: 'watched', p: { what: 'watched', sort: 'score' } },
+  { ic: 'trophy', col: '#b8862a', t: 'My top 10', d: 'Your ten best, with posters and every rating.', f: 'PDF', p: { what: 'watched', sort: 'score', limit: 10 } },
+  { ic: 'image', col: '#7a4fa3', t: 'Top 10 story', d: 'Your ten best as an image for Instagram or TikTok.', f: 'Image', p: { what: 'watched', sort: 'score', format: 'image' } },
+  { ic: 'activity', col: '#2b5a85', t: 'My taste profile', d: 'How you score — your genres, decades and what you’re toughest on.', f: 'PDF', p: { what: 'taste' } },
+  { ic: 'clock', col: '#a8433b', t: 'Year in Review', d: 'Your year: what you finished, your best, month by month.', f: 'PDF', p: { what: 'year' } },
+  { ic: 'episodes', col: '#1f4d2b', t: 'Episode ratings', d: 'A show’s episode chart — every season at a glance.', f: 'Image', p: { what: 'episodes', format: 'image' } },
+  { ic: 'bookmark', col: '#5f6b2a', t: 'My watchlist', d: 'Everything you plan to watch.', f: 'PDF', n: 'watchlist', p: { what: 'watchlist' } },
+  { ic: 'play', col: '#c0732a', t: 'Currently watching', d: 'What you’re in the middle of, and how far.', f: 'PDF', n: 'watching', p: { what: 'watching' } },
+  { ic: 'sparkles', col: '#3e6e8e', t: 'Ask an AI', d: 'Your taste in a message to paste into any AI chat for picks.', f: 'AI', p: { what: 'watched', format: 'ai' } },
+];
+const exCount = k => _exAll.filter(e => k === 'watched' ? ['completed', 'ongoing'].includes(e.status) : k === 'watchlist' ? e.status === 'queue' : ['watching', 'up_next', 'paused'].includes(e.status)).length;
+
+function exOpen(preset) {
+  const p = window._navUserProfile || {};
+  MSSStudio.open({ preset, who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' }, load: () => _exReady });
+}
+function exDraw() {
+  const page = document.getElementById('exPage');
+  page.innerHTML = `<div class="ex-wrap fade-up">
+    <div class="ex-eyebrow">Export</div>
+    <h1 class="ex-title">Take your library with you</h1>
+    <p class="ex-sub">Make a PDF to keep, an image to share, a file for another app or a full backup — you choose what goes in and see it before you download.</p>
+
+    <section class="ex-hero" aria-labelledby="exStudioT">
+      <div>
+        <span class="ex-hero-ic" aria-hidden="true">${icon('download', 26)}</span>
+        <h2 id="exStudioT">Export Studio</h2>
+        <p>Pick exactly what goes in — your watched titles, a list, your taste, your year or a show’s episodes — how it’s sorted and how it looks.</p>
+        <ul class="ex-points">
+          <li>${icon('eye', 14)} Live preview</li><li>${icon('lock', 14)} Hide spoilers or your name</li><li>${icon('moon', 14)} Light or dark</li>
+        </ul>
+        <button type="button" class="ex-go" onclick="exOpen(null)">${icon('download', 17)} Open Export Studio</button>
+      </div>
+      <div class="ex-formats" role="group" aria-label="Start with a format">
+        ${EX_FORMATS.map(([k, ic, l, sub]) => `<button type="button" class="ex-fmt" onclick="exOpen({ format: '${k}' })"><span class="ex-fmt-ic" aria-hidden="true">${icon(ic, 19)}</span><b>${l}</b><small>${sub}</small></button>`).join('')}
+      </div>
+    </section>
+
+    <div class="ex-head"><h3>Quick exports</h3><span>One tap — the Studio opens ready to go</span></div>
+    <div class="ex-grid">${EX_QUICK.map((q, i) => {
+      return `<button type="button" class="ex-card" onclick="exOpen(EX_QUICK[${i}].p)">
+        <span class="ex-card-ic" style="--ic:${q.col}" aria-hidden="true">${icon(q.ic, 21)}</span>
+        <span class="ex-card-main"><b>${esc(q.t)}</b><small>${esc(q.d)}</small>
+          <span class="ex-card-foot"><span class="ex-pill">${esc(q.f)}</span>${q.n ? `<span class="ex-count" data-n="${q.n}"></span>` : ''}</span></span>
+        <span class="ex-arrow" aria-hidden="true">${icon('arrowRight', 16)}</span></button>`;
+    }).join('')}</div>
+
+    <div class="ex-note">
+      <span>${icon('layers', 14)} A list? Open it and use its <b>Export</b> button — <a href="lists.html">Your lists</a></span>
+      <span>${icon('episodes', 14)} A show’s chart is on <a href="episodes.html">Episodes</a> too</span>
+    </div>
+  </div>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async user => {
+    if (!user) {
+      document.getElementById('exPage').innerHTML = `<div class="guest-page-state fade-up"><div class="guest-page-icon">${icon('download', 36)}</div>
+        <h2 class="guest-page-title">Export</h2><p class="guest-page-sub">Sign in to export your library as a PDF, an image, a spreadsheet or a backup.</p>
+        <div class="guest-cta"><a href="login.html" class="guest-btn-primary">Sign In</a><a href="login.html#signup" class="guest-btn-secondary">Create Account</a></div></div>`;
+      return;
+    }
+    _exReady = getEntries(user.id).then(r => (_exAll = r || []), () => (_exAll = []));
+    exDraw();                               // straight away; the counts fill in once your library's here
+    await _exReady;
+    document.querySelectorAll('.ex-count[data-n]').forEach(el => { const n = exCount(el.dataset.n); el.textContent = `${n} ${n === 1 ? 'title' : 'titles'}`; });
+  });
+});
+</script>
+</body>
+</html>
