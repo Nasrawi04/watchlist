@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  /* Hide nav search bar on home page — hero search replaces it */
+  .search-wrap { display:none !important; }
+  .nav-icon-btn { display:none !important; }
+  .mobile-search-bar { display:none !important; }
+  .home-hero { padding-bottom: 0.5rem; }
+
+  /* ── Explore — highlighted Discover shortcuts ──
+     Cinematic cards: the category's top poster as a blurred backdrop under
+     a colored wash, a fanned stack of its top 3 posters, a bold title and
+     an Explore pill. Scrolls as a slow infinite marquee (pauses on hover,
+     static swipeable row for people who prefer reduced motion). */
+  .xp { margin:0 0 3rem; }
+  .xp-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:1.1rem; }
+  .xp-all { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--olive-light); text-decoration:none; white-space:nowrap; }
+  .xp-all svg { width:13px; height:13px; transition:transform .2s; }
+  .xp-all:hover svg { transform:translateX(3px); }
+  /* Scrollable row that also drifts on its own (JS in _xpAutoScroll):
+     swipe / drag / trackpad to move it faster either way — it picks the
+     drift back up a moment after you let go. */
+  .xp-marquee {
+    overflow-x:auto; overflow-y:hidden; margin:0 -4px; padding:10px 4px 12px;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;
+    cursor:grab; user-select:none; -webkit-user-select:none;
+  }
+  .xp-marquee::-webkit-scrollbar { display:none; }
+  .xp-marquee.dragging { cursor:grabbing; }
+  .xp-marquee.dragging .xp-card { pointer-events:none; }
+  .xp-track { display:flex; width:max-content; }
+  .xp-group { display:flex; gap:18px; padding-inline-end:18px; flex-shrink:0; }
+
+  .xp-card {
+    --xp-a:#1E5C26; --xp-b:#0F2D14;
+    position:relative; flex-shrink:0; width:360px; height:200px; border-radius:18px; overflow:hidden;
+    display:flex; align-items:stretch; text-decoration:none; color:#fff; isolation:isolate;
+    background:linear-gradient(135deg, var(--xp-a), var(--xp-b));
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+    transition:transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s;
+  }
+  .xp-card:hover { transform:translateY(-4px); box-shadow:inset 0 0 0 1px rgba(255,255,255,.16); }
+  .xp-bg {
+    position:absolute; inset:-24px; z-index:-2; background-size:cover; background-position:center 30%;
+    filter:blur(18px) saturate(1.3); opacity:0; transform:scale(1.1); transition:opacity .6s ease;
+  }
+  .xp-bg.on { opacity:.55; }
+  .xp-shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(100deg, var(--xp-b) 0%, color-mix(in srgb, var(--xp-a) 78%, transparent) 55%, rgba(0,0,0,.15) 100%); }
+  .xp-num {
+    position:absolute; inset-inline-end:-8px; bottom:-22px; z-index:-1; font-family:var(--bebas); font-size:150px; line-height:1;
+    color:rgba(255,255,255,.07); letter-spacing:-2px; pointer-events:none;
+  }
+  .xp-text { position:relative; flex:1; min-width:0; padding-block:20px; padding-inline:22px 0; display:flex; flex-direction:column; }
+  .xp-badge {
+    align-self:flex-start; font-family:var(--sans); font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase;
+    padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.22);
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); margin-bottom:10px;
+  }
+  .xp-title { font-family:var(--serif); font-weight:600; font-size:24px; line-height:1.1; margin-bottom:6px; text-shadow:0 2px 14px rgba(0,0,0,.45); white-space:nowrap; }
+  .xp-text { z-index:1; padding-inline-end:22px; }
+  .xp-sub, .xp-badge { max-width:calc(100% - 118px); }
+  .xp-sub { font-size:12.5px; color:rgba(255,255,255,.82); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .xp-cta {
+    margin-top:auto; align-self:flex-start; display:inline-flex; align-items:center; gap:7px;
+    padding:8px 14px; border-radius:999px; color:#fff;   /* frosted glass, like the badge above it */
+    background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.32); box-shadow:0 4px 14px rgba(0,0,0,.18);
+    -webkit-backdrop-filter:blur(10px) saturate(1.4); backdrop-filter:blur(10px) saturate(1.4);
+    font-family:var(--sans); font-size:12.5px; font-weight:700; transition:gap .2s, padding .2s, background .2s;
+  }
+  .xp-cta svg { width:13px; height:13px; }
+  .xp-card:hover .xp-cta { gap:11px; padding-inline-end:12px; background:rgba(255,255,255,.28); }
+  /* Fanned stack of the category's top 3 posters */
+  .xp-fan { position:absolute; top:0; inset-inline-end:0; bottom:0; width:140px; z-index:0; pointer-events:none; }
+  .xp-p {
+    position:absolute; bottom:-14px; width:84px; aspect-ratio:2/3; border-radius:8px; overflow:hidden;
+    background:rgba(255,255,255,.12); box-shadow:0 10px 24px rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.18);
+    transition:transform .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .xp-p img { width:100%; height:100%; object-fit:cover; display:block; }
+  .xp-p:nth-child(1) { inset-inline-end:66px; transform:rotate(-11deg) translateY(10px); z-index:1; }
+  .xp-p:nth-child(2) { inset-inline-end:38px; transform:rotate(-3deg);  z-index:2; }
+  .xp-p:nth-child(3) { inset-inline-end:10px; transform:rotate(7deg) translateY(6px); z-index:3; }
+  .xp-card:hover .xp-p:nth-child(1) { transform:rotate(-15deg) translate(-8px, 2px); }
+  .xp-card:hover .xp-p:nth-child(2) { transform:rotate(-3deg) translateY(-10px); }
+  .xp-card:hover .xp-p:nth-child(3) { transform:rotate(11deg) translate(8px, 0); }
+
+  @media(max-width:640px) {
+    .xp { margin-bottom:2.25rem; }
+    .xp-card { width:292px; height:172px; border-radius:16px; }
+    .xp-title { font-size:20px; }
+    .xp-sub { font-size:11.5px; }
+    .xp-text { padding-block:16px; padding-inline:18px 0; }
+    .xp-fan { width:108px; }
+    .xp-sub, .xp-badge { max-width:calc(100% - 96px); }
+    .xp-p { width:68px; }
+    .xp-p:nth-child(1) { inset-inline-end:52px; } .xp-p:nth-child(2) { inset-inline-end:30px; } .xp-p:nth-child(3) { inset-inline-end:8px; }
+    .xp-num { font-size:120px; }
+    .xp-group { gap:14px; padding-inline-end:14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .xp-group + .xp-group { display:none; }   /* no drift → no need for the loop copy */
+  }
+
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+
+<div class="page-wrap">
+  <!-- HERO -->
+  <div class="home-hero fade-up">
+    <div class="home-eyebrow">Your screen portfolio</div>
+    <h1 class="home-title" translate="no">My <em>Screen</em> Folio</h1>
+    <p class="home-sub">Everything you’ve watched, in one portfolio — track your progress, rate every watch, and curate rankings that show your taste.</p>
+  </div>
+
+  <!-- HERO SEARCH -->
+  <div class="hero-search-wrap fade-up" style="margin:1rem 0 2.5rem;">
+    <input type="text" id="heroSearch" placeholder="Search movies, shows, anime…" autocomplete="off">
+    <button type="button" class="hero-search-btn" tabindex="-1" onclick="document.getElementById('heroSearch').focus()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span>Search</span>
+    </button>
+  </div>
+
+  <!-- EXPLORE — highlighted Discover shortcuts (cards built in JS) -->
+  <section class="xp fade-up" aria-label="Explore Discover">
+    <div class="xp-head">
+      <div>
+        <div class="section-eyebrow">Discover</div>
+        <div class="section-title" style="margin-bottom:0">Start Exploring</div>
+      </div>
+      <a class="xp-all" href="discover.html">See all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
+    <div class="xp-marquee">
+      <div class="xp-track" id="xpTrack"></div>
+    </div>
+  </section>
+
+  <!-- CURRENTLY WATCHING -->
+  <div id="homeWatching" style="margin-top:4rem"></div>
+
+  <!-- FRIENDS ACTIVITY — what your friends just watched -->
+  <div id="homeFriends" style="margin-top:3rem"></div>
+
+  <!-- RECOMMENDED FOR YOU (from every profile favorite) -->
+  <div id="homeRecs" style="margin-top:3rem"></div>
+
+  <!-- FROM YOUR WATCHLIST -->
+  <div id="homeWatchlist" style="margin-top:3rem"></div>
+
+  <!-- RECENTLY VIEWED (MyScreenFolio view history) -->
+  <div id="homeRecentlyViewed" style="margin-top:3rem"></div>
+
+  <!-- GUEST SIGN-IN CTA (shown only when logged out) -->
+  <div id="guestCta" style="margin-top:3rem"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/rating-popup.js"></script>
+<script src="js/easter-egg.js"></script>
+<script src="js/note-popup.js"></script>
+<script src="js/episode-ratings.js"></script>
+<script src="js/discover-categories.js"></script>
+<script>
+let _homeUser = null;
+
+/* ── Explore cards ── */
+const _XP_ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+const HOME_EXPLORE = [
+  { key:'top_rated_mss',   title:'Top Rated on MSF', sub:'Highest rated by our community', badge:'Community Pick', num:'MSF', a:'#2E7D32', b:'#0E2F14' },
+  { key:'popular',         title:"What's Popular",    sub:'Trending across the board',     badge:'Trending',       num:'HOT', a:'#8A5A1C', b:'#2B1A08' },
+  { key:'top250_movies',   title:'Top 250 Movies',    sub:'The best movies ever, ranked',      badge:'Ranked',         num:'250', a:'#9C3D1C', b:'#2E1007' },
+  { key:'top250_shows',    title:'Top 250 Shows',     sub:'The best TV ever made, ranked',               badge:'Ranked',         num:'250', a:'#2F5F8A', b:'#0C1D2E' },
+  { key:'top250_anime',    title:'Top 250 Anime',     sub:'The best anime, ranked',    badge:'Ranked',         num:'250', a:'#7A3E78', b:'#240F24' },
+  { key:'top250_cartoons', title:'Top 250 Cartoons',  sub:'The best cartoons, ranked',     badge:'Ranked',         num:'250', a:'#3F7A6E', b:'#0D2520' },
+];
+
+function _xpCardHTML(c) {
+  const href = `discover-list.html?list=${encodeURIComponent(c.key)}&title=${encodeURIComponent(c.title)}`;
+  return `<a class="xp-card" data-xp="${c.key}" href="${href}" style="--xp-a:${c.a};--xp-b:${c.b};">
+    <div class="xp-bg"></div>
+    <div class="xp-shade"></div>
+    <div class="xp-num">${c.num}</div>
+    <div class="xp-text">
+      <span class="xp-badge">${_homeEsc(c.badge)}</span>
+      <div class="xp-title">${_homeEsc(c.title)}</div>
+      <div class="xp-sub">${_homeEsc(c.sub)}</div>
+      <span class="xp-cta">Explore ${_XP_ARROW}</span>
+    </div>
+    <div class="xp-fan"><div class="xp-p"></div><div class="xp-p"></div><div class="xp-p"></div></div>
+  </a>`;
+}
+
+function _xpRender() {
+  const track = document.getElementById('xpTrack');
+  if (!track) return;
+  const group = HOME_EXPLORE.map(_xpCardHTML).join('');
+  // Two identical groups make the loop seamless; the copy is hidden from screen readers
+  track.innerHTML = `<div class="xp-group">${group}</div><div class="xp-group" aria-hidden="true">${group.replace(/<a /g, '<a tabindex="-1" ')}</div>`;
+}
+
+/* ── Drift + manual scroll ──
+   The row drifts left by itself. Any swipe, drag, wheel/trackpad move or
+   hover pauses the drift and lets you scroll freely either way; ~1.2s after
+   you stop it carries on from wherever you left it. Two copies of the cards
+   make it loop seamlessly in both directions. */
+function _xpAutoScroll() {
+  const m = document.querySelector('.xp-marquee');
+  const track = document.getElementById('xpTrack');
+  if (!m || !track) return;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SPEED = 32;                         // px per second
+  let pos = 0, lastSet = 0, last = performance.now();
+  let userBusy = false, hovering = false, resumeT = null;
+
+  const groupW = () => track.firstElementChild ? track.firstElementChild.offsetWidth : 0;
+  const wrap = x => { const g = groupW(); if (!g) return x; while (x >= g) x -= g; while (x < 0) x += g; return x; };
+  const set = x => { pos = wrap(x); m.scrollLeft = pos; lastSet = m.scrollLeft; };
+  const busy = () => { userBusy = true; clearTimeout(resumeT); };
+  const idle = (ms = 1200) => { clearTimeout(resumeT); resumeT = setTimeout(() => { userBusy = false; pos = m.scrollLeft; last = performance.now(); }, ms); };
+
+  // Scrolls that didn't come from the drift = the user (touch, trackpad, momentum)
+  m.addEventListener('scroll', () => {
+    if (Math.abs(m.scrollLeft - lastSet) > 1) {
+      busy();
+      const g = groupW();
+      if (g && (m.scrollLeft >= g || m.scrollLeft <= 0)) set(m.scrollLeft);   // keep the loop seamless
+      else { pos = m.scrollLeft; lastSet = m.scrollLeft; }
+      idle();
+    }
+  }, { passive: true });
+  m.addEventListener('wheel', () => { busy(); idle(); }, { passive: true });
+  m.addEventListener('touchstart', busy, { passive: true });
+  m.addEventListener('touchend', () => idle(), { passive: true });
+  m.addEventListener('mouseenter', () => { hovering = true; });
+  m.addEventListener('mouseleave', () => { hovering = false; last = performance.now(); });
+
+  // Mouse drag to scroll (touch uses native swiping)
+  let drag = null;
+  m.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    drag = { x: e.clientX, start: m.scrollLeft, moved: false };
+    busy();
+  });
+  window.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 5) { drag.moved = true; m.classList.add('dragging'); }
+    if (drag.moved) set(drag.start - dx);
+  });
+  window.addEventListener('pointerup', () => {
+    if (!drag) return;
+    const moved = drag.moved;
+    drag = null;
+    m.classList.remove('dragging');
+    if (moved) {   // a drag isn't a click on the card underneath
+      const stop = ev => { ev.preventDefault(); ev.stopPropagation(); };
+      m.addEventListener('click', stop, { capture: true, once: true });
+      setTimeout(() => m.removeEventListener('click', stop, { capture: true }), 50);
+    }
+    idle();
+  });
+
+  if (reduced) return;                      // no drift; still freely scrollable
+  const step = t => {
+    const dt = Math.min(64, t - last); last = t;
+    if (!userBusy && !hovering && !document.hidden) set(pos + SPEED * dt / 1000);
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function _xpFill(key, items) {
+  const posters = (items || []).map(it => it.poster_url).filter(u => safeURL(u)).slice(0, 3);
+  if (!posters.length) return;
+  document.querySelectorAll(`.xp-card[data-xp="${key}"]`).forEach(card => {
+    const bg = card.querySelector('.xp-bg');
+    bg.style.backgroundImage = cssURL(posters[0]);
+    bg.classList.add('on');
+    card.querySelectorAll('.xp-p').forEach((p, i) => {
+      const u = posters[i];
+      p.innerHTML = u ? `<img src="${safeURL(u)}" alt="" loading="lazy" onerror="mssImgError(this)">` : '';
+      p.style.display = u ? '' : 'none';
+    });
+  });
+}
+
+/* Poster picks are saved on the device (localStorage), so after the first
+   visit the cards show their posters instantly — even in a new session.
+   Saved picks older than 6 hours are still shown right away, then quietly
+   refreshed in the background (stale-while-revalidate). */
+const _XP_STORE = 'mss_explore_posters_v1';
+const _XP_FRESH_MS = 6 * 60 * 60 * 1000;
+function _xpStoreGet() { try { return JSON.parse(localStorage.getItem(_XP_STORE) || '{}'); } catch { return {}; } }
+function _xpStoreSet(key, posters) {
+  try {
+    const all = _xpStoreGet();
+    all[key] = { t: Date.now(), posters };
+    localStorage.setItem(_XP_STORE, JSON.stringify(all));
+  } catch {}
+}
+function _xpPostersOf(items) { return (items || []).map(it => it.poster_url).filter(u => safeURL(u)).slice(0, 3); }
+
+function _xpLoad() {
+  const saved = _xpStoreGet();
+  let delay = 0;
+  HOME_EXPLORE.forEach(c => {
+    const s = saved[c.key];
+    if (s && s.posters && s.posters.length) _xpFill(c.key, s.posters.map(u => ({ poster_url: u })));   // instant
+    if (s && Date.now() - s.t < _XP_FRESH_MS) return;                                                // fresh enough
+
+    // Discover's session cache counts as fresh data too
+    try {
+      const x = JSON.parse(sessionStorage.getItem('disc_cache_' + c.key) || 'null');
+      if (x && Date.now() - x.t < 15 * 60 * 1000 && x.items?.length) {
+        _xpFill(c.key, x.items); _xpStoreSet(c.key, _xpPostersOf(x.items)); return;
+      }
+    } catch {}
+
+    const cat = typeof getDiscoverCategory === 'function' ? getDiscoverCategory(c.key) : null;
+    if (!cat) return;
+    setTimeout(async () => {
+      try {
+        const items = await cat.fetch(1);
+        try { sessionStorage.setItem('disc_cache_' + c.key, JSON.stringify({ t: Date.now(), items: items.slice(0, 12) })); } catch {}
+        const posters = _xpPostersOf(items);
+        if (posters.length) { _xpStoreSet(c.key, posters); _xpFill(c.key, items); }
+      } catch (e) { /* keeps whatever was saved (or the plain colored card) */ }
+    }, delay);
+    delay += 250;
+  });
+}
+
+const _NAV_LEFT_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+const _NAV_RIGHT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+function _homeEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Shared horizontal-scroll section shell — used by the home row sections.
+// seeAll: link for a "See All" on the right (same header as the Discover rows)
+function _homeHScrollSection(containerId, gridId, eyebrow, title, cardsHTML, seeAll) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = cardsHTML ? _homeRowHTML(gridId, eyebrow, title, cardsHTML, seeAll) : '';
+}
+function _homeRowHTML(gridId, eyebrow, title, cardsHTML, seeAll, gridCls = 'queue-grid') {
+  return `
+    ${seeAll ? `<div class="disc-section-head">
+      <div><div class="section-eyebrow">${eyebrow}</div><div class="section-title" style="margin-bottom:0">${title}</div></div>
+      <a class="disc-see-all" href="${escHTML(seeAll)}">See All ${_SEE_ALL_SVG}</a>
+    </div>` : `<div class="section-eyebrow">${eyebrow}</div>
+    <div class="section-title">${title}</div>`}
+    <div class="grid-nav-wrap">
+      <button class="grid-nav-btn arr-left" onclick="event.stopPropagation();document.getElementById('${gridId}').scrollBy({left:-660,behavior:'smooth'})" aria-label="Scroll left">${_NAV_LEFT_SVG}</button>
+      <button class="grid-nav-btn arr-right" onclick="event.stopPropagation();document.getElementById('${gridId}').scrollBy({left:660,behavior:'smooth'})" aria-label="Scroll right">${_NAV_RIGHT_SVG}</button>
+      <div class="${gridCls}" id="${gridId}">${cardsHTML}</div>
+    </div>`;
+}
+
+// Card for a TMDB-sourced item (Trending/Top Picks/Upcoming/Recently Viewed) —
+// these aren't local library entries, so they use their own light card
+// instead of posterHTML()/genreHTML() which expect the local entry shape.
+function _tmdbCardHTML(posterUrl, title, year, onclick) {
+  return MSSCard.poster({ poster: posterUrl, title, year, onclick });
+}
+
+/* Currently Watching — only what you're watching right now (not Up Next or Taking a Break).
+   One title: the wide list card. More: the Library's Watching grid cards, scrolling sideways. */
+function renderHomeWatching(entries) {
+  const watching = entries.filter(e => e.status === 'watching');
+  const el = document.getElementById('homeWatching');
+  if (!watching.length) { el.innerHTML = ''; return; }
+  if (watching.length === 1) { el.innerHTML = _HOME_WATCH_HEAD + _homeWatchOne(watching[0]); return; }
+  el.innerHTML = _HOME_WATCH_HEAD + _homeWatchGrid(watching.slice(0, 12).map(_homeWatchCard).join(''));
+}
+const _HOME_WATCH_HEAD = `<div class="section-eyebrow">In Progress</div><div class="section-title">Currently Watching</div>`;
+function _homeWatchInfo(e) {
+  const isM = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+  const pct = e.total_eps ? Math.round(((e.watched || 0) / e.total_eps) * 100) : 0;
+  const rtH = Number(e.runtime_h) || 0, rtM = Number(e.runtime_m) || 0;
+  const ep = isM ? (rtH || rtM ? (rtH ? `${rtH}h ${rtM}m` : `${rtM}m`) : '')
+    : (e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : ''));
+  return { isM, pct, ep, rewatch: typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 };
+}
+// One title: the wide list card
+function _homeWatchOne(e) {
+  const { isM, pct, ep, rewatch } = _homeWatchInfo(e);
+  const typeBadge = `<span class="${isM ? 'type-label' : 'type-label type-label-tv'}">${isM ? 'Movie' : 'TV Show'}</span>`;
+  return `<div class="watch-list"><div class="w-card" onclick="_homeOpenInfo('${e.id}')">
+      <div class="w-poster" style="position:relative">${posterHTML(e)}</div>
+      <div class="w-body">
+        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${rewatch ? rewatchBadgeHTML(e) : ''}</div></div>
+        <div class="w-ep-row">${typeBadge}${ep ? `<span class="w-ep-badge">${ep}</span>` : ''}</div>
+        ${(!isM && e.total_eps) ? `<div class="w-prog-track" style="margin-top:6px;"><div class="w-prog-fill" style="width:${pct}%"></div></div><div class="w-prog-label">${e.watched || 0} / ${e.total_eps} eps · ${pct}%</div>` : (!isM && e.watched ? `<div class="w-prog-label">${e.watched} watched</div>` : '')}
+      </div>
+    </div></div>`;
+}
+// More: the Library's Watching grid cards, scrolling sideways
+function _homeWatchCard(e) {
+  const { isM, pct, ep, rewatch } = _homeWatchInfo(e);
+  return `<div class="wg-card" onclick="_homeOpenInfo('${e.id}')">
+      <div class="wg-poster" style="position:relative">${posterHTML(e, 'big')}${rewatch ? `<div class="rewatch-card-icon">${icon('refresh', 9)}${getRewatchCount(e)}</div>` : ''}
+        <span class="${isM ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${isM ? 'Movie' : 'TV Show'}</span></div>
+      <div class="wg-info"><div class="title-year-row"><div class="wg-title" translate="no">${escHTML(e.title)}</div>${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}</div>
+        ${ep ? `<div class="wg-genre"><span class="w-ep-badge">${ep}</span></div>` : ''}
+        ${!isM && e.total_eps ? `<div class="fv-w-prog-track" style="margin-top:6px;"><div class="fv-w-prog-fill" style="width:${pct}%"></div></div><div class="wg-prog-label">${e.watched || 0} / ${e.total_eps} eps · ${pct}%</div>` : ''}
+      </div></div>`;
+}
+function _homeWatchGrid(cards) {
+  return `
+    <div class="grid-nav-wrap">
+      <button class="grid-nav-btn arr-left" onclick="event.stopPropagation();document.getElementById('homeWatchingGrid').scrollBy({left:-660,behavior:'smooth'})" aria-label="Scroll left">${_NAV_LEFT_SVG}</button>
+      <button class="grid-nav-btn arr-right" onclick="event.stopPropagation();document.getElementById('homeWatchingGrid').scrollBy({left:660,behavior:'smooth'})" aria-label="Scroll right">${_NAV_RIGHT_SVG}</button>
+      <div class="watching-grid" id="homeWatchingGrid">${cards}</div>
+    </div>`;
+}
+
+/* Tapping one of your titles opens the shared info popup (info-popup.js)
+   with your entry's actions; a change or delete re-draws these sections. */
+function _homeOpenInfo(id) {
+  const e = (window._homeEntries || []).find(x => x.id === id);
+  if (!e) return;
+  MSSInfo.forOwnEntry(e, {
+    from: 'index.html',
+    onChange: _homeRerender,
+    onDelete: x => { window._homeEntries = window._homeEntries.filter(y => y.id !== x.id); _homeRerender(); },
+  });
+}
+function _homeRerender() {
+  renderHomeWatching(window._homeEntries);
+  renderHomeWatchlist(window._homeEntries);
+}
+
+/* Friends Activity — the titles your friends logged as watched, newest first.
+   Tapping one opens its Info first (Info · Ratings · Note switcher, MSSViews). */
+const _homeFriendEntries = {}, _homeFriendProfiles = {};
+async function renderHomeFriends(user) {
+  const fr = (await getFriendships(user.id)).filter(f => f.status === 'accepted');
+  const ids = fr.map(f => f.friendId);
+  if (!ids.length) { _homeHScrollSection('homeFriends', 'homeFriendsGrid', '', '', ''); return; }
+  fr.forEach(f => { _homeFriendProfiles[f.friendId] = f.friendProfile || {}; });
+  // what they finished — and what they dropped (071: a muted "Dropped" tag instead of the score)
+  const { data } = await sb.from('entries').select('*').in('user_id', ids).in('status', ['completed', 'dropped'])
+    .order('updated_at', { ascending: false }).limit(80);
+  const at = e => new Date(e.status === 'dropped' ? (e.progress_at || e.updated_at) : (e.completed_at || e.created_at || e.updated_at));   // when they watched / dropped it
+  const rows = (data || []).filter(e => !isNaN(at(e))).sort((a, b) => at(b) - at(a)).slice(0, 12);
+  rows.forEach(e => { _homeFriendEntries[e.id] = e; });
+  const cards = rows.map(e => {
+    const p = _homeFriendProfiles[e.user_id] || {}, u = safeURL(p.avatar_url), name = p.username || 'friend', sc = liveScore(e), drop = e.status === 'dropped';
+    return MSSCard.poster({ onclick: `_homeOpenFriend('${e.id}')`, title: e.title, year: e.year, posterHTML: posterHTML(e, 'big'), typeHTML: getTypeBadgeOverlay(e, 'latest'),
+      cls: drop ? 'is-dropped' : '',
+      overPoster: `<span class="hf-av" aria-hidden="true">${u ? `<img src="${u}" alt="" loading="lazy">` : escHTML(name[0].toUpperCase())}</span>`,
+      below: `<div class="hf-who"><b translate="no">@${escHTML(name)}</b> · ${drop ? 'dropped · ' : ''}${escHTML(_notifTimeAgo(at(e)))}</div>`,
+      score: !drop && sc != null ? Number(sc).toFixed(2) : '',
+      scoreHTML: drop ? mssDroppedTagHTML(e) : '' });
+  }).join('');
+  _homeHScrollSection('homeFriends', 'homeFriendsGrid', 'Your friends', 'Friends Activity', cards, 'friends.html?s=activity');
+}
+function _homeOpenFriend(id) {
+  const e = _homeFriendEntries[id];
+  if (e) MSSViews.open(e, { start: 'info', profile: _homeFriendProfiles[e.user_id] || {} });
+}
+
+function renderHomeWatchlist(entries) {
+  const all = entries.filter(e => e.status === 'queue');
+  // Fisher-Yates shuffle — a fresh random sample each page load, instead of
+  // always the same items in the same order.
+  const shuffled = [...all];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const queue = shuffled.slice(0, 12);
+  const cards = queue.map(e => MSSCard.poster({ onclick: `_homeOpenInfo('${e.id}')`, title: e.title, year: e.year, posterHTML: posterHTML(e, 'big'), typeHTML: getTypeBadgeOverlay(e, 'latest') })).join('');
+  _homeHScrollSection('homeWatchlist', 'homeWatchlistGrid', 'Saved', 'From Your Watchlist', cards);
+}
+/* ── Recommended for You ── (pool: MSSRecs in discover-categories.js)
+   Each visit draws a fresh mix from the strongest ~40 (stronger ones more
+   often), so it changes as you come back. 12 of them. "See All" opens every one, ranked by rating. */
+async function renderHomeRecs(entries, profile) {
+  const top = (await MSSRecs.pool(entries, profile)).sort((a, b) => b.w - a.w).slice(0, 40);
+  const picks = [];
+  while (picks.length < 12 && top.length) {                  // weighted draw, no repeats
+    let r = Math.random() * top.reduce((a, p) => a + p.w * p.w, 0), j = 0;
+    while (j < top.length - 1 && (r -= top[j].w * top[j].w) > 0) j++;
+    picks.push(top.splice(j, 1)[0].it);
+  }
+  const cards = picks.map(it => MSSCard.poster({ attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url,
+    type: it.media_type, score: _discFloorScore(it.score) })).join('');
+  _homeHScrollSection('homeRecs', 'homeRecsGrid', 'Based on your favorites', MSSRecs.category.title, cards, MSSRecs.category.href);
+}
+function renderHomeRecentlyViewed(rows) {
+  const cards = rows.map(r => _tmdbCardHTML(r.poster_url, r.title, null,
+    `MSSInfo.fromDiscover({ id: ${Number(r.tmdb_id)}, media_type: ${escHTML(JSON.stringify(r.tmdb_type === 'movie' ? 'movie' : 'tv'))}, title: ${escHTML(JSON.stringify(r.title || ''))}, poster_url: ${escHTML(JSON.stringify(r.poster_url || ''))} })`)).join('');
+  _homeHScrollSection('homeRecentlyViewed', 'homeRecentlyViewedGrid', 'History', 'Recently Viewed', cards);
+}
+
+/* Home rows show top to bottom: a row only appears once every row above it is ready, so
+   nothing jumps when a slower row above — Friends, Recommended — finishes later. Until then
+   each row shows its skeleton: the real heading and cards the same size as the real ones
+   (mssSkeleton, config.js) — only for the rows you had last time (remembered on this device),
+   so a row you never have doesn't flash in and out. After 8 s everything shows anyway. */
+const _HOME_ROWS = ['homeWatching', 'homeFriends', 'homeRecs', 'homeWatchlist', 'homeRecentlyViewed'];
+const _homeReady = new Set();
+let _homeShown = 0;   // how many rows (top down) are showing for real
+function _homeLayout() {
+  while (_homeShown < _HOME_ROWS.length && _homeReady.has(_HOME_ROWS[_homeShown])) _homeShown++;
+  const had = mssSkeleton.shape('home');
+  _HOME_ROWS.forEach((id, i) => {
+    const el = document.getElementById(id), sk = document.getElementById(id + 'Skel');
+    const real = i < _homeShown;
+    el.hidden = !real;
+    if (real || (had && !had.rows.includes(id))) { sk?.remove(); return; }
+    if (sk) return;
+    el.insertAdjacentHTML('beforebegin', `<div class="page-loading" id="${id}Skel" data-skel="home-${id}" style="margin-top:${el.style.marginTop}"></div>`);
+  });
+  if (_homeShown === _HOME_ROWS.length)
+    mssSkeleton.shape('home', { rows: _HOME_ROWS.filter(id => document.getElementById(id).innerHTML.trim()), one: !!document.querySelector('#homeWatching .watch-list') });
+}
+function _homeDone(id) { _homeReady.add(id); _homeLayout(); }
+
+// Each row's skeleton: the row's own markup with sample cards (masked into placeholders)
+(() => {
+  const ent = (cat = 'tv') => ({ id: '', title: 'Sample title', year: '2024', cat, status: 'watching', season: 1, episode: 4, total_eps: 10, watched: 4, ratings: {} });
+  const n = (k, f) => Array.from({ length: k }, (_, i) => f(i)).join('');
+  const poster = o => MSSCard.poster({ title: 'Sample title', year: '2024', posterHTML: '', ...o });
+  const keep = html => html.replace(/class="(section-eyebrow|section-title|disc-see-all)"/g, 'class="$1" data-skel-keep');
+  const rows = {
+    homeWatching: () => keep(_HOME_WATCH_HEAD) + (mssSkeleton.shape('home')?.one ? _homeWatchOne(ent()) : _homeWatchGrid(n(6, () => _homeWatchCard(ent())))),
+    homeFriends: () => keep(_homeRowHTML('', 'Your friends', 'Friends Activity', n(6, () => poster({ overPoster: '<span class="hf-av"></span>',
+      below: '<div class="hf-who"><b>@friend</b> · 2d ago</div>', score: '8.50', typeHTML: '<span class="type-label type-label-overlay-bottom">TV Show</span>' })), 'friends.html?s=activity')),
+    homeRecs: () => keep(_homeRowHTML('', 'Based on your favorites', MSSRecs.category.title, n(6, () => poster({ type: 'tv', score: '7.90' })), MSSRecs.category.href)),
+    homeWatchlist: () => keep(_homeRowHTML('', 'Saved', 'From Your Watchlist', n(6, () => poster({ typeHTML: '<span class="type-label type-label-overlay-bottom">TV Show</span>' })))),
+    homeRecentlyViewed: () => keep(_homeRowHTML('', 'History', 'Recently Viewed', n(6, () => poster({ year: '' })))),
+  };
+  Object.entries(rows).forEach(([id, f]) => mssSkeleton.define('home-' + id, f));
+})();
+
+function renderGuestLanding() {
+  document.getElementById('homeWatching').innerHTML = '';
+  document.getElementById('homeWatchlist').innerHTML = '';
+  document.getElementById('homeRecs').innerHTML = '';
+  document.getElementById('homeRecentlyViewed').innerHTML = '';
+  document.getElementById('guestCta').innerHTML = `
+    <div class="guest-cta">
+      <a href="login.html" class="guest-btn-primary">Sign In</a>
+      <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
+    </div>`;
+}
+
+// Returning via browser back/forward can restore this page from the
+// bfcache with stale data (e.g. an entry just added/edited elsewhere
+// wouldn't show up here) instead of re-running this page's scripts.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  _xpRender();   // cards show instantly in their colors; posters fill in as they load
+  _xpAutoScroll();
+  _xpLoad();
+  initInlineSearch('heroSearch', { hide: ['.xp', '#homeWatching', '#homeFriends', '#homeRecs', '#homeWatchlist', '#homeRecentlyViewed', '#guestCta'] });   // live results on the page (no dropdown)
+  initPageGuest(async (user) => {
+    if (!user) { renderGuestLanding(); return; }
+    _homeUser = user;
+    _homeLayout();                                                  // skeletons until each row's turn
+    setTimeout(() => { _HOME_ROWS.forEach(id => _homeReady.add(id)); _homeLayout(); }, 8000);
+
+    const entries = await getEntries(user.id);
+    window._homeEntries = entries;
+
+    renderHomeWatching(entries); _homeDone('homeWatching');
+    renderHomeFriends(user).catch(e => console.warn('Friends activity:', e)).finally(() => _homeDone('homeFriends'));
+
+    /* The rows load side by side (TMDB ones don't hold up the rest) — but they
+       show in page order (_homeDone), so nothing jumps. */
+    renderHomeWatchlist(entries); _homeDone('homeWatchlist');
+    getProfile(user.id).then(p => renderHomeRecs(entries, p)).catch(e => console.warn('Recommendations:', e)).finally(() => _homeDone('homeRecs'));
+
+    getRecentlyViewed(user.id, 12).then(renderHomeRecentlyViewed).catch(() => {}).finally(() => _homeDone('homeRecentlyViewed'));
+
+  });
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => {
+        console.log('SW registered:', r.scope);
+        // Show toast only on first install
+        if (r.installing) {
+          r.installing.addEventListener('statechange', e => {
+            if (e.target.state === 'activated') {
+              showToast && showToast('App installed and cached.');
+            }
+          });
+        }
+      })
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+if (!navigator.onLine) { window.location.replace('offline.html'); }
+window.addEventListener('offline', () => { window.location.replace('offline.html'); });
+setTimeout(() => {
+  if (!navigator.onLine) window.location.replace('offline.html');
+}, 10000);
+</script>
+
+</body>
+</html>

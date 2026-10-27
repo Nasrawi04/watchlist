@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.pp-wrap { max-width:none; }
+.pp-back {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; color:var(--text-3); text-decoration:none;
+  margin-bottom:1.5rem; transition:color .15s;
+}
+.pp-back:hover { color:var(--olive-light); }
+
+.pp-layout {
+  display:grid; grid-template-columns:280px 1fr; gap:clamp(1.25rem, 3vw, 2.5rem);
+  align-items:start;
+}
+/* Left column runs the full height of the page; the photo + Personal Info
+   scroll away normally and only the Acting / Directing box stays pinned, so
+   nothing floats over the credits. */
+.pp-sticky-col { align-self:stretch; }
+/* Jump-to box under Personal Info — same card style */
+.pp-nav-card { margin-top:1rem; position:sticky; top:calc(var(--page-pt, 80px) + 16px); z-index:2; }
+.pp-nav-btn {
+  /* same look as the Personal Info rows: label + value, no boxes */
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px; width:100%;
+  padding:8px 0; margin:0; cursor:pointer; text-align:start;
+  background:none; border:none; border-top:0.5px solid var(--border); color:var(--text);
+  font-family:'Manrope',var(--sans); font-size:clamp(12.5px, 3vw, 13.5px); font-weight:500; transition:color .15s;
+}
+.pp-nav-btn:first-of-type { border-top:none; padding-top:0; }
+.pp-nav-btn span { display:inline-flex; align-items:center; gap:6px; }
+.pp-nav-btn span::after { content:'›'; color:var(--text-3); font-size:15px; line-height:1; transition:transform .15s, color .15s; }
+.pp-nav-btn:hover { color:var(--olive-light); }
+.pp-nav-btn:hover span::after { color:var(--olive-light); transform:translateX(2px); }
+.pp-nav-btn b { font-family:var(--bebas); font-weight:400; font-size:clamp(17px, 4vw, 20px); color:var(--text); letter-spacing:.5px; line-height:1.2; }
+.pp-nav-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.pp-from { font-weight:600; }
+.pp-section-title { scroll-margin-top:calc(var(--page-pt, 80px) + 24px); }
+
+/* ── Left column: photo + personal info ── */
+.pp-photo {
+  width:100%; aspect-ratio:2/3; border-radius:var(--radius-lg); overflow:hidden;
+  background:var(--bg-3); border:0.5px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-size:clamp(36px, 8vw, 56px); color:var(--olive-light);
+  margin-bottom:1.5rem;
+}
+.pp-photo img { width:100%; height:100%; object-fit:cover; }
+
+.pp-info-card {
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+  padding:clamp(1rem, 3vw, 1.25rem);
+}
+.pp-info-title {
+  font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light);
+  margin-bottom:1rem; padding-bottom:.6rem; border-bottom:0.5px solid var(--border);
+}
+.pp-info-row { margin-bottom:1rem; }
+.pp-info-row:last-child { margin-bottom:0; }
+.pp-info-label { font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); margin-bottom:3px; }
+.pp-info-value { font-size:clamp(12.5px, 3vw, 13.5px); color:var(--text); line-height:1.5; }
+.pp-info-value.muted { color:var(--text-2); }
+.pp-info-num { font-family:var(--bebas); font-size:clamp(17px, 4vw, 20px); letter-spacing:.5px; line-height:1.2; }
+
+/* ── Right column: name + bio + credits ── */
+.pp-eyebrow { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:.5rem; }
+.pp-name { font-family:var(--serif); font-size:clamp(26px, 6vw, 46px); font-weight:500; margin-bottom:1.25rem; line-height:1.1; }
+
+.pp-section-title {
+  font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light);
+  margin:0 0 1rem; display:flex; align-items:center; gap:12px;
+}
+.pp-section-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
+.pp-section-title.pp-mt { margin-top:2.5rem; }
+.pp-mode-toggle-row { margin-top:2.5rem; display:flex; }
+.pp-mode-toggle-row .view-toggle { margin-inline-start:0; }
+.pp-layout > * { min-width:0; }
+.pp-sf-row { display:flex; justify-content:flex-end; margin-top:2rem; }
+.pp-sf-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.pp-sf-bar .sort-bar::before { content:none; }
+.pp-sf-row + #ppCredits > .pp-section-title.pp-mt:first-child { margin-top:1rem; }
+.pp-mode-toggle-row .vt-btn { width:auto; height:auto; padding:8px 18px; font-size:13px; font-weight:500; font-family:var(--sans); white-space:nowrap; }
+
+.pp-bio { font-size:clamp(13.5px, 3vw, 14.5px); line-height:1.75; color:var(--text-2); white-space:pre-line; }
+.pp-bio.clamped { display:-webkit-box; -webkit-line-clamp:6; line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
+.pp-bio-toggle { font-size:12.5px; color:var(--olive-light); cursor:pointer; margin-top:8px; display:inline-block; background:none; border:none; padding:0; font-family:var(--sans); }
+
+/* ── Credits grid — self-contained, no shared-class dependency ── */
+.pp-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px;
+}
+@media(min-width:1024px) {
+  .pp-grid { grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
+}
+@media(min-width:1600px) {
+  .pp-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
+}
+@media(max-width:640px) {
+  .pp-grid { grid-template-columns:repeat(2,1fr); }
+}
+.pp-credit-role { margin-top:2px; font-size:clamp(10.5px, 2.6vw, 11.5px); color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.pp-empty { padding:3rem 1rem; text-align:center; color:var(--text-3); font-size:14px; }
+
+@media(max-width:760px) {
+  .pp-layout { grid-template-columns:1fr; gap:1.5rem; }
+  /* Phone: a bigger photo with the Acting / Directing box under it,
+     Personal Info beside them */
+  .pp-sticky-col { position:static; align-self:start; display:grid; grid-template-columns:clamp(128px, 40vw, 172px) minmax(0, 1fr);
+                   grid-template-areas:"photo info" "nav info"; gap:1rem; align-items:start; }
+  .pp-photo { grid-area:photo; width:100%; margin-bottom:0; }
+  .pp-sticky-col > .pp-info-card:not(.pp-nav-card) { grid-area:info; min-width:0; }
+  .pp-nav-card { grid-area:nav; margin-top:0; position:static; }
+  .pp-info-row { margin-bottom:.7rem; }
+}
+@media(max-width:460px) {
+  .pp-info-card { padding:.85rem; }
+  .pp-info-title { font-size:10px; margin-bottom:.75rem; padding-bottom:.5rem; }
+  .pp-info-row { margin-bottom:.55rem; }
+  .pp-info-label { font-size:9.5px; }
+  .pp-info-value { font-size:12px; }
+}
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+  <div class="pp-wrap">
+    <a class="pp-back" href="#" onclick="history.length>1?history.back():location.href='index.html';return false;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </a>
+
+    <div id="ppLoading" class="page-loading" data-skel="pp-page"></div>
+    <div id="ppContent" style="display:none"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/sort-filter.js"></script>
+<script src="js/info-popup.js"></script>
+<script>
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+const _ppParams = new URLSearchParams(location.search);
+const _ppId = _ppParams.get('id');
+let _ppMode = _ppParams.get('mode') === 'directing' ? 'directing' : 'acting';
+let _ppPerson = null;
+let _ppList = [];   // the credits on show (acting or directing), as Sort & Filter items
+const TMDB_GENDER = { 0: '', 1: 'Female', 2: 'Male', 3: 'Non-binary' };
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPageGuest(async () => {
+    if (!_ppId) { renderPpError('No person specified.'); return; }
+    loadPerson();
+  });
+});
+
+async function loadPerson() {
+  try {
+    const res = await tmdbFetch(`${TMDB_BASE}/person/${_ppId}?language=en-US&append_to_response=combined_credits`);
+    if (!res.ok) { renderPpError('Could not load this person — they may not exist on TMDB.'); return; }
+    const p = await res.json();
+    _ppPerson = p;
+    renderPerson(p);
+  } catch (e) {
+    console.error(e);
+    renderPpError('Something went wrong loading this page.');
+  }
+}
+
+function renderPpError(msg) {
+  document.getElementById('ppLoading').style.display = 'none';
+  const c = document.getElementById('ppContent');
+  c.style.display = '';
+  c.innerHTML = `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('search', 44)}</div><div class="empty-text">${esc(msg)}</div></div>`;
+}
+
+function renderPerson(p) {
+  document.getElementById('ppLoading').style.display = 'none';
+  const c = document.getElementById('ppContent');
+  c.style.display = '';
+  document.title = p.name ? `${p.name} — MyScreenFolio` : 'MyScreenFolio';
+
+  const { html, list } = _ppHTML(p);
+  _ppList = list;
+  c.innerHTML = html;
+  if (list.length) _ppDrawCredits();
+  // Only show the "Read more" toggle if the bio actually overflows
+  requestAnimationFrame(() => {
+    const bioEl = document.getElementById('ppBio');
+    const toggle = document.getElementById('ppBioToggle');
+    if (bioEl && toggle && bioEl.scrollHeight <= bioEl.clientHeight + 2) {
+      toggle.style.display = 'none';
+    }
+  });
+}
+
+// The page for a person (without the credits, which _ppDrawCredits fills) + their credits as Sort & Filter items
+function _ppHTML(p) {
+  const photo = p.profile_path ? `${TMDB_IMG.replace('w185','w342')}${p.profile_path}` : null;
+  const bio = (p.biography || '').trim();
+  const age = p.birthday ? _ppAge(p.birthday, p.deathday) : null;
+
+  // De-dupe cast credits (a person can appear twice for different roles),
+  // keep only ones with a poster; the site's Sort & Filter (scope 'pp') orders
+  // them — newest first by default — then they split into Movies / TV Shows.
+  // In "directing" mode, source from crew instead (Director for movies,
+  // Creator for TV shows) rather than cast.
+  const seen = new Set();
+  const sourceCredits = _ppMode === 'directing'
+    ? (p.combined_credits?.crew || []).filter(cr => cr.job === 'Director' || cr.job === 'Creator')
+    : (p.combined_credits?.cast || []);
+  const allCredits = sourceCredits
+    .filter(cr => cr.poster_path)
+    .filter(cr => { const k = cr.media_type + cr.id; if (seen.has(k)) return false; seen.add(k); return true; });
+  const movieCount = allCredits.filter(cr => cr.media_type === 'movie').length;
+  const tvCount     = allCredits.length - movieCount;
+
+  // Only worth a toggle when the person genuinely has both kinds of
+  // credits — most people are one or the other, and showing a toggle
+  // that just leads to an empty state isn't useful.
+  const hasActingCredits = (p.combined_credits?.cast || []).some(cr => cr.poster_path);
+  const hasDirectingCredits = (p.combined_credits?.crew || []).some(cr => (cr.job === 'Director' || cr.job === 'Creator') && cr.poster_path);
+  const showModeToggle = hasActingCredits && hasDirectingCredits;
+
+  const knownCreditsCount = (p.combined_credits?.cast?.length || 0) + (p.combined_credits?.crew?.length || 0);
+  const akaList = (p.also_known_as || []).filter(n => n && n !== p.name).slice(0, 4);
+
+  return { list: allCredits.map(_ppItem), html: `
+    <div class="pp-layout fade-up">
+      <div class="pp-sticky-col">
+        <div class="pp-photo">${photo ? `<img src="${photo}" alt="">` : esc((p.name || '?')[0])}</div>
+        <div class="pp-info-card">
+          <div class="pp-info-title">Personal Info</div>
+          ${p.place_of_birth ? `<div class="pp-info-row"><div class="pp-info-label">From</div><div class="pp-info-value pp-from">${esc(p.place_of_birth.split(',').pop().trim())}</div></div>` : ''}
+          ${p.known_for_department ? `<div class="pp-info-row"><div class="pp-info-label">Known For</div><div class="pp-info-value">${esc(p.known_for_department)}</div></div>` : ''}
+          <div class="pp-info-row"><div class="pp-info-label">Known Credits</div><div class="pp-info-value pp-info-num">${knownCreditsCount}</div></div>
+          ${p.gender != null && TMDB_GENDER[p.gender] ? `<div class="pp-info-row"><div class="pp-info-label">Gender</div><div class="pp-info-value">${TMDB_GENDER[p.gender]}</div></div>` : ''}
+          ${p.birthday ? `<div class="pp-info-row"><div class="pp-info-label">${p.deathday ? 'Birthday' : 'Birthday'}</div><div class="pp-info-value">${esc(p.birthday)}${age != null ? ' (' + age + ' years old)' : ''}</div></div>` : ''}
+          ${p.deathday ? `<div class="pp-info-row"><div class="pp-info-label">Day of Death</div><div class="pp-info-value">${esc(p.deathday)}</div></div>` : ''}
+          ${p.place_of_birth ? `<div class="pp-info-row"><div class="pp-info-label">Place of Birth</div><div class="pp-info-value muted">${esc(p.place_of_birth)}</div></div>` : ''}
+          ${akaList.length ? `<div class="pp-info-row"><div class="pp-info-label">Also Known As</div><div class="pp-info-value muted">${akaList.map(esc).join('<br>')}</div></div>` : ''}
+        </div>
+        ${allCredits.length ? `<div class="pp-info-card pp-nav-card" role="navigation" aria-label="Jump to">
+          <div class="pp-info-title">${_ppMode === 'directing' ? 'Directing' : 'Acting'}</div>
+          ${movieCount ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppMovies')"><span>${_ppMode === 'directing' ? 'Movies Directed' : 'Movies'}</span><b>${movieCount}</b></button>` : ''}
+          ${tvCount ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppTv')"><span>${_ppMode === 'directing' ? 'Shows Created' : 'TV Shows'}</span><b>${tvCount}</b></button>` : ''}
+        </div>` : ''}
+      </div>
+
+      <div>
+        ${p.known_for_department ? `<div class="pp-eyebrow">${esc(p.known_for_department)}</div>` : ''}
+        <div class="pp-name" translate="no">${esc(p.name)}</div>
+
+        ${bio ? `
+          <div class="pp-section-title">Biography</div>
+          <div class="pp-bio clamped" id="ppBio" translate="no">${esc(bio)}</div>
+          <button class="pp-bio-toggle" id="ppBioToggle" onclick="_ppToggleBio()">Read more</button>
+        ` : ''}
+
+        ${showModeToggle ? `
+          <div class="pp-mode-toggle-row pp-mt">
+            <div class="view-toggle">
+              <button class="vt-btn ${_ppMode==='acting'?'active':''}" onclick="_ppSetMode('acting')">Acting</button>
+              <button class="vt-btn ${_ppMode==='directing'?'active':''}" onclick="_ppSetMode('directing')">Directing</button>
+            </div>
+          </div>
+        ` : ''}
+
+        ${allCredits.length ? `
+          <div class="pp-sf-row"><div id="ppSfBar" class="pp-sf-bar"></div></div>
+          <div id="ppCredits"></div>
+        ` : `<div class="pp-empty">${_ppMode === 'directing' ? 'No directing/creator credits found.' : 'No known credits found.'}</div>`}
+      </div>
+    </div>
+  ` };
+}
+
+/* ── Loading skeleton: this page's own layout with a sample person and credits, masked into
+   placeholders (mssSkeleton, config.js) — the section names and buttons stay as they are ── */
+mssSkeleton.define('pp-page', () => {
+  const cr = t => ({ id: 0, media_type: t, title: 'Sample title', name: 'Sample title', character: 'Character name', job: 'Director',
+    poster_path: '/x', release_date: '2020-01-01', first_air_date: '2020-01-01', vote_average: 7.5, vote_count: 100 });
+  const credits = [...Array(6).fill('movie'), ...Array(4).fill('tv')].map(cr);
+  const p = { name: 'Sample person name', known_for_department: 'Acting', place_of_birth: 'City, Country', gender: 2, birthday: '1980-01-01',
+    biography: 'A sample biography, long enough to fill the few lines this section shows before Read more — the way a real one does while it loads.',
+    combined_credits: _ppMode === 'directing' ? { cast: [], crew: credits } : { cast: credits, crew: [] } };
+  const grid = list => `<div class="pp-grid">${list.map(c => MSSCard.poster({ cls: 'pp-card', title: 'Sample title', year: '2020', posterHTML: '', type: c.media_type, score: '7.5',
+    below: '<div class="pp-credit-role">Character name</div>' })).join('')}</div>`;
+  const dir = _ppMode === 'directing';
+  return _ppHTML(p).html
+    .replace('<div id="ppSfBar" class="pp-sf-bar"></div>', `<div class="pp-sf-bar" data-skel-keep>${SF.bar('pp', 'all')}</div>`)
+    .replace('<div id="ppCredits"></div>', `<div class="pp-section-title pp-mt" data-skel-keep>${dir ? 'Movies Directed' : 'Movies'}</div>${grid(credits.slice(0, 6))}
+      <div class="pp-section-title pp-mt" data-skel-keep>${dir ? 'Shows Created' : 'TV Shows'}</div>${grid(credits.slice(6))}`)
+    .replace(/class="(pp-info-title|pp-info-label|pp-section-title[^"]*|pp-bio-toggle|vt-btn[^"]*)"/g, 'class="$1" data-skel-keep')
+    .replace(/ id="[^"]*"/g, '');
+});
+
+// Same card as Discover: poster + type tag, title + year, role, ★ TMDB score.
+// Tapping opens the info popup (Add to Watchlist · Discover → title page).
+window._ppItems = {};
+function _ppCreditGrid(list, byScore) {
+  return list.map((it, i) => {
+    const cr = it.cr;
+    const isMovie = cr.media_type === 'movie';
+    const title = isMovie ? cr.title : cr.name;
+    const year = ((isMovie ? cr.release_date : cr.first_air_date) || '').split('-')[0];
+    const roleLabel = _ppMode === 'directing' ? (cr.job || '') : (cr.character || '');
+    const key = cr.media_type + ':' + cr.id;
+    window._ppItems[key] = {
+      id: cr.id, media_type: cr.media_type, title, year, overview: cr.overview,
+      poster_url: cr.poster_path ? TMDB_FULL + cr.poster_path : null, genre_ids: cr.genre_ids || [],
+      score: cr.vote_average, origin_country: cr.origin_country, original_language: cr.original_language,
+    };
+    const sc = cr.vote_count && cr.vote_average ? (Math.floor(cr.vote_average * 10) / 10).toFixed(1) : null;
+    return MSSCard.poster({ cls: 'pp-card', onclick: `MSSInfo.fromDiscover(window._ppItems['${key}'])`, title, year,
+      rank: byScore && it.score != null ? i + 1 : 0,   // numbered when sorted by score
+      poster: TMDB_IMG.replace('w185', 'w500') + cr.poster_path, type: isMovie ? 'movie' : 'tv', score: sc,
+      below: roleLabel ? `<div class="pp-credit-role">${esc(roleLabel)}</div>` : '' });
+  }).join('');
+}
+
+/* ── Sort & Filter (the site's own Sort / Filter buttons, js/sort-filter.js) ──
+   Sorts: Release Date (newest first by default) · A–Z · Ratings (TMDB score — titles
+   with under 20 votes go last and aren't numbered) · Popularity. Filters: genre, year, score. */
+const _PP_GENRES = { 10759: ['Action', 'Adventure'], 10765: ['Science Fiction', 'Fantasy'], 10768: ['War'], 10762: ['Family'] };   // TV-only genres → the site's list
+function _ppItem(cr) {
+  const date = (cr.media_type === 'movie' ? cr.release_date : cr.first_air_date) || '';
+  return { cr, media_type: cr.media_type, title: (cr.media_type === 'movie' ? cr.title : cr.name) || '', date, year: date.slice(0, 4) || null,
+    genres: [...new Set((cr.genre_ids || []).flatMap(g => _PP_GENRES[g] || (TMDB_GENRE_EN[g] ? [TMDB_GENRE_EN[g]] : [])))],
+    score: (cr.vote_count || 0) >= 20 && cr.vote_average ? cr.vote_average : null, popularity: cr.popularity || 0 };
+}
+const _ppByDate = dir => (a, b) => (!a.date || !b.date) ? !a.date - !b.date : dir * a.date.localeCompare(b.date);   // undated always last
+SF.register('pp', {
+  base: () => _ppList,
+  render: () => _ppDrawCredits(),
+  defaultSort: 'dateNew',
+  sorts: () => ['date', 'alpha', 'ratings', 'popular'],
+  presets: {
+    date:    { header: 'Release Date', opts: [['dateNew', 'Latest'], ['dateOld', 'Earliest']] },
+    popular: { header: 'Popularity',   opts: [['popular', 'Most Popular'], ['unpopular', 'Least Popular']] },
+  },
+  compare: { dateNew: _ppByDate(-1), dateOld: _ppByDate(1), popular: (a, b) => b.popularity - a.popularity, unpopular: (a, b) => a.popularity - b.popularity },
+  filters: () => ['genre', 'year', 'score'],
+  scoreOf: it => it.score,
+  scoreLabel: 'TMDB Score',
+});
+// Movies, then TV Shows — in the order Sort & Filter gives
+function _ppDrawCredits() {
+  const box = document.getElementById('ppCredits');
+  if (!box) return;
+  document.getElementById('ppSfBar').innerHTML = SF.bar('pp', 'all');
+  const shown = SF.list('pp', 'all'), sort = SF.getSort('pp', 'all'), byScore = sort === 'highest' || sort === 'lowest';
+  const part = t => shown.filter(it => it.media_type === t);
+  const movies = part('movie'), tv = part('tv');
+  const sec = (id, title, list) => list.length ? `<div class="pp-section-title pp-mt" id="${id}">${title}</div><div class="pp-grid">${_ppCreditGrid(list, byScore)}</div>` : '';
+  mssKeepScroll(box, () => {
+    box.innerHTML = shown.length
+      ? sec('ppMovies', _ppMode === 'directing' ? 'Movies Directed' : 'Movies', movies) + sec('ppTv', _ppMode === 'directing' ? 'Shows Created' : 'TV Shows', tv)
+      : `<div class="pp-empty">Nothing matches these filters.</div>`;
+  });
+}
+
+function _ppJump(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+}
+
+function _ppSetMode(mode) {
+  if (mode === _ppMode || !_ppPerson) return;
+  _ppMode = mode;
+  const url = new URL(location.href);
+  url.searchParams.set('mode', mode);
+  history.replaceState(null, '', url);
+  renderPerson(_ppPerson);
+}
+
+function _ppToggleBio() {
+  const bioEl = document.getElementById('ppBio');
+  const toggle = document.getElementById('ppBioToggle');
+  const clamped = bioEl.classList.toggle('clamped');
+  toggle.textContent = clamped ? 'Read more' : 'Show less';
+}
+
+function _ppAge(birthday, deathday) {
+  const end = deathday ? new Date(deathday) : new Date();
+  const start = new Date(birthday);
+  let age = end.getFullYear() - start.getFullYear();
+  const m = end.getMonth() - start.getMonth();
+  if (m < 0 || (m === 0 && end.getDate() < start.getDate())) age--;
+  return age;
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

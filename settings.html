@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Settings — MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ── Settings layout — wide, two-column ── */
+.settings-wrap { width:100%; }
+.settings-grid {
+  display:grid; grid-template-columns:340px 1fr; gap:1.25rem; align-items:start;
+}
+.settings-col { display:flex; flex-direction:column; gap:1.25rem; min-width:0; }
+
+.settings-section {
+  background:var(--card);
+  border:0.5px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:clamp(1rem, 4vw, 1.75rem);
+}
+.settings-back-link {
+  display:inline-flex; align-items:center; gap:6px; margin-bottom:1.5rem;
+  font-size:12px; color:var(--text-3);
+  text-decoration:none; transition:color .15s;
+}
+.settings-back-link:hover { color:var(--olive-light); }
+.settings-title {
+  font-size:11px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--olive-light);
+  margin-bottom:1.25rem; padding-bottom:.75rem;
+  border-bottom:0.5px solid var(--border);
+}
+
+.field-row { margin-bottom:1.1rem; }
+.field-row:last-child { margin-bottom:0; }
+.field-row .field-label {
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:11px; letter-spacing:1px; text-transform:uppercase;
+  color:var(--text-3); margin-bottom:6px;
+}
+.field-row input, .field-row textarea { width:100%; box-sizing:border-box; }
+.field-hint { font-size:10.5px; color:var(--text-3); font-weight:400; letter-spacing:0; text-transform:none; }
+.field-hint.ok   { color:var(--olive-light); }
+.field-hint.bad  { color:#ff6b6b; }
+.field-static {
+  width:100%; box-sizing:border-box; background:var(--bg-2); border:0.5px solid var(--border-2);
+  border-radius:var(--radius-sm); color:var(--text-2); font-size:14px; padding:10px 14px;
+}
+
+/* ── Avatar section ── */
+.avatar-row { display:flex; align-items:center; gap:1.25rem; }
+.settings-avatar {
+  width:clamp(84px, 20vw, 120px); height:clamp(84px, 20vw, 120px); border-radius:50%;
+  background:var(--olive-faint); border:3px solid var(--border-olive);
+  font-family:var(--serif); font-size:clamp(28px, 7vw, 44px); color:var(--olive-light);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; flex-shrink:0; cursor:pointer; transition:opacity .2s;
+}
+.settings-avatar:hover { opacity:.85; }
+.settings-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.avatar-info { flex:1; min-width:0; }
+.avatar-hint { font-size:11px; color:var(--text-3); margin-top:5px; line-height:1.4; }
+
+/* ── Theme preference ── */
+.theme-pref-row { display:flex; gap:10px; }
+.theme-pref-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;
+  padding:16px 10px; border-radius:var(--radius-sm); cursor:pointer;
+  background:var(--bg-2); border:1.5px solid var(--border-2); color:var(--text-2);
+  font-size:12.5px; font-family:var(--sans); transition:border-color .15s, color .15s;
+}
+.theme-pref-btn svg { width:20px; height:20px; }
+.theme-pref-btn.active { border-color:var(--olive-light); color:var(--olive-light); background:var(--olive-faint); }
+
+/* ── Share profile ── */
+.share-link-row { display:flex; gap:8px; }
+.share-link-row .field-input { flex:1; min-width:0; cursor:pointer; color:var(--text-2); }
+.share-copy-btn {
+  flex-shrink:0; width:42px; height:42px; display:flex; align-items:center; justify-content:center;
+  background:var(--bg-2); border:0.5px solid var(--border-2); border-radius:var(--radius-sm);
+  color:var(--text-2); cursor:pointer; transition:border-color .15s, color .15s;
+}
+.share-copy-btn svg { width:16px; height:16px; }
+.share-copy-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
+.share-copy-btn.copied { border-color:var(--olive-light); color:var(--olive-light); }
+
+/* ── Sessions + Delete Account — same card as every other section ── */
+/* the open language list sits above the cards that follow */
+.settings-section:has(.mss-pick.open) { position:relative; z-index:50; }
+.lang-req { margin-top:14px; padding:12px 14px; border-radius:var(--radius-sm); background:var(--bg-3); border:0.5px solid var(--border-2); }
+.lang-req-text { margin:0 0 10px; font-size:13px; color:var(--text-2); line-height:1.5; }
+.lang-req-btn { width:100%; }
+.lang-req-btn:disabled { opacity:.7; cursor:default; }
+.settings-desc { font-size:13.5px; color:var(--text-2); line-height:1.6; margin:0 0 1.1rem; }
+.settings-desc b { color:var(--text); font-weight:600; }
+.settings-desc a { color:var(--olive-light); font-weight:600; text-decoration:none; }
+.settings-desc a:hover { text-decoration:underline; }
+.set-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  padding:11px 16px; border-radius:var(--radius-sm); cursor:pointer;
+  font-family:var(--sans); font-size:13.5px; font-weight:600;
+  background:transparent; border:1px solid var(--border-2); color:var(--text-2);
+  transition:border-color .15s, color .15s, background .15s;
+}
+.set-btn svg { width:15px; height:15px; flex-shrink:0; }
+.set-btn:hover { border-color:var(--border-olive); color:var(--text); background:var(--olive-faint); }
+.set-btn-delete { color:#dc2626; }
+.set-btn-delete:hover { border-color:#dc2626; color:#dc2626; background:rgba(220,38,38,0.06); }
+[data-theme="dark"] .set-btn-delete, [data-theme="dark"] .set-btn-delete:hover { color:#f87171; }
+.set-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.del-list { margin:0 0 1.1rem; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+.del-list li { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-2); }
+.del-list li::before { content:''; width:5px; height:5px; border-radius:50%; background:var(--text-3); flex-shrink:0; }
+
+/* Delete-account dialog (built on the shared confirm dialog styles) */
+#delAccOverlay .confirm-card { max-width:420px; text-align:start; align-items:stretch; }
+#delAccOverlay .confirm-title, #delAccOverlay .confirm-msg { text-align:start; max-width:none; }
+#delAccOverlay .field-row { margin:4px 0 0; }
+#delAccOverlay .field-label { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); margin-bottom:6px; display:block; }
+#delAccOverlay .field-label b { color:var(--text); text-transform:none; letter-spacing:0; }
+.del-acc-error { font-size:12.5px; color:#dc2626; min-height:0; }
+[data-theme="dark"] .del-acc-error { color:#f87171; }
+.del-acc-error:empty { display:none; }
+#delAccConfirm:disabled { opacity:.45; cursor:default; }
+
+/* ── Mobile ── */
+@media(max-width:900px) {
+  .settings-grid { grid-template-columns:1fr; }
+}
+@media(max-width:640px) {
+  .cat-page-title { font-size:28px; }
+}
+/* Episode Ratings toggle: on phones the three choices share the width (never wider than the screen) */
+@media(max-width:640px) {
+  .ep-mode-toggle { width:100%; }
+  .ep-mode-toggle .pn-toggle-btn { flex:1; min-width:0; padding:10px 6px; white-space:nowrap; }
+}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="cat-page-header fade-up">
+    <div>
+      <h1 class="cat-page-title">Settings</h1>
+    </div>
+  </div>
+
+  <a href="profile.html" class="settings-back-link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to Profile
+  </a>
+
+  <div class="settings-wrap">
+    <div class="settings-grid">
+
+      <!-- LEFT: Photo + Preferences -->
+      <div class="settings-col">
+        <div class="settings-section fade-up">
+          <div class="settings-title">Profile Photo</div>
+          <div class="avatar-row">
+            <div class="settings-avatar" id="settingsAvatar"
+                 onclick="document.getElementById('avatarFile').click()"
+                 title="Change photo">?</div>
+            <div class="avatar-info">
+              <button class="btn-save" onclick="document.getElementById('avatarFile').click()">Change Photo</button>
+              <div class="avatar-hint">JPG or PNG · max 5MB<br>Tap photo or button to upload</div>
+              <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="_avatarCropStart(event)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Avatar crop/zoom/pan popup -->
+        <div id="avatarCropOverlay" style="position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:20px;">
+          <div style="width:100%;max-width:380px;background:var(--bg-2);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);box-shadow:4px 4px 0 var(--olive);padding:1.75rem;">
+            <div style="font-family:var(--serif);font-size:20px;font-weight:400;margin-bottom:1.25rem;text-align:center;">Adjust Photo</div>
+            <div id="avatarCropViewport" style="width:240px;height:240px;border-radius:50%;overflow:hidden;margin:0 auto 1.25rem;position:relative;background:var(--bg-3);border:0.5px solid var(--border);cursor:grab;touch-action:none;">
+              <img id="avatarCropImg" style="position:absolute;top:50%;left:50%;max-width:none;-webkit-user-select:none; user-select:none;-webkit-user-drag:none;pointer-events:none;">
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;">
+              <span style="font-size:12px;color:var(--text-3);">−</span>
+              <input type="range" id="avatarCropZoom" min="1" max="3" step="0.01" value="1" style="flex:1;accent-color:var(--olive-light);" oninput="_avatarCropUpdateZoom(this.value)">
+              <span style="font-size:12px;color:var(--text-3);">+</span>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="fav-edit-btn" style="flex:1;justify-content:center;" onclick="_avatarCropCancel()">Cancel</button>
+              <button class="btn-save" style="flex:1;" onclick="_avatarCropConfirm()">Use Photo</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section fade-up fade-up-1">
+          <div class="settings-title">Appearance</div>
+          <div class="field-row" style="margin-bottom:0">
+            <div class="field-label">Theme</div>
+            <div class="theme-pref-row">
+              <div class="theme-pref-btn" id="themeBtnLight" onclick="setSettingsTheme('light')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                Light
+              </div>
+              <div class="theme-pref-btn" id="themeBtnDark" onclick="setSettingsTheme('dark')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                Dark
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section fade-up fade-up-1">
+          <div class="settings-title">Language</div>
+          <p class="settings-desc" id="langHint">MyScreenFolio and everything from TMDB — titles, posters, descriptions, seasons and episodes — show in this language. Anything not translated yet stays in English.</p>
+          <div class="field-label" id="setLanguageLabel">Language</div>
+          <div id="setLanguagePick"></div>
+          <div class="lang-req" id="langReq" hidden>
+            <p class="lang-req-text" id="langReqText"></p>
+            <button type="button" class="set-btn lang-req-btn" id="langReqBtn" onclick="requestLanguage()"></button>
+          </div>
+        </div>
+
+        <div class="settings-section fade-up fade-up-1">
+          <div class="settings-title">Notifications</div>
+          <div class="field-row" style="margin-bottom:0">
+            <div class="push-row">
+              <div class="push-text">
+                <div class="push-name" id="notifPopupsLabel">New notification alerts</div>
+                <div class="push-sub" id="pushStatus">Ring the bell and show a short alert at the bottom of the screen when something new arrives. When off, you'll only see the count on the bell.</div>
+              </div>
+              <button type="button" class="push-switch" id="pushSwitch" role="switch" aria-checked="true" aria-labelledby="notifPopupsLabel" aria-describedby="pushStatus" title="New notification alerts" onclick="toggleNotifPopupsSetting()"><span aria-hidden="true"></span></button>
+            </div>
+            <a href="notifications.html" class="push-link">Open notifications →</a>
+            <a href="notifications.html?tab=settings" class="push-link np-set-jump">Notification settings →</a>
+          </div>
+        </div>
+
+        <div class="settings-section fade-up fade-up-1">
+          <div class="settings-title">Share Profile</div>
+          <div class="field-row">
+            <div class="field-label">Your Profile Link</div>
+            <div class="share-link-row">
+              <input class="field-input" id="shareProfileUrl" readonly onclick="this.select()" aria-label="Your profile link">
+              <button class="share-copy-btn" id="shareCopyBtn" onclick="copyProfileLink()" title="Copy link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+          <button class="btn-save" style="width:100%;margin-top:1rem" onclick="shareProfileNative()" id="shareNativeBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share Profile
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Account details -->
+      <div class="settings-col">
+        <div class="settings-section fade-up fade-up-1">
+          <div class="settings-title">Account</div>
+          <div class="field-row">
+            <label class="field-label" for="setUsername">
+              <span>Username</span>
+              <span class="field-hint" id="usernameHint"></span>
+            </label>
+            <input class="field-input" id="setUsername" placeholder="your_username" maxlength="30"
+                   autocomplete="off" spellcheck="false"
+                   oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();checkUsernameLive()">
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="setDisplayName">Display Name</label>
+            <input class="field-input" id="setDisplayName" placeholder="Your Name">
+          </div>
+          <div class="field-row">
+            <div class="field-label">Email</div>
+            <div class="field-static" id="setEmail">—</div>
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="setBio">
+              <span>Bio</span>
+              <span class="field-hint" id="bioCount">0/150</span>
+            </label>
+            <textarea class="field-input" id="setBio" rows="3"
+                      placeholder="A cinephile who…" maxlength="150" oninput="updateCharCount('setBio','bioCount',150)"></textarea>
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="setQuote">
+              <span>Quote</span>
+              <span class="field-hint" id="quoteCount">0/200</span>
+            </label>
+            <textarea class="field-input" id="setQuote" rows="2"
+                      placeholder="I watch too much TV and I have no regrets." maxlength="200" oninput="updateCharCount('setQuote','quoteCount',200)"></textarea>
+          </div>
+          <button class="btn-save" style="width:100%;margin-top:1rem" onclick="saveSettings()">Save Changes</button>
+        </div>
+
+        <div class="settings-section fade-up fade-up-2">
+          <div class="settings-title">Change Password</div>
+          <div class="field-row">
+            <label class="field-label" for="setNewPassword">New Password</label>
+            <input class="field-input" id="setNewPassword" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+          </div>
+          <button class="btn-save" style="width:100%;margin-top:.25rem" onclick="changePassword()">Update Password</button>
+        </div>
+
+        <div class="settings-section fade-up fade-up-2">
+          <div class="settings-title">Episode Ratings</div>
+          <p class="settings-desc">When you mark an episode watched with “+”, MyScreenFolio can ask you to rate it.</p>
+          <div class="pn-toggle ep-mode-toggle" role="radiogroup" aria-label="Episode ratings">
+            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="true" data-mode="ask" onclick="setEpisodeMode('ask')">Ask per show</button>
+            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-mode="always" onclick="setEpisodeMode('always')">Always</button>
+            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-mode="off" onclick="setEpisodeMode('off')">Never</button>
+          </div>
+          <p class="settings-desc" id="epModeHint" style="margin-top:.6rem;margin-bottom:0"></p>
+        </div>
+
+        <div class="settings-section fade-up fade-up-2">
+          <div class="settings-title">Sessions</div>
+          <p class="settings-desc">Signed in on a shared or lost device? Sign out of MyScreenFolio everywhere, including this browser.</p>
+          <button type="button" class="set-btn" onclick="doSignOutEverywhere()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign Out of All Devices
+          </button>
+        </div>
+
+        <div class="settings-section fade-up fade-up-2">
+          <div class="settings-title">Delete Account</div>
+          <p class="settings-desc">Permanently delete your MyScreenFolio account. This removes:</p>
+          <ul class="del-list">
+            <li>Your library, ratings and notes</li>
+            <li>Your lists, comments, replies and reactions</li>
+            <li>Your friends, notifications and profile</li>
+          </ul>
+          <p class="settings-desc">This can't be undone. Want a copy first? <a href="profile.html">Export your library</a> from your profile.</p>
+          <button type="button" class="set-btn set-btn-delete" onclick="openDeleteAccount()">Delete Account…</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="delAccOverlay" onclick="if(event.target===this)closeDeleteAccount()">
+  <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="delAccTitle" aria-describedby="delAccMsg">
+    <div class="confirm-title" id="delAccTitle">Delete your account?</div>
+    <div class="confirm-msg" id="delAccMsg">Your account and everything in it will be permanently deleted. This can't be undone.</div>
+    <div class="field-row">
+      <label class="field-label" for="delAccUsername">Type <b id="delAccHandle" translate="no"></b> to confirm</label>
+      <input class="field-input" id="delAccUsername" autocomplete="off" spellcheck="false" autocapitalize="none" oninput="updateDeleteAccountBtn()">
+    </div>
+    <div class="field-row">
+      <label class="field-label" for="delAccPassword">Password</label>
+      <input class="field-input" id="delAccPassword" type="password" autocomplete="current-password" oninput="updateDeleteAccountBtn()">
+    </div>
+    <div class="del-acc-error" id="delAccError" role="alert"></div>
+    <div class="confirm-actions">
+      <button type="button" class="confirm-cancel" onclick="closeDeleteAccount()">Cancel</button>
+      <button type="button" class="confirm-ok" id="delAccConfirm" onclick="confirmDeleteAccount()" disabled>Delete Account</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/episode-ratings.js"></script>
+<script>
+let _sUser = null, _sProfile = null;
+let _usernameCheckTimer = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async (user, profile) => {
+    if (!user) { window.location.href = 'login.html'; return; }
+    _sUser = user;
+    _sProfile = profile;
+    populateSettings();
+    syncThemeButtons();
+  });
+});
+
+function populateSettings() {
+  const p = _sProfile, u = _sUser;
+  const un = p?.username || u.email?.split('@')[0] || '';
+
+  document.getElementById('setUsername').value    = p?.username     || '';
+  document.getElementById('setDisplayName').value = p?.display_name || '';
+  document.getElementById('setBio').value         = p?.bio          || '';
+  document.getElementById('setQuote').value       = p?.quote        || '';
+  document.getElementById('setEmail').textContent = u.email || '—';
+  updateCharCount('setBio', 'bioCount', 150);
+  updateCharCount('setQuote', 'quoteCount', 200);
+
+  const av = document.getElementById('settingsAvatar');
+  if (safeURL(p?.avatar_url)) {
+    av.innerHTML = `<img src="${safeURL(p.avatar_url)}" alt="">`;
+  } else {
+    av.textContent = (un[0] || '?').toUpperCase();
+  }
+
+  const base = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+  document.getElementById('shareProfileUrl').value = base + 'profile-view.html?u=' + encodeURIComponent(un);
+  document.getElementById('shareNativeBtn').style.display = navigator.share ? '' : 'none';
+}
+
+function copyProfileLink() {
+  const input = document.getElementById('shareProfileUrl');
+  input.select();
+  navigator.clipboard?.writeText(input.value).then(() => {
+    const btn = document.getElementById('shareCopyBtn');
+    btn.classList.add('copied');
+    showToast('Link copied!');
+    setTimeout(() => btn.classList.remove('copied'), 1500);
+  }).catch(() => {
+    document.execCommand('copy');
+    showToast('Link copied!');
+  });
+}
+
+function shareProfileNative() {
+  const un = _sProfile?.username || _sUser?.email?.split('@')[0] || '';
+  const url = document.getElementById('shareProfileUrl').value;
+  if (navigator.share) {
+    navigator.share({ title: 'MyScreenFolio — @' + un, url }).catch(() => {});
+  } else {
+    copyProfileLink();
+  }
+}
+
+function updateCharCount(fieldId, countId, max) {
+  const len = document.getElementById(fieldId).value.length;
+  document.getElementById(countId).textContent = `${len}/${max}`;
+}
+
+function checkUsernameLive() {
+  const hint = document.getElementById('usernameHint');
+  const val = document.getElementById('setUsername').value.trim();
+  clearTimeout(_usernameCheckTimer);
+  if (!val || val === _sProfile?.username) { hint.textContent = ''; hint.className = 'field-hint'; return; }
+  if (val.length < 3) { hint.textContent = 'Too short'; hint.className = 'field-hint bad'; return; }
+  hint.textContent = 'Checking…'; hint.className = 'field-hint';
+  _usernameCheckTimer = setTimeout(async () => {
+    const [available, allowed] = await Promise.all([checkUsernameAvailable(val, _sUser.id), isUsernameAllowed(val)]);
+    hint.textContent = !allowed ? 'Not allowed' : available ? 'Available' : 'Taken';
+    hint.className = 'field-hint ' + (available && allowed ? 'ok' : 'bad');
+  }, 400);
+}
+
+function setSettingsTheme(theme) {
+  localStorage.setItem('wl-theme', theme);
+  document.documentElement.setAttribute('data-theme', theme);
+  syncThemeButtons();
+}
+
+function syncThemeButtons() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  document.getElementById('themeBtnLight')?.classList.toggle('active', current === 'light');
+  document.getElementById('themeBtnDark')?.classList.toggle('active', current === 'dark');
+}
+
+async function saveSettings() {
+  const username = document.getElementById('setUsername').value.trim();
+  if (!username || username.length < 3) {
+    showToast('Username must be at least 3 characters.', 'err'); return;
+  }
+  const available = await checkUsernameAvailable(username, _sUser.id);
+  if (!available) { showToast('That username is taken. Try another.', 'err'); return; }
+  if (username !== _sProfile?.username && !(await isUsernameAllowed(username))) {
+    showToast('That username isn’t allowed. Try another.', 'err'); return;
+  }
+  try {
+    _sProfile = await updateProfile(_sUser.id, {
+      username,
+      display_name: document.getElementById('setDisplayName').value.trim(),
+      bio:          document.getElementById('setBio').value.trim(),
+      quote:        document.getElementById('setQuote').value.trim(),
+    });
+    // The word filter may have starred something out — show what was saved
+    if (_sProfile) {
+      document.getElementById('setDisplayName').value = _sProfile.display_name || '';
+      document.getElementById('setBio').value = _sProfile.bio || '';
+      document.getElementById('setQuote').value = _sProfile.quote || '';
+    }
+    showToast('Settings saved!');
+  } catch(e) {
+    showToast(isUsernameBlockedError(e) ? 'That username isn’t allowed. Try another.' : 'Error saving settings.', 'err');
+    console.error(e);
+  }
+}
+
+async function changePassword() {
+  const pw = document.getElementById('setNewPassword').value;
+  if (!pw || pw.length < 6) { showToast('Password must be at least 6 characters.', 'err'); return; }
+  try {
+    const { error } = await sb.auth.updateUser({ password: pw });
+    if (error) throw error;
+    document.getElementById('setNewPassword').value = '';
+    showToast('Password updated!');
+  } catch(e) {
+    showToast('Error updating password.', 'err');
+    console.error(e);
+  }
+}
+
+/* ── Avatar crop/zoom/pan ── */
+let _avatarCropFile = null;
+let _avatarCropNaturalW = 0, _avatarCropNaturalH = 0;
+let _avatarCropMinZoom = 1;
+let _avatarCropZoom = 1;
+let _avatarCropX = 0, _avatarCropY = 0; // pan offset in screen px, relative to viewport center
+let _avatarCropDragging = false;
+let _avatarCropDragStart = { x: 0, y: 0, panX: 0, panY: 0 };
+const _AVATAR_VIEWPORT = 240; // matches #avatarCropViewport width/height
+
+function _avatarCropStart(event) {
+  MSSImageCheck.preload();          // start loading the picture check while they crop
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showToast('Image must be under 5MB.', 'err'); return; }
+  _avatarCropFile = file;
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = document.getElementById('avatarCropImg');
+    img.onload = () => {
+      _avatarCropNaturalW = img.naturalWidth;
+      _avatarCropNaturalH = img.naturalHeight;
+      // Minimum zoom is whatever scale makes the image's shorter side
+      // exactly fill the circular viewport, so there's never empty space.
+      _avatarCropMinZoom = _AVATAR_VIEWPORT / Math.min(_avatarCropNaturalW, _avatarCropNaturalH);
+      _avatarCropZoom = _avatarCropMinZoom;
+      _avatarCropX = 0; _avatarCropY = 0;
+      document.getElementById('avatarCropZoom').min = _avatarCropMinZoom;
+      document.getElementById('avatarCropZoom').max = _avatarCropMinZoom * 3;
+      document.getElementById('avatarCropZoom').value = _avatarCropMinZoom;
+      _avatarCropApplyTransform();
+      document.getElementById('avatarCropOverlay').style.display = 'flex';
+      mssLockScroll('avatarCrop');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = ''; // allow re-selecting the same file later
+}
+
+function _avatarCropApplyTransform() {
+  const img = document.getElementById('avatarCropImg');
+  const w = _avatarCropNaturalW * _avatarCropZoom;
+  const h = _avatarCropNaturalH * _avatarCropZoom;
+  img.style.width = w + 'px';
+  img.style.height = h + 'px';
+
+  // Clamp panning so the image always fully covers the circular viewport
+  const maxX = Math.max(0, (w - _AVATAR_VIEWPORT) / 2);
+  const maxY = Math.max(0, (h - _AVATAR_VIEWPORT) / 2);
+  _avatarCropX = Math.min(maxX, Math.max(-maxX, _avatarCropX));
+  _avatarCropY = Math.min(maxY, Math.max(-maxY, _avatarCropY));
+
+  img.style.transform = `translate(-50%, -50%) translate(${_avatarCropX}px, ${_avatarCropY}px)`;
+}
+
+function _avatarCropUpdateZoom(val) {
+  _avatarCropZoom = Number(val);
+  _avatarCropApplyTransform();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const vp = document.getElementById('avatarCropViewport');
+  if (!vp) return;
+  const start = (x, y) => {
+    _avatarCropDragging = true;
+    vp.style.cursor = 'grabbing';
+    _avatarCropDragStart = { x, y, panX: _avatarCropX, panY: _avatarCropY };
+  };
+  const move = (x, y) => {
+    if (!_avatarCropDragging) return;
+    _avatarCropX = _avatarCropDragStart.panX + (x - _avatarCropDragStart.x);
+    _avatarCropY = _avatarCropDragStart.panY + (y - _avatarCropDragStart.y);
+    _avatarCropApplyTransform();
+  };
+  const end = () => { _avatarCropDragging = false; vp.style.cursor = 'grab'; };
+
+  vp.addEventListener('pointerdown', e => { vp.setPointerCapture(e.pointerId); start(e.clientX, e.clientY); });
+  vp.addEventListener('pointermove', e => move(e.clientX, e.clientY));
+  vp.addEventListener('pointerup', end);
+  vp.addEventListener('pointercancel', end);
+
+  // Pinch-to-zoom and scroll-wheel zoom
+  let pinchStartDist = null, pinchStartZoom = 1;
+  vp.addEventListener('wheel', e => {
+    e.preventDefault();
+    const slider = document.getElementById('avatarCropZoom');
+    const delta = -e.deltaY * 0.0015;
+    const newZoom = Math.min(Number(slider.max), Math.max(Number(slider.min), _avatarCropZoom + delta));
+    slider.value = newZoom;
+    _avatarCropUpdateZoom(newZoom);
+  }, { passive: false });
+});
+
+function _avatarCropCancel() {
+  document.getElementById('avatarCropOverlay').style.display = 'none';
+  mssUnlockScroll('avatarCrop');
+  _avatarCropFile = null;
+}
+
+async function _avatarCropConfirm() {
+  const img = document.getElementById('avatarCropImg');
+  // Map the visible circular viewport back to source-image pixel
+  // coordinates, then draw that exact region into a fixed-size output
+  // canvas — this is what actually "bakes in" the pan + zoom.
+  const srcCenterX = (_avatarCropNaturalW / 2) - (_avatarCropX / _avatarCropZoom);
+  const srcCenterY = (_avatarCropNaturalH / 2) - (_avatarCropY / _avatarCropZoom);
+  const srcSize = _AVATAR_VIEWPORT / _avatarCropZoom;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = MSS_AVATAR.px;
+  canvas.height = MSS_AVATAR.px;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(
+    img,
+    srcCenterX - srcSize / 2, srcCenterY - srcSize / 2, srcSize, srcSize,
+    0, 0, MSS_AVATAR.px, MSS_AVATAR.px
+  );
+
+  canvas.toBlob(async (blob) => {
+    if (!blob) { showToast('Failed to process image.', 'err'); return; }
+    document.getElementById('avatarCropOverlay').style.display = 'none';
+    mssUnlockScroll('avatarCrop');
+
+    showToast('Checking photo…');
+    const verdict = await MSSImageCheck.allowed(blob, 'profile photo');
+    if (!verdict) return;
+    const previewUrl = URL.createObjectURL(blob);
+    document.getElementById('settingsAvatar').innerHTML = `<img src="${previewUrl}" alt="">`;
+    showToast('Uploading photo…');
+
+    try {
+      const path = `${_sUser.id}/avatar.jpg`;
+      const { error: upErr } = await sb.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
+      const bustedUrl = publicUrl + '?t=' + Date.now();
+      await updateProfile(_sUser.id, { avatar_url: bustedUrl });
+      mssAvatarTidy(_sUser.id, bustedUrl).catch(() => {});   // old avatar.png / .jpeg files go
+      MSSImageCheck.review(verdict, 'avatar', bustedUrl);
+      if (_sProfile) _sProfile.avatar_url = bustedUrl;
+      ['navUserInitial','navUserInitialMobile'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.innerHTML = `<img src="${bustedUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+          el.style.padding = '0';
+        }
+      });
+      showToast('Photo updated!');
+    } catch(e) {
+      showToast('Upload failed — check Supabase Storage is set up.', 'err');
+      console.error(e);
+    }
+  }, 'image/jpeg', MSS_AVATAR.q);
+}
+
+async function doSignOutEverywhere() {
+  const ok = await showConfirm({
+    title: 'Sign out everywhere?',
+    message: 'You will be signed out on all devices immediately.',
+    confirmText: 'Sign Out',
+    iconName: 'logout',
+    danger: false
+  });
+  if (!ok) return;
+  await sb.auth.signOut({ scope: 'global' });
+  window.location.href = 'login.html';
+}
+
+/* ── Delete account ──
+   Asks for your username + password, removes your profile photo, then
+   delete_my_account() (029 SQL) deletes the account — everything you own
+   goes with it through the database's ON DELETE CASCADE links. */
+function openDeleteAccount() {
+  if (!_sUser || !_sProfile) return;
+  document.getElementById('delAccHandle').textContent = _sProfile.username;
+  ['delAccUsername', 'delAccPassword'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('delAccError').textContent = '';
+  updateDeleteAccountBtn();
+  document.getElementById('delAccOverlay').classList.add('open');
+  mssLockScroll('delAcc');
+  setTimeout(() => document.getElementById('delAccUsername').focus(), 60);
+}
+function closeDeleteAccount() {
+  document.getElementById('delAccOverlay').classList.remove('open');
+  mssUnlockScroll('delAcc');
+}
+function updateDeleteAccountBtn() {
+  const typed = document.getElementById('delAccUsername').value.trim().replace(/^@/, '').toLowerCase();
+  const pw = document.getElementById('delAccPassword').value;
+  document.getElementById('delAccConfirm').disabled = !(typed === (_sProfile?.username || '').toLowerCase() && pw);
+}
+async function confirmDeleteAccount() {
+  const btn = document.getElementById('delAccConfirm');
+  const err = document.getElementById('delAccError');
+  if (btn.disabled) return;
+  btn.disabled = true; btn.textContent = 'Deleting…'; err.textContent = '';
+  try {
+    // Re-check the password before anything is deleted
+    const { error: pwErr } = await sb.auth.signInWithPassword({ email: _sUser.email, password: document.getElementById('delAccPassword').value });
+    if (pwErr) throw new Error('bad_password');
+    await mssAvatarTidy(_sUser.id, null).catch(() => {});   // every photo file, old names too
+    const { error } = await sb.rpc('delete_my_account');
+    if (error) throw error;
+    try { await sb.auth.signOut(); } catch {}
+    window.location.replace('login.html');
+  } catch (e) {
+    console.error(e);
+    err.textContent = e.message === 'bad_password' ? 'That password is incorrect.' : 'Something went wrong — your account was not deleted. Please try again.';
+    btn.textContent = 'Delete Account';
+    updateDeleteAccountBtn();
+  }
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('delAccOverlay')?.classList.contains('open')) closeDeleteAccount();
+});
+
+/* ── In-app notification pop-ups (ON by default) ── */
+function refreshNotifPopupsSetting() {
+  document.getElementById('pushSwitch').setAttribute('aria-checked', mssNotifPopupsOn() ? 'true' : 'false');
+}
+function toggleNotifPopupsSetting() {
+  const on = !mssNotifPopupsOn();
+  mssSetNotifPopups(on);
+  refreshNotifPopupsSetting();
+  showToast(on ? 'Notification alerts on.' : 'Alerts off — new notifications will just show on the bell.');
+}
+document.addEventListener('DOMContentLoaded', refreshNotifPopupsSetting);
+
+/* ── Language (MSSLang, config.js + MSSI18n, i18n.js) ──
+   Languages with a full site translation first; every other TMDB language
+   translates titles & descriptions, and can be requested for the site. */
+let _langPicker = null;
+function _paintLanguage() {
+  const full = l => l.code.startsWith('en-') || MSSI18n.has(l.code);
+  const name = (c, loc) => { try { return new Intl.DisplayNames([loc], { type: 'language' }).of(c); } catch { return ''; } };
+  const item = l => ({ value: l.code, label: l.name, lang: l.code, keys: [l.code, name(l.code, 'en'), name(l.code, MSSI18n.locale.split('-u-')[0])] });
+  const all = MSSLang.list();
+  _langPicker = MSSPicker.mount(document.getElementById('setLanguagePick'), {
+    id: 'setLanguage', label: 'Language', describedBy: 'langHint', value: MSSLang.code, search: 'Type a language…',
+    groups: [{ label: 'Full site translation', items: all.filter(full).map(item) },
+             { label: 'Titles & descriptions only', items: all.filter(l => !full(l)).map(item) }],
+    onChange: setLanguage,
+  });
+  _paintLanguageRequest();
+}
+let _langRequested = false;
+async function _paintLanguageRequest() {
+  const box = document.getElementById('langReq'), c = MSSLang.code;
+  const need = !c.startsWith('en-') && !MSSI18n.has(c);
+  box.hidden = !need;
+  if (!need) return;
+  const name = MSSLang.name(c);
+  document.getElementById('langReqText').textContent = mssT('The site itself isn’t translated into {0} yet — only titles and descriptions are.', name);
+  const btn = document.getElementById('langReqBtn');
+  btn.textContent = mssT('Request {0}', name);
+  btn.disabled = false;
+  try {
+    const user = await getCurrentUser();
+    if (!user) { btn.disabled = true; return; }
+    const { data } = await sb.from('language_requests').select('language').eq('language', c).limit(1);
+    if (data?.length) _langRequestedUI();
+  } catch {}
+}
+function _langRequestedUI() {
+  _langRequested = true;
+  const btn = document.getElementById('langReqBtn');
+  btn.textContent = mssT('Requested — thanks!');
+  btn.disabled = true;
+}
+async function requestLanguage() {
+  if (_langRequested) return;
+  const btn = document.getElementById('langReqBtn');
+  btn.disabled = true;
+  const { error } = await sb.from('language_requests').insert({ language: MSSLang.code });
+  if (!error || error.code === '23505') { _langRequestedUI(); return; }   // 23505: already requested
+  console.error(error);
+  btn.disabled = false;
+  showToast(mssT('Couldn’t send the request — try again.'), 'err');
+}
+async function setLanguage(c) {
+  const sel = document.getElementById('setLanguage');
+  sel.disabled = true;
+  try {
+    await MSSLang.set(c);
+    location.reload();
+  } catch (err) {
+    console.error(err);
+    if (err?.profile) {                    // saved on this device, not on the account
+      showToast(mssT('Saved on this device — couldn’t save it to your account. Try again.'), 'err');
+      setTimeout(() => location.reload(), 2500);
+      return;
+    }
+    _langPicker.value = MSSLang.code;
+    sel.disabled = false;
+    showToast(mssT('Couldn’t switch language — check your connection and try again.'), 'err');
+  }
+}
+document.addEventListener('DOMContentLoaded', _paintLanguage);
+
+/* ── Episode ratings setting (episode-ratings.js) ── */
+const _EP_MODE_HINT = {
+  ask:    'Asks once for each show whether you want to rate its episodes (default).',
+  always: 'Rates every show — the rating popup opens after each “+” without asking first.',
+  off:    'Never asks. You can still rate any episode from a show’s info popup.',
+};
+function _paintEpisodeMode(m) {
+  document.querySelectorAll('.ep-mode-toggle .pn-toggle-btn').forEach(b => {
+    const on = b.dataset.mode === m;
+    b.classList.toggle('active', on); b.setAttribute('aria-checked', on);
+  });
+  document.getElementById('epModeHint').textContent = _EP_MODE_HINT[m] || '';
+}
+async function setEpisodeMode(m) {
+  _paintEpisodeMode(m);
+  try { await MSSEp.setMode(m); showToast('Saved.'); }
+  catch (err) { console.error(err); showToast('Couldn’t save that — try again.', 'err'); }
+}
+document.addEventListener('DOMContentLoaded', () => { MSSEp.mode().then(_paintEpisodeMode); });
+
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

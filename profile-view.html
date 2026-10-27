@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Profile — MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.pv-section { margin-bottom:2.5rem; }
+
+.pv-eyebrow { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; }
+
+.pv-title { font-family:var(--serif); font-size:22px; font-weight:500; margin-bottom:1rem; }
+
+.pv-empty { text-align:center; padding:2rem; color:var(--text-3); font-size:13px; }
+
+/* ══ Profile Header — Instagram style ══ */
+.prof-header {
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:0;
+  padding:1.75rem 0 1.5rem;
+  position:relative;
+  margin-bottom:1.5rem;
+/* Full-width divider line under prof-header */
+.prof-header::after {
+  content:'';
+  position:absolute;
+  bottom:0;
+  inset-inline-start:calc(-50vw + 50%);
+  width:100vw;
+  height:0.5px;
+  background:var(--border);
+}
+}
+.prof-avatar {
+  width:110px; height:110px; border-radius:50%; flex-shrink:0;
+  background:var(--olive-faint); border:2.5px solid var(--olive-light);
+  font-family:var(--serif); font-size:38px; color:var(--olive-light);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+  grid-column:1; grid-row:1;
+}
+.prof-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+/* Stat boxes sit on the same row as the avatar, filling the right column */
+.prof-stat-boxes {
+  width:100%;
+  display:grid;
+  margin-top:4px;
+  grid-template-columns:repeat(6,1fr);
+  gap:6px; align-self:center;
+}
+.prof-stat-box {
+  background:var(--card); border:0.5px solid var(--border-olive); border-radius:var(--radius);
+  padding:.5rem .85rem; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  transition:border-color var(--trans) var(--ease);
+  grid-column:span 2; min-width:0; overflow:hidden;
+}
+/* Episodes and Runtime — each takes half the full width (3 of 6 cols) */
+.prof-stat-box:hover { border-color:var(--border-olive); }
+.prof-stat-box-num { font-family:var(--serif); font-size:22px; font-weight:500; color:var(--olive-light); line-height:1.15; text-align:center; }
+.prof-stat-box-label { font-size:8px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; margin-top:3px; white-space:nowrap; text-align:center; }
+/* Info block: username, display name, bio, quote — below avatar in left column, spans both cols */
+.prof-header-top {
+  display:flex; flex-direction:row; align-items:flex-start;
+  gap:1.5rem; margin-bottom:14px;
+}
+.prof-header-info {
+  flex:1; min-width:0;
+  display:flex; flex-direction:column; justify-content:center;
+  padding-top:4px;
+}
+.prof-username { font-family:var(--serif); font-size:30px; font-weight:600; color:var(--text); line-height:1.1; margin-bottom:5px; }
+.prof-displayname { font-size:15px; color:var(--text-2); margin-bottom:10px; font-weight:400; }
+.prof-bio { font-size:14px; color:var(--text); line-height:1.6; margin-bottom:8px; }
+.prof-quote {
+  font-family:var(--sans); font-style:italic;
+  font-size:14px; font-weight:400; color:var(--text-2);
+  padding-inline-start:14px; border-inline-start:3px solid var(--olive-light);
+  margin-bottom:10px; line-height:1.6;
+}
+/* Buttons row */
+.prof-header-actions {
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  justify-content:center; padding-top:10px; width:100%;
+}
+/* Friend buttons */
+.pv-friend-btn {
+  /* every button here the same size as the taste-match pill */
+  display:inline-flex; align-items:center; justify-content:center; gap:6px; box-sizing:border-box; vertical-align:middle;
+  height:var(--pvb-h, 35px); padding:0 18px; border-radius:var(--radius-sm); border:0.5px solid transparent;
+  font-family:var(--sans); font-size:12px; font-weight:600; line-height:1; text-decoration:none;
+  cursor:pointer; transition:all .15s; white-space:nowrap;
+}
+.pv-friend-btn.add { background:var(--olive); color:#fff; border-color:var(--olive); }
+.pv-friend-btn.add:hover { background:var(--olive-2); }
+.pv-friend-btn.friends { background:var(--olive-faint); color:var(--olive-light); border:0.5px solid var(--border-olive); }
+.pv-friend-btn.friends:hover { background:#f87171; color:#fff; border-color:#f87171; }
+.pv-friend-btn.pending { background:transparent; color:var(--text-3); border:0.5px solid var(--border-2); }
+.pv-friend-btn.pending:hover { background:var(--bg-3); }
+.pv-friend-btn.accept { background:var(--olive); color:#fff; border-color:var(--olive); }
+.pv-friend-btn.accept:hover { background:var(--olive-2); }
+.pv-friend-btn.decline { background:transparent; color:#f87171; border:0.5px solid #f87171; }
+.pv-friend-btn.decline:hover { background:#f87171; color:#fff; }
+.pv-friend-btn.pv-match { margin-inline-start:6px; color:var(--olive-light); background:var(--olive-faint); border-color:var(--border-olive); }
+.pv-friend-btn.pv-match.hi { background:var(--olive); color:#fff; border-color:var(--olive); }
+.pv-friend-btn.pv-match:hover { border-color:var(--olive-light); }
+.pv-friend-btn.pv-notify { background:transparent; color:var(--text-2); border:0.5px solid var(--border-2); margin-inline-start:6px; }
+.pv-friend-btn.pv-notify:hover { border-color:var(--border-olive); color:var(--olive-light); background:var(--olive-faint); }
+.pv-friend-btn.pv-notify.on { background:var(--olive); color:#fff; border-color:var(--olive); }
+.pv-friend-btn.pv-notify.on:hover { background:var(--olive-2); }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — full scaling for all screens
+   ══════════════════════════════════════════ */
+
+/* ── Large desktop (≥1280px) ── */
+@media(min-width:1280px) {
+  .prof-stat-box-num { font-size:28px; }
+}
+
+/* ── Tablet (≤900px) ── */
+@media(max-width:900px) {
+  .prof-header-top { gap:1.25rem; }
+  .prof-stat-box-num { font-size:24px; }
+  .prof-stat-box { padding:.45rem .6rem; min-width:0; }
+  .prof-bio { font-size:13px; } .prof-quote { font-size:14px; }
+  
+  
+  
+  
+  
+  
+  
+}
+
+/* ── Mobile (≤640px) ── */
+@media(max-width:640px) {
+  .prof-header { padding:1rem 0; }
+  .prof-header-top { gap:1rem; margin-bottom:10px; }
+  .prof-avatar { width:82px; height:82px; font-size:32px; }
+  .prof-username { font-size:25px; }
+  .prof-displayname { font-size:14px; margin-bottom:8px; }
+  .prof-bio { font-size:13px; } .prof-quote { font-size:14px; }
+  .prof-stat-box-num { font-size:18px; }
+  .prof-stat-box { padding:.4rem .5rem; min-width:0; }
+  .prof-avatar { width:72px; height:72px; font-size:28px; }
+  .prof-username { font-size:22px; }
+  .prof-displayname { font-size:13px; margin-bottom:8px; }
+  .prof-stat-boxes { gap:4px; }
+  .prof-stat-box { padding:.3rem .4rem; }
+  .prof-stat-box-num { font-size:18px; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:0.8px; }
+  .prof-bio { font-size:12px; }
+  .prof-quote { font-size:13px; }
+  .prof-edit-btn, .prof-share-btn { font-size:11px; padding:6px 14px; }
+  .pv-friend-btn { --pvb-h:32px; font-size:11px; padding:0 14px; }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  .note-row { padding:12px 14px; gap:12px; border-radius:var(--radius); }
+  .note-poster { width:64px; height:90px; font-size:20px; }
+  .note-title { font-size:15px; }
+  .note-tags { gap:3px; margin-bottom:3px; }
+  .note-text { font-size:11px; margin-top:4px; }
+  .note-score { font-size:20px; }
+  .note-date { font-size:10px; }
+  .fav-slot { padding:10px 12px; min-height:64px; gap:10px; }
+  .fav-slot-title { font-size:13px; }
+  .fav-slot-num { font-size:20px; }
+  .fav-slot-score { font-size:15px; }
+  .fav-slot-poster { width:40px; height:56px; font-size:16px; }
+  .fav-edit-btn { font-size:11px; padding:6px 12px; }
+  .fav-picker-item { padding:11px 16px; gap:12px; }
+  .fav-picker-poster { width:44px; height:62px; font-size:17px; }
+  .fav-picker-name { font-size:14px; }
+  .fav-picker-sub { font-size:11px; }
+  .fav-picker-score { font-size:17px; }
+  .fav-picker-check { width:24px; height:24px; }
+  #favPickerSheet { max-height:88dvh; }
+  .prof-share-card { padding:18px; }
+  .prof-share-title { font-size:18px; }
+  .sort-bar { padding:8px 12px 10px; gap:4px; }
+  .sort-btn { font-size:10px; padding:4px 8px; }
+  .cf-btn { font-size:10px; padding:4px 9px; }
+  .section-block-title { font-size:12px; }
+  .export-grid { grid-template-columns:repeat(2,1fr); }
+  .export-card { padding:1rem; }
+}
+
+/* ── Small mobile (≤400px) ── */
+@media(max-width:400px) {
+  .prof-header { padding:.85rem 0; }
+  .prof-header-top { flex-direction:column; align-items:center; gap:.5rem; margin-bottom:10px; }
+  .prof-header-info { align-items:center; text-align:center; width:100%; }
+  .prof-avatar { width:78px; height:78px; font-size:30px; }
+  .prof-username { font-size:27px; }
+  .prof-displayname { font-size:13px; }
+  .prof-stat-box-num { font-size:15px; }
+  .prof-stat-box { padding:.3rem .35rem; min-width:0; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:.5px; }
+  .prof-header-top { flex-direction:column; align-items:center; gap:.6rem; }
+  .prof-header-info { align-items:center; text-align:center; }
+  .prof-avatar { width:80px; height:80px; font-size:32px; }
+  .prof-username { font-size:22px; }
+  .prof-displayname { font-size:13px; }
+  .prof-stat-box-num { font-size:14px; }
+  .prof-stat-box { padding:.3rem .35rem; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:.5px; }
+  .prof-header-identity { margin-bottom:8px; }
+  .prof-avatar { width:60px; height:60px; font-size:22px; }
+  .fav-slot { padding:8px 10px; gap:8px; min-height:56px; }
+  .fav-slot-poster { width:36px; height:50px; font-size:14px; }
+  .fav-slot-title { font-size:12px; }
+  .fav-slot-num { font-size:17px; }
+  .fav-picker-item { padding:9px 12px; gap:10px; }
+  .fav-picker-poster { width:38px; height:54px; font-size:15px; }
+  .fav-picker-name { font-size:13px; }
+  .fav-picker-sub { font-size:10px; }
+  .fav-picker-score { font-size:15px; }
+  .fav-picker-check { width:22px; height:22px; }
+  .prof-username { font-size:20px; }
+  .prof-stat-boxes { gap:3px; }
+  .prof-stat-box { padding:.25rem .3rem; }
+  .prof-stat-box-num { font-size:13px; }
+  .prof-stat-box-label { font-size:7px; letter-spacing:0.5px; }
+  .prof-header-actions { gap:6px; }
+  .prof-edit-btn, .prof-share-btn { font-size:10px; padding:5px 11px; }
+  .pv-friend-btn { --pvb-h:28px; font-size:10px; padding:0 11px; }
+  
+  
+  
+  
+  
+  
+  
+  .sort-btn { font-size:9px; padding:3px 6px; }
+  .cf-btn { font-size:9px; padding:3px 7px; }
+  .note-row { padding:10px 12px; gap:10px; }
+  .note-poster { width:54px; height:76px; font-size:18px; }
+  .note-title { font-size:13px; }
+  .note-text { font-size:10px; }
+  .note-score { font-size:17px; }
+  .export-grid { grid-template-columns:1fr; }
+}
+
+.prof-ov-grid {
+  display:grid; grid-template-columns:repeat(5,1fr); gap:12px;
+}
+.prof-ov-grid .q-card { width:100% !important; max-width:100% !important; min-width:0 !important; }
+@media(max-width:900px)  { .prof-ov-grid { grid-template-columns:repeat(4,1fr); gap:10px; } }
+@media(max-width:640px)  { .prof-ov-grid { grid-template-columns:repeat(3,1fr); gap:8px; } }
+@media(max-width:400px)  { .prof-ov-grid { grid-template-columns:repeat(2,1fr); gap:6px; } }
+
+
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div id="pvContent">
+    <div class="page-loading" data-skel="pvprofile"></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/sort-filter.js"></script>
+<script src="js/rating-curve.js"></script>
+<script>window.LIB_SCOPE = 'pv'; window.LIB_READONLY = true; window.LIB_ENTRIES = function(){ return _pvEntries; }; window.LIB_PROFILE = function(){ return _pvProfile; };</script>
+<script src="js/library-view.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/rating-popup.js"></script>
+<script src="js/comments.js"></script>
+<script src="js/easter-egg.js"></script>
+<script src="js/note-popup.js"></script>
+<script src="js/list-popup.js"></script>
+<script src="js/profile-tabs.js"></script>
+<script src="js/episode-ratings.js"></script>
+<script src="js/medals.js"></script>
+<script src="js/showcase.js"></script>
+<script>
+let _pvMe = null, _pvMeProfile = null;
+let _pvUserId = null, _pvUsername = null, _pvProfile = null;
+let _pvEntries = [];
+let _pvFriendship = null;
+let _pvNotifyOn = false;   // am I subscribed to this friend's activity? (off by default)
+let _pvMatch = null;       // taste match with a friend (mssTasteMatch, config.js)
+
+// Returning via browser back/forward can restore this page from the
+// bfcache with stale data (e.g. an entry just added/edited elsewhere
+// wouldn't show up here) instead of re-running this page's scripts.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Get target user — URL params first (survive refresh), then sessionStorage
+  var urlParams = new URLSearchParams(window.location.search);
+  _pvUserId   = urlParams.get('id')  || sessionStorage.getItem('viewProfileId')  || null;
+  _pvUsername = urlParams.get('u')   || sessionStorage.getItem('viewProfileUsername') || null;
+
+  // Push into URL so page survives refresh
+  if (_pvUserId || _pvUsername) {
+    var _newUrl = new URL(window.location.href);
+    if (_pvUserId   && !_newUrl.searchParams.get('id')) _newUrl.searchParams.set('id', _pvUserId);
+    if (_pvUsername && !_newUrl.searchParams.get('u'))  _newUrl.searchParams.set('u',  _pvUsername);
+    history.replaceState(null, '', _newUrl.toString());
+  }
+  // Clear sessionStorage now that URL has the params
+  sessionStorage.removeItem('viewProfileId');
+  sessionStorage.removeItem('viewProfileUsername');
+
+  // Start loading the friend's profile + library while the nav is still
+  // signing in — these don't depend on who's viewing.
+  const profileP = _pvUserId ? getProfile(_pvUserId) : (_pvUsername ? getProfileByUsername(_pvUsername) : Promise.resolve(null));
+  const earlyP = _pvUserId ? Promise.all([
+    getPublicEntries(_pvUserId),
+    sb.from('favorite_lists').select('*').eq('user_id', _pvUserId).order('created_at', { ascending: true }).then(r => r.data || [], () => []),
+  ]) : null;
+
+  await initPageGuest(async (user, profile) => {
+    _pvMe = user;
+    _pvMeProfile = profile;
+  });
+
+  // Resolve profile
+  _pvProfile = await profileP;
+  if (_pvProfile && !_pvUserId) _pvUserId = _pvProfile.id;
+
+  if (!_pvProfile) {
+    document.getElementById('pvContent').innerHTML = '<div class="guest-page-state fade-up">'
+      +'<div class="guest-page-icon">'+icon('user',36)+'</div>'
+      +'<h2 class="guest-page-title">User not found</h2>'
+      +'<p class="guest-page-sub">This profile does not exist or has been removed.</p>'
+      +'</div>';
+    return;
+  }
+
+  document.title = `${_pvProfile.display_name || _pvProfile.username} — MyScreenFolio`;
+
+  // If viewing own profile, redirect to profile.html
+  if (_pvMe && _pvUserId === _pvMe.id) {
+    window.location.href = 'profile.html';
+    return;
+  }
+
+  // Friendship, notify-me state, entries and lists — all at once
+  const [friendships, sub, early] = await Promise.all([
+    _pvMe ? getFriendships(_pvMe.id).catch(() => []) : Promise.resolve([]),
+    _pvMe ? sb.from('activity_subscriptions').select('target_id').eq('subscriber_id', _pvMe.id).eq('target_id', _pvUserId).limit(1).then(r => r.data || [], () => []) : Promise.resolve([]),
+    earlyP || Promise.all([
+      getPublicEntries(_pvUserId),
+      sb.from('favorite_lists').select('*').eq('user_id', _pvUserId).order('created_at', { ascending: true }).then(r => r.data || [], () => []),
+    ]),
+  ]);
+  _pvFriendship = friendships.find(function(f){ return f.friendId === _pvUserId; }) || null;
+  _pvNotifyOn = !!(_pvFriendship && _pvFriendship.status === 'accepted' && sub.length);
+  _pvEntries = early[0];
+  _pvFavLists = early[1];
+
+  _pvCmtUser = _pvMe;
+  renderProfile();
+  var tab = parseInt(new URLSearchParams(location.search).get('tab'), 10);
+  if (tab > 0 && tab <= 5) pvTabSwitch(tab);
+  _libResume();
+  // Friends: how your tastes line up — your own titles, quietly, then the pill by the buttons
+  if (_pvFriendship && _pvFriendship.status === 'accepted') {
+    getEntries(_pvMe.id).then(mine => {
+      _pvMatch = mssTasteMatch(mine, _pvEntries);
+      const b = document.getElementById('pvBtns'); if (b) b.innerHTML = _friendBtnHTML();
+    }).catch(() => {});
+  }
+});
+
+function _friendBtnHTML() {
+  if (!_pvMe) {
+    return '<a href="login.html" class="pv-friend-btn add">Sign in to Follow</a>';
+  }
+  const f = _pvFriendship;
+  if (!f) {
+    return '<button class="pv-friend-btn add" onclick="pvSendRequest()">+ Follow</button>';
+  }
+  if (f.status === 'accepted') {
+    return '<button class="pv-friend-btn friends" onclick="pvUnfriend()" title="Click to unfriend">✓ Friends</button>'
+      + _pvNotifyBtnHTML() + _pvMatchHTML();
+  }
+  if (f.status === 'pending' && f.iRequested) {
+    return '<button class="pv-friend-btn pending" onclick="pvCancelRequest()">Requested ✕</button>';
+  }
+  if (f.status === 'pending' && !f.iRequested) {
+    return '<button class="pv-friend-btn accept" onclick="pvAccept()">Accept</button>'
+            +'<button class="pv-friend-btn decline" onclick="pvDecline()">Decline</button>';
+  }
+  return '<button class="pv-friend-btn add" onclick="pvSendRequest()">+ Follow</button>';
+}
+
+/* Friend-activity notifications toggle — OFF by default. When on, you're
+   notified the moment this friend starts, watches an episode of or finishes
+   something, writes a note or makes a list (022 / 047). */
+function _pvMatchHTML() {
+  const m = _pvMatch && _pvMatch.pct;
+  return m != null ? '<a class="pv-friend-btn pv-match' + (m >= 80 ? ' hi' : '') + '" href="friends.html?s=compare&with=' + encodeURIComponent(_pvUserId) + '" title="Based on ' + _pvMatch.rated.length + ' titles you have both rated — see the full comparison">'
+    + icon('compare', 12) + ' ' + m + '% taste match</a>' : '';
+}
+function _pvNotifyBtnHTML() {
+  return _pvNotifyOn
+    ? '<button class="pv-friend-btn pv-notify on" onclick="pvToggleNotify()" title="Turn off notifications for this friend"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications On</button>'
+    : '<button class="pv-friend-btn pv-notify" onclick="pvToggleNotify()" title="Get notified about what they watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.9 17.9 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Notify Me</button>';
+}
+async function pvToggleNotify() {
+  const next = !_pvNotifyOn;
+  try {
+    const { error } = await sb.rpc('set_activity_subscription', { p_target: _pvUserId, p_on: next });
+    if (error) throw error;
+    _pvNotifyOn = next;
+    document.getElementById('pvBtns').innerHTML = _friendBtnHTML();
+    const name = (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || 'them';
+    showToast(next ? `You'll be notified when ${name} starts, watches or finishes something.` : `Notifications off for ${name}.`);
+  } catch (e) { console.error(e); showToast('Could not update notifications — try again.', 'err'); }
+}
+
+
+
+
+
+
+// Their title: Info · Ratings · Note in one popup (MSSViews, info-popup.js) — opens on
+// Ratings once it's rated/watched, otherwise on Info. Add to Watchlist · Discover.
+
+
+function pvTabSwitch(n) { var t=document.getElementById("pvTab"+n); if(t) pvTab(n,t); var s=document.getElementById("pvTabsSelect"); if(s) s.value=n; }
+
+// While the profile loads: the same header, tabs and Overview with sample text, masked into placeholders
+mssSkeleton.define('pvprofile', function() {
+  var tab = +new URLSearchParams(location.search).get('tab') || 0;
+  var tabs = _pvTabsHTML().replace(/ class="prof-tab active"/, ' class="prof-tab"').replace(new RegExp('(class="prof-tab)(" onclick="pvTab\\(' + tab + ',)'), '$1 active$2')
+    .replace(/class="prof-tab(s|-select)"/g, 'class="prof-tab$1" data-skel-keep');   // tabs stay as they are
+  var btns = '<button class="pv-friend-btn">' + icon('check', 13) + ' Friends</button><button class="pv-friend-btn">' + icon('bell', 13) + ' Notify Me</button>';
+  return (MSSTabs.headSkel(btns) + tabs + '<div class="prof-panel active">' + (tab ? mssSkeleton('grid') : mssSkeleton('overview')) + '</div>').replace(/ id="[^"]*"/g, '');
+});
+
+// The tab bar + the phone's tab menu (also drawn in the loading skeleton)
+function _pvTabsHTML() {
+  var tabBar = '<div class="prof-tabs">'
+    +'<div class="prof-tab active" onclick="pvTab(0,this)" id="pvTab0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="prof-tab-label">Overview</span></div>'
+    +'<div class="prof-tab" onclick="pvTab(1,this)" id="pvTab1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="prof-tab-label">Library</span></div>'
+    +'<div class="prof-tab" onclick="pvTab(2,this)" id="pvTab2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><span class="prof-tab-label">Lists</span></div>'
+    +'<div class="prof-tab" onclick="pvTab(3,this)" id="pvTab3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="prof-tab-label">Notes</span></div>'
+    +'<div class="prof-tab" onclick="pvTab(4,this)" id="pvTab4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 8h3"/><path d="M6 11h3"/><path d="M6 14h3"/><path d="M13 9l4 2-4 2z"/></svg><span class="prof-tab-label">Episodes</span></div>'
+    +'<div class="prof-tab" onclick="pvTab(5,this)" id="pvTab5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg><span class="prof-tab-label">Showcase</span></div>'
+    +'</div>';
+
+  var mobileSelect = '<select class="prof-tab-select" id="pvTabsSelect" onchange="pvTabSwitch(parseInt(this.value))">'
+    +'<option value="0">Overview</option>'
+    +'<option value="1">Library</option>'
+    +'<option value="2">Lists</option>'
+    +'<option value="3">Notes</option>'
+    +'<option value="4">Episodes</option>'
+    +'<option value="5">Showcase</option>'
+    +'</select>';
+
+  return mobileSelect + tabBar;
+}
+
+function renderProfile() {
+  var p = _pvProfile;
+  if (!p) return;
+  var un = p.username || _pvUsername || '';
+  var st = computeStats(_pvEntries);
+  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+
+/* ── Profile stats (5 boxes) ── */
+
+
+  var friendBtnHTML = _friendBtnHTML();
+  var avHTML = safeURL(p.avatar_url)
+    ? '<img src="'+safeURL(p.avatar_url)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
+    : esc((un[0]||'?').toUpperCase());
+
+  var header = '<div class="prof-header fade-up">'
+    +'<div class="prof-header-top">'
+    +'<div class="prof-avatar" id="pvAvatar">'+avHTML+'</div>'
+    +'<div class="prof-header-info">'
+    +'<div class="prof-username">@'+esc(un)+'</div>'
+    +(p.display_name?'<div class="prof-displayname">'+esc(p.display_name)+'</div>':'')
+    +(p.bio?'<div class="prof-bio">'+esc(p.bio)+'</div>':'')
+    +(p.quote?'<div class="prof-quote">'+esc(p.quote)+'</div>':'')
+    +'</div></div>'
+    +'<div class="prof-stat-boxes">'
+    +MSSTabs.statsHTML(_pvEntries)
+    +'</div>'
+    +'<div class="prof-header-actions"><div id="pvBtns">'+friendBtnHTML+'</div></div>'
+    +'</div>';
+
+  var panel0 = '<div class="prof-panel active" id="pvPanel0"><div id="pvOverviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>';
+  var panel1 = '<div class="prof-panel" id="pvPanel1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>';
+
+  var panel2 = '<div class="prof-panel" id="pvPanel2"><div id="pvListsContent"></div></div>';
+  var panel3 = '<div class="prof-panel" id="pvPanel3"><div id="pvNotesContent"></div></div>';
+  var panel4 = '<div class="prof-panel" id="pvPanel4"><div id="pvEpisodesContent"></div></div>';
+  var panel5 = '<div class="prof-panel" id="pvPanel5"><div id="pvShowcase"><div class="page-loading"><div class="spinner"></div></div></div></div>';
+
+  document.getElementById('pvContent').innerHTML = header + _pvTabsHTML() + panel0 + panel1 + panel2 + panel3 + panel4 + panel5;
+
+  window.pvTab = function(n, el) {
+    document.querySelectorAll('.prof-tab').forEach(function(t){t.classList.remove('active');});
+    document.querySelectorAll('.prof-panel').forEach(function(p){p.classList.remove('active');});
+    el.classList.add('active');
+    document.getElementById('pvPanel'+n).classList.add('active');
+    var sel = document.getElementById('pvTabsSelect');
+    if (sel && parseInt(sel.value) !== n) sel.value = n;
+    if (n === 1) { renderLibrary(); }
+    // Keep the tab in the URL — Back / refresh come back to it (not Overview)
+    var u = new URL(location.href);
+    if (n) u.searchParams.set('tab', n); else u.searchParams.delete('tab');
+    history.replaceState(history.state, '', u.toString());
+    // Lists + Notes: the Personal sections of the Notes / Lists pages, read-only (profile-tabs.js)
+    var tabOpts = { userId: _pvUserId, entries: _pvEntries, owner: !!(_pvMe && _pvMe.id === _pvUserId), name: (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '' };
+    if (n === 2) MSSTabs.lists(document.getElementById('pvListsContent'), tabOpts);
+    if (n === 3) MSSTabs.notes(document.getElementById('pvNotesContent'), tabOpts);
+    if (n === 4) MSSTabs.episodes(document.getElementById('pvEpisodesContent'), tabOpts);
+    if (n === 5) MSSShowcase.mount(document.getElementById('pvShowcase'), _pvProfile && _pvProfile.id, { own: !!(_pvMe && _pvProfile && _pvMe.id === _pvProfile.id), name: (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '' });
+  };
+
+  renderPvOverview();
+}
+
+function _pvStatsBoxHTML() {
+  var entries = _pvEntries || [];
+  var profile = _pvProfile;
+  var favLists = _pvFavLists;
+  var watched = function(e){ return e.status==='completed'||e.status==='ongoing'; };
+  var byCat = function(c){ return entries.filter(function(e){return e.cat===c;}); };
+  var tv = byCat('tv'), movies = byCat('movies'), anime = byCat('anime'), cartoons = byCat('cartoons');
+  var watchlist = entries.filter(function(e){return e.status==='queue'||e.status==='up_next';});
+  var reviews = entries.filter(function(e){return e.notes && e.notes.trim();});
+
+  var favIds = {};
+  if (profile) {
+    ['top_picks','fav_tv','fav_movies','fav_anime','fav_cartoons'].forEach(function(k){
+      (Array.isArray(profile[k]) ? profile[k] : []).forEach(function(id){ favIds[id] = true; });
+    });
+  }
+  var favoritesCount = Object.keys(favIds).length;
+  var listsCount = Array.isArray(favLists) ? favLists.length : 0;
+
+  var rows = [
+    { label:'All Items',        value:entries.length },
+    { label:'TV Shows',         value:tv.length },
+    { label:'TV Shows Watched', value:tv.filter(watched).length },
+    { label:'Movies',           value:movies.length },
+    { label:'Movies Watched',   value:movies.filter(watched).length },
+    { label:'Animes',           value:anime.length },
+    { label:'Animes Watched',   value:anime.filter(watched).length },
+    { label:'Cartoons',         value:cartoons.length },
+    { label:'Cartoons Watched', value:cartoons.filter(watched).length },
+    { label:'Watchlist',        value:watchlist.length },
+    { label:'Lists',            value:listsCount },
+    { label:'Reviews',          value:reviews.length },
+  ];
+
+  var chevronSvg = '<span class="stats-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>';
+  return '<div class="stats-box fade-up" id="statsBoxPv">' + rows.map(function(r,i){
+    return '<div class="stats-row"' + (i===0 ? ' onclick="MSSTabs.toggleStats(\'statsBoxPv\')"' : '') + '>'
+      + '<span class="stats-label">' + r.label + '</span>'
+      + '<span class="stats-value">' + r.value.toLocaleString() + (i===0 ? chevronSvg : '') + '</span>'
+      + '</div>';
+  }).join('') + '</div>';
+}
+
+function renderPvOverview() {
+  var el = document.getElementById('pvOverviewContent');
+  if (!el) return;
+  if (!_pvEntries || !_pvEntries.length) {
+    el.innerHTML = '<div class="pv-empty" style="text-align:center;padding:3rem 1rem;color:var(--text-3);font-size:14px;">Nothing added yet.</div>';
+    return;
+  }
+  var _statsHTML = _pvStatsBoxHTML();
+  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+MSSCurve.html(_pvEntries, { user: _pvUserId })+'</div><div class="overview-main" id="pvDashMain"></div></div>';
+  // Their picks: Top Favorites, Would Recommend, Top 5 per type (read-only)
+  MSSDash.render(document.getElementById('pvDashMain'), {
+    entries: _pvEntries, profile: _pvProfile || {}, editable: false,
+    openEntry: _libOpen,
+    save: function(){ return Promise.resolve(); }
+  });
+}
+
+/* ── Tab 1: Library — the same Library as library.html / your profile
+   (js/library-view.js), read-only. Its cards open this page's popups. ── */
+
+/* ── Friend request actions ── */
+async function pvSendRequest() {
+  if (!_pvMe || !_pvProfile?.username) return;
+  try {
+    await sendFriendRequest(_pvMe.id, _pvProfile.username);
+    showToast('Friend request sent!');
+    // Refresh friendship status
+    const friendships = await getFriendships(_pvMe.id);
+    _pvFriendship = friendships.find(f => f.friendId === _pvUserId) || null;
+    document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
+  } catch(e) { showToast(e.message || 'Error sending request', 'err'); }
+}
+
+async function pvCancelRequest() {
+  if (!_pvFriendship) return;
+  const ok = await showConfirm({ title:'Cancel request?', message:'Cancel your friend request to @' + (_pvProfile?.username||'') + '?', confirmText:'Cancel Request', iconName:'users' });
+  if (!ok) return;
+  await removeFriendship(_pvFriendship.id);
+  _pvFriendship = null;
+  document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
+  showToast('Request cancelled');
+}
+
+async function pvUnfriend() {
+  if (!_pvFriendship) return;
+  const ok = await showConfirm({ title:'Remove friend?', message:'Remove @' + (_pvProfile?.username||'') + ' from your friends?', confirmText:'Unfriend', iconName:'users' });
+  if (!ok) return;
+  await removeFriendship(_pvFriendship.id);
+  _pvFriendship = null;
+  document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
+  showToast('Removed from friends');
+}
+
+async function pvAccept() {
+  if (!_pvFriendship) return;
+  await respondFriendRequest(_pvFriendship.id, true);
+  const friendships = await getFriendships(_pvMe.id);
+  _pvFriendship = friendships.find(f => f.friendId === _pvUserId) || null;
+  document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
+  showToast('Now friends with @' + (_pvProfile?.username||''));
+}
+
+async function pvDecline() {
+  if (!_pvFriendship) return;
+  await respondFriendRequest(_pvFriendship.id, false);
+  _pvFriendship = null;
+  document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
+  showToast('Request declined');
+}
+
+
+
+
+
+
+
+
+
+
+var _pvFavLists = [];
+
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

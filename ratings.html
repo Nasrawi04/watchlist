@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Ratings — MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ratings.html — looks like a list page (list-view.html, styles in style.css "List page look") */
+.rt-curve { max-width:520px; margin:0 0 1.5rem; }
+.rt-curve .rc-box { margin-top:0; }
+.rt-search { margin:0 0 1.25rem; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="lv-back" href="profile.html" id="rtBack">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+  <div id="rtLoading" class="page-loading" data-skel="rt-page"></div>
+  <div id="rtContent" style="display:none">
+    <div class="lv-owner-row">
+      <div class="lv-owner">
+        <div class="lv-avatar" id="rtAvatar"></div>
+        <span class="lv-username" id="rtUsername" translate="no"></span>
+      </div>
+    </div>
+    <div class="lv-title-row"><h1 class="lv-title" id="rtTitle"></h1></div>
+    <div class="lv-desc" id="rtDesc"></div>
+    <div class="rt-curve" id="rtCurve"></div>
+    <div class="rt-search" id="rtSearch"></div>
+    <div class="lv-controls">
+      <div class="lv-count"><b id="rtCount"></b> <span id="rtCountLabel">titles</span></div>
+      <div class="lv-controls-right">
+        <div id="rtSfBar" class="lv-sf-bar"></div>
+        <div class="view-toggle" id="rtViewToggle"></div>
+      </div>
+    </div>
+    <div class="lv-grid" id="rtGrid"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/sort-filter.js"></script>
+<script src="js/rating-curve.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/create-card.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/episode-ratings.js"></script>
+<script src="js/rating-popup.js"></script>
+<script src="js/list-popup.js"></script>
+<script src="js/comments.js"></script>
+<script src="js/easter-egg.js"></script>
+<script src="js/note-popup.js"></script>
+<script>
+/* Every watched title one person scored in a range (from the Ratings curve's bars).
+   ?range=8.5-9 (default the top bar, 9.5–10) · ?user=<id> for someone else's (read-only; the
+   database leaves out titles they've hidden from you). */
+var _rtQ = new URLSearchParams(location.search);
+var _rtRange = MSSCurve.RANGES.find(function(r){ return r.key === _rtQ.get('range'); }) || MSSCurve.RANGES[MSSCurve.RANGES.length - 1];
+var _rtOwner = _rtQ.get('user') || null;
+var _rtProfile = null, _rtAll = [];
+var _rtView = localStorage.getItem('rt_view') || 'list';
+var _rtItems = function(){ return MSSCurve.rated(_rtAll).filter(function(e){ return MSSCurve.of(e) === _rtRange.key; }); };
+
+window.addEventListener('pageshow', function(ev){ if (ev.persisted) location.reload(); });   // back/forward cache → fresh data
+
+SF.register('rt', {
+  base: _rtItems,
+  render: _rtRender,
+  onSearch: _rtRender,
+  defaultSort: 'highest',
+  sorts: function(){ return ['alpha', 'added', 'release', 'ratings', 'runtime', 'seasons', 'episodes']; },
+  filters: function(){ return ['genre', 'year', 'score', 'length']; },
+  choiceFilters: function(){ return [
+    { key: 'cat', label: 'Type', options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']] },
+    { key: 'format', label: 'Format', options: [['', 'All Formats'], ['show', 'Shows'], ['movie', 'Movies']],
+      when: function(ch){ return ch.cat === 'anime' || ch.cat === 'cartoons'; },
+      test: function(e, v){ return (v === 'movie') === SF.isMovie(e); } },
+    { key: 'status', label: 'Status', options: [['', 'All'], ['completed', 'Watched'], ['ongoing', 'To Be Continued']] },
+  ]; },
+});
+
+function _rtTypeLabel(e) {
+  var movie = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+  return '<span class="' + (movie ? 'type-label' : 'type-label type-label-tv') + '">' + (movie ? 'Movie' : 'TV Show') + '</span>';
+}
+function _rtScore(e) { return '<span class="home-tmdb-score">★ ' + Number(liveScore(e)).toFixed(2) + '</span>'; }
+function _rtRank(n) {
+  if (n == null) return '';
+  return '<div class="cg-rank-badge ' + (n === 1 ? 'cg-rank-1' : n === 2 ? 'cg-rank-2' : n === 3 ? 'cg-rank-3' : 'cg-rank-other') + '">' + n + '</div>';
+}
+function _rtRow(e, n) {
+  var img = safeURL(e.poster_url)
+    ? '<img src="' + safeURL(e.poster_url) + '" alt="" loading="lazy" data-letter="' + escHTML((e.title || '?')[0]) + '" onerror="mssImgError(this)">'
+    : '<div class="home-tmdb-poster-fallback" style="font-size:18px">' + escHTML((e.title || '?')[0].toUpperCase()) + '</div>';
+  return '<div class="lv-list-row lv-in-view" role="button" tabindex="0" onclick="_rtOpen(' + attrJSON(e.id) + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}">'
+    + '<div class="lv-list-poster" style="position:relative">' + img + mssHiddenBadgeHTML(e) + _rtRank(n) + '</div>'
+    + '<div style="min-width:0"><div class="lv-list-title-row"><div class="lv-list-title" translate="no">' + escHTML(e.title) + '</div>'
+    + (e.year ? '<span class="title-year-inline">' + escHTML(e.year) + '</span>' : '') + '</div>'
+    + '<div class="lv-list-badges-row">' + _rtTypeLabel(e) + (e.status === 'ongoing' ? '<span class="w-ep-badge">To Be Continued</span>' : '') + '</div></div>'
+    + '<div class="lv-list-score-wrap">' + _rtScore(e) + '</div></div>';
+}
+function _rtCard(e, n) {
+  return MSSCard.poster({ cls: 'lv-card lv-in-view', onclick: '_rtOpen(' + attrJSON(e.id) + ')', title: e.title, year: e.year, poster: e.poster_url,
+    rank: n || 0, typeHTML: _rtTypeLabel(e).replace('">', ' type-label-overlay-bottom">'), scoreHTML: _rtScore(e) });
+}
+
+// The page around the titles: who, which range, its count + average, and the curve
+function _rtHead() {
+  var p = _rtProfile || {}, items = _rtItems(), name = p.username || '';
+  var avg = items.length ? items.reduce(function(s, e){ return s + Number(liveScore(e)); }, 0) / items.length : null;
+  document.title = 'Rated ' + _rtRange.label + (_rtOwner && name ? ' · @' + name : '') + ' — MyScreenFolio';
+  document.getElementById('rtBack').href = _rtOwner ? 'profile-view.html?id=' + encodeURIComponent(_rtOwner) : 'profile.html';
+  document.getElementById('rtAvatar').innerHTML = safeURL(p.avatar_url) ? '<img src="' + safeURL(p.avatar_url) + '" alt="">' : escHTML((name || '?')[0].toUpperCase());
+  document.getElementById('rtUsername').textContent = name ? '@' + name : '';
+  document.getElementById('rtTitle').textContent = 'Rated ' + _rtRange.label;
+  document.getElementById('rtDesc').textContent = (_rtOwner ? 'Every title @' + name + ' scored' : 'Every title you scored') + ' from ' + _rtRange.lo + ' to ' + _rtRange.to + ' out of 10'
+    + (avg != null ? ' · average ' + avg.toFixed(2) : '') + '.';
+  document.getElementById('rtCurve').innerHTML = MSSCurve.html(_rtAll, { user: _rtOwner, current: _rtRange.key });   // the other bars switch range
+}
+
+function _rtViewToggleHTML() {
+  return '<button class="vt-btn ' + (_rtView === 'list' ? 'active' : '') + '" onclick="_rtSetView(\'list\')" title="List view" aria-pressed="' + (_rtView === 'list') + '">' + icon('list', 13) + '</button>'
+    + '<button class="vt-btn ' + (_rtView === 'grid' ? 'active' : '') + '" onclick="_rtSetView(\'grid\')" title="Grid view" aria-pressed="' + (_rtView === 'grid') + '">' + icon('grid', 13) + '</button>';
+}
+
+/* Loading skeleton: this page's own header, curve, search, toolbar and rows (or cards, in the view
+   you chose) — the range's name and the buttons as they'll be, the rest masked into placeholders,
+   as many titles as last time (mssSkeleton, config.js) */
+mssSkeleton.define('rt-page', function() {
+  var box = document.getElementById('rtContent').cloneNode(true), $ = function(id){ return box.querySelector('#' + id); };
+  var keep = function(el){ el.setAttribute('data-skel-keep', ''); };
+  $('rtAvatar').textContent = 'U';
+  $('rtUsername').textContent = '@username';
+  $('rtTitle').textContent = 'Rated ' + _rtRange.label; keep($('rtTitle'));
+  $('rtDesc').textContent = 'Every title you scored from ' + _rtRange.lo + ' to ' + _rtRange.to + ' out of 10 · average 8.70.';
+  var fake = [];
+  [0, 1, 2, 3, 6, 9, 12, 10, 7, 4].forEach(function(n, i){ for (var k = 0; k < n; k++) fake.push({ status: 'completed', final_score: 5.25 + i / 2 }); });
+  $('rtCurve').innerHTML = MSSCurve.html(fake, { current: _rtRange.key }).replace(/class="rc-bar"/g, 'class="rc-bar skel"').replace(/class="(rc-title|rc-axis)"/g, 'class="$1" data-skel-keep');
+  $('rtSearch').innerHTML = SF.searchHTML('rt', _rtOwner ? 'Search their ratings…' : 'Search your ratings…'); keep($('rtSearch'));
+  var n = (mssSkeleton.shape('rt') || {}).n || 6;
+  $('rtCount').textContent = String(n);
+  $('rtSfBar').innerHTML = SF.bar('rt', 'all'); keep($('rtSfBar'));
+  $('rtViewToggle').innerHTML = _rtViewToggleHTML(); keep($('rtViewToggle'));
+  var e = { id: '', title: 'Sample title', year: '2024', cat: 'tv', status: 'completed', final_score: 8.75 };
+  $('rtGrid').className = _rtView === 'list' ? 'lv-list' : 'lv-grid';
+  $('rtGrid').innerHTML = Array.from({ length: n }, function(){ return _rtView === 'list' ? _rtRow(e, null) : _rtCard(e, null); }).join('');
+  box.style.display = '';
+  return box.outerHTML.replace(/ (id|onclick)="[^"]*"/g, '');
+});
+
+function _rtRender() {
+  _rtHead();
+  var grid = document.getElementById('rtGrid'), all = _rtItems(), shown = SF.list('rt', 'all'), q = SF.query('rt');
+  document.getElementById('rtCount').textContent = shown.length.toLocaleString();
+  document.getElementById('rtCountLabel').textContent = shown.length === 1 ? 'title' : 'titles';
+  document.getElementById('rtSfBar').innerHTML = SF.bar('rt', 'all');
+  document.getElementById('rtViewToggle').innerHTML = _rtViewToggleHTML();
+  mssSkeleton.shape('rt', { n: Math.min(shown.length, 12) });
+  if (!shown.length) {
+    grid.className = '';
+    grid.innerHTML = '<div class="lv-empty">' + (q ? 'Nothing matches “' + escHTML(q) + '”.' : all.length ? 'Nothing here matches these filters.' : 'No titles in this range yet.') + '</div>';
+    return;
+  }
+  // numbered when sorted by score (Highest / Lowest)
+  var sort = SF.getSort('rt', 'all'), ranked = sort === 'highest' || sort === 'lowest';
+  grid.className = _rtView === 'list' ? 'lv-list' : 'lv-grid';
+  mssKeepScroll(grid, function(){
+    grid.innerHTML = shown.map(function(e, i){ var n = ranked ? i + 1 : null; return _rtView === 'list' ? _rtRow(e, n) : _rtCard(e, n); }).join('');
+  });
+}
+function _rtSetView(v) {
+  if (v === _rtView) return;
+  _rtView = v;
+  try { localStorage.setItem('rt_view', v); } catch {}
+  _rtRender();
+}
+
+// A title → Info · Ratings · Note. Yours can be edited (and a new score moves it to its range); someone else's is read-only.
+function _rtOpen(id) {
+  var e = _rtAll.find(function(x){ return x.id === id; });
+  if (!e) return;
+  if (_rtOwner) { MSSViews.open(e, { start: 'rate', profile: _rtProfile || {} }); return; }
+  MSSViews.open(e, { start: 'rate', own: true, from: 'ratings.html' + location.search,
+    onChange: _rtRender, onNoteSaved: _rtRender,
+    onDelete: function(x){ _rtAll = _rtAll.filter(function(y){ return y.id !== x.id; }); _rtRender(); } });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  initPage(async function(user, profile) {
+    if (_rtOwner && user && _rtOwner === user.id) _rtOwner = null;          // your own id → your page
+    var wrap = document.querySelector('.page-wrap');
+    if (!user && !_rtOwner) {
+      wrap.innerHTML = '<div class="guest-page-state fade-up"><div class="guest-page-icon">' + icon('ratingStar', 36) + '</div><h2 class="guest-page-title">Your ratings</h2><p class="guest-page-sub">Sign in to see your ratings.</p><div class="guest-cta"><a href="login.html" class="guest-btn-primary">Sign In</a><a href="login.html#signup" class="guest-btn-secondary">Create Account</a></div></div>';
+      return;
+    }
+    if (_rtOwner) {
+      var r = await Promise.all([getProfile(_rtOwner).catch(function(){ return null; }), getPublicEntries(_rtOwner).catch(function(){ return []; })]);
+      _rtProfile = r[0]; _rtAll = r[1] || [];
+      if (!_rtProfile) {
+        wrap.innerHTML = '<div class="guest-page-state fade-up"><div class="guest-page-icon">' + icon('user', 36) + '</div><h2 class="guest-page-title">User not found</h2><p class="guest-page-sub">This profile does not exist or has been removed.</p></div>';
+        return;
+      }
+    } else {
+      _rtProfile = profile;
+      _rtAll = await getEntries(user.id);
+    }
+    document.getElementById('rtSearch').innerHTML = SF.searchHTML('rt', _rtOwner ? 'Search their ratings…' : 'Search your ratings…');
+    document.getElementById('rtLoading').style.display = 'none';
+    document.getElementById('rtContent').style.display = '';
+    _rtRender();
+    mssScrollReturn(document.getElementById('rtGrid'));
+    var back = MSSViews.resume();                                          // back from a person's page opened in a title's popup
+    if (back) _rtOpen(back.id);
+  });
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

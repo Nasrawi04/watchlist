@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Notes — MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1E5C26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<style>
+
+/* ── Social note row ── */
+.snote-row-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.snote-rect-btn {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:11px 0; border-radius:var(--radius-sm); font-size:13.5px; font-weight:600;
+  background:var(--bg-3); border:0.5px solid var(--border-2); color:var(--text-3); cursor:pointer;
+  transition:all .15s;
+}
+.snote-rect-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.snote-rect-btn.active-like { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+.snote-rect-btn.active-dislike { background:rgba(192,104,90,0.12); border-color:rgba(192,104,90,0.4); color:#c0685a; }
+
+/* ── Header buttons ── */
+.notes-header-btns { display:flex; gap:8px; flex-wrap:wrap; }
+@media(max-width:520px){
+  .notes-header-btns { width:100%; }
+  .notes-header-btns .btn-add-entry { flex:1; font-size:clamp(11px,3vw,13px); padding:10px 12px; }
+}
+
+/* ── Search popup (opened via + Add Note / Edit Note) ── */
+.notes-search-overlay {
+  position:fixed; inset:0; z-index:1150; background:rgba(0,0,0,0.72);
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:flex-start; justify-content:center;
+  padding:16px; padding-top:max(16px, env(safe-area-inset-top)); box-sizing:border-box;
+  opacity:0; pointer-events:none; transition:opacity .2s; overflow-y:auto;
+}
+.notes-search-overlay.open { opacity:1; pointer-events:auto; }
+.notes-search-card {
+  width:100%; max-width:480px; max-height:calc(100dvh - 32px); display:flex; flex-direction:column;
+  background:var(--bg-2); border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg);
+  transform:translateY(16px); transition:transform .25s cubic-bezier(.4,0,.2,1);
+  overflow:hidden; margin-top:4vh;
+}
+.notes-search-overlay.open .notes-search-card { transform:translateY(0); }
+.notes-search-card-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 20px; border-bottom:0.5px solid var(--border); flex-shrink:0;
+}
+.notes-search-card-title { font-family:var(--serif); font-size:20px; font-weight:500; color:var(--text); }
+.notes-search-card-close { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:20px; line-height:1; }
+.notes-search-card-close:hover { color:var(--text); }
+.notes-search-input-wrap { position:relative; padding:16px 20px 12px; flex-shrink:0; }
+.notes-search-input {
+  width:100%; box-sizing:border-box; padding-block:11px; padding-inline:40px 14px;
+  border-radius:var(--radius-sm); border:1px solid var(--border);
+  background:var(--bg-3); color:var(--text); font-family:var(--sans);
+  font-size:16px; outline:none; transition:border-color .15s;
+}
+.notes-search-input:focus { border-color:var(--olive-light); }
+.notes-search-icon {
+  position:absolute; inset-inline-start:33px; top:50%; transform:translateY(-50%);
+  color:var(--text-3); pointer-events:none;
+}
+.notes-search-results {
+  overflow-y:auto; overscroll-behavior-y:contain; padding:4px 10px 16px;
+}
+.notes-search-item {
+  display:flex; align-items:center; gap:12px; padding:10px 10px;
+  border-radius:var(--radius-sm); cursor:pointer; transition:background-color .12s;
+}
+.notes-search-item:hover, .notes-search-item.active { background:var(--olive-faint); }
+.notes-search-item-poster {
+  width:36px; height:52px; border-radius:var(--radius-xs); flex-shrink:0;
+  background:var(--bg-3); overflow:hidden; display:flex; align-items:center;
+  justify-content:center; font-family:var(--serif); font-size:15px; color:var(--olive-light);
+}
+.notes-search-item-poster img { width:100%; height:100%; object-fit:cover; }
+.notes-search-item-info { flex:1; min-width:0; }
+.notes-search-item-title {
+  font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.notes-search-item-meta { font-size:11px; color:var(--text-3); margin-top:2px; }
+.notes-search-item-has-note {
+  font-size:9px; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--olive-light); background:var(--olive-faint);
+  border:0.5px solid var(--border-olive); border-radius:20px; padding:2px 7px;
+  flex-shrink:0;
+}
+.notes-search-empty { padding:24px 14px; text-align:center; font-size:13px; color:var(--text-3); }
+
+/* ── Sort bar ── */
+.notes-sort-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1.25rem; }
+.notes-user-search-wrap { margin-bottom:1.25rem; }
+.username-dropdown {
+  position:fixed;
+  background:var(--bg-3); border:0.5px solid var(--olive-light); border-top:none;
+  border-radius:0 0 var(--radius) var(--radius); z-index:290;
+  box-shadow:var(--shadow-lg);
+  overflow-y:auto; overflow-x:hidden; max-height:320px;
+  display:none;
+}
+.username-dropdown.open { display:block; }
+.ud-item {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 14px; cursor:pointer;
+  transition:background .15s;
+  border-bottom:0.5px solid var(--border);
+}
+.ud-item:last-child { border-bottom:none; }
+.ud-item:hover, .ud-item.ud-active { background:var(--olive-faint); }
+.ud-avatar {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:var(--bg-3); border:1px solid var(--border-2);
+  font-family:var(--serif); font-size:16px; color:var(--text-2);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.ud-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.ud-info { flex:1; min-width:0; }
+.ud-username { font-size:14px; font-weight:500; color:var(--text); }
+.ud-username em { color:var(--olive-light); font-style:normal; font-weight:600; }
+.ud-display { font-size:11px; color:var(--text-3); margin-top:2px; }
+.ud-loading, .ud-empty { padding:14px; font-size:13px; color:var(--text-3); text-align:center; }
+.ud-type-tag {
+  font-size:9.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--olive-light); background:var(--olive-faint); border:0.5px solid var(--border-olive);
+  border-radius:20px; padding:2px 8px; flex-shrink:0;
+}
+.notes-user-search-wrap .fused-search-wrap {
+  display:flex; align-items:stretch;
+  border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden;
+  background:var(--bg-3); transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
+}
+.notes-user-search-wrap .fused-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.notes-user-search-wrap .add-friend-input {
+  flex:1; min-width:0; background:transparent; border:none;
+  color:var(--text); font-size:16px;
+  padding:18px 20px; outline:none; box-sizing:border-box; transition:none;
+}
+.notes-user-search-wrap .add-friend-input::placeholder { color:var(--text-3); font-size:14px; }
+.notes-user-search-wrap .fused-search-btn {
+  flex-shrink:0; display:flex; align-items:center; gap:8px;
+  padding:0 26px; border:none; cursor:pointer;
+  background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff;
+  font-size:14px; font-weight:500; font-family:var(--sans);
+  transition:opacity .15s;
+}
+.notes-user-search-wrap .fused-search-btn:hover { opacity:.9; }
+.notes-user-search-wrap .fused-search-btn svg { width:16px; height:16px; flex-shrink:0; }
+#notesUserFilterBanner {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:var(--olive-faint); border:0.5px solid var(--border-olive); border-radius:var(--radius);
+  padding:10px 16px; margin-top:10px; font-size:13.5px; color:var(--olive-light); font-weight:500;
+}
+#notesUserFilterBanner button {
+  background:none; border:none; color:var(--olive-light); font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:underline;
+}
+
+@media(max-width:640px){
+  .notes-search-card-header { padding:14px 16px; }
+  .notes-search-card-title { font-size:18px; }
+  .notes-search-input-wrap { padding:14px 16px 10px; }
+  .notes-search-input { padding-block:11px; padding-inline:38px 14px; font-size:16px; }
+  .notes-search-icon { inset-inline-start:29px; }
+  .notes-search-item { padding:9px 8px; gap:10px; }
+  .notes-search-item-poster { width:32px; height:46px; font-size:13px; }
+  .notes-search-item-title { font-size:13px; }
+  .notes-search-item-meta { font-size:10px; }
+  .notes-search-item-has-note { font-size:8px; padding:2px 6px; }
+}
+@media(max-width:400px){
+  .notes-search-card-header { padding:12px 14px; }
+  .notes-search-card-title { font-size:16px; }
+  .notes-search-input-wrap { padding:12px 14px 8px; }
+  .notes-search-input { padding-block:10px; padding-inline:34px 12px; }
+  .notes-search-icon { inset-inline-start:25px; width:14px; height:14px; }
+  .notes-search-results { max-height:280px; }
+  .notes-search-item { padding:8px 10px; gap:8px; }
+  .notes-search-item-poster { width:28px; height:40px; font-size:12px; }
+  .notes-search-item-title { font-size:12px; }
+}
+
+@media(max-width:640px) { #notesPageStats { display:grid; grid-template-columns:repeat(2, 1fr); } }
+
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="cat-page-header fade-up">
+    <div class="cat-page-header-left">
+      <h1 class="cat-page-title" id="notesPageTitle">My Notes</h1>
+      <div class="cat-page-sub" id="notesPageSub"></div>
+    </div>
+    <div class="cat-page-header-right notes-header-btns">
+      <button class="btn-add-entry" onclick="openNotesSearchPopup('add')">+ Add Note</button>
+      <button class="btn-add-entry" onclick="openNotesSearchPopup('edit')">Edit Note</button>
+    </div>
+  </div>
+
+  <!-- Personal / Social toggle -->
+  <div class="pn-toggle fade-up" id="notesModeToggle">
+    <button class="pn-toggle-btn active" data-mode="personal" onclick="setNotesMode('personal')">Personal</button>
+    <button class="pn-toggle-btn" data-mode="social" onclick="setNotesMode('social')">Community</button>
+  </div>
+
+  <!-- Stat boxes -->
+  <div class="page-stats fade-up fade-up-1" id="notesPageStats"></div>
+
+  <!-- Social: user search -->
+  <div class="notes-user-search-wrap fade-up fade-up-1" id="notesUserSearchWrap" style="display:none;">
+    <div class="fused-search-wrap" id="notesUserSearchWrapInner">
+      <input id="notesUserSearchInput" class="add-friend-input" placeholder="Search people or titles…" aria-label="Search people or titles"
+             type="search" name="mss-notes-search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" data-1p-ignore data-lpignore="true" data-form-type="other"
+             oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'');_nuSearch(this.value);"
+             onkeydown="_nuKeydown(event)">
+      <button type="button" class="fused-search-btn" tabindex="-1" onclick="document.getElementById('notesUserSearchInput').focus()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>Search</span>
+      </button>
+    </div>
+    <div id="notesUserFilterBanner" style="display:none;"></div>
+  </div>
+  <div id="nuDropdown" class="username-dropdown"></div>
+
+  <!-- Toolbar: section label + Sort / Filter (both tabs) -->
+  <div class="mss-toolbar fade-up fade-up-1" id="notesToolbar" style="display:none;"></div>
+
+  <!-- Notes list -->
+  <div id="notesPageContent" class="fade-up fade-up-2">
+    <div class="page-loading" data-skel="notes-page"></div>
+  </div>
+
+</div>
+
+<!-- Search popup -->
+<div class="notes-search-overlay" id="notesSearchOverlay" onclick="if(event.target===this)closeNotesSearchPopup()">
+  <div class="notes-search-card">
+    <div class="notes-search-card-header">
+      <div class="notes-search-card-title" id="notesSearchCardTitle">Add Note</div>
+      <button class="notes-search-card-close" onclick="closeNotesSearchPopup()">&#x2715;</button>
+    </div>
+    <div class="notes-search-input-wrap">
+      <svg class="notes-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="notesSearchInput" class="notes-search-input" placeholder="Search your library…" autocomplete="off" oninput="_notesPageSearch(this.value)" onkeydown="_notesPageSearchKeydown(event)">
+    </div>
+    <div class="notes-search-results" id="notesSearchResults"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/sort-filter.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/rating-popup.js"></script>
+<script src="js/easter-egg.js"></script>
+<script src="js/note-popup.js"></script>
+<script>
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+let _notesUser = null;
+let _notesEntries = [];
+let _notesActiveId = null;
+let _notesMode = 'personal';
+let _socialNotesRaw = [];
+let _socialNotesMyReactions = {}; // entry_id -> 'like' | 'dislike'
+
+document.addEventListener('DOMContentLoaded', () => {
+  attachClearButton('notesUserSearchInput');
+  initPage(async (user) => {
+    if (!user) {
+      document.querySelector('.page-wrap').innerHTML = `
+        <div class="guest-page-state fade-up">
+          <div class="guest-page-icon">${icon('notebook', 36)}</div>
+          <h2 class="guest-page-title">Your Notes</h2>
+          <p class="guest-page-sub">Sign in to write personal notes on anything in your library.</p>
+          <div class="guest-cta">
+            <a href="login.html" class="guest-btn-primary">Sign In</a>
+            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
+          </div>
+        </div>`;
+      _notesOpenLink();
+      return;
+    }
+    _notesUser = user;
+    const q = new URLSearchParams(location.search);
+    if (q.get('mode') === 'community') setNotesMode('social');
+    await loadNotesPage();
+    _notesOpenLink();
+    if (q.get('add')) {                                 // (+) → Write a note, from another page
+      const url = new URL(location.href); url.searchParams.delete('add');
+      history.replaceState(history.state, '', url.pathname + url.search);
+      openNotesSearchPopup('add');
+    }
+  });
+});
+
+/* A shared note: notes.html?note=<entry id> (sent to you, a friend's) or with
+   &k=<token> — its private link (069), which opens it for anyone, guests too. */
+async function _notesOpenLink() {
+  const q = new URLSearchParams(location.search), id = q.get('note');
+  if (!id) return;
+  let e = null;
+  if (q.get('k')) e = (await sb.rpc('open_note_link', { p_entry: id, p_token: q.get('k') })).data || null;
+  if (!e) {
+    const { data } = await sb.from('entries').select('*').eq('id', id).maybeSingle();
+    e = data ? (await mssWithPrivateNotes([data]))[0] : null;
+  }
+  if (!e || !(e.notes || '').trim()) { showToast('This note is private, or it doesn’t exist anymore.', 'err'); return; }
+  const own = _notesUser && e.user_id === _notesUser.id;
+  const profile = own ? null : (await sb.from('profiles').select('id, username, display_name, avatar_url').eq('id', e.user_id).maybeSingle()).data || {};
+  MSSViews.open(e, own ? { start: 'note', own: true } : { start: 'note', profile });
+}
+
+let _notesReactionCounts = {}; // entry_id -> { like, dislike }
+
+/* Your notes show as soon as your entries arrive; like/dislike counts
+   fill in right after, and Community is fetched quietly in the background
+   so switching tabs is instant. */
+async function loadNotesPage() {
+  _notesEntries = await getEntries(_notesUser.id) || [];
+  if (_notesMode === 'personal') renderNotesPage();            // ← first paint
+  const withNotes = _notesEntries.filter(e => e.notes && e.notes.trim());
+  if (withNotes.length) {
+    const { data: reactions } = await sb.from('note_reactions').select('entry_id, is_like').in('entry_id', withNotes.map(e => e.id));
+    _notesReactionCounts = {};
+    (reactions || []).forEach(r => {
+      if (!_notesReactionCounts[r.entry_id]) _notesReactionCounts[r.entry_id] = { like: 0, dislike: 0 };
+      if (r.is_like) _notesReactionCounts[r.entry_id].like++;
+      else _notesReactionCounts[r.entry_id].dislike++;
+    });
+    if (_notesMode === 'personal') renderNotesPage();
+  }
+  const idle = fn => ('requestIdleCallback' in window) ? requestIdleCallback(fn, { timeout: 2500 }) : setTimeout(fn, 1200);
+  idle(() => _fetchSocialNotes().catch(() => {}));            // warm up Community
+}
+
+
+// Section label + count left, Sort / Filter right
+function _renderNotesToolbar(label, count, barHTML) {
+  const el = document.getElementById('notesToolbar');
+  if (!barHTML) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = mssToolbarHTML(label, count, barHTML, 'note');
+}
+
+const _NOTE_LEN_PRESET = { length: { header: 'Note Length', opts: [['note_long', 'Longest'], ['note_short', 'Shortest']] } };
+const _noteLenCompare = {
+  note_long:  (a, b) => MSSNote.words(b.notes) - MSSNote.words(a.notes),
+  note_short: (a, b) => MSSNote.words(a.notes) - MSSNote.words(b.notes),
+};
+
+/* Personal Sort & Filter (shared js/sort-filter.js) */
+SF.register('notesMine', {
+  watched: () => true,          // Year Watched filter (titles you've finished)
+  base: () => _notesEntries.filter(e => e.notes && e.notes.trim()),
+  render: () => renderNotesPage(),
+  defaultSort: 'newest',
+  addedDate: MSSNote.watchedDate,
+  presets: {
+    added: { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Earliest']] },
+    ..._NOTE_LEN_PRESET,
+    likes: { header: 'Likes', opts: [['likes_most', 'Most Liked'], ['likes_least', 'Least Liked']] },
+  },
+  sorts: () => ['added', 'alpha', 'length', 'ratings', 'likes'],
+  filters: () => ['genre', 'year', 'score', 'length'],
+  compare: {
+    ..._noteLenCompare,
+    likes_most:  (a, b) => ((_notesReactionCounts[b.id]?.like || 0) - (_notesReactionCounts[a.id]?.like || 0)),
+    likes_least: (a, b) => ((_notesReactionCounts[a.id]?.like || 0) - (_notesReactionCounts[b.id]?.like || 0)),
+  },
+  choiceFilters: () => [{
+    key: 'cat', label: 'Type',
+    options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']],
+  }, {
+    key: 'format', label: 'Format',
+    options: [['', 'All Formats'], ['show', 'Shows'], ['movie', 'Movies']],
+    when: ch => ch.cat === 'anime' || ch.cat === 'cartoons',
+    test: (e, v) => (v === 'movie') === SF.isMovie(e),
+  }],
+});
+
+/* Community Sort & Filter */
+const _snScore = n => Number(n.like_count || 0) - Number(n.dislike_count || 0);
+SF.register('notesSocial', {
+  watched: () => true,
+  base: () => _socialNotesRaw || [],
+  render: () => renderSocialNotes(),
+  defaultSort: 'popular',
+  presets: {
+    popularity: { header: 'Popularity', opts: [['popular', 'Most Liked'], ['least_popular', 'Least Liked']] },
+    added:      { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Earliest']] },
+    ..._NOTE_LEN_PRESET,
+  },
+  sorts: () => ['popularity', 'added', 'alpha', 'length', 'ratings'],
+  filters: () => ['score'],
+  scoreOf: n => n.final_score != null ? Number(n.final_score) : null,
+  addedDate: MSSNote.watchedDate,
+  compare: {
+    ..._noteLenCompare,
+    popular: (a, b) => (_snScore(b) - _snScore(a)) || (new Date(MSSNote.watchedDate(b)) - new Date(MSSNote.watchedDate(a))),
+    least_popular: (a, b) => (Number(b.dislike_count) - Number(a.dislike_count)) || (_snScore(a) - _snScore(b)),
+  },
+  choiceFilters: () => [{
+    key: 'owner', label: 'Whose Notes',
+    options: [['', 'Everyone'], ['others', 'Other People'], ['mine', 'Mine']],
+    test: (n, v) => v === 'mine' ? n.user_id === _notesUser?.id : n.user_id !== _notesUser?.id,
+  }],
+});
+
+
+/* ── Loading skeleton: the toolbar and note cards (yours, or Community's) with sample
+   text masked into placeholders — as many as last time (mssSkeleton, config.js) ── */
+mssSkeleton.define('notes-page', () => {
+  const social = _notesMode === 'social' || new URLSearchParams(location.search).get('mode') === 'community';
+  const n = Math.min(Math.max(mssSkeleton.shape(social ? 'notes_c' : 'notes')?.n ?? 3, 1), 6);
+  const note = { id: '', entry_id: '', title: 'Sample title', cat: 'tv', genres: ['Drama'], year: 2024, username: 'username', final_score: 8,
+    completed_date: '2026-01-01', status: 'completed', ratings: { story: 8 }, notes: 'A sample note, long enough to run across the card the way a real one does.' };
+  const card = social ? () => _socialNoteCardHTML(note) : () => MSSNote.cardHTML(note, { counts: { like: 0, dislike: 0 } });
+  return `<div class="mss-toolbar">${mssToolbarHTML(social ? 'Community' : 'Your Notes', n, SF.bar(social ? 'notesSocial' : 'notesMine', 'all'), 'note')
+      .replace(/class="(mss-toolbar-title|sort-bar[^"]*)"/g, 'class="$1" data-skel-keep')}</div>
+    <div class="nc-grid">${Array.from({ length: n }, card).join('')}</div>`.replace(/ onclick="[^"]*"/g, '');
+});
+// Header pieces that wait for your notes: the line under the title and the stat boxes
+if (new URLSearchParams(location.search).get('mode') !== 'community') {
+  document.getElementById('notesPageSub').textContent = 'Your personal thoughts, reactions, and memories from everything you watch.';
+  mssSkeleton.stats(document.getElementById('notesPageStats'), ['Notes', 'Words Written', 'Avg. Words / Note', 'Likes Received']);
+}
+
+function renderNotesPage() {
+  const withNotes = _notesEntries.filter(e => e.notes && e.notes.trim());
+
+  // Stats: how much you've written, how long your notes run, and how
+  // they've landed with others (likes on your notes from the community)
+  const totalWords = withNotes.reduce((t, e) => t + MSSNote.words(e.notes), 0);
+  const avgWords = withNotes.length ? Math.round(totalWords / withNotes.length) : 0;
+  const likesReceived = withNotes.reduce((t, e) => t + (_notesReactionCounts[e.id]?.like || 0), 0);
+  document.getElementById('notesPageStats').innerHTML = `
+    <div class="page-stat"><div class="page-stat-num">${withNotes.length}</div><div class="page-stat-label">Notes</div></div>
+    <div class="page-stat"><div class="page-stat-num">${totalWords.toLocaleString()}</div><div class="page-stat-label">Words Written</div></div>
+    <div class="page-stat"><div class="page-stat-num">${avgWords}</div><div class="page-stat-label">Avg. Words / Note</div></div>
+    <div class="page-stat"><div class="page-stat-num">${likesReceived}</div><div class="page-stat-label">Likes Received</div></div>`;
+
+  document.getElementById('notesPageSub').textContent = 'Your personal thoughts, reactions, and memories from everything you watch.';
+
+  _renderNotesToolbar('Your Notes', withNotes.length ? SF.list('notesMine', 'all').length : 0, withNotes.length ? SF.bar('notesMine', 'all') : '');
+
+  if (!withNotes.length) {
+    document.getElementById('notesPageContent').innerHTML = `
+      <div class="empty" style="padding:4rem 1rem;text-align:center;">
+        <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('notebook', 44)}</div>
+        <div class="empty-text" style="color:var(--text-2);margin-bottom:.5rem;">No notes yet</div>
+        <div style="font-size:13px;color:var(--text-3);">Tap "+ Add Note" to write your first one.</div>
+      </div>`;
+    return;
+  }
+
+  const sorted = SF.list('notesMine', 'all');
+  mssSkeleton.shape('notes', { n: withNotes.length });
+  if (!sorted.length) { document.getElementById('notesPageContent').innerHTML = `<div class="mss-empty">No notes match these filters.</div>`; return; }
+  document.getElementById('notesPageContent').innerHTML = `<div class="nc-grid">${sorted.map(e =>
+    MSSNote.cardHTML(e, { counts: _notesReactionCounts[e.id], onclick: `_notesOpen(${attrJSON(e.id)})` })).join('')}</div>`;
+}
+
+// Info · Ratings · Note popup, opening on your note (MSSViews, info-popup.js)
+function _notesOpen(id) {
+  const e = _notesEntries.find(en => en.id === id);
+  if (!e) return;
+  MSSViews.open(e, {
+    start: 'note', own: true, writeNote: true, from: 'notes.html', counts: _notesReactionCounts[id],
+    onNoteSaved: renderNotesPage, onChange: renderNotesPage,
+    onDelete: x => { _notesEntries = _notesEntries.filter(y => y.id !== x.id); renderNotesPage(); },
+  });
+}
+
+function setNotesSort(order) { SF.setSort('notesMine', 'all', { latest: 'newest', earliest: 'oldest', az: 'alpha', za: 'zalpha', longest: 'note_long' }[order] || order); }
+
+// Personal ↔ Community from the phone toggles: switch in place
+window.mssTabGo = url => { setNotesMode(url.searchParams.get('mode') === 'community' ? 'social' : 'personal'); return true; };
+function setNotesMode(mode) {
+  _notesMode = mode;
+  const url = new URL(location.href);                 // ?mode=community — the phone toggles link to it
+  if (mode === 'social') url.searchParams.set('mode', 'community'); else url.searchParams.delete('mode');
+  history.replaceState(history.state, '', url.pathname + url.search);
+  window.mssTabsRefresh?.();
+  document.querySelectorAll('#notesModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('notesPageTitle').textContent = mode === 'personal' ? 'My Notes' : 'Community Notes';
+  document.getElementById('notesUserSearchWrap').style.display = mode === 'social' ? '' : 'none';
+  // "+ Add Note" / "Edit Note" stay available in both modes — you can add
+  // a personal note even while browsing the community feed.
+  if (mode === 'social') {
+    _nuFilterUser = null;
+    document.getElementById('notesUserFilterBanner').style.display = 'none';
+    loadSocialNotes();
+  } else {
+    renderNotesPage();
+  }
+}
+
+function setSocialNotesSort(val) { SF.setSort('notesSocial', 'all', val === 'latest' ? 'newest' : val); }
+
+// Fetches Community notes once (also used to prefetch in the background)
+let _socialNotesPromise = null, _socialNotesCache = null;
+function _fetchSocialNotes(force) {
+  if (_socialNotesPromise && !force) return _socialNotesPromise;
+  _socialNotesPromise = (async () => {
+    const { data, error } = await sb.rpc('get_social_notes', { p_limit: 100 });
+    if (error) throw error;
+    const notes = data || [];
+    if (_notesUser && notes.length) {
+      const { data: myReactions } = await sb.from('note_reactions')
+        .select('entry_id, is_like').eq('user_id', _notesUser.id).in('entry_id', notes.map(n => n.entry_id));
+      _socialNotesMyReactions = {};
+      (myReactions || []).forEach(r => { _socialNotesMyReactions[r.entry_id] = r.is_like ? 'like' : 'dislike'; });
+    }
+    _socialNotesCache = notes;
+    return notes;
+  })().catch(err => { _socialNotesPromise = null; throw err; });
+  return _socialNotesPromise;
+}
+
+async function loadSocialNotes() {
+  const wrap = document.getElementById('notesPageContent');
+  document.getElementById('notesPageSub').textContent = 'Discover what the MyScreenFolio community has to say about the titles they’ve watched.';
+  if (!_socialNotesCache) {                                  // not prefetched yet
+    wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;
+    document.getElementById('notesPageStats').innerHTML = '';
+  }
+  try {
+    _socialNotesRaw = await _fetchSocialNotes();
+    if (_notesMode === 'social') renderSocialNotes();
+  } catch (err) {
+    console.error('Load social notes error:', err);
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load social notes right now.</div>`;
+  }
+}
+
+/* ── Find notes by username — same live dropdown pattern used on friends.html ── */
+let _nuTimer = null;
+let _nuActive = -1;
+let _nuResults = [];
+let _nuFilterUser = null; // { id, username, avatar_url }
+
+function _nuPosition() {
+  const wrap = document.getElementById('notesUserSearchWrapInner');
+  const drop = document.getElementById('nuDropdown');
+  if (!wrap || !drop) return;
+  const r = wrap.getBoundingClientRect();
+  drop.style.top = r.bottom + 'px';
+  drop.style.left = r.left + 'px';
+  drop.style.width = r.width + 'px';
+  drop.style.position = 'fixed';
+}
+
+async function _nuSearch(val) {
+  const q = val.trim().toLowerCase();
+  const drop = document.getElementById('nuDropdown');
+  clearTimeout(_nuTimer);
+  _nuActive = -1;
+  if (q.length < 2) {
+    drop.classList.remove('open');
+    document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
+    mssUnlockScroll('nuDropdown');
+    return;
+  }
+  _nuPosition();
+  drop.innerHTML = '<div class="ud-loading">Searching…</div>';
+  drop.classList.add('open');
+  document.getElementById('notesUserSearchWrapInner')?.classList.add('dd-connected-active');
+  mssLockScroll('nuDropdown');
+  _nuTimer = setTimeout(async () => {
+    try {
+      const [{ data: users }, { data: entries }] = await Promise.all([
+        sb.from('profiles').select('id, username, display_name, avatar_url')
+          .ilike('username', q + '%').neq('id', _notesUser?.id || '').limit(6),
+        sb.from('entries').select('title, poster_url')
+          .ilike('title', '%' + q + '%').not('notes', 'is', null).limit(20),
+      ]);
+
+      // De-dupe titles (many users can have a note on the same title)
+      const seenTitles = new Set();
+      const titleMatches = [];
+      for (const e of (entries || [])) {
+        const key = (e.title || '').toLowerCase();
+        if (!key || seenTitles.has(key)) continue;
+        seenTitles.add(key);
+        titleMatches.push(e);
+        if (titleMatches.length >= 6) break;
+      }
+
+      _nuResults = [
+        ...(users || []).map(u => ({ type: 'user', ...u })),
+        ...titleMatches.map(e => ({ type: 'title', ...e })),
+      ];
+
+      if (!_nuResults.length) {
+        drop.innerHTML = '<div class="ud-empty">No matches found</div>';
+        return;
+      }
+
+      const reg = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      drop.innerHTML = _nuResults.map((r, i) => {
+        if (r.type === 'user') {
+          const initial = (r.username[0] || '?').toUpperCase();
+          const avatarHTML = safeURL(r.avatar_url)
+            ? '<div class="ud-avatar"><img src="'+safeURL(r.avatar_url)+'" loading="lazy"></div>'
+            : '<div class="ud-avatar">' + initial + '</div>';
+          const highlighted = r.username.replace(reg, '<em>$1</em>');
+          const display = r.display_name && r.display_name !== r.username ? r.display_name : '';
+          return '<div class="ud-item" data-i="' + i + '" onmousedown="_nuSelectResult(' + i + ')">'
+            + avatarHTML
+            + '<div class="ud-info"><div class="ud-username">@' + highlighted + '</div>'
+            + (display ? '<div class="ud-display">' + display + '</div>' : '') + '</div>'
+            + '<span class="ud-type-tag">User</span></div>';
+        }
+        // title
+        const avatarHTML = safeURL(r.poster_url)
+          ? '<div class="ud-avatar"><img src="'+safeURL(r.poster_url)+'" loading="lazy"></div>'
+          : '<div class="ud-avatar">' + ((r.title || '?')[0] || '?').toUpperCase() + '</div>';
+        const highlighted = esc(r.title).replace(reg, '<em>$1</em>');
+        return '<div class="ud-item" data-i="' + i + '" onmousedown="_nuSelectResult(' + i + ')">'
+          + avatarHTML
+          + '<div class="ud-info"><div class="ud-username">' + highlighted + '</div>'
+          + '<div class="ud-display">Community notes</div></div>'
+          + '<span class="ud-type-tag">Title</span></div>';
+      }).join('');
+    } catch (e) {
+      console.error('Search error:', e);
+      drop.innerHTML = '<div class="ud-empty">Error searching</div>';
+    }
+  }, 250);
+}
+
+function _nuKeydown(e) {
+  const drop = document.getElementById('nuDropdown');
+  const items = drop.querySelectorAll('.ud-item');
+  if (!drop.classList.contains('open') || !items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _nuActive = Math.min(_nuActive + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('ud-active', i === _nuActive));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _nuActive = Math.max(_nuActive - 1, -1);
+    items.forEach((el, i) => el.classList.toggle('ud-active', i === _nuActive));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_nuActive >= 0) _nuSelectResult(_nuActive);
+  } else if (e.key === 'Escape') {
+    drop.classList.remove('open'); _nuActive = -1;
+    document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
+    mssUnlockScroll('nuDropdown');
+  }
+}
+
+document.addEventListener('click', e => {
+  const dd = document.getElementById('nuDropdown');
+  if (dd && dd.classList.contains('open') && !e.target.closest('#notesUserSearchWrap') && !e.target.closest('#nuDropdown')) {
+    dd.classList.remove('open');
+    document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
+    mssUnlockScroll('nuDropdown');
+    _nuActive = -1;
+  }
+});
+
+function _nuSelectResult(i) {
+  const r = _nuResults[i];
+  if (!r) return;
+  document.getElementById('notesUserSearchInput').value = r.type === 'title' ? r.title : r.username;
+  document.getElementById('nuDropdown').classList.remove('open');
+  document.getElementById('notesUserSearchWrapInner')?.classList.remove('dd-connected-active');
+  mssUnlockScroll('nuDropdown');
+  _nuResults = []; _nuActive = -1;
+
+  if (r.type === 'user') {
+    _nuFilterUser = { id: r.id, username: r.username, avatar_url: r.avatar_url };
+    _nuLoadUserNotes();
+  } else {
+    _nuLoadTitleNotes(r.title);
+  }
+}
+
+function _nuClearFilter() {
+  _nuFilterUser = null;
+  document.getElementById('notesUserSearchInput').value = '';
+  document.getElementById('notesUserFilterBanner').style.display = 'none';
+  loadSocialNotes();
+}
+
+async function _nuLoadTitleNotes(title) {
+  const wrap = document.getElementById('notesPageContent');
+  wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;
+
+  const banner = document.getElementById('notesUserFilterBanner');
+  banner.style.display = 'flex';
+  banner.innerHTML = `<span>Showing notes for "${esc(title)}"</span><button onclick="_nuClearFilter()">Clear</button>`;
+
+  try {
+    const { data: entries, error } = await sb.from('entries')
+      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, note_visibility, final_score, created_at, completed_date, user_id, ratings')
+      .ilike('title', title)
+      .or('notes.not.is.null,note_visibility.neq.anyone')       // Friends / Private notes (069) live elsewhere
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const withNotes = (await mssWithPrivateNotes(entries || [])).filter(e => e.notes && e.notes.trim());
+    const userIds = [...new Set(withNotes.map(e => e.user_id))];
+    const { data: profiles } = userIds.length
+      ? await sb.from('profiles').select('id, username, avatar_url').in('id', userIds)
+      : { data: [] };
+    const profileMap = {};
+    (profiles || []).forEach(p => { profileMap[p.id] = p; });
+
+    _socialNotesRaw = withNotes.map(e => {
+      const p = profileMap[e.user_id] || {};
+      return {
+        entry_id: e.id, user_id: e.user_id, username: p.username || 'user', avatar_url: p.avatar_url || null,
+        title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
+        notes: e.notes, final_score: e.final_score, created_at: e.created_at, completed_date: e.completed_date, spoiler: mssIsSpoiler(e),
+        like_count: 0, dislike_count: 0,
+      };
+    });
+
+    if (_socialNotesRaw.length) {
+      const entryIds = _socialNotesRaw.map(n => n.entry_id);
+      const { data: allReactions } = await sb.from('note_reactions').select('entry_id, is_like').in('entry_id', entryIds);
+      const counts = {};
+      (allReactions || []).forEach(r => {
+        if (!counts[r.entry_id]) counts[r.entry_id] = { like: 0, dislike: 0 };
+        r.is_like ? counts[r.entry_id].like++ : counts[r.entry_id].dislike++;
+      });
+      _socialNotesRaw.forEach(n => {
+        n.like_count = counts[n.entry_id]?.like || 0;
+        n.dislike_count = counts[n.entry_id]?.dislike || 0;
+      });
+
+      if (_notesUser) {
+        const { data: myReactions } = await sb.from('note_reactions')
+          .select('entry_id, is_like').eq('user_id', _notesUser.id).in('entry_id', entryIds);
+        _socialNotesMyReactions = {};
+        (myReactions || []).forEach(r => { _socialNotesMyReactions[r.entry_id] = r.is_like ? 'like' : 'dislike'; });
+      }
+    }
+
+    document.getElementById('notesPageSub').textContent = `${_socialNotesRaw.length} note${_socialNotesRaw.length !== 1 ? 's' : ''} for "${title}"`;
+    renderSocialNotes();
+  } catch (err) {
+    console.error('Load title notes error:', err);
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load notes for this title.</div>`;
+  }
+}
+
+async function _nuLoadUserNotes() {
+  const wrap = document.getElementById('notesPageContent');
+  wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;
+
+  const banner = document.getElementById('notesUserFilterBanner');
+  banner.style.display = 'flex';
+  banner.innerHTML = `<span>Showing notes by @${esc(_nuFilterUser.username)}</span><button onclick="_nuClearFilter()">Clear</button>`;
+
+  try {
+    const { data: entries, error } = await sb.from('entries')
+      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, note_visibility, final_score, created_at, completed_date, user_id, ratings')
+      .eq('user_id', _nuFilterUser.id)
+      .or('notes.not.is.null,note_visibility.neq.anyone')       // Friends / Private notes (069) live elsewhere
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const withNotes = (await mssWithPrivateNotes(entries || [])).filter(e => e.notes && e.notes.trim());
+    _socialNotesRaw = withNotes.map(e => ({
+      entry_id: e.id, user_id: e.user_id, username: _nuFilterUser.username, avatar_url: _nuFilterUser.avatar_url,
+      title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
+      notes: e.notes, final_score: e.final_score, created_at: e.created_at, completed_date: e.completed_date, spoiler: mssIsSpoiler(e),
+      like_count: 0, dislike_count: 0,
+    }));
+
+    if (_socialNotesRaw.length) {
+      const entryIds = _socialNotesRaw.map(n => n.entry_id);
+      const { data: allReactions } = await sb.from('note_reactions').select('entry_id, is_like').in('entry_id', entryIds);
+      const counts = {};
+      (allReactions || []).forEach(r => {
+        if (!counts[r.entry_id]) counts[r.entry_id] = { like: 0, dislike: 0 };
+        r.is_like ? counts[r.entry_id].like++ : counts[r.entry_id].dislike++;
+      });
+      _socialNotesRaw.forEach(n => {
+        n.like_count = counts[n.entry_id]?.like || 0;
+        n.dislike_count = counts[n.entry_id]?.dislike || 0;
+      });
+
+      if (_notesUser) {
+        const { data: myReactions } = await sb.from('note_reactions')
+          .select('entry_id, is_like').eq('user_id', _notesUser.id).in('entry_id', entryIds);
+        _socialNotesMyReactions = {};
+        (myReactions || []).forEach(r => { _socialNotesMyReactions[r.entry_id] = r.is_like ? 'like' : 'dislike'; });
+      }
+    }
+
+    document.getElementById('notesPageSub').textContent = `${_socialNotesRaw.length} note${_socialNotesRaw.length !== 1 ? 's' : ''} from @${_nuFilterUser.username}`;
+    renderSocialNotes();
+  } catch (err) {
+    console.error('Load user notes error:', err);
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load this user's notes.</div>`;
+  }
+}
+
+
+function renderSocialNotes() {
+  const wrap = document.getElementById('notesPageContent');
+  const all = _socialNotesRaw || [];
+  const searching = document.getElementById('notesUserFilterBanner').style.display === 'flex';
+  if (!searching) {
+    const writers = new Set(all.map(n => n.user_id)).size;
+    const titles = new Set(all.map(n => n.tmdb_id ? `${n.tmdb_type}:${n.tmdb_id}` : (n.title || '').trim().toLowerCase())).size;
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const thisWeek = all.filter(n => new Date(n.created_at).getTime() >= weekAgo).length;
+    document.getElementById('notesPageStats').innerHTML = all.length ? `
+      <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Notes</div></div>
+      <div class="page-stat"><div class="page-stat-num">${writers}</div><div class="page-stat-label">Writers</div></div>
+      <div class="page-stat"><div class="page-stat-num">${titles}</div><div class="page-stat-label">Titles Discussed</div></div>
+      <div class="page-stat"><div class="page-stat-num">${thisWeek}</div><div class="page-stat-label">New This Week</div></div>` : '';
+  }
+  const list = SF.list('notesSocial', 'all');
+  if (!searching) mssSkeleton.shape('notes_c', { n: list.length });
+  _renderNotesToolbar(searching ? 'Search Results' : 'Community', list.length, all.length ? SF.bar('notesSocial', 'all') : '');
+  if (!all.length) {
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
+      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('notebook', 44)}</div>
+      <div class="empty-text" style="color:var(--text-2);">${searching ? 'No notes found.' : 'No public notes yet.'}</div>
+    </div>`;
+    return;
+  }
+  if (!list.length) { wrap.innerHTML = `<div class="mss-empty">No notes match these filters.</div>`; return; }
+
+  wrap.innerHTML = `<div class="nc-grid">${list.map(_socialNoteCardHTML).join('')}</div>`;
+}
+// One Community note card (also drawn, with sample text, as the loading skeleton)
+function _socialNoteCardHTML(n) {
+  const myReaction = _socialNotesMyReactions[n.entry_id];
+  const id = attrJSON(n.entry_id);
+  const initial = (n.username || '?')[0].toUpperCase();
+  const words = MSSNote.words(n.notes);
+  return `<article class="nc-card" onclick="_notesOpenSocial(${id})" data-dbl-like>
+    ${MSSNote.poster(n.poster_url, n.title, 'nc-poster')}
+    <div class="nc-main">
+      <div class="nc-top">
+        <div class="nc-author">
+          <div class="snote-avatar">${safeURL(n.avatar_url) ? `<img src="${safeURL(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
+          <span>@${esc(n.username || 'user')}</span>
+        </div>
+      </div>
+      <div class="nc-top"><div class="nc-title" translate="no">${esc(n.title)}</div>${MSSNote.scorePill(n.final_score)}</div>
+      <div class="nc-tags">${MSSNote.badges(n, { date: MSSNote.date(MSSNote.watchedDate(n), true) })}</div>
+      ${mssIsSpoiler(n) && n.user_id !== _notesUser?.id
+        ? mssSpoilerHTML(`<blockquote class="nc-quote" translate="no">&ldquo;${esc(MSSNote.trim(MSSRich.plain(n.notes)))}&rdquo;</blockquote>`, { compact: true, id: n.entry_id, e: n })
+        : `<blockquote class="nc-quote" translate="no">&ldquo;${esc(MSSNote.trim(MSSRich.plain(n.notes)))}&rdquo;</blockquote>`}
+      <div class="nc-foot">
+        <div class="nc-reacts">
+          <button type="button" class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="event.stopPropagation();reactToSocialNote(${id}, true)">
+            ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
+          </button>
+          <button type="button" class="snote-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="event.stopPropagation();reactToSocialNote(${id}, false)">
+            ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
+          </button>
+        </div>
+        <span class="nc-words"><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>
+      </div>
+    </div>
+  </article>`;
+}
+
+
+/* ── Social note expand popup ── */
+
+
+// Someone's note (with its reactions + replies) in the Info · Ratings · Note popup, opening on the note
+function _notesOpenSocial(entryId) {
+  const n = _socialNotesRaw.find(x => x.entry_id === entryId);
+  if (!n) return;
+  MSSViews.open({ ...n, id: n.entry_id }, {
+    start: 'note', own: !!_notesUser && n.user_id === _notesUser.id, from: 'notes.html',
+    profile: { id: n.user_id, username: n.username, avatar_url: n.avatar_url },
+    onReact: st => _notesSetReact(n, st),
+  });
+}
+
+// Like / dislike someone's note: from the card (double-tap) or the note popup
+function _notesSetReact(n, st) {
+  n.like_count = st.like; n.dislike_count = st.dislike;
+  if (st.mine) _socialNotesMyReactions[n.entry_id] = st.mine; else delete _socialNotesMyReactions[n.entry_id];
+  renderSocialNotes();
+}
+function reactToSocialNote(entryId, isLike) {
+  const n = _socialNotesRaw.find(x => x.entry_id === entryId);
+  if (!n) return Promise.resolve();
+  return mssReactFeed('note', entryId, isLike,
+    () => ({ like: n.like_count, dislike: n.dislike_count, mine: _socialNotesMyReactions[entryId] || null }),
+    st => _notesSetReact(n, st));
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ── Search popup (opened via + Add Note / Edit Note) ── */
+let _notesSearchMode = 'add';
+
+
+function openNotesSearchPopup(mode) {
+  _notesSearchMode = mode;
+  document.getElementById('notesSearchCardTitle').textContent = mode === 'edit' ? 'Edit Note' : 'Add Note';
+  const input = document.getElementById('notesSearchInput');
+  input.value = '';
+  input.placeholder = mode === 'edit' ? 'Search notes you\'ve already written…' : 'Search your library…';
+  document.getElementById('notesSearchResults').innerHTML = '';
+  _notesActiveId = -1;
+  _notesSearchResultsList = [];
+
+  if (mode === 'edit' && !_notesEntries.some(e => (e.status === 'watching' || e.status === 'ongoing' || e.status === 'completed') && e.notes && e.notes.trim())) {
+    document.getElementById('notesSearchResults').innerHTML = `<div class="notes-search-empty">You haven't written any notes yet — use "+ Add Note" to write your first one.</div>`;
+  }
+
+  document.getElementById('notesSearchOverlay').classList.add('open');
+  mssLockScroll('notesSearchOverlay');
+
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) setTimeout(() => input.focus(), 150);
+}
+
+function closeNotesSearchPopup() {
+  const ov = document.getElementById('notesSearchOverlay');
+  if (!ov.classList.contains('open')) return;
+  ov.classList.remove('open');
+  mssUnlockScroll('notesSearchOverlay');
+}
+
+/* ── Search (client-side, filters the already-loaded library) ── */
+let _notesSearchResultsList = [];
+
+function _notesPageSearch(query) {
+  const resultsEl = document.getElementById('notesSearchResults');
+  const q = query.trim().toLowerCase();
+  _notesActiveId = -1;
+
+  // Notes only make sense for things you've actually watched some of —
+  // exclude Watchlist (not started) and Taking a Break (paused mid-way).
+  // Applies to both Add and Edit modes.
+  let pool = _notesEntries.filter(e => e.status === 'watching' || e.status === 'ongoing' || e.status === 'completed');
+  if (_notesSearchMode === 'edit') pool = pool.filter(e => e.notes && e.notes.trim());
+
+  if (!q) {
+    // No query yet — for Edit mode, show existing notes to browse; for Add
+    // mode, wait for a search term rather than dumping the whole library.
+    if (_notesSearchMode === 'edit' && pool.length) {
+      _notesSearchResultsList = pool.slice(0, 20);
+      _renderNotesSearchResults();
+    } else {
+      resultsEl.innerHTML = '';
+      _notesSearchResultsList = [];
+    }
+    return;
+  }
+
+  _notesSearchResultsList = pool.filter(e => e.title && e.title.toLowerCase().includes(q)).slice(0, 20);
+
+  if (!_notesSearchResultsList.length) {
+    resultsEl.innerHTML = `<div class="notes-search-empty">No matches${_notesSearchMode === 'edit' ? ' among your notes' : ' in your library'}.</div>`;
+    return;
+  }
+  _renderNotesSearchResults();
+}
+
+function _renderNotesSearchResults() {
+  const resultsEl = document.getElementById('notesSearchResults');
+  resultsEl.innerHTML = _notesSearchResultsList.map((e, i) => {
+    const hasNote = e.notes && e.notes.trim();
+    const posterEl = safeURL(e.poster_url)
+      ? `<img src="${safeURL(e.poster_url)}" loading="lazy">`
+      : esc((e.title||'?')[0].toUpperCase());
+    return `<div class="notes-search-item" data-i="${i}" onclick="_notesPageSearchPick(${i})">
+      <div class="notes-search-item-poster">${posterEl}</div>
+      <div class="notes-search-item-info">
+        <div class="notes-search-item-title" translate="no">${esc(e.title)}</div>
+        <div class="notes-search-item-meta">${CAT_META[e.cat]?.label || ''}${e.year ? ' · ' + e.year : ''}</div>
+      </div>
+      ${hasNote ? `<span class="notes-search-item-has-note">Has Note</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function _notesPageSearchKeydown(e) {
+  if (!_notesSearchResultsList.length) return;
+  const items = document.querySelectorAll('#notesSearchResults .notes-search-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _notesActiveId = Math.min(_notesActiveId + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('active', i === _notesActiveId));
+    items[_notesActiveId]?.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _notesActiveId = Math.max(_notesActiveId - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('active', i === _notesActiveId));
+    items[_notesActiveId]?.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_notesActiveId >= 0) _notesPageSearchPick(_notesActiveId);
+    else if (_notesSearchResultsList.length === 1) _notesPageSearchPick(0);
+  } else if (e.key === 'Escape') {
+    closeNotesSearchPopup();
+  }
+}
+
+function _notesPageSearchPick(i) {
+  const e = _notesSearchResultsList[i];
+  if (!e) return;
+  closeNotesSearchPopup();
+  _notesOpen(e.id);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('notesSearchOverlay')?.classList.contains('open')) closeNotesSearchPopup();
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,2704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* ── TMDB-locked fields — title, year, completion year, description,
+   genres, runtime, and season breakdown are all sourced directly from
+   TMDB once an entry is properly linked, so they're locked from manual
+   editing by default (the app's own TMDB auto-refresh can still update
+   them). Each section has its own small lock icon the person can click
+   to unlock that data and edit it manually if they need to — mainly
+   meant for fixing older entries that ended up with nulls from earlier
+   bugs, without permanently disabling the protection for everyone. ── */
+.tmdb-lock-btn {
+  display:none; align-items:center; gap:4px; flex-shrink:0;
+  background:none; border:none; cursor:pointer; padding:2px 4px;
+  font-size:12px; color:var(--text-3); transition:color .15s;
+}
+.tmdb-lock-btn svg { width:13px; height:13px; }
+#updateDetailsOverlay {
+  position:fixed; inset:0; z-index:1300;
+  background:rgba(0,0,0,0.6); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+#updateDetailsOverlay.open { opacity:1; pointer-events:auto; }
+
+#posterPickerOverlay {
+  position:fixed; inset:0; z-index:1300;
+  background:rgba(0,0,0,0.6); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+#posterPickerOverlay.open { opacity:1; pointer-events:auto; }
+#posterPickerCard {
+  width:100%; max-width:760px; height:82vh; max-height:82vh;
+  background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#posterPickerGrid {
+  display:flex !important; flex-direction:column; gap:20px;
+  padding:24px; overflow-y:auto; flex:1 1 auto; min-height:0;
+}
+.poster-picker-group-grid {
+  display:grid !important; grid-template-columns:repeat(3, 1fr) !important; gap:24px !important;
+}
+.poster-picker-opt {
+  position:relative; width:100%; aspect-ratio:2/3 !important; border-radius:var(--radius-sm);
+  overflow:hidden !important; cursor:pointer; border:2px solid transparent;
+  transition:border-color .15s, transform .15s;
+  box-shadow:0 2px 10px rgba(0,0,0,0.25);
+}
+.poster-picker-opt:hover { border-color:var(--border-olive); transform:translateY(-2px); }
+.poster-picker-opt.selected { border-color:var(--olive-light); }
+.poster-picker-opt img {
+  position:absolute !important; inset:0 !important;
+  width:100% !important; height:100% !important; object-fit:cover !important; display:block;
+}
+.poster-picker-group-label {
+  display:flex; align-items:baseline; gap:8px;
+  font-size:13px; font-weight:600; color:var(--text-2);
+  padding-bottom:8px; border-bottom:0.5px solid var(--border);
+  margin-bottom:16px;
+}
+.poster-picker-group-count { font-size:11px; font-weight:400; color:var(--text-3); }
+@media(max-width:640px) {
+  #posterPickerCard { height:78vh; max-height:78vh; }
+  #posterPickerGrid { gap:14px !important; padding:14px; }
+  .poster-picker-group-grid { grid-template-columns:repeat(2, 1fr) !important; gap:14px !important; }
+}
+.tmdb-lock-btn:hover { color:var(--olive-light); }
+.tmdb-lock-btn.linked { display:inline-flex; }
+.field-locked {
+  opacity:0.7 !important; cursor:not-allowed !important;
+}
+.genre-picker.locked .genre-opt { pointer-events:none; opacity:0.7; }
+#dSeasonList.locked input { pointer-events:none; }
+#dSeasonList.locked button { display:none !important; }
+/* Font system: Oswald = titles & section headings, Bebas Neue = numbers,
+   Manrope = everything else. Number fields show their digits in Bebas. */
+.page-wrap input[type="number"], #dSeason, #dEpisode, #dRuntimeH, #dRuntimeM, #dTotalSeasons, #dTotalEps {
+  font-family:var(--bebas); font-size:18px; letter-spacing:.4px;
+}
+.page-wrap input[type="number"]::placeholder { font-family:var(--sans); font-size:14px; letter-spacing:0; }
+.ratings-section-label { font-family:var(--serif); font-weight:500; font-size:11px; }
+</style>
+<style>
+/* ── Final Score ── */
+.final-score-section{
+  background:var(--olive-faint);
+  border:0.5px solid var(--border-olive);border-radius:var(--radius);
+  padding:1.5rem;display:flex;align-items:center;gap:1.5rem;margin-top:1.5rem;
+}
+.final-score-left{text-align:center;flex-shrink:0;min-width:90px}
+.final-score-num{
+  font-family:var(--serif);font-size:72px;font-weight:500;
+  color:var(--olive-light);line-height:1;letter-spacing:-2px;
+}
+.final-score-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-3);margin-top:4px}
+.final-score-right{flex:1}
+.score-breakdown{display:flex;flex-direction:column;gap:6px}
+.score-breakdown-row{display:flex;align-items:center;gap:8px;font-size:11px}
+.score-breakdown-row label{color:var(--text-3);width:80px;flex-shrink:0}
+.score-mini-bar{flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.score-mini-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .5s ease}
+.score-mini-val{color:var(--olive-light);font-family:var(--bebas);font-weight:400;font-size:16px;letter-spacing:.3px;min-width:28px;text-align:end}
+
+/* ── Rating dropdown ── */
+.ratings-section-label{
+  font-size:10px;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--olive-light);margin-bottom:1rem;margin-top:1.5rem;
+  display:flex;align-items:center;gap:10px;
+}
+.ratings-section-label::after{content:'';flex:1;height:0.5px;background:var(--border)}
+
+.rdrop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rdrop-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--bg-3);border-radius:var(--radius-sm);border:0.5px solid var(--border)}
+.rdrop-label{font-size:12px;color:var(--text-2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rdrop-label .icon{margin-inline-end:5px;font-size:13px}
+.rdrop-wrap{position:relative;flex-shrink:0}
+.rdrop-btn{
+  background:var(--bg);border:0.5px solid var(--border-2);border-radius:6px;
+  padding:5px 10px;min-width:52px;text-align:center;cursor:pointer;
+  font-family:var(--serif);font-size:16px;color:var(--text-3);
+  transition:all .15s;white-space:nowrap;
+}
+.rdrop-btn:hover{border-color:var(--border-olive);color:var(--text)}
+.rdrop-btn.rated{color:var(--olive-light);border-color:var(--border-olive);background:var(--olive-faint)}
+.rdrop-list{
+  position:absolute;inset-inline-end:0;top:calc(100% + 4px);
+  width:68px;max-height:220px;overflow-y:auto;overscroll-behavior-y:contain;
+  background:var(--card-2);border:0.5px solid var(--border-2);border-radius:10px;
+  z-index:200;display:none;flex-direction:column;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  scrollbar-width:thin;scrollbar-color:var(--olive) transparent;
+}
+.rdrop-list.open{display:flex}
+.rdrop-opt{
+  padding:6px 10px;text-align:center;cursor:pointer;font-size:13px;
+  color:var(--text-2);transition:background .1s;flex-shrink:0;
+}
+.rdrop-opt:hover{background:var(--olive-faint);color:var(--text)}
+.rdrop-opt.sel{color:var(--olive-light);font-weight:600;background:rgba(92,107,58,0.1)}
+
+/* ── Progress bar ── */
+.det-prog-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-top:8px}
+[data-theme="light"] .det-prog-track{background:rgba(0,0,0,0.16)}
+.det-prog-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .4s ease}
+
+/* ── Saving state ── */
+.btn-save.saving{opacity:.6;pointer-events:none}
+
+/* ── Comments trigger button ── */
+.btn-comments{
+  display:inline-flex;align-items:center;gap:6px;
+  height:42px;padding:0 18px;
+  border-radius:var(--radius-sm);
+  border:1.5px solid var(--border-2);
+  background:var(--bg-3);
+  color:var(--text-2);
+  font-size:13px;font-weight:500;font-family:var(--sans);
+  cursor:pointer;
+  transition:border-color .18s,color .18s,box-shadow .15s,transform .12s;
+}
+.btn-comments:hover{border-color:var(--olive-light);color:var(--text);}
+.btn-comments:active{transform:translate(2px,2px);box-shadow:none;}
+
+/* ── Rating steppers ── */
+.rating-stepper-grid{display:flex;flex-direction:column;gap:8px}
+.rating-stepper-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 14px;position:relative;overflow:hidden;
+  background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-sm);
+}
+/* thin meter along the bottom of each rating — fills with the value */
+.rating-meter{position:absolute;inset-inline-start:0;inset-inline-end:0;bottom:0;height:3px;background:transparent;pointer-events:none}
+.rating-meter i{display:block;height:100%;width:0;background:var(--olive-light);border-start-start-radius:0;border-start-end-radius:3px;border-end-end-radius:3px;border-end-start-radius:0;transition:width .3s cubic-bezier(.4,0,.2,1)}
+.rating-stepper-label{
+  font-size:13px;color:var(--text-2);flex:1;min-width:0;
+  display:flex;align-items:center;
+}
+.rating-stepper-controls{
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.rating-stepper-val{
+  font-family:var(--bebas);font-size:23px;font-weight:400;letter-spacing:.3px;
+  color:var(--text-3);width:56px;text-align:center;
+  background:transparent;border:none;border-bottom:1px solid var(--border-2);
+  outline:none;-moz-appearance:textfield;appearance:textfield;
+  transition:color .15s,border-color .15s;
+}
+.rating-stepper-val::-webkit-inner-spin-button,.rating-stepper-val::-webkit-outer-spin-button{-webkit-appearance:none}
+.rating-stepper-val::placeholder{color:var(--text-3);}
+.rating-stepper-val:focus{border-color:var(--border-olive);color:var(--text);}
+.rating-stepper-val.has-val{color:var(--olive-light);}
+.anim-toggle-btn{
+  width:100%;padding:8px 12px;margin-top:6px;
+  font-size:11px;letter-spacing:0.5px;text-transform:uppercase;
+  border:0.5px dashed var(--border-2);border-radius:var(--radius-xs);
+  background:transparent;color:var(--text-3);cursor:pointer;
+  transition:all .2s;text-align:center;
+}
+.anim-toggle-btn:hover,.anim-toggle-btn.on{border-style:solid;border-color:var(--border-olive);color:var(--olive-light);}
+.fav-section-inner{display:flex;flex-wrap:wrap;gap:10px;}
+.fav-field{
+  flex:1 1 140px; min-width:120px; box-sizing:border-box;
+  border:1px solid var(--border-olive); border-radius:var(--radius-sm);
+  padding:10px 12px;
+}
+.fav-field label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:6px;}
+.fav-field.low-field{border-color:rgba(163,51,51,0.35);}
+@media(max-width:560px) {
+  /* Three fields at their 120px minimum barely fit a phone screen at
+     all, forcing cramped, hard-to-tap trigger buttons — stacking them
+     one per row keeps every trigger comfortably full-width instead. */
+  .fav-section-inner { flex-direction:column; }
+  .fav-field { flex:1 1 auto; width:100%; }
+}
+[data-theme="dark"] .fav-field.low-field{border-color:rgba(224,133,133,0.35);}
+@media(max-width:520px){
+  .fav-field{flex:1 1 100%;}
+}
+@media(max-width:600px){.rating-stepper-grid{gap:6px}}
+
+/* ── Completion popup ── */
+.completion-overlay{
+  position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.completion-overlay.open{display:flex;animation:fadeIn .25s var(--ease);}
+.completion-card{
+  background:var(--bg-3);
+  border:1.5px solid var(--olive-light);
+  box-shadow:4px 4px 0 var(--olive);
+  border-radius:var(--radius-lg);
+  padding:2.5rem 2rem;
+  max-width:380px;width:100%;
+  text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  animation:slideUp .28s var(--ease);
+}
+.completion-icon{
+  width:72px;height:72px;border-radius:50%;
+  background:var(--olive-faint);border:1.5px solid var(--border-olive);
+  display:flex;align-items:center;justify-content:center;margin-bottom:4px;
+}
+.completion-title{
+  font-family:var(--serif);font-size:32px;font-weight:500;
+  color:var(--text);letter-spacing:-0.5px;
+}
+.completion-sub{
+  font-size:14px;color:var(--text-2);line-height:1.6;
+  max-width:280px;
+}
+.completion-actions{display:flex;flex-direction:column;gap:10px;width:100%;margin-top:8px;}
+.completion-btn-primary{
+  width:100%;padding:13px;
+  background:var(--olive);border:1.5px solid var(--olive-light);
+  box-shadow:3px 3px 0 var(--olive-2);
+  border-radius:var(--radius-sm);color:#fff;
+  font-size:14px;font-weight:600;cursor:pointer;
+  transition:all var(--trans) var(--ease);
+}
+.completion-btn-primary:hover{background:var(--olive-2);}
+.completion-btn-primary:active{transform:translate(3px,3px);box-shadow:none;}
+.completion-btn-secondary{
+  width:100%;padding:12px;
+  background:transparent;border:1.5px solid var(--border-2);
+  box-shadow:2px 2px 0 var(--border-2);
+  border-radius:var(--radius-sm);color:var(--text-2);
+  font-size:14px;font-weight:500;cursor:pointer;
+  transition:all var(--trans) var(--ease);
+}
+.completion-btn-secondary:hover{border-color:var(--border-olive);box-shadow:2px 2px 0 var(--border-olive);color:var(--text);}
+.completion-btn-secondary:active{transform:translate(2px,2px);box-shadow:none;}
+
+@media(max-width:600px){
+  .final-score-section{flex-direction:column;align-items:flex-start;gap:1rem}
+  .final-score-num{font-size:56px}
+  .rdrop-grid{grid-template-columns:1fr}
+  .completion-overlay { padding:16px; align-items:flex-end; }
+  .completion-card {
+    padding:1.75rem 1.25rem;
+    border-radius:var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-sm);
+    max-width:100%;
+    gap:10px;
+  }
+  .completion-icon { width:56px; height:56px; }
+  .completion-icon svg { width:36px; height:36px; }
+  .completion-title { font-size:26px; }
+  .completion-sub { font-size:13px; }
+  .completion-btn-primary { padding:11px; font-size:13px; }
+  .completion-btn-secondary { padding:10px; font-size:13px; }
+}
+@media(max-width:400px){
+  .completion-card { padding:1.25rem 1rem; gap:8px; }
+  .completion-title { font-size:22px; }
+  .completion-sub { font-size:12px; }
+}
+.date-3box { display:flex; gap:8px; align-items:center; }
+.date-3box-input { margin:0 !important; }
+
+/* ══════════════════════════════════════════
+   DETAIL PAGE REDESIGN — hero + card layout
+══════════════════════════════════════════ */
+.det-wrap { max-width:none; }
+
+/* ── Header card (poster + core identity fields) ── */
+.det-back {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; color:var(--text-3); text-decoration:none;
+  margin-bottom:1.25rem; transition:color .15s;
+}
+.det-back:hover { color:var(--olive-light); }
+
+.det-header {
+  display:flex; gap:clamp(1.25rem, 3vw, 2rem); align-items:flex-start; flex-wrap:wrap;
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+  padding:clamp(1.5rem, 3vw, 2rem); margin-bottom:1.5rem; max-width:100%; box-sizing:border-box;
+  /* above the cards below it, so its dropdowns (type / status / month) open over them */
+  position:relative; z-index:3;
+}
+/* Small inline message under a field (bad year / day) */
+.det-field-hint { font-size:11.5px; color:#c0564a; margin-top:6px; min-height:0; }
+.det-field-hint:empty { display:none; }
+[data-theme="dark"] .det-field-hint { color:#e08585; }
+
+/* Month: type or pick (same look as the site dropdowns) */
+.mcombo { position:relative; flex:1; min-width:7.5em; }
+.mcombo-input { width:100%; padding-inline-end:30px !important; }
+.mcombo-chev { position:absolute; inset-inline-end:10px; top:50%; transform:translateY(-50%); color:var(--text-3); pointer-events:none; transition:transform .15s; }
+.mcombo.open .mcombo-chev { transform:translateY(-50%) rotate(180deg); color:var(--olive-light); }
+.mcombo-menu {
+  display:none; position:absolute; top:calc(100% + 4px); inset-inline-start:0; inset-inline-end:0; z-index:60;
+  background:var(--bg-3); border:0.5px solid var(--olive-light); border-radius:var(--radius-sm);
+  box-shadow:var(--shadow-lg); max-height:230px; overflow-y:auto; overscroll-behavior-y:contain; text-align:start;
+}
+.mcombo.open .mcombo-menu { display:block; }
+.mcombo-menu .sel-dd-opt.hl { background:var(--bg-2); }
+.mcombo-empty { padding:10px 14px; font-size:13px; color:var(--text-3); }
+/* No number spinners on the date / year boxes (they also ate the width on phones) */
+.det-year-input, .date-3box-input { -moz-appearance:textfield; appearance:textfield; }
+.det-year-input::-webkit-inner-spin-button, .det-year-input::-webkit-outer-spin-button,
+.date-3box-input::-webkit-inner-spin-button, .date-3box-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+
+/* Poster — reuses .detail-poster-wrap class (handlePosterUpload's querySelector depends on it) */
+.det-header .detail-poster-wrap {
+  width:clamp(96px, 16vw, 160px); height:clamp(144px, 24vw, 240px); flex-shrink:0;
+  border-radius:var(--radius); overflow:hidden; position:relative; cursor:pointer;
+  background:var(--bg-3); box-shadow:var(--shadow);
+  display:flex; align-items:center; justify-content:center;
+  border:0.5px solid var(--border);
+  font-family:var(--serif); font-size:clamp(32px,6vw,48px); color:var(--olive-light);
+}
+.det-header .detail-poster-wrap img { width:100%; height:100%; object-fit:cover; }
+
+@media(min-width:901px) {
+  .det-header .detail-poster-wrap { width:220px; height:330px; }
+}
+
+/* Title/dropdowns/year box, paired with Details (Genres + Description)
+   next to the poster. Wrapped together in .det-header-main so the pair
+   moves as one unit relative to the poster — both sit beside it, or
+   both wrap below it together, never split apart from each other.
+   Both sides share .det-row-2col-half's own flex/min-width/padding
+   (and its :last-child border-side-switch at 760px) directly in the
+   HTML class list — rather than maintaining a second, separately-tuned
+   copy of those same dimensions here, which is exactly what caused the
+   two rows to drift out of sync with each other before. */
+.det-header-main { flex:1 1 480px; min-width:0; display:flex; flex-wrap:wrap; }
+/* .det-row-2col-half sets an explicit min-width:280px as a floor, but
+   an explicit value doesn't stop a child's own content from pushing
+   the item even wider — only min-width:0 disables that "auto-expand
+   to fit my content" behavior. The year box's labels don't wrap
+   (white-space:nowrap), so without this override its natural content
+   width can force .det-header-info wider than its fair 50% share,
+   pushing the divider off-center and simultaneously starving the year
+   box of room at cramped widths — the two symptoms share this one
+   cause. (The actual override with the correct effective source order
+   is further below, right after .det-row-2col-half is defined — this
+   position, before that shared class, was getting silently overridden
+   by it.) */
+/* Locks the Favorites/Lowlights field rows (now paired with Progress
+   below, class name kept from its earlier header placement) to their
+   column's width — without this, wrapping content like this can push
+   its column wider than its fair share, the same issue genres
+   previously ran into. */
+.det-header-notes .fav-section-inner { width:100%; box-sizing:border-box; }
+
+.det-eyebrow-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem; }
+.det-eyebrow-row .sel-dd { width:auto; min-width:120px; }
+.det-eyebrow-row .sel-dd-trigger { height:34px; padding:0 12px; border-radius:var(--radius-sm); font-size:12.5px; }
+.det-eyebrow-row .sel-dd.open .sel-dd-trigger { border-end-start-radius:0; border-end-end-radius:0; }
+
+.det-title-input {
+  display:block; width:100%; background:transparent; border:none; border-bottom:1.5px solid var(--border);
+  font-family:var(--serif); font-size:clamp(24px, 4.5vw, 38px); font-weight:500;
+  color:var(--text); padding:4px 0 8px; margin-bottom:1.1rem; line-height:1.15;
+  outline:none; transition:border-color .2s;
+}
+.det-title-input::placeholder { color:var(--text-3); }
+.det-title-input:focus { border-color:var(--olive-light); }
+
+/* Release + Completed combined into a single unified box */
+.det-year-box {
+  display:flex; align-items:stretch; width:fit-content; max-width:100%;
+  background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius-sm);
+  overflow:hidden;
+}
+.det-year-field { display:flex; align-items:center; gap:8px; padding:8px 16px; min-width:0; }
+.det-year-field label { font-size:10.5px; color:var(--text-3); letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+.det-year-divider { width:0.5px; background:var(--border-2); align-self:stretch; flex-shrink:0; }
+.det-year-input {
+  width:64px; flex-shrink:0; background:transparent; border:none;
+  color:var(--text); font-size:13px; padding:0; text-align:center;
+  outline:none; -moz-appearance:textfield; appearance:textfield;
+}
+.det-year-input::placeholder { color:var(--text-3); }
+
+.det-final-score-card {
+  text-align:center; padding:clamp(1.5rem, 4vw, 2.25rem) 1.5rem;
+  background:var(--olive-faint); border:1.5px solid var(--border-olive);
+}
+.det-final-score-label { font-size:11px; color:var(--olive-light); letter-spacing:2.5px; text-transform:uppercase; margin-bottom:.6rem; }
+.det-final-score-num { font-family:var(--bebas); font-weight:400; letter-spacing:.5px; font-size:clamp(52px, 11vw, 84px); color:var(--olive-light); line-height:1; }
+.det-final-score-outof { font-size:10px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; margin-top:.5rem; }
+
+@media(max-width:760px) {
+  .det-header { flex-direction:column; align-items:center; text-align:center; padding:1.25rem; }
+  .det-header .detail-poster-wrap { width:clamp(110px, 38vw, 150px); height:auto; aspect-ratio:2/3; }
+  .det-header-main { flex-basis:100%; width:100%; }
+  .det-header-details { border-inline-start:none; border-top:0.5px solid var(--border); padding-inline-start:0; padding-top:1.5rem; }
+  .det-title-input { text-align:center; }
+  /* section titles + field labels stay left-aligned like the rest of the page */
+  .det-header .det-card-title, .det-header .field-label { text-align:start; }
+  .det-eyebrow-row { justify-content:center; }
+  .det-year-box { margin:0 auto; }
+  .det-year-field { padding:8px 10px; gap:5px; }
+  .det-year-field label { font-size:9px; }
+  .det-year-input { width:42px; font-size:13px; }
+  /* clip (not hidden): hidden turned these into scroll boxes, so the status /
+     month dropdowns got cut off and scrolled inside the card on phones */
+  .det-header, .det-header-info, .det-header-notes, .det-header-main { overflow-x:hidden; overflow-x:clip; }
+}
+
+/* ── Content cards ── */
+.det-content { display:flex; flex-direction:column; gap:1.5rem; }
+.det-row-2col { display:flex; gap:0; align-items:flex-start; flex-wrap:wrap; padding:0 !important; overflow:hidden; }
+.det-row-2col-half { flex:1; min-width:280px; padding:clamp(1.25rem, 3vw, 1.75rem); }
+/* .det-header-info's min-width:0 override lives here, not up near
+   .det-header-main above where it originally was, because that
+   position came BEFORE .det-row-2col-half in source order — meaning
+   .det-row-2col-half's own flex:1/min-width:280px was winning the
+   cascade and silently nullifying it (same specificity, later rule
+   wins). Placing the override here, after the shared class, is what
+   actually makes it take effect. */
+.det-header-info { min-width:0; flex:0.65; }
+/* This has to sit AFTER the plain .det-header-info rule right above,
+   not back up near .det-header-main/the other 760px rules — a media
+   query doesn't get special cascade priority just for being a media
+   query. With equal specificity, whichever rule is LATER in the file
+   wins regardless of which one is conditional, so placing this before
+   the plain rule (as it was originally) meant the plain rule's
+   flex:0.65 was silently overriding this at every width, including
+   ≤760px. This is the same mistake, in a new spot, as the earlier
+   title-width override that needed the identical fix.
+   The actual bug being fixed: .det-header-info's min-width:0 (needed
+   above 760px so year-box content can't force it wider than its
+   flex:0.65 share) also removes the one thing flex-wrap needs to ever
+   trigger wrapping — an infinitely-shrinkable item just keeps
+   shrinking instead of dropping to a new line, which is what was
+   crushing the title down to nothing while Details stayed rigidly
+   beside it at its own min-width. Forcing both to flex-basis:100%
+   here makes them explicitly stack instead of depending on wrap
+   happening on its own. */
+@media(max-width:760px) {
+  .det-header-info, .det-header-details { flex:1 1 100%; min-width:0; }
+}
+/* Tablets (iPad etc.) and small laptops: the title box and Details were too
+   cramped side by side next to the poster (title cut off, month box crushed) —
+   stack them there too, Details under the title. */
+@media(max-width:1180px) {
+  .det-header-main .det-header-info, .det-header-main .det-header-details { flex:1 1 100%; min-width:0; }
+  .det-header .det-header-main .det-header-details { border-inline-start:none; border-top:0.5px solid var(--border); padding-inline-start:0; padding-inline-end:0; padding-top:1.5rem; margin-top:.5rem; }
+  .det-header-main .det-header-info { padding-inline-start:0; padding-inline-end:0; }
+}
+.det-row-2col-half:last-child { border-inline-start:0.5px solid var(--border); }
+/* Same width-safety lock as .det-header-notes above — genres previously
+   caused exactly this "pushes its column wider than its share" issue. */
+#dGenres { width:100%; box-sizing:border-box; }
+@media(max-width:760px) {
+  .det-row-2col-half:last-child { border-inline-start:none; border-top:0.5px solid var(--border); }
+}
+.det-card {
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
+  padding:clamp(1.25rem, 3vw, 1.75rem);
+}
+.det-card-title {
+  font-family:var(--serif); font-weight:500; font-size:12px; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light);
+  margin-bottom:1.25rem; display:flex; align-items:center; gap:10px;
+}
+.det-card-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
+
+.det-fields-grid { display:flex; flex-direction:column; gap:1rem; }
+.det-two-col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+/* Core / Bonus ratings side by side */
+.det-ratings-cols { display:grid; grid-template-columns:1fr 1fr; gap:clamp(1rem, 3vw, 2rem); align-items:start; }
+.det-ratings-col-title {
+  font-family:var(--serif); font-weight:500; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light);
+  margin-bottom:.85rem; display:flex; align-items:center; gap:8px;
+}
+@media(max-width:760px) {
+  .det-ratings-cols { grid-template-columns:1fr; gap:1.5rem; }
+}
+
+/* ── Bottom action bar ── */
+.det-actions-bar {
+  display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center;
+  margin-top:2rem; padding-top:1.75rem; border-top:0.5px solid var(--border);
+}
+/* All four are shared/global classes with different padding/height each
+   elsewhere on the site — unify them here without touching their base
+   definitions (which would ripple to every other page). The target size
+   is calibrated to match .popup-action-btn's natural dimensions (the
+   same class used in the category quick-view popups), so Discover/Add to
+   Favorites still look like they do there — Save/Delete/Comments now
+   match that same compact scale instead of towering over it. */
+.det-actions-bar .btn-save,
+.det-actions-bar .btn-delete,
+.det-actions-bar .popup-action-btn,
+.det-actions-bar .btn-comments {
+  box-sizing:border-box; height:40px; padding:0 18px;
+  font-size:13px; display:inline-flex; align-items:center; justify-content:center;
+  flex:1 1 160px;
+}
+/* Delete: solid filled red, matching the same "solid, not outlined"
+   treatment Save Entry already has, instead of its usual transparent/
+   outlined look elsewhere on the site. Scoped to this action bar only —
+   .btn-delete's base outlined style elsewhere is untouched. */
+.det-actions-bar .btn-delete {
+  background:#b23a3a; border:1px solid #b23a3a; color:#fff;
+}
+.det-actions-bar .btn-delete:hover { background:#9c3232; border-color:#9c3232; color:#fff; }
+/* Add to Favorites / Discover / Comments: solid filled green, matching
+   Save Entry, instead of their usual neutral/outlined look elsewhere. */
+.det-actions-bar .popup-action-btn,
+.det-actions-bar .btn-comments {
+  background:var(--olive); border:1px solid var(--olive); color:#fff;
+}
+.det-actions-bar .popup-action-btn:hover,
+.det-actions-bar .btn-comments:hover { background:var(--olive-2); border-color:var(--olive-2); color:#fff; }
+.det-actions-bar .popup-action-btn svg,
+.det-actions-bar .btn-comments svg { color:#fff; opacity:0.9; }
+
+@media(max-width:600px) {
+  .det-two-col { grid-template-columns:1fr; }
+  .det-actions-bar { flex-direction:column; }
+  .det-actions-bar .btn-save,
+  .det-actions-bar .btn-delete,
+  .det-actions-bar .popup-action-btn,
+  .det-actions-bar .btn-comments { width:100%; max-width:none; flex:1 1 auto; }
+}
+.list-desc-count { font-size:10.5px; color:var(--text-3); text-align:end; margin-top:4px; }
+.list-desc-count.over { color:#c0564a; }
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+
+<div class="page-wrap det-wrap">
+  <div id="detailLoading" class="page-loading" data-skel="det-page"></div>
+
+  <div class="fade-up" id="detailLayout" style="display:none">
+
+    <a class="det-back" id="backBtn" href="index.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Back</a>
+
+    <!-- ═══ HEADER ═══ -->
+    <div class="det-header">
+      <div class="detail-poster-wrap" onclick="_openPosterPicker()">
+        <div class="detail-poster-letter" id="dPosterLetter">?</div>
+        <img id="dPosterImg" style="display:none" alt="">
+        <div class="poster-upload-overlay">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span>Upload Poster</span>
+        </div>
+        <div id="posterUploadingOverlay" style="display:none;position:absolute;inset:0;background:rgba(10,10,14,0.75);-webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:10px;border-radius:var(--radius);">
+          <div style="width:36px;height:36px;border-radius:50%;border:3px solid rgba(126,184,108,0.3);border-top-color:var(--olive-light);animation:spin .65s linear infinite;"></div>
+          <span style="font-size:12px;color:var(--olive-light);letter-spacing:.5px;">Uploading…</span>
+        </div>
+      </div>
+      <input type="file" id="posterFile" accept="image/*" style="display:none" onchange="handlePosterUpload(event)">
+
+      <div class="det-header-main">
+      <div class="det-header-info det-row-2col-half">
+        <div class="det-title-row" style="position:relative;">
+          <input class="det-title-input" id="dTitle" type="text" placeholder="Untitled…" oninput="updatePosterLetter()" style="padding-right:32px;">
+          <button class="tmdb-lock-btn" id="tmdbLockBtn-title" onclick="_toggleTmdbFieldLock('title')" title="Synced from TMDB — click to edit manually" style="position:absolute;right:0;top:4px;"></button>
+        </div>
+
+        <div class="det-eyebrow-row">
+          <select id="dCat" onchange="updateTypeSelector()" style="display:none">
+            <option value="tv">TV Show</option>
+            <option value="movies">Movie</option>
+            <option value="anime">Anime</option>
+            <option value="cartoons">Cartoon</option>
+          </select>
+          <div id="dCatDD"></div>
+
+          <select id="dStatus" onchange="onStatusChange()" style="display:none">
+            <option value="queue">Watchlist</option>
+            <option value="up_next">Up Next</option>
+            <option value="watching">Currently Watching</option>
+            <option value="paused">Taking a Break</option>
+            <option value="completed">Watched</option>
+            <option value="ongoing">To Be Continued</option>
+            <option value="dropped">Dropped</option>
+          </select>
+          <div id="dStatusDD"></div>
+
+          <div id="dTypeGroup" style="display:none">
+            <select id="dMediaType" onchange="updateTypeSelector()" style="display:none">
+              <option value="show">Show / Series</option>
+              <option value="movie">Movie</option>
+            </select>
+            <div id="dMediaTypeDD"></div>
+          </div>
+        </div>
+
+        <div class="det-year-box">
+          <button class="tmdb-lock-btn" id="tmdbLockBtn-year" onclick="_toggleTmdbFieldLock('year')" title="Synced from TMDB — click to edit manually"></button>
+          <div class="det-year-field">
+            <label>Release<span class="det-year-label-full"> Year</span></label>
+            <input class="det-year-input" id="dYear" type="text" inputmode="numeric" maxlength="4" placeholder="Year" aria-label="Release year">
+          </div>
+          <div class="det-year-divider" id="detYearDivider"></div>
+          <div class="det-year-field" id="completionYearGroup">
+            <label>Completion<span class="det-year-label-full"> Year</span></label>
+            <input class="det-year-input" id="dCompletionYear" type="text" inputmode="numeric" maxlength="4" placeholder="—" aria-label="Completion year">
+          </div>
+        </div>
+        <div class="det-field-hint" id="yearHint" role="status" aria-live="polite"></div>
+
+        <!-- Who can see this title (073) — saved with the entry -->
+        <div id="dTitleVisWrap" class="det-title-vis"></div>
+
+        <div class="field-group" id="completedOnGroup" style="display:none;margin-top:1.25rem;margin-bottom:0;">
+          <div class="field-label">Watched On</div>
+          <div class="date-3box" id="completedDateWrap">
+            <input class="field-input date-3box-input" id="dDay" type="text" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="Day" style="width:64px;text-align:center">
+            <select id="dMonth" style="display:none" aria-hidden="true" tabindex="-1">
+              <option value=""></option>
+              <option value="01">January</option><option value="02">February</option>
+              <option value="03">March</option><option value="04">April</option>
+              <option value="05">May</option><option value="06">June</option>
+              <option value="07">July</option><option value="08">August</option>
+              <option value="09">September</option><option value="10">October</option>
+              <option value="11">November</option><option value="12">December</option>
+            </select>
+            <!-- Month: type it ("mar", "3") or pick it from the list -->
+            <div class="mcombo" id="dMonthCombo">
+              <input class="field-input date-3box-input mcombo-input" id="dMonthInput" type="text" placeholder="Month" autocomplete="off" spellcheck="false"
+                     role="combobox" aria-expanded="false" aria-controls="dMonthList" aria-autocomplete="list" aria-label="Month"
+                     oninput="_mcFilter()" onfocus="_mcOpen()" onkeydown="_mcKey(event)" onblur="_mcBlur()">
+              <svg class="mcombo-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              <div class="mcombo-menu" id="dMonthList" role="listbox"></div>
+            </div>
+            <input class="field-input date-3box-input" id="dCYear" type="text" inputmode="numeric" maxlength="4" placeholder="YYYY" aria-label="Year" style="width:84px;text-align:center">
+          </div>
+          <div class="det-field-hint" id="dateHint" role="status" aria-live="polite"></div>
+        </div>
+
+      </div>
+
+      <!-- Notes & Favorites — paired with the title, next to the poster -->
+      <div class="det-header-details det-row-2col-half">
+        <div class="det-card-title">Details</div>
+        <div class="det-fields-grid">
+          <div class="field-group">
+            <div class="field-label">Genres <button class="tmdb-lock-btn" id="tmdbLockBtn-genres" onclick="_toggleTmdbFieldLock('genres')" title="Synced from TMDB — click to edit manually"></button></div>
+            <div class="genre-picker" id="dGenres" style="justify-content:space-between;">
+              <span class="genre-opt" data-genre="Action" onclick="toggleGenre(this)">Action</span>
+              <span class="genre-opt" data-genre="Adventure" onclick="toggleGenre(this)">Adventure</span>
+              <span class="genre-opt" data-genre="Animation" onclick="toggleGenre(this)">Animation</span>
+              <span class="genre-opt" data-genre="Biography" onclick="toggleGenre(this)">Biography</span>
+              <span class="genre-opt" data-genre="Comedy" onclick="toggleGenre(this)">Comedy</span>
+              <span class="genre-opt" data-genre="Crime" onclick="toggleGenre(this)">Crime</span>
+              <span class="genre-opt" data-genre="Documentary" onclick="toggleGenre(this)">Documentary</span>
+              <span class="genre-opt" data-genre="Drama" onclick="toggleGenre(this)">Drama</span>
+              <span class="genre-opt" data-genre="Family" onclick="toggleGenre(this)">Family</span>
+              <span class="genre-opt" data-genre="Fantasy" onclick="toggleGenre(this)">Fantasy</span>
+              <span class="genre-opt" data-genre="Heist" onclick="toggleGenre(this)">Heist</span>
+              <span class="genre-opt" data-genre="Historical" onclick="toggleGenre(this)">Historical</span>
+              <span class="genre-opt" data-genre="Horror" onclick="toggleGenre(this)">Horror</span>
+              <span class="genre-opt" data-genre="Medical" onclick="toggleGenre(this)">Medical</span>
+              <span class="genre-opt" data-genre="Musical" onclick="toggleGenre(this)">Musical</span>
+              <span class="genre-opt" data-genre="Mystery" onclick="toggleGenre(this)">Mystery</span>
+              <span class="genre-opt" data-genre="Political" onclick="toggleGenre(this)">Political</span>
+              <span class="genre-opt" data-genre="Psychological" onclick="toggleGenre(this)">Psychological</span>
+              <span class="genre-opt" data-genre="Romance" onclick="toggleGenre(this)">Romance</span>
+              <span class="genre-opt" data-genre="Sci-Fi" onclick="toggleGenre(this)">Sci-Fi</span>
+              <span class="genre-opt" data-genre="Slice of Life" onclick="toggleGenre(this)">Slice of Life</span>
+              <span class="genre-opt" data-genre="Space" onclick="toggleGenre(this)">Space</span>
+              <span class="genre-opt" data-genre="Sports" onclick="toggleGenre(this)">Sports</span>
+              <span class="genre-opt" data-genre="Superhero" onclick="toggleGenre(this)">Superhero</span>
+              <span class="genre-opt" data-genre="Supernatural" onclick="toggleGenre(this)">Supernatural</span>
+              <span class="genre-opt" data-genre="Thriller" onclick="toggleGenre(this)">Thriller</span>
+              <span class="genre-opt" data-genre="War" onclick="toggleGenre(this)">War</span>
+              <span class="genre-opt" data-genre="Western" onclick="toggleGenre(this)">Western</span>
+            </div>
+            <div id="animeGenreSection" style="display:none;margin-top:12px;">
+              <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;padding-top:10px;border-top:0.5px solid var(--border);">Anime-Specific Genres</div>
+              <div class="genre-picker" style="justify-content:flex-start;">
+                <span class="genre-opt" data-genre="Isekai" onclick="toggleGenre(this)">Isekai</span>
+                <span class="genre-opt" data-genre="Josei" onclick="toggleGenre(this)">Josei</span>
+                <span class="genre-opt" data-genre="Mecha" onclick="toggleGenre(this)">Mecha</span>
+                <span class="genre-opt" data-genre="Seinen" onclick="toggleGenre(this)">Seinen</span>
+                <span class="genre-opt" data-genre="Shoujo" onclick="toggleGenre(this)">Shoujo</span>
+                <span class="genre-opt" data-genre="Shounen" onclick="toggleGenre(this)">Shounen</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Description <button class="tmdb-lock-btn" id="tmdbLockBtn-desc" onclick="_toggleTmdbFieldLock('desc')" title="Synced from TMDB — click to edit manually"></button></div>
+            <textarea class="field-input" id="dDesc" placeholder="Synopsis…"></textarea>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+    <!-- /det-header -->
+
+    <!-- ═══ CONTENT ═══ -->
+    <div class="det-content">
+
+      <div class="det-card det-row-2col">
+      <!-- Progress / Runtime -->
+      <div class="det-row-2col-half">
+        <div class="det-card-title">Progress</div>
+
+        <div id="dProgressSection" class="progress-edit-section">
+          <div class="progress-edit-title">Season Breakdown <button class="tmdb-lock-btn" id="tmdbLockBtn-season" onclick="_toggleTmdbFieldLock('season')" title="Synced from TMDB — click to edit manually"></button></div>
+          <div id="dSeasonList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+          <button onclick="addSeason()" style="width:100%;padding:7px;font-size:11px;letter-spacing:.5px;text-transform:uppercase;border:0.5px dashed var(--border-2);border-radius:var(--radius-xs);background:transparent;color:var(--text-3);cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--border-olive)';this.style.color='var(--olive-light)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text-3)'">+ Add Season</button>
+
+          <div class="ep-grid" style="margin-top:10px;">
+            <div class="ep-field"><label>Total Seasons</label><input type="number" id="dTotalSeasons" readonly placeholder="—" style="opacity:.7;cursor:default;-moz-appearance:textfield;appearance:textfield;"></div>
+            <div class="ep-field"><label>Total Episodes</label><input type="number" id="dTotalEps" readonly placeholder="—" style="opacity:.7;cursor:default;-moz-appearance:textfield;appearance:textfield;"></div>
+          </div>
+
+          <div id="dCurrentPosSection" style="display:none;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);">
+            <div class="progress-edit-title" style="margin-bottom:8px;">Current Position</div>
+            <div class="ep-grid">
+              <div class="ep-field"><label>Current Season</label><input type="number" id="dSeason" min="1" placeholder="1" oninput="updateProgBar()"></div>
+              <div class="ep-field"><label>Current Episode</label><input type="number" id="dEpisode" min="1" placeholder="1" oninput="updateProgBar()"></div>
+            </div>
+            <div class="det-prog-track" style="margin-top:10px;"><div class="det-prog-fill" id="detProgFill" style="width:0%"></div></div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:5px;" id="detProgLabel"></div>
+          </div>
+
+          <input type="hidden" id="dWatched" value="0">
+        </div>
+
+        <div id="dRuntimeSection" style="display:none;" class="field-group">
+          <div class="progress-edit-title">Runtime <button class="tmdb-lock-btn" id="tmdbLockBtn-runtime" onclick="_toggleTmdbFieldLock('runtime')" title="Synced from TMDB — click to edit manually"></button></div>
+          <div class="ep-grid">
+            <div class="ep-field"><label>Hours</label><input type="number" id="dRuntimeH" min="0" placeholder="0" oninput="updateRuntimeDisplay()"></div>
+            <div class="ep-field"><label>Minutes</label><input type="number" id="dRuntimeM" min="0" max="59" placeholder="0" oninput="updateRuntimeDisplay()"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:6px;" id="dRuntimeLabel"></div>
+        </div>
+
+        <!-- Dropped movie: where you stopped (optional) — ratings._dropped_at, minutes (071) -->
+        <div id="dDroppedAtSection" class="field-group" hidden>
+          <div class="progress-edit-title">Dropped at <span class="field-optional">optional</span></div>
+          <div class="ep-grid">
+            <div class="ep-field"><label for="dDroppedH">Hours</label><input type="number" id="dDroppedH" min="0" max="9" placeholder="0"></div>
+            <div class="ep-field"><label for="dDroppedM">Minutes</label><input type="number" id="dDroppedM" min="0" max="59" placeholder="0"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:1.25rem;">
+          <div class="field-group" id="dRewatchSection" style="display:none;margin-bottom:0;">
+            <label class="field-label" for="dRewatchCount" style="display:block;">Times Watched</label>
+            <input type="number" class="field-input" id="dRewatchCount" min="1" max="999"
+              placeholder="1" style="padding:8px 12px;max-width:120px;"
+              onchange="if(this.value<1)this.value=1">
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes & Favorites — paired with Progress -->
+      <div class="det-header-notes det-row-2col-half">
+        <div class="det-card-title">Notes &amp; Favorites</div>
+        <div class="det-fields-grid">
+          <div class="field-group" id="dNotesSection" style="margin-bottom:0;">
+            <div class="field-label">Personal Notes</div>
+            <div id="dNotesTools"></div>
+            <textarea class="field-input" id="dNotes" placeholder="Your thoughts…" oninput="_notesUpdateWordCount()"></textarea>
+            <div class="list-desc-count" id="dNotesCount">0 / 500 words</div>
+            <div id="dNoteVisWrap"></div>
+          </div>
+
+          <div class="field-group" id="favSection" style="margin-bottom:0;">
+            <div class="field-label">Favorites</div>
+            <div class="fav-section-inner">
+              <div class="fav-field">
+                <div class="fav-label-row">
+                  <label>Favorite Character</label>
+                  <button type="button" class="fav-clear-btn" id="favCharacterClearBtn" onclick="_favClearField('fav','Character')" aria-label="Clear favorite character">&times;</button>
+                </div>
+                <!-- Type any name (nicknames welcome) or pick from the cast -->
+                <div class="fav-char-field">
+                  <input type="text" class="field-input fav-char-input" id="favCharacter" maxlength="80" autocomplete="off"
+                         placeholder="Type or pick from cast" aria-label="Favorite character" oninput="_favCharTyped('fav')">
+                  <button type="button" class="fav-cast-btn" onclick="_favOpenPersonPicker('fav')" aria-label="Pick favorite character from the cast" title="Pick from cast">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="fav-field" id="favEpisodeWrap">
+                <div class="fav-label-row">
+                  <label>Favorite Episode</label>
+                  <button type="button" class="fav-clear-btn" id="favEpisodeClearBtn" onclick="_favClearField('fav','Episode')" aria-label="Clear favorite episode">&times;</button>
+                </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenEpisodePicker('fav')" style="text-align:left;">
+                  <span id="favEpisodeLabel" class="fav-person-placeholder">Choose an episode…</span>
+                </button>
+                <input type="hidden" id="favEpisode">
+              </div>
+              <div class="fav-field" id="favSeasonWrap">
+                <div class="fav-label-row">
+                  <label>Favorite Season</label>
+                  <button type="button" class="fav-clear-btn" id="favSeasonClearBtn" onclick="_favClearField('fav','Season')" aria-label="Clear favorite season">&times;</button>
+                </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenSeasonPicker('fav')" style="text-align:left;">
+                  <span id="favSeasonLabel" class="fav-person-placeholder">Choose a season…</span>
+                </button>
+                <input type="hidden" id="favSeason">
+              </div>
+            </div>
+            <div class="field-label" style="margin-top:1rem;">Lowlights</div>
+            <div class="fav-section-inner">
+              <div class="fav-field low-field">
+                <div class="fav-label-row">
+                  <label>Least Favorite Character</label>
+                  <button type="button" class="fav-clear-btn" id="lowCharacterClearBtn" onclick="_favClearField('low','Character')" aria-label="Clear least favorite character">&times;</button>
+                </div>
+                <!-- Type any name (nicknames welcome) or pick from the cast -->
+                <div class="fav-char-field">
+                  <input type="text" class="field-input fav-char-input" id="lowCharacter" maxlength="80" autocomplete="off"
+                         placeholder="Type or pick from cast" aria-label="Least favorite character" oninput="_favCharTyped('low')">
+                  <button type="button" class="fav-cast-btn" onclick="_favOpenPersonPicker('low')" aria-label="Pick least favorite character from the cast" title="Pick from cast">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="fav-field low-field" id="lowEpisodeWrap">
+                <div class="fav-label-row">
+                  <label>Least Favorite Episode</label>
+                  <button type="button" class="fav-clear-btn" id="lowEpisodeClearBtn" onclick="_favClearField('low','Episode')" aria-label="Clear least favorite episode">&times;</button>
+                </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenEpisodePicker('low')" style="text-align:left;">
+                  <span id="lowEpisodeLabel" class="fav-person-placeholder">Choose an episode…</span>
+                </button>
+                <input type="hidden" id="lowEpisode">
+              </div>
+              <div class="fav-field low-field" id="lowSeasonWrap">
+                <div class="fav-label-row">
+                  <label>Least Favorite Season</label>
+                  <button type="button" class="fav-clear-btn" id="lowSeasonClearBtn" onclick="_favClearField('low','Season')" aria-label="Clear least favorite season">&times;</button>
+                </div>
+                <button type="button" class="field-input fav-person-trigger" onclick="_favOpenSeasonPicker('low')" style="text-align:left;">
+                  <span id="lowSeasonLabel" class="fav-person-placeholder">Choose a season…</span>
+                </button>
+                <input type="hidden" id="lowSeason">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+      <!-- /det-row-2col: Progress + Notes & Favorites -->
+
+      <!-- Ratings card — core and bonus side by side -->
+      <div class="det-card">
+        <div class="det-card-title">Rate This</div>
+        <div class="det-ratings-cols">
+          <div>
+            <div class="det-ratings-col-title">Core Ratings</div>
+            <div class="rating-stepper-grid" id="coreRatingGrid"></div>
+            <div id="animToggleSection" style="display:none;">
+              <button class="anim-toggle-btn" id="animToggleBtn" onclick="toggleAnimation()">+ Enable Animation Quality</button>
+              <div class="rating-stepper-grid" id="animRatingRow" style="display:none;margin-top:6px;"></div>
+            </div>
+          </div>
+          <div>
+            <div class="det-ratings-col-title">Bonus Ratings <span style="color:var(--text-3);font-size:9px;letter-spacing:1px;text-transform:none;font-family:var(--sans);margin-left:4px">optional</span></div>
+            <div class="rating-stepper-grid" id="bonusRatingGrid"></div>
+          </div>
+        </div>
+        <div class="ratings-section-label" style="margin-top:1.5rem;">Score Breakdown</div>
+        <div class="score-breakdown" id="scoreBreakdown"></div>
+      </div>
+
+      <!-- Final Score card — sits at the very bottom, above the actions bar -->
+      <div class="det-card det-final-score-card" id="finalScoreSection">
+        <div class="det-final-score-label">Final Score</div>
+        <div class="det-final-score-num" id="finalScoreNum">—</div>
+        <div class="det-final-score-outof">Out of 10</div>
+      </div>
+
+      <!-- ═══ ALL ACTIONS AT THE BOTTOM ═══ -->
+      <div class="det-actions-bar">
+        <button class="btn-save" id="btnSave" onclick="doSave()">Save Entry</button>
+        <button class="btn-delete" id="dDeleteBtn" style="display:none" onclick="doDelete()">Delete</button>
+        <button class="popup-action-btn" id="dDiscoverBtn" style="display:none;" onclick="MSSInfo.discover(_detEntry, this)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Discover
+        </button>
+        <button class="popup-action-btn" id="dRateEpsBtn" style="display:none;" onclick="MSSEp.rate(_detEntry, _detEntry.season || 1, Math.max(1, _detEntry.episode || 1))">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M13 9l4 2-4 2z"/></svg>
+          Rate Episodes
+        </button>
+        <button class="popup-action-btn" id="btnUpdateDetails" style="display:none;" onclick="_openUpdateDetailsPicker()" title="Re-search TMDB to fix missing or outdated details">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+          Update Details
+        </button>
+        <button class="btn-comments" id="dCommentsBtn" style="display:none" onclick="openCommentsModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span id="dCommentsBtnLabel">Comments</span>
+        </button>
+      </div>
+
+    </div><!-- /det-content -->
+
+  </div><!-- /detailLayout -->
+
+
+</div>
+
+<!-- ═══ COMPLETION POPUP ═══ -->
+<div class="completion-overlay" id="completionOverlay">
+  <div class="completion-card">
+    <div class="completion-icon">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--olive-light)">
+        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+        <path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+      </svg>
+    </div>
+    <div class="completion-title" id="completionTitle">Finished!</div>
+    <div class="completion-sub" id="completionSub">You completed this title. Give it your ratings to rank it in your collection.</div>
+    <div class="completion-actions">
+      <button class="completion-btn-primary" onclick="closeCompletionPopup()">Rate Now</button>
+      <button class="completion-btn-secondary" onclick="window.location.href='completed.html'">View Completed →</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/easter-egg.js"></script>
+<script src="js/db.js"></script>
+<script src="js/comments.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/create-card.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/episode-ratings.js"></script>
+<script src="js/info-popup.js"></script>
+
+<script>
+let _detUser   = null;
+/* Loading skeleton: this page's own layout (#detailLayout) before it's filled — the field and
+   card names as they are, the rest (poster, title, values) masked into placeholders (mssSkeleton) */
+mssSkeleton.define('det-page', () => {
+  const box = document.getElementById('detailLayout').cloneNode(true);
+  box.style.display = '';
+  box.querySelectorAll('.field-label, .det-card-title, .progress-edit-title, .det-year-label-full, .det-back').forEach(el => el.setAttribute('data-skel-keep', ''));
+  const t = box.querySelector('.det-title-input'); if (t) t.outerHTML = '<div class="det-title-input">Sample title name</div>';
+  return box.outerHTML.replace(/ (id|onclick|oninput|onchange)="[^"]*"/g, '');
+});
+let _detId     = sessionStorage.getItem('detailId') || null;
+let _originalStatus = null; // track status at load time to detect new completions
+
+function _parseCompletedDate() {
+  const day   = document.getElementById('dDay')?.value?.trim();
+  const month = document.getElementById('dMonth')?.value;
+  const year  = document.getElementById('dCYear')?.value?.trim();
+  if (!year) return null;
+  const m = month || '01';
+  const d = day   ? String(parseInt(day)).padStart(2,'0') : '01';
+  return `${year}-${m}-${d}`;
+}
+function _setCompletedDate(iso) {
+  if (!iso) { 
+    document.getElementById('dDay').value = '';
+    document.getElementById('dMonth').value = '';
+    document.getElementById('dMonth')._ddSync?.();
+    document.getElementById('dCYear').value = '';
+    return;
+  }
+  const dt = new Date(iso + 'T12:00:00');
+  document.getElementById('dDay').value    = dt.getDate();
+  document.getElementById('dMonth').value  = String(dt.getMonth()+1).padStart(2,'0');
+  document.getElementById('dMonth')._ddSync?.();
+  document.getElementById('dCYear').value  = dt.getFullYear();
+}
+/* ── Watched On: month combobox + checks ── */
+const _MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+let _mcHl = -1;
+function _mcEls() { return { wrap: document.getElementById('dMonthCombo'), input: document.getElementById('dMonthInput'), list: document.getElementById('dMonthList'), sel: document.getElementById('dMonth') }; }
+// "mar", "March", "3", "03" → 3 (1-based); otherwise matching months for the list
+function _mcMatches(q) {
+  q = q.trim().toLowerCase();
+  if (!q) return _MONTHS.map((_, i) => i);
+  if (/^\d{1,2}$/.test(q)) { const n = +q; return n >= 1 && n <= 12 ? [n - 1] : []; }
+  const pre = _MONTHS.map((m, i) => i).filter(i => _MONTHS[i].toLowerCase().startsWith(q));
+  return pre.length ? pre : _MONTHS.map((m, i) => i).filter(i => _MONTHS[i].toLowerCase().includes(q));
+}
+function _mcRender(idxs) {
+  const { list, sel } = _mcEls();
+  list.innerHTML = idxs.length ? idxs.map((i, k) => {
+    const v = String(i + 1).padStart(2, '0');
+    return `<div class="sel-dd-opt${v === sel.value ? ' active' : ''}${k === _mcHl ? ' hl' : ''}" role="option" aria-selected="${v === sel.value}" data-i="${i}" onmousedown="event.preventDefault();_mcPick(${i})">${_MONTHS[i]}</div>`;
+  }).join('') : `<div class="mcombo-empty">No month matches</div>`;
+}
+function _mcOpen() {
+  const { wrap, input } = _mcEls();
+  _mcHl = -1; _mcRender(_MONTHS.map((_, i) => i));
+  wrap.classList.add('open'); input.setAttribute('aria-expanded', 'true');
+  input.select();
+}
+function _mcClose() { const { wrap, input } = _mcEls(); wrap.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); }
+function _mcFilter() { _mcHl = 0; _mcRender(_mcMatches(_mcEls().input.value)); _mcEls().wrap.classList.add('open'); }
+function _mcPick(i) {
+  const { input, sel } = _mcEls();
+  sel.value = i == null ? '' : String(i + 1).padStart(2, '0');
+  input.value = i == null ? '' : _MONTHS[i];
+  _mcClose();
+  _detCheckDay();
+}
+function _mcKey(ev) {
+  const idxs = _mcMatches(_mcEls().input.value);
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    _mcEls().wrap.classList.add('open');
+    _mcHl = Math.max(0, Math.min(idxs.length - 1, _mcHl + (ev.key === 'ArrowDown' ? 1 : -1)));
+    _mcRender(idxs);
+  } else if (ev.key === 'Enter') {
+    ev.preventDefault();
+    if (idxs.length) _mcPick(idxs[Math.max(0, _mcHl)]);
+  } else if (ev.key === 'Escape') { _mcClose(); }
+}
+// Leaving the box: keep a valid month, clear an empty one, revert nonsense
+function _mcBlur() {
+  const { input, sel } = _mcEls();
+  const q = input.value.trim();
+  if (!q) { _mcPick(null); return; }
+  const idxs = _mcMatches(q);
+  if (idxs.length === 1 || (idxs.length && _MONTHS[idxs[0]].toLowerCase() === q.toLowerCase())) { _mcPick(idxs[0]); return; }
+  input.value = sel.value ? _MONTHS[+sel.value - 1] : '';
+  _mcClose();
+  if (q) _detHint('dateHint', `“${q}” isn't a month — pick one from the list.`);
+}
+// Keeps the text box in step when code sets #dMonth (load, defaults)
+function _mcSync() { const { input, sel } = _mcEls(); input.value = sel.value ? _MONTHS[+sel.value - 1] : ''; }
+
+function _detHint(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  clearTimeout(el._t);
+  if (msg) el._t = setTimeout(() => { el.textContent = ''; }, 5000);
+}
+// Years must be all 4 digits — anything else is cleared, with a note
+function _detCheckYear(el, hintId) {
+  const v = el.value.trim();
+  if (!v || /^\d{4}$/.test(v)) { _detHint(hintId, ''); if (hintId === 'dateHint') _detCheckDay(); return; }
+  el.value = '';
+  _detHint(hintId, `“${v}” isn't a full year — use 4 digits, like 2004.`);
+}
+// Day must exist in that month (Feb: 29 only in leap years; 29 if no year yet)
+function _detCheckDay() {
+  const dEl = document.getElementById('dDay');
+  const raw = dEl.value.trim();
+  if (!raw) return;
+  _detHint('dateHint', '');
+  const d = parseInt(raw, 10), m = parseInt(document.getElementById('dMonth').value || '0', 10);
+  const yRaw = document.getElementById('dCYear').value.trim(), y = /^\d{4}$/.test(yRaw) ? +yRaw : null;
+  const max = m ? new Date(y || 2024, m, 0).getDate() : 31;
+  if (!/^\d{1,2}$/.test(raw) || d < 1 || d > max) {
+    dEl.value = '';
+    _detHint('dateHint', !/^\d{1,2}$/.test(raw) || d < 1 ? 'Enter a day number, like 14.'
+      : `${_MONTHS[m - 1] || 'That month'}${y ? ' ' + y : ''} only has ${max} days.`);
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dDay').addEventListener('change', _detCheckDay);
+  document.getElementById('dCYear').addEventListener('change', e => _detCheckYear(e.target, 'dateHint'));
+  document.getElementById('dYear').addEventListener('change', e => _detCheckYear(e.target, 'yearHint'));
+  document.getElementById('dCompletionYear').addEventListener('change', e => _detCheckYear(e.target, 'yearHint'));
+  // digits only while typing
+  ['dDay', 'dCYear', 'dYear', 'dCompletionYear'].forEach(id => document.getElementById(id).addEventListener('input', e => {
+    const c = e.target.value.replace(/\D/g, ''); if (c !== e.target.value) e.target.value = c;
+  }));
+  document.getElementById('dMonth')._ddSync = _mcSync;
+});
+
+let _fromPage  = sessionStorage.getItem('detailFrom') || 'index.html';
+let _detEntry  = null;
+let draftRatings = {};
+let _posterUrl = null;
+
+document.getElementById('backBtn').href = _fromPage;
+
+let _animEnabled = false;
+
+/* ── Rating steppers ── */
+function buildRatingStepper(key, label) {
+  const val    = draftRatings[key];
+  const hasVal = val !== undefined && val !== null && val !== '';
+  const display = hasVal ? Number(val).toFixed(1) : '';
+  return `<div class="rating-stepper-item">
+    <div class="rating-stepper-label">${label}</div>
+    <div class="rating-stepper-controls">
+      <button class="ep-btn" onclick="stepRating('${key}',-0.5)" style="width:32px;height:32px;font-size:16px;">−</button>
+      <input class="rating-stepper-val${hasVal?' has-val':''}" id="sval-${key}"
+             type="text" inputmode="decimal" value="${display}" placeholder="—"
+             onchange="typeRating('${key}',this.value)"
+             onblur="typeRating('${key}',this.value)">
+      <button class="ep-btn" onclick="stepRating('${key}',+0.5)" style="width:32px;height:32px;font-size:16px;">+</button>
+    </div>
+    <div class="rating-meter" aria-hidden="true"><i id="smeter-${key}" style="width:${hasVal ? Number(val) * 10 : 0}%"></i></div>
+  </div>`;
+}
+
+function renderRatingGrids() {
+  const cat = document.getElementById('dCat').value;
+  const isAnimated = cat === 'anime' || cat === 'cartoons';
+  const isMovie = getMediaType() === 'movie';
+  const { core: coreArr, bonus: bonusArr } = getRatings(cat, isMovie);
+  if (isMovie) delete draftRatings.bingeable;      // movies don't have a Bingeable rating
+
+  // Core: use category-specific array (animation already in ANIME_CORE_RATINGS)
+  document.getElementById('coreRatingGrid').innerHTML = coreArr.map(r => buildRatingStepper(r.key, r.label)).join('');
+
+  // Bonus: use category-specific array
+  document.getElementById('bonusRatingGrid').innerHTML = bonusArr.map(r => buildRatingStepper(r.key, r.label)).join('');
+
+  // Animation toggle row: only for TV/movies (anime/cartoons always show it in core)
+  const animSection = document.getElementById('animToggleSection');
+  if (animSection) animSection.style.display = isAnimated ? 'none' : 'block';
+  if (!isAnimated && _animEnabled) {
+    document.getElementById('animRatingRow').innerHTML = buildRatingStepper('animation', 'Animation Quality');
+    document.getElementById('animRatingRow').style.display = 'block';
+  }
+}
+
+function stepRating(key, delta) {
+  const val    = draftRatings[key];
+  const hasVal = val !== undefined && val !== null && val !== '';
+  if (!hasVal && delta < 0) return;
+  const current = hasVal ? Number(val) : -0.5;
+  let next = Math.round((current + delta) * 10) / 10;
+  next = Math.max(0, Math.min(10, next));
+  draftRatings[key] = next;
+  const el = document.getElementById('sval-' + key);
+  if (el) { el.value = next.toFixed(1); el.classList.add('has-val'); }
+  _setMeter(key, next);
+  recalcFinal();
+}
+function _setMeter(key, v) {
+  const m = document.getElementById('smeter-' + key);
+  if (m) m.style.width = (v == null ? 0 : Number(v) * 10) + '%';
+}
+
+function typeRating(key, rawVal) {
+  const s = String(rawVal).trim();
+  if (s === '' || s === '—') {
+    delete draftRatings[key];
+    const el = document.getElementById('sval-' + key);
+    if (el) { el.value = ''; el.classList.remove('has-val'); }
+    _setMeter(key, null);
+    recalcFinal(); return;
+  }
+  const raw = parseFloat(s);
+  if (isNaN(raw)) {
+    const el = document.getElementById('sval-' + key);
+    if (el) el.value = draftRatings[key] != null ? Number(draftRatings[key]).toFixed(1) : '';
+    return;
+  }
+  let snapped = Math.round(raw * 2) / 2;
+  snapped = Math.max(0, Math.min(10, snapped));
+  draftRatings[key] = snapped;
+  const el = document.getElementById('sval-' + key);
+  if (el) { el.value = snapped.toFixed(1); el.classList.add('has-val'); }
+  _setMeter(key, snapped);
+  recalcFinal();
+}
+
+function toggleAnimation() {
+  _animEnabled = !_animEnabled;
+  draftRatings._animEnabled = _animEnabled;
+  const row = document.getElementById('animRatingRow');
+  const btn = document.getElementById('animToggleBtn');
+  if (_animEnabled) {
+    row.innerHTML = buildRatingStepper('animation', 'Animation Quality');
+    row.style.display = 'block';
+    btn.textContent = '− Disable Animation Quality';
+    btn.classList.add('on');
+  } else {
+    row.style.display = 'none';
+    row.innerHTML = '';
+    delete draftRatings['animation'];
+    btn.textContent = '+ Enable Animation Quality';
+    btn.classList.remove('on');
+  }
+  recalcFinal();
+}
+
+
+function recalcFinal() {
+  const cat = document.getElementById('dCat').value;
+  const isAnimated = cat === 'anime' || cat === 'cartoons';
+  const isMovie = getMediaType() === 'movie';
+  const { core: coreArr, bonus: bonusArr } = getRatings(cat, isMovie);
+  const score = calcFinal({ ...draftRatings, _media_type: isMovie ? 'movie' : draftRatings._media_type }, cat);
+  document.getElementById('finalScoreNum').textContent = score != null ? Number(score).toFixed(2) : '—';
+
+  const coreKeys = coreArr.filter(r => r.key !== 'enjoyment').map(r => r.key);
+  if (!isAnimated && draftRatings.animation != null && draftRatings.animation !== '') coreKeys.push('animation');
+  const coreVals  = coreKeys.map(k => draftRatings[k]).filter(v => v !== undefined && v !== null && v !== '');
+  const bonusVals = bonusArr.map(r => draftRatings[r.key]).filter(v => v !== undefined && v !== null && v !== '');
+  const coreAvg   = coreVals.length  ? coreVals.reduce((a,b) => a + Number(b), 0) / coreVals.length  : null;
+  const bonusAvg  = bonusVals.length ? bonusVals.reduce((a,b) => a + Number(b), 0) / bonusVals.length : null;
+  const enjoyVal  = draftRatings['enjoyment'];
+
+  document.getElementById('scoreBreakdown').innerHTML = [
+    { label: 'Core (70%)',      val: coreAvg,                                    filled: coreVals.length > 0 },
+    { label: 'Enjoyment (20%)', val: enjoyVal != null ? Number(enjoyVal) : null, filled: enjoyVal != null   },
+    { label: 'Bonus (10%)',     val: bonusAvg,                                   filled: bonusVals.length > 0 },
+  ].map(r => `<div class="score-breakdown-row">
+    <label>${r.label}</label>
+    <div class="score-mini-bar"><div class="score-mini-fill" style="width:${r.filled && r.val != null ? r.val * 10 : 0}%"></div></div>
+    <span class="score-mini-val">${r.filled && r.val != null ? Number(r.val).toFixed(2) : '—'}</span>
+  </div>`).join('');
+}
+
+/* ── Season Breakdown ── */
+let _seasonBreakdown = []; // array of episode counts per season
+
+function addSeason(eps) {
+  _seasonBreakdown.push(eps !== undefined ? Number(eps) : '');
+  renderSeasonRows();
+}
+
+function removeSeasonRow(i) {
+  _seasonBreakdown.splice(i, 1);
+  renderSeasonRows();
+}
+
+function updateSeasonEps(i, val) {
+  _seasonBreakdown[i] = parseInt(val) > 0 ? parseInt(val) : '';
+  updateSeasonTotals();
+}
+
+function renderSeasonRows() {
+  const container = document.getElementById('dSeasonList');
+  if (!container) return;
+  const locked = container.classList.contains('locked');
+  container.innerHTML = _seasonBreakdown.map((eps, i) => `
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:12px;color:var(--text-3);min-width:68px;flex-shrink:0;">Season ${i+1}</span>
+      <input type="number" min="1" value="${eps || ''}" placeholder="Episodes"
+             onchange="updateSeasonEps(${i},this.value)" oninput="updateSeasonEps(${i},this.value)"
+             class="field-input${locked ? ' field-locked' : ''}" ${locked ? 'readonly' : ''} style="flex:1;padding:6px 10px;font-size:13px;">
+      <button onclick="removeSeasonRow(${i})" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:15px;padding:2px 6px;transition:color .2s;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='var(--text-3)'">✕</button>
+    </div>`).join('');
+  updateSeasonTotals();
+}
+
+// Locks/unlocks the fields that come directly from TMDB once an entry
+// is linked (tmdb_id set) — title, years, description, genres, runtime,
+// and the season breakdown. The app's own TMDB auto-refresh can still
+// update these programmatically; this only blocks manual editing, and
+// only when the person hasn't clicked one of the lock icons to
+// deliberately unlock everything and fix it by hand.
+let _tmdbFieldsLinked = false; // is this entry actually tmdb-linked?
+// Each section locks independently — clicking one lock icon only
+// unlocks that section's fields, not all of them.
+let _tmdbLockState = { title: true, year: true, genres: true, desc: true, season: true, runtime: true };
+// The actual tmdb_id/tmdb_type to save — carried forward from the loaded
+// entry (or from a fresh TMDB match via Update Details/new-entry prefill)
+// and included explicitly in every save. Without this, saveEntry()'s
+// payload never mentioned these fields at all, and db.js's `|| null`
+// fallback then silently wiped tmdb_id/tmdb_type to null on every single
+// save of an already-linked entry — not just the entries actually added
+// with a bug, but any of them the person ever so much as re-saved after.
+let _detNotesSaved = '';
+let _pendingTmdbId = null;
+let _pendingTmdbType = null;
+
+const TMDB_LOCK_SECTIONS = {
+  title:   { btnId: 'tmdbLockBtn-title',   fieldIds: ['dTitle'] },
+  year:    { btnId: 'tmdbLockBtn-year',    fieldIds: ['dYear', 'dCompletionYear'] },
+  genres:  { btnId: 'tmdbLockBtn-genres',  fieldIds: [] },
+  desc:    { btnId: 'tmdbLockBtn-desc',    fieldIds: ['dDesc'] },
+  season:  { btnId: 'tmdbLockBtn-season',  fieldIds: [] },
+  runtime: { btnId: 'tmdbLockBtn-runtime', fieldIds: ['dRuntimeH', 'dRuntimeM'] },
+};
+
+function _applyTmdbLock(isLinked) {
+  _tmdbFieldsLinked = isLinked;
+  Object.keys(_tmdbLockState).forEach(k => _tmdbLockState[k] = isLinked); // (re-)lock everything whenever freshly (re-)linked
+  _renderTmdbLockUI();
+}
+
+function _toggleTmdbFieldLock(section) {
+  if (!_tmdbFieldsLinked || !TMDB_LOCK_SECTIONS[section]) return;
+  _tmdbLockState[section] = !_tmdbLockState[section];
+  _renderTmdbLockUI();
+  if (!_tmdbLockState[section]) {
+    showToast('Unlocked — edit this manually, or use "Update Details" to re-sync from TMDB.');
+  }
+}
+
+function _renderTmdbLockUI() {
+  Object.entries(TMDB_LOCK_SECTIONS).forEach(([section, cfg]) => {
+    const locked = _tmdbFieldsLinked && _tmdbLockState[section];
+    const btn = document.getElementById(cfg.btnId);
+    if (btn) {
+      btn.classList.toggle('linked', _tmdbFieldsLinked);
+      btn.innerHTML = icon(locked ? 'lock' : 'unlock', 13);
+      btn.title = locked ? 'Synced from TMDB — click to edit manually' : 'Unlocked — click to lock again';
+    }
+    cfg.fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.readOnly = locked;
+      el.classList.toggle('field-locked', locked);
+    });
+  });
+
+  const genrePicker = document.getElementById('dGenres');
+  if (genrePicker) genrePicker.classList.toggle('locked', _tmdbFieldsLinked && _tmdbLockState.genres);
+
+  const seasonList = document.getElementById('dSeasonList');
+  const seasonLocked = _tmdbFieldsLinked && _tmdbLockState.season;
+  if (seasonList) {
+    seasonList.classList.toggle('locked', seasonLocked);
+    renderSeasonRows();
+  }
+  const addSeasonBtn = document.querySelector('button[onclick="addSeason()"]');
+  if (addSeasonBtn) addSeasonBtn.style.display = seasonLocked ? 'none' : '';
+
+  const updateBtn = document.getElementById('btnUpdateDetails');
+  // Shown for any existing entry, linked or not — this is the tool for
+  // fixing entries that ended up unlinked/null from earlier bugs, so it
+  // needs to be available precisely when an entry ISN'T linked, not
+  // just when it already is.
+  if (updateBtn) updateBtn.style.display = _detId ? '' : 'none';
+}
+
+// Opens the same TMDB search picker used when adding a new entry, with
+// the current title pre-filled — meant for fixing older entries that
+// ended up with missing/null TMDB data from bugs in earlier versions
+// of the add flow, without having to delete and re-add them. Reuses
+// the same live search already wired up on the title field itself.
+function _openUpdateDetailsPicker() {
+  if (!_detEntry) return;
+  _injectUpdateDetailsOverlay();
+  const input = document.getElementById('updateDetailsSearchInput');
+  input.value = _detEntry.title || '';
+  document.getElementById('updateDetailsResultsList').innerHTML = '';
+  _updateDetailsResults = [];
+  document.getElementById('updateDetailsOverlay').classList.add('open');
+  mssLockScroll('updateDetails');
+  // Kick off a search immediately using the current title, same as
+  // picking a result from a fresh add — saves having to retype it.
+  _onUpdateDetailsSearchInput(input.value);
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) setTimeout(() => input.focus(), 150);
+}
+
+function _injectUpdateDetailsOverlay() {
+  if (document.getElementById('updateDetailsOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'updateDetailsOverlay';
+  el.innerHTML = `<div id="updateDetailsCard" style="width:100%;max-width:460px;max-height:80vh;background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;overflow:hidden;">
+    <div class="rf-header">
+      <div class="rf-title">Update Details</div>
+      <button class="rf-close" onclick="_closeUpdateDetailsPicker()">${icon('x', 18)}</button>
+    </div>
+    <div class="card-link-input-wrap">
+      <input class="card-link-input" id="updateDetailsSearchInput" placeholder="Search movies & TV shows…" oninput="_onUpdateDetailsSearchInput(this.value)">
+    </div>
+    <div class="rf-list" id="updateDetailsResultsList"></div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) _closeUpdateDetailsPicker(); });
+  document.body.appendChild(el);
+}
+
+function _closeUpdateDetailsPicker() {
+  const ov = document.getElementById('updateDetailsOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  mssUnlockScroll('updateDetails');
+}
+
+let _updateDetailsResults = [];
+let _updateDetailsSearchTimer = null;
+
+function _onUpdateDetailsSearchInput(query) {
+  clearTimeout(_updateDetailsSearchTimer);
+  const q = query.trim();
+  const listEl = document.getElementById('updateDetailsResultsList');
+  if (!q) { listEl.innerHTML = ''; _updateDetailsResults = []; return; }
+  _updateDetailsSearchTimer = setTimeout(async () => {
+    const results = await _tmdbSearch(q, 30);
+    _updateDetailsResults = results;
+    if (!results.length) {
+      listEl.innerHTML = `<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">No matches found.</div>`;
+      return;
+    }
+    listEl.innerHTML = results.map((r, i) => {
+      const title = r.title || r.name || 'Untitled';
+      const date = r.release_date || r.first_air_date || '';
+      const year = date ? date.slice(0, 4) : '';
+      const typeLabel = r.media_type === 'movie' ? 'Movie' : 'TV Show';
+      const posterEl = r.poster_path
+        ? `<img src="${TMDB_FULL}${r.poster_path}" loading="lazy">`
+        : (title[0] || '?').toUpperCase();
+      return `<div class="card-link-result" onclick="_pickUpdateDetailsMatch(${i})">
+        <div class="card-link-result-poster">${posterEl}</div>
+        <div>
+          <div class="card-link-result-title" translate="no">${escHTML(title)}</div>
+          <div class="card-link-result-meta">${typeLabel}${year ? ' · ' + year : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }, 350);
+}
+
+async function _pickUpdateDetailsMatch(i) {
+  const r = _updateDetailsResults[i];
+  _closeUpdateDetailsPicker();
+  if (!r) return;
+  showToast('Fetching details…');
+  try {
+    const isMovie = r.media_type === 'movie';
+    const detail = isMovie ? await _tmdbMovie(r.id) : await _tmdbTV(r.id);
+    const entry = _tmdbToEntry(r, detail);
+    if (document.getElementById('dCat')?.dataset.value === 'anime' || document.getElementById('dCat')?.dataset.value === 'cartoons') {
+      entry.cat = document.getElementById('dCat').dataset.value;
+    }
+    if (entry.title) document.getElementById('dTitle').value = entry.title;
+    if (entry.year)  document.getElementById('dYear').value = entry.year;
+    _applyTMDBPrefill(entry);
+  } catch (err) {
+    console.error(err);
+    showToast('Error fetching TMDB details.', 'err');
+  }
+}
+
+function updateSeasonTotals() {
+  const valid = _seasonBreakdown.filter(n => parseInt(n) > 0).map(Number);
+  const totalSeasons = valid.length;
+  const totalEps = valid.reduce((a, b) => a + b, 0);
+  const tsEl = document.getElementById('dTotalSeasons');
+  const teEl = document.getElementById('dTotalEps');
+  if (tsEl) tsEl.value = totalSeasons || '';
+  if (teEl) teEl.value = totalEps || '';
+  updateProgBar();
+}
+
+/* ── Runtime display ── */
+function updateRuntimeDisplay() {
+  const h = parseInt(document.getElementById('dRuntimeH')?.value) || 0;
+  const m = parseInt(document.getElementById('dRuntimeM')?.value) || 0;
+  const label = document.getElementById('dRuntimeLabel');
+  if (!label) return;
+  if (!h && !m) { label.textContent = ''; return; }
+  label.textContent = h ? `${h}h ${m}m` : `${m}m`;
+}
+
+/* ── Progress bar ── */
+function updateProgBar() {
+  const breakdown = _seasonBreakdown.filter(n => parseInt(n) > 0).map(Number);
+  const totalEps  = breakdown.length > 0 ? breakdown.reduce((a, b) => a + b, 0)
+                    : (parseInt(document.getElementById('dTotalEps').value) || 0);
+  const curSeason = parseInt(document.getElementById('dSeason')?.value) || 1;
+  const curEp     = parseInt(document.getElementById('dEpisode')?.value) || 0;
+  // Calculate watched from breakdown + current position
+  let watched = 0;
+  if (breakdown.length > 0) {
+    for (let i = 0; i < curSeason - 1 && i < breakdown.length; i++) watched += breakdown[i];
+    watched += curEp;
+  } else {
+    watched = parseInt(document.getElementById('dWatched').value) || 0;
+  }
+
+  // Store calculated watched in hidden field for save
+  const watchedEl = document.getElementById('dWatched');
+  if (watchedEl) watchedEl.value = watched;
+
+  const pct = totalEps > 0 ? Math.min(100, Math.floor((watched / totalEps) * 10000) / 100) : 0;
+  const fill  = document.getElementById('detProgFill');
+  const label = document.getElementById('detProgLabel');
+  if (fill)  fill.style.width = pct + '%';
+  if (label) {
+    if (breakdown.length > 0 && (curSeason > 0 || curEp > 0)) {
+      label.textContent = `S${curSeason} · E${curEp}  ·  ${watched} / ${totalEps} Episodes  ·  ${pct.toFixed(2)}%`;
+    } else if (totalEps > 0) {
+      label.textContent = `${watched} / ${totalEps} episodes — ${pct.toFixed(2)}%`;
+    } else {
+      label.textContent = '';
+    }
+  }
+
+  // Auto-complete for movies only when 100%
+  if (pct >= 100 && totalEps > 0) {
+    const statusEl  = document.getElementById('dStatus');
+    const mediaType = getMediaType();
+    if (mediaType === 'movie' && statusEl && statusEl.value === 'watching') {
+      statusEl.value = 'completed';
+      updateStatusUI();
+    }
+    // For shows: no auto-complete — user chooses manually or via the category page popup
+  }
+}
+
+/* ── Type selector (anime/cartoon: movie vs show) ── */
+/* ── Shadow-select: hidden native <select> stays the real source of truth
+   (existing onchange/.value logic elsewhere is untouched), a visual .sel-dd
+   dropdown mirrors it. Call sel._ddSync() after programmatically changing
+   the hidden select's value or options so the visual stays in sync. ── */
+function _makeShadowDD(selectId, wrapId) {
+  const sel = document.getElementById(selectId);
+  const wrap = document.getElementById(wrapId);
+  if (!sel || !wrap) return;
+
+  const ddId = wrapId + '-dd';
+  const fnName = '_shadowSync_' + selectId;
+  window[fnName] = function(value) {
+    if (sel.value !== value) {
+      sel.value = value;
+      sel.dispatchEvent(new Event('change'));
+    }
+  };
+
+  function render() {
+    const opts = Array.from(sel.options).map(o => ({ value: o.value, label: o.textContent }));
+    if (!opts.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = _selDDHTML(ddId, opts, sel.value, fnName);
+  }
+  render();
+  sel._ddSync = render;
+}
+
+function updateTypeSelector() {
+  const cat = document.getElementById('dCat').value;
+  const isAnimeOrCartoon = cat === 'anime' || cat === 'cartoons';
+  // Whether episode/season fields make sense depends on the actual
+  // media type — for Movies/TV Shows pages that's just the category,
+  // but Anime/Cartoons can hold either, so it has to come from the
+  // Movie/TV Show sub-type selector instead once that's relevant.
+  const isMovies = isAnimeOrCartoon ? getMediaType() === 'movie' : cat === 'movies';
+  const animeSection = document.getElementById('animeGenreSection');
+  if (animeSection) animeSection.style.display = cat === 'anime' ? '' : 'none';
+  document.getElementById('dTypeGroup').style.display = isAnimeOrCartoon ? '' : 'none';
+  // Favorites: hide episode/season for movies
+  const epWrap = document.getElementById('favEpisodeWrap');
+  const seaWrap = document.getElementById('favSeasonWrap');
+  if (epWrap)  epWrap.style.display  = isMovies ? 'none' : '';
+  if (seaWrap) seaWrap.style.display = isMovies ? 'none' : '';
+  const lowEpWrap  = document.getElementById('lowEpisodeWrap');
+  const lowSeaWrap = document.getElementById('lowSeasonWrap');
+  if (lowEpWrap)  lowEpWrap.style.display  = isMovies ? 'none' : '';
+  if (lowSeaWrap) lowSeaWrap.style.display = isMovies ? 'none' : '';
+  // Re-render grids to reposition animation input
+  renderRatingGrids();
+  updateStatusUI();
+}
+
+function getMediaType() {
+  const cat = document.getElementById('dCat').value;
+  if (cat === 'movies') return 'movie';
+  if (cat === 'tv')     return 'show';
+  // anime / cartoons: use the selector
+  return document.getElementById('dMediaType').value || 'show';
+}
+
+function onStatusChange() {
+  updateStatusUI();
+}
+
+function updateStatusUI() {
+  const status    = document.getElementById('dStatus').value;
+  // Times Watched: for titles you've watched (Watched / To Be Continued)
+  const rewatchSec = document.getElementById('dRewatchSection');
+  if (rewatchSec) rewatchSec.style.display = (status === 'completed' || status === 'ongoing') ? '' : 'none';
+  const mediaType = getMediaType();
+  const isMovie   = mediaType === 'movie';
+  const showProgress = !isMovie && status !== 'queue';
+
+  document.getElementById('dProgressSection').style.display = (!isMovie) ? 'block' : 'none';
+
+  // Hide paused/ongoing for movies — remove/re-add for cross-browser reliability
+  const statusEl = document.getElementById('dStatus');
+  const currentVal = statusEl.value;
+  ['paused','ongoing'].forEach(val => {
+    const opt = statusEl.querySelector(`option[value="${val}"]`);
+    if (isMovie && opt) opt.remove();
+    if (!isMovie && !statusEl.querySelector(`option[value="${val}"]`)) {
+      const newOpt = document.createElement('option');
+      newOpt.value = val;
+      newOpt.textContent = val === 'paused' ? 'Taking a Break' : 'To Be Continued';
+      const completed = statusEl.querySelector('option[value="completed"]');
+      statusEl.insertBefore(newOpt, completed);
+    }
+  });
+  if (isMovie && (currentVal === 'paused' || currentVal === 'ongoing')) {
+    statusEl.value = currentVal === 'paused' ? 'watching' : 'completed';
+  }
+  statusEl._ddSync?.();
+
+  // Show runtime section for movies only
+  const runtimeSection = document.getElementById('dRuntimeSection');
+  if (runtimeSection) runtimeSection.style.display = isMovie ? '' : 'none';
+  document.getElementById('dDroppedAtSection').hidden = !(isMovie && status === 'dropped');
+
+  // Hide completion year for movies (they only have release year)
+  const completionYearGroup = document.getElementById('completionYearGroup');
+  if (completionYearGroup) completionYearGroup.style.display = isMovie ? 'none' : '';
+  const yearDivider = document.getElementById('detYearDivider');
+  if (yearDivider) yearDivider.style.display = isMovie ? 'none' : '';
+
+  // Show current position only when actively watching or paused
+  const curPos = document.getElementById('dCurrentPosSection');
+  if (curPos) curPos.style.display = (showProgress && (status === 'watching' || status === 'paused' || status === 'dropped')) ? 'block' : 'none';   // dropped: where you stopped
+
+  // Show/hide "Watched On" date field
+  const completedOnGroup = document.getElementById('completedOnGroup');
+  if (completedOnGroup) completedOnGroup.style.display = (status === 'completed' || status === 'ongoing') ? '' : 'none';
+  const _rwSec = document.getElementById('dRewatchSection');
+  if (_rwSec) _rwSec.style.display = (status === 'completed' || status === 'ongoing') ? '' : 'none';
+  // Only auto-set date if there is no date already AND entry has no existing completed_date
+  if ((status === 'completed' || status === 'ongoing') && !document.getElementById('dCYear')?.value && !_detEntry?.completed_date) {
+    const now = new Date();
+    document.getElementById('dDay').value   = now.getDate();
+    document.getElementById('dMonth').value = String(now.getMonth()+1).padStart(2,'0');
+    document.getElementById('dMonth')._ddSync?.();
+    document.getElementById('dCYear').value  = now.getFullYear();
+  }
+}
+
+function updatePosterLetter() {
+  const t = document.getElementById('dTitle').value;
+  if (document.getElementById('dPosterImg').style.display === 'none')
+    document.getElementById('dPosterLetter').textContent = t ? t[0].toUpperCase() : '?';
+}
+
+function toggleGenre(el) { el.classList.toggle('selected'); }
+
+/* ── Poster upload ── */
+// Poster picker — lets the person choose from every poster TMDB has
+// for this title (different language releases, fan uploads, etc.) or
+// fall back to uploading their own image, instead of only ever being
+// able to upload. Since poster_url is the same field every other page
+// (category, completed, profile, profile-view, lists, favorites,
+// notes) already reads via posterHTML(), picking one here is all
+// that's needed for it to show up everywhere once saved.
+function _openPosterPicker() {
+  _injectPosterPickerOverlay();
+  document.getElementById('posterPickerOverlay').classList.add('open');
+  mssLockScroll('posterPicker');
+  const grid = document.getElementById('posterPickerGrid');
+  // Uses the pending tmdb_id/type (kept current by Update Details the
+  // moment a match is picked) rather than _detEntry's, which only
+  // reflects whatever was loaded from the database — otherwise picking
+  // a new match via Update Details and then immediately trying to pick
+  // a poster would still show alternates for the OLD title until the
+  // entry was saved and reloaded.
+  if (_pendingTmdbId && _pendingTmdbType) {
+    grid.innerHTML = `<div style="padding:24px;text-align:center;"><div class="spinner"></div></div>`;
+    _loadTmdbPosterOptions(_pendingTmdbId, _pendingTmdbType);
+  } else {
+    grid.innerHTML = `<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">This entry isn't linked to TMDB, so there aren't alternate posters to choose from — use "Upload Your Own" below.</div>`;
+  }
+}
+
+function _injectPosterPickerOverlay() {
+  if (document.getElementById('posterPickerOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'posterPickerOverlay';
+  el.innerHTML = `<div id="posterPickerCard">
+    <div class="rf-header">
+      <div class="rf-title">Choose a Poster</div>
+      <button class="rf-close" onclick="_closePosterPicker()">${icon('x', 18)}</button>
+    </div>
+    <div id="posterPickerGrid"></div>
+    <div style="padding:14px;border-top:0.5px solid var(--border);">
+      <button class="popup-action-btn" style="width:100%;justify-content:center;" onclick="_closePosterPicker();document.getElementById('posterFile').click()">
+        ${icon('image', 14)} Upload Your Own
+      </button>
+    </div>
+  </div>`;
+  el.addEventListener('click', ev => { if (ev.target === el) _closePosterPicker(); });
+  document.body.appendChild(el);
+}
+
+function _closePosterPicker() {
+  const ov = document.getElementById('posterPickerOverlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  mssUnlockScroll('posterPicker');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Favorites/Lowlights pickers — Season and Episode as dropdowns
+   (reusing the same .td-dd component the category pages' Sort &
+   Filter popups use, since this page already loads that shared CSS),
+   and Character as a popup grid of cast photos + names, instead of
+   free-text fields the person had to type exactly.
+   ══════════════════════════════════════════════════════════════════ */
+
+let _favData = null; // { seasons:[{number,name,poster_path,episode_count,air_date}], episodesBySeasonNum:{}, cast:[{name,character,profile_path}] }
+
+async function _favLoadData(tmdbId, tmdbType) {
+  _favData = null;
+  try {
+    // TV's basic "credits" only returns a short top-billed list — the
+    // full cast (matching what the title page shows) needs the
+    // dedicated aggregate_credits endpoint instead, same fix already
+    // applied to title.html and create-card.js earlier. Its cast
+    // entries also nest the character under roles[0] rather than a
+    // direct .character field.
+    const extra = tmdbType === 'movie' ? 'credits' : 'credits,aggregate_credits';
+    const res = await tmdbFetch(`${TMDB_BASE}/${tmdbType}/${tmdbId}?language=en-US&append_to_response=${extra}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const seasons = tmdbType === 'tv' ? (data.seasons || []).filter(s => s.season_number > 0)
+      .map(s => ({ number: s.season_number, name: s.name, poster_path: s.poster_path, episode_count: s.episode_count, air_date: s.air_date })) : [];
+    const castSource = tmdbType === 'movie' ? (data.credits?.cast || []) : (data.aggregate_credits?.cast || data.credits?.cast || []);
+    const cast = castSource.map(c => ({ name: c.name, character: c.character || c.roles?.[0]?.character || '', profile_path: c.profile_path })).filter(c => c.name);
+    _favData = { seasons, episodesBySeasonNum: {}, cast };
+  } catch { _favData = null; }
+}
+
+function _favSetLabel(which, field, value) {
+  // Character is a text box you can type in (or fill from the cast picker)
+  if (field === 'Character') {
+    const input = document.getElementById(`${which}Character`);
+    if (input) { input.value = value || ''; input.title = value || ''; }
+    document.getElementById(`${which}CharacterClearBtn`)?.classList.toggle('visible', !!value);
+    return;
+  }
+  const el = document.getElementById(`${which}${field}Label`);
+  if (!el) return;
+  el.textContent = value || `Choose ${field === 'Character' ? 'from cast' : field === 'Episode' ? 'an episode' : 'a season'}…`;
+  el.classList.toggle('fav-person-placeholder', !value);
+  const clearBtn = document.getElementById(`${which}${field}ClearBtn`);
+  if (clearBtn) clearBtn.classList.toggle('visible', !!value);
+}
+
+function _favCharTyped(which) {
+  const v = document.getElementById(`${which}Character`).value;
+  document.getElementById(`${which}Character`).title = v;
+  document.getElementById(`${which}CharacterClearBtn`)?.classList.toggle('visible', !!v.trim());
+}
+
+function _favClearField(which, field) {
+  document.getElementById(`${which}${field}`).value = '';
+  _favSetLabel(which, field, '');
+}
+
+
+/* ── Season & Episode pickers — small centered popups (same pattern as
+   the Character picker below), rather than inline dropdowns. An inline
+   dropdown here could open right on top of the next field in the grid
+   (Favorites and Lowlights rows sit close together), tall enough that
+   a still-open dropdown could physically cover the next trigger button
+   and silently swallow a click meant for it. A centered modal has no
+   such neighbor to collide with. ── */
+
+/* Shared bits: TMDB image sizes + the overlay shell */
+const _favImg = (path, size) => path ? `${TMDB_IMG.replace('w185', size)}${path}` : '';
+function _favOverlay(id, cardId, title, closeFn, extra = '') {
+  if (document.getElementById(id)) return;
+  const el = document.createElement('div');
+  el.id = id;
+  el.innerHTML = `<div id="${cardId}" role="dialog" aria-modal="true" aria-label="${title}">
+      <div class="sf-header">
+        <div class="sf-title">${title}</div>
+        <button type="button" class="sf-close" onclick="${closeFn}()" aria-label="Close">${icon('x', 18)}</button>
+      </div>${extra}
+      <div class="sf-body" id="${id}Body"></div>
+    </div>`;
+  MSSDialog.bind(el, () => window[closeFn]());
+  document.body.appendChild(el);
+}
+const _favSeasonBlock = (s, onclick, picked) => `<button type="button" class="td-season-block${picked ? ' picked' : ''}" onclick="${onclick}">
+    <div class="td-season-block-poster">${s.poster_path ? `<img src="${_favImg(s.poster_path, 'w342')}" alt="" loading="lazy">` : ''}</div>
+    <div class="td-season-block-info">
+      <div class="td-season-block-name" translate="no">${escHTML(mssSeasonLabel(s.number, s.name))}</div>
+      <div class="td-season-block-sub">${s.episode_count ? `${s.episode_count} ep${s.episode_count !== 1 ? 's' : ''}` : ''}${s.air_date ? ` · ${s.air_date.split('-')[0]}` : ''}</div>
+      ${_favSeasonMineHTML(s.number)}
+    </div>
+  </button>`;
+
+/* ── Your own episode / season ratings (episodes page), shown as a tag on
+   each card of the pickers: "You 8.7" in that score's band colour.
+   A season shows its whole-season rating, else the average of the
+   episodes you rated in it ("Your avg"). Loaded each time a picker opens. ── */
+let _favMine = {};   // 'season:episode' → score (episode 0 = the whole season)
+async function _favLoadMine() {
+  _favMine = {};
+  if (!_detId) return;
+  try {
+    const { data } = await sb.from('episode_ratings').select('season_number,episode_number,score').eq('entry_id', _detId);
+    (data || []).forEach(r => { _favMine[`${r.season_number}:${r.episode_number}`] = Number(r.score); });
+  } catch {}
+}
+const _favMineTag = (v, label) => `<span class="fav-mine ep-band-${MSSEp.band(v).key}"><small>${label}</small> ${v.toFixed(1)}</span>`;
+function _favSeasonMineHTML(sn) {
+  const whole = _favMine[`${sn}:0`];
+  if (whole != null) return _favMineTag(whole, 'You');
+  const eps = Object.entries(_favMine).filter(([k]) => k.startsWith(sn + ':') && k !== sn + ':0').map(([, v]) => v);
+  return eps.length ? _favMineTag(eps.reduce((a, b) => a + b, 0) / eps.length, 'Your avg') : '';
+}
+
+/* ── Season picker: the title page's season posters ── */
+async function _favOpenSeasonPicker(which) {
+  _favPersonTarget = which;
+  await _favLoadMine();
+  _favOverlay('favSeasonOverlay', 'favSeasonCard', 'Choose a Season', '_favCloseSeasonPicker');
+  const seasons = _favData?.seasons || [];
+  const current = document.getElementById(`${which}Season`).value;
+  document.getElementById('favSeasonOverlayBody').innerHTML = seasons.length
+    ? `<div class="fav-season-grid">${seasons.map(s => _favSeasonBlock(s, `_favPickSeason(${s.number})`, current === `Season ${s.number}`)).join('')}</div>`
+    : `<div class="sf-empty">No season data available — link this title to TMDB first.</div>`;
+  MSSDialog.open(document.getElementById('favSeasonOverlay'));
+}
+function _favCloseSeasonPicker() { MSSDialog.close(document.getElementById('favSeasonOverlay')); }
+function _favPickSeason(seasonNumber) {
+  const which = _favPersonTarget;
+  const label = `Season ${seasonNumber}`;
+  document.getElementById(`${which}Season`).value = label;
+  _favSetLabel(which, 'Season', label);
+  _favCloseSeasonPicker();
+}
+
+/* ── Episode picker: season strip on top, then the title page's episode
+   cards (still, badge, rating · date · runtime, description). Searching
+   looks through every season. ── */
+let _favEpSeason = null;
+const _favEpisodeLabel = (seasonNumber, ep) => `S${seasonNumber}E${ep.number} - ${ep.name}`;   // the saved value (plain text)
+
+async function _favLoadSeasonEpisodes(n) {
+  if (_favData.episodesBySeasonNum[n]) return;
+  try {
+    const res = await tmdbFetch(`${TMDB_BASE}/tv/${_pendingTmdbId}/season/${n}?language=en-US`);
+    const d = res.ok ? await res.json() : null;
+    _favData.episodesBySeasonNum[n] = (d?.episodes || []).map(ep => ({
+      number: ep.episode_number, name: ep.name || `Episode ${ep.episode_number}`, still_path: ep.still_path,
+      overview: ep.overview, vote_average: ep.vote_average, air_date: ep.air_date, runtime: ep.runtime,
+    }));
+  } catch { _favData.episodesBySeasonNum[n] = []; }
+}
+
+async function _favOpenEpisodePicker(which) {
+  _favPersonTarget = which;
+  _favOverlay('favEpisodeOverlay', 'favEpisodeCard', 'Choose an Episode', '_favCloseEpisodePicker', `
+      <div class="fav-ep-seasons" id="favEpSeasons"></div>
+      <div class="search-wrap fav-picker-search">
+        <span class="search-icon-wrap">${icon('search', 14)}</span>
+        <input type="text" id="favEpisodeSearch" placeholder="Search every episode…" autocomplete="off" aria-label="Search episodes" oninput="_favFilterEpisodes(this.value)">
+      </div>`);
+  document.getElementById('favEpisodeSearch').value = '';
+  MSSDialog.open(document.getElementById('favEpisodeOverlay'), { focus: window.matchMedia('(max-width:640px)').matches ? null : '#favEpisodeSearch' });
+  const body = document.getElementById('favEpisodeOverlayBody');
+  if (!_favData?.seasons?.length) {
+    document.getElementById('favEpSeasons').innerHTML = '';
+    body.innerHTML = `<div class="sf-empty">No episode data available — link this title to TMDB first.</div>`;
+    return;
+  }
+  await _favLoadMine();
+  // Open on the season of the episode already picked, else Season 1
+  const cur = document.getElementById(`${which}Episode`).value.match(/^S(\d+)E/);
+  const start = cur && _favData.seasons.some(s => s.number === +cur[1]) ? +cur[1] : _favData.seasons[0].number;
+  _favShowSeason(start);
+}
+
+async function _favShowSeason(n) {
+  _favEpSeason = n;
+  document.getElementById('favEpSeasons').innerHTML = _favData.seasons.map(s => _favSeasonBlock(s, `_favShowSeason(${s.number})`, s.number === n)).join('');
+  document.querySelector('#favEpSeasons .picked')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  document.getElementById('favEpisodeSearch').value = '';
+  const body = document.getElementById('favEpisodeOverlayBody');
+  body.innerHTML = `<div class="sf-empty">Loading episodes…</div>`;
+  await _favLoadSeasonEpisodes(n);
+  if (_favEpSeason !== n) return;            // another season was picked meanwhile
+  _favRenderEpisodes((_favData.episodesBySeasonNum[n] || []).map(ep => ({ seasonNumber: n, ep })), false);
+}
+
+function _favEpCardHTML(seasonNumber, ep) {
+  const label = _favEpisodeLabel(seasonNumber, ep);
+  const picked = document.getElementById(`${_favPersonTarget}Episode`)?.value === label;
+  const rating = ep.vote_average ? Number(ep.vote_average).toFixed(1) : '';
+  return `<button type="button" class="td-episode-card${picked ? ' picked' : ''}" onclick="_favPickEpisode(${attrJSON(label)})">
+    <div class="td-ep-still">
+      ${ep.still_path ? `<img src="${_favImg(ep.still_path, 'w500')}" alt="" loading="lazy">` : ''}
+      <span class="td-ep-num-badge">S${seasonNumber} · E${ep.number}</span>
+    </div>
+    <div class="td-ep-body">
+      <div class="td-ep-title" translate="no">${escHTML(ep.name)}</div>
+      <div class="td-ep-meta-row">
+        ${_favMine[`${seasonNumber}:${ep.number}`] != null ? _favMineTag(_favMine[`${seasonNumber}:${ep.number}`], 'You') : ''}
+        ${rating ? `<span class="td-ep-rating">★ ${rating}</span>` : ''}
+        ${ep.air_date ? `<span>${escHTML(ep.air_date)}</span>` : ''}
+        ${ep.runtime ? `<span>${ep.runtime}m</span>` : ''}
+      </div>
+      <div class="td-ep-overview" translate="no">${(ep.overview ? escHTML(ep.overview) : mssT('No description available.'))}</div>
+    </div>
+  </button>`;
+}
+
+function _favRenderEpisodes(items, grouped) {
+  const body = document.getElementById('favEpisodeOverlayBody');
+  if (!items.length) { body.innerHTML = `<div class="sf-empty">No episodes found.</div>`; return; }
+  let html = '', last = null;
+  items.forEach(({ seasonNumber, ep }) => {
+    if (grouped && seasonNumber !== last) { html += `<div class="fav-ep-group">Season ${seasonNumber}</div>`; last = seasonNumber; }
+    html += _favEpCardHTML(seasonNumber, ep);
+  });
+  body.innerHTML = `<div class="fav-ep-grid">${html}</div>`;
+}
+
+let _favSearchSeq = 0;
+async function _favFilterEpisodes(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) { _favShowSeason(_favEpSeason); return; }
+  const seq = ++_favSearchSeq;
+  const missing = _favData.seasons.filter(s => !_favData.episodesBySeasonNum[s.number]);
+  if (missing.length) {
+    document.getElementById('favEpisodeOverlayBody').innerHTML = `<div class="sf-empty">Searching every season…</div>`;
+    await Promise.all(missing.map(s => _favLoadSeasonEpisodes(s.number)));
+    if (seq !== _favSearchSeq) return;
+  }
+  const hits = [];
+  _favData.seasons.forEach(s => (_favData.episodesBySeasonNum[s.number] || []).forEach(ep => {
+    if (_favEpisodeLabel(s.number, ep).toLowerCase().includes(q) || (ep.overview || '').toLowerCase().includes(q)) hits.push({ seasonNumber: s.number, ep });
+  }));
+  _favRenderEpisodes(hits, true);
+}
+
+function _favCloseEpisodePicker() { MSSDialog.close(document.getElementById('favEpisodeOverlay')); }
+
+function _favPickEpisode(name) {
+  const which = _favPersonTarget;
+  document.getElementById(`${which}Episode`).value = name;
+  _favSetLabel(which, 'Episode', name);
+  _favCloseEpisodePicker();
+}
+
+let _favPersonTarget = null; // 'fav' or 'low' — shared target for all three pickers (Character/Season/Episode), since only one is ever open at a time
+
+function _favOpenPersonPicker(which) {
+  _favPersonTarget = which;
+  if (!document.getElementById('favPersonOverlay')) {
+    const el = document.createElement('div');
+    el.id = 'favPersonOverlay';
+    el.innerHTML = `<div id="favPersonCard" role="dialog" aria-modal="true" aria-labelledby="favPersonTitle">
+      <div class="sf-header">
+        <div class="sf-title" id="favPersonTitle">Choose a Character</div>
+        <button type="button" class="sf-close" onclick="_favClosePersonPicker()" aria-label="Close">${icon('x', 18)}</button>
+      </div>
+      <div class="search-wrap fav-picker-search">
+        <span class="search-icon-wrap">${icon('search', 14)}</span>
+        <input type="text" id="favPersonSearch" placeholder="Search characters…" autocomplete="off" aria-label="Search characters" oninput="_favFilterPersonGrid(this.value)">
+      </div>
+      <div class="sf-body" id="favPersonGrid"></div>
+    </div>`;
+    MSSDialog.bind(el, _favClosePersonPicker);
+    document.body.appendChild(el);
+  }
+  document.getElementById('favPersonSearch').value = '';
+  _favCastFiltered = (_favData?.cast || []).filter(c => c.character);
+  _favRenderPersonGrid(_favCastFiltered, '');
+  MSSDialog.open(document.getElementById('favPersonOverlay'));
+}
+
+let _favCastFiltered = [];
+
+function _favRenderPersonGrid(cast, query) {
+  const grid = document.getElementById('favPersonGrid');
+  const q = (query || '').trim();
+  // Searched for a name that isn't in the cast list (a nickname, someone
+  // uncredited…)? Offer to use exactly what was typed.
+  const exact = q && cast.some(c => c.character.toLowerCase() === q.toLowerCase());
+  const useTyped = q && !exact ? `<button type="button" class="fav-use-typed" onclick="_favPickPerson(${attrJSON(q.slice(0, 80))})">Use “${escHTML(q.slice(0, 80))}”</button>` : '';
+  grid.innerHTML = useTyped + (cast.length ? `<div class="fav-person-grid">${cast.map(c => `
+    <button type="button" class="fav-person-card" onclick="_favPickPerson(${attrJSON(String(c.character || ''))})">
+      <div class="fav-person-photo">${c.profile_path ? `<img src="https://image.tmdb.org/t/p/w185${c.profile_path}" loading="lazy">` : (c.name[0]||'?')}</div>
+      <div class="fav-person-name" translate="no">${escHTML(c.character)}</div>
+      <div class="fav-person-actor" translate="no">${escHTML(c.name)}</div>
+    </button>`).join('')}</div>`
+    : `<div class="sf-empty">No matching characters.</div>`);
+}
+
+function _favFilterPersonGrid(query) {
+  const q = query.trim().toLowerCase();
+  const all = (_favData?.cast || []).filter(c => c.character);
+  const matches = q ? all.filter(c => c.character.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)) : all;
+  _favRenderPersonGrid(matches, query);
+}
+
+function _favClosePersonPicker() { MSSDialog.close(document.getElementById('favPersonOverlay')); }
+
+function _favPickPerson(name) {
+  const which = _favPersonTarget;
+  document.getElementById(`${which}Character`).value = name;
+  _favSetLabel(which, 'Character', name);
+  _favClosePersonPicker();
+}
+
+async function _loadTmdbPosterOptions(tmdbId, tmdbType) {
+  const grid = document.getElementById('posterPickerGrid');
+  try {
+    const path = tmdbType === 'movie' ? 'movie' : 'tv';
+    const res = await tmdbFetch(`${TMDB_BASE}/${path}/${tmdbId}/images`);
+    if (!res.ok) throw new Error('TMDB images fetch failed');
+    const data = await res.json();
+    const posters = (data.posters || []).sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+    if (!posters.length) {
+      grid.innerHTML = `<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">No alternate posters found for this title.</div>`;
+      return;
+    }
+    // Grouped by language with a section header per group, instead of
+    // one flat strip — TMDB often has many posters that reuse the exact
+    // same key art with just the title text translated, and seeing that
+    // many near-identical crops in a row read as a repeating mess. This
+    // still shows every poster, just organized so it's clear WHY there
+    // are so many similar-looking ones, and lets someone jump straight
+    // to a language they care about.
+    let langNamer = null;
+    try { langNamer = new Intl.DisplayNames(['en'], { type: 'language' }); } catch (e) {}
+    const groups = new Map(); // key: lang code or 'none', value: posters[]
+    posters.forEach(p => {
+      const key = p.iso_639_1 || 'none';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    });
+    // "No Language" (textless/international) group first, then
+    // alphabetically by language name.
+    const sortedKeys = [...groups.keys()].sort((a, b) => {
+      if (a === 'none') return -1;
+      if (b === 'none') return 1;
+      return a.localeCompare(b);
+    });
+    grid.innerHTML = sortedKeys.map(key => {
+      const label = key === 'none' ? 'No Language / Textless' : (langNamer ? (langNamer.of(key) || key.toUpperCase()) : key.toUpperCase());
+      const items = groups.get(key).map(p => {
+        const full = `${TMDB_FULL}${p.file_path}`;
+        const isCurrent = _posterUrl && _posterUrl.includes(p.file_path);
+        return `<div class="poster-picker-opt${isCurrent ? ' selected' : ''}" onclick="_selectTmdbPoster('${full}')">
+          <img src="https://image.tmdb.org/t/p/w500${p.file_path}" loading="lazy">
+        </div>`;
+      }).join('');
+      return `<div>
+        <div class="poster-picker-group-label">${label} <span class="poster-picker-group-count">${groups.get(key).length}</span></div>
+        <div class="poster-picker-group-grid">${items}</div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = `<div style="padding:24px 14px;text-align:center;font-size:13px;color:var(--text-3);">Couldn't load posters right now — please try again.</div>`;
+  }
+}
+
+function _selectTmdbPoster(url) {
+  _posterUrl = url;
+  const img = document.getElementById('dPosterImg');
+  img.src = url;
+  img.style.display = 'block';
+  const letter = document.getElementById('dPosterLetter');
+  if (letter) letter.style.display = 'none';
+  _closePosterPicker();
+  showToast('Poster updated — hit Save Entry to keep it.');
+}
+
+async function handlePosterUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const overlay = document.getElementById('posterUploadingOverlay');
+  const wrap    = document.querySelector('.detail-poster-wrap');
+
+  // Show loading overlay immediately, block clicks, disable save
+  _posterUploading = true;
+  if (overlay) overlay.style.display = 'flex';
+  if (wrap)    wrap.style.pointerEvents = 'none';
+  const btnSave = document.getElementById('btnSave');
+  if (btnSave) { btnSave.disabled = true; btnSave.textContent = 'Uploading poster…'; }
+
+  try {
+    const userId = _detUser?.id || 'unknown';
+    const url = await uploadPoster(file, userId, _detId || Date.now());
+    _posterUrl = url;
+    // Show the real Cloudinary image
+    document.getElementById('dPosterImg').src = url;
+    document.getElementById('dPosterImg').style.display = 'block';
+    document.getElementById('dPosterLetter').style.display = 'none';
+    showToast('Poster uploaded.');
+  } catch(e) {
+    if (e?.refused) return;                    // picture check said no (and told them) — keep the old poster
+    console.warn('Cloudinary upload failed:', e);
+    showToast('Poster upload failed. Please try again.', 'err');
+    _posterUrl = null;
+    document.getElementById('dPosterImg').style.display = 'none';
+    document.getElementById('dPosterLetter').style.display = 'block';
+  } finally {
+    _posterUploading = false;
+    if (overlay) overlay.style.display = 'none';
+    if (wrap)    wrap.style.pointerEvents = '';
+    if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Save Entry'; }
+  }
+}
+
+/* ── Load entry ── */
+document.addEventListener('DOMContentLoaded', () => {
+  // easter-egg.js — the title as it stands, even before the first save
+  MSSEgg.noteBox(document.getElementById('dNotes'), () => ({ id: _detId || 'new', title: document.getElementById('dTitle').value, tmdb_id: _pendingTmdbId, tmdb_type: _pendingTmdbType }));
+  _makeShadowDD('dCat', 'dCatDD');
+  _makeShadowDD('dMediaType', 'dMediaTypeDD');
+  _makeShadowDD('dStatus', 'dStatusDD');
+  initPage(async (user) => {
+    _detUser = user;
+    const e = _detId ? await getEntry(_detId) : null;
+    _detEntry = e || null;
+
+    // Populate form
+    draftRatings = (e && e.ratings) ? { ...e.ratings } : {};
+    _posterUrl   = (e?.poster_url && !e.poster_url.startsWith('data:')) ? e.poster_url : null;
+
+    document.getElementById('dTitle').value         = e?.title         || '';
+    document.getElementById('dCat').value           = e?.cat           || 'tv';
+    document.getElementById('dCat')._ddSync?.();
+    document.getElementById('dStatus').value        = e?.status        || 'queue';
+    document.getElementById('dStatus')._ddSync?.();
+    _originalStatus = e?.status || 'queue';
+    document.getElementById('dYear').value             = e?.year          || '';
+    document.getElementById('dCompletionYear').value   = e?.ratings?._completion_year || '';
+    document.getElementById('dDesc').value             = e?.description   || '';
+    document.getElementById('dSeason').value           = e?.season        || '';
+    document.getElementById('dEpisode').value          = e?.episode       || '';
+    document.getElementById('dWatched').value          = e?.watched       || '';
+    // Load runtime for movies
+    if (document.getElementById('dRuntimeH')) {
+      document.getElementById('dRuntimeH').value = e?.runtime_h || '';
+      const dropAt = Number(e?.ratings?._dropped_at) || 0;
+      document.getElementById('dDroppedH').value = dropAt ? Math.floor(dropAt / 60) : '';
+      document.getElementById('dDroppedM').value = dropAt ? dropAt % 60 : '';
+      document.getElementById('dRuntimeM').value = e?.runtime_m || '';
+      updateRuntimeDisplay();
+    }
+    document.getElementById('dNotes').value            = e?.notes         || '';
+    _notesRichTools();   // the toolbar holds the spoiler toggle — it has to exist first
+    document.getElementById('dNotesSpoilerWrap').innerHTML = mssSpoilerToggleHTML('dNotesSpoiler', e);
+    document.getElementById('dNotesSpoiler').checked = mssIsSpoiler(e);
+    document.getElementById('dNoteVisWrap').innerHTML = mssNoteVisHTML('dNoteVis', e?.note_visibility, e?.id);   // who can view (069)
+    document.getElementById('dTitleVisWrap').innerHTML = mssTitleVisHTML('dTitleVis', e?.visibility);           // who can see this title (073)
+    _detNotesSaved = e?.notes || '';   // what's saved — an easter egg's confirm only asks about a new or changed note
+    _notesUpdateWordCount();
+    // Rewatch count
+    const _rewatchEl = document.getElementById('dRewatchCount');
+    const _rewatchSec = document.getElementById('dRewatchSection');
+    if (_rewatchEl && _rewatchSec) {
+      const _cnt = Number(e?.ratings?._rewatch_count) || 1;
+      _rewatchEl.value = _cnt;
+      const _st = e?.status || '';
+      _rewatchSec.style.display = (_st === 'completed' || _st === 'ongoing') ? '' : 'none';
+    }
+    _setCompletedDate(e?.completed_date || null);
+
+    // Restore season breakdown
+    _seasonBreakdown = Array.isArray(e?.ratings?._season_breakdown) ? [...e.ratings._season_breakdown] : [];
+    if (_seasonBreakdown.length === 0 && (e?.total_seasons || e?.total_eps)) {
+      // Legacy fallback: no breakdown stored yet but has totals
+    }
+    renderSeasonRows();
+    // Totals auto-calculated by renderSeasonRows; if no breakdown use stored values
+    if (_seasonBreakdown.length === 0) {
+      document.getElementById('dTotalSeasons').value = e?.total_seasons || '';
+      document.getElementById('dTotalEps').value     = e?.total_eps     || '';
+    }
+
+    document.querySelectorAll('.genre-opt').forEach(opt => {
+      opt.classList.toggle('selected', !!(e && e.genres && e.genres.includes(opt.dataset.genre)));
+    });
+
+    // Lock TMDB-sourced fields once this entry is actually linked —
+    // must run after the season rows/genres above are populated, since
+    // it re-renders the season list and toggles the genre picker.
+    _applyTmdbLock(!!(e && e.tmdb_id));
+    _pendingTmdbId = (e && e.tmdb_id) || null;
+    _pendingTmdbType = (e && e.tmdb_type) || null;
+    if (_pendingTmdbId && _pendingTmdbType) _favLoadData(_pendingTmdbId, _pendingTmdbType);
+
+    // Poster
+    const pImg = document.getElementById('dPosterImg');
+    const pLtr = document.getElementById('dPosterLetter');
+    if (e?.poster_url) {
+      pImg.src = e.poster_url; pImg.style.display = 'block'; pLtr.style.display = 'none';
+    } else {
+      pImg.style.display = 'none'; pLtr.style.display = 'block';
+      pLtr.textContent = (e?.title || '?')[0]?.toUpperCase() || '?';
+    }
+
+    // Restore media type for anime/cartoons
+    if (e?.ratings?._media_type) {
+      document.getElementById('dMediaType').value = e.ratings._media_type;
+      document.getElementById('dMediaType')._ddSync?.();
+    }
+
+    // Restore animation quality toggle
+    _animEnabled = !!(e?.ratings?._animEnabled);
+    draftRatings._animEnabled = _animEnabled;
+    const animBtn = document.getElementById('animToggleBtn');
+    if (_animEnabled && animBtn) {
+      animBtn.textContent = '− Disable Animation Quality';
+      animBtn.classList.add('on');
+    }
+
+    // Restore favorites
+    const favs = e?.ratings?._favorites || {};
+    document.getElementById('favCharacter').value = favs.character || '';
+    document.getElementById('favEpisode').value   = favs.episode   || '';
+    document.getElementById('favSeason').value    = favs.season    || '';
+    _favSetLabel('fav', 'Character', favs.character);
+    _favSetLabel('fav', 'Episode', favs.episode);
+    _favSetLabel('fav', 'Season', favs.season);
+    const lows = e?.ratings?._lowlights || e?.ratings?._favorites?._lowlights || {};
+    if (document.getElementById('lowCharacter')) document.getElementById('lowCharacter').value = lows.character || '';
+    if (document.getElementById('lowEpisode'))   document.getElementById('lowEpisode').value   = lows.episode   || '';
+    if (document.getElementById('lowSeason'))    document.getElementById('lowSeason').value    = lows.season    || '';
+    _favSetLabel('low', 'Character', lows.character);
+    _favSetLabel('low', 'Episode', lows.episode);
+    _favSetLabel('low', 'Season', lows.season);
+
+    document.getElementById('dDeleteBtn').style.display = _detId ? 'block' : 'none';
+    renderRatingGrids();
+    updateTypeSelector(); // sets type group visibility + calls updateStatusUI
+
+    updateProgBar();
+    recalcFinal();
+
+    // Show layout
+    document.getElementById('detailLoading').style.display = 'none';
+    document.getElementById('detailLayout').style.display  = '';
+    document.title = e ? `${e.title} — MyScreenFolio` : 'New Entry';
+
+    // Scroll to progress section if coming from Continue Watching
+    const scrollTo = sessionStorage.getItem('detailScrollTo');
+    if (scrollTo === 'progress') {
+      sessionStorage.removeItem('detailScrollTo');
+      setTimeout(() => {
+        document.getElementById('dProgressSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+    } else if (scrollTo === 'notes') {
+      sessionStorage.removeItem('detailScrollTo');
+      setTimeout(() => {
+        document.getElementById('dNotesSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('dNotes')?.focus();
+      }, 300);
+    }
+
+    // Show comments button for existing entries
+    if (_detId) {
+      const btn = document.getElementById('dCommentsBtn');
+      if (btn) btn.style.display = 'inline-flex';
+      MSSComments.count(_detId).then(_setCommentsBtnCount);
+    }
+  });
+});
+
+/* ── Comments: the shared MSSComments popup (comments.js) ── */
+function openCommentsModal() {
+  if (!_detId) return;
+  const title = document.getElementById('dTitle')?.value?.trim();
+  MSSComments.open({ ...(_detEntry || {}), id: _detId, title: title || _detEntry?.title || 'this entry' },
+    { onChange: _setCommentsBtnCount });
+}
+function _setCommentsBtnCount(n) {
+  const label = document.getElementById('dCommentsBtnLabel');
+  if (label) label.textContent = n ? `Comments (${n})` : 'Comments';
+}
+
+// Close the completion popup on Escape
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const completionOv = document.getElementById('completionOverlay');
+  if (completionOv && completionOv.classList.contains('open')) closeCompletionPopup();
+});
+
+// Reads an integer from an input and clamps it into [min, max] — guards
+// against negative episode/season numbers, an out-of-range runtime
+// minute value, etc. reaching the save payload unvalidated. Returns
+// `fallback` (default null) if the field is empty or not a number.
+function _clampInt(value, min, max, fallback = null) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+/* ── Save ── */
+async function doSave() {
+  const title = document.getElementById('dTitle').value.trim();
+  if (!title) { showToast('Please enter a title.', 'err'); return; }
+
+  const status  = document.getElementById('dStatus').value;
+  const cat     = document.getElementById('dCat').value;
+  const mediaType = getMediaType();
+  const isMovie = mediaType === 'movie';
+  const genres  = [...document.querySelectorAll('.genre-opt.selected')].map(o => o.dataset.genre);
+
+  // ── Musts validation ──
+  if (!genres.length) {
+    showToast('Please select at least one genre.', 'err'); return;
+  }
+  if (isMovie) {
+    const rh = parseInt(document.getElementById('dRuntimeH')?.value) || 0;
+    const rm = parseInt(document.getElementById('dRuntimeM')?.value) || 0;
+    if (!rh && !rm) { showToast('Please enter the movie runtime.', 'err'); return; }
+  } else {
+    const totalEps = parseInt(document.getElementById('dTotalEps')?.value) || 0;
+    if (!totalEps) { showToast('Please add at least one season with episodes.', 'err'); return; }
+  }
+
+  // easter-egg.js: some titles ask before a new or changed note goes up
+  const egg = { id: _detId || 'new', title, tmdb_id: _pendingTmdbId, tmdb_type: _pendingTmdbType };
+  if (!(await MSSEgg.beforeNoteSave(egg, document.getElementById('dNotes').value, _detNotesSaved))) return;
+  const btn = document.getElementById('btnSave');
+  btn.classList.add('saving'); btn.textContent = 'Saving…';
+
+  // Store media type in ratings metadata for anime/cartoons
+  const ratingsWithType = { ...draftRatings };
+  if (cat === 'anime' || cat === 'cartoons') {
+    ratingsWithType._media_type = document.getElementById('dMediaType').value;
+  }
+
+  // Store animation enabled state
+  ratingsWithType._animEnabled = _animEnabled;
+
+  // A dropped movie: where you stopped (optional)
+  const dropMins = (Math.min(9, Math.max(0, parseInt(document.getElementById('dDroppedH').value) || 0)) * 60)
+    + Math.min(59, Math.max(0, parseInt(document.getElementById('dDroppedM').value) || 0));
+  if (status === 'dropped' && isMovie && dropMins) ratingsWithType._dropped_at = dropMins;
+  else delete ratingsWithType._dropped_at;
+
+  // Store favorites
+  // Note marked as a spoiler → shown blurred to other people
+  ratingsWithType._notes_spoiler = !!document.getElementById('dNotesSpoiler')?.checked && !!document.getElementById('dNotes').value.trim();
+  ratingsWithType._favorites = {
+    character: document.getElementById('favCharacter')?.value?.trim() || '',
+    episode:   document.getElementById('favEpisode')?.value?.trim()   || '',
+    season:    document.getElementById('favSeason')?.value?.trim()    || '',
+  };
+  ratingsWithType._lowlights = {
+    character: document.getElementById('lowCharacter')?.value?.trim() || '',
+    episode:   document.getElementById('lowEpisode')?.value?.trim()   || '',
+    season:    document.getElementById('lowSeason')?.value?.trim()    || '',
+  };
+
+  // Store season breakdown and completion year
+  const validBreakdown = _seasonBreakdown.filter(n => parseInt(n) > 0).map(Number);
+  ratingsWithType._season_breakdown = validBreakdown;
+  ratingsWithType._completion_year  = (() => { const n = _clampInt(document.getElementById('dCompletionYear').value, 1900, 2100); return n != null ? String(n) : null; })();
+  // Rewatch count
+  const _rewatchInput = document.getElementById('dRewatchCount');
+  if (_rewatchInput && document.getElementById('dRewatchSection')?.style.display !== 'none') {
+    ratingsWithType._rewatch_count = Math.max(1, parseInt(_rewatchInput.value) || 1);
+  } else if (_detEntry?.ratings?._rewatch_count) {
+    ratingsWithType._rewatch_count = _detEntry.ratings._rewatch_count;
+  }
+  // Preserve rewatching flag
+  if (_detEntry?.ratings?._is_rewatching != null) {
+    ratingsWithType._is_rewatching = _detEntry.ratings._is_rewatching;
+  }
+
+  // Auto-calculate totals from breakdown if available
+  const calcTotalSeasons = validBreakdown.length > 0 ? validBreakdown.length : (parseInt(document.getElementById('dTotalSeasons').value) || null);
+  const calcTotalEps     = validBreakdown.length > 0 ? validBreakdown.reduce((a, b) => a + b, 0) : (parseInt(document.getElementById('dTotalEps').value) || null);
+
+  const payload = {
+    title,
+    cat,
+    status,
+    year:          (() => { const n = _clampInt(document.getElementById('dYear').value, 1900, 2100); return n != null ? String(n) : null; })(),
+    description:   document.getElementById('dDesc').value,
+    genres,
+    poster_url:    (_posterUrl && !_posterUrl.startsWith('data:')) ? _posterUrl : null,
+    season:        isMovie ? null : _clampInt(document.getElementById('dSeason').value, 1, 999),
+    episode:       isMovie ? null : _clampInt(document.getElementById('dEpisode').value, 0, 9999),
+    total_seasons: isMovie ? null : calcTotalSeasons,
+    watched:       isMovie ? 0    : _clampInt(document.getElementById('dWatched').value, 0, 99999, 0),
+    total_eps:     isMovie ? null : calcTotalEps,
+    runtime_h:     isMovie ? _clampInt(document.getElementById('dRuntimeH')?.value, 0, 99) : null,
+    runtime_m:     isMovie ? _clampInt(document.getElementById('dRuntimeM')?.value, 0, 59) : null,
+    notes:         document.getElementById('dNotes').value,
+    note_visibility: document.getElementById('dNoteVis')?.value,
+    visibility:    document.getElementById('dTitleVis')?.value,
+    completed_date: _parseCompletedDate(),
+    ratings:       ratingsWithType,
+    tmdb_id:       _pendingTmdbId,
+    tmdb_type:     _pendingTmdbType,
+  };
+
+  // Only show completion popup when transitioning INTO completed for the first time
+  const isNewlyCompleted = (status === 'completed' || status === 'ongoing') && _originalStatus !== 'completed' && _originalStatus !== 'ongoing';
+
+  try {
+    const savedMsg = payload.notes ? MSSEgg.savedMsg(egg, 'Saved!') : 'Saved!';
+    const saved = await saveEntry(payload, _detUser.id, _detId);
+    _detId = saved.id;
+    _originalStatus = status; // update so re-saves don't re-trigger popup
+    _detNotesSaved = payload.notes || '';
+    btn.classList.remove('saving'); btn.textContent = 'Save Entry';
+    document.getElementById('dDeleteBtn').style.display = 'block';
+    showToast(savedMsg);
+  } catch(e) {
+    showToast('Error saving. Please try again.', 'err');
+    btn.classList.remove('saving'); btn.textContent = 'Save Entry';
+    console.error('Save error:', e);
+    return;
+  }
+
+  if (isNewlyCompleted) {
+    showCompletionPopup(title);
+  } else {
+    setTimeout(() => window.location.href = _fromPage, 700);
+  }
+}
+
+/* ── Completion popup ── */
+function showCompletionPopup(title) {
+  document.getElementById('completionTitle').textContent = `Finished "${title}"`;
+  document.getElementById('completionSub').textContent =
+    'Add your ratings to rank it in your collection.';
+  document.getElementById('completionOverlay').classList.add('open');
+  mssLockScroll('completion');
+}
+
+function closeCompletionPopup() {
+  document.getElementById('completionOverlay').classList.remove('open');
+  mssUnlockScroll('completion');
+  // Scroll to ratings section
+  document.querySelector('.ratings-wrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ── Delete ── */
+async function doDelete() {
+  if (!_detId) return;
+  const title = document.getElementById('dTitle').value.trim() || 'this entry';
+  const ok = await showConfirm({
+    title: 'Delete entry?',
+    message: `"${title}" will be permanently removed.`,
+    confirmText: 'Delete',
+    iconName: 'x'
+  });
+  if (!ok) return;
+  try {
+    await deleteEntry(_detId, _detUser.id);
+    showToast('Deleted.');
+    setTimeout(() => window.location.href = _fromPage, 600);
+  } catch(e) {
+    showToast('Error deleting.', 'err');
+  }
+}
+</script>
+</body>
+<script>
+/* ── TMDB prefill from quick create ── */
+function _applyTMDBPrefill(p) {
+  if (!p) {
+    const btnSave = document.getElementById('btnSave');
+    if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Save Entry'; }
+    return;
+  }
+  console.log('[TMDB] applying prefill:', p);
+  if (p.description) { const el = document.getElementById('dDesc'); if(el && !el.value) el.value = p.description; }
+  if (p.genres && p.genres.length) {
+    document.querySelectorAll('.genre-opt').forEach(el => {
+      el.classList.toggle('selected', p.genres.includes(el.dataset.genre));
+    });
+  }
+  if (p.poster_url && !_posterUrl) {
+    // Only fills the poster when one isn't already set — a fresh new
+    // entry has none yet, so TMDB's default poster is a good fill-in.
+    // But an existing entry being re-synced via Update Details already
+    // has SOME poster (either TMDB's original or one the person chose
+    // deliberately via the poster picker), and overwriting that every
+    // time Update Details is used would silently discard a poster
+    // choice the person made on purpose.
+    _posterUrl = p.poster_url;
+    const img = document.getElementById('dPosterImg');
+    const letter = document.getElementById('dPosterLetter');
+    if (img) { img.src = p.poster_url; img.style.display = 'block'; }
+    if (letter) letter.style.display = 'none';
+  }
+  if (p.total_seasons != null) {
+    const el = document.getElementById('dTotalSeasons');
+    if (el) { el.removeAttribute('readonly'); el.value = p.total_seasons; el.setAttribute('readonly',''); }
+  }
+  if (p.total_eps != null) {
+    const el = document.getElementById('dTotalEps');
+    if (el) { el.removeAttribute('readonly'); el.value = p.total_eps; el.setAttribute('readonly',''); }
+  }
+  // Fill season breakdown
+  if (p._season_breakdown && p._season_breakdown.length) {
+    _seasonBreakdown = [...p._season_breakdown];
+    if (typeof renderSeasonRows === 'function') renderSeasonRows();
+  }
+  if (p._completion_year) { const el = document.getElementById('dCompletionYear'); if(el) el.value = p._completion_year; }
+  else if (p.year && !p._completion_year) { /* leave completion year blank for ongoing */ }
+  if (p.runtime_h != null || p.runtime_m != null) {
+    const catEl = document.getElementById('dCat');
+    if (catEl) catEl.dispatchEvent(new Event('change'));
+    if (p.runtime_h != null) { const el = document.getElementById('dRuntimeH'); if(el) el.value = p.runtime_h; }
+    if (p.runtime_m != null) { const el = document.getElementById('dRuntimeM'); if(el) el.value = p.runtime_m; }
+    if (typeof updateRuntimeDisplay === 'function') updateRuntimeDisplay();
+  }
+  if (p.ratings?._type) {
+    const el = document.getElementById('dMediaType');
+    if (el) { el.value = p.ratings._type; el._ddSync?.(); el.dispatchEvent(new Event('change')); }
+  }
+  // Unlock Save now that the real TMDB data (media type, runtime,
+  // season/episode counts, etc.) has actually been applied — it was
+  // previously possible to hit Save during the blind loading delay
+  // below, before this data ever arrived, leaving a new anime/cartoon
+  // entry stuck defaulting to "show" even when it was really a movie.
+  const btnSave = document.getElementById('btnSave');
+  if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Save Entry'; }
+  // p always has a tmdb_id here (that's what "prefill from TMDB" means),
+  // so this entry is linked and its TMDB-sourced fields lock immediately.
+  _applyTmdbLock(!!p.tmdb_id);
+  _pendingTmdbId = p.tmdb_id || null;
+  _pendingTmdbType = p.tmdb_type || null;
+  showToast && showToast('Details filled from TMDB ✓');
+}
+
+/* ── Check for TMDB prefill from session ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const prefill = sessionStorage.getItem('tmdbPrefill');
+  if (prefill) {
+    sessionStorage.removeItem('tmdbPrefill');
+    // Lock Save immediately — the form is showing placeholder/default
+    // values (media type defaults to "show") until the real TMDB data
+    // below actually applies, and letting someone save in that window
+    // is exactly what was creating movies that stuck as "TV Show".
+    const btnSave = document.getElementById('btnSave');
+    if (btnSave) { btnSave.disabled = true; btnSave.textContent = 'Loading details…'; }
+    try { setTimeout(() => _applyTMDBPrefill(JSON.parse(prefill)), 50); } catch(e) {
+      if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Save Entry'; }
+    }
+  }
+
+  /* ── Init TMDB search on title field ── */
+  setTimeout(() => {
+    if (typeof initTMDBSearch === 'function') {
+      initTMDBSearch('dTitle', () => document.getElementById('dCat')?.value || 'tv', entry => {
+        if (entry.title) document.getElementById('dTitle').value = entry.title;
+        if (entry.cat)   { const el = document.getElementById('dCat'); if(el) { el.value = entry.cat; el._ddSync?.(); el.dispatchEvent(new Event('change')); } }
+        if (entry.year)  { const el = document.getElementById('dYear'); if(el) el.value = entry.year; }
+        _applyTMDBPrefill(entry);
+      }, { connected: true });
+    }
+  }, 300);
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+
+function _showDuplicatePopup(title, existing) {
+  // Remove any existing popup
+  const old = document.getElementById('dupPopupOverlay');
+  if (old) old.remove();
+
+  const catLabel = (CAT_META[existing.cat] && CAT_META[existing.cat].label) || existing.cat;
+  const el = document.createElement('div');
+  el.id = 'dupPopupOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.72);-webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity .2s;pointer-events:none;';
+  el.innerHTML = `
+    <div id="dupPopupCard" style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:97%;max-width:440px;padding:28px 28px 24px;box-sizing:border-box;transform:translateY(16px);transition:transform .25s cubic-bezier(.4,0,.2,1);text-align:center;">
+      <div style="color:var(--olive-light);margin-bottom:14px;opacity:.7;">${icon('x', 32)}</div>
+      <h2 style="font-family:var(--serif);font-size:22px;font-weight:500;margin-bottom:10px;color:var(--text);">Already in your library</h2>
+      <p style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:6px;">
+        <strong style="color:var(--text);" translate="no">${escHTML(title)}</strong> is already saved as a <strong style="color:var(--text);">${catLabel}</strong>.
+      </p>
+      <p style="font-size:13px;color:var(--text-3);margin-bottom:24px;">Close this and update your existing entry instead.</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button onclick="document.getElementById('dupPopupOverlay').remove();" style="padding:10px 28px;border-radius:var(--radius-sm);background:var(--olive);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">Got it</button>
+      </div>
+    </div>`;
+  el.addEventListener('click', function(ev) { if (ev.target === el) el.remove(); });
+  document.body.appendChild(el);
+  requestAnimationFrame(() => {
+    el.style.opacity = '1'; el.style.pointerEvents = 'auto';
+    document.getElementById('dupPopupCard').style.transform = 'translateY(0)';
+  });
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { el.remove(); document.removeEventListener('keydown', esc); }
+  }, { once: true });
+}
+</script>
+
+<script>
+(function() {
+  // Wait for the existing init flow (in the main script above) to finish
+  // populating _detEntry and reveal the page, rather than calling
+  // initPage() a second time (which would duplicate nav rendering/auth
+  // checks). Polls briefly since there's no event fired for "entry loaded".
+  let tries = 0;
+  const check = setInterval(() => {
+    tries++;
+    const layout = document.getElementById('detailLayout');
+    const ready = layout && layout.style.display !== 'none';
+    if (ready || tries > 100) { // ~10s max
+      clearInterval(check);
+      const btn = document.getElementById('dDiscoverBtn');
+      // Show for any existing, titled entry — no longer requires a
+      // pre-linked tmdb_id/type, since the picker can now find one.
+      if (btn) btn.style.display = (typeof _detEntry !== 'undefined' && _detEntry && _detEntry.title) ? 'inline-flex' : 'none';
+      // Rate Episodes: saved shows only (not movies)
+      const rate = document.getElementById('dRateEpsBtn');
+      if (rate) rate.style.display = _detEntry?.id && MSSEp.isShow(_detEntry) ? 'inline-flex' : 'none';
+    }
+  }, 100);
+})();
+</script>
+
+<script>
+/* Personal Notes — NOTE_WORD_LIMIT (500) word cap (was 150), matching the length _trimNotes() already
+   truncates the display preview to elsewhere in the app (Notes tab list
+   view). Previously the writing field had no limit at all, so a note
+   could be written longer than what would ever actually be shown when
+   viewing it later. Blocks further typing at the limit via beforeinput
+   (deletions and replacing a selection still work) instead of silently
+   trimming text back after the fact. */
+function _notesCountWords(s) {
+  const t = MSSRich.plain(s).trim();      // style markers (**, > …) aren't words
+  return t ? t.split(/\s+/).length : 0;
+}
+function _notesUpdateWordCount() {
+  const el = document.getElementById('dNotes');
+  const countEl = document.getElementById('dNotesCount');
+  if (!el || !countEl) return;
+  const count = _notesCountWords(el.value);
+  if (count > NOTE_WORD_LIMIT) {
+    el.value = clampWords(el.value, NOTE_WORD_LIMIT);
+    countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`;
+    countEl.classList.add('over');
+    return;
+  }
+  countEl.textContent = `${count} / ${NOTE_WORD_LIMIT} words`;
+  countEl.classList.toggle('over', count >= NOTE_WORD_LIMIT);
+}
+// B · I · U · S · Quote above the note box (MSSRich, config.js)
+function _notesRichTools() {
+  const box = document.getElementById('dNotesTools');
+  if (!box || box.childElementCount) return;
+  box.innerHTML = MSSRich.toolbarHTML('dNotes', '<div class="mss-rt-end" id="dNotesSpoilerWrap"></div>');   // spoiler toggle at the end of the row
+  // styles show as you type; typing stops at the word limit (deleting still works)
+  MSSRich.attach(document.getElementById('dNotes'), { maxWords: NOTE_WORD_LIMIT, onLimit: () => {
+    const c = document.getElementById('dNotesCount');
+    if (c) { c.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`; c.classList.add('over'); }
+  } });
+}
+</script>
+</html>

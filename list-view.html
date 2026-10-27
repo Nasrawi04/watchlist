@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.home-tmdb-poster-fallback {
+  width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+  background:var(--bg-3); font-family:var(--serif); color:var(--olive-light);
+  font-size:clamp(22px, 6vw, 32px);
+}
+.home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
+.home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
+.home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
+/* ── Invite-link popup ── */
+#lvJoinOverlay {
+  position:fixed; inset:0; z-index:1300; display:flex; align-items:center; justify-content:center; padding:16px;
+  background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  opacity:0; transition:opacity .2s;
+}
+#lvJoinOverlay.open { opacity:1; }
+.lvj-card {
+  width:100%; max-width:420px; text-align:center; padding:28px 24px 22px;
+  background:var(--bg-2); border:1.5px solid var(--olive-light); border-radius:var(--radius-lg); box-shadow:4px 4px 0 var(--olive);
+  transform:translateY(12px) scale(.98); transition:transform .25s cubic-bezier(.2,.8,.2,1);
+}
+#lvJoinOverlay.open .lvj-card { transform:none; }
+.lvj-av {
+  position:relative; width:64px; height:64px; margin:0 auto 14px; border-radius:50%; overflow:visible;
+  background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-weight:600; font-size:26px;
+}
+.lvj-av img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.lvj-av-ic { position:absolute; inset-inline-end:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%; background:var(--olive-light); color:#fff; border:2px solid var(--bg-2); display:flex; align-items:center; justify-content:center; }
+.lvj-eyebrow { font-family:var(--serif); font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
+.lvj-title { font-size:14px; color:var(--text-2); line-height:1.5; }
+.lvj-title b { color:var(--text); }
+.lvj-list { font-family:var(--serif); font-size:clamp(21px, 5.5vw, 26px); font-weight:600; line-height:1.2; margin:4px 0 6px; overflow-wrap:anywhere; }
+.lvj-meta { font-size:12.5px; color:var(--text-3); margin-bottom:14px; }
+.lvj-note { font-size:12.5px; color:var(--text-3); line-height:1.5; padding:10px 12px; border-radius:var(--radius-sm); background:var(--olive-faint); margin-bottom:18px; }
+.lvj-actions { display:flex !important; flex-direction:row !important; gap:8px; padding:0 !important; }
+.lvj-actions .popup-action-btn { flex:1; width:auto !important; justify-content:center; padding:11px 14px; font-size:14px; }
+.lvj-actions .popup-action-btn:first-child { flex:2; }
+.lvj-actions .lvj-ghost { background:transparent !important; color:var(--text-2) !important; border-color:var(--border-2) !important; }
+.lvj-actions .lvj-ghost:hover { color:var(--text) !important; border-color:var(--border-olive) !important; background:var(--olive-faint) !important; }
+.lvj-actions .popup-action-btn:disabled { opacity:.6; }
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+  <a class="lv-back" href="lists.html" id="lvBack">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+
+  <div id="lvLoading" class="page-loading" data-skel="lv-page"></div>
+  <div id="lvContent" style="display:none">
+    <div class="lv-owner-row">
+      <div class="lv-owner">
+        <div class="lv-avatar" id="lvAvatar"></div>
+        <span class="lv-username" id="lvUsername" translate="no"></span>
+      </div>
+    </div>
+
+    <div class="lv-title-row">
+      <h1 class="lv-title" id="lvTitle" translate="no"></h1>
+      <span id="lvRankedBadgeSlot" class="lv-badge-slot"></span>
+    </div>
+    <div class="lv-desc" id="lvDesc"></div>
+
+    <div class="lv-import-row">
+      <span id="lvImportPopupActions" class="lv-import-slot">
+        <button class="popup-action-btn" id="lvImportBtn" onclick="importList()"><span class="lv-import-btn-label">+ Import This List</span></button>
+      </span>
+      <button type="button" class="popup-action-btn" id="lvShareBtn" hidden onclick="_lvShare()"><span class="lv-import-btn-label">Share with Friends</span></button>
+      <button type="button" class="popup-action-btn" id="lvExportBtn" hidden onclick="_lvExport()"><span class="lv-import-btn-label" id="lvExportLabel">Export List</span></button>
+    </div>
+
+    <div class="lv-controls">
+      <div class="lv-count"><b id="lvCount"></b> <span id="lvCountLabel">titles</span></div>
+      <div class="lv-controls-right">
+        <div id="lvSfBar" class="lv-sf-bar"></div>
+        <div class="view-toggle" id="lvViewToggle"></div>
+      </div>
+    </div>
+
+    <div class="lv-grid" id="lvGrid"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/rating-popup.js"></script>
+<script src="js/easter-egg.js"></script>
+<script src="js/note-popup.js"></script>
+<script src="js/sort-filter.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/export.js"></script>
+<script src="js/taste-profile.js"></script>
+<script src="js/year-review.js"></script>
+<script src="js/export-formats.js"></script>
+<script src="js/export-image.js"></script>
+<script src="js/export-studio.js"></script>
+<script>
+function _lvEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+const _lvParams = new URLSearchParams(location.search);
+const _lvListId = _lvParams.get('list');
+
+let _lvUser = null;
+let _lvList = null;
+let _lvItems = [];
+let _lvView = localStorage.getItem('disc_listView') || 'grid';
+let _lvRevealObserver = null;
+let _tmdbItemCache = {};
+
+// Same dual-format item resolution used on lists.html — an item id is
+// either a personal entry's UUID, or a bare "tmdb:movie:123" reference
+// for something added straight from Discover with no personal entry
+// behind it at all.
+async function _hydrateTmdbItems(items) {
+  const toFetch = [...new Set(items.filter(id => typeof id === 'string' && id.startsWith('tmdb:') && !_tmdbItemCache[id]))];
+  await Promise.all(toFetch.map(async pseudoId => {
+    const [, type, tmdbId] = pseudoId.split(':');
+    try {
+      const res = await tmdbFetch(`${TMDB_BASE}/${type}/${tmdbId}?language=en-US`);
+      if (!res.ok) return;
+      const d = await res.json();
+      const title = type === 'movie' ? d.title : d.name;
+      const dateStr = type === 'movie' ? d.release_date : d.first_air_date;
+      _tmdbItemCache[pseudoId] = {
+        id: pseudoId,
+        title, poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null,
+        tmdb_id: Number(tmdbId), tmdb_type: type,
+        year: (dateStr || '').split('-')[0],
+      };
+    } catch (e) { console.error('Hydrate TMDB item error:', pseudoId, e); }
+  }));
+}
+
+function _lvRankBadgeHTML(rank) {
+  if (rank == null) return '';
+  const cls = rank === 0 ? 'cg-rank-1' : rank === 1 ? 'cg-rank-2' : rank === 2 ? 'cg-rank-3' : 'cg-rank-other';
+  return `<div class="cg-rank-badge ${cls}">${rank + 1}</div>`;
+}
+
+// Personal ranked lists can genuinely mix movies and shows within the
+// same list (a "Cold Characters" list might have both a film and a
+// series) — unlike Discover's category-based lists where most
+// categories are already single-type by name, there's no such
+// shortcut here, so the type badge always shows when we can determine
+// it. Checks tmdb_type first (TMDB-linked items), falling back to the
+// personal entry's own category/media-type fields.
+function _lvTypeLabel(e) {
+  if (e.tmdb_type) return e.tmdb_type === 'movie' ? 'Movie' : 'TV Show';
+  if (e.cat === 'movies') return 'Movie';
+  if (e.cat === 'tv') return 'TV Show';
+  const mt = e.ratings && e.ratings._media_type;
+  if (mt) return mt === 'movie' ? 'Movie' : 'TV Show';
+  return null;
+}
+function _lvTypeCls(e) {
+  const isMovie = e.tmdb_type === 'movie' || e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+  return isMovie ? 'type-label' : 'type-label type-label-tv';
+}
+
+// Back: to the page that opened this list (Lists, a profile, Friends…) —
+// remembered on arrival, so it still works after list → detail → Back
+// (where the browser's own "back" would just bounce to the detail page).
+(function _lvRememberFrom() {
+  try {
+    const r = document.referrer ? new URL(document.referrer) : null;
+    if (r && r.origin === location.origin && !/\/(detail|list-view|login)\.html$/.test(r.pathname)) {
+      sessionStorage.setItem('lvFrom', r.pathname.split('/').pop() + r.search);
+    }
+  } catch {}
+  const back = document.getElementById('lvBack');
+  const from = sessionStorage.getItem('lvFrom');
+  if (back && from) back.setAttribute('href', from);
+})();
+
+// Tapping a title: Info · Ratings · Note popup, opening on Info (MSSViews, info-popup.js)
+function _lvOpenInfo(id) {
+  const e = _lvItems.find(x => x.id === id);
+  if (!e) return;
+  MSSViews.open(e, { start: 'info' });
+}
+
+function _lvCardHTML(e, rank) {
+  const scoreStr = _lvOwnScoreHTML(e);
+  return MSSCard.poster({ cls: 'lv-card', onclick: `_lvOpenInfo(${attrJSON(e.id)})`, title: e.title, year: e.year, poster: e.poster_url,
+    rank: rank == null ? 0 : rank + 1, typeHTML: _lvTypeLabel(e) ? `<span class="${_lvTypeCls(e)} type-label-overlay-bottom">${_lvTypeLabel(e)}</span>` : '',
+    scoreHTML: scoreStr });
+}
+
+function _lvListRowHTML(e, rank) {
+  const posterInner = safeURL(e.poster_url)
+    ? `<img src="${safeURL(e.poster_url)}" loading="lazy">`
+    : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
+  const clickAttr = `onclick="_lvOpenInfo(${attrJSON(e.id)})"`;
+  const scoreStr = _lvOwnScoreHTML(e);
+  const typeLabel = _lvTypeLabel(e);
+  return `<div class="lv-list-row" ${clickAttr}>
+    <div class="lv-list-poster" style="position:relative">${posterInner}${_lvRankBadgeHTML(rank)}</div>
+    <div style="min-width:0">
+      <div class="lv-list-title-row">
+        <div class="lv-list-title" translate="no">${_lvEsc(e.title)}</div>
+        ${e.year ? `<span class="title-year-inline">${_lvEsc(e.year)}</span>` : ''}
+      </div>
+      ${typeLabel ? `<div class="lv-list-badges-row"><span class="${_lvTypeCls(e)}">${typeLabel}</span></div>` : ''}
+    </div>
+    <div class="lv-list-score-wrap">${scoreStr}</div>
+  </div>`;
+}
+
+// Shows the viewer's own MSF score, in the same star/olive style used
+// for ratings everywhere else — but only when it's actually meaningful:
+// this is your own list, it's a ranked list, and this particular item
+// is a real personal entry (not something added straight from
+// Discover, which has no personal score to show).
+function _lvOwnScoreHTML(e) {
+  // Shows the rating whenever the entry actually has one — the site has
+  // no private-account model, so a real score is public data regardless
+  // of who owns the list or whether the list itself is flagged "ranked".
+  const isTmdbOnly = typeof e.id === 'string' && e.id.startsWith('tmdb:');
+  if (isTmdbOnly) return '';
+  const score = liveScore(e);
+  if (score == null) return '';
+  return `<span class="home-tmdb-score">★ ${Number(score).toFixed(2)}</span>`;
+}
+
+function _lvRenderViewToggle() { document.getElementById('lvViewToggle').innerHTML = _lvViewToggleHTML(); }
+function _lvViewToggleHTML() {
+  return `
+    <button class="vt-btn ${_lvView==='list'?'active':''}" onclick="_lvSetView('list')" title="List view">${icon('list',13)}</button>
+    <button class="vt-btn ${_lvView==='grid'?'active':''}" onclick="_lvSetView('grid')" title="Grid view">${icon('grid',13)}</button>`;
+}
+
+/* ── Loading skeleton: this page's own header, buttons, toolbar and titles (rows or cards, in the
+   view you chose) with sample text masked into placeholders — as many as last time (mssSkeleton) ── */
+mssSkeleton.define('lv-page', () => {
+  const box = document.getElementById('lvContent').cloneNode(true), $ = id => box.querySelector('#' + id);
+  $('lvAvatar').textContent = 'U';
+  $('lvUsername').textContent = '@username';
+  $('lvTitle').textContent = 'Sample list name';
+  $('lvDesc').textContent = 'A sample description for this list.';
+  const n = mssSkeleton.shape('lv')?.n || 8;
+  $('lvCount').textContent = String(n);
+  $('lvSfBar').innerHTML = SF.bar('lv', 'all'); $('lvSfBar').setAttribute('data-skel-keep', '');
+  $('lvViewToggle').innerHTML = _lvViewToggleHTML(); $('lvViewToggle').setAttribute('data-skel-keep', '');
+  const e = { id: '', title: 'Sample title', year: '2024', cat: 'tv', final_score: 8.5 };
+  $('lvGrid').className = _lvView === 'list' ? 'lv-list' : 'lv-grid';
+  $('lvGrid').innerHTML = Array.from({ length: n }, () => _lvView === 'list' ? _lvListRowHTML(e, null) : _lvCardHTML(e, null)).join('').replace(/(lv-card|lv-list-row)"/g, '$1 lv-in-view"');   // shown straight away (no reveal)
+  box.style.display = '';
+  return box.outerHTML.replace(/ (id|onclick)="[^"]*"/g, '');
+});
+
+function _lvSetView(v) {
+  if (v === _lvView) return;
+  _lvView = v;
+  localStorage.setItem('disc_listView', v);
+  _lvRenderGrid();
+  _lvRenderViewToggle();
+}
+
+function _lvObserveCards() {
+  if (!_lvRevealObserver) {
+    _lvRevealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('lv-in-view');
+          _lvRevealObserver.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+  }
+  const grid = document.getElementById('lvGrid');
+  const selector = _lvView === 'list' ? '.lv-list-row' : '.lv-card';
+  grid.querySelectorAll(selector).forEach(el => _lvRevealObserver.observe(el));
+}
+
+function _lvRenderGrid() {
+  const grid = document.getElementById('lvGrid');
+  grid.className = _lvView === 'list' ? 'lv-list' : 'lv-grid';
+  if (!_lvItems.length) {
+    grid.className = '';
+    grid.innerHTML = `<div class="lv-empty">This list is empty.</div>`;
+    return;
+  }
+  const shown = SF.list('lv', 'all');
+  document.getElementById('lvSfBar').innerHTML = SF.bar('lv', 'all');
+  if (!shown.length) {
+    grid.className = '';
+    grid.innerHTML = `<div class="lv-empty">Nothing in this list matches these filters.</div>`;
+    return;
+  }
+  // Number badges (same corner badges as the category pages):
+  //   • a Ranked list in its own order (or reversed) → the title's place in the list
+  //   • sorted by rating (Highest / Lowest) → its place in that rating order,
+  //     ranked list or not (unrated titles get no number)
+  //   • any other sort, or an unranked list in its order → no numbers
+  const sort = SF.getSort('lv', 'all');
+  const byScore = sort === 'highest' || sort === 'lowest';
+  const byOrder = (sort === 'rank' || sort === 'rankRev') && _lvList?.ranked === true;
+  let n = 0;
+  grid.innerHTML = shown.map(e => {
+    let rank = null;
+    if (byScore) rank = (_lvIsTmdbOnly(e) ? null : liveScore(e)) != null ? n++ : null;
+    else if (byOrder) rank = e._rank - 1;
+    return _lvView === 'list' ? _lvListRowHTML(e, rank) : _lvCardHTML(e, rank);
+  }).join('');
+  _lvObserveCards();
+}
+
+/* Sort & Filter — shared js/sort-filter.js module */
+function _lvIsTmdbOnly(e) { return typeof e.id === 'string' && e.id.startsWith('tmdb:'); }
+SF.register('lv', {
+  base: () => _lvItems,
+  render: () => _lvRenderGrid(),
+  defaultSort: 'rank',
+  // a ranked list reads "Rank · Top First"; any other list shows in the owner's order
+  get presets() { return _lvList?.ranked === true ? {} : { rank: { header: 'Order', opts: [['rank', 'List Order'], ['rankRev', 'Reversed']] } }; },
+  sorts: () => ['rank', 'alpha', 'release', 'ratings', 'runtime', 'seasons', 'episodes'],
+  filters: () => ['genre', 'year', 'score', 'length'],
+  choiceFilters: () => [{
+    key: 'cat', label: 'Type',
+    options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']],
+    test: (e, v) => (e.cat || (e.tmdb_type === 'movie' ? 'movies' : 'tv')) === v,
+  }, {
+    key: 'format', label: 'Format',
+    options: [['', 'All Formats'], ['show', 'Shows'], ['movie', 'Movies']],
+    when: ch => ch.cat === 'anime' || ch.cat === 'cartoons',
+    test: (e, v) => (v === 'movie') === SF.isMovie(e),
+  }],
+  scoreOf: e => _lvIsTmdbOnly(e) ? null : liveScore(e),
+});
+
+function _lvRankedBadgeHTML() {
+  // official lists: just the Official tag — no Ranked / Unranked (or its switch)
+  return _lvList?.official ? `<span class="list-rank-badge is-official">${icon('crown', 11)} Official</span>` : _lvRankedOnlyHTML();
+}
+function _lvRankedOnlyHTML() {
+  const ranked = _lvList?.ranked;
+  const isOwner = _lvUser && _lvList && _lvList.user_id === _lvUser.id;
+  if (ranked === true)  return `<span class="list-rank-badge is-ranked">Ranked</span>`;
+  if (ranked === false) return `<span class="list-rank-badge is-unranked">Unranked</span>`;
+  if (isOwner) {
+    return `<span class="sf-choice-inline" style="margin-left:12px;">
+      <label class="sf-check-row">
+        <input type="checkbox" onchange="if(this.checked) _lvSetRanked(true)">
+        <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        <span>Ranked</span>
+      </label>
+      <label class="sf-check-row">
+        <input type="checkbox" onchange="if(this.checked) _lvSetRanked(false)">
+        <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        <span>Unranked</span>
+      </label>
+    </span>`;
+  }
+  return '';
+}
+
+async function _lvSetRanked(value) {
+  try {
+    const { error } = await sb.from('favorite_lists').update({ ranked: value }).eq('id', _lvList.id).eq('user_id', _lvUser.id);
+    if (error) throw error;
+    _lvList.ranked = value;
+    document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML() + mssVisBadge(_lvList.visibility);
+    showToast(value ? 'Marked as ranked!' : 'Marked as unranked.');
+  } catch (err) {
+    console.error('Set ranked error:', err);
+    showToast('Failed to update.', 'err');
+  }
+}
+
+// Send this list to friends (social.js, loaded on demand by mssRecommend)
+// Export this list — the Export Studio (export-studio.js), with this list already chosen
+function _lvExport() {
+  if (!_lvList || !_lvUser) return;
+  const p = window._navUserProfile || {};
+  MSSStudio.open({ who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' },
+    preset: { what: 'list', list: { id: _lvList.id, title: _lvList.title, description: _lvList.description, items: _lvList.items || [], ranked: !!_lvList.ranked,
+      owner: _lvList.profiles?.username, mine: _lvList.user_id === _lvUser.id } },
+    load: () => getEntries(_lvUser.id) });
+}
+
+function _lvShare() {
+  if (!_lvList) return;
+  mssRecommend({ kind: 'list', list_id: _lvList.id, title: _lvList.title, count: (_lvList.items || []).length });
+}
+
+function _lvMarkImported() {
+  const btn = document.getElementById('lvImportBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="lv-import-btn-label">Added to My Lists ✓</span>';
+}
+
+// The original list's items are the OWNER's personal entry ids. Copied
+// as-is, they'd point at someone else's entries, which the importer's
+// Lists page can't resolve (it only loads their own library) — the
+// imported list would show up empty or with gaps. So each item is
+// re-pointed: to the importer's own entry for the same title if they
+// have one, otherwise to a TMDB reference (tmdb:movie:123), and only
+// kept as the original id when the entry was never linked to TMDB.
+async function _lvItemsForImport() {
+  const byId = Object.fromEntries(_lvItems.map(e => [e.id, e]));
+  const { data: mine } = await sb.from('entries')
+    .select('id, tmdb_id, tmdb_type').eq('user_id', _lvUser.id).not('tmdb_id', 'is', null);
+  const myByTmdb = {};
+  (mine || []).forEach(e => { myByTmdb[`${e.tmdb_type}:${e.tmdb_id}`] = e.id; });
+  const out = [];
+  for (const id of (_lvList.items || [])) {
+    let next = id;
+    if (!(typeof id === 'string' && id.startsWith('tmdb:'))) {
+      const e = byId[id];
+      if (e && e.tmdb_id && e.tmdb_type) {
+        next = myByTmdb[`${e.tmdb_type}:${e.tmdb_id}`] || `tmdb:${e.tmdb_type}:${e.tmdb_id}`;
+      }
+    } else {
+      const [, type, tmdbId] = id.split(':');
+      next = myByTmdb[`${type}:${tmdbId}`] || id;
+    }
+    if (!out.includes(next)) out.push(next);
+  }
+  return out;
+}
+
+async function importList() {
+  if (!_lvUser) { showToast('Sign in to import lists.', 'err'); return; }
+  if (!_lvList) return;
+  const btn = document.getElementById('lvImportBtn');
+  btn.disabled = true;
+  try {
+    const items = await _lvItemsForImport();
+    const { error } = await sb.from('favorite_lists').insert({
+      user_id: _lvUser.id,
+      cat: 'custom',
+      genre: _lvList.genre || '',
+      title: _lvList.title,
+      description: _lvList.description || null,
+      items,
+      ranked: _lvList.ranked ?? null,
+      forked_from: _lvList.id,
+    });
+    if (error) throw error;
+    showToast('Added to your lists!');
+    _lvMarkImported();
+  } catch (err) {
+    console.error('Import list error:', err);
+    showToast('Failed to import list.', 'err');
+    btn.disabled = false;
+  }
+}
+
+async function _lvLoad() {
+  if (!_lvListId) {
+    document.getElementById('lvLoading').innerHTML = `<div class="lv-empty">No list specified.</div>`;
+    return;
+  }
+  try {
+    let { data: list } = await sb.from('favorite_lists')
+      .select('*, profiles(username, avatar_url)')
+      .eq('id', _lvListId)
+      .maybeSingle();
+    // A private list (068) opened from its link: list-view.html?list=…&k=<token>
+    if (!list && _lvParams.get('k')) {
+      const { data } = await sb.rpc('open_list_link', { p_list: _lvListId, p_token: _lvParams.get('k') });
+      list = (data || [])[0] || null;
+      if (list) list.profiles = (await sb.from('profiles').select('username, avatar_url').eq('id', list.user_id).maybeSingle()).data;
+    }
+    if (!list) {
+      document.getElementById('lvLoading').innerHTML = `<div class="lv-empty">${icon('lock', 28)}<div>This list is private, or it doesn’t exist anymore.</div></div>`;
+      return;
+    }
+    _lvList = list;
+
+    const items = list.items || [];
+    let entries = [];
+    if (items.length) {
+      const entryItemIds = items.filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')));
+      const map = {};
+      if (entryItemIds.length) {
+        const { data: entryRows } = await sb.from('entries').select('*').in('id', entryItemIds);
+        (entryRows || []).forEach(e => { map[e.id] = e; });
+        await mssFillHiddenListItems(entryItemIds, map);   // titles hidden from you (073): name + poster only
+      }
+      await _hydrateTmdbItems(items);
+      entries = items.map(id => (typeof id === 'string' && id.startsWith('tmdb:')) ? _tmdbItemCache[id] : map[id]).filter(Boolean);
+    }
+    _lvItems = entries.map((e, i) => Object.assign({}, e, { _rank: i + 1 }));
+
+    document.title = `${list.title} — MyScreenFolio`;
+    document.getElementById('lvTitle').textContent = list.title; document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML() + mssVisBadge(list.visibility);
+    document.getElementById('lvDesc').textContent = list.description || '';
+    document.getElementById('lvDesc').style.display = list.description ? '' : 'none';
+    const username = list.profiles?.username || 'user';
+    const avatarUrl = list.profiles?.avatar_url;
+    document.getElementById('lvUsername').textContent = '@' + username;
+    document.getElementById('lvAvatar').innerHTML = safeURL(avatarUrl)
+      ? `<img src="${safeURL(avatarUrl)}" loading="lazy">`
+      : (username[0] || '?').toUpperCase();
+    document.getElementById('lvCount').textContent = entries.length;
+    mssSkeleton.shape('lv', { n: Math.min(entries.length, 12) });
+    document.getElementById('lvCountLabel').textContent = entries.length === 1 ? 'title' : 'titles';
+
+    const isOwn = _lvUser && list.user_id === _lvUser.id;
+    // Social → Recommendations; a private list (068) is only sent on by its owner
+    document.getElementById('lvShareBtn').hidden = !_lvUser || list.cat !== 'custom' || (list.visibility !== 'anyone' && list.user_id !== _lvUser.id);
+    document.getElementById('lvExportBtn').hidden = !_lvUser;
+    document.getElementById('lvExportLabel').innerHTML = `${icon('download', 15)} Export List`;
+    document.getElementById('lvImportPopupActions').style.display = isOwn ? 'none' : '';
+    if (!isOwn && _lvUser) {
+      // Collaborators already have this list in their Lists — no Import
+      const { data: collab } = await sb.from('list_collaborators')
+        .select('status').eq('list_id', list.id).eq('user_id', _lvUser.id).eq('status', 'accepted').limit(1);
+      if (collab && collab.length) document.getElementById('lvImportPopupActions').style.display = 'none';
+      // Already imported this one before? Show that instead of letting
+      // the same list get copied into their lists twice.
+      const { data: existing } = await sb.from('favorite_lists')
+        .select('id').eq('user_id', _lvUser.id).eq('forked_from', list.id).limit(1);
+      if (existing && existing.length) _lvMarkImported();
+    }
+
+    _lvRenderViewToggle();
+    _lvRenderGrid();
+
+    document.getElementById('lvLoading').style.display = 'none';
+    document.getElementById('lvContent').style.display = '';
+  } catch (err) {
+    console.error('Load list error:', err);
+    document.getElementById('lvLoading').innerHTML = `<div class="lv-empty">Couldn't load this list.</div>`;
+  }
+}
+
+/* ══ Invite link: list-view.html?list=…&join=<token> ══
+   Opening an owner's invite link asks whether you want to collaborate.
+   Accept → you're added (list lands at the top of your Lists).
+   Decline / invalid → the link part is dropped and it's a normal list page. */
+const _lvJoinToken = new URLSearchParams(location.search).get('join');
+
+function _lvDropJoinParam() {
+  const url = new URL(location.href); url.searchParams.delete('join'); history.replaceState(null, '', url);
+}
+
+async function _lvHandleJoinLink() {
+  if (!_lvJoinToken || !_lvList) return;
+  let state = 'invalid';
+  try {
+    const { data, error } = await sb.rpc('check_list_join_token', { p_list_id: _lvList.id, p_token: _lvJoinToken });
+    if (error) throw error;
+    state = data;
+  } catch (e) { console.warn('Join link check failed:', e); }
+  if (state === 'owner')  { _lvDropJoinParam(); return; }
+  if (state === 'member') { _lvDropJoinParam(); showToast("You're already collaborating on this list."); return; }
+  if (state === 'invalid') { _lvDropJoinParam(); showToast('This invite link has expired or was reset.', 'err'); return; }
+  _lvShowJoinPopup();
+}
+
+function _lvShowJoinPopup() {
+  const l = _lvList, owner = l.profiles || {};
+  const initial = escHTML((owner.username || '?')[0].toUpperCase());
+  const av = safeURL(owner.avatar_url) ? `<img src="${safeURL(owner.avatar_url)}" alt="">` : initial;
+  const count = (l.items || []).length;
+  const el = document.createElement('div');
+  el.id = 'lvJoinOverlay';
+  el.innerHTML = `<div class="lvj-card" role="dialog" aria-modal="true" aria-labelledby="lvjTitle">
+      <div class="lvj-av">${av}<span class="lvj-av-ic">${icon('users', 12)}</span></div>
+      <div class="lvj-eyebrow">List invite</div>
+      <div class="lvj-title" id="lvjTitle"><b>@${escHTML(owner.username || 'user')}</b> invited you to collaborate on</div>
+      <div class="lvj-list">&ldquo;${escHTML(l.title)}&rdquo;</div>
+      <div class="lvj-meta">${count} ${count === 1 ? 'title' : 'titles'}</div>
+      <div class="lvj-note">As a collaborator you can add and remove titles. Only the owner can rename or delete the list.</div>
+      <div class="lvj-actions" id="lvjPopupActions">
+        ${_lvUser
+          ? `<button class="popup-action-btn" id="lvjAccept" onclick="_lvJoinRespond(true)">Accept</button>
+             <button class="popup-action-btn lvj-ghost" onclick="_lvJoinRespond(false)">Decline</button>`
+          : `<a class="popup-action-btn" href="login.html" style="text-decoration:none;">Sign in to join</a>
+             <button class="popup-action-btn lvj-ghost" onclick="_lvJoinRespond(false)">Not now</button>`}
+      </div>
+    </div>`;
+  el.addEventListener('click', e => { if (e.target === el) _lvJoinRespond(false); });
+  document.body.appendChild(el);
+  mssLockScroll('lvJoin');
+  requestAnimationFrame(() => el.classList.add('open'));
+}
+
+function _lvCloseJoinPopup() {
+  const el = document.getElementById('lvJoinOverlay');
+  if (!el) return;
+  el.classList.remove('open');
+  mssUnlockScroll('lvJoin');
+  setTimeout(() => el.remove(), 220);
+}
+
+async function _lvJoinRespond(accept) {
+  if (!accept) { _lvDropJoinParam(); _lvCloseJoinPopup(); return; }
+  const btn = document.getElementById('lvjAccept');
+  if (btn) { btn.disabled = true; btn.textContent = 'Joining…'; }
+  try {
+    const { data, error } = await sb.rpc('join_list_with_token', { p_list_id: _lvList.id, p_token: _lvJoinToken });
+    if (error) throw error;
+    _lvDropJoinParam(); _lvCloseJoinPopup();
+    if (data === 'invalid') { showToast('This invite link has expired or was reset.', 'err'); return; }
+    showToast(data === 'member' ? "You're already collaborating on this list." : "You joined! It's at the top of your Lists.");
+    const imp = document.getElementById('lvImportPopupActions');
+    if (imp) imp.style.display = 'none';
+  } catch (e) {
+    console.error(e);
+    if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+    showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Could not join — try again.', 'err');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPageGuest(async (user) => {
+    _lvUser = user;
+    await _lvLoad();
+    _lvHandleJoinLink();
+  });
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

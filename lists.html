@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Lists — MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1E5C26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<style>
+/* Score styling — matches Discover's grid card exactly */
+.home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
+.home-tmdb-score { font-family:var(--bebas); color:var(--olive-light); font-size:clamp(15px, 3.3vw, 17px); font-weight:400; white-space:nowrap; }
+/* ── Lists page ── */
+.fav-page-list-header {
+  display:block;
+  margin-bottom:1rem;
+}
+.fav-page-list-title-row {
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:nowrap;
+  margin-bottom:6px;
+}
+.fav-page-list-title-inner { display:flex; align-items:center; gap:8px; min-width:0; flex:1; }
+.home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
+.fav-edit-btn-row { display:flex; gap:6px; flex-shrink:0; }
+@media(max-width:640px) {
+  .fav-page-list-title-row { gap:8px; }
+  .fav-edit-btn-row { gap:5px; }
+  .fav-edit-btn-label { display:none; }
+  .fav-edit-btn { padding:7px 9px !important; }
+}
+.fav-page-list-title {
+  font-family:var(--serif);font-size:clamp(17px, 3.4vw, 20px);font-weight:500;color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+}
+.fav-page-list-count {
+  font-size:11px;color:var(--text-3);letter-spacing:.5px;margin-top:2px;
+}
+.fav-page-section {
+  margin-bottom:2.5rem;
+}
+.fav-page-section-hd {
+  font-size:11px;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--olive-light);margin:2rem 0 1.25rem;
+  display:flex;align-items:center;gap:12px;
+}
+.fav-page-section-hd::after{content:'';flex:1;height:0.5px;background:var(--border);}
+
+
+/* ── Search — same live dropdown pattern used on friends.html/notes.html ── */
+.lists-search-wrap { margin-bottom:1.25rem; }
+.username-dropdown {
+  position:fixed;
+  background:var(--bg-3); border:0.5px solid var(--olive-light); border-top:none;
+  border-radius:0 0 var(--radius) var(--radius); z-index:290;
+  box-shadow:var(--shadow-lg);
+  overflow-y:auto; overflow-x:hidden; max-height:320px;
+  display:none;
+}
+.username-dropdown.open { display:block; }
+.ud-item {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 14px; cursor:pointer;
+  transition:background .15s;
+  border-bottom:0.5px solid var(--border);
+}
+.ud-item:last-child { border-bottom:none; }
+.ud-item:hover, .ud-item.ud-active { background:var(--olive-faint); }
+.ud-avatar {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:var(--bg-3); border:1px solid var(--border-2);
+  font-family:var(--serif); font-size:16px; color:var(--text-2);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.ud-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.ud-info { flex:1; min-width:0; }
+.ud-username { font-size:14px; font-weight:500; color:var(--text); }
+.ud-username em { color:var(--olive-light); font-style:normal; font-weight:600; }
+.ud-display { font-size:11px; color:var(--text-3); margin-top:2px; }
+.ud-loading, .ud-empty { padding:14px; font-size:13px; color:var(--text-3); text-align:center; }
+.ud-type-tag {
+  font-size:9.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--olive-light); background:var(--olive-faint); border:0.5px solid var(--border-olive);
+  border-radius:20px; padding:2px 8px; flex-shrink:0;
+}
+.lists-search-wrap .fused-search-wrap {
+  display:flex; align-items:stretch;
+  border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden;
+  background:var(--bg-3); transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
+}
+.lists-search-wrap .fused-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.lists-search-wrap .add-friend-input {
+  flex:1; min-width:0; background:transparent; border:none;
+  color:var(--text); font-size:16px;
+  padding:18px 20px; outline:none; box-sizing:border-box; transition:none;
+}
+.lists-search-wrap .add-friend-input::placeholder { color:var(--text-3); font-size:14px; }
+.lists-search-wrap .fused-search-btn {
+  flex-shrink:0; display:flex; align-items:center; gap:8px;
+  padding:0 26px; border:none; cursor:pointer;
+  background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff;
+  font-size:14px; font-weight:500; font-family:var(--sans);
+  transition:opacity .15s;
+}
+.lists-search-wrap .fused-search-btn:hover { opacity:.9; }
+.lists-search-wrap .fused-search-btn svg { width:16px; height:16px; flex-shrink:0; }
+#listsFilterBanner {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:var(--olive-faint); border:0.5px solid var(--border-olive); border-radius:var(--radius);
+  padding:10px 16px; margin-top:10px; font-size:13.5px; color:var(--olive-light); font-weight:500;
+}
+#listsFilterBanner button {
+  background:none; border:none; color:var(--olive-light); font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:underline;
+}
+
+/* ── Social list rows ── */
+.social-list-row { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.1rem 1.25rem; transition:border-color .15s; cursor:pointer; }
+.social-list-row:hover { border-color:var(--border-olive); }
+.snote-rect-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:11px 8px; border-radius:var(--radius-sm); font-size:13px; font-weight:600;
+  background:var(--bg-3); border:0.5px solid var(--border-2); color:var(--text-3); cursor:pointer;
+  transition:all .15s; white-space:nowrap;
+}
+.snote-rect-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.snote-rect-btn.active-like { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+.snote-rect-btn.active-dislike { background:rgba(192,104,90,0.12); border-color:rgba(192,104,90,0.4); color:#c0685a; }
+.social-list-add-btn {
+  font-size:11.5px; font-weight:600; padding:6px 14px; border-radius:999px;
+  background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light);
+  cursor:pointer; transition:all .15s; white-space:nowrap;
+}
+.social-list-add-btn:hover { background:var(--olive-light); color:var(--bg); }
+.social-list-add-btn:disabled { opacity:.5; cursor:default; }
+.social-list-row { position:relative; }
+
+@media(max-width:600px){
+  .fav-h-grid .q-card{flex:0 0 120px;min-width:120px;}
+  .fav-h-nav{display:none;}
+}
+@media(max-width:400px){
+  .fav-h-grid .q-card{flex:0 0 105px;min-width:105px;}
+}
+
+.lists-page-header-right { display:flex; flex-direction:row; align-items:center; gap:8px; flex-wrap:wrap; }
+@media(max-width:520px){
+  .lists-page-header-right { width:100%; }
+  .lists-page-header-right .btn-add-entry { flex:1; font-size:clamp(11px,3vw,13px); padding:10px 12px; }
+}
+
+.list-desc-field {
+  width:100%;box-sizing:border-box;padding:10px 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg-3);color:var(--text);
+  font-family:var(--sans);font-size:14px;outline:none;resize:vertical;min-height:56px;
+  transition:border-color .15s;
+}
+.list-desc-field:focus{border-color:var(--olive-light);}
+.list-desc-count { font-size:10.5px; color:var(--text-3); text-align:end; margin-top:4px; }
+.list-desc-count.over { color:#c0564a; }
+.fav-page-list-desc {
+  font-size:12.5px; color:var(--text-2); line-height:1.5; margin-top:4px;
+}
+.list-item-sort-bar { display:flex; gap:6px; flex-wrap:wrap; }
+/* Owner popup has 4 actions — 2×2 on phones so labels fit */
+@media(max-width:600px) {
+  #lpPopupActions:has(> .popup-action-btn:nth-child(4)) { flex-wrap:wrap !important; }
+  #lpPopupActions:has(> .popup-action-btn:nth-child(4)) .popup-action-btn { flex:1 1 calc(50% - 4px) !important; }
+}
+#collabOverlay {
+  position:fixed; inset:0; z-index:1250; background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity .2s;
+}
+#collabOverlay.open { opacity:1; pointer-events:auto; }
+#collabCard {
+  width:100%; max-width:460px; max-height:min(80dvh, 640px); display:flex; flex-direction:column;
+  background:var(--bg-2); border:1.5px solid var(--olive-light); border-radius:var(--radius-lg); box-shadow:4px 4px 0 var(--olive);
+  transform:translateY(10px); transition:transform .2s;
+}
+#collabOverlay.open #collabCard { transform:none; }
+.cp-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:18px 20px 12px; }
+.cp-eyebrow { font-family:var(--serif); font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; }
+.cp-title { font-family:var(--serif); font-size:19px; font-weight:600; line-height:1.25; overflow-wrap:anywhere; }
+.cp-close { background:none; border:none; color:var(--text-3); cursor:pointer; display:flex; padding:4px; }
+.cp-link { margin:0 20px 12px; padding:12px; border-radius:var(--radius-sm); background:var(--olive-faint); border:1px solid var(--border-olive); }
+.cp-link-head { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+.cp-link-ic { width:30px; height:30px; border-radius:50%; flex-shrink:0; background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center; }
+.cp-link-title { font-size:13.5px; font-weight:600; color:var(--text); }
+.cp-link-sub { font-size:11.5px; color:var(--text-3); line-height:1.35; }
+.cp-link-row { display:flex; gap:8px; }
+.cp-link-input { flex:1; min-width:0; padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-2); color:var(--text-2); font-size:12.5px; font-family:var(--sans); outline:none; text-overflow:ellipsis; }
+.cp-link-reset { margin-top:8px; background:none; border:none; padding:0; color:var(--text-3); font-size:11.5px; font-weight:600; cursor:pointer; text-decoration:underline; }
+.cp-link-reset:hover { color:#c0564a; }
+.cp-divider { display:flex; align-items:center; gap:10px; margin:2px 20px 10px; font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); }
+.cp-divider::before, .cp-divider::after { content:''; flex:1; height:0.5px; background:var(--border); }
+.cp-search { position:relative; margin:0 20px 10px; }
+.cp-search span { position:absolute; inset-inline-start:13px; top:50%; transform:translateY(-50%); color:var(--text-3); display:flex; }
+.cp-search input {
+  width:100%; box-sizing:border-box; padding-block:11px; padding-inline:38px 14px; border-radius:var(--radius-sm);
+  border:1px solid var(--border); background:var(--bg-3); color:var(--text); font-family:var(--sans); font-size:16px; outline:none;
+}
+.cp-search input:focus { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.cp-list { flex:1; overflow-y:auto; overscroll-behavior:contain; padding:4px 12px; min-height:120px; }
+.cp-row { display:flex; align-items:center; gap:12px; padding:9px 8px; border-radius:var(--radius-sm); }
+.cp-row:hover { background:var(--card); }
+.cp-av { width:40px; height:40px; border-radius:50%; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; font-family:var(--serif); font-weight:600; }
+.cp-av img { width:100%; height:100%; object-fit:cover; }
+.cp-who { flex:1; min-width:0; }
+.cp-name { font-size:14px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cp-user { font-size:12px; color:var(--text-3); }
+.cp-btn { flex-shrink:0; padding:7px 16px; border-radius:var(--radius-sm); font-family:'Manrope',var(--sans); font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid transparent; }
+.cp-invite { background:var(--olive); border-color:var(--olive); color:#fff; }
+.cp-invite:hover:not(:disabled) { background:var(--olive-light); border-color:var(--olive-light); }
+.cp-sent { background:transparent; border-color:var(--border-2); color:var(--text-3); cursor:default; }
+.cp-joined { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+.cp-joined:hover { border-color:#c0564a; color:#c0564a; background:transparent; }
+.cp-btn:disabled { opacity:.7; }
+.cp-empty { padding:28px 12px; text-align:center; color:var(--text-3); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.cp-empty svg { opacity:.5; }
+.cp-empty a { color:var(--olive-light); font-weight:600; text-decoration:none; }
+.cp-foot { padding:12px 20px 18px !important; border-top:0.5px solid var(--border); display:flex; flex-direction:row !important; }
+.cp-foot .popup-action-btn { flex:1; }
+
+/* ── Reorder mode ── */
+.lr-hint {
+  display:flex; align-items:center; gap:8px; margin:-2px 0 14px; padding:10px 14px;
+  font-size:12.5px; color:var(--text-2); background:var(--olive-faint); border:1px dashed var(--border-olive); border-radius:var(--radius-sm);
+}
+.lr-hint svg { color:var(--olive-light); flex-shrink:0; }
+.lc-card.lc-reorder { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
+.lc-card.lc-reorder:hover { transform:none; }
+.lc-card.lc-reorder:active { cursor:grabbing; }
+.lc-grid-reorder .lc-card { box-shadow:0 0 0 1px var(--border-olive); }
+.lc-grid-reorder .lc-card .lc-posters { opacity:.75; }
+.lr-bar {
+  display:flex; align-items:center; gap:8px; margin:-4px -4px 10px; padding:4px 4px 10px;
+  border-bottom:0.5px dashed var(--border-olive);
+}
+.lr-grip { width:20px; height:20px; color:var(--olive-light); display:inline-flex; }
+.lr-grip svg { width:100%; height:100%; }
+.lr-pos {
+  font-family:var(--bebas); font-size:16px; line-height:1; color:#fff; background:var(--olive);
+  min-width:24px; height:24px; padding:0 6px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center;
+}
+.lr-move { margin-inline-start:auto; display:flex; gap:6px; }
+.lr-arrow {
+  width:32px; height:32px; border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--bg-3); border:1px solid var(--border-2); color:var(--text-2); transition:background .15s, color .15s, border-color .15s;
+}
+.lr-arrow svg { width:15px; height:15px; }
+.lr-arrow:hover:not(:disabled) { background:var(--olive); border-color:var(--olive); color:#fff; }
+.lr-arrow:disabled { opacity:.35; cursor:default; }
+/* The slot the card will drop into */
+.lc-card.lr-dragging { opacity:.35; border:1.5px dashed var(--olive-light) !important; box-shadow:none !important; background:var(--olive-faint); }
+.lc-card.lr-dragging > * { visibility:hidden; }
+/* The card following the pointer */
+.lr-ghost {
+  position:fixed !important; top:0; inset-inline-start:0; z-index:2000; pointer-events:none; margin:0 !important;
+  box-shadow:0 24px 50px rgba(0,0,0,.28), 0 0 0 2px var(--olive-light) !important; opacity:.97;
+  transition:none; will-change:transform;
+}
+body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing; }
+.lr-ghost .lr-pos, .lr-ghost .lr-move { visibility:hidden; }
+.lr-toggle.active { background:var(--olive) !important; color:#fff !important; border-color:var(--olive) !important; }
+
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="cat-page-header fade-up">
+    <div class="cat-page-header-left">
+      <h1 class="cat-page-title" id="listsPageTitle">My Lists</h1>
+      <div class="cat-page-sub" id="listsPageSub"></div>
+    </div>
+    <div class="cat-page-header-right lists-page-header-right">
+      <button class="btn-add-entry" id="listsCustomBtn" onclick="MSSListStudio.open()">+ New List</button>
+    </div>
+  </div>
+
+  <!-- Personal / Social toggle -->
+  <div class="pn-toggle fade-up" id="listsModeToggle">
+    <button class="pn-toggle-btn active" data-mode="personal" onclick="setListsMode('personal')">Personal</button>
+    <button class="pn-toggle-btn" data-mode="social" onclick="setListsMode('social')">Community</button>
+  </div>
+
+  <!-- Stat boxes -->
+  <div class="page-stats fade-up fade-up-1" id="listsPageStats"></div>
+
+
+  <!-- Social: search users, list names, item names -->
+  <div class="lists-search-wrap fade-up fade-up-1" id="listsSearchWrap" style="display:none;">
+    <div class="fused-search-wrap" id="listsSearchWrapInner">
+      <input type="text" id="listsSearchInput" class="add-friend-input" placeholder="Search users, lists, or titles…"
+             autocomplete="off" spellcheck="false"
+             oninput="_llSearch(this.value)"
+             onkeydown="_llKeydown(event)">
+      <button type="button" class="fused-search-btn" tabindex="-1" onclick="document.getElementById('listsSearchInput').focus()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>Search</span>
+      </button>
+    </div>
+    <div id="listsFilterBanner" style="display:none;"></div>
+  </div>
+  <div id="llDropdown" class="username-dropdown"></div>
+
+  <!-- Toolbar: section label + Sort / Filter (both tabs) -->
+  <div class="mss-toolbar fade-up fade-up-1" id="listsToolbar" style="display:none;"></div>
+
+  <!-- Main content -->
+  <div id="listsPageContent" class="fade-up fade-up-2">
+    <div class="page-loading" data-skel="lists"></div>
+  </div>
+
+</div>
+
+<!-- Custom List Modal -->
+<!-- Popup injected dynamically -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/sort-filter.js"></script>
+<script src="js/list-popup.js"></script>
+<script src="js/list-studio.js"></script>
+<script>
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+
+function goToDetail(id, from) {
+  sessionStorage.setItem('detailId', id);
+  sessionStorage.setItem('detailFrom', from || 'lists.html');
+  window.location.href = 'detail.html';
+}
+
+function _favNavScroll(id, dir) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var target = el.scrollWidth > el.clientWidth ? el : (el.closest('.grid-nav-wrap') || el);
+  target.scrollBy({ left: dir * (target.clientWidth * 0.75 || 220), behavior: 'smooth' });
+}
+
+// Runtime (movies) / season+episode count (shows) badge — same logic as
+// category.js's _entryMeta(), inlined here since lists.html doesn't
+// load category.js.
+
+let _listsUser = null;
+let _listsEntries = [];
+let _listsAll = [];
+let _listsOrderSort = 'default';
+
+let _listsEntryMap = {};
+// List items can be either a personal entry's UUID (existing behavior)
+// or a bare "tmdb:movie:123" / "tmdb:tv:456" reference for something
+// added straight from Discover, with no personal entry behind it at
+// all. This is the one place that knows how to turn either shape into
+// the same {id, title, poster_url, tmdb_id, tmdb_type, year} object
+// every renderer already expects — so hScrollSection/social
+// previews/list-view.html don't need to know the difference.
+function _resolveListItem(id) {
+  if (typeof id === 'string' && id.startsWith('tmdb:')) return MSSList.tmdb(id);
+  return _listsEntryMap[id] || null;
+}
+
+let _listsMode = 'personal';
+let _socialListsSort = 'popular';
+let _socialListsRaw = [];
+let _socialListsMyReactions = {}; // list_id -> 'like' | 'dislike'
+
+// Picker state
+
+// Popup state
+let _favPopupId = null;
+
+// Returning via browser back/forward can restore this page from the
+// bfcache with stale data (e.g. an entry just added/edited elsewhere
+// wouldn't show up here) instead of re-running this page's scripts.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  attachClearButton('listsSearchInput');
+  initPage(async (user) => {
+    if (!user) {
+      document.querySelector('.page-wrap').innerHTML = `
+        <div class="guest-page-state fade-up">
+          <div class="guest-page-icon">${icon('layers', 36)}</div>
+          <h2 class="guest-page-title">Your Lists</h2>
+          <p class="guest-page-sub">Sign in to create and manage your custom lists.</p>
+          <div class="guest-cta">
+            <a href="login.html" class="guest-btn-primary">Sign In</a>
+            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
+          </div>
+        </div>`;
+      return;
+    }
+    _listsUser = user;
+    MSSListStudio.init({
+      lists: () => _listsAll, entries: () => _listsEntries, resolve: _resolveListItem, save: saveFavoriteList,
+      afterSave: (list, isNew) => { if (isNew) _listsAll.push(list); renderListsPage(); },
+      collab: id => openCollabPicker(id),
+    });
+    const q = new URLSearchParams(location.search);
+    if (q.get('mode') === 'community') setListsMode('social');
+    if (q.get('new')) {                                 // (+) → New list, from another page
+      const url = new URL(location.href); url.searchParams.delete('new');
+      history.replaceState(history.state, '', url.pathname + url.search);
+      MSSListStudio.open();
+    }
+    await loadListsPage();
+  });
+});
+// Personal ↔ Community from the phone toggles: switch in place
+window.mssTabGo = url => { setListsMode(url.searchParams.get('mode') === 'community' ? 'social' : 'personal'); return true; };
+
+/* Personal loads first and shows as soon as YOUR lists + entries arrive.
+   Shared lists, other people's entries and titles added from Discover
+   (TMDB lookups — cached on the device) fill in right after, each with a
+   quick re-render. Community data is fetched quietly in the background so
+   switching tabs is instant. */
+async function loadListsPage() {
+  const [entries, lists] = await Promise.all([
+    getEntries(_listsUser.id),
+    getFavoriteLists(_listsUser.id),
+  ]);
+  _listsEntries = entries || [];
+  _listsAll = lists || [];
+  _listsEntryMap = Object.fromEntries(_listsEntries.map(e => [e.id, e]));
+  if (_listsMode === 'personal') renderListsPage();            // ← first paint
+
+  _ensureListSortOrder().catch(() => {});                       // one-off backfill, no need to wait
+  await _loadCollabData();
+  // Items that aren't in my library: shared lists' entries, older imports
+  const foreignIds = [...new Set(_listsAll.flatMap(l => l.items || []))]
+    .filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')) && !_listsEntryMap[id]);
+  if (foreignIds.length) {
+    const { data: foreignRows } = await sb.from('entries').select('*').in('id', foreignIds);
+    (foreignRows || []).forEach(e => { _listsEntryMap[e.id] = e; });
+    await mssFillHiddenListItems(foreignIds, _listsEntryMap);   // a collaborator's hidden title (073)
+  }
+  if (_listsMode === 'personal') renderListsPage();
+  if (await MSSList.hydrate(_listsAll) && _listsMode === 'personal') renderListsPage();
+
+  _mssIdle(() => _fetchSocialLists());                         // warm up Community
+}
+
+// Runs a task once the browser is idle (or after a short delay)
+function _mssIdle(fn) { ('requestIdleCallback' in window) ? requestIdleCallback(fn, { timeout: 2500 }) : setTimeout(fn, 1200); }
+
+// Custom lists (cat='custom') are already fetched ordered by created_at, so
+// that's a stable baseline. Lists with a real sort_order move to that
+// position; ones without one (not yet reordered) keep their created_at
+// spot. If any are missing sort_order, backfill it once from the current
+// order so future reorders have real values to work from everywhere,
+// including profile.html/profile-view.html which just read this column.
+async function _ensureListSortOrder() {
+  const custom = _listsAll.filter(l => l.cat === 'custom' && !l._collab);
+  custom.sort((a, b) => {
+    const ao = a.sort_order, bo = b.sort_order;
+    if (ao != null && bo != null) return ao - bo;
+    if (ao != null) return -1;
+    if (bo != null) return 1;
+    return new Date(a.created_at) - new Date(b.created_at);
+  });
+
+  const needsBackfill = custom.some(l => l.sort_order == null);
+  if (!needsBackfill) return;
+
+  try {
+    await Promise.all(custom.map((l, i) => {
+      l.sort_order = i;
+      return sb.from('favorite_lists').update({ sort_order: i }).eq('id', l.id).eq('user_id', _listsUser.id);
+    }));
+  } catch (e) { console.error('sort_order backfill error:', e); }
+}
+
+async function getFavoriteLists(userId) {
+  const { data, error } = await sb.from('favorite_lists')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+  if (error) { console.error('getFavoriteLists:', error); return []; }
+  return data || [];
+}
+
+async function saveFavoriteList(list) {
+  if (list.id) {
+    const upd = { items: list.items, title: list.title };
+    if (list.description !== undefined) upd.description = list.description;
+    if (list.ranked !== undefined) upd.ranked = list.ranked;
+    if (list.sort_mode !== undefined) upd.sort_mode = list.sort_mode;
+    if (list.visibility !== undefined) upd.visibility = list.visibility;
+    const { data, error } = await sb.from('favorite_lists')
+      .update(upd)
+      .eq('id', list.id)
+      .eq('user_id', _listsUser.id)
+      .select().single();
+    if (error) throw error;
+    return data;
+  } else {
+    const { data, error } = await sb.from('favorite_lists')
+      .insert({ user_id: _listsUser.id, cat: list.cat, genre: list.genre, title: list.title, description: list.description || null, items: list.items || [], ranked: list.ranked ?? null, sort_mode: list.sort_mode ?? null, visibility: list.visibility || 'anyone' })
+      .select().single();
+    if (error) throw error;
+    return data;
+  }
+}
+
+async function deleteFavoriteList(id) {
+  const { error } = await sb.from('favorite_lists').delete().eq('id', id).eq('user_id', _listsUser.id);
+  if (error) throw error;
+}
+
+
+// Badge only — no badge at all for lists that haven't picked yet
+// Owner's pick for an undecided list (shown inside the popup)
+function _rankChoiceHTML(listId) {
+  const mark = '<span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>';
+  const id = attrJSON(listId);
+  return `<div class="lp-choice"><span>Is this list ranked?</span><span class="sf-choice-inline">
+    <label class="sf-check-row"><input type="checkbox" onchange="if(this.checked) setListRanked(${id}, true)">${mark}<span>Ranked</span></label>
+    <label class="sf-check-row"><input type="checkbox" onchange="if(this.checked) setListRanked(${id}, false)">${mark}<span>Unranked</span></label>
+  </span></div>`;
+}
+// Kept for any older caller
+
+async function setListRanked(listId, value) {
+  try {
+    const { error } = await sb.from('favorite_lists').update({ ranked: value }).eq('id', listId).eq('user_id', _listsUser.id);
+    if (error) throw error;
+    const list = _listsAll.find(l => l.id === listId);
+    if (list) list.ranked = value;
+    const socialList = _socialListsRaw?.find?.(l => l.id === listId);
+    if (socialList) socialList.ranked = value;
+
+    if (_listsMode === 'social') {
+      renderSocialLists();
+    } else {
+      renderListsPage();
+    }
+    if (_slPopupListId === listId) _renderListPopup();
+    showToast(value ? 'Marked as ranked!' : 'Marked as unranked.');
+  } catch (err) {
+    console.error('Set ranked error:', err);
+    showToast('Failed to update.', 'err');
+  }
+}
+
+const _LIST_ICONS = {
+  del:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
+};
+
+/* ══ Reorder lists (drag, or arrows) ══
+   Tap "Reorder" → cards get a grip bar; drag any card (mouse or finger)
+   and the others slide out of the way (FLIP animation). Arrows do the
+   same one step at a time (and work with the keyboard). Every change
+   saves on its own. Only available on the Default order with no filters,
+   since that's the order being edited. */
+let _listsReorder = false;
+let _lr = null;       // active drag state
+
+/* ══ Collaborative lists ══
+   _listsCollab[listId] = [{ user_id, status, profile }] for lists I own.
+   Lists other people shared with me (accepted) are added to _listsAll
+   with _collab = true and _owner = their profile. */
+let _listsCollab = {};
+let _listsFriends = null;
+
+async function _loadCollabData() {
+  _listsCollab = {};
+  try {
+    const myIds = _listsAll.filter(l => l.cat === 'custom').map(l => l.id);
+    const [mineRes, sharedRes] = await Promise.all([
+      myIds.length ? sb.from('list_collaborators').select('list_id, user_id, status').in('list_id', myIds).neq('status', 'declined') : { data: [] },
+      sb.from('list_collaborators').select('list_id, sort_order').eq('user_id', _listsUser.id).eq('status', 'accepted'),
+    ]);
+    const sharedIds = (sharedRes.data || []).map(r => r.list_id);
+    const sharedLists = sharedIds.length ? (await sb.from('favorite_lists').select('*').in('id', sharedIds)).data || [] : [];
+    const peopleIds = [...new Set([...(mineRes.data || []).map(r => r.user_id), ...sharedLists.map(l => l.user_id)])];
+    const people = peopleIds.length ? (await sb.from('profiles').select('id, username, display_name, avatar_url').in('id', peopleIds)).data || [] : [];
+    const P = Object.fromEntries(people.map(p => [p.id, p]));
+    (mineRes.data || []).forEach(r => { (_listsCollab[r.list_id] ||= []).push({ ...r, profile: P[r.user_id] || null }); });
+    // A shared list sits where *I* put it (my own sort_order on the collaborator
+    // row) — new ones default to the top. The owner's order never applies here.
+    const myPos = Object.fromEntries((sharedRes.data || []).map(r => [r.list_id, r.sort_order]));
+    sharedLists.forEach(l => { l._collab = true; l._owner = P[l.user_id] || null; l.sort_order = myPos[l.id] ?? -1; });
+    _listsAll = _listsAll.filter(l => !l._collab).concat(sharedLists);
+  } catch (e) { console.warn('Collab data load failed (run 021 SQL?):', e); }
+}
+
+
+/* ── Friends picker (with search) for inviting ── */
+let _collabPickerList = null, _collabPickerThen = null;
+function _injectCollabPicker() {
+  if (document.getElementById('collabOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'collabOverlay';
+  el.innerHTML = `<div id="collabCard">
+      <div class="cp-head">
+        <div><div class="cp-eyebrow">Collaborate</div><div class="cp-title" id="collabTitle">Invite friends</div></div>
+        <button class="cp-close" onclick="closeCollabPicker()" aria-label="Close">${icon('x', 18)}</button>
+      </div>
+      <div class="cp-link" id="collabLinkBox">
+        <div class="cp-link-head"><span class="cp-link-ic">${icon('link', 15)}</span>
+          <div><div class="cp-link-title">Invite link</div><div class="cp-link-sub">Anyone with the link can ask to join and add titles</div></div></div>
+        <div class="cp-link-row">
+          <input class="cp-link-input" id="collabLinkInput" readonly value="Creating link…" onclick="this.select()" aria-label="Invite link">
+          <button class="cp-btn cp-invite" id="collabLinkCopy" onclick="_collabCopyLink()" disabled>Copy</button>
+        </div>
+        <button class="cp-link-reset" onclick="_collabResetLink()">Reset link</button>
+      </div>
+      <div class="cp-divider"><span>or invite friends</span></div>
+      <div class="cp-search"><span>${icon('search', 15)}</span><input type="text" id="collabSearch" placeholder="Search your friends…" autocomplete="off" oninput="_renderCollabPicker()"></div>
+      <div class="cp-list" id="collabList"></div>
+      <div class="cp-foot" id="collabPopupActions"><button class="popup-action-btn" onclick="closeCollabPicker()">Done</button></div>
+    </div>`;
+  el.addEventListener('click', e => { if (e.target === el) closeCollabPicker(); });
+  document.body.appendChild(el);
+}
+async function openCollabPicker(listId, then) {
+  const list = _listsAll.find(l => l.id === listId && !l._collab);
+  if (!list) return;
+  _injectCollabPicker();
+  _collabPickerList = list; _collabPickerThen = then || null;
+  document.getElementById('collabTitle').textContent = `Invite friends to “${list.title}”`;
+  document.getElementById('collabSearch').value = '';
+  document.getElementById('collabList').innerHTML = '<div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>';
+  document.getElementById('collabOverlay').classList.add('open');
+  mssLockScroll('collab');
+  if (!_listsFriends) {
+    try {
+      const all = await getFriendships(_listsUser.id);
+      _listsFriends = all.filter(f => f.status === 'accepted' && f.friendProfile).map(f => f.friendProfile);
+    } catch { _listsFriends = []; }
+  }
+  _renderCollabPicker();
+  _collabLoadLink();
+}
+
+/* ── Invite link (owner only) ── */
+function _collabLinkURL(token) {
+  const base = location.href.replace(/[^/]*$/, '');
+  return `${base}list-view.html?list=${encodeURIComponent(_collabPickerList.id)}&join=${encodeURIComponent(token)}`;
+}
+async function _collabLoadLink(reset) {
+  const input = document.getElementById('collabLinkInput'), btn = document.getElementById('collabLinkCopy');
+  if (!input || !_collabPickerList) return;
+  input.value = reset ? 'Making a new link…' : 'Creating link…'; btn.disabled = true;
+  try {
+    const { data, error } = await sb.rpc(reset ? 'reset_list_join_token' : 'get_list_join_token', { p_list_id: _collabPickerList.id });
+    if (error) throw error;
+    input.value = _collabLinkURL(data); btn.disabled = false;
+    if (reset) showToast('New link created — the old one no longer works.');
+  } catch (e) { console.error(e); input.value = 'Could not create a link (run 024 SQL?)'; }
+}
+async function _collabCopyLink() {
+  const url = document.getElementById('collabLinkInput').value;
+  const title = _collabPickerList?.title || 'my list';
+  // Phones: native share sheet (Messages, WhatsApp…); otherwise copy
+  if (navigator.share && window.matchMedia('(pointer:coarse)').matches) {
+    try { await navigator.share({ title: `Join “${title}” on MyScreenFolio`, url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); }
+  catch { const i = document.getElementById('collabLinkInput'); i.select(); document.execCommand('copy'); }
+  const btn = document.getElementById('collabLinkCopy');
+  btn.textContent = 'Copied ✓'; setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+}
+async function _collabResetLink() {
+  const ok = await showConfirm({ title: 'Reset invite link?', message: 'The current link will stop working. People who already joined stay on the list.', confirmText: 'Reset', iconName: 'refresh', danger: false });
+  if (ok) _collabLoadLink(true);
+}
+function closeCollabPicker() {
+  const ov = document.getElementById('collabOverlay');
+  if (!ov || !ov.classList.contains('open')) return;
+  ov.classList.remove('open');
+  mssUnlockScroll('collab');
+  renderListsPage();
+  const then = _collabPickerThen; _collabPickerThen = null; _collabPickerList = null;
+  if (then) setTimeout(then, 250);
+}
+function _renderCollabPicker() {
+  const wrap = document.getElementById('collabList');
+  if (!wrap || !_collabPickerList) return;
+  const q = document.getElementById('collabSearch').value.trim().toLowerCase();
+  const friends = (_listsFriends || []).filter(p => !q || (p.username || '').toLowerCase().includes(q) || (p.display_name || '').toLowerCase().includes(q));
+  if (!(_listsFriends || []).length) {
+    wrap.innerHTML = `<div class="cp-empty">${icon('users', 28)}<div>You don't have any friends to invite yet.</div><a href="friends.html">Find friends →</a></div>`;
+    return;
+  }
+  if (!friends.length) { wrap.innerHTML = `<div class="cp-empty">No friends match “${esc(q)}”.</div>`; return; }
+  const status = Object.fromEntries((_listsCollab[_collabPickerList.id] || []).map(c => [c.user_id, c.status]));
+  wrap.innerHTML = friends.map(p => {
+    const st = status[p.id];
+    const btn = st === 'accepted'
+      ? `<button class="cp-btn cp-joined" onclick="_collabRemove(${attrJSON(p.id)}, ${attrJSON(p.username)})" title="Remove from list">Joined ✓</button>`
+      : st === 'pending'
+      ? `<button class="cp-btn cp-sent" disabled>Invited</button>`
+      : `<button class="cp-btn cp-invite" onclick="_collabInvite(this, ${attrJSON(p.id)})">Invite</button>`;
+    return `<div class="cp-row">
+      ${MSSList.avatarHTML(p, 'cp-av')}
+      <div class="cp-who"><div class="cp-name" translate="no">${esc(p.display_name || p.username)}</div><div class="cp-user">@${esc(p.username)}</div></div>
+      ${btn}
+    </div>`;
+  }).join('');
+}
+async function _collabInvite(btn, userId) {
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const { data, error } = await sb.rpc('invite_to_list', { p_list_id: _collabPickerList.id, p_user_id: userId });
+    if (error) throw error;
+    (_listsCollab[_collabPickerList.id] ||= []).push({ list_id: _collabPickerList.id, user_id: userId, status: data === 'accepted' ? 'accepted' : 'pending',
+      profile: (_listsFriends || []).find(p => p.id === userId) || null });
+    showToast('Invite sent!');
+    _renderCollabPicker();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Invite';
+    showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Could not send the invite — try again.', 'err');
+    console.error(e);
+  }
+}
+async function _collabRemove(userId, username) {
+  const ok = await showConfirm({ title: 'Remove collaborator?', message: `@${username} won't be able to add titles to this list anymore.`, confirmText: 'Remove', iconName: 'x' });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('remove_list_collaborator', { p_list_id: _collabPickerList.id, p_user_id: userId });
+    if (error) throw error;
+    _listsCollab[_collabPickerList.id] = (_listsCollab[_collabPickerList.id] || []).filter(c => c.user_id !== userId);
+    showToast(`Removed @${username}.`);
+    _renderCollabPicker();
+  } catch (e) { showToast('Could not remove — try again.', 'err'); console.error(e); }
+}
+async function leaveSharedList(listId) {
+  const list = _listsAll.find(l => l.id === listId);
+  const ok = await showConfirm({ title: 'Leave this list?', message: `You'll stop collaborating on “${list?.title || 'this list'}”. The owner can invite you again.`, confirmText: 'Leave', iconName: 'x' });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('leave_list', { p_list_id: listId });
+    if (error) throw error;
+    _listsAll = _listsAll.filter(l => l.id !== listId);
+    closeSocialListPopup();
+    renderListsPage();
+    showToast('You left the list.');
+  } catch (e) { showToast('Could not leave — try again.', 'err'); console.error(e); }
+}
+
+/* Live: when someone accepts or declines one of my invites (their
+   notification arrives in real time), refresh collaborators without a
+   reload — the card, popup and invite picker all update. */
+document.addEventListener('mss:notifications', async ev => {
+  const relevant = (ev.detail.arrived || []).some(n => n.type === 'list_invite_accepted' || n.type === 'list_invite_declined');
+  if (!relevant || !_listsUser) return;
+  await _loadCollabData();
+  renderListsPage();
+  if (document.getElementById('collabOverlay')?.classList.contains('open')) _renderCollabPicker();
+  if (_slPopupListId && document.getElementById('slPopupOverlay')?.style.display === 'flex') _renderListPopup();
+});
+
+function toggleListsReorder() {
+  if (!_listsReorder) {
+    const ok = SF.getSort('listsOrder', 'all') === 'rank' && SF.filterCount('listsOrder', 'all') === 0;
+    if (!ok) {
+      SF.restoreState('listsOrder', 'all', { sort: 'rank', filter: { genres: [], choice: {} } });
+      showToast('Switched to Default order so you can rearrange it.');
+    }
+  }
+  _listsReorder = !_listsReorder;
+  renderListsPage();
+}
+
+function _lrCurrentOrder() {
+  return [...document.querySelectorAll('#lcGridMine > .lc-card')].map(c => c.dataset.listId);
+}
+
+let _lrSaveTimer = null;
+function _lrSave(order) {
+  // Update locally right away, then persist (debounced so fast moves = one save)
+  order.forEach((id, i) => { const l = _listsAll.find(x => x.id === id); if (l) l.sort_order = i; });
+  clearTimeout(_lrSaveTimer);
+  _lrSaveTimer = setTimeout(async () => {
+    try {
+      // One call saves my own lists AND my personal position for shared ones
+      const { error } = await sb.rpc('set_my_list_order', { p_ids: order });
+      if (error) throw error;
+      showToast('Order saved');
+    } catch (e) {
+      console.error('Reorder save error:', e);
+      showToast('Could not save the new order — try again.', 'err');
+    }
+  }, 450);
+}
+
+// Moves the card elements and animates everyone else sliding (FLIP)
+function _lrAnimate(grid, mutate) {
+  const cards = [...grid.querySelectorAll('.lc-card')];
+  const before = new Map(cards.map(c => [c, c.getBoundingClientRect()]));
+  mutate();
+  cards.forEach(c => {
+    if (c.classList.contains('lr-dragging')) return;
+    const a = before.get(c), b = c.getBoundingClientRect();
+    const dx = a.left - b.left, dy = a.top - b.top;
+    if (!dx && !dy) return;
+    c.style.transition = 'none';
+    c.style.transform = `translate(${dx}px, ${dy}px)`;
+    requestAnimationFrame(() => {
+      c.style.transition = 'transform .28s cubic-bezier(.2,.8,.2,1)';
+      c.style.transform = '';
+    });
+  });
+}
+
+function _lrRefreshPositions() {
+  const cards = [...document.querySelectorAll('#lcGridMine > .lc-card')];
+  cards.forEach((c, i) => {
+    const pos = c.querySelector('.lr-pos'); if (pos) pos.textContent = i + 1;
+    const [prev, next] = c.querySelectorAll('.lr-arrow');
+    if (prev) prev.disabled = i === 0;
+    if (next) next.disabled = i === cards.length - 1;
+  });
+}
+
+function _lrMove(id, dir) {
+  const grid = document.getElementById('lcGridMine');
+  const card = grid && grid.querySelector(`.lc-card[data-list-id="${CSS.escape(id)}"]`);
+  if (!card) return;
+  const sib = dir < 0 ? card.previousElementSibling : card.nextElementSibling;
+  if (!sib) return;
+  _lrAnimate(grid, () => dir < 0 ? grid.insertBefore(card, sib) : grid.insertBefore(sib, card));
+  _lrRefreshPositions();
+  _lrSave(_lrCurrentOrder());
+  card.querySelector(dir < 0 ? '.lr-arrow' : '.lr-arrow:last-child')?.focus();
+}
+
+function _lrPointerDown(ev, card) {
+  if (ev.button !== undefined && ev.button !== 0) return;
+  const grid = document.getElementById('lcGridMine');
+  const rect = card.getBoundingClientRect();
+  _lr = { card, grid, startX: ev.clientX, startY: ev.clientY, offX: ev.clientX - rect.left, offY: ev.clientY - rect.top,
+          w: rect.width, h: rect.height, started: false, pointerId: ev.pointerId, order0: _lrCurrentOrder().join('|') };
+  // Listen on window, not the card: the card moves around in the DOM while
+  // dragging, and moving an element drops any pointer capture it had.
+  window.addEventListener('pointermove', _lrPointerMove, { passive: false });
+  window.addEventListener('pointerup', _lrPointerUp);
+  window.addEventListener('pointercancel', _lrPointerUp);
+}
+
+function _lrStart() {
+  const { card, w, h } = _lr;
+  // Ghost follows the pointer; the real card stays in the grid as a placeholder
+  const ghost = card.cloneNode(true);
+  ghost.classList.add('lr-ghost');
+  ghost.style.width = w + 'px'; ghost.style.height = h + 'px';
+  document.body.appendChild(ghost);
+  _lr.ghost = ghost;
+  card.classList.add('lr-dragging');
+  document.body.classList.add('lr-no-select');
+  _lr.started = true;
+  if (navigator.vibrate) { try { navigator.vibrate(8); } catch {} }
+}
+
+function _lrPointerMove(ev) {
+  if (!_lr || (_lr.pointerId != null && ev.pointerId !== _lr.pointerId)) return;
+  const dx = ev.clientX - _lr.startX, dy = ev.clientY - _lr.startY;
+  if (!_lr.started) {
+    if (Math.hypot(dx, dy) < 6) return;     // small wiggle = not a drag yet
+    _lrStart();
+  }
+  ev.preventDefault();
+  const { ghost, offX, offY, card, grid } = _lr;
+  ghost.style.transform = `translate(${ev.clientX - offX}px, ${ev.clientY - offY}px) rotate(1.5deg) scale(1.03)`;
+
+  // Auto-scroll near the top/bottom edge
+  const edge = 80;
+  _lr.scrollDir = ev.clientY < edge ? -1 : ev.clientY > window.innerHeight - edge ? 1 : 0;
+  if (_lr.scrollDir && !_lr.scrollRAF) _lrAutoScroll();
+
+  // Which card is under the pointer?
+  ghost.style.display = 'none';
+  const under = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('#lcGridMine .lc-card');
+  ghost.style.display = '';
+  if (!under || under === card) return;
+  // Moving forward → drop after the hovered card; moving back → before it
+  const cards = [...grid.querySelectorAll('.lc-card')];
+  const ref = cards.indexOf(under) > cards.indexOf(card) ? under.nextElementSibling : under;
+  _lrAnimate(grid, () => grid.insertBefore(card, ref));
+  _lrRefreshPositions();
+}
+
+function _lrAutoScroll() {
+  if (!_lr || !_lr.scrollDir) { if (_lr) _lr.scrollRAF = null; return; }
+  window.scrollBy(0, _lr.scrollDir * 12);
+  _lr.scrollRAF = requestAnimationFrame(_lrAutoScroll);
+}
+
+function _lrPointerUp() {
+  if (!_lr) return;
+  const { card, ghost, started, order0 } = _lr;
+  window.removeEventListener('pointermove', _lrPointerMove);
+  window.removeEventListener('pointerup', _lrPointerUp);
+  window.removeEventListener('pointercancel', _lrPointerUp);
+  if (_lr.scrollRAF) cancelAnimationFrame(_lr.scrollRAF);
+  if (started) {
+    // Ghost glides into the card's new slot, then disappears
+    const r = card.getBoundingClientRect();
+    ghost.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1)';
+    ghost.style.transform = `translate(${r.left}px, ${r.top}px)`;
+    setTimeout(() => { ghost.remove(); card.classList.remove('lr-dragging'); }, 220);
+    document.body.classList.remove('lr-no-select');
+    const order = _lrCurrentOrder();
+    if (order.join('|') !== order0) _lrSave(order);
+  }
+  _lr = null;
+}
+
+
+// " · Imported" / " · Shared" / " · Collab" after the title count
+function _listMetaExtra(list) {
+  return (list.forked_from ? ' · Imported' : '')
+    + (list._collab ? ' · <span class="cl-tag">Shared</span>' : (_listsCollab[list.id] || []).some(c => c.status === 'accepted') ? ' · <span class="cl-tag">Collab</span>' : '');
+}
+
+// Personal list card — same design as the Community cards (list-popup.js)
+function myListCardHTML(list, idx, total) {
+  const items = list.items || [];
+  const id = attrJSON(list.id);
+  const reorder = _listsReorder;
+  return `<div class="lc-card${reorder ? ' lc-reorder' : ''}" data-list-id="${escHTML(list.id)}"
+      ${reorder ? `onpointerdown="_lrPointerDown(event, this)"` : `onclick="openMyListPopup(${id})"`}>
+    ${reorder ? `<div class="lr-bar">
+      <span class="lr-grip" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+      <span class="lr-pos">${idx + 1}</span>
+      <span class="lr-move">
+        <button type="button" class="lr-arrow" aria-label="Move earlier" ${idx === 0 ? 'disabled' : ''} onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();_lrMove(${id}, -1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <button type="button" class="lr-arrow" aria-label="Move later" ${idx === total - 1 ? 'disabled' : ''} onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();_lrMove(${id}, 1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </span>
+    </div>` : ''}
+    ${MSSList.cardInnerHTML(list, { resolve: _resolveListItem, metaExtra: _listMetaExtra(list), collabLine: MSSList.collabLineHTML(list, _listsCollab[list.id]) })}
+  </div>`;
+}
+
+/* ── Loading skeleton: the toolbar and list cards (yours, or Community's) with sample
+   names masked into placeholders — as many as last time (mssSkeleton, config.js) ── */
+mssSkeleton.define('lists', () => {
+  const social = _listsMode === 'social' || new URLSearchParams(location.search).get('mode') === 'community';
+  const n = Math.min(Math.max(mssSkeleton.shape(social ? 'lists_c' : 'lists')?.n ?? 4, 1), 8);
+  const list = { title: 'Sample list name', items: [1, 2, 3, 4, 5] };
+  const card = () => `<div class="lc-card">${MSSList.cardInnerHTML(list, {
+    resolve: () => ({ title: 'Sample', cat: 'tv' }),
+    ownerHTML: social ? '<div class="social-list-owner"><div class="social-list-avatar">U</div><div class="social-list-username">@username</div></div>' : '' })}</div>`;
+  return `<div class="mss-toolbar">${mssToolbarHTML(social ? 'Community' : 'Your Lists', n, SF.bar(social ? 'social' : 'listsOrder', 'all'), 'list')
+      .replace(/class="(mss-toolbar-title|sort-bar[^"]*)"/g, 'class="$1" data-skel-keep')}</div>
+    <div class="lc-grid">${Array.from({ length: n }, card).join('')}</div>`;
+});
+// Header pieces that wait for your lists: the line under the title and the stat boxes
+if (new URLSearchParams(location.search).get('mode') !== 'community') {
+  document.getElementById('listsPageSub').textContent = 'Your personal collections, curated your way — from watchlists to favorites and beyond.';
+  mssSkeleton.stats(document.getElementById('listsPageStats'), ['Lists', 'Titles Saved', 'Ranked Lists', 'Collaborative']);
+}
+
+function renderListsPage() {
+  const customLists = _listsAll.filter(l => l.cat === 'custom');
+  const totalLists = customLists.length;
+
+  // Stats: lists, distinct titles across them, how many are ranked, and
+  // how many you collaborate on (shared with friends or shared with you)
+  const uniqueItemIds = new Set();
+  customLists.forEach(list => (list.items || []).forEach(id => uniqueItemIds.add(id)));
+  const rankedCount = customLists.filter(l => l.ranked === true).length;
+  const collabCount = customLists.filter(l => l._collab || (_listsCollab[l.id] || []).some(c => c.status === 'accepted')).length;
+
+  mssSkeleton.shape('lists', { n: totalLists });
+  const statsEl = document.getElementById('listsPageStats');
+  statsEl.innerHTML = `
+    <div class="page-stat"><div class="page-stat-num">${totalLists}</div><div class="page-stat-label">Lists</div></div>
+    <div class="page-stat"><div class="page-stat-num">${uniqueItemIds.size}</div><div class="page-stat-label">Titles Saved</div></div>
+    <div class="page-stat"><div class="page-stat-num">${rankedCount}</div><div class="page-stat-label">Ranked Lists</div></div>
+    <div class="page-stat"><div class="page-stat-num">${collabCount}</div><div class="page-stat-label">Collaborative</div></div>`;
+
+  document.getElementById('listsPageSub').textContent = 'Your personal collections, curated your way — from watchlists to favorites and beyond.';
+
+  const canReorder = totalLists > 1 && SF.getSort('listsOrder', 'all') === 'rank' && SF.filterCount('listsOrder', 'all') === 0;
+  if (_listsReorder && !canReorder) _listsReorder = false;
+  const reorderBtn = totalLists > 1
+    ? `<button class="sf-icon-btn lr-toggle${_listsReorder ? ' active' : ''}" onclick="toggleListsReorder()" ${!canReorder && !_listsReorder ? `title="Set Sort to Default and clear filters to reorder"` : ''}>
+        ${_listsReorder ? icon('check', 15) : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>'}
+        <span class="sf-icon-btn-label">${_listsReorder ? 'Done' : 'Reorder'}</span></button>`
+    : '';
+  _renderListsToolbar('Your Lists', totalLists ? SF.list('listsOrder', 'all').length : 0,
+    totalLists ? (_listsReorder ? `<div class="sort-bar sf-trigger-row">${reorderBtn}</div>` : SF.bar('listsOrder', 'all').replace('<div class="sort-bar sf-trigger-row">', '<div class="sort-bar sf-trigger-row">' + reorderBtn)) : '');
+
+  let html = '';
+
+  if (!totalLists) {
+    html = `<div class="empty" style="padding:4rem 1rem;text-align:center;">
+      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('layers', 44)}</div>
+      <div class="empty-text" style="color:var(--text-2);margin-bottom:.5rem;">No lists yet</div>
+      <div style="font-size:13px;color:var(--text-3);">Use "+ New List" to create a custom list — mix any movies, shows, anime, or cartoons together.</div>
+    </div>`;
+  } else {
+    const sorted = SF.list('listsOrder', 'all');
+    html = sorted.length
+      ? `${_listsReorder ? `<div class="lr-hint">${icon('info', 14)} Drag a card — or use the arrows — to change the order. Changes save automatically.</div>` : ''}<div class="lc-grid${_listsReorder ? ' lc-grid-reorder' : ''}" id="lcGridMine">${sorted.map((l, i, a) => myListCardHTML(l, i, a.length)).join('')}</div>`
+      : `<div style="padding:2rem 0;text-align:center;font-size:13px;color:var(--text-3);">No lists match these filters.</div>`;
+  }
+
+  document.getElementById('listsPageContent').innerHTML = html;
+  _updateGridNavVisibility();
+}
+
+// Hides the scroll arrows on a .grid-nav-wrap when its content doesn't
+// actually overflow — otherwise, with only a couple of items, the wrap
+// still spans the full row width and the absolutely-positioned arrows
+// end up sitting at the far edges of the page, nowhere near the (much
+// narrower) visible cards.
+function _updateGridNavVisibility() {
+  document.querySelectorAll('.grid-nav-wrap').forEach(wrap => {
+    const grid = wrap.querySelector('.fav-watching-grid, .queue-grid, .watching-grid, .completed-grid');
+    if (!grid) return;
+    const overflowing = grid.scrollWidth > grid.clientWidth + 2;
+    wrap.querySelectorAll('.grid-nav-btn').forEach(btn => {
+      btn.style.display = overflowing ? '' : 'none';
+    });
+  });
+}
+window.addEventListener('resize', () => { if (typeof _updateGridNavVisibility === 'function') _updateGridNavVisibility(); });
+
+function setListsOrder(val) {
+  SF.setSort('listsOrder', 'all', { default: 'rank', az: 'alpha', za: 'zalpha' }[val] || val);
+}
+
+/* Sort & Filter for the lists themselves (the button above the containers) */
+function _listsDefaultOrder() {
+  return _listsAll.filter(l => l.cat === 'custom').sort((a, b) => {
+    const ao = a.sort_order, bo = b.sort_order;
+    if (ao != null && bo != null) return ao - bo;
+    if (ao != null) return -1;
+    if (bo != null) return 1;
+    return new Date(a.created_at) - new Date(b.created_at);
+  });
+}
+SF.register('listsOrder', {
+  // copies tagged with their position in the default order
+  base: () => _listsDefaultOrder().map((l, i) => Object.assign({}, l, { _rank: i + 1 })),
+  render: () => renderListsPage(),
+  defaultSort: 'rank',
+  presets: {
+    rank:  { header: 'Order',   opts: [['rank', 'Default'], ['rankRev', 'Reversed']] },
+    added: { header: 'Created', opts: [['newest', 'Newest'], ['oldest', 'Oldest']] },
+  },
+  sorts: () => ['rank', 'alpha', 'added'],
+  filters: () => [],
+  addedDate: l => l.created_at,
+  choiceFilters: () => [
+    { key: 'ranked', label: 'Ranking',
+      options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked'], ['unset', 'Not Set']],
+      test: (l, v) => v === 'yes' ? l.ranked === true : v === 'no' ? l.ranked === false : l.ranked == null },
+    { key: 'origin', label: 'Source',
+      options: [['', 'All Lists'], ['mine', 'Created by Me'], ['imported', 'Imported']],
+      test: (l, v) => v === 'imported' ? !!l.forked_from : !l.forked_from },
+  ],
+});
+
+// Section label + count on the left, Sort / Filter on the right
+function _renderListsToolbar(label, count, barHTML) {
+  const el = document.getElementById('listsToolbar');
+  if (!el) return;
+  if (!barHTML) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = mssToolbarHTML(label, count, barHTML, 'list');
+}
+
+/* Community Sort & Filter (shared js/sort-filter.js module) */
+const _socialScore = l => Number(l.like_count || 0) - Number(l.dislike_count || 0);
+SF.register('social', {
+  base: () => (_listsFilterMode ? _listsFilterMode.lists : _socialListsRaw) || [],
+  render: () => renderSocialLists(),
+  defaultSort: 'popular',
+  presets: {
+    popularity: { header: 'Popularity', opts: [['popular', 'Most Liked'], ['least_popular', 'Least Liked']] },
+    added:      { header: 'Posted',     opts: [['newest', 'Newest'], ['oldest', 'Oldest']] },
+  },
+  sorts: () => ['popularity', 'added', 'alpha'],
+  filters: () => [],
+  addedDate: l => l.created_at,
+  compare: {
+    popular: (a, b) => (_socialScore(b) - _socialScore(a)) || (new Date(b.created_at) - new Date(a.created_at)),
+    least_popular: (a, b) => (Number(b.dislike_count) - Number(a.dislike_count)) || (_socialScore(a) - _socialScore(b)),
+  },
+  choiceFilters: () => [
+    { key: 'official', label: 'Official',
+      options: [['', 'All Lists'], ['yes', 'Official Lists'], ['no', 'Community Only']],
+      test: (l, v) => v === 'yes' ? !!l.official : !l.official },
+    { key: 'ranked', label: 'Ranking',
+      options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked']],
+      test: (l, v) => v === 'yes' ? l.ranked === true : l.ranked === false },
+    { key: 'owner', label: 'Whose Lists',
+      options: [['', 'Everyone'], ['others', 'Other People'], ['mine', 'Mine']],
+      test: (l, v) => v === 'mine' ? l.user_id === _listsUser?.id : l.user_id !== _listsUser?.id },
+  ],
+});
+
+function setListsMode(mode) {
+  _listsMode = mode;
+  const url = new URL(location.href);                 // ?mode=community — the phone toggles link to it
+  if (mode === 'social') url.searchParams.set('mode', 'community'); else url.searchParams.delete('mode');
+  history.replaceState(history.state, '', url.pathname + url.search);
+  window.mssTabsRefresh?.();
+  document.querySelectorAll('#listsModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('listsPageTitle').textContent = mode === 'personal' ? 'My Lists' : 'Community Lists';
+  document.getElementById('listsSearchWrap').style.display = mode === 'social' ? '' : 'none';
+  // "New List" stays available in both modes — you can start a new
+  // personal list even while browsing the community feed.
+  if (mode === 'social') {
+    _listsFilterMode = null;
+    document.getElementById('listsFilterBanner').style.display = 'none';
+    loadSocialLists();
+  } else {
+    renderListsPage();
+  }
+}
+
+/* ── Search — users, list names, and item (title) names — same live
+   dropdown pattern used on friends.html/notes.html ── */
+let _llTimer = null;
+let _llActive = -1;
+let _llResults = [];
+
+function _llPosition() {
+  const wrap = document.getElementById('listsSearchWrapInner');
+  const drop = document.getElementById('llDropdown');
+  if (!wrap || !drop) return;
+  const r = wrap.getBoundingClientRect();
+  drop.style.top = r.bottom + 'px';
+  drop.style.left = r.left + 'px';
+  drop.style.width = r.width + 'px';
+  drop.style.position = 'fixed';
+}
+
+async function _llSearch(val) {
+  const q = val.trim().toLowerCase();
+  const drop = document.getElementById('llDropdown');
+  clearTimeout(_llTimer);
+  _llActive = -1;
+  if (q.length < 2) {
+    drop.classList.remove('open');
+    document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
+    mssUnlockScroll('llDropdown');
+    return;
+  }
+  _llPosition();
+  drop.innerHTML = '<div class="ud-loading">Searching…</div>';
+  drop.classList.add('open');
+  document.getElementById('listsSearchWrapInner')?.classList.add('dd-connected-active');
+  mssLockScroll('llDropdown');
+
+  _llTimer = setTimeout(async () => {
+    try {
+      const { data: users } = await sb.from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .ilike('username', q + '%')
+        .neq('id', _listsUser?.id || '')
+        .limit(5);
+
+      const listMatches = _socialListsRaw
+        .filter(l => (l.title || '').toLowerCase().includes(q))
+        .slice(0, 5);
+
+      const seenEntryTitles = new Set();
+      const itemMatches = [];
+      for (const l of _socialListsRaw) {
+        for (const id of (l.items || [])) {
+          const e = _resolveSocialItem(id);
+          if (!e || !e.title) continue;
+          const key = e.title.toLowerCase();
+          if (!key.includes(q) || seenEntryTitles.has(key)) continue;
+          seenEntryTitles.add(key);
+          itemMatches.push(e);
+          if (itemMatches.length >= 5) break;
+        }
+        if (itemMatches.length >= 5) break;
+      }
+
+      _llResults = [
+        ...(users || []).map(u => ({ type: 'user', ...u })),
+        ...listMatches.map(l => ({ type: 'list', ...l })),
+        ...itemMatches.map(e => ({ type: 'item', ...e })),
+      ];
+
+      if (!_llResults.length) {
+        drop.innerHTML = '<div class="ud-empty">No matches found</div>';
+        return;
+      }
+
+      const reg = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      drop.innerHTML = _llResults.map((r, i) => {
+        if (r.type === 'user') {
+          const initial = (r.username[0] || '?').toUpperCase();
+          const avatarHTML = safeURL(r.avatar_url)
+            ? '<div class="ud-avatar"><img src="'+safeURL(r.avatar_url)+'" loading="lazy"></div>'
+            : '<div class="ud-avatar">' + initial + '</div>';
+          const highlighted = r.username.replace(reg, '<em>$1</em>');
+          const display = r.display_name && r.display_name !== r.username ? r.display_name : '';
+          return '<div class="ud-item" data-i="' + i + '" onmousedown="_llSelectResult(' + i + ')">'
+            + avatarHTML
+            + '<div class="ud-info"><div class="ud-username">@' + highlighted + '</div>'
+            + (display ? '<div class="ud-display">' + display + '</div>' : '') + '</div>'
+            + '<span class="ud-type-tag">User</span></div>';
+        }
+        if (r.type === 'list') {
+          const initial = (r.title[0] || '?').toUpperCase();
+          const highlighted = esc(r.title).replace(reg, '<em>$1</em>');
+          return '<div class="ud-item" data-i="' + i + '" onmousedown="_llSelectResult(' + i + ')">'
+            + '<div class="ud-avatar">' + initial + '</div>'
+            + '<div class="ud-info"><div class="ud-username">' + highlighted + '</div>'
+            + '<div class="ud-display">List by @' + esc(r.username || 'user') + '</div></div>'
+            + '<span class="ud-type-tag">List</span></div>';
+        }
+        // item
+        const avatarHTML = safeURL(r.poster_url)
+          ? '<div class="ud-avatar"><img src="'+safeURL(r.poster_url)+'" loading="lazy"></div>'
+          : '<div class="ud-avatar">' + ((r.title || '?')[0] || '?').toUpperCase() + '</div>';
+        const highlighted = esc(r.title).replace(reg, '<em>$1</em>');
+        return '<div class="ud-item" data-i="' + i + '" onmousedown="_llSelectResult(' + i + ')">'
+          + avatarHTML
+          + '<div class="ud-info"><div class="ud-username">' + highlighted + '</div>'
+          + '<div class="ud-display">Appears in community lists</div></div>'
+          + '<span class="ud-type-tag">Title</span></div>';
+      }).join('');
+    } catch (e) {
+      console.error('Search error:', e);
+      drop.innerHTML = '<div class="ud-empty">Error searching</div>';
+    }
+  }, 250);
+}
+
+function _llKeydown(e) {
+  const drop = document.getElementById('llDropdown');
+  const items = drop.querySelectorAll('.ud-item');
+  if (!drop.classList.contains('open') || !items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _llActive = Math.min(_llActive + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('ud-active', i === _llActive));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _llActive = Math.max(_llActive - 1, -1);
+    items.forEach((el, i) => el.classList.toggle('ud-active', i === _llActive));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_llActive >= 0) _llSelectResult(_llActive);
+  } else if (e.key === 'Escape') {
+    drop.classList.remove('open'); _llActive = -1;
+    document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
+    mssUnlockScroll('llDropdown');
+  }
+}
+
+document.addEventListener('click', e => {
+  const dd = document.getElementById('llDropdown');
+  if (dd && dd.classList.contains('open') && !e.target.closest('#listsSearchWrap') && !e.target.closest('#llDropdown')) {
+    dd.classList.remove('open');
+    document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
+    mssUnlockScroll('llDropdown');
+    _llActive = -1;
+  }
+});
+
+function _llCloseDropdown() {
+  document.getElementById('llDropdown').classList.remove('open');
+  document.getElementById('listsSearchWrapInner')?.classList.remove('dd-connected-active');
+  mssUnlockScroll('llDropdown');
+  _llResults = []; _llActive = -1;
+}
+
+function _llSelectResult(i) {
+  const r = _llResults[i];
+  if (!r) return;
+  document.getElementById('listsSearchInput').value = r.type === 'item' ? r.title : (r.username || r.title);
+  _llCloseDropdown();
+
+  if (r.type === 'user') {
+    const lists = _socialListsRaw.filter(l => l.user_id === r.id);
+    _listsFilterMode = { type: 'user', label: '@' + r.username, lists };
+    _showListsFilterBanner(`Showing lists by @${esc(r.username)}`);
+    renderSocialLists();
+  } else if (r.type === 'list') {
+    openSocialListPopup(r.id);
+  } else if (r.type === 'item') {
+    const lists = _socialListsRaw.filter(l => (l.items || []).includes(r.id));
+    _listsFilterMode = { type: 'item', label: r.title, lists };
+    _showListsFilterBanner(`Showing lists containing "${esc(r.title)}"`);
+    renderSocialLists();
+  }
+}
+
+function _showListsFilterBanner(text) {
+  const banner = document.getElementById('listsFilterBanner');
+  banner.style.display = 'flex';
+  banner.innerHTML = `<span>${text}</span><button onclick="_llClearFilter()">Clear</button>`;
+}
+
+function _llClearFilter() {
+  _listsFilterMode = null;
+  document.getElementById('listsSearchInput').value = '';
+  document.getElementById('listsFilterBanner').style.display = 'none';
+  renderSocialLists();
+}
+
+function setSocialListsSort(val) { SF.setSort('social', 'all', val === 'latest' ? 'newest' : val); }
+
+let _socialEntryMap = {}; // entry_id -> entry (across ALL social lists, not just the viewer's own)
+function _resolveSocialItem(id) {
+  if (typeof id === 'string' && id.startsWith('tmdb:')) return MSSList.tmdb(id);
+  return _socialEntryMap[id] || null;
+}
+let _listsFilterMode = null; // { type: 'user'|'item', label, ... }
+
+// Fetches Community data once (also used to prefetch in the background);
+// TMDB posters for Discover-added titles fill in afterwards.
+let _socialListsPromise = null, _socialListsCache = null;
+function _fetchSocialLists(force) {
+  if (_socialListsPromise && !force) return _socialListsPromise;
+  _socialListsPromise = (async () => {
+    const { data, error } = await sb.rpc('get_social_lists', { p_limit: 100 });
+    if (error) throw error;
+    const lists = data || [];
+    // Other users' entries for the poster previews (Discover items are hydrated separately)
+    const entryItemIds = [...new Set(lists.flatMap(l => l.items || []))].filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')));
+    const [entryRes, reactRes] = await Promise.all([
+      entryItemIds.length ? sb.from('entries').select('*').in('id', entryItemIds) : { data: [] },
+      (_listsUser && lists.length) ? sb.from('list_reactions').select('list_id, is_like').eq('user_id', _listsUser.id).in('list_id', lists.map(l => l.id)) : { data: [] },
+    ]);
+    _socialEntryMap = {};
+    (entryRes.data || []).forEach(e => { _socialEntryMap[e.id] = e; });
+    await mssFillHiddenListItems(entryItemIds, _socialEntryMap);   // hidden titles (073): name + poster only
+    _socialListsMyReactions = {};
+    (reactRes.data || []).forEach(r => { _socialListsMyReactions[r.list_id] = r.is_like ? 'like' : 'dislike'; });
+    _socialListsCache = lists;
+    MSSList.hydrate(lists).then(changed => { if (changed && _listsMode === 'social') renderSocialLists(); });
+    return lists;
+  })().catch(err => { _socialListsPromise = null; throw err; });
+  return _socialListsPromise;
+}
+
+async function loadSocialLists() {
+  const wrap = document.getElementById('listsPageContent');
+  document.getElementById('listsPageSub').textContent = 'Explore collections from the community and discover what others are watching.';
+  if (!_socialListsCache) {                                  // not prefetched yet
+    wrap.innerHTML = `<div class="page-loading" data-skel="lists"></div>`;
+    document.getElementById('listsPageStats').innerHTML = '';
+  }
+  try {
+    _socialListsRaw = await _fetchSocialLists();
+    if (_listsMode === 'social') renderSocialLists();
+  } catch (err) {
+    console.error('Load social lists error:', err);
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load social lists right now.</div>`;
+  }
+}
+
+// Like / dislike someone's list (card double-tap or the list popup)
+function reactToSocialList(listId, isLike) {
+  const l = _socialListsRaw.find(x => x.id === listId);
+  if (!l) return Promise.resolve();
+  return mssReactFeed('list', listId, isLike,
+    () => ({ like: l.like_count, dislike: l.dislike_count, mine: _socialListsMyReactions[listId] || null }),
+    st => {
+      l.like_count = st.like; l.dislike_count = st.dislike;
+      if (st.mine) _socialListsMyReactions[listId] = st.mine; else delete _socialListsMyReactions[listId];
+      renderSocialLists();
+    });
+}
+
+function renderSocialLists() {
+  const wrap = document.getElementById('listsPageContent');
+  const all = _socialListsRaw || [];
+  const curators = new Set(all.map(l => l.user_id)).size;
+  const titles = new Set(all.flatMap(l => l.items || [])).size;
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const thisWeek = all.filter(l => new Date(l.created_at).getTime() >= weekAgo).length;
+  document.getElementById('listsPageStats').innerHTML = all.length ? `
+    <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Lists</div></div>
+    <div class="page-stat"><div class="page-stat-num">${curators}</div><div class="page-stat-label">Curators</div></div>
+    <div class="page-stat"><div class="page-stat-num">${titles}</div><div class="page-stat-label">Titles Featured</div></div>
+    <div class="page-stat"><div class="page-stat-num">${thisWeek}</div><div class="page-stat-label">New This Week</div></div>` : '';
+
+  const source = SF.list('social', 'all');
+  const baseCount = (_listsFilterMode ? _listsFilterMode.lists : all).length;
+  if (!_listsFilterMode) mssSkeleton.shape('lists_c', { n: source.length });
+  _renderListsToolbar(_listsFilterMode ? 'Search Results' : 'Community', source.length, baseCount ? SF.bar('social', 'all') : '');
+  if (!baseCount) {
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
+      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('layers', 44)}</div>
+      <div class="empty-text" style="color:var(--text-2);">${_listsFilterMode ? 'No lists match that search.' : 'No public lists yet.'}</div>
+    </div>`;
+    return;
+  }
+  if (!source.length) { wrap.innerHTML = `<div class="mss-empty">No lists match these filters.</div>`; return; }
+  const sorted = source;
+
+  wrap.innerHTML = `<div class="lc-grid">${sorted.map(l => {
+    const items = l.items || [];
+    const initial = (l.username || '?')[0].toUpperCase();
+    const myReaction = _socialListsMyReactions[l.id];
+    const id = attrJSON(l.id);
+    return `<div class="lc-card" onclick="openSocialListPopup(${id})" data-dbl-like>
+      <div class="social-list-owner">
+        <div class="social-list-avatar">${safeURL(l.avatar_url) ? `<img src="${safeURL(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
+        <div class="social-list-username">@${esc(l.username || 'user')}</div>
+      </div>
+      <div class="lc-title-row"><div class="lc-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l) || MSSList.rankBadge(l.ranked)}</div>
+      <div class="lc-meta">${MSSList.countHTML(items.length)}</div>
+      ${MSSList.postersHTML(items, _resolveSocialItem)}
+      <div class="social-list-reactions">
+        <button type="button" class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="event.stopPropagation();reactToSocialList(${id}, true)">
+          ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${l.like_count || 0}</span>
+        </button>
+        <button type="button" class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="event.stopPropagation();reactToSocialList(${id}, false)">
+          ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${l.dislike_count || 0}</span>
+        </button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+/* ── Social list details popup ── */
+function _injectSocialListPopupOverlay() {
+  if (document.getElementById('slPopupOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'slPopupOverlay';
+  el.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px;';
+  el.innerHTML = `<div id="slPopupCard" data-dbl-like role="dialog" aria-modal="true" aria-label="List" style="background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-lg);max-width:560px;width:100%;max-height:88vh;overflow-y:auto;padding:clamp(1.1rem, 4vw, 1.6rem);box-shadow:0 24px 60px rgba(0,0,0,.35);"></div>`;
+  el.addEventListener('click', e => { if (e.target === el) closeSocialListPopup(); });
+  document.body.appendChild(el);
+}
+
+let _slPopupListId = null;
+let _slPopupKind = null;   // 'mine' (Personal) or 'social' (Community)
+
+function _showListPopup() {
+  _renderListPopup();
+  document.getElementById('slPopupOverlay').style.display = 'flex';
+  mssLockScroll('slPopup');
+}
+function openSocialListPopup(listId) {
+  if (!_socialListsRaw.find(x => x.id === listId)) return;
+  _injectSocialListPopupOverlay();
+  _slPopupListId = listId; _slPopupKind = 'social';
+  _showListPopup();
+}
+function openMyListPopup(listId) {
+  if (!_listsAll.find(x => x.id === listId)) return;
+  _injectSocialListPopupOverlay();
+  _slPopupListId = listId; _slPopupKind = 'mine';
+  _showListPopup();
+}
+function closeSocialListPopup() {
+  const ov = document.getElementById('slPopupOverlay');
+  if (ov) ov.style.display = 'none';
+  mssUnlockScroll('slPopup');
+  _slPopupListId = null; _slPopupKind = null;
+}
+// Closes the popup, then runs an owner action (its own modal opens on top)
+function _lpThen(fn) { const id = _slPopupListId; closeSocialListPopup(); fn(id); }
+
+function _renderListPopup() {
+  const mine = _slPopupKind === 'mine';
+  const l = mine ? _listsAll.find(x => x.id === _slPopupListId) : _socialListsRaw.find(x => x.id === _slPopupListId);
+  const card = document.getElementById('slPopupCard');
+  if (!l || !card) return;
+  const items = l.items || [];
+  const resolve = mine ? _resolveListItem : _resolveSocialItem;
+  const shown = items.map(resolve).filter(Boolean);
+  const maxPosters = shown.length > 8 ? 7 : 8;               // last tile becomes "+N"
+  const posters = shown.slice(0, maxPosters);
+  const extra = shown.length - posters.length;
+  const isOwn = (mine && !l._collab) || l.user_id === _listsUser?.id;
+  const id = attrJSON(l.id);
+
+  let head;
+  if (mine) {
+    head = `<div class="lp-eyebrow">${l._collab ? 'Shared List' : 'Your List'}${l.forked_from ? '<span class="lp-tag">Imported</span>' : ''}</div>`;
+  } else {
+    const initial = (l.username || '?')[0].toUpperCase();
+    head = mssProfileLinkHTML({ id: l.user_id, username: l.username }, `<div class="social-list-owner" style="margin-bottom:0;">
+      <div class="social-list-avatar">${safeURL(l.avatar_url) ? `<img src="${safeURL(l.avatar_url)}" loading="lazy">` : esc(initial)}</div>
+      <div class="social-list-username">@${esc(l.username || 'user')}</div>
+    </div>`);
+  }
+
+  let actions;
+  if (mine && l._collab) {
+    // Collaborator: can add/remove titles and leave — never rename/delete
+    actions = `<div id="lpPopupActions" class="lp-actions">
+      <button class="popup-action-btn" style="flex:2 1 0;" onclick="_lpThen(id => MSSListStudio.open({ id }))">${icon('edit', 14)}Edit</button>
+      <button class="popup-action-btn popup-action-danger" onclick="leaveSharedList(${id})">Leave</button>
+    </div>`;
+  } else if (mine) {
+    actions = `<div id="lpPopupActions" class="lp-actions">
+      <button class="popup-action-btn" onclick="_lpThen(id => MSSListStudio.open({ id }))">${icon('edit', 14)}Edit</button>
+      <button class="popup-action-btn" onclick="_lpThen(openCollabPicker)">${icon('users', 14)}Collaborate</button>
+      <button class="popup-action-btn popup-action-danger lp-del" onclick="_lpThen(deleteFavListConfirm)" aria-label="Delete list">${_LIST_ICONS.del}</button>
+    </div>`;
+  } else {
+    const myReaction = _socialListsMyReactions[l.id];
+    const alreadyForked = _listsAll.some(x => x.cat === 'custom' && (x.forked_from === l.id || x.title.toLowerCase().trim() === (l.title || '').toLowerCase().trim()));
+    const rerender = `.then(() => _renderListPopup())`;
+    actions = `<div id="lpPopupActions" class="lp-actions lp-actions-social">
+      <div class="lp-react-pair">
+        <button type="button" class="popup-action-btn lp-react ${myReaction === 'like' ? 'is-on' : ''}" onclick="reactToSocialList(${id}, true)${rerender}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}">
+          ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)}<span>${l.like_count || 0}</span>
+        </button>
+        <button type="button" class="popup-action-btn lp-react lp-react-down ${myReaction === 'dislike' ? 'is-on' : ''}" onclick="reactToSocialList(${id}, false)${rerender}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}">
+          ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)}<span>${l.dislike_count || 0}</span>
+        </button>
+      </div>
+      ${!isOwn ? `<button class="popup-action-btn lp-add" ${alreadyForked ? 'disabled' : ''} onclick="forkSocialList(${id})">${alreadyForked ? 'Added to My Lists ✓' : '+ Add to My Lists'}</button>` : ''}
+    </div>`;
+  }
+
+  card.innerHTML = `
+    <div class="lp-head">${head}<button class="lp-close" onclick="closeSocialListPopup()" aria-label="Close">${icon('x', 18)}</button></div>
+    <div class="lp-title-row"><div class="lp-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l) || MSSList.rankBadge(l.ranked)}${mssVisBadge(l.visibility)}</div>
+    ${l.description ? `<div class="lp-desc" translate="no">${esc(l.description)}</div>` : ''}
+    <div class="lp-meta">${MSSList.countHTML(items.length)}</div>
+    ${mine ? MSSList.collabLineHTML(l, _listsCollab[l.id]) : ''}
+    ${isOwn && l.ranked == null && !l.official ? _rankChoiceHTML(l.id) : ''}
+    ${posters.length ? `<div class="lp-posters">
+      ${posters.map(e => `<div class="lp-poster">${posterHTML(e, 'big')}</div>`).join('')}
+      ${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}
+    </div>` : ''}
+    ${actions}
+    <div id="lpNavPopupActions" class="lp-footer">
+      <button class="popup-action-btn lp-view" onclick="closeSocialListPopup(); location.href='list-view.html?list=${encodeURIComponent(l.id)}'">${icon('list', 14)} View List</button>
+      ${_listsUser && l.cat === 'custom' ? `<button class="popup-action-btn lp-share" onclick="mssRecommend(${escHTML(JSON.stringify({ kind: 'list', list_id: l.id, title: l.title, count: items.length }))})">${icon('send', 14)} Share</button>` : ''}
+      <button class="popup-action-btn lp-replies" onclick="closeSocialListPopup()">Close</button>
+    </div>
+  `;
+}
+// Older callers
+function _renderSocialListPopup() { _renderListPopup(); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function forkSocialList(listId) {
+  if (!_listsUser) { showToast('Sign in to add lists.', 'err'); return; }
+  const list = _socialListsRaw.find(l => l.id === listId);
+  if (!list) return;
+  try {
+    const { error } = await sb.from('favorite_lists').insert({
+      user_id: _listsUser.id,
+      cat: 'custom',
+      genre: list.genre || '',
+      title: list.title,
+      description: list.description || null,
+      items: list.items || [],
+      ranked: list.ranked ?? null,
+      forked_from: list.id,
+    });
+    if (error) throw error;
+    showToast('Added to your lists!');
+    const lists = await getFavoriteLists(_listsUser.id);
+    _listsAll = lists || [];
+    renderSocialLists();
+    if (_slPopupListId === listId) _renderSocialListPopup(list);
+  } catch (err) {
+    console.error('Fork list error:', err);
+    showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Failed to add list.', 'err');
+  }
+}
+
+
+async function deleteFavListConfirm(id) {
+  const list = _listsAll.find(l => l.id === id);
+  const ok = await showConfirm({ title: 'Delete List?', message: '"'+(list?.title||'this list')+'" will be permanently deleted.', confirmText: 'Delete', iconName: 'x' });
+  if (!ok) return;
+
+  // Optimistic: remove from view immediately after confirming, restore
+  // it if the delete actually fails server-side.
+  const idx = _listsAll.findIndex(l => l.id === id);
+  const removed = _listsAll[idx];
+  _listsAll = _listsAll.filter(l => l.id !== id);
+  renderListsPage();
+
+  try {
+    await deleteFavoriteList(id);
+    showToast('List deleted.');
+  } catch(e) {
+    if (removed) _listsAll.splice(idx, 0, removed);
+    renderListsPage();
+    showToast('Error deleting.', 'err');
+  }
+}
+
+// ══════════════════════════════════════════
+// LIST PICKER (edit a list's items)
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// RATINGS POPUP
+// ══════════════════════════════════════════
+
+
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW failed:', e));
+  });
+}
+
+</script>
+</body>
+</html>

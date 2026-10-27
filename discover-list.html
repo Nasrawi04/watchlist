@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.dl-back {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; color:var(--text-3); text-decoration:none;
+  margin-bottom:1.5rem; transition:color .15s;
+}
+.dl-back:hover { color:var(--olive-light); }
+
+.dl-head {
+  display:flex; align-items:center; justify-content:space-between; column-gap:1rem; row-gap:12px; flex-wrap:wrap;
+  margin-bottom:1.5rem; padding-bottom:12px; border-bottom:0.5px solid var(--border);
+}
+.dl-title { font-family:var(--serif); font-size:clamp(26px, 6vw, 44px); font-weight:600; line-height:1.25; margin:0; min-width:0; overflow-wrap:anywhere; overflow:visible; padding-bottom:2px; }
+
+/* ── Grid view ── */
+.dl-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+  gap:14px;
+  align-items:start; grid-auto-rows:max-content;
+}
+@media(min-width:1024px) {
+  /* On laptops/desktop, the 200px minimum lets a lot of columns fit,
+     keeping each card fairly small even though there's plenty of room
+     to spare — bumping the minimum specifically at this width makes
+     each card genuinely bigger instead of just adding more of them. */
+  .dl-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
+}
+@media(min-width:1600px) {
+  .dl-grid { grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); }
+}
+@media(max-width:640px) {
+  .dl-grid { grid-template-columns:repeat(2,1fr); }
+}
+.dl-card {
+  opacity:0; transform:translateY(18px); width:100%; box-sizing:border-box;
+  transition:opacity .5s var(--ease), transform .5s var(--ease);
+}
+.dl-card.dl-in-view { opacity:1; transform:none; }
+
+/* ── List view ── */
+.dl-list { display:flex; flex-direction:column; gap:8px; }
+.dl-list-row {
+  display:grid; grid-template-columns:96px 1fr auto; align-items:center; gap:22px;
+  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius);
+  padding-block:16px;
+  padding-inline:16px 24px; cursor:pointer;
+  opacity:0; transform:translateX(-10px);
+  transition:opacity .4s var(--ease), transform .4s var(--ease), border-color .15s, background .15s;
+}
+.dl-list-row.dl-in-view { opacity:1; transform:none; }
+.dl-list-row:hover { border-color:var(--border-olive); background:var(--card-2); }
+.dl-list-rank { font-family:var(--bebas); font-weight:400; font-size:26px; color:var(--text-3); text-align:center; }
+.dl-list-poster { width:96px; height:136px; border-radius:6px; overflow:hidden; background:var(--bg-3); flex-shrink:0; }
+.dl-list-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.dl-list-title-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; min-width:0; }
+.dl-list-title { font-family:'Oswald',var(--sans); font-weight:600; font-size:19px; color:var(--text); }
+.dl-list-badges-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.dl-list-desc {
+  font-size:12px; color:var(--text-3); margin-top:4px; line-height:1.4;
+  display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+/* .dl-list-type removed — list-view type tags now use the shared .type-label/.type-label-tv classes */
+.dl-list-right { display:flex; flex-direction:column; align-items:center; gap:6px; }
+
+@media(max-width:560px) {
+  .dl-head { margin-bottom:1.5rem; }
+  .dl-grid { gap:10px; }
+  .dl-rank-badge { min-width:22px; height:22px; font-size:13px; }
+  .dl-list-row { grid-template-columns:64px 1fr auto; gap:14px; padding-block:10px; padding-inline:10px 16px; }
+  .dl-list-poster { width:64px; height:92px; }
+  .dl-list-rank { font-size:18px; }
+  .dl-list-title { font-size:15px; }
+  .dl-list-row .type-label { font-size:10px; padding:3px 8px; }
+}
+
+/* "Very slightly" bigger — this is Discover's public TMDB score, kept
+   modest since it's someone else's aggregate rating, not the user's
+   own. list-view.html's own MSF score gets a much bigger, standalone
+   treatment instead (that one is the user's own rating, not TMDB's). */
+.dl-score-big { font-family:var(--bebas); font-weight:400; font-size:clamp(17px, 3.7vw, 19px); }
+
+.dl-sentinel { height:1px; }
+.dl-head-right { display:flex; align-items:center; gap:8px; margin-inline-start:auto; }
+.dl-sf-bar:empty { display:none; }
+.dl-sf-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.dl-sf-bar .sort-bar::before { content:none; }
+.dl-end-msg { text-align:center; padding:2.5rem 0; color:var(--text-3); font-size:13px; }
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+  <a class="dl-back" href="discover.html" id="dlBack" onclick="if(history.length>1){history.back();return false;}">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+  <div class="dl-head">
+    <h1 class="dl-title" id="dlTitle">Loading…</h1>
+    <div class="dl-head-right">
+      <div id="dlSfBar" class="dl-sf-bar"></div>
+      <div class="view-toggle" id="dlViewToggle"></div>
+    </div>
+  </div>
+  <div class="dl-grid" id="dlGrid"><div class="page-loading" data-skel="dl-page"></div></div>
+  <div class="dl-sentinel" id="dlSentinel"></div>
+  <div class="dl-end-msg" id="dlEndMsg" style="display:none">You've reached the end.</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/sort-filter.js"></script>
+<script src="js/discover-categories.js"></script>
+<script>
+function _dlEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+const _dlParams = new URLSearchParams(location.search);
+const _dlCategory = getDiscoverCategory(_dlParams.get('list') || 'trending_week');
+const _dlTitle = _dlParams.get('title') || _dlCategory.title;
+
+let _dlPage = 1;
+let _dlLoading = false;
+let _dlDone = false;
+let _dlView = localStorage.getItem('disc_listView') || 'grid';
+const _dlIsRanked = _dlCategory.key.startsWith('top250') || _dlCategory.key === 'recommended';
+
+// Type badge is only shown on the Anime/Cartoons categories, where a
+// single list genuinely mixes movies and shows (a viewer can't tell
+// which just from the title/poster) — everywhere else the category
+// itself already says what you're browsing, so the badge is redundant.
+// Skip the type badge only for categories that are genuinely
+// single-media-type by name — the category itself already says what
+// you're browsing there, so the badge would be redundant. Everywhere
+// else (trending, popular, top-rated, every "best X" superlative
+// category, anime/cartoons, etc.) can genuinely mix movies and shows
+// within the same list, so the badge shows by default rather than
+// needing every mixed category enumerated by hand — that whitelist
+// approach was actually the earlier bug: it missed "Trending This
+// Week" and "Popular", which are just as mixed as anime/cartoons.
+const _DL_SINGLE_TYPE_CATEGORIES = new Set([
+  'top250_movies', 'top250_shows',
+  'niche_movies', 'niche_shows',
+  'upcoming_movies', 'upcoming_tv',
+  'airing_today',
+]);
+
+function _dlTypeLabel(it) {
+  if (_DL_SINGLE_TYPE_CATEGORIES.has(_dlCategory.key)) return null;
+  return it.media_type === 'movie' ? 'Movie' : 'TV Show';
+}
+
+function _dlRankCls(rank) {
+  return rank === 1 ? 'cg-rank-1' : rank === 2 ? 'cg-rank-2' : rank === 3 ? 'cg-rank-3' : 'cg-rank-other';
+}
+
+function _dlCardHTML(it, rank) {
+  return MSSCard.poster({ cls: 'dl-card', attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url,
+    rank: _dlIsRanked ? (it._rank || rank) : 0, type: _dlTypeLabel(it) ? it.media_type : null, score: _discFloorScore(it.score) });
+}
+
+function _dlListRowHTML(it, rank) {
+  const posterInner = safeURL(it.poster_url)
+    ? `<img src="${safeURL(it.poster_url)}" loading="lazy" data-letter="${escHTML((it.title||'?')[0])}" onerror="mssImgError(this)">`
+    : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
+  const rankBadge = _dlIsRanked
+    ? `<div class="cg-rank-badge ${_dlRankCls(it._rank || rank)}">${it._rank || rank}</div>`
+    : '';
+  const scoreStr = _discFloorScore(it.score);
+  const typeLabel = _dlTypeLabel(it);
+  const typeCls = it.media_type === 'movie' ? 'type-label' : 'type-label type-label-tv';
+  // TMDB's discover/list data doesn't include runtime or episode count
+  // (that only exists on the per-item detail endpoint) — this stays
+  // empty for essentially every item here, not a bug, just a real data
+  // gap on this specific data source.
+  return `<div class="dl-list-row" ${_discClickAttr(it)}>
+    <div class="dl-list-poster" style="position:relative">${posterInner}${rankBadge}</div>
+    <div style="min-width:0">
+      <div class="dl-list-title-row">
+        <div class="dl-list-title" translate="no">${_dlEsc(it.title)}</div>
+        ${it.year ? `<span class="title-year-inline">${_dlEsc(it.year)}</span>` : ''}
+      </div>
+      ${typeLabel ? `<div class="dl-list-badges-row"><span class="${typeCls}">${typeLabel}</span></div>` : ''}
+      ${it.overview ? `<div class="dl-list-desc" translate="no">${_dlEsc(it.overview)}</div>` : ''}
+    </div>
+    <div class="dl-list-right">
+      ${scoreStr ? `<span class="home-tmdb-score dl-score-big">★ ${scoreStr}</span>` : ''}
+    </div>
+  </div>`;
+}
+
+/* Loading skeleton: this list's own cards (or rows, in the view you chose) with sample text,
+   masked into placeholders (mssSkeleton, config.js) */
+mssSkeleton.define('dl-page', () => {
+  const it = { id: 0, title: 'Sample title', year: '2024', media_type: 'tv', score: 7.5, poster_url: '', overview: 'A sample description, long enough to wrap the way a real one does.', _rank: 1 };
+  return Array.from({ length: 12 }, (_, i) => _dlView === 'list' ? _dlListRowHTML(it, i + 1) : _dlCardHTML(it, i + 1)).join('')
+    .replace(/(dl-card|dl-list-row)"/g, '$1 dl-in-view"').replace(/ (id|onclick|onkeydown)="[^"]*"/g, '');
+});
+
+function _dlRenderViewToggle() {
+  document.getElementById('dlViewToggle').innerHTML = `
+    <button class="vt-btn ${_dlView==='list'?'active':''}" onclick="_dlSetView('list')" title="List view">${icon('list',13)}</button>
+    <button class="vt-btn ${_dlView==='grid'?'active':''}" onclick="_dlSetView('grid')" title="Grid view">${icon('grid',13)}</button>`;
+}
+
+let _dlAllItems = [];
+let _dlRevealObserver = null;
+
+function _dlSetView(v) {
+  if (v === _dlView) return;
+  _dlView = v;
+  localStorage.setItem('disc_listView', v);
+  // Items already fetched aren't re-fetched, just redrawn in the new view.
+  _dlRenderAll();
+  _dlRenderViewToggle();
+}
+
+/* ══ Sort & Filter (shared js/sort-filter.js) — the "top rated" lists only ══
+   Sorting/filtering a ranked list only makes sense over the WHOLE list, so
+   applying either first loads every remaining page (these lists are capped:
+   250, or 500 for MSF). Rank badges keep each title's original position. */
+const _DL_SF_KEYS = new Set(['top_rated_mss', 'top250_movies', 'top250_shows', 'top250_anime', 'top250_cartoons', 'recommended']);
+const _dlHasSF = _DL_SF_KEYS.has(_dlCategory.key);
+const _dlIsMss = _dlCategory.key === 'top_rated_mss';
+
+function _dlSfActive() {
+  return _dlHasSF && (SF.getSort('dl', 'all') !== 'rank' || SF.filterCount('dl', 'all') > 0);
+}
+
+/* ── Returning to a list lands exactly where you left ──
+   Everything loaded so far (all the scrolled-in pages), the sort/filter
+   and the scroll position are saved when leaving; coming BACK restores
+   them instantly instead of starting over at page 1 — which is why the
+   page used to jump higher (the rows you'd scrolled past weren't there). */
+const _DL_STATE_KEY = 'dl_state_' + _dlCategory.key;
+const _dlIsBack = (performance.getEntriesByType('navigation')[0] || {}).type === 'back_forward';
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.MSS_OWN_SCROLL = true; // this page restores its own position (faster, cached rows)
+
+function _dlSaveState() {
+  try {
+    sessionStorage.setItem(_DL_STATE_KEY, JSON.stringify({
+      t: Date.now(), items: _dlAllItems, page: _dlPage, done: _dlDone, y: window.scrollY,
+      sf: _dlHasSF ? { sort: SF.getSort('dl', 'all'), filter: SF.filterState('dl', 'all') } : null,
+    }));
+  } catch {}
+}
+window.addEventListener('pagehide', _dlSaveState);
+
+function _dlRestoreState() {
+  if (!_dlIsBack) return false;
+  try {
+    const st = JSON.parse(sessionStorage.getItem(_DL_STATE_KEY) || 'null');
+    if (!st || Date.now() - st.t > 30 * 60 * 1000 || !st.items?.length) return false;
+    _dlAllItems = st.items; _dlPage = st.page; _dlDone = st.done;
+    if (_dlHasSF && st.sf) SF.restoreState('dl', 'all', st.sf);
+    _dlRenderAll();
+    if (_dlDone) document.getElementById('dlEndMsg').style.display = '';
+    // Rows render instantly, so the position can be restored right away.
+    // Cards fade in via .dl-in-view — mark them visible so nothing shifts.
+    document.querySelectorAll('#dlGrid .dl-card, #dlGrid .dl-list-row').forEach(el => el.classList.add('dl-in-view'));
+    mssJumpTo(st.y || 0); // no smooth-scroll animation; Safari-safe
+    return true;
+  } catch { return false; }
+}
+
+async function _dlLoadAll() {
+  let guard = 0;
+  while (!_dlDone && guard++ < 40) {
+    if (_dlLoading) { await new Promise(res => setTimeout(res, 120)); continue; }
+    await _dlLoadMore();
+  }
+}
+
+function _dlRenderAll() {
+  const grid = document.getElementById('dlGrid');
+  const list = _dlSfActive() ? SF.list('dl', 'all') : _dlAllItems;
+  grid.className = _dlView === 'list' ? 'dl-list' : 'dl-grid';
+  grid.innerHTML = list.length
+    ? list.map((it, i) => _dlView === 'list' ? _dlListRowHTML(it, i + 1) : _dlCardHTML(it, i + 1)).join('')
+    : `<div class="dl-end-msg" style="grid-column:1/-1">Nothing here matches these filters.</div>`;
+  _dlObserveNewCards();
+  if (_dlHasSF) document.getElementById('dlSfBar').innerHTML = SF.bar('dl', 'all');
+}
+
+if (_dlHasSF) {
+  SF.register('dl', {
+    base: () => _dlAllItems,
+    render: () => _dlRenderAll(),
+    defaultSort: 'rank',
+    sorts: () => ['rank', 'alpha', 'release', 'ratings'],
+    filters: () => ['genre', 'year', 'score'],
+    choiceFilters: () => _dlIsMss ? [{
+      key: 'cat', label: 'Type',
+      options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']],
+    }, {
+      key: 'format', label: 'Format',
+      options: [['', 'All Formats'], ['show', 'Shows'], ['movie', 'Movies']],
+      when: ch => ch.cat === 'anime' || ch.cat === 'cartoons',
+      test: (it, v) => (v === 'movie') === (it.media_type === 'movie'),
+    }] : [],
+    scoreOf: it => it.score,
+    scoreLabel: _dlIsMss ? 'MyScreenFolio' : 'TMDB Score',
+    beforeSort: () => _dlLoadAll(),
+    beforeFilter: () => _dlLoadAll(),
+  });
+}
+
+function _dlObserveNewCards() {
+  if (!_dlRevealObserver) {
+    _dlRevealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('dl-in-view');
+          _dlRevealObserver.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+  }
+  const grid = document.getElementById('dlGrid');
+  const selector = _dlView === 'list' ? '.dl-list-row:not(.dl-in-view)' : '.dl-card:not(.dl-in-view)';
+  grid.querySelectorAll(selector).forEach(el => _dlRevealObserver.observe(el));
+}
+
+async function _dlLoadMore() {
+  if (_dlLoading || _dlDone) return;
+  _dlLoading = true;
+  try {
+    let items = await _dlCategory.fetch(_dlPage);
+    document.querySelector('#dlGrid > .page-loading')?.remove();   // the loading skeleton
+
+    // Enforce a per-category hard cap (e.g. a genuine "Top 250" should
+    // stop at 250, not keep paginating until TMDB runs dry).
+    if (_dlCategory.cap) {
+      const remaining = _dlCategory.cap - _dlAllItems.length;
+      if (remaining <= 0) {
+        items = [];
+      } else if (items.length > remaining) {
+        items = items.slice(0, remaining);
+      }
+    }
+
+    if (!items.length) {
+      _dlDone = true;
+      const endMsg = document.getElementById('dlEndMsg');
+      if (!_dlAllItems.length && _dlCategory.emptyMsg) endMsg.textContent = _dlCategory.emptyMsg;
+      endMsg.style.display = '';
+      return;
+    }
+    const startRank = _dlAllItems.length + 1;
+    items.forEach((it, i) => { it._rank = startRank + i; });
+    _dlAllItems = _dlAllItems.concat(items);
+    if (_dlSfActive()) {
+      _dlRenderAll();
+    } else {
+      const grid = document.getElementById('dlGrid');
+      grid.insertAdjacentHTML('beforeend', items.map((it, i) => _dlView === 'list' ? _dlListRowHTML(it, startRank + i) : _dlCardHTML(it, startRank + i)).join(''));
+      _dlObserveNewCards();
+    }
+    _dlPage++;
+    if (_dlCategory.cap && _dlAllItems.length >= _dlCategory.cap) {
+      _dlDone = true;
+      document.getElementById('dlEndMsg').style.display = '';
+    }
+    if (_dlPage > 30) { _dlDone = true; } // safety net regardless of category
+  } catch (e) {
+    console.error('Discover list fetch error:', e);
+    _dlDone = true;
+    const endMsg = document.getElementById('dlEndMsg');
+    if (isRateLimitError(e)) {
+      endMsg.textContent = "TMDB is busy right now — please refresh in a moment to keep browsing.";
+      endMsg.style.display = '';
+    } else if (_dlAllItems.length === 0) {
+      endMsg.textContent = "Couldn't load this list right now — please try again shortly.";
+      endMsg.style.display = '';
+    }
+  } finally {
+    _dlLoading = false;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dlTitle').textContent = _dlTitle;
+  if (_dlCategory.backTo) document.getElementById('dlBack').href = _dlCategory.backTo;   // e.g. Recommended for You → home
+  document.title = _dlTitle + ' — MyScreenFolio';
+  document.getElementById('dlGrid').className = _dlView === 'list' ? 'dl-list' : 'dl-grid';
+  _dlRenderViewToggle();
+
+  initPageGuest(async () => {
+    if (!_dlRestoreState()) await _dlLoadMore();
+    if (_dlHasSF) document.getElementById('dlSfBar').innerHTML = SF.bar('dl', 'all');
+
+    const sentinel = document.getElementById('dlSentinel');
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) _dlLoadMore(); });
+    }, { rootMargin: '400px' });
+    obs.observe(sentinel);
+  });
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

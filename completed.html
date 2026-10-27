@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Completed — MyScreenFolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* .sort-bar::before is a decorative hairline-seam cap meant for the
+   page-level sticky sort bar (shared style.css) — here #compSortBar is
+   reused nested inside a non-sticky flex row, so that absolutely-
+   positioned cap was rendering as a stray floating bar above this row.
+   It isn't needed here since this bar was never sticky in the first place. */
+#compSortBar::before, .comp-sf-bar .sort-bar::before { content:none; }
+.comp-sf-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.comp-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:2.5rem;position:relative;z-index:60;}
+.comp-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.view-tabs{display:flex;background:var(--bg-3);border-radius:var(--radius-sm);padding:3px;gap:3px}
+.view-tab{
+  padding:7px 16px;border:none;background:transparent;color:var(--text-2);
+  font-size:12px;border-radius:5px;cursor:pointer;transition:all .2s;letter-spacing:.5px;
+}
+.view-tab.active{background:var(--olive);color:#fff;font-weight:500}
+.cat-filter{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:2rem}
+.cf-btn{
+  padding:6px 12px;border:0.5px solid var(--border-2);border-radius:20px;
+  background:transparent;color:var(--text-2);font-size:12px;cursor:pointer;transition:all .2s;
+}
+.cf-btn.active{border-color:var(--olive);color:var(--olive-light);background:var(--olive-faint)}
+.export-btn{
+  padding:8px 16px;background:transparent;border:0.5px solid var(--border-olive);
+  border-radius:var(--radius-sm);color:var(--olive-light);font-size:12px;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.export-btn:hover{background:var(--olive-faint)}
+
+/* Main content scroll container */
+#mainContent{min-height:200px;overflow-x:hidden;}
+#mainContent::-webkit-scrollbar{display:block;width:3px;}
+#mainContent::-webkit-scrollbar-thumb{background:var(--border-olive);border-radius:2px;}
+
+/* Ranked/recent list — matches library.html's .fv-ranked-list exactly */
+.fv-ranked-list{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;overscroll-behavior-y:contain;overflow-x:hidden;scrollbar-width:none;}
+.fv-ranked-list::-webkit-scrollbar{display:none;}
+.fv-entry-block{display:flex;flex-direction:column;}
+.fv-rank-row{display:flex;align-items:center;gap:20px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;min-height:160px;overflow:hidden;box-sizing:border-box;cursor:pointer;transition:border-color var(--trans) var(--ease),background var(--trans) var(--ease);}
+.fv-rank-row:hover{border-color:var(--border-olive);background:var(--card-2);}
+.fv-rank-poster{width:96px;height:136px;border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+.fv-rank-poster img{width:100%;height:100%;object-fit:cover}
+.fv-rank-info{flex:1;min-width:0}
+.fv-rank-title{font-family:'Oswald',var(--sans);font-size:19px;font-weight:600;color:var(--text);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;overflow:hidden;}
+.fv-rank-score{font-family:var(--bebas);color:var(--olive-light);font-size:clamp(17px, 3.7vw, 19px);font-weight:400;white-space:nowrap;text-align:end;flex-shrink:0}
+.fv-rank-date{font-size:clamp(9px, 2.2vw, 11px);color:var(--text-3);margin-top:4px;text-align:end;}
+
+.cat-badge{
+  font-size:10px;padding:2px 8px;border-radius:20px;background:var(--olive-faint);
+  border:0.5px solid var(--border-olive);color:var(--olive-light);letter-spacing:.5px;
+}
+/* rank-badge is now in style.css */
+
+
+/* ── Mobile overrides ── */
+@media(max-width:900px) {
+  .fv-rank-row { padding:14px 16px; gap:14px; }
+  .fv-rank-poster { width:70px; height:98px; }
+  .fv-rank-title { font-size:15px; }
+}
+@media(max-width:600px) {
+  .comp-header { flex-direction:column; align-items:flex-start; gap:.75rem; margin-bottom:1.5rem; }
+  .comp-controls { width:100%; justify-content:flex-end; }
+  .sort-bar { flex-wrap:wrap; gap:3px; }
+  .sort-btn { font-size:10px; padding:4px 8px; border-radius:14px; }
+  .cat-filter { gap:3px; margin-bottom:1.25rem; flex-wrap:wrap; }
+  .cf-btn { font-size:10px; padding:4px 9px; border-radius:16px; }
+
+  /* List rows — matches library.html's .fv-rank-row mobile tiers exactly */
+  .fv-rank-row { padding:10px 12px; gap:10px; min-height:unset; }
+  .fv-rank-poster { width:56px; height:78px; }
+  .fv-rank-title { font-size:13px; }
+}
+@media(max-width:400px) {
+  .fv-rank-row { padding:8px 10px; gap:8px; }
+  .fv-rank-poster { width:48px; height:66px; }
+  .cf-btn { font-size:9px; padding:3px 7px; }
+  .cat-filter { gap:2px; }
+}
+</style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="comp-header fade-up">
+    <div>
+      <h1 class="cat-page-title">Watched</h1>
+    </div>
+    <div class="comp-controls">
+      <button class="export-btn" id="exportBtn" onclick="_compExport()" style="display:inline-flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="page-stats fade-up fade-up-1" id="compStats" data-skel-stats="6"></div>
+
+  <!-- Search, then Sort + Filter + view toggle -->
+  <div class="sf-search-row fade-up fade-up-2" id="compSearch"></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem;" class="fade-up fade-up-2">
+    <div id="compSfBar" class="comp-sf-bar"></div>
+    <div style="flex:1;"></div>
+    <div class="view-toggle" id="compViewToggle"></div>
+  </div>
+
+  <!-- Main content (pdf-able) -->
+  <div id="pdfRanked"    style="position:fixed;top:-9999px;left:0;width:900px;display:none"></div>
+  <div id="pdfCompleted" style="position:fixed;top:-9999px;left:0;width:900px;display:none"></div>
+
+  <div id="mainContent" class="fade-up fade-up-4">
+    <div class="page-loading"><div class="spinner"></div></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/rewatch.js"></script>
+<script src="js/create-card.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/sort-filter.js"></script>
+<script src="js/export.js"></script>
+<script src="js/taste-profile.js"></script>
+<script src="js/year-review.js"></script>
+<script src="js/export-formats.js"></script>
+<script src="js/export-image.js"></script>
+<script src="js/export-studio.js"></script>
+<script src="js/easter-egg.js"></script>
+<script src="js/rating-popup.js"></script>
+<script src="js/list-popup.js"></script>
+<script src="js/comments.js"></script>
+<script>
+let _compUser = null;
+let _allCompleted = [];
+let _compSort    = 'newest';
+let _compView    = localStorage.getItem('mss_compView') || 'list';
+let _catFilter   = '';
+let _statusFilter = '';
+
+/* ── Ep/runtime meta text (plain value — callers wrap it: .wg-ep on a
+   poster overlay for grid cards, .w-ep-badge next to the title for
+   list rows) ── */
+function _entryMeta(e) {
+  const isMovie = e.cat === 'movies' || (e.ratings?._media_type === 'movie');
+  if (isMovie) {
+    const rtH = Number(e.runtime_h)||0, rtM = Number(e.runtime_m)||0;
+    if (!rtH && !rtM) return '';
+    return rtH ? `${rtH}h ${rtM}m` : `${rtM}m`;
+  }
+  const bd = Array.isArray(e.ratings?._season_breakdown)
+    ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
+  const _bdTot = bd.reduce((a,b)=>a+b,0);
+  const scope = bd.length ? `S${bd.length} · E${_bdTot}`
+    : (e.total_seasons && e.total_eps) ? `S${e.total_seasons} · E${e.total_eps}`
+    : e.total_seasons ? `S${e.total_seasons}`
+    : e.total_eps ? `${e.total_eps} eps` : '';
+  return scope;
+}
+
+// Same runtime/episode info as _entryMeta, wrapped as the solid pill
+// badge used everywhere else (category pages, the ratings popup) —
+// _entryMeta itself returns bare text with no markup.
+function _entryMetaBadge(e) {
+  const text = _entryMeta(e);
+  return text ? `<span class="w-ep-badge">${text}</span>` : '';
+}
+
+// Plain inline version of the always-show type badge — getTypeBadgeOverlay()
+// always includes absolute-positioning classes meant for a poster corner,
+// which isn't right sitting inline in a text meta row.
+function _compTypeBadgeInline(e) {
+  const isM = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
+  return `<span class="${isM ? 'type-label' : 'type-label type-label-tv'}">${isM ? 'Movie' : 'TV Show'}</span>`;
+}
+
+function _cgBadgeHTML(rank) {
+  const cls = rank===1?'cg-rank-1':rank===2?'cg-rank-2':rank===3?'cg-rank-3':'cg-rank-other';
+  return `<div class="cg-rank-badge ${cls}">${rank}</div>`;
+}
+
+/* Generic version — this page mixes every category together, so ratings
+   are looked up directly by key on whatever the entry actually has. */
+function _ratingVal(e, key) {
+  const v = e.ratings?.[key];
+  return (v !== undefined && v !== null && v !== '') ? Number(v) : null;
+}
+
+function _cgRatingBadgeHTML(e, key) {
+  const val = _ratingVal(e, key);
+  if (val == null) return `<div class="cg-score-badge cg-score-none">-</div>`;
+  let cls;
+  if (val >= 10) cls = 'cg-score-10';
+  else if (val >= 9) cls = 'cg-score-9';
+  else if (val >= 8) cls = 'cg-score-8';
+  else if (val >= 7) cls = 'cg-score-7';
+  else if (val >= 6) cls = 'cg-score-6';
+  else if (val >= 3) cls = 'cg-score-3-5';
+  else cls = 'cg-score-0-2';
+  return `<div class="cg-score-badge ${cls}">${val.toFixed(2)}</div>`;
+}
+
+/* This page mixes every category, so the rating list is the full union
+   across TV/Movies and Anime/Cartoons — e.g. "Acting" and "Voice Acting"
+   both show up as separate options, since they're different keys on
+   different entries. Deduplicated by key where a key is genuinely shared
+   (e.g. "story", "music", "emotional"). */
+function _ratingFilterOptionsAll() {
+  const seen = new Set();
+  const opts = [];
+  [...CORE_RATINGS, ...ANIME_CORE_RATINGS].forEach(r => {
+    if (seen.has(r.key)) return;
+    seen.add(r.key);
+    opts.push({ key: r.key, label: r.label, group: 'Core' });
+  });
+  if (!seen.has('animation')) { seen.add('animation'); opts.push({ key: 'animation', label: 'Animation Quality', group: 'Core' }); }
+  const seenB = new Set();
+  [...BONUS_RATINGS, ...ANIME_BONUS_RATINGS].forEach(r => {
+    if (seenB.has(r.key)) return;
+    seenB.add(r.key);
+    opts.push({ key: r.key, label: r.label, group: 'Bonus' });
+  });
+  return opts;
+}
+function _ratingFilterLabelAll(key) {
+  const opt = _ratingFilterOptionsAll().find(o => o.key === key);
+  return opt ? opt.label : key;
+}
+const _CLEFT  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+const _CRIGHT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+/* ════════ GRID DETAIL POPUP ════════ */
+
+
+// Ratings: the shared MSSRate popup (rating-popup.js)
+function cpOpenPopup(id) {
+  const e = _allCompleted.find(en => en.id === id);
+  if (!e) return;
+  MSSRate.forOwnEntry(e, {
+    onChange: renderMain,
+    onComments: x => MSSComments.open(x),
+    onDelete: x => { _allCompleted = _allCompleted.filter(y => y.id !== x.id); renderStats(); renderMain(); },
+    addToList: true,
+  });
+}
+
+// Comments: the shared MSSComments popup (comments.js)
+function cpOpenPopupToComments(id) {
+  const e = _allCompleted.find(en => en.id === id);
+  if (e) MSSComments.open(e);
+}
+
+
+function _renderCompGrid(items) {
+  const isRanked  = _compSort === 'highest' || _compSort === 'lowest';
+  const ratingKey = (_compSort||'').startsWith('rating:') ? _compSort.slice(7) : null;
+  const gid = 'compgrid';
+  const cards = items.map((e, i) => {
+    const score = liveScore(e) != null ? Number(liveScore(e)).toFixed(2) : null;
+    const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString(MSSI18n.locale,{day:'numeric',month:'short',year:'numeric'}) : '';
+    const _badge = getTypeBadgeOverlay(e, 'completed');
+    const _meta = _entryMeta(e);
+    return `<div class="wg-card cg-card-wrap" style="cursor:pointer;">
+      <div class="wg-poster" onclick="cpOpenPopup('${e.id}')" style="position:relative;">
+        ${posterHTML(e,'big')}
+        <div class="wg-overlay">${_meta ? `<span class="wg-ep">${_meta}</span>` : ''}</div>
+        ${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : (isRanked ? _cgBadgeHTML(SF.rank(e, i)) : '')}
+        ${_badge}
+        ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
+      </div>
+      <div class="cg-grid-info" onclick="cpOpenPopup('${e.id}')">
+        <div class="title-year-row"><div class="wg-title" style="margin-bottom:0;" translate="no">${escHTML(e.title)}</div>${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}</div>
+        ${_meta ? `<div class="wg-genre"><span class="w-ep-badge">${_meta}</span></div>` : ''}
+        <div class="cg-score-row"><span class="cg-score">${score ? '★ '+score : '—'}</span></div>
+      </div>
+      <div onclick="event.stopPropagation()" style="padding:0 10px 10px;">
+        ${MSSComments.buttonHTML(`cpOpenPopupToComments('${e.id}')`)}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="grid-nav-wrap">
+    <button class="grid-nav-btn arr-left"  onclick="_cScroll(-1)" aria-label="Scroll left">${_CLEFT}</button>
+    <button class="grid-nav-btn arr-right" onclick="_cScroll(1)"  aria-label="Scroll right">${_CRIGHT}</button>
+    <div class="watching-grid" id="${gid}">${cards}</div>
+  </div>`;
+}
+
+function _cScroll(dir) {
+  const el = document.getElementById('compgrid');
+  if (!el) return;
+  const amount = el.clientWidth * 0.75 || 220;
+  el.scrollBy({ left: dir * amount, behavior:'smooth' });
+}
+
+
+function _compViewBar() {
+  const el = document.getElementById('compViewToggle');
+  if (!el) return;
+  el.innerHTML = `
+    <button class="vt-btn ${_compView==='list'?'active':''}" onclick="setCompView('list')" title="List view">${icon('list',13)}</button>
+    <button class="vt-btn ${_compView==='grid'?'active':''}" onclick="setCompView('grid')" title="Grid view">${icon('grid',13)}</button>`;
+}
+
+function setCompView(v) {
+  _compView = v;
+  localStorage.setItem('mss_compView', v);
+  _compViewBar();
+  renderMain();
+}
+
+/* ══ Sort & Filter — shared js/sort-filter.js module ══
+   One section ('all'). Type and Status are single-pick filters inside
+   the same Filter popup, alongside the standard ones. */
+const _compSortState = { all: 'newest' };
+SF.register('comp', {
+  base: () => _allCompleted,
+  watched: () => true,          // Year Watched filter
+  render() {
+    // Keep the page-level globals the stats/export/ranked views read in sync
+    const f = SF.filterState('comp', 'all');
+    _catFilter    = (f.choice && f.choice.cat) || '';
+    _statusFilter = (f.choice && f.choice.status) || '';
+    _compSort     = SF.getSort('comp', 'all');
+    _compSfBar();
+    renderStats();
+    renderMain();
+  },
+  sortState: _compSortState,
+  onSearch: () => renderMain(),
+  sorts: () => ['alpha', 'added', 'release', 'ratings', _catFilter !== 'tv' && 'runtime', _catFilter !== 'movies' && 'seasons', _catFilter !== 'movies' && 'episodes'],
+  lengthKind: () => _catFilter === 'movies' ? 'movie' : _catFilter === 'tv' ? 'show' : 'mixed',
+  choiceFilters: () => [
+    { key: 'cat',    label: 'Type',   options: Object.entries(_compCatLabels) },
+    // Anime & Cartoons mix series and films — pick one under Type to get this
+    { key: 'format', label: 'Format', options: [['', 'All Formats'], ['show', 'Shows'], ['movie', 'Movies']],
+      when: ch => ch.cat === 'anime' || ch.cat === 'cartoons',
+      test: (e, v) => (v === 'movie') === SF.isMovie(e) },
+    { key: 'status', label: 'Status', options: Object.entries(_compStatusLabels) },
+  ],
+  ratingSort: {
+    options: _ratingFilterOptionsAll,
+    label: _ratingFilterLabelAll,
+    value: _ratingVal,
+  },
+  // Release sort needs each show's first-air date (fetched once, cached)
+  beforeSort: async (section, value) => {
+    if (value === 'releaseNewest' || value === 'releaseOldest') await ensureReleaseDatesFetched(_allCompleted);
+  },
+  saveRatings: (entry, ratings) => updateProgress(entry.id, _compUser.id, { ratings }).catch(() => {}),
+});
+
+function _compSfBar() {
+  const el = document.getElementById('compSfBar');
+  if (el) el.innerHTML = SF.bar('comp', 'all');
+}
+
+function setCompSort(v) { SF.setSort('comp', 'all', v); }
+// Returning via browser back/forward can restore this page from the
+// bfcache with stale data (e.g. an entry just added/edited elsewhere
+// wouldn't show up here) instead of re-running this page's scripts.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  initPage(async (user) => {
+    if (!user) {
+      document.querySelector('.page-wrap').innerHTML = `
+        <div class="guest-page-state fade-up">
+          <div class="guest-page-icon">${icon('check', 36)}</div>
+          <h2 class="guest-page-title">Your Watched Titles</h2>
+          <p class="guest-page-sub">Sign in to see your ranked and completed collection.</p>
+          <div class="guest-cta">
+            <a href="login.html" class="guest-btn-primary">Sign In</a>
+            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
+          </div>
+        </div>`;
+      return;
+    }
+    _compUser = user;
+    const [comp, ong] = await Promise.all([
+      getEntries(user.id, { status: 'completed' }),
+      getEntries(user.id, { status: 'ongoing' }),
+    ]);
+    _allCompleted = [...comp, ...ong];
+    document.getElementById('compSearch').innerHTML = SF.searchHTML('comp', 'Search your watched titles…');
+    _compSfBar();
+    _compViewBar();
+    renderStats();
+    renderMain();
+  });
+});
+
+
+const _compCatLabels = { '':'All Types', tv:'TV Shows', movies:'Movies', anime:'Anime', cartoons:'Cartoons' };
+const _compStatusLabels = { '':'All Statuses', completed:'Watched', ongoing:'To Be Continued' };
+
+// Filtered + sorted list for this page (export, empty-state checks, etc.)
+function filtered() { return SF.list('comp', 'all'); }
+
+function renderStats() {
+  const all   = _allCompleted;
+  const rated = all.filter(e => e.final_score != null);
+  const avg   = rated.length ? (rated.reduce((s, e) => s + Number(liveScore(e)), 0) / rated.length).toFixed(2) : '—';
+  const cats  = {};
+  all.forEach(e => { cats[e.cat] = (cats[e.cat] || 0) + 1; });
+  const topCat = Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
+  const topCatLabel = topCat ? CAT_META[topCat[0]]?.label : '—';
+
+  // Episodes: completed only, use total_eps with watched as fallback, exclude movies and movie-type anime/cartoons
+  const epsSource = (_catFilter && _catFilter !== 'movies')
+    ? _allCompleted.filter(e => e.cat === _catFilter && (e.ratings?._media_type || 'show') !== 'movie')
+    : _allCompleted.filter(e => e.cat !== 'movies' && (e.ratings?._media_type || 'show') !== 'movie');
+  const totalEps = _catFilter === 'movies' ? 0 : epsSource.reduce((sum, e) => sum + (Number(e.total_eps) || Number(e.watched) || 0), 0);
+  const epsLabel = _catFilter && _catFilter !== 'movies'
+    ? `${CAT_META[_catFilter]?.label} Eps`
+    : 'Episodes';
+
+  // Movie watch time
+  const movieSource = _catFilter
+    ? _allCompleted.filter(e => e.cat === _catFilter && (e.cat === 'movies' || (e.ratings?._media_type === 'movie')))
+    : _allCompleted.filter(e => e.cat === 'movies' || (e.ratings?._media_type === 'movie'));
+  const totalMovieMins = movieSource.reduce((sum, e) => sum + (Number(e.runtime_h)||0)*60 + (Number(e.runtime_m)||0), 0);
+  const wtH = Math.floor(totalMovieMins / 60);
+  const wtM = totalMovieMins % 60;
+  const watchTimeLabel = totalMovieMins ? (wtH ? `${wtH}h ${wtM}m` : `${wtM}m`) : null;
+
+  const ongoingCount = (_catFilter ? _allCompleted.filter(e => e.cat === _catFilter && e.status === 'ongoing') : _allCompleted.filter(e => e.status === 'ongoing')).length;
+  const completedCount = (_catFilter ? _allCompleted.filter(e => e.cat === _catFilter && e.status === 'completed') : _allCompleted.filter(e => e.status === 'completed')).length;
+
+  document.getElementById('compStats').innerHTML = `
+    <div class="page-stat"><div class="page-stat-num">${completedCount}</div><div class="page-stat-label">Watched</div></div>
+    <div class="page-stat"><div class="page-stat-num">${ongoingCount}</div><div class="page-stat-label">To Be Continued</div></div>
+    <div class="page-stat"><div class="page-stat-num">${avg}</div><div class="page-stat-label">Avg Score</div></div>
+    <div class="page-stat"><div class="page-stat-num">${rated.length}</div><div class="page-stat-label">Rated</div></div>
+    <div class="page-stat"><div class="page-stat-num">${topCatLabel}</div><div class="page-stat-label">Top Category</div></div>
+    ${totalEps > 0 ? `<div class="page-stat"><div class="page-stat-num">${totalEps.toLocaleString()}</div><div class="page-stat-label">${epsLabel}</div></div>` : ''}
+    ${watchTimeLabel ? `<div class="page-stat"><div class="page-stat-num">${watchTimeLabel}</div><div class="page-stat-label">Movie Watch Time</div></div>` : ''}`;
+}
+
+function renderMain() {
+  const el = document.getElementById('mainContent');
+  el.innerHTML = _compMainHTML(filtered());
+  mssSkeleton.shape('comp', { stats: [...document.querySelectorAll('#compStats .page-stat-label')].map(x => x.textContent), n: _allCompleted.length });
+}
+// The list / grid for these titles — also drawn by the loading skeleton (with sample titles)
+function _compMainHTML(items) {
+  const q = SF.query('comp');
+  if (q && !items.length) { return `<div class="sf-search-empty">${icon('search', 22)}<b>Nothing matches “${escHTML(q)}”</b><span>Try another title or year.</span></div>`; }
+
+  if (!items.length) {
+    return `<div class="empty"><div class="empty-icon" style="opacity:.35"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></div><div class="empty-text">No watched entries${_catFilter ? ' in this category' : ''}.</div></div>`;
+  }
+
+  const _sortedItems = items; // already sorted by SF.list
+
+  if (_compView === 'grid') return _renderCompGrid(_sortedItems);
+
+  if (_compSort === 'highest' || _compSort === 'lowest') {
+    const sorted = _sortedItems;
+    return `<div class="fv-ranked-list">${sorted.map((e, i) => {
+      const score = liveScore(e) != null ? '★ ' + Number(liveScore(e)).toFixed(2) : '—';
+      const completedDateStr = e.completed_date
+        ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' })
+        : null;
+      return `<div class="fv-entry-block">
+        <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
+          <div class="fv-rank-poster" style="position:relative;">${posterHTML(e)}${_cgBadgeHTML(SF.rank(e, i))}</div>
+          <div class="fv-rank-info">
+            <div class="fv-rank-title" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline" style="margin-left:2px;">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-meta">${_compTypeBadgeInline(e)} ${_entryMetaBadge(e)}</div>
+            ${completedDateStr ? `<div class="fv-rank-meta"><span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">${MSS_WATCHED_ON} ${completedDateStr}</span></div>` : ''}
+            ${renderFavChips(e.ratings, e.cat)}
+          </div>
+          <div class="fv-rank-score">${score}</div>
+        </div>
+        ${MSSComments.buttonHTML(`event.stopPropagation();cpOpenPopupToComments('${e.id}')`)}
+      </div>`;
+    }).join('')}</div>`;
+  } else {
+    const recentSorted = _sortedItems;
+    const ratingKey = (_compSort||'').startsWith('rating:') ? _compSort.slice(7) : null;
+  return `<div class="fv-ranked-list">${recentSorted.map(e => {
+      const score = liveScore(e) != null ? '★ ' + Number(liveScore(e)).toFixed(2) : '—';
+      const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString(MSSI18n.locale,{day:'numeric',month:'short',year:'numeric'}) : '';
+      return `<div class="fv-entry-block">
+        <div class="fv-rank-row" onclick="cpOpenPopup('${e.id}')">
+          <div class="fv-rank-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadgeHTML(e, ratingKey) : ''}</div>
+          <div class="fv-rank-info">
+            <div class="fv-rank-title" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline" style="margin-left:2px;">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
+            <div class="fv-rank-meta">${_compTypeBadgeInline(e)} ${_entryMetaBadge(e)}</div>
+            ${date ? `<div class="fv-rank-meta"><span class="w-ep-badge" style="font-family:'Manrope',var(--sans);font-weight:500;">${MSS_WATCHED_ON} ${date}</span></div>` : ''}
+            ${renderFavChips(e.ratings, e.cat)}
+          </div>
+          <div>
+            <div class="fv-rank-score">${score}</div>
+          </div>
+        </div>
+        ${MSSComments.buttonHTML(`event.stopPropagation();cpOpenPopupToComments('${e.id}')`)}
+      </div>`;
+    }).join('')}</div>`;
+  }
+}
+
+/* ── Loading skeleton: this page's list (or grid) with sample titles masked into placeholders,
+   and its stats / search / Sort bar drawn straight away — as many as you had last time ── */
+mssSkeleton.define('completed', () => {
+  const n = Math.min(mssSkeleton.shape('comp')?.n ?? 6, 6);
+  return _compMainHTML(Array.from({ length: n }, () => ({ id: '', title: 'Sample title', year: '2024', cat: 'tv', status: 'completed',
+    total_seasons: 2, total_eps: 16, completed_date: '2026-01-01', ratings: { story: 8 }, final_score: 8 })));
+});
+document.addEventListener('DOMContentLoaded', () => {
+  mssSkeleton.stats(document.getElementById('compStats'), mssSkeleton.shape('comp')?.stats || ['Watched', 'To Be Continued', 'Avg Score', 'Rated', 'Top Category', 'Episodes']);
+  document.getElementById('compSearch').innerHTML = SF.searchHTML('comp', 'Search your watched titles…');
+  _compSfBar();
+  _compViewBar();
+});
+
+// Export: the Export Studio (export-studio.js) — with "As filtered here" when filters are on
+function _compExport() {
+  const shown = filtered(), p = window._navUserProfile || {};
+  MSSStudio.open({ who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' },
+    preset: { what: 'watched', sort: _compSort === 'highest' ? 'score' : 'recent' },
+    custom: shown.length && shown.length !== _allCompleted.length ? { label: 'Watched · as filtered here', entries: shown } : null,
+    load: () => getEntries(_compUser.id) });
+}
+
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>
