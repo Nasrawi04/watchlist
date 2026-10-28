@@ -5,12 +5,15 @@
    One popup for every title anywhere on the site: poster, title/years,
    type + genre + TMDB score tags, description, runtime / season
    breakdown, Director (movies) / Created By (TV) and Top Cast with
-   photos. Only the buttons change, depending on whose title it is:
+   photos. It's the "Title" tab — buttons about the title itself:
 
-     Someone else's title / a TMDB title → Add to Watchlist · Discover
-     Your own entry → Start Watching · Up Next (when they apply) ·
-                      Rate Episodes (shows) · Edit · Discover · Discover Card · Delete
-                      + "Who can see this title" while it isn't rated yet (watchlist, watching…)
+     Not in your library → Add to Library (a popup: where, type, who can see) ·
+                           Episode Chart · Recommend · Share Title · Discover
+     In your library     → In Your Library (opens Your Entry) · …the same
+     Your own entry      → Add to List · Episode Chart · Recommend · Share Title ·
+                           Discover · Discover Card
+   Everything about YOUR entry (status, Edit, Rewatch, cards, who can see it,
+   Delete) is on the "Your Entry" tab — MSSRate, rating-popup.js.
 
    Also owns the shared "Discover" action: a linked title opens its
    title page; an unlinked one searches TMDB and shows the "Which one
@@ -19,12 +22,8 @@
    Usage:
      MSSInfo.fromDiscover(item)            // Discover-shaped TMDB item
      MSSInfo.fromEntry(entry)              // someone else's library entry
-     MSSInfo.forOwnEntry(entry, {          // your own entry
-       onChange(entry),                    //   re-render after a status change
-       onDelete(entry),                    //   drop it from the page's arrays + re-render
-       handlers: { start, upnext },        //   optional: page's own status functions (id) => …
-       from: 'library.html',               //   where Edit returns to (defaults to this page)
-     })
+     MSSInfo.forOwnEntry(entry, o)         // your own entry (MSSViews opens it — use that)
+     MSSInfo.addToLibrary(item, { details, onAdded(entry) })   // the Add to Library popup
      MSSInfo.discover(entryOrItem, btn)    // the Discover action on its own
      MSSInfo.open(item, opts) / MSSInfo.close()
 
@@ -36,9 +35,9 @@
 
 const INFO_POPUP_CONFIG = {
   // Buttons, left → right. Remove / reorder here.
-  actions: ['queue', 'chart', 'recommend', 'discover'],                          // someone else's / TMDB title
-  ownerActions: ['start', 'upnext', 'pickup', 'rateEps', 'chart', 'edit', 'drop', 'recommend', 'share', 'discover', 'card', 'delete'], // your own entry
-  addStatus: 'queue',      // status used by "Add to Watchlist"
+  actions: ['queue', 'chart', 'recommend', 'shareTitle', 'discover'],             // someone else's / TMDB title
+  ownerActions: ['lists', 'chart', 'recommend', 'shareTitle', 'discover', 'card'],  // your own entry (its own buttons: Your Entry tab)
+  addStatus: 'queue',      // where Add to Library starts (the popup lets you pick)
   showTmdbScore: true,     // TMDB community rating in the tags row
   showCrew: true,          // Director (movies) / Created By (TV)
   crewCount: 2,
@@ -89,7 +88,6 @@ const MSSInfo = (() => {
           <div id="mssInfoDetails"></div>
           <div id="mssInfoCrew"></div>
           <div id="mssInfoCast"></div>
-          <div id="mssInfoVis" class="mr-vis" hidden></div>
         </div>
         <div class="mss-info-actions" id="mssInfoPopupActions"></div>
       </div>`;
@@ -212,31 +210,22 @@ const MSSInfo = (() => {
     `<button type="button" class="popup-action-btn${extra}" data-act="${key}" onclick="MSSInfo._act('${key}', this)">${icon(ico, 14)} ${label}</button>`;
 
   function actionsHTML(it, own, user) {
-    const e = opts.owner ? it.entry : null;
+    const e = opts.owner ? it.entry : null, tv = (e?.tmdb_type || it.media_type) === 'tv';
     const B = {
       queue: () => {
-        if (!user) return `<button type="button" class="popup-action-btn" onclick="mssJoin('add titles to your Watchlist')">${icon('plus', 14)} Add to Watchlist</button>`;
-        if (own === undefined) return `<button type="button" class="popup-action-btn" disabled>${icon('plus', 14)} Add to Watchlist</button>`;
-        if (own) return `<button type="button" class="popup-action-btn" onclick="goToDetail(${attrJSON(own.id)}, ${attrJSON(thisFile())})">${icon('check', 14)} In Your Library · View</button>`;
-        return btn('queue', 'plus', 'Add to Watchlist');
+        if (!user) return `<button type="button" class="popup-action-btn" onclick="mssJoin('add titles to your library')">${icon('plus', 14)} Add to Library</button>`;
+        if (own === undefined) return `<button type="button" class="popup-action-btn" disabled>${icon('plus', 14)} Add to Library</button>`;
+        if (own) return btn('mine', 'check', 'In Your Library');
+        return btn('queue', 'plus', 'Add to Library');
       },
-      discover: () => (it.tmdb_id || it.title) ? btn('discover', 'search', 'Discover') : '',
-      // Social → Recommendations (js/social.js): Recommend sends the title to watch;
-      // Share (your own, once watched or rated) sends "I watched this" — your rating + note
-      recommend: () => user && it.tmdb_id && (it.media_type === 'movie' || it.media_type === 'tv') ? btn('recommend', 'send', 'Recommend') : '',
-      share:  () => user && e && (e.status === 'completed' || e.status === 'ongoing' || liveScore(e) != null) ? btn('share', 'share', 'Share') : '',
-      start:  () => e && (e.status === 'queue' || e.status === 'up_next') ? btn('start', 'play', 'Start Watching') : '',
-      upnext: () => e && e.status === 'queue' ? btn('upnext', 'skipForward', 'Up Next') : '',
-      // Dropped (071): drop what you're watching; a dropped title can be picked back up
-      drop:   () => e && ['watching', 'up_next', 'paused'].includes(e.status) ? btn('drop', 'drop', 'Drop') : '',
-      pickup: () => e && e.status === 'dropped' ? btn('pickup', 'play', 'Pick Back Up') : '',
-      rateEps: () => e && typeof MSSEp !== 'undefined' && MSSEp.isShow(e) ? btn('rateEps', 'ratingStar', 'Rate Episodes') : '',
+      lists:      () => e && typeof MSSList !== 'undefined' ? btn('lists', 'layers', 'Add to List') : '',
       // shows: straight to their Episode Chart (episodes.html)
-      chart:  () => it.tmdb_id && (e?.tmdb_type || it.media_type) === 'tv'
-        ? `<a class="popup-action-btn" href="episodes.html?show=${Number(it.tmdb_id)}" style="text-decoration:none;">${icon('episodes', 14)} Episode Chart</a>` : '',
-      edit:   () => e ? btn('edit', 'edit', 'Edit') : '',
-      card:   () => e && typeof createShareCard === 'function' ? btn('card', 'idCard', 'Discover Card') : '',
-      delete: () => e ? btn('delete', 'trash', 'Delete', ' popup-action-danger') : '',
+      chart:      () => it.tmdb_id && tv ? `<a class="popup-action-btn" href="episodes.html?show=${Number(it.tmdb_id)}" style="text-decoration:none;">${icon('episodes', 14)} Episode Chart</a>` : '',
+      // Social → Recommendations (social.js): send the title to a friend to watch
+      recommend:  () => user && it.tmdb_id ? btn('recommend', 'send', 'Recommend') : '',
+      shareTitle: () => it.tmdb_id ? btn('shareTitle', 'link', 'Share Title') : '',
+      discover:   () => (it.tmdb_id || it.title) ? btn('discover', 'search', 'Discover') : '',
+      card:       () => e && typeof createShareCard === 'function' ? btn('card', 'idCard', 'Discover Card') : '',
     };
     const keys = opts.actions || (opts.owner ? INFO_POPUP_CONFIG.ownerActions : INFO_POPUP_CONFIG.actions);
     return keys.map(k => B[k] ? B[k]() : '').join('');
@@ -245,49 +234,24 @@ const MSSInfo = (() => {
   async function act(key, el) {
     const it = current, e = it?.entry;
     if (!it) return;
-    const user = window._navUser || null;
-    if (key === 'queue') return addToQueue(el);
+    if (key === 'queue') return addToLibrary(it, { details: it._details, onAdded: entry => { if (current === it) setActions(it, entry); } });
+    if (key === 'mine') return openMine(it);
     if (key === 'discover') return discover(e || it, el);
     if (key === 'recommend') return mssRecommend({ tmdb_id: it.tmdb_id, media_type: it.media_type, title: it.title || it._details?.title || it._details?.name,
       poster_url: it.poster_url || e?.poster_url, year: it.year || e?.year });
-    if (key === 'share' && e) return mssRecommend({ kind: 'entry', entry_id: e.id, title: e.title, poster_url: e.poster_url, year: e.year, media_type: it.media_type });
+    if (key === 'shareTitle') return mssShareTitle({ tmdb_id: it.tmdb_id, media_type: it.media_type, title: it.title || it._details?.title || it._details?.name });
     if (!e) return;
-    if (key === 'edit') { goToDetail(e.id, opts.from || thisFile()); return; }
-    if (key === 'drop' || key === 'pickup') {
-      const onChange = opts.onChange;
-      close();
-      return key === 'drop' ? MSSDrop.drop(e, { onChange }) : MSSDrop.pickUp(e, { onChange });
-    }
-    if (key === 'rateEps') { close(); MSSEp.rate(e, e.season || 1, Math.max(1, e.episode || 1)); return; }
+    if (key === 'lists') { MSSList.addTo(e); return; }                     // opens on top of this popup
     if (key === 'card') { close(); createShareCard(e.id, 3, true); return; }
-    if (key === 'delete') {
-      const ok = await showConfirm({ title: 'Delete entry?', message: `"${e.title || 'This entry'}" will be permanently removed.`, confirmText: 'Delete', iconName: 'trash' });
-      if (!ok) return;
-      try {
-        close();
-        await mssDeleteWithUndo(e, user?.id || (await getCurrentUser()).id);
-        opts.onDelete?.(e);
-      } catch (err) { console.error(err); showToast('Error deleting entry.', 'err'); }
-      return;
-    }
-    if (key === 'start' || key === 'upnext') {
-      const handler = opts.handlers?.[key];
-      close();
-      if (handler) return handler(e.id);
-      // Default: just change the status
-      try {
-        const status = key === 'start' ? 'watching' : 'up_next', prev = e.status;
-        const uid = user?.id || (await getCurrentUser()).id;
-        await updateProgress(e.id, uid, { status });
-        e.status = status;
-        opts.onChange?.(e);
-        showUndoToast(key === 'start' ? `Started watching “${e.title}”` : `“${e.title}” is Up Next`, async () => {
-          await updateProgress(e.id, uid, { status: prev });
-          e.status = prev;
-          opts.onChange?.(e);
-        });
-      } catch (err) { console.error(err); showToast('Error updating. Please try again.', 'err'); }
-    }
+  }
+  const setActions = (it, own) => { document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, own, window._navUser || null); };
+  // "In Your Library" → your entry in the same popup (Your Entry tab), or its page
+  async function openMine(it) {
+    const user = window._navUser;
+    const own = user && await getOwnEntryByTmdb(user.id, it.tmdb_id ? Number(it.tmdb_id) : null, it.media_type, it.title).catch(() => null);
+    if (!own) return;
+    if (typeof MSSRate !== 'undefined' && typeof MSSNote !== 'undefined') { close(); MSSViews.open(own, { own: true, start: 'rate' }); }
+    else goToDetail(own.id, thisFile());
   }
 
   function render(it, d, own, user, loading) {
@@ -305,28 +269,7 @@ const MSSInfo = (() => {
     document.getElementById('mssInfoCrew').innerHTML = loading && it.tmdb_id && INFO_POPUP_CONFIG.showCrew ? skeleton(isMovieType(it.media_type) ? 'Directed By' : 'Created By', 1) : crewHTML(it, d);
     if (loading) document.getElementById('mssInfoCast').innerHTML = it.tmdb_id && INFO_POPUP_CONFIG.showCast ? skeleton('Top Cast', INFO_POPUP_CONFIG.castCount) : '';
     document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, own, user);
-    // yours and not rated yet (watchlist, watching…): who can see it lives here (073) — rated ones have it in Ratings
-    const e = opts.owner ? it.entry : null, vis = document.getElementById('mssInfoVis');
-    vis.hidden = !e || isRated(e);
-    vis.innerHTML = vis.hidden ? '' : mssTitleVisHTML('mssInfoVisSel', e.visibility, '_mssInfoVisPick');
   }
-  const isRated = e => e.status === 'completed' || e.status === 'ongoing' || e.status === 'dropped' || liveScore(e) != null;
-  async function saveVis(v) {
-    const e = opts.owner ? current?.entry : null;
-    if (!e || (e.visibility || 'anyone') === v) return;
-    const prev = e.visibility || 'anyone';
-    try {
-      await updateProgress(e.id, window._navUser?.id || (await getCurrentUser()).id, { visibility: v });
-      e.visibility = v;
-      opts.onChange?.(e);
-      showToast(v === 'private' ? 'Only you can see this title now.' : v === 'friends' ? 'Only your friends can see this title now.' : 'Anyone can see this title now.');
-    } catch (err) {
-      console.error('MSSInfo vis:', err);
-      showToast('Couldn’t save that — try again.', 'err');
-      mssVisSet('mssInfoVisSel', prev);
-    }
-  }
-
   async function fetchDetails(it) {
     const key = `${it.media_type}:${it.tmdb_id}`;
     if (detailCache[key]) return detailCache[key];
@@ -371,15 +314,15 @@ const MSSInfo = (() => {
   }
 
   // Builds the new-entry payload from TMDB details, or from the entry
-  // being viewed when it isn't linked to TMDB.
-  function payloadFor(it, d) {
+  // being viewed when it isn't linked to TMDB. o: { status, cat, visibility } from the Add popup.
+  function payloadFor(it, d, o = {}) {
     const movie = isMovieType(it.media_type), src = it.entry;
-    const cat = it.cat || guessCat(it, d);
+    const cat = o.cat || it.cat || guessCat(it, d), status = o.status || INFO_POPUP_CONFIG.addStatus, visibility = o.visibility || 'anyone';
     if (!d && src) {
       const r = src.ratings || {}, ratings = {};
       ['_season_breakdown', '_completion_year', '_media_type'].forEach(k => { if (r[k] != null) ratings[k] = r[k]; });
       return {
-        title: src.title, cat, status: INFO_POPUP_CONFIG.addStatus, year: src.year || null,
+        title: src.title, cat, status, visibility, year: src.year || null,
         description: src.description || null, genres: src.genres || [], poster_url: src.poster_url || null,
         total_seasons: src.total_seasons || null, total_eps: src.total_eps || null,
         runtime_h: src.runtime_h || null, runtime_m: src.runtime_m || null,
@@ -388,7 +331,7 @@ const MSSInfo = (() => {
     }
     const payload = {
       title: it.title || (movie ? d?.title : d?.name),
-      cat, status: INFO_POPUP_CONFIG.addStatus,
+      cat, status, visibility,
       year: it.year || ((movie ? d?.release_date : d?.first_air_date) || '').slice(0, 4) || null,
       description: d?.overview || it.overview || null,
       genres: d ? tmdbGenreNames(d.genres) : (it.genres || []),
@@ -408,37 +351,107 @@ const MSSInfo = (() => {
     return payload;
   }
 
-  async function addToQueue(b) {
-    const it = current, d = it?._details;
+  /* ── Add to Library: a popup — where it goes in your library, what it is, who can see it ── */
+  const ADD_WHERE = [
+    ['queue', 'bookmark', 'Watchlist', 'Want to watch it'],
+    ['up_next', 'skipForward', 'Up Next', 'Watching it soon'],
+    ['watching', 'play', 'Watching', 'Started it'],
+    ['completed', 'check', 'Watched', 'Finished it'],
+    ['ongoing', 'clock', 'To Be Continued', 'Caught up — more to come', 'tv'],
+  ];
+  let addSt = null;
+  async function addToLibrary(item, o = {}) {
     const user = window._navUser || await getCurrentUser();
-    if (!user) { mssJoin('add titles to your Watchlist'); return; }
-    if (!it) return;
-    if (b) { if (b.disabled) return; b.disabled = true; b.innerHTML = 'Adding…'; }
-    const payload = payloadFor(it, d);
+    if (!user) { mssJoin('add titles to your library'); return; }
+    const it = { ...item, media_type: item.media_type === 'movie' ? 'movie' : 'tv' };
+    const d = o.details || it._details || null;
+    addSt = { it, d, o, user, status: INFO_POPUP_CONFIG.addStatus, cat: it.cat || guessCat(it, d) };
+    let ov = document.getElementById('mssAddOverlay');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'mssAddOverlay';
+      ov.innerHTML = `<div id="mssAddCard" role="dialog" aria-modal="true" aria-labelledby="mssAddT">
+          <div class="mss-add-head">
+            <div class="mss-add-poster" id="mssAddPoster"></div>
+            <div class="mss-add-who"><div class="lp-eyebrow">Add to Library</div><div class="mss-add-title" id="mssAddT" translate="no"></div><div class="mss-add-sub" id="mssAddSub"></div></div>
+            <button type="button" class="sf-close" onclick="MSSInfo._addClose()" aria-label="Close">${icon('x', 18)}</button>
+          </div>
+          <div class="sf-body" id="mssAddBody"></div>
+          <div class="sf-footer"><button type="button" class="sf-clear-btn" onclick="MSSInfo._addClose()">Cancel</button><button type="button" class="sf-apply-btn" id="mssAddGo" onclick="MSSInfo._addGo()">${icon('plus', 15)} Add to Library</button></div>
+        </div>`;
+      MSSDialog.bind(ov, addClose);
+      document.body.appendChild(ov);
+    }
+    renderAdd();
+    MSSDialog.open(ov, { focus: '.mss-add-opt.on' });
+    // TMDB details fill in the poster / years / Anime-or-Cartoon guess once they arrive
+    if (!d && it.tmdb_id) fetchDetails(it).then(x => {
+      if (addSt?.it !== it) return;
+      addSt.d = x; it._details = x;
+      if (!it.cat) addSt.cat = guessCat(it, x);
+      renderAdd();
+    }).catch(() => {});
+  }
+  function renderAdd() {
+    const { it, d } = addSt, movie = isMovieType(it.media_type), $ = id => document.getElementById(id);
+    const poster = safeURL(d?.poster_path ? TMDB_IMG + d.poster_path : it.poster_url || it.entry?.poster_url);
+    $('mssAddPoster').innerHTML = poster ? `<img src="${poster}" alt="">` : esc((it.title || '?')[0].toUpperCase());
+    $('mssAddT').textContent = it.title || d?.title || d?.name || '';
+    const year = it.year || ((movie ? d?.release_date : d?.first_air_date) || '').slice(0, 4);
+    $('mssAddSub').textContent = [movie ? 'Movie' : 'TV Show', year].filter(Boolean).join(' · ');
+    const vis = $('mssAddVis')?.value || 'anyone';
+    const opt = (group, v, ic, label, hint) => {
+      const on = addSt[group] === v;
+      return `<button type="button" role="radio" class="mss-add-opt${on ? ' on' : ''}" aria-checked="${on}" data-g="${group}" data-v="${v}" onclick="MSSInfo._addPick('${group}', '${v}')">
+        ${ic ? `<span class="mss-add-ic" aria-hidden="true">${icon(ic, 17)}</span>` : ''}<span class="mss-add-l"><b>${label}</b>${hint ? `<small>${hint}</small>` : ''}</span></button>`;
+    };
+    $('mssAddBody').innerHTML = `
+      <div class="sf-section-label" id="mssAddWhereL">Where in your library</div>
+      <div class="mss-add-where" role="radiogroup" aria-labelledby="mssAddWhereL">${ADD_WHERE.filter(w => !w[4] || !movie).map(([v, ic, l, h]) => opt('status', v, ic, l, h)).join('')}</div>
+      <div class="sf-section-label" id="mssAddCatL">What it is</div>
+      <div class="mss-add-cats" role="radiogroup" aria-labelledby="mssAddCatL">${[[movie ? 'movies' : 'tv', movie ? 'Movie' : 'TV Show'], ['anime', 'Anime'], ['cartoons', 'Cartoon']].map(([v, l]) => opt('cat', v, '', l)).join('')}</div>
+      <div class="mr-vis mss-add-vis">${mssTitleVisHTML('mssAddVis', vis)}</div>`;
+  }
+  function addPick(group, v) {
+    if (!addSt) return;
+    addSt[group] = v;
+    document.querySelectorAll(`#mssAddBody .mss-add-opt[data-g="${group}"]`).forEach(b => {
+      const on = b.dataset.v === v;
+      b.classList.toggle('on', on); b.setAttribute('aria-checked', on);
+    });
+  }
+  function addClose() { MSSDialog.close(document.getElementById('mssAddOverlay')); }
+  async function addGo() {
+    const c = addSt, b = document.getElementById('mssAddGo');
+    if (!c || b.disabled) return;
+    const where = ADD_WHERE.find(w => w[0] === c.status)?.[2] || 'your library';
+    const payload = payloadFor(c.it, c.d, { status: c.status, cat: c.cat, visibility: document.getElementById('mssAddVis')?.value });
     // Added from a friend's entry → let them know (notify_friend_queued)
-    const src = it.entry;
-    if (src?.user_id && src.user_id !== user.id) {
+    const src = c.it.entry;
+    if (src?.user_id && src.user_id !== c.user.id) {
       try { sessionStorage.setItem('mssQueuedFrom', JSON.stringify({ owner: src.user_id, entry: src.id, title: payload.title, t: Date.now() })); } catch {}
     }
+    b.disabled = true; b.textContent = 'Adding…';
     try {
-      const entry = await quickCreate(payload, user.id);
-      if (current === it) document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, entry, user);
-      showUndoToast(`Added “${payload.title}” to your Watchlist`, async () => {
-        await deleteEntry(entry.id, user.id);
-        if (current === it) document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, null, user);
+      const entry = await quickCreate(payload, c.user.id);
+      addClose();
+      c.o.onAdded?.(entry);
+      showUndoToast(`Added “${payload.title}” to ${where}`, async () => {
+        await deleteEntry(entry.id, c.user.id);
+        c.o.onAdded?.(null);
       });
     } catch (err) {
       try { sessionStorage.removeItem('mssQueuedFrom'); } catch {}
       if (String(err.message).startsWith('DUPLICATE:')) {
-        const own = await getOwnEntryByTmdb(user.id, payload.tmdb_id, payload.tmdb_type, payload.title).catch(() => null);
+        const own = await getOwnEntryByTmdb(c.user.id, payload.tmdb_id, payload.tmdb_type, payload.title).catch(() => null);
+        addClose();
         showToast('Already in your library.');
-        if (current === it) document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, own, user);
+        if (own) c.o.onAdded?.(own);
       } else {
         console.error(err);
         showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Could not add — try again.', 'err');
-        if (b) { b.disabled = false; b.innerHTML = `${icon('plus', 14)} Add to Watchlist`; }
       }
-    }
+    } finally { b.disabled = false; b.innerHTML = `${icon('plus', 15)} Add to Library`; }
   }
 
   // Adds a TMDB title to your Watchlist without opening the popup (Social → Recommendations)
@@ -526,33 +539,33 @@ const MSSInfo = (() => {
   }
 
   return {
-    open, close, fromDiscover, fromEntry, forOwnEntry, discover, quickAdd, config: INFO_POPUP_CONFIG, _vis: saveVis,
-    _act: act, _closePicker: closePicker,
+    open, close, fromDiscover, fromEntry, forOwnEntry, discover, quickAdd, addToLibrary, config: INFO_POPUP_CONFIG,
+    _act: act, _closePicker: closePicker, _addPick: addPick, _addGo: addGo, _addClose: addClose,
   };
 })();
-// the title-visibility control calls this by name (mssTitleVisHTML onPick)
-function _mssInfoVisPick(v) { MSSInfo._vis(v); }
 
 
 /* ═══════════════════════════════════════════════════════════════
-   MSSViews — Info · Ratings · Note in one popup (v646)
+   MSSViews — Title · Your Entry · Note in one popup (v646, renamed msf-v140)
 
    Opens a title in the shared popups (MSSInfo, MSSRate, MSSNote) with a
-   switcher on top, so you can move between its Info, Ratings and Note
-   without closing anything — tap a tab, swipe left / right on the
-   popup, or use the ← → keys. Only the views a title actually has show
-   up (Ratings once it's rated / watched, Note once it has one).
+   switcher on top, so you can move between them without closing
+   anything — tap a tab, swipe left / right on the popup, or use the ← →
+   keys. Title = about the title; Your Entry = about your entry (always
+   there for your own titles, rated or not); someone else's shows as
+   "Their Entry" once they've rated / watched it; Note once there is one.
 
-   Tabs are always in the same order — Info · Ratings · Note — only the
-   one it opens on depends on where you opened it:
+   Tabs are always in the same order — Title · Entry · Note — only the
+   one it opens on depends on where you opened it ('info' / 'rate' / 'note'):
      MSSViews.open(entry, {
        start: 'note',          // lists / friends → 'info' (default), notes → 'note',
                                // library / dashboard → 'rate' (falls back to the first tab it has)
-       own: true,              // your entry → Edit / Delete…, editable note
+       own: true,              // your entry → Your Entry tab (status, Edit, Delete…), editable note
        writeNote: true,        // with own: show Note even when empty (opens the editor)
        profile,                // their profile, for "Sam's rating"
        counts,                 // note 👍/👎, if the page already has them
        onChange(entry), onDelete(entry), onNoteSaved(entry), from,
+       handlers: { start, upnext }, onComments(entry),   // passed on to Your Entry
        onReact(state, entry),  // someone else's note: after you like / dislike it
      })
      MSSViews.resume() → { id, view } when you've just come Back to the page you
@@ -564,8 +577,8 @@ function _mssInfoVisPick(v) { MSSInfo._vis(v); }
 
 const MSSViews = (() => {
   const VIEWS = {
-    info: { label: 'Info',    slot: 'mssInfoViews', card: 'mssInfoCard' },
-    rate: { label: 'Ratings', slot: 'mssRateViews', card: 'mssRateCard' },
+    info: { label: 'Title',   slot: 'mssInfoViews', card: 'mssInfoCard' },
+    rate: { label: 'Entry',   slot: 'mssRateViews', card: 'mssRateCard' },   // shown as Your Entry / Their Entry
     note: { label: 'Note',    slot: 'mssNoteViews', card: null },        // .note-popup2
   };
   let st = null;   // { e, views, cur, o, refreshed }
@@ -574,7 +587,8 @@ const MSSViews = (() => {
   const hasNote = e => !!(e.notes && e.notes.trim());
   // writeNote: your own entry gets the Note view even before it has one (to write it)
   const ORDER = ['info', 'rate', 'note'];
-  const available = (e, o) => ORDER.filter(v => v === 'info' || (v === 'rate' && isRated(e)) || (v === 'note' && (hasNote(e) || (o.own && o.writeNote))));
+  const available = (e, o) => ORDER.filter(v => v === 'info' || (v === 'rate' && (o.own || isRated(e))) || (v === 'note' && (hasNote(e) || (o.own && o.writeNote))));
+  const label = v => v === 'rate' ? (st.o.own ? 'Your Entry' : 'Their Entry') : VIEWS[v].label;
   const cardOf = v => v === 'note' ? document.querySelector('#mssNoteOverlay .note-popup2') : document.getElementById(VIEWS[v].card);
 
   function closeAll() { MSSInfo.close(); MSSRate.close(); MSSNote.close(); }
@@ -582,7 +596,7 @@ const MSSViews = (() => {
   function barHTML() {
     return `<div class="pn-toggle" role="tablist" aria-label="Views">${st.views.map(v => {
       const on = v === st.cur;
-      return `<button type="button" role="tab" class="pn-toggle-btn${on ? ' active' : ''}" aria-selected="${on}" ${on ? '' : `onclick="MSSViews.show('${v}')"`}>${VIEWS[v].label}</button>`;
+      return `<button type="button" role="tab" class="pn-toggle-btn${on ? ' active' : ''}" aria-selected="${on}" ${on ? '' : `onclick="MSSViews.show('${v}')"`}>${label(v)}</button>`;
     }).join('')}</div><button type="button" class="mss-views-close" onclick="MSSViews.close()" aria-label="Close">✕</button>`;
   }
 
@@ -596,7 +610,7 @@ const MSSViews = (() => {
     try {
       closeAll();
       Object.values(VIEWS).forEach(x => { const el = document.getElementById(x.slot); if (el) el.innerHTML = ''; });
-      const cbs = { from: o.from, onChange: o.onChange, onDelete: o.onDelete, noRefresh: st.refreshed, addToList: o.addToList };
+      const cbs = { from: o.from, onChange: o.onChange, onDelete: o.onDelete, noRefresh: st.refreshed, handlers: o.handlers, onComments: o.onComments };
       if (v === 'info') o.own ? MSSInfo.forOwnEntry(e, cbs) : MSSInfo.fromEntry(e);
       // Ratings view: no Notes block when there's a Note tab right beside it
       const hideNotes = st.views.includes('note');
