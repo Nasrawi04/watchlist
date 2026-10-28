@@ -22,25 +22,18 @@ function _catRemoveEntry(x) {
 
 /* ── To Be Continued: new episodes out ──
    A show you'd caught up on stays in To Be Continued — nothing in your library moves by itself.
-   Once an episode past where you stopped has fully aired (MSSSchedule.newOut: air date before
-   today on TMDB — announced / future episodes don't count), it's marked "New episodes", sits at
-   the top of the section (default sort) and gets an Up Next button (markUpNext). */
+   Once an episode past where you stopped has fully aired (mssNewEpisodes, config.js: air date
+   before today on TMDB — announced / future episodes don't count) it gets the "New Season" poster
+   cover + badge, sits at the top of the section (default sort) and an Up Next button (markUpNext). */
 let _catNewEps = {};   // entry id → the latest aired episode { s, n, air }
 async function _catCheckNewEps() {
-  const shows = _catAll.filter(e => e.status === 'ongoing' && e.tmdb_id && e.tmdb_type === 'tv' && e.ratings?._media_type !== 'movie');
-  if (!shows.length) return;
-  await mssLoadScript('js/tv-schedule.js');
-  if (typeof MSSSchedule === 'undefined') return;
-  const found = {};
-  for (let i = 0; i < shows.length; i += 4) {
-    const chunk = shows.slice(i, i + 4), ds = await Promise.all(chunk.map(e => MSSSchedule.details(e.tmdb_id)));
-    chunk.forEach((e, j) => { const ep = MSSSchedule.newOut(e, ds[j]); if (ep) found[e.id] = ep; });
-  }
+  const found = await mssNewEpisodes(_catAll);
   if (JSON.stringify(found) === JSON.stringify(_catNewEps)) return;
   _catNewEps = found;
   renderSections();
 }
-const _catNewEpHTML = e => _catNewEps[e.id] ? `<div class="w-ep-row"><span class="tbc-new-tag">${icon('sparkles', 11)} New<span class="tbc-new-word"> episodes</span> · S${_catNewEps[e.id].s} E${_catNewEps[e.id].n} out</span></div>` : '';
+// The Up Next button: the same icon as the Up Next poster cover, everywhere
+const _catUpNextIcon = () => icon('skipForward', 15);
 
 function openCatInfoPopup(id) {
   const e = _catAll.find(en => en.id === id);
@@ -758,7 +751,7 @@ function renderQueueGrid(items) {
       </div>
       <div class="start-watching-wrap" onclick="event.stopPropagation()">
         <button type="button" onclick="startWatching('${e.id}')" class="continue-btn">Start</button>
-        <button type="button" onclick="markUpNext('${e.id}')" class="up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="14" y2="6"/><line x1="3" y1="12" x2="11" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="16 14 20 18 16 22"/><line x1="14" y1="18" x2="20" y2="18"/></svg></button>
+        <button type="button" onclick="markUpNext('${e.id}')" class="up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next">${_catUpNextIcon()}</button>
       </div>
     </div>`;
   }).join('');
@@ -876,9 +869,10 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
     const date  = e.completed_date ? new Date(e.completed_date + 'T12:00:00').toLocaleDateString(MSSI18n.locale,{day:'numeric',month:'short',year:'numeric'}) : '';
     const isMc  = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
     const typeClsC = (isMc ? 'type-label' : 'type-label type-label-tv') + ' type-label-overlay-bottom';
-    return `<div class="wg-card cg-card-wrap${_catNewEps[e.id] && e.status === 'ongoing' ? ' tbc-new' : ''}" style="cursor:pointer;">
+    const newEp = e.status === 'ongoing' ? _catNewEps[e.id] : null;
+    return `<div class="wg-card cg-card-wrap" style="cursor:pointer;">
       <div class="wg-poster" onclick="openGridPopup('${e.id}')" style="position:relative;">
-        ${posterHTML(e,'big')}
+        ${posterHTML(e,'big')}${mssNewSeasonHoldHTML(e, newEp)}
         ${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? '<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>' : ''}
         ${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(SF.rank(e, i)) : '')}
         ${SHOW_TYPE_TAG() ? `<span class="${typeClsC}">${isMc ? 'Movie' : 'TV Show'}</span>` : ''}
@@ -888,11 +882,12 @@ function renderCompletedGrid(items, sectionKey = 'completed') {
           <div class="wg-title" translate="no">${escHTML(e.title)}</div>
           ${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}
         </div>
-        ${e.status === 'ongoing' ? _ongoingMeta(e) + _catNewEpHTML(e) : _entryMeta(e)}
+        ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
+        ${newEp ? `<div class="w-ep-row">${mssNewSeasonBadgeHTML(e, newEp)}</div>` : ''}
         <div class="cg-score-row"><span class="cg-score">${score != null ? `★ ${score}` : '—'}</span></div>
       </div>
       <div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">
-        ${e.status !== 'ongoing' ? '' : _catNewEps[e.id] ? `<button class="continue-btn tbc-upnext-btn" onclick="markUpNext('${e.id}')">${icon('skipForward', 13)} Up Next</button>` : `<button class="continue-btn" onclick="continueWatching('${e.id}')">Continue</button>`}
+        ${e.status !== 'ongoing' ? '' : newEp ? `<button class="continue-btn" onclick="markUpNext('${e.id}')">${_catUpNextIcon()} Up Next</button>` : `<button class="continue-btn" onclick="continueWatching('${e.id}')">Continue</button>`}
         ${MSSComments.buttonHTML(`_catComments('${e.id}')`)}
       </div>
     </div>`;
@@ -1164,7 +1159,7 @@ function renderQueueList(items) {
       </div>
       <div class="w-queue-actions" onclick="event.stopPropagation()">
         <button type="button" onclick="startWatching('${e.id}')" class="w-list-action-btn w-list-play-btn" title="Start Watching" aria-label="Start Watching">${icon('play',14)}</button>
-        <button type="button" onclick="markUpNext('${e.id}')" class="w-list-action-btn up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="14" y2="6"/><line x1="3" y1="12" x2="11" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="16 14 20 18 16 22"/><line x1="14" y1="18" x2="20" y2="18"/></svg></button>
+        <button type="button" onclick="markUpNext('${e.id}')" class="w-list-action-btn up-next-btn" title="Watch this next (Up Next)" aria-label="Up Next">${_catUpNextIcon()}</button>
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -1189,19 +1184,21 @@ function renderCompletedList(sorted, sectionKey = 'completed') {
     const score = e.final_score != null ? Number(liveScore(e)).toFixed(2) : null;
     const _ctx = catContext();
     const _badge = _ctx ? getTypeBadge(e, _ctx) : '';
-    return `<div class="cc-block${_catNewEps[e.id] && e.status === 'ongoing' ? ' tbc-new' : ''}">
+    const newEp = e.status === 'ongoing' ? _catNewEps[e.id] : null;
+    return `<div class="cc-block">
       <div class="comp-row" style="cursor:pointer;" onclick="openGridPopup('${e.id}')">
-        <div class="comp-poster" style="position:relative;">${posterHTML(e)}${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(SF.rank(e, i)) : '')}</div>
+        <div class="comp-poster" style="position:relative;">${posterHTML(e)}${mssNewSeasonHoldHTML(e, newEp)}${ratingKey ? _cgRatingBadge(e, ratingKey) : (isRanked ? _cgBadge(SF.rank(e, i)) : '')}</div>
         <div class="comp-info">
           <div class="comp-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : ''}</div>
           <div class="comp-meta">${_badge}</div>
-          ${e.status === 'ongoing' ? _ongoingMeta(e) + _catNewEpHTML(e) : _entryMeta(e)}
+          ${e.status === 'ongoing' ? _ongoingMeta(e) : _entryMeta(e)}
+          ${newEp ? `<div class="w-ep-row">${mssNewSeasonBadgeHTML(e, newEp)}</div>` : ''}
           ${e.notes ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2; line-clamp:2;-webkit-box-orient:vertical;">"${escHTML(MSSRich.plain(e.notes))}"</div>` : ''}
           ${renderFavChips(e.ratings, e.cat)}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;" onclick="event.stopPropagation()">
           <div style="font-family:var(--bebas);color:var(--olive-light);font-size:clamp(17px, 3.8vw, 19px);font-weight:400;">${score != null ? `★ ${score}` : '—'}</div>
-          ${e.status !== 'ongoing' ? '' : _catNewEps[e.id] ? `<button class="tbc-upnext-btn tbc-upnext-pill" onclick="markUpNext('${e.id}')">${icon('skipForward', 13)} Up Next</button>` : `<button class="w-list-action-btn w-list-play-btn" onclick="continueWatching('${e.id}')" title="Continue">${icon('play',14)}</button>`}
+          ${e.status !== 'ongoing' ? '' : newEp ? `<button type="button" class="w-list-action-btn up-next-btn" onclick="markUpNext('${e.id}')" title="Watch this next (Up Next)" aria-label="Up Next">${_catUpNextIcon()}</button>` : `<button class="w-list-action-btn w-list-play-btn" onclick="continueWatching('${e.id}')" title="Continue">${icon('play',14)}</button>`}
         </div>
       </div>
       ${MSSComments.buttonHTML(`event.stopPropagation();_catComments('${e.id}')`)}
