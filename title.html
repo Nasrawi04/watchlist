@@ -462,6 +462,8 @@ a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center;
 .td-friend-info .w-ep-badge, .td-friend-info .up-next-tag { font-size:11px; }
 .td-friend-info { max-width:100%; }
 .td-friend-info .dropped-tag { max-width:100%; box-sizing:border-box; }
+.td-friend-info .eg-show-avg { font-size:clamp(15px, 2vw, 17px); line-height:1.25; }
+.td-friend-eps { align-self:center; margin-inline-start:6px; }
 @media(max-width:640px) {
   .td-friends-tabs { width:100%; }
   .td-friends-tabs .pn-toggle-btn { flex:1; justify-content:center; font-size:12.5px; padding:9px 6px; }
@@ -661,7 +663,8 @@ async function _tdRefresh(btn) {
 }
 
 /* ── Your friends and this title: Watched By (with their score) · Currently
-   Watching (where they are) · Want to Watch. Accepted friends only; groups
+   Watching (where they are) · Want to Watch · Dropped · Rated Episodes (shows:
+   their episode average + count → their episode ratings popup). Accepted friends only; groups
    with nobody are left out, and the whole section hides when no friend has
    it. Tap a friend → their Ratings / Info (MSSViews, read-only). ── */
 let _tdFriendEntries = {};
@@ -683,6 +686,14 @@ async function _tdLoadFriends(title) {
     rows = await mssWithPrivateNotes([...(linked.data || []), ...(unlinked.data || [])].filter(e => !seen.has(e.user_id) && seen.add(e.user_id)));
   } catch (err) { console.error('Friends on this title:', err); return; }
   if (!rows.length) return;
+  // Shows: each friend's episode ratings of it (their entry's) — the Rated Episodes tab
+  _tdFriendEps = {};
+  if (_tdType === 'tv') {
+    try {
+      const { data } = await sb.from('episode_ratings').select('entry_id,season_number,episode_number,score,updated_at').in('entry_id', rows.map(e => e.id)).gt('episode_number', 0);
+      (data || []).forEach(r => (_tdFriendEps[r.entry_id] ||= []).push(r));
+    } catch (err) { console.error('Friends’ episode ratings:', err); }
+  }
   _tdFriendEntries = {};
   rows.forEach(e => { e._profile = profiles[e.user_id] || { id: e.user_id }; _tdFriendEntries[e.id] = e; });
   const by = (a, b) => (b || '').localeCompare(a || '');
@@ -693,6 +704,7 @@ async function _tdLoadFriends(title) {
         .sort((a, b) => by(a.updated_at, b.updated_at)) },
     { key: 'want', label: 'Want to Watch', items: rows.filter(e => e.status === 'queue').sort((a, b) => by(a.created_at, b.created_at)) },
     { key: 'dropped', label: 'Dropped', items: rows.filter(e => e.status === 'dropped').sort((a, b) => by(a.updated_at, b.updated_at)) },   // 071
+    { key: 'episodes', label: 'Rated Episodes', items: rows.filter(e => _tdFriendEps[e.id]).sort((a, b) => _tdEpAvg(b) - _tdEpAvg(a)) },
   ].filter(g => g.items.length);
   if (!_tdFriendGroups.length) return;
   const scores = rows.map(mssCountedScore).filter(v => v != null);   // dropped scores don't count (071)
@@ -711,7 +723,8 @@ async function _tdLoadFriends(title) {
     </section>`;
   _tdFriendsTab(_tdFriendGroups[0].key);
 }
-let _tdFriendGroups = [];
+let _tdFriendGroups = [], _tdFriendEps = {};
+const _tdEpAvg = e => { const r = _tdFriendEps[e.id] || []; return r.length ? r.reduce((a, x) => a + Number(x.score), 0) / r.length : 0; };
 // Switch Watched By · Watching · Want to Watch (the shared pn-toggle)
 function _tdFriendsTab(key) {
   const g = _tdFriendGroups.find(x => x.key === key);
@@ -736,14 +749,23 @@ function _tdFriendCard(e, key) {
         : e.status === 'paused' ? `<span class="td-friend-sub">Taking a break</span>`
         : e.season || e.episode ? `<span class="w-ep-badge">S${Number(e.season) || 1} · E${Number(e.episode) || 0}</span>`
         : e.watched ? `<span class="w-ep-badge">${Number(e.watched)} eps</span>` : `<span class="td-friend-sub">Just started</span>`)
+      : key === 'episodes' ? `<span class="eg-show-avg ep-band-${MSSEp.band(_tdEpAvg(e)).key}">${_tdEpAvg(e).toFixed(1)}</span><span class="td-friend-sub td-friend-eps">${_tdFriendEps[e.id].length} ep${_tdFriendEps[e.id].length === 1 ? '' : 's'}</span>`
       : key === 'dropped' ? (mssDroppedAt(e)            // the tab already says Dropped — just where they stopped, so it fits the card
         ? `<span class="dropped-tag">${icon('drop', 11)}<span class="sr-only">Dropped at</span> ${esc(mssDroppedAt(e))}</span>` : mssDroppedTagHTML(e, false))
       : `<span class="td-friend-sub">${e.created_at ? 'Added ' + esc(MSSNote.date(e.created_at, true)) : 'On their list'}</span>`;
-  return `<button type="button" class="td-cast-card td-friend-card" onclick="_tdOpenFriend(${attrJSON(e.id)})" aria-label="@${esc(name)} — open their ${key === 'watched' ? 'ratings' : 'entry'}">
+  return `<button type="button" class="td-cast-card td-friend-card" onclick="${key === 'episodes' ? '_tdOpenFriendEps' : '_tdOpenFriend'}(${attrJSON(e.id)})" aria-label="@${esc(name)} — open their ${key === 'watched' ? 'ratings' : key === 'episodes' ? 'episode ratings' : 'entry'}">
       <span class="td-cast-photo td-friend-photo">${av ? `<img src="${av}" alt="" loading="lazy">` : esc(name[0].toUpperCase())}</span>
       <span class="td-cast-name">@${esc(name)}</span>
       <span class="td-friend-info">${info}</span>
     </button>`;
+}
+// Their episode ratings of this show (the same popup as their profile's Episodes tab) → View Ratings
+function _tdOpenFriendEps(id) {
+  const e = _tdFriendEntries[id];
+  if (!e) return;
+  const total = (_tdDetail?.seasons || []).filter(x => x.season_number > 0).reduce((a, x) => a + (x.episode_count || 0), 0) || null;
+  MSSEp.showPopup({ title: e.title, poster: mssSharpPoster(e.poster_url) || (_tdDetail?.poster_path ? TMDB_IMG + _tdDetail.poster_path : null), tmdbId: Number(_tdId),
+    status: e.status, rows: _tdFriendEps[id], total, userId: e.user_id, whoName: '@' + (e._profile.username || 'friend') });
 }
 function _tdOpenFriend(id) {
   const e = _tdFriendEntries[id];
