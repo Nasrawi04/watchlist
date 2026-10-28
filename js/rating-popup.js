@@ -1,27 +1,24 @@
 /* ═══════════════════════════════════════════════════════════════
    rating-popup.js — THE ratings popup, used on every page (v629)
 
-   One popup for a rated entry anywhere on the site: poster, title/years,
-   type + genre tags, Watched On / Left off, description, Overall Score
-   box, TV Show Breakdown / Movie Runtime, Core + Bonus ratings,
-   Highlights and Notes. Only the buttons change, depending on whose
-   entry it is:
+   The "Your Entry" tab (another person's: "Their Entry"): poster, title/years,
+   type + genre tags, where it is in the library / Watched On / Left off,
+   description, Overall Score box, TV Show Breakdown / Movie Runtime, Core +
+   Bonus ratings, Highlights and Notes — or "Not rated yet" before there are any.
+   Buttons — everything about YOUR entry (the title's own are on the Title tab):
 
-     Your own entry   → Edit · Add to List · Rewatch · Create Card · Discover Card · Delete
-                        (Add to List only where the page asks for it — addToList:
-                        true on Library + the category pages; needs list-popup.js)
-                        (Rewatch hides while you're watching it; Discover
-                        Card shows for titles that aren't finished)
-     Someone else's   → Add to Watchlist · Discover
-                        (+ "<Name>'s rating" line when you pass their profile)
+     Your own entry → Start Watching · Up Next · Pick Back Up · Rewatch (when they apply) ·
+                      Rate Episodes (shows) · Edit · Drop · Create Card (once rated) · Delete
+                      + "Who can see this title"
+     Someone else's → no buttons (+ "<Name>'s rating" line when you pass their profile)
 
-   Usage:
+   Usage (pages open it through MSSViews.open — info-popup.js):
      MSSRate.forOwnEntry(entry, {
        onDelete(entry),          // drop it from the page's arrays + re-render
-       onChange(entry),          // re-render (e.g. new seasons found on TMDB)
+       onChange(entry),          // re-render after a status change / new seasons found on TMDB
        onComments(entry),        // optional: shows the Comments strip
+       handlers: { start, upnext },   // optional: the page's own status functions (id) => …
        from: 'library.html',     // where Edit returns to (defaults to this page)
-       addToList: true,          // show "Add to List" (MSSList.addTo, list-popup.js)
      })
      MSSRate.forFriend(entry, profile?, { hideNotes })
      (hideNotes: true leaves out the Notes block — used when the switcher has a Note tab)
@@ -29,13 +26,14 @@
 
    Requires config.js (icon, escHTML, posterHTML, liveScore, getRatings,
    CAT_META, showConfirm, mssIsSpoiler, mssSpoilerHTML), db.js
-   (deleteEntry), info-popup.js (MSSInfo — Add to Watchlist / Discover),
-   rewatch.js + create-card.js for those buttons (hidden if not loaded).
+   (updateProgress, MSSDrop, mssDeleteWithUndo), rewatch.js, create-card.js and
+   episode-ratings.js for those buttons (hidden if not loaded).
 ═══════════════════════════════════════════════════════════════ */
 
 const RATING_POPUP_CONFIG = {
-  ownerActions:  ['edit', 'lists', 'recommend', 'share', 'rewatch', 'card', 'discoverCard', 'delete'],
-  friendActions: ['queue', 'recommend', 'discover'],
+  // Your Entry tab: everything about YOUR entry — the title's own buttons are on the Title tab (MSSInfo)
+  ownerActions:  ['start', 'upnext', 'pickup', 'rewatch', 'rateEps', 'edit', 'drop', 'card', 'delete'],
+  friendActions: [],
 };
 
 const MSSRate = (() => {
@@ -127,20 +125,18 @@ const MSSRate = (() => {
     `<button type="button" class="popup-action-btn${extra}" data-act="${key}" onclick="MSSRate._act('${key}', this)">${icon(ico, 14)} ${label}</button>`;
 
   function actionsHTML(e) {
-    const watchingNow = e.status === 'watching' || e.status === 'up_next' || e.status === 'paused';
     const finished = e.status === 'completed' || e.status === 'ongoing';
     const B = {
-      edit:         () => btn('edit', 'edit', 'Edit'),
-      lists:        () => opts.addToList && typeof MSSList !== 'undefined' ? btn('lists', 'layers', 'Add to List') : '',
-      rewatch:      () => !watchingNow && e.status !== 'dropped' && typeof rewatchEntry === 'function' ? btn('rewatch', 'refresh', 'Rewatch') : '',   // dropped → Pick Back Up instead
-      card:         () => typeof createShareCard === 'function' ? btn('card', 'image', 'Create Card') : '',
-      discoverCard: () => !finished && typeof createShareCard === 'function' ? btn('discoverCard', 'idCard', 'Discover Card') : '',
-      delete:       () => btn('delete', 'trash', 'Delete', ' popup-action-danger'),
-      queue:        () => btn('queue', 'plus', 'Add to Watchlist'),
-      discover:     () => btn('discover', 'search', 'Discover'),
-      // Social → Recommendations (social.js via mssRecommend): Recommend sends the title; Share (yours) → "I watched this"
-      share:        () => window._navUser ? btn('share', 'share', 'Share') : '',
-      recommend:    () => window._navUser && e.tmdb_id && (e.tmdb_type === 'movie' || e.tmdb_type === 'tv') ? btn('recommend', 'send', 'Recommend') : '',
+      start:   () => e.status === 'queue' || e.status === 'up_next' ? btn('start', 'play', 'Start Watching') : '',
+      upnext:  () => e.status === 'queue' ? btn('upnext', 'skipForward', 'Up Next') : '',
+      pickup:  () => e.status === 'dropped' ? btn('pickup', 'play', 'Pick Back Up') : '',                     // Dropped (071)
+      rewatch: () => finished && typeof rewatchEntry === 'function' ? btn('rewatch', 'refresh', 'Rewatch') : '',
+      rateEps: () => typeof MSSEp !== 'undefined' && MSSEp.isShow(e) ? btn('rateEps', 'ratingStar', 'Rate Episodes') : '',
+      edit:    () => btn('edit', 'edit', 'Edit'),
+      drop:    () => ['watching', 'up_next', 'paused'].includes(e.status) ? btn('drop', 'drop', 'Drop') : '',
+      // your score card — once there's something to put on it (the Title tab has the Discover Card)
+      card:    () => typeof createShareCard === 'function' && (finished || liveScore(e) != null) ? btn('card', 'image', 'Create Card') : '',
+      delete:  () => btn('delete', 'trash', 'Delete', ' popup-action-danger'),
     };
     const keys = opts.owner ? RATING_POPUP_CONFIG.ownerActions : RATING_POPUP_CONFIG.friendActions;
     return keys.map(k => B[k] ? B[k]() : '').join('');
@@ -149,21 +145,40 @@ const MSSRate = (() => {
   async function act(key, b) {
     const e = current;
     if (!e) return;
-    if (key === 'edit')         { goToDetail(e.id, opts.from || thisFile()); return; }
-    if (key === 'rewatch')      { rewatchEntry(e.id); return; }        // closes this popup itself
-    if (key === 'lists')        { MSSList.addTo(e); return; }      // opens on top of this popup
-    if (key === 'card')         { createShareCard(e.id); return; }
-    if (key === 'discoverCard') { createShareCard(e.id, 3, true); return; }
-    if (key === 'queue')        { close(); MSSInfo.fromEntry(e); return; }
-    if (key === 'discover')     { close(); MSSInfo.discover(e, b); return; }
-    if (key === 'share')        { mssRecommend({ kind: 'entry', entry_id: e.id, title: e.title, poster_url: e.poster_url, year: e.year, media_type: e.tmdb_type }); return; }
-    if (key === 'recommend')    { mssRecommend({ tmdb_id: e.tmdb_id, media_type: e.tmdb_type, title: e.title, poster_url: e.poster_url, year: e.year }); return; }
+    const uid = async () => window._navUser?.id || (await getCurrentUser()).id;
+    if (key === 'edit')    { goToDetail(e.id, opts.from || thisFile()); return; }
+    if (key === 'rewatch') { rewatchEntry(e.id); return; }        // closes this popup itself
+    if (key === 'card')    { createShareCard(e.id); return; }
+    if (key === 'rateEps') { close(); MSSEp.rate(e, e.season || 1, Math.max(1, e.episode || 1)); return; }
+    if (key === 'drop' || key === 'pickup') {
+      const onChange = opts.onChange;
+      close();
+      return key === 'drop' ? MSSDrop.drop(e, { onChange }) : MSSDrop.pickUp(e, { onChange });
+    }
+    if (key === 'start' || key === 'upnext') {
+      const handler = opts.handlers?.[key];
+      close();
+      if (handler) return handler(e.id);
+      // Default: just change the status
+      try {
+        const status = key === 'start' ? 'watching' : 'up_next', prev = e.status, id = await uid();
+        await updateProgress(e.id, id, { status });
+        e.status = status;
+        opts.onChange?.(e);
+        showUndoToast(key === 'start' ? `Started watching “${e.title}”` : `“${e.title}” is Up Next`, async () => {
+          await updateProgress(e.id, id, { status: prev });
+          e.status = prev;
+          opts.onChange?.(e);
+        });
+      } catch (err) { console.error(err); showToast('Error updating. Please try again.', 'err'); }
+      return;
+    }
     if (key === 'delete') {
       const ok = await showConfirm({ title: 'Delete entry?', message: `"${e.title || 'This entry'}" will be permanently removed.`, confirmText: 'Delete', iconName: 'trash' });
       if (!ok) return;
       try {
         close();
-        await mssDeleteWithUndo(e, window._navUser?.id || (await getCurrentUser()).id);
+        await mssDeleteWithUndo(e, await uid());
         opts.onDelete?.(e);
       } catch (err) { console.error(err); showToast('Error deleting entry.', 'err'); }
     }
@@ -188,7 +203,9 @@ const MSSRate = (() => {
       (label ? `<span class="${isMovie(e) ? 'type-label' : 'type-label type-label-tv'}">${esc(label)}</span>` : '') +
       (e.genres || []).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('') +
       (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
-    const dateRow = (e.completed_date ? `<span class="w-ep-badge">${MSS_WATCHED_ON} ${fmtDate(e.completed_date)}</span>` : '') +
+    const where = { queue: 'On your Watchlist', up_next: 'Up Next', watching: 'Watching', paused: 'Taking a Break' }[e.status];
+    const dateRow = (where ? `<span class="w-ep-badge">${where}${e.status === 'watching' && !isMovie(e) && (e.season || e.episode) ? ` · S${Number(e.season) || 1} · E${Number(e.episode) || 0}` : ''}</span>` : '') +
+      (e.completed_date ? `<span class="w-ep-badge">${MSS_WATCHED_ON} ${fmtDate(e.completed_date)}</span>` : '') +
       (e.status === 'ongoing' && e.season != null && e.episode != null && !isMovie(e) ? `<span class="w-ep-badge">Left off: S${e.season} · E${e.episode}</span>` : '') +
       (e.status === 'dropped' ? mssDroppedTagHTML(e) : '');
     $('mssRatePopupDateRow').innerHTML = dateRow;
@@ -200,7 +217,11 @@ const MSSRate = (() => {
     $('mssRateScoreVal').textContent = sc != null ? '★ ' + sc : '';
     $('mssRateScoreBox').classList.toggle('is-dropped', e.status === 'dropped');   // a dropped title's score never counts (071)
     $('mssRateScoreNote').hidden = e.status !== 'dropped';
-    $('mssRateBody').innerHTML = bodyHTML(e, !o.owner, !!o.hideNotes)
+    const unrated = sc == null && !Object.keys(e.ratings || {}).some(k => !k.startsWith('_') && e.ratings[k] != null && e.ratings[k] !== '');
+    $('mssRateBody').innerHTML = (unrated ? `<div class="mr-unrated">${icon('ratingStar', 20)}<div><b>Not rated yet</b><span>${o.owner
+        ? (e.status === 'completed' || e.status === 'ongoing' ? 'Tap Edit to rate it.' : 'Rate it once you’ve watched it — Edit has every rating.')
+        : 'They haven’t rated it yet.'}</span></div></div>` : '')
+      + bodyHTML(e, !o.owner, !!o.hideNotes)
       + (o.owner ? `<div class="mr-vis">${mssTitleVisHTML('mssRateVis', e.visibility, '_mssRateVisPick')}</div>` : '');   // yours: who can see it (073)
     $('mssRateCc').innerHTML = o.onComments
       ? `<button type="button" class="cc-strip" onclick="MSSRate._comments()">${icon('comment', 11)}<span>Comments</span></button>` : '';
