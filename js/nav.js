@@ -799,6 +799,8 @@ function toggleMobileUser(e) {
 
 function toggleUserMenu(e) {
   e.stopPropagation();
+  // desktop: your account opens in the same panel as the tabs (_dnavAcct)
+  if (matchMedia('(min-width:1381px)').matches) { _dnavCur === 'acct' ? _dnavHide() : _dnavShow('acct'); return; }
   const dd = document.getElementById('userMenuDropdown');
   if (!dd) return;
   if (!dd.classList.contains('open')) _navCloseAll('user');
@@ -814,11 +816,11 @@ document.addEventListener('click', () => {
 /* ═════════════════════════════════════════════════════════════
    Desktop (>1380px) — the floating top bar + mega menu
    The same four tabs as the phone bar (Home · Library · Social · You — MSS_TABS).
-   Hover or focus a tab (↓ steps into it, Esc closes) and a panel drops under the
-   bar, exactly as wide as it: the tab's pages as cards — with their Personal ·
+   Click a tab (or ↓ on it) and a panel drops under the bar, exactly as wide as it —
+   click it again, click outside or press Esc to close: the tab's pages as cards — with their Personal ·
    Friends · Community / Compare · Blend shortcuts — and on the far right a showcase
    card for the page you're pointing at, in the Start Exploring cards' look
-   (index.html .xp-card). A soft pill slides under the tab you're on / pointing at.
+   (index.html .xp-card). The tab you're on is olive with an underline, like before.
 ═════════════════════════════════════════════════════════════ */
 const DNAV_INFO = {
   'index.html':                 'Your portfolio at a glance — what you’re watching, what’s next and what friends are up to.',
@@ -844,31 +846,49 @@ const DNAV_INFO = {
   'cabinet.html':               'The medals and achievements you’ve earned.',
   'export.html':                'Cards, PDFs, spreadsheets and backups of your library.',
 };
-const DNAV_TONE = { home: ['#1E5C26', '#0F2D14'], lib: ['#1D4A7A', '#0B1F36'], social: ['#5B2D7A', '#22102E'], you: ['#8A5A14', '#33210A'] };
+const DNAV_TONE = { home: ['#1E5C26', '#0F2D14'], lib: ['#1D4A7A', '#0B1F36'], social: ['#5B2D7A', '#22102E'], you: ['#8A5A14', '#33210A'], acct: ['#1F5E5B', '#0B2624'] };
+// The account menu (avatar) on desktop opens in the same panel — you, Medals, Export, Settings,
+// Admin (owners), Switch account, Sign out (the phone keeps its small dropdown: _navAcctMenuHTML)
+function _dnavAcct() {
+  const p = window._navUserProfile || {}, name = p.username || 'you';
+  let admin = false; try { admin = (sessionStorage.getItem('mss_admin') || '').endsWith(':1'); } catch {}
+  return { k: 'acct', label: 'Account', items: [
+    { label: p.display_name || name, icon: 'user', href: 'profile.html', info: '@' + name + ' · your profile, stats and favourites.', me: true },
+    { label: 'Medals', icon: 'trophy', href: 'cabinet.html' },
+    { label: 'Export', icon: 'download', href: 'export.html' },
+    { label: 'Settings', icon: 'settings', href: 'settings.html', info: 'Your account, privacy, notifications, language and look.' },
+    ...(admin ? [{ label: 'Admin', icon: 'lock', href: 'admin.html', info: 'Reports, pictures waiting for review, users and site settings.' }] : []),
+    { label: 'Switch account', icon: 'users', act: '_navAccounts()', info: 'Hop to another account you’ve signed in with on this device.' },
+    { label: 'Sign out', icon: 'logout', act: 'handleLogout()', info: 'Sign out of MyScreenFolio on this device.', out: true },
+  ] };
+}
+const _dnavTab = k => k === 'acct' ? _dnavAcct() : _dnavTabs().find(x => x.k === k);
+const _dnavInfo = it => it.info || DNAV_INFO[it.href] || '';
 const _dnavTabs = () => MSS_TABS.filter(t => t.items);
 // the phone toggles shorten "TV Shows" to "TV" — here there's room for the full name
 const _dnavLabel = it => LIBRARY_PAGES.find(p => p.href === it.href)?.label || it.label;
 function _dnavTabsHTML() {
   const where = _mtabWhere();
-  return `<span class="dnav-pill" aria-hidden="true"></span>` + _dnavTabs().map(t =>
-    `<a class="dnav-tab${t.k === where.tab ? ' active' : ''}" href="${t.href}" data-tab="${t.k}"${t.k === 'social' ? ' data-page="friends.html"' : ''} aria-haspopup="true" aria-expanded="false" aria-controls="dnavMega"${t.k === where.tab ? ' aria-current="page"' : ''}>${icon(t.icon, 16)}<span>${t.label}</span>${icon('chevdown', 12)}</a>`).join('');
+  return _dnavTabs().map(t =>
+    `<button type="button" class="dnav-tab${t.k === where.tab ? ' active' : ''}" data-tab="${t.k}"${t.k === 'social' ? ' data-page="friends.html"' : ''} aria-haspopup="true" aria-expanded="false" aria-controls="dnavMega">${icon(t.icon, 16)}<span>${t.label}</span>${icon('chevdown', 12)}</button>`).join('');
 }
-let _dnavCur = null, _dnavTimer = null;
+let _dnavCur = null;
 function _dnavShowcase(t, it) {
   const [a, b] = DNAV_TONE[t.k] || DNAV_TONE.home;
-  return `<a class="dnav-show" href="${it.href}" style="--xp-a:${a};--xp-b:${b}" tabindex="-1" aria-hidden="true">
+  const av = it.me && safeURL(window._navUserProfile?.avatar_url);
+  return `<a class="dnav-show" ${it.act ? `href="#" onclick="${it.act};return false"` : `href="${it.href}"`} style="--xp-a:${a};--xp-b:${b}" tabindex="-1" aria-hidden="true">
       <span class="dnav-show-ghost">${escHTML(_dnavLabel(it))}</span>
-      <span class="dnav-show-orb"><span class="dnav-show-ring"></span><span class="dnav-show-ring r2"></span>${icon(it.icon, 54)}</span>
+      <span class="dnav-show-orb${av ? ' has-av' : ''}"><span class="dnav-show-ring"></span><span class="dnav-show-ring r2"></span>${av ? `<img src="${av}" alt="">` : icon(it.icon, 54)}</span>
       <span class="dnav-show-tx">
         <span class="dnav-show-badge">${escHTML(t.label)}</span>
         <span class="dnav-show-title">${escHTML(it.label === 'Inbox' ? 'Recommendations' : _dnavLabel(it))}</span>
-        <span class="dnav-show-sub">${escHTML(DNAV_INFO[it.href] || '')}</span>
-        <span class="dnav-show-cta">Open ${icon('arrowRight', 13)}</span>
+        <span class="dnav-show-sub">${escHTML(_dnavInfo(it))}</span>
+        <span class="dnav-show-cta">${it.act ? escHTML(it.label) : 'Open'} ${icon('arrowRight', 13)}</span>
       </span>
     </a>`;
 }
 function _dnavPick(i) {
-  const t = _dnavTabs().find(x => x.k === _dnavCur), it = t?.items[i];
+  const t = _dnavTab(_dnavCur), it = t?.items[i];
   if (!it) return;
   document.querySelectorAll('#dnavMegaIn .dnav-item').forEach((el, j) => el.classList.toggle('on', j === i));
   const slot = document.getElementById('dnavShow');
@@ -876,30 +896,24 @@ function _dnavPick(i) {
   slot.dataset.i = i;
   slot.innerHTML = _dnavShowcase(t, it);
 }
-function _dnavPill(tab) {
-  const pill = document.querySelector('#dnav .dnav-pill');
-  if (!pill) return;
-  if (!tab) { pill.style.opacity = 0; return; }
-  pill.style.opacity = 1;
-  pill.style.width = tab.offsetWidth + 'px';
-  pill.style.transform = `translateX(${tab.offsetLeft}px)`;
-}
 function _dnavShow(k) {
-  const t = _dnavTabs().find(x => x.k === k), mega = document.getElementById('dnavMega');
+  const t = _dnavTab(k), mega = document.getElementById('dnavMega');
   if (!t || !mega) return;
   document.querySelectorAll('#dnav .dnav-tab').forEach(a => { const on = a.dataset.tab === k; a.classList.toggle('open', on); a.setAttribute('aria-expanded', on); });
-  _dnavPill(document.querySelector(`#dnav .dnav-tab[data-tab="${k}"]`));
+  document.querySelector('#dnav .nav-user-wrap')?.classList.toggle('open', k === 'acct');
   if (_dnavCur === k && !mega.hidden) return;
   if (mega.hidden) _navCloseAll('mega');
   _dnavCur = k;
-  const where = _mtabWhere(), here = where.tab === k ? where.item : -1;
+  const where = _mtabWhere(), page = location.pathname.split('/').pop() || 'index.html';
+  const here = k === 'acct' ? t.items.findIndex(it => it.href === page) : where.tab === k ? where.item : -1;
+  const me = safeURL(window._navUserProfile?.avatar_url);
   mega.setAttribute('aria-label', t.label);
   document.getElementById('dnavMegaIn').innerHTML = `
     <div class="dnav-items" style="--cols:${t.items.length > 6 ? 4 : t.items.length > 2 ? 3 : 2}">${t.items.map((it, i) => `
-      <div class="dnav-item${i === here ? ' here' : ''}" data-i="${i}">
-        <a class="dnav-item-main" href="${it.href}"${i === here ? ' aria-current="page"' : ''}>
-          <span class="dnav-item-ic" style="--xp-a:${(DNAV_TONE[k] || DNAV_TONE.home)[0]}">${icon(it.icon, 19)}</span>
-          <span class="dnav-item-tx"><b>${escHTML(_dnavLabel(it))}</b><small>${escHTML(DNAV_INFO[it.href] || '')}</small></span>
+      <div class="dnav-item${i === here ? ' here' : ''}${it.out ? ' is-out' : ''}" data-i="${i}">
+        <a class="dnav-item-main" ${it.act ? `href="#" role="button" onclick="${it.act};return false"` : `href="${it.href}"`}${i === here ? ' aria-current="page"' : ''}>
+          <span class="dnav-item-ic${it.me && me ? ' is-av' : ''}" style="--xp-a:${(DNAV_TONE[k] || DNAV_TONE.home)[0]}">${it.me && me ? `<img src="${me}" alt="">` : icon(it.icon, 19)}</span>
+          <span class="dnav-item-tx"><b translate="${it.me ? 'no' : 'yes'}">${escHTML(_dnavLabel(it))}</b><small>${escHTML(_dnavInfo(it))}</small></span>
         </a>
         ${it.sub ? `<div class="dnav-subs">${it.sub.map(([l, h], j) => `<a class="dnav-sub${i === here && j === where.sub ? ' here' : ''}" href="${h}">${escHTML(l)}</a>`).join('')}</div>` : ''}
       </div>`).join('')}
@@ -911,36 +925,26 @@ function _dnavShow(k) {
 }
 function _dnavHide() {
   const mega = document.getElementById('dnavMega');
-  clearTimeout(_dnavTimer);
   if (!mega || mega.hidden) return;
   mega.classList.remove('open'); mega.hidden = true; _dnavCur = null;
   document.querySelectorAll('#dnav .dnav-tab').forEach(a => { a.classList.remove('open'); a.setAttribute('aria-expanded', 'false'); });
-  _dnavPill(document.querySelector('#dnav .dnav-tab.active'));
+  document.querySelector('#dnav .nav-user-wrap')?.classList.remove('open');
 }
 function _dnavInit() {
   const bar = document.getElementById('dnav'), mega = document.getElementById('dnavMega');
   if (!bar || !mega) return;
-  const later = (fn, ms) => { clearTimeout(_dnavTimer); _dnavTimer = setTimeout(fn, ms); };
-  bar.querySelectorAll('.dnav-tab').forEach(a => {
-    a.addEventListener('mouseenter', () => later(() => _dnavShow(a.dataset.tab), mega.hidden ? 90 : 0));
-    a.addEventListener('focus', () => _dnavShow(a.dataset.tab));
-    a.addEventListener('keydown', ev => {
-      if (ev.key === 'ArrowDown') { ev.preventDefault(); _dnavShow(a.dataset.tab); mega.querySelector('.dnav-item-main')?.focus(); }
+  bar.querySelectorAll('.dnav-tab').forEach(t => {
+    t.addEventListener('click', ev => { ev.stopPropagation(); if (!mega.hidden && _dnavCur === t.dataset.tab) _dnavHide(); else _dnavShow(t.dataset.tab); });
+    t.addEventListener('keydown', ev => {
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); _dnavShow(t.dataset.tab); mega.querySelector('.dnav-item-main')?.focus(); }
       if (ev.key === 'Escape') _dnavHide();
     });
   });
-  // the logo / search / buttons aren't part of the menu → it closes when you move onto them
-  bar.querySelectorAll(':scope > .nav-logo, :scope > .nav-right').forEach(el => el.addEventListener('mouseenter', () => later(_dnavHide, 160)));
-  bar.addEventListener('mouseleave', () => later(_dnavHide, 240));
-  mega.addEventListener('mouseenter', () => clearTimeout(_dnavTimer));
+  mega.addEventListener('click', ev => ev.stopPropagation());
+  document.addEventListener('click', () => _dnavHide());                // a click anywhere else closes it
   mega.addEventListener('mouseover', ev => { const it = ev.target.closest('.dnav-item'); if (it) _dnavPick(Number(it.dataset.i)); });
   mega.addEventListener('focusin', ev => { const it = ev.target.closest('.dnav-item'); if (it) _dnavPick(Number(it.dataset.i)); });
-  mega.addEventListener('keydown', ev => { if (ev.key === 'Escape') { const k = _dnavCur; _dnavHide(); bar.querySelector(`.dnav-tab[data-tab="${k}"]`)?.focus(); } });
-  bar.addEventListener('focusout', ev => { if (!bar.contains(ev.relatedTarget)) _dnavHide(); });
-  const settle = () => _dnavPill(bar.querySelector('.dnav-tab.' + (mega.hidden ? 'active' : 'open')));
-  settle();
-  document.fonts?.ready.then(settle);
-  addEventListener('resize', settle);
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !mega.hidden) { const k = _dnavCur; _dnavHide(); bar.querySelector(`.dnav-tab[data-tab="${k}"]`)?.focus(); } });
 }
 
 /* ═════════════════════════════════════════════════════════════
