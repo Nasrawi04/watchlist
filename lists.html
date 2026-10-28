@@ -121,6 +121,9 @@
 #listsFilterBanner button {
   background:none; border:none; color:var(--olive-light); font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:underline;
 }
+#listsFilterBanner a { color:inherit; font-weight:700; text-decoration:underline; text-underline-offset:2px; }
+
+.ll-pos { margin-inline-start:8px; padding:1px 8px; border-radius:4px; background:var(--olive-faint); color:var(--olive-light); font-size:11px; font-weight:700; }
 
 /* ── Social list rows ── */
 .social-list-row { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.1rem 1.25rem; transition:border-color .15s; cursor:pointer; }
@@ -283,7 +286,7 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
       <div class="cat-page-sub" id="listsPageSub"></div>
     </div>
     <div class="cat-page-header-right lists-page-header-right">
-      <button class="btn-add-entry" id="listsCustomBtn" onclick="MSSListStudio.open()">+ New List</button>
+      <button class="btn-add-entry" id="listsCustomBtn" onclick="if(!mssGuestGate('make lists'))MSSListStudio.open()">+ New List</button>
     </div>
   </div>
 
@@ -392,7 +395,9 @@ window.addEventListener('pageshow', (event) => {
 document.addEventListener('DOMContentLoaded', () => {
   attachClearButton('listsSearchInput');
   initPage(async (user) => {
-    if (!user) {
+    const q = new URLSearchParams(location.search);
+    // Guests can look through Community lists; their own lists need an account
+    if (!user && q.get('mode') !== 'community') {
       document.querySelector('.page-wrap').innerHTML = `
         <div class="guest-page-state fade-up">
           <div class="guest-page-icon">${icon('layers', 36)}</div>
@@ -402,16 +407,17 @@ document.addEventListener('DOMContentLoaded', () => {
             <a href="login.html" class="guest-btn-primary">Sign In</a>
             <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
           </div>
+          <a class="guest-browse" href="lists.html?mode=community">Browse Community lists →</a>
         </div>`;
       return;
     }
+    if (!user) { setListsMode('social'); return; }
     _listsUser = user;
     MSSListStudio.init({
       lists: () => _listsAll, entries: () => _listsEntries, resolve: _resolveListItem, save: saveFavoriteList,
       afterSave: (list, isNew) => { if (isNew) _listsAll.push(list); renderListsPage(); },
       collab: id => openCollabPicker(id),
     });
-    const q = new URLSearchParams(location.search);
     if (q.get('mode') === 'community') setListsMode('social');
     if (q.get('new')) {                                 // (+) → New list, from another page
       const url = new URL(location.href); url.searchParams.delete('new');
@@ -1124,6 +1130,7 @@ SF.register('social', {
 });
 
 function setListsMode(mode) {
+  if (mode !== 'social' && mssGuestGate('make your own lists')) return;
   _listsMode = mode;
   const url = new URL(location.href);                 // ?mode=community — the phone toggles link to it
   if (mode === 'social') url.searchParams.set('mode', 'community'); else url.searchParams.delete('mode');
@@ -1134,6 +1141,7 @@ function setListsMode(mode) {
   document.getElementById('listsSearchWrap').style.display = mode === 'social' ? '' : 'none';
   // "New List" stays available in both modes — you can start a new
   // personal list even while browsing the community feed.
+  if (mode !== 'social') _llForgetTitle();
   if (mode === 'social') {
     _listsFilterMode = null;
     document.getElementById('listsFilterBanner').style.display = 'none';
@@ -1301,6 +1309,7 @@ function _llSelectResult(i) {
   if (!r) return;
   document.getElementById('listsSearchInput').value = r.type === 'item' ? r.title : (r.username || r.title);
   _llCloseDropdown();
+  if (r.type !== 'list') _llForgetTitle();
 
   if (r.type === 'user') {
     const lists = _socialListsRaw.filter(l => l.user_id === r.id);
@@ -1324,10 +1333,50 @@ function _showListsFilterBanner(text) {
 }
 
 function _llClearFilter() {
+  _llForgetTitle();
   _listsFilterMode = null;
   document.getElementById('listsSearchInput').value = '';
   document.getElementById('listsFilterBanner').style.display = 'none';
   renderSocialLists();
+}
+
+// Back to the whole Community: drop ?tmdb=…&type=…&t=…
+function _llForgetTitle() {
+  if (!_listsTitle) return;
+  _listsTitle = null;
+  const url = new URL(location.href);
+  ['tmdb', 'type', 't'].forEach(k => url.searchParams.delete(k));
+  history.replaceState(history.state, '', url.pathname + url.search);
+  if (_listsMode === 'social') document.getElementById('listsPageSub').textContent = 'Explore collections from the community and discover what others are watching.';
+}
+
+// Every list holding one title — the same lists as its title page (get_lists_for_title).
+// Lists the Community feed doesn't have yet join it, so their popup, likes and forks work as usual.
+async function _llLoadTitle() {
+  const t = _listsTitle;
+  _showListsFilterBanner(`Showing lists with <a href="title.html?id=${t.id}&type=${t.type}" translate="no">${esc(t.name)}</a>`);
+  try {
+    const { data, error } = await sb.rpc('get_lists_for_title', { p_tmdb_id: t.id, p_tmdb_type: t.type });
+    if (error) throw error;
+    if (_listsTitle !== t) return;                           // cleared while loading
+    const byId = new Map(_socialListsRaw.map(l => [l.id, l])), add = (data || []).filter(l => !byId.has(l.id));
+    const need = [...new Set(add.flatMap(l => l.items || []))].filter(id => !MSSList.isTmdbId(id) && !_socialEntryMap[id]);
+    const [entryRes, reactRes] = await Promise.all([
+      need.length ? sb.from('entries').select('*').in('id', need) : { data: [] },
+      (_listsUser && add.length) ? sb.from('list_reactions').select('list_id, is_like').eq('user_id', _listsUser.id).in('list_id', add.map(l => l.id)) : { data: [] },
+    ]);
+    (entryRes.data || []).forEach(e => { _socialEntryMap[e.id] = e; });
+    await mssFillHiddenListItems(need, _socialEntryMap);
+    (reactRes.data || []).forEach(r => { _socialListsMyReactions[r.list_id] = r.is_like ? 'like' : 'dislike'; });
+    add.forEach(l => _socialListsRaw.push(l));
+    const lists = (data || []).map(l => byId.get(l.id) || l);
+    _listsFilterMode = { type: 'title', label: t.name, lists, pos: Object.fromEntries((data || []).map(l => [l.id, l.pos])) };
+    document.getElementById('listsPageSub').textContent = `${lists.length} list${lists.length !== 1 ? 's' : ''} with "${t.name}"`;
+    MSSList.hydrate(add).then(changed => { if (changed && _listsMode === 'social') renderSocialLists(); });
+  } catch (err) {
+    console.error('Lists for title:', err);
+    _listsFilterMode = { type: 'title', label: t.name, lists: [] };
+  }
 }
 
 function setSocialListsSort(val) { SF.setSort('social', 'all', val === 'latest' ? 'newest' : val); }
@@ -1337,7 +1386,9 @@ function _resolveSocialItem(id) {
   if (typeof id === 'string' && id.startsWith('tmdb:')) return MSSList.tmdb(id);
   return _socialEntryMap[id] || null;
 }
-let _listsFilterMode = null; // { type: 'user'|'item', label, ... }
+let _listsFilterMode = null; // { type: 'user'|'item'|'title', label, lists, pos? }
+// From a title page's "View all lists": lists.html?mode=community&tmdb=<id>&type=<movie|tv>&t=<name>
+let _listsTitle = (q => q.get('tmdb') ? { id: Number(q.get('tmdb')), type: q.get('type') === 'tv' ? 'tv' : 'movie', name: q.get('t') || 'this title' } : null)(new URLSearchParams(location.search));
 
 // Fetches Community data once (also used to prefetch in the background);
 // TMDB posters for Discover-added titles fill in afterwards.
@@ -1375,6 +1426,7 @@ async function loadSocialLists() {
   }
   try {
     _socialListsRaw = await _fetchSocialLists();
+    if (_listsTitle) await _llLoadTitle();
     if (_listsMode === 'social') renderSocialLists();
   } catch (err) {
     console.error('Load social lists error:', err);
@@ -1402,7 +1454,7 @@ function renderSocialLists() {
   const titles = new Set(all.flatMap(l => l.items || [])).size;
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const thisWeek = all.filter(l => new Date(l.created_at).getTime() >= weekAgo).length;
-  document.getElementById('listsPageStats').innerHTML = all.length ? `
+  document.getElementById('listsPageStats').innerHTML = all.length && _listsFilterMode?.type !== 'title' ? `
     <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Lists</div></div>
     <div class="page-stat"><div class="page-stat-num">${curators}</div><div class="page-stat-label">Curators</div></div>
     <div class="page-stat"><div class="page-stat-num">${titles}</div><div class="page-stat-label">Titles Featured</div></div>
@@ -1411,7 +1463,7 @@ function renderSocialLists() {
   const source = SF.list('social', 'all');
   const baseCount = (_listsFilterMode ? _listsFilterMode.lists : all).length;
   if (!_listsFilterMode) mssSkeleton.shape('lists_c', { n: source.length });
-  _renderListsToolbar(_listsFilterMode ? 'Search Results' : 'Community', source.length, baseCount ? SF.bar('social', 'all') : '');
+  _renderListsToolbar(_listsFilterMode?.type === 'title' ? 'On This Title' : _listsFilterMode ? 'Search Results' : 'Community', source.length, baseCount ? SF.bar('social', 'all') : '');
   if (!baseCount) {
     wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
       <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('layers', 44)}</div>
@@ -1433,7 +1485,7 @@ function renderSocialLists() {
         <div class="social-list-username">@${esc(l.username || 'user')}</div>
       </div>
       <div class="lc-title-row"><div class="lc-title" translate="no">${esc(l.title)}</div>${MSSList.officialBadge(l) || MSSList.rankBadge(l.ranked)}</div>
-      <div class="lc-meta">${MSSList.countHTML(items.length)}</div>
+      <div class="lc-meta">${MSSList.countHTML(items.length)}${l.ranked && _listsFilterMode?.pos?.[l.id] ? `<span class="ll-pos">#${_listsFilterMode.pos[l.id]} in this list</span>` : ''}</div>
       ${MSSList.postersHTML(items, _resolveSocialItem)}
       <div class="social-list-reactions">
         <button type="button" class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="event.stopPropagation();reactToSocialList(${id}, true)">
@@ -1577,7 +1629,7 @@ function _renderSocialListPopup() { _renderListPopup(); }
 
 
 async function forkSocialList(listId) {
-  if (!_listsUser) { showToast('Sign in to add lists.', 'err'); return; }
+  if (mssGuestGate('save lists') || !_listsUser) return;
   const list = _socialListsRaw.find(l => l.id === listId);
   if (!list) return;
   try {
