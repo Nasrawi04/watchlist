@@ -142,7 +142,7 @@ let _dlPage = 1;
 let _dlLoading = false;
 let _dlDone = false;
 let _dlView = localStorage.getItem('disc_listView') || 'grid';
-const _dlIsRanked = _dlCategory.key.startsWith('top250') || _dlCategory.key === 'recommended';
+const _dlIsRanked = _dlCategory.key.startsWith('top250') || _dlCategory.key === 'recommended' || _dlCategory.key === 'top_rated_mss';   // ranked lists: #1, #2… badges
 
 // Type badge is only shown on the Anime/Cartoons categories, where a
 // single list genuinely mixes movies and shows (a viewer can't tell
