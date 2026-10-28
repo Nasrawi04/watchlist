@@ -939,18 +939,18 @@ const MSSRich = (() => {
 })();
 
 /* ══════════════════════════════════════════
-   EMOJI PICKER — MSSEmoji
-   For laptops and desktops (a mouse or trackpad — phones and tablets have an emoji
-   keyboard): wherever you write — notes, comments, replies, episode chat, polls,
-   recommendations, list names and descriptions, the Export Studio's title, your bio,
-   challenges, Movie Night — a small smiley button sits in the corner of the box while
-   you type in it (in a note's B · I · U toolbar it's a button of its own). Ctrl + ;
-   opens it from the keyboard too.
-   The picker: search, Recently used, then every group (Smileys, People, Animals &
-   Nature, Food, Activities, Travel, Objects, Symbols, Flags). Click an emoji → it goes
-   in where the cursor was and the picker stays open for more; Esc or a click outside
-   closes it. The emoji list (js/emoji-data.js) loads the first time it opens.
-     MSSEmoji.open(field, anchor)   field: a textarea / input / the note editor
+   EMOJI — MSSEmoji (laptops / desktops; phones have an emoji keyboard)
+   Wherever you write — notes, comments, replies, episode chat, polls, recommendations,
+   list names and descriptions, the Export Studio's title, your bio, challenges, Movie
+   Night — a small smiley sits in the corner of the box you're typing in (it's part of the
+   page, so it scrolls with the box). In a note's B · I · U toolbar it's a button of its own.
+   Like WhatsApp:
+     • the smiley (or Ctrl + ;) → your 5 most-used emoji in a little bar, and +
+     • + → every emoji in a popup like the site's others (page locked behind it): search,
+       Recently used, every group. Picking one puts it in and closes the popup.
+   The emoji go in where the cursor was (Undo works, word counts update). The list
+   (js/emoji-data.js) loads the first time the popup opens.
+     MSSEmoji.quick(field, anchor) · MSSEmoji.all(field)
 ══════════════════════════════════════════ */
 const MSSEmoji = (() => {
   const FINE = matchMedia('(hover: hover) and (pointer: fine)');
@@ -958,10 +958,24 @@ const MSSEmoji = (() => {
   const FIELDS = 'textarea:not([readonly]):not([hidden]):not([data-no-emoji]), .mss-rte, #mssCommentsInput, .det-reply-input, #lsName, #xsTitle, #setDisplayName, #mnT, #chT, .ch-in:not([inputmode]), input[id^="pfO"]';
   const GROUPS = [['smile', '😀', 'Smileys'], ['people', '👋', 'People'], ['nature', '🐻', 'Animals & Nature'], ['food', '🍔', 'Food & Drink'], ['activity', '⚽', 'Activities'],
     ['travel', '✈️', 'Travel & Places'], ['objects', '💡', 'Objects'], ['symbols', '❤️', 'Symbols'], ['flags', '🏁', 'Flags']];
-  const RECENT_KEY = 'mss_emoji_recent', RECENT_MAX = 27;
-  let data = null, loading = null, panel = null, trigger = null, field = null, saved = null;
-  const recent = () => { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; } };
+  const STARTERS = ['😂', '❤️', '👍', '😭', '🔥'];     // until you've used five of your own
+  const USE_KEY = 'mss_emoji_use', RECENT_MAX = 27;
+  let data = null, loading = null, field = null, saved = null, trigger = null, bar = null, ov = null;
   const isRte = el => el && el.classList?.contains('mss-rte');
+
+  /* what you've used: { emoji: [times, last used] } → most used, recently used */
+  const uses = () => { try { return JSON.parse(localStorage.getItem(USE_KEY) || '{}') || {}; } catch { return {}; } };
+  function used(e) {
+    const u = uses(), n = u[e] || [0, 0];
+    u[e] = [n[0] + 1, Date.now()];
+    const keep = Object.entries(u).sort((a, b) => b[1][1] - a[1][1]).slice(0, 60);   // only the last 60 different ones
+    try { localStorage.setItem(USE_KEY, JSON.stringify(Object.fromEntries(keep))); } catch {}
+  }
+  const top5 = () => {
+    const mine = Object.entries(uses()).sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1]).map(x => x[0]);
+    return [...mine, ...STARTERS.filter(e => !mine.includes(e))].slice(0, 5);
+  };
+  const recent = () => Object.entries(uses()).sort((a, b) => b[1][1] - a[1][1]).map(x => x[0]).slice(0, RECENT_MAX);
 
   function load() {
     if (data) return Promise.resolve(data);
@@ -975,7 +989,7 @@ const MSSEmoji = (() => {
     }));
   }
 
-  // remember where the cursor was in the field, so an emoji goes in right there
+  /* ── putting it in, where the cursor was ── */
   function remember() {
     if (!field) return;
     if (isRte(field)) { const sel = getSelection(); if (sel.rangeCount && field.contains(sel.anchorNode)) saved = sel.getRangeAt(0).cloneRange(); }
@@ -1002,26 +1016,100 @@ const MSSEmoji = (() => {
       }
     }
     remember();
-    try { localStorage.setItem(RECENT_KEY, JSON.stringify([emoji, ...recent().filter(x => x !== emoji)].slice(0, RECENT_MAX))); } catch {}
+    used(emoji);
   }
 
-  /* ── the picker ── */
+  /* ── the smiley in the corner of the box — part of the page, so it moves with it ── */
+  function showTrigger(f) {
+    if (!trigger) {
+      trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'mss-emo-trigger';
+      trigger.title = 'Emoji (Ctrl + ;)';
+      trigger.setAttribute('aria-label', 'Add an emoji');
+      trigger.setAttribute('aria-haspopup', 'true');
+      trigger.innerHTML = icon('smile', 17);
+      trigger.addEventListener('mousedown', ev => ev.preventDefault());   // the box keeps its cursor
+      trigger.addEventListener('click', () => bar?.classList.contains('open') ? closeBar(true) : quick(field, trigger));
+    }
+    field = f;
+    // next to the box, inside the same parent: no layout change (it's positioned), and it
+    // scrolls, moves and hides with the box — in a popup too
+    if (trigger.parentElement !== f.parentElement || trigger.previousElementSibling !== f) f.after(trigger);
+    trigger.hidden = false;
+    posTrigger();
+  }
+  function posTrigger() {
+    if (!trigger || trigger.hidden || !field || trigger.previousElementSibling !== field) return;
+    const tall = field.offsetHeight > 56, resizable = field.tagName === 'TEXTAREA' && getComputedStyle(field).resize !== 'none';
+    trigger.style.top = (field.offsetTop + (tall ? field.offsetHeight - 34 : (field.offsetHeight - 28) / 2)) + 'px';
+    trigger.style.left = (field.offsetLeft + field.offsetWidth - 34 - (resizable ? 14 : 0)) + 'px';
+  }
+  function hideTrigger() { if (trigger) { trigger.hidden = true; trigger.remove(); } }
+
+  /* ── your top 5 + "+" (closes on a click elsewhere or Esc) ── */
+  function quick(f, anchor) {
+    if (!f) return;
+    field = f; remember();
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'mss-emo-quick';
+      bar.setAttribute('role', 'toolbar');
+      bar.setAttribute('aria-label', 'Emoji');
+      bar.addEventListener('mousedown', ev => ev.preventDefault());
+      bar.addEventListener('click', ev => {
+        const b = ev.target.closest('button'); if (!b) return;
+        if (b.dataset.more) { closeBar(); all(field); return; }
+        insert(b.dataset.e); closeBar();
+      });
+      bar.addEventListener('keydown', ev => {
+        const bs = [...bar.querySelectorAll('button')], i = bs.indexOf(document.activeElement);
+        if (ev.key === 'Escape') { ev.preventDefault(); closeBar(true); }
+        if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { ev.preventDefault(); bs[(i + (ev.key === 'ArrowRight' ? 1 : -1) + bs.length) % bs.length].focus(); }
+      });
+      document.body.appendChild(bar);
+    }
+    bar.innerHTML = top5().map(e => `<button type="button" class="mss-emo-q" data-e="${e}" aria-label="${e}">${e}</button>`).join('')
+      + `<button type="button" class="mss-emo-q mss-emo-more" data-more="1" aria-label="More emoji" title="More emoji">${icon('plus', 18)}</button>`;
+    bar._at = anchor && anchor.isConnected ? anchor : f;
+    bar.classList.add('open');
+    placeBar();
+  }
+  // stays by the smiley while the page (or a popup) scrolls; goes once the smiley is out of sight
+  let barRaf = 0;
+  function placeBar() {
+    barRaf = 0;
+    if (!bar?.classList.contains('open')) return;
+    const r = bar._at.getBoundingClientRect(), w = bar.offsetWidth, h = bar.offsetHeight;
+    if (!bar._at.isConnected || r.bottom < 0 || r.top > innerHeight) { closeBar(); return; }
+    const above = r.top - h - 8 >= 8;
+    bar.style.top = (above ? r.top - h - 8 : r.bottom + 8) + 'px';
+    bar.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.right - w)) + 'px';
+  }
+  function closeBar(refocus) {
+    if (!bar?.classList.contains('open')) return;
+    bar.classList.remove('open');
+    if (refocus && field?.isConnected) field.focus({ preventScroll: true });
+  }
+
+  /* ── every emoji: a popup like the site's others (MSSDialog — page locked behind it) ── */
   function build() {
-    panel = document.createElement('div');
-    panel.className = 'mss-emo';
-    panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-label', 'Emoji');
-    panel.innerHTML = `<div class="mss-emo-search">${icon('search', 15)}<input type="text" placeholder="Search emoji" aria-label="Search emoji" autocomplete="off" spellcheck="false" data-no-emoji></div>
+    ov = document.createElement('div');
+    ov.className = 'mss-emo-ov';
+    ov.innerHTML = `<div class="mss-emo" role="dialog" aria-modal="true" aria-labelledby="mssEmoT">
+      <div class="mss-emo-head"><b id="mssEmoT">Emoji</b><button type="button" class="dp-close" onclick="MSSEmoji._close()" aria-label="Close">${icon('x', 18)}</button></div>
+      <div class="mss-emo-search">${icon('search', 15)}<input type="text" placeholder="Search emoji" aria-label="Search emoji" autocomplete="off" spellcheck="false" data-no-emoji></div>
       <div class="mss-emo-tabs" role="tablist">${[['recent', '🕘', 'Recently used'], ...GROUPS].map(([k, e, l]) => `<button type="button" class="mss-emo-tab" data-tab="${k}" title="${l}" aria-label="${l}">${e}</button>`).join('')}</div>
-      <div class="mss-emo-grid" tabindex="-1"><div class="mss-emo-wait">Loading emoji…</div></div>
-      <div class="mss-emo-foot"><span class="mss-emo-big" aria-hidden="true">😀</span><span class="mss-emo-name">Pick an emoji</span></div>`;
-    document.body.appendChild(panel);
-    const grid = panel.querySelector('.mss-emo-grid'), q = panel.querySelector('input');
-    panel.addEventListener('mousedown', ev => { if (ev.target !== q) ev.preventDefault(); });   // the field keeps its cursor
-    grid.addEventListener('click', ev => { const b = ev.target.closest('.mss-emo-e'); if (b) insert(b.textContent); });
-    const show = ev => { const b = ev.target.closest('.mss-emo-e'); if (!b) return; panel.querySelector('.mss-emo-big').textContent = b.textContent; panel.querySelector('.mss-emo-name').textContent = b.title.charAt(0).toUpperCase() + b.title.slice(1); };
+      <div class="mss-emo-grid"><div class="mss-emo-wait">Loading emoji…</div></div>
+      <div class="mss-emo-foot"><span class="mss-emo-big" aria-hidden="true">😀</span><span class="mss-emo-name">Pick an emoji</span></div>
+    </div>`;
+    MSSDialog.bind(ov, () => closeAll());
+    document.body.appendChild(ov);
+    const grid = ov.querySelector('.mss-emo-grid'), q = ov.querySelector('input');
+    grid.addEventListener('click', ev => { const b = ev.target.closest('.mss-emo-e'); if (b) pick(b.textContent); });
+    const show = ev => { const b = ev.target.closest('.mss-emo-e'); if (!b) return; ov.querySelector('.mss-emo-big').textContent = b.textContent; ov.querySelector('.mss-emo-name').textContent = b.title.charAt(0).toUpperCase() + b.title.slice(1); };
     grid.addEventListener('mouseover', show); grid.addEventListener('focusin', show);
-    panel.querySelector('.mss-emo-tabs').addEventListener('click', ev => {
+    ov.querySelector('.mss-emo-tabs').addEventListener('click', ev => {
       const t = ev.target.closest('.mss-emo-tab'); if (!t) return;
       if (q.value) { q.value = ''; fill(); }
       const sec = grid.querySelector(`[data-sec="${t.dataset.tab}"]`);
@@ -1029,23 +1117,20 @@ const MSSEmoji = (() => {
     });
     grid.addEventListener('scroll', mark, { passive: true });
     q.addEventListener('input', fill);
-    panel.addEventListener('keydown', ev => {
-      if (ev.key === 'Escape') { ev.preventDefault(); close(true); }
-      if (ev.key === 'Enter' && ev.target === q) { const first = grid.querySelector('.mss-emo-e'); if (first) { ev.preventDefault(); insert(first.textContent); } }
-    });
+    q.addEventListener('keydown', ev => { if (ev.key === 'Enter') { const first = grid.querySelector('.mss-emo-e'); if (first) { ev.preventDefault(); pick(first.textContent); } } });
   }
   function fill() {
-    const grid = panel.querySelector('.mss-emo-grid'), q = panel.querySelector('input').value.trim().toLowerCase();
+    const grid = ov.querySelector('.mss-emo-grid'), q = ov.querySelector('input').value.trim().toLowerCase();
     if (!data) return;
     const one = x => `<button type="button" class="mss-emo-e" title="${escHTML(x.l)}">${x.e}</button>`;
     if (q) {
-      // every word has to match; the emoji whose own name fits best come first ("fire" → 🔥 before ❤️‍🔥)
-      const words = q.split(/\s+/), rank = x => x.l === q ? 0 : x.l.startsWith(q) ? 1 : x.l.split(' ').includes(words[0]) ? 2 : x.l.includes(words[0]) ? 3 : 4;
+      // every word has to match; best fits first: the name itself, a word of the name, a search word,
+      // then names that start with it ("fire" → 🔥 before ❤️‍🔥, "tea" → 🍵 before 🧑‍🏫)
+      const words = q.split(/\s+/), rank = x => x.l === q ? 0 : x.l.split(' ').includes(q) ? 1 : x.n.split(' ').includes(words[0]) ? 2 : x.l.startsWith(q) ? 3 : 4;
       const hits = data.flat().filter(x => words.every(w => x.n.includes(w))).map((x, i) => ({ x, i, r: rank(x) })).sort((a, b) => a.r - b.r || a.i - b.i).slice(0, 160).map(h => h.x);
       grid.innerHTML = hits.length ? `<div class="mss-emo-sec"><div class="mss-emo-h">Results</div><div class="mss-emo-set">${hits.map(one).join('')}</div></div>` : `<div class="mss-emo-wait">No emoji for “${escHTML(q)}”</div>`;
     } else {
-      const names = new Map(data.flat().map(x => [x.e, x.l]));
-      const rec = recent();
+      const names = new Map(data.flat().map(x => [x.e, x.l])), rec = recent();
       grid.innerHTML = (rec.length ? `<div class="mss-emo-sec" data-sec="recent"><div class="mss-emo-h">Recently used</div><div class="mss-emo-set">${rec.map(e => one({ e, l: names.get(e) || '' })).join('')}</div></div>` : '')
         + data.map((g, i) => `<div class="mss-emo-sec" data-sec="${GROUPS[i][0]}"><div class="mss-emo-h">${GROUPS[i][2]}</div><div class="mss-emo-set">${g.map(one).join('')}</div></div>`).join('');
       grid.scrollTop = 0;
@@ -1054,95 +1139,68 @@ const MSSEmoji = (() => {
   }
   // the tab for the group you're looking at lights up
   function mark() {
-    const grid = panel.querySelector('.mss-emo-grid');
+    const grid = ov.querySelector('.mss-emo-grid');
     let on = null;
     grid.querySelectorAll('[data-sec]').forEach(s => { if (s.offsetTop - grid.offsetTop <= grid.scrollTop + 8) on = s.dataset.sec; });
-    panel.querySelectorAll('.mss-emo-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === on));
+    ov.querySelectorAll('.mss-emo-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === on));
   }
-  function place(anchor) {
-    const r = (anchor || field).getBoundingClientRect(), w = panel.offsetWidth, h = panel.offsetHeight, vw = innerWidth, vh = innerHeight;
-    const below = r.bottom + 8 + h <= vh - 8 || r.top - 8 - h < 8;
-    panel.style.top = Math.max(8, Math.min(vh - h - 8, below ? r.bottom + 8 : r.top - 8 - h)) + 'px';
-    panel.style.left = Math.max(8, Math.min(vw - w - 8, r.right - w)) + 'px';
+  function all(f) {
+    if (f) { field = f; if (!saved) remember(); }
+    if (!ov) build();
+    ov.querySelector('input').value = '';
+    MSSDialog.open(ov, { focus: '.mss-emo-search input' });
+    load().then(() => { if (MSSDialog.isOpen(ov)) fill(); })
+      .catch(() => { ov.querySelector('.mss-emo-grid').innerHTML = '<div class="mss-emo-wait">Emoji didn’t load — check your connection.</div>'; });
   }
-  function open(f, anchor) {
-    if (!f) return;
-    field = f; remember();
-    if (!panel) build();
-    panel.classList.add('open');
-    panel.querySelector('input').value = '';
-    place(anchor || trigger);
-    load().then(() => { if (panel.classList.contains('open')) { fill(); place(anchor || trigger); } })
-      .catch(() => { panel.querySelector('.mss-emo-grid').innerHTML = '<div class="mss-emo-wait">Emoji didn’t load — check your connection.</div>'; });
+  function closeAll() { if (ov) MSSDialog.close(ov); }
+  // pick one → the popup closes and it goes in where you were typing
+  function pick(e) {
+    closeAll();
+    setTimeout(() => insert(e), 0);   // after the popup hands focus back
   }
-  function close(refocus) {
-    if (!panel?.classList.contains('open')) return;
-    panel.classList.remove('open');
-    if (refocus && field && document.contains(field)) field.focus({ preventScroll: true });
-  }
-  const isOpen = () => !!panel?.classList.contains('open');
-
-  /* ── the smiley in the corner of the box you're typing in ── */
-  function showTrigger(f) {
-    if (!trigger) {
-      trigger = document.createElement('button');
-      trigger.type = 'button';
-      trigger.className = 'mss-emo-trigger';
-      trigger.title = 'Emoji (Ctrl + ;)';
-      trigger.setAttribute('aria-label', 'Add an emoji');
-      trigger.innerHTML = icon('smile', 17);
-      trigger.addEventListener('mousedown', ev => ev.preventDefault());
-      trigger.addEventListener('click', () => isOpen() ? close(true) : open(field, trigger));
-      document.body.appendChild(trigger);
-    }
-    field = f;
-    trigger.hidden = false;
-    posTrigger();
-  }
-  function posTrigger() {
-    if (!trigger || trigger.hidden || !field) return;
-    const r = field.getBoundingClientRect();
-    if (!r.width || r.bottom < 0 || r.top > innerHeight) { trigger.style.visibility = 'hidden'; return; }
-    trigger.style.visibility = '';
-    const tall = r.height > 56, resizable = field.tagName === 'TEXTAREA' && getComputedStyle(field).resize !== 'none';
-    trigger.style.top = (tall ? r.bottom - 34 : r.top + (r.height - 28) / 2) + 'px';
-    trigger.style.left = (r.right - 34 - (resizable ? 14 : 0)) + 'px';
-  }
-  function hideTrigger() { if (trigger) trigger.hidden = true; }
 
   if (FINE.matches) {
     document.addEventListener('focusin', ev => {
       const t = ev.target;
-      if (panel?.contains(t)) return;
-      if (t.matches?.(FIELDS) && !t.closest('.mss-emo') && !t.disabled) {
-        if (field !== t) close();
-        if (isRte(t) && t.previousElementSibling?.tagName === 'TEXTAREA' && document.querySelector(`.mss-rt[data-for="${t.previousElementSibling.id}"] .mss-rt-emo`)) { field = t; hideTrigger(); return; }   // its toolbar has the button
+      if (t === trigger || bar?.contains(t) || ov?.contains(t)) return;
+      if (t.matches?.(FIELDS) && !t.disabled) {
+        if (field !== t) closeBar();
+        // a note: its toolbar has the button
+        if (isRte(t) && document.querySelector(`.mss-rt[data-for="${t.previousElementSibling?.id}"] .mss-rt-emo`)) { field = t; hideTrigger(); return; }
         showTrigger(t);
-      } else if (t !== trigger) { hideTrigger(); close(); }
+      } else { hideTrigger(); closeBar(); }
     });
+    // clicked away from the box (not onto the smiley, the bar or the popup) → the smiley goes
     document.addEventListener('focusout', () => setTimeout(() => {
       const a = document.activeElement;
-      if (!a || a === document.body) { if (!isOpen()) hideTrigger(); }
+      if (a === field || a === trigger || bar?.contains(a) || ov?.contains(a) || bar?.classList.contains('open') || (ov && MSSDialog.isOpen(ov))) return;
+      hideTrigger();
     }, 0));
     ['selectionchange', 'keyup', 'mouseup'].forEach(k => document.addEventListener(k, () => { if (field && document.activeElement === field) remember(); }));
     document.addEventListener('input', ev => { if (ev.target === field) posTrigger(); });
-    addEventListener('scroll', () => { posTrigger(); if (isOpen()) place(trigger && !trigger.hidden ? trigger : field); }, { passive: true, capture: true });
-    addEventListener('resize', () => { posTrigger(); if (isOpen()) place(trigger && !trigger.hidden ? trigger : field); });
-    document.addEventListener('mousedown', ev => { if (isOpen() && !panel.contains(ev.target) && ev.target !== trigger && !ev.target.closest('.mss-rt-emo')) close(); });
+    addEventListener('resize', () => { posTrigger(); placeBar(); });
+    addEventListener('scroll', () => { if (bar?.classList.contains('open') && !barRaf) barRaf = requestAnimationFrame(placeBar); }, { passive: true, capture: true });
+    document.addEventListener('mousedown', ev => { if (bar?.classList.contains('open') && !bar.contains(ev.target) && ev.target !== trigger && !ev.target.closest('.mss-rt-emo')) closeBar(); });
     document.addEventListener('keydown', ev => {    // Ctrl + ; in a box you can write in
-      if (ev.key === ';' && ev.ctrlKey && !ev.altKey && document.activeElement?.matches?.(FIELDS)) { ev.preventDefault(); isOpen() ? close(true) : open(document.activeElement, trigger && !trigger.hidden ? trigger : document.activeElement); }
+      const a = document.activeElement;
+      if (ev.key === ';' && ev.ctrlKey && !ev.altKey && a?.matches?.(FIELDS)) {
+        ev.preventDefault();
+        if (bar?.classList.contains('open')) { closeBar(true); return; }
+        quick(a, trigger && !trigger.hidden ? trigger : a);
+        bar.querySelector('button')?.focus();
+      }
     });
   }
   // the button in a note's toolbar (MSSRich.toolbarHTML)
   function fromToolbar(id, b) {
     const ta = document.getElementById(id), f = ta?._mssRich?.ed || ta;
     if (!f) return;
-    if (isOpen() && field === f) { close(true); return; }
-    if (document.activeElement !== f) { if (ta._mssRich) ta.focus(); else f.focus(); }
+    if (bar?.classList.contains('open') && field === f) { closeBar(true); return; }
+    if (document.activeElement !== f) ta.focus();
     hideTrigger();
-    open(f, b);
+    quick(f, b);
   }
-  return { open, close, _tb: fromToolbar, enabled: () => FINE.matches };
+  return { quick, all, _close: closeAll, _tb: fromToolbar, enabled: () => FINE.matches };
 })();
 
 
