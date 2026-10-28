@@ -1446,13 +1446,15 @@ async function _mssSaveReact(kind, id, mine) {
 }
 const _mssReactFail = err => { console.error(err); showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save that — try again.', 'err'); };
 async function mssReact(kind, id, isLike, state) {
-  if (!window._navUser?.id) { showToast('Sign in to react.', 'err'); return state; }
+  if (mssGuestGate(isLike ? 'like this' : 'react to this')) return state;
+  if (!window._navUser?.id) return state;
   const next = _mssNextReact(state, isLike);
   try { await _mssSaveReact(kind, id, next.mine); return next; }
   catch (err) { _mssReactFail(err); return state; }
 }
 async function mssReactFeed(kind, id, isLike, get, set) {
-  if (!window._navUser?.id) { showToast('Sign in to react.', 'err'); return; }
+  if (mssGuestGate(isLike ? 'like this' : 'react to this')) return;
+  if (!window._navUser?.id) return;
   const prev = get(), next = _mssNextReact(prev, isLike);
   set(next);
   try { await _mssSaveReact(kind, id, next.mine); }
@@ -2253,6 +2255,54 @@ function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Con
     overlay._mssClose = onCancel;          // backdrop + Esc
     MSSDialog.open(overlay, { focus: notice ? btnOk : btnCancel });
   });
+}
+
+/* ══════════════════════════════════════════
+   GUESTS — look around everything, sign up to do anything
+   initPage / initPageGuest (nav.js) set window._navGuest for a signed-out
+   visitor. Every action that saves something starts with
+     if (mssGuestGate('like notes')) return;
+   which shows "Sign up to like notes" (Create account / Sign in / Not now).
+   Signing in from any Sign in link brings you back to the page you were on (mssAfterLogin).
+══════════════════════════════════════════ */
+function mssGuestGate(what) {
+  if (!window._navGuest) return false;
+  mssJoin(what);
+  return true;
+}
+function mssJoin(what = 'do that') {
+  let ov = document.getElementById('mssJoin');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.className = 'confirm-overlay mss-join';
+    ov.id = 'mssJoin';
+    ov.innerHTML = `<div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="mssJoinT" aria-describedby="mssJoinM">
+      <button type="button" class="dp-close mss-join-x" aria-label="Close">${icon('x', 18)}</button>
+      <div class="mss-join-ic" aria-hidden="true">${icon('user', 26)}</div>
+      <div class="confirm-title" id="mssJoinT"></div>
+      <div class="confirm-msg" id="mssJoinM">It’s free — track what you watch, rate it, write notes, make lists and join the conversation.</div>
+      <div class="confirm-actions mss-join-actions">
+        <a class="confirm-ok is-safe" href="login.html#signup">Create account</a>
+        <a class="confirm-cancel" href="login.html">Sign in</a>
+      </div>
+    </div>`;
+    MSSDialog.bind(ov, () => MSSDialog.close(ov));
+    ov.querySelector('.mss-join-x').addEventListener('click', () => MSSDialog.close(ov));
+    document.body.appendChild(ov);
+  }
+  ov.querySelector('#mssJoinT').textContent = 'Sign up to ' + what;
+  MSSDialog.open(ov, { focus: '.confirm-ok' });
+}
+// Any Sign in / Create account link remembers this page, so you come back to it
+document.addEventListener('click', ev => {
+  const a = ev.target.closest?.('a[href^="login.html"]'), page = location.pathname.split('/').pop() || 'index.html';
+  if (a && page !== 'login.html') try { sessionStorage.setItem('mss_next', page + location.search); } catch {}
+}, true);
+// login.html: where to go once signed in — back to the page that asked, or Home
+function mssAfterLogin() {
+  let next = '';
+  try { next = sessionStorage.getItem('mss_next') || ''; sessionStorage.removeItem('mss_next'); } catch {}
+  return /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) && !next.startsWith('login.html') ? next : 'index.html';
 }
 
 /* ══════════════════════════════════════════
