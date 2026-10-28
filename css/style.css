@@ -4579,6 +4579,7 @@ body { font-size:15px; }
   text-shadow:0 1px 2px rgba(0,0,0,.6); box-shadow:0 8px 22px rgba(0,0,0,.4);
 }
 .mss-hold.is-up-next .mss-hold-label { --hold-top:#1c3553; --hold-bot:#0f1f33; --hold-line:rgba(150,195,240,.4); }
+.mss-hold.is-new .mss-hold-label { --hold-top:#3c2453; --hold-bot:#22142f; --hold-line:rgba(205,165,240,.45); }
 /* The circle: the card's top colour, outlined only on its upper half */
 .mss-hold-label::before {
   content:''; display:block; width:2.6em; height:2.6em; margin:-1.35em auto .5em; border-radius:50%; box-sizing:border-box;
@@ -4592,20 +4593,17 @@ body { font-size:15px; }
 }
 .mss-hold.is-break .mss-hold-label::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EADCB8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 2v2'/%3E%3Cpath d='M14 2v2'/%3E%3Cpath d='M6 2v2'/%3E%3Cpath d='M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1'/%3E%3C/svg%3E"); }
 .mss-hold.is-up-next .mss-hold-label::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EADCB8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='6 4 16 12 6 20 6 4'/%3E%3Cline x1='19' y1='5' x2='19' y2='19'/%3E%3C/svg%3E"); }
+.mss-hold.is-new .mss-hold-label::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EADCB8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/%3E%3C/svg%3E"); }
 /* Tiny list-view posters on phones: tighter card so the words never clip */
 @container (max-width:72px) { .mss-hold-label { padding:0 .35em .5em; border-radius:.6em; letter-spacing:.02em; } }
 .up-next-tag { display:inline-flex; align-items:center; padding:3px 9px; border-radius:var(--radius-xs, 4px); background:#264e78; color:#fff;
   font-family:'Manrope',var(--sans); font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; }
-/* To Be Continued with new episodes out (category.js _catNewEps): Up Next's blue — the tag, a
-   tinted card and an Up Next button; nothing moves until you tap it */
-.tbc-new-tag { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:var(--radius-xs, 4px); background:#264e78; color:#fff;
-  font-family:'Manrope',var(--sans); font-size:11px; font-weight:700; letter-spacing:.3px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.tbc-new.wg-card, .tbc-new .comp-row { border-color:#3b6fa5; box-shadow:inset 0 0 0 1px rgba(59,111,165,.35); background:linear-gradient(180deg, rgba(38,78,120,.14), transparent 70%), var(--card); }
-@media(max-width:480px) { .tbc-new-word { display:none; } }
-.tbc-upnext-btn { background:#264e78; }
-.tbc-upnext-btn:hover { background:#2f5f92; }
-.tbc-upnext-pill { display:inline-flex; align-items:center; gap:5px; padding:7px 12px; border-radius:var(--radius-sm); border:none; color:#fff; cursor:pointer;
-  font-family:var(--sans); font-size:12px; font-weight:600; white-space:nowrap; transition:background .15s; }
+/* "New Season" — a To Be Continued show with new episodes out (mssNewSeasonHoldHTML /
+   mssNewSeasonBadgeHTML, config.js): the Up Next cover in plum, and a genre-shaped badge in the
+   same plum; in list view Up Next is an icon button like the others */
+.mss-new-badge { display:inline-flex; align-items:center; gap:4px; background:#6d3d8f; border-color:#6d3d8f; }
+.mss-new-badge svg { width:11px; height:11px; flex-shrink:0; }
+.fv-rank-side { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
 
 /* ── Comments popup mobile fix ── */
 @media(max-width:640px) {
