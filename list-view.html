@@ -119,6 +119,7 @@
 <script src="js/export-formats.js"></script>
 <script src="js/export-image.js"></script>
 <script src="js/export-studio.js"></script>
+<script src="js/create-card.js"></script>
 <script>
 function _lvEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -504,7 +505,12 @@ async function _lvLoad() {
         await mssFillHiddenListItems(entryItemIds, map);   // titles hidden from you (073): name + poster only
       }
       await _hydrateTmdbItems(items);
-      entries = items.map(id => (typeof id === 'string' && id.startsWith('tmdb:')) ? _tmdbItemCache[id] : map[id]).filter(Boolean);
+      const look = id => (typeof id === 'string' && id.startsWith('tmdb:')) ? _tmdbItemCache[id] : map[id];
+      // A list set to an order (Ratings Highest, Date Watched…) shows in it even if a score changed
+      // since it was last saved; your own is saved that way too (db.js keeps it so from now on)
+      if (MSSOrder.reorder(list, list.sort_mode, id => look(id) || null) && _lvUser && list.user_id === _lvUser.id)
+        sb.from('favorite_lists').update({ items: list.items }).eq('id', list.id).eq('user_id', _lvUser.id).then(() => {}, () => {});
+      entries = list.items.map(look).filter(Boolean);
     }
     _lvItems = entries.map((e, i) => Object.assign({}, e, { _rank: i + 1 }));
 
