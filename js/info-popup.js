@@ -8,10 +8,10 @@
    photos. It's the "Title" tab — buttons about the title itself:
 
      Not in your library → Add to Library (a popup: where, type, who can see) ·
-                           Episode Chart · Recommend · Share Title · Discover
+                           Episode Chart · Recommend · Discover
      In your library     → In Your Library (opens Your Entry) · …the same
-     Your own entry      → Add to List · Episode Chart · Recommend · Share Title ·
-                           Discover · Discover Card
+     Your own entry      → Add to List · Episode Chart · Recommend · Discover ·
+                           Discover Card
        …on your Watchlist / Up Next (no Your Entry tab yet) → also Start Watching ·
                            Up Next · Drop · Edit · Delete + "Who can see this title"
    Everything about YOUR entry (status, Edit, Rewatch, cards, who can see it,
@@ -37,8 +37,8 @@
 
 const INFO_POPUP_CONFIG = {
   // Buttons, left → right. Remove / reorder here.
-  actions: ['queue', 'chart', 'recommend', 'shareTitle', 'discover'],             // someone else's / TMDB title
-  ownerActions: ['lists', 'chart', 'recommend', 'shareTitle', 'discover', 'card'],  // your own entry (its own buttons: Your Entry tab)
+  actions: ['queue', 'chart', 'recommend', 'discover'],                           // someone else's / TMDB title
+  ownerActions: ['lists', 'chart', 'recommend', 'discover', 'card'],                // your own entry (its own buttons: Your Entry tab)
   addStatus: 'queue',      // where Add to Library starts (the popup lets you pick)
   showTmdbScore: true,     // TMDB community rating in the tags row
   showCrew: true,          // Director (movies) / Created By (TV)
@@ -230,7 +230,6 @@ const MSSInfo = (() => {
       chart:      () => it.tmdb_id && tv ? `<a class="popup-action-btn" href="episodes.html?show=${Number(it.tmdb_id)}" style="text-decoration:none;">${icon('episodes', 14)} Episode Chart</a>` : '',
       // Social → Recommendations (social.js): send the title to a friend to watch
       recommend:  () => user && it.tmdb_id ? btn('recommend', 'send', 'Recommend') : '',
-      shareTitle: () => it.tmdb_id ? btn('shareTitle', 'link', 'Share Title') : '',
       discover:   () => (it.tmdb_id || it.title) ? btn('discover', 'search', 'Discover') : '',
       card:       () => e && typeof createShareCard === 'function' ? btn('card', 'idCard', 'Discover Card') : '',
     };
@@ -250,7 +249,6 @@ const MSSInfo = (() => {
     if (key === 'discover') return discover(e || it, el);
     if (key === 'recommend') return mssRecommend({ tmdb_id: it.tmdb_id, media_type: it.media_type, title: it.title || it._details?.title || it._details?.name,
       poster_url: it.poster_url || e?.poster_url, year: it.year || e?.year });
-    if (key === 'shareTitle') return mssShareTitle({ tmdb_id: it.tmdb_id, media_type: it.media_type, title: it.title || it._details?.title || it._details?.name });
     if (!e) return;
     if (['start', 'upnext', 'edit', 'drop', 'delete'].includes(key)) return MSSRate.entryAct(key, e, opts, close);
     if (key === 'lists') { MSSList.addTo(e); return; }                     // opens on top of this popup
