@@ -30,9 +30,10 @@ document.addEventListener('mss:entries-changed', ev => {
 function openCatInfoPopup(id) {
   const e = _catAll.find(en => en.id === id);
   if (!e) return;
-  MSSInfo.forOwnEntry(e, {
+  MSSViews.open(e, {
+    own: true, start: 'info',
     onChange: _catRenderStatsAndSections,   // a status change (Drop / Pick Back Up…) moves it between sections + counts
-    onDelete: _catRemoveEntry,
+    onDelete: _catRemoveEntry, onComments: x => MSSComments.open(x),
     handlers: { start: x => (e.status === 'up_next' ? resumeEntry(x) : startWatching(x)), upnext: markUpNext },
   });
 }
@@ -838,7 +839,7 @@ function _cgRatingBadge(e, key) {
 function openGridPopup(id) {
   const e = _catAll.find(en => en.id === id);
   if (!e) return;
-  MSSRate.forOwnEntry(e, { onChange: renderSections, onDelete: _catRemoveEntry, onComments: x => MSSComments.open(x), addToList: true });
+  MSSViews.open(e, { own: true, start: 'rate', onChange: _catRenderStatsAndSections, onDelete: _catRemoveEntry, onComments: x => MSSComments.open(x) });
 }
 
 
