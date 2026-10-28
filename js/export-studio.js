@@ -44,7 +44,10 @@ const MSSStudio = (() => {
     mixed:     [['manual', 'As picked'], ['score', 'Score'], ['title', 'A–Z'], ['year', 'Year']],
   };
   const FORMATS = [['pdf', 'PDF', 'download', 'To read, print or send'], ['image', 'Image', 'image', 'Story or square · top 10'], ['ai', 'For an AI', 'sparkles', 'Paste into any AI chat'],
-    ['csv', 'Spreadsheet', 'list', '.csv for Excel / Sheets'], ['letterboxd', 'Letterboxd', 'film', 'Import your movies there'], ['backup', 'Full backup', 'layers', 'Everything, as .json']];
+    ['csv', 'Spreadsheet', 'list', '.csv for Excel / Sheets'], ['letterboxd', 'Letterboxd', 'film', 'Import your movies there'], ['backup', 'Full backup', 'layers', 'Everything, as .json'],
+    ['card', 'Title card', 'idCard', 'One title, as a card']];
+  // Title card = Create Card (create-card.js) — offered where the page has it
+  const formats = () => FORMATS.filter(f => f[0] !== 'card' || typeof createShareCard === 'function');
   const CATS = [['', 'All'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
   const LIMITS = [[0, 'All'], [10, '10'], [25, '25'], [50, '50']];
   const CAT_ORDER = ['tv', 'movies', 'anime', 'cartoons'];
@@ -249,9 +252,11 @@ const MSSStudio = (() => {
       ...(EP_FORMATS.includes(S.format) ? [['episodes', 'Episode ratings', 'episodes', !S.epAll ? 'Loading…' : S.epShows.length ? `${S.epShows.length} ${S.epShows.length === 1 ? 'show' : 'shows'} rated` : 'Rate episodes first']] : [])];
     const base = S.what === 'custom' ? S.o.custom.entries : WHAT[S.what] ? S.all.filter(WHAT[S.what].test) : [];
     const watchedish = k === 'watched' || k === 'mixed';
-    const fmts = sec('Export as', `<div class="xs-fmts" role="radiogroup" aria-label="Export as">${FORMATS.map(([f, l, ic, sub]) =>
+    const fmts = sec('Export as', `<div class="xs-fmts" role="radiogroup" aria-label="Export as">${formats().map(([f, l, ic, sub]) =>
         `<button type="button" role="radio" class="xs-fmt${S.format === f ? ' on' : ''}" aria-checked="${S.format === f}" onclick="MSSStudio._set('format','${f}')">
           <span class="xs-what-ic">${icon(ic, 16)}</span><span class="xs-pk-text"><b>${l}</b><small>${sub}</small></span></button>`).join('')}</div>`);
+    if (fmt('card')) return fmts + sec('Which title', `<input class="xs-input" id="xsCardQ" type="search" placeholder="Search your titles…" value="${esc(S.cq)}" aria-label="Search your titles" oninput="MSSStudio._cardQ(this.value)" autocomplete="off">
+        <div id="xsCardBody">${cardRowsHTML()}</div>`, 'pick one');
     if (fmt('backup')) return fmts + sec('What’s in it', `<div class="xs-info">${icon('info', 16)}<span>Every title in your library with all its ratings, highlights and notes, your lists and your episode ratings — one file to keep somewhere safe.</span></div>`);
     if (fmt('letterboxd')) { const n = MSSFormats.lbMovies(lbSource()).length;
       return fmts + sec('What’s in it', `<div class="xs-info">${icon('film', 16)}<span><b>${n} watched ${n === 1 ? 'movie' : 'movies'}</b> with your score as a rating (rounded to a whole number out of 10), the date you watched it and whether it was a rewatch. Shows aren’t on Letterboxd, so they’re left out. Import it at letterboxd.com → Settings → Import &amp; Export.</span></div>`)
@@ -329,6 +334,21 @@ const MSSStudio = (() => {
 
   /* ── Pick titles: search + tick, then your picks in order ── */
   const STATUS = [['', 'All'], ['watched', 'Watched'], ['watchlist', 'Watchlist'], ['watching', 'Watching']];
+  // Title card: your titles, watched first and best-rated first, then the rest A–Z — tap one
+  function cardRowsHTML() {
+    const q = S.cq.trim().toLowerCase(), done = e => WHAT.watched.test(e) ? 0 : 1;
+    const rows = S.all.filter(e => !q || String(e.title || '').toLowerCase().includes(q))
+      .sort((a, b) => done(a) - done(b) || (liveScore(b) || 0) - (liveScore(a) || 0) || String(a.title || '').localeCompare(String(b.title || '')));
+    const row = e => {
+      const sc = liveScore(e), on = S.card === e.id, th = thumb(e.poster_url);
+      const meta = [CAT_META?.[e.cat]?.singular, e.year ? String(e.year).slice(0, 4) : '', sc != null ? `★ ${Number(sc).toFixed(2)}` : ''].filter(Boolean).join(' · ');
+      return `<button type="button" role="radio" class="xs-pk-row${on ? ' on' : ''}" aria-checked="${on}" onclick="MSSStudio._card('${e.id}')">
+        <span class="xs-pk-th">${th ? `<img src="${esc(th)}" alt="" loading="lazy">` : esc((e.title || '?')[0])}</span>
+        <span class="xs-pk-text"><b translate="no">${esc(e.title || 'Untitled')}</b><small>${esc(meta)}</small></span>
+        <span class="xs-pk-box" aria-hidden="true">${on ? icon('check', 13) : ''}</span></button>`;
+    };
+    return `<div class="xs-pk-list" role="radiogroup" aria-label="Your titles">${rows.slice(0, PICK_SHOW).map(row).join('') || '<div class="xs-pk-none">No titles match.</div>'}</div>`;
+  }
   function pickRows() {
     const q = S.pq.trim().toLowerCase();
     return S.all.filter(e => (!S.pst || WHAT[S.pst].test(e)) && (!q || String(e.title || '').toLowerCase().includes(q)))
@@ -510,6 +530,16 @@ const MSSStudio = (() => {
   }
   function drawSide() {
     if (!S) return;
+    if (fmt('card')) {   // the card itself is made in Create Card — here: which title
+      const e = S.all.find(x => x.id === S.card), th = e && safeURL(e.poster_url);
+      $('xsPvLabel').innerHTML = 'Title card<span>next: Card or Discover Card · light or dark</span>';
+      $('xsPreview').innerHTML = e ? `<div class="xs-card-pv">${th ? `<img src="${esc(th)}" alt="">` : `<span>${esc((e.title || '?')[0])}</span>`}<b translate="no">${esc(e.title || 'Untitled')}</b>
+          ${liveScore(e) != null ? `<em>★ ${Number(liveScore(e)).toFixed(2)}</em>` : ''}<small>Your poster, scores and note on a card to share — you can hide the note.</small></div>`
+        : `<div class="xs-loading">Pick a title on the left.</div>`;
+      $('xsSummary').innerHTML = e ? `<b translate="no">${esc(e.title || 'Untitled')}</b> · an image to share` : 'Pick one of your titles.';
+      goLabel(); $('xsAlt').hidden = true; if (!S.busy) $('xsGo').disabled = !e;
+      return;
+    }
     const list = picked(), n = list.length;
     if (isEps()) epLoad();
     if (fmt('image') && isEps()) {   // the Episodes page's chart, drawn here
@@ -569,7 +599,7 @@ const MSSStudio = (() => {
     const scroll = $('xsOpts').scrollTop;
     $('xsOpts').innerHTML = optsHTML();
     $('xsOpts').scrollTop = scroll;
-    ['xsPickQ', 'xsEpQ'].forEach(id => attachClearButton(id));
+    ['xsPickQ', 'xsEpQ', 'xsCardQ'].forEach(id => attachClearButton(id));
     drawSide();
   }
 
@@ -615,7 +645,7 @@ const MSSStudio = (() => {
       include: { breakdown: true, highlights: true, notes: true, dates: true, ...(p.include || {}) },
       privacy: { hideSpoilers: true, anon: false, ...(p.privacy || {}) }, title: '', busy: false,
       years: [], year: null, ySlide: 'overview', yExtra: null, epAll: null, epShows: [], epShow: pre.show || null, epQ: '', epSort: 'count', epSize: 'square', epSrc: 'mine',
-      pick: [], pq: '', pst: '', numbered: true, lists: null, listQ: '', list: null, listItems: null,
+      pick: [], pq: '', pst: '', numbered: true, card: pre.card || null, cq: '', lists: null, listQ: '', list: null, listItems: null,
       format: pre.format || (['pdf', 'image', 'ai', 'csv'].includes(p.format) ? p.format : 'pdf'), img: { size: p.img?.size === 'square' ? 'square' : 'story' }, ai: { length: 'full', promptOn: true, watchlist: true, taste: true, ...(p.ai || {}), prompt: null } };
     if (!S.sort) S.sort = SORTS[kindOf()][0][0];
     if (special() && !formatsFor().includes(S.format)) S.format = 'pdf';
@@ -702,7 +732,7 @@ const MSSStudio = (() => {
   const imgJob = list => ({ size: S.img.size, theme: S.theme, title: title(), kicker: kicker(), entries: isYear() ? (yearData()?.top || []).map(x => x.e) : list, who: S.o.who, anon: S.privacy.anon,
     taste: isTaste() ? taste() : null, year: isYear() ? yearData() : null, slide: S.ySlide });
   function goLabel() {
-    const L = { pdf: ['download', 'Export PDF'], image: ['image', 'Save image'], ai: ['copy', 'Copy for an AI'], csv: ['download', 'Download .csv'], letterboxd: ['download', 'Download for Letterboxd'], backup: ['download', 'Download backup'] }[S.format];
+    const L = { pdf: ['download', 'Export PDF'], image: ['image', 'Save image'], ai: ['copy', 'Copy for an AI'], csv: ['download', 'Download .csv'], letterboxd: ['download', 'Download for Letterboxd'], backup: ['download', 'Download backup'], card: ['idCard', 'Make the card'] }[S.format];
     $('xsGo').innerHTML = `${icon(ICONS[L[0]] ? L[0] : 'download', 15)} ${L[1]}`;
   }
   const slug = () => title().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'export';
@@ -744,6 +774,13 @@ const MSSStudio = (() => {
   }
   async function go(mode) {
     if (!S || S.busy) return;
+    if (fmt('card')) {   // hands over to Create Card
+      const e = S.all.find(x => x.id === S.card);
+      if (!e) return;
+      close();
+      createShareCard(e);
+      return;
+    }
     const list = picked();
     if (fmt('image')) {   // the studio stays open — make the other size too if you like
       if (!has(list)) { showToast('Nothing to export with these options.', 'err'); return; }
@@ -801,6 +838,8 @@ const MSSStudio = (() => {
   }
 
   return { open, close, _set: set, _tog: tog, _go: go, _retry: () => { const o = S?.o; if (o) open(o); },
+    _card: id => { if (!S || S.busy) return; S.card = id; const b = $('xsCardBody'), st = b?.querySelector('.xs-pk-list')?.scrollTop || 0; if (b) { b.innerHTML = cardRowsHTML(); b.querySelector('.xs-pk-list').scrollTop = st; } drawSide(); },
+    _cardQ: v => { if (!S) return; S.cq = v; const b = $('xsCardBody'); if (b) b.innerHTML = cardRowsHTML(); },
     _year: yy => { if (!S || S.busy) return; S.year = yy; draw(); },
     _epShow: id => {   // just the list + preview, so the search keeps what you typed and focus stays on the row
       if (!S || S.busy) return; S.epShow = id; drawEpShows(); drawSide();
