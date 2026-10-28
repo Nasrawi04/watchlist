@@ -14,9 +14,8 @@
      • episodes that aired in the last 7 days of a show you track (and
        after you added it), one notification per show per release day
        → add_new_episode_notifications
-     • a show you'd caught up on (To Be Continued) has a new episode out since
-       you finished it → it moves to Currently Watching (as Up Next, at the top —
-       Up Next doesn't tell friends you "started watching"), with a toast
+     (A show you'd caught up on never moves by itself any more: To Be Continued
+      marks it "New episodes" with an Up Next button — newOut(), category.js)
      • a movie on your Watchlist / Up Next coming out in your country —
        in cinemas, then to stream / buy, in the last 14 days (TMDB
        release dates; MSSRegion)
@@ -246,14 +245,8 @@ const MSSSchedule = (() => {
     const from = (days, created) => ymd(new Date(Math.max(+today() - days * DAY, created ? +new Date(new Date(created).toDateString()) - DAY : 0)));
 
     // TV: episodes out in the last 7 days — the ones that came out together share one notification
-    const episodes = [], caughtUp = [];
+    const episodes = [];
     for (const { e, d } of await load(uid)) {
-      // To Be Continued + an episode out after the day you caught up → back to Currently Watching
-      if (e.status === 'ongoing') {
-        const done = e.completed_at ? ymd(new Date(e.completed_at)) : (e.completed_date || ymd(new Date(e.created_at)));
-        const latest = [d.last, d.next].filter(x => x?.air && x.air <= todayS).map(x => x.air).sort().pop();
-        if (latest && latest > done) caughtUp.push(e);
-      }
       const since = from(7, e.created_at), seasons = new Set();
       if (d.last?.air && d.last.air >= since) seasons.add(d.last.s);
       if (d.next?.air && d.next.air <= todayS) seasons.add(d.next.s);      // aired since TMDB details were cached
@@ -288,20 +281,23 @@ const MSSSchedule = (() => {
         });
       });
     }
-    if (caughtUp.length) await backToWatching(uid, caughtUp);
     const added = (await send('add_new_episode_notifications', episodes)) + (await send('add_release_notifications', releases));
     if (added && typeof _notifLoad === 'function') _notifLoad();       // show them in the bell straight away
     return added;
   }
 
-  // New episode on a show you'd caught up on: To Be Continued → Up Next (shown first in Currently Watching)
-  async function backToWatching(uid, list) {
-    const ids = list.map(e => e.id);
-    const { data, error } = await sb.from('entries').update({ status: 'up_next' }).in('id', ids).eq('user_id', uid).eq('status', 'ongoing').select('id,title');
-    if (error || !data?.length) return;
-    showToast(data.length === 1 ? `New episode of ${data[0].title} — it’s back in Currently Watching.` : `${data.length} shows have new episodes — they’re back in Currently Watching.`);
-    document.dispatchEvent(new CustomEvent('mss:entries-changed', { detail: { ids: data.map(x => x.id), status: 'up_next' } }));
+  /* A show you'd caught up on (To Be Continued) with an episode out past where you stopped —
+     fully out: aired BEFORE today, so an episode that's only announced / dated, or airing
+     today somewhere, doesn't count yet. → the latest such episode { s, n, air }, or null */
+  function newOut(e, d) {
+    if (!d) return null;
+    const todayS = ymd(new Date());
+    const aired = [d.last, d.next].filter(x => x?.air && x.air < todayS).sort((a, b) => b.s - a.s || b.n - a.n)[0];
+    if (!aired) return null;
+    if (e.season != null && e.episode != null) return aired.s > e.season || (aired.s === e.season && aired.n > e.episode) ? aired : null;
+    const done = e.completed_at ? ymd(new Date(e.completed_at)) : (e.completed_date || ymd(new Date(e.created_at)));
+    return aired.air > done ? aired : null;
   }
 
-  return { renderDiscover, checkReleases, load, details };
+  return { renderDiscover, checkReleases, load, details, newOut };
 })();
