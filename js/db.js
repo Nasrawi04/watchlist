@@ -88,6 +88,7 @@ async function saveEntry(payload, userId, existingId) {
       .select()
       .single();
     if (error) throw error;
+    mssResortLists(userId, existingId);   // its scores / dates may have moved it in a sorted list
     return _mssWatched(data);
   } else {
     const { data, error } = await sb.from('entries')
@@ -121,7 +122,37 @@ async function updateProgress(id, userId, updates) {
     .select()
     .single();
   if (error) throw error;
+  if (_MSS_ORDER_KEYS.some(k => k in updates)) mssResortLists(userId, id);
   return _mssWatched(data);
+}
+
+/* ── Lists that keep an order stay in it ──
+   A list set to an order (sort_mode: Ratings Highest / Lowest, a specific rating, Date
+   Watched, Release Date, A–Z) used to sort itself only when a title was added — change a
+   score afterwards and it stayed where it was. Now, whenever one of your titles changes
+   in a way an order can use, every list of yours holding it is put back in its order
+   (MSSOrder, config.js) and saved, so it's right everywhere: the list page, popups,
+   exports, other people looking at it. Titles added straight from Discover keep their
+   places if this page can't look them up. Runs in the background; never blocks a save. */
+const _MSS_ORDER_KEYS = ['ratings', 'final_score', 'completed_date', 'completed_at', 'status', 'title', 'year'];
+async function mssResortLists(userId, entryId) {
+  try {
+    const { data: lists, error } = await sb.from('favorite_lists').select('id, items, sort_mode')
+      .eq('user_id', userId).contains('items', [entryId]);
+    if (error) throw error;
+    const sorted = (lists || []).filter(l => l.sort_mode && l.sort_mode !== 'picked' && (l.items || []).length > 1);
+    if (!sorted.length) return;
+    const ids = [...new Set(sorted.flatMap(l => l.items).filter(id => !String(id).startsWith('tmdb:')))];
+    const { data: ents } = await sb.from('entries').select('*').eq('user_id', userId).in('id', ids);
+    const map = Object.fromEntries((ents || []).map(e => [e.id, e]));
+    const discover = id => typeof MSSList !== 'undefined' && MSSList.isTmdbId(id) ? MSSList.tmdb(id) : null;
+    for (const l of sorted) {
+      if (!MSSOrder.reorder(l, l.sort_mode, id => map[id] || discover(id))) continue;
+      const { error: e2 } = await sb.from('favorite_lists').update({ items: l.items }).eq('id', l.id).eq('user_id', userId);
+      if (e2) throw e2;
+      document.dispatchEvent(new CustomEvent('mss:list-resorted', { detail: { id: l.id, items: l.items } }));
+    }
+  } catch (err) { console.warn('Keeping lists in order:', err); }
 }
 
 /* ── Dropped (071): drop a title / pick it back up ──
