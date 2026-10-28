@@ -124,6 +124,40 @@ const MSSNote = (() => {
     </article>`;
   }
 
+  /* Someone's note, with who wrote it and live like / dislike buttons — the Notes page's
+     Community cards and a title page's Community Notes (one design for both).
+       mine: your reaction ('like' | 'dislike'), me: your user id (your own spoilers aren't covered),
+       open / react / replies: names of the page's functions — open(id), react(id, isLike), replies(id, username) */
+  function communityCardHTML(n, { mine, me, open, react, replies } = {}) {
+    const id = attrJSON(n.entry_id), w = words(n.notes);
+    const quote = `<blockquote class="nc-quote" translate="no">&ldquo;${esc(trim(MSSRich.plain(n.notes)))}&rdquo;</blockquote>`;
+    const btn = (like, on) => `<button type="button" class="snote-react-btn ${on ? (like ? 'active-like' : 'active-dislike') : ''}"${like ? ' data-like' : ''} aria-label="${like ? 'Like' : 'Dislike'}" aria-pressed="${on}" onclick="event.stopPropagation();${react}(${id}, ${like})">
+            ${icon(like ? (on ? 'thumbsUpFilled' : 'thumbsUp') : (on ? 'thumbsDownFilled' : 'thumbsDown'), 14)} <span>${(like ? n.like_count : n.dislike_count) || 0}</span>
+          </button>`;
+    return `<article class="nc-card" onclick="${open}(${id})" data-dbl-like role="button" tabindex="0" aria-label="Open @${esc(n.username || 'user')}’s note" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();this.click()}">
+    ${poster(n.poster_url, n.title, 'nc-poster')}
+    <div class="nc-main">
+      <div class="nc-top">
+        <div class="nc-author">
+          <div class="snote-avatar">${safeURL(n.avatar_url) ? `<img src="${safeURL(n.avatar_url)}" alt="" loading="lazy">` : esc((n.username || '?')[0].toUpperCase())}</div>
+          <span>@${esc(n.username || 'user')}</span>
+        </div>
+      </div>
+      <div class="nc-top"><div class="nc-title" translate="no">${esc(n.title)}</div>${scorePill(n.final_score)}</div>
+      <div class="nc-tags">${badges(n, { date: date(watchedDate(n), true) })}</div>
+      ${mssIsSpoiler(n) && n.user_id !== me ? mssSpoilerHTML(quote, { compact: true, id: n.entry_id, e: n }) : quote}
+      <div class="nc-foot">
+        <div class="nc-reacts">
+          ${btn(true, mine === 'like')}
+          ${btn(false, mine === 'dislike')}
+          ${replies ? `<button type="button" class="snote-react-btn" onclick='event.stopPropagation();${replies}(${id}, ${attrJSON(n.username || '')})'>${icon('reply', 14)} Replies</button>` : ''}
+        </div>
+        <span class="nc-words"><b>${w}</b> ${w === 1 ? 'word' : 'words'}</span>
+      </div>
+    </div>
+  </article>`;
+  }
+
   /* ── Popup ── */
   const PEN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
   function inject() {
@@ -154,9 +188,9 @@ const MSSNote = (() => {
           ${MSSRich.toolbarHTML('mssNoteTextarea', '<div class="mss-rt-end" id="mssNoteSpoilerWrap"></div>')}
           <textarea class="np-textarea" id="mssNoteTextarea" aria-label="Your note" placeholder="What did you think? Favorite moments, hot takes, anything…" oninput="MSSNote._count()"></textarea>
           <div class="np-count" id="mssNoteCount">0 / ${NOTE_WORD_LIMIT} words</div>
+          <div class="np-vis-wrap" id="mssNoteVisWrap"></div>
         </div>
         <div class="np-footer" id="mssNoteEditFooter" style="display:none">
-          <div class="np-vis-wrap" id="mssNoteVisWrap"></div>
           <div class="np-actions" id="mssNoteEditPopupActions">
             <button type="button" class="popup-action-btn np-grow" id="mssNoteSave" onclick="MSSNote._save()">Save Note</button>
             <button type="button" class="popup-action-btn np-ghost" onclick="MSSNote._cancel()">Cancel</button>
@@ -325,7 +359,7 @@ const MSSNote = (() => {
 
 
   return {
-    cardHTML, open, close, reactionCounts,
+    cardHTML, communityCardHTML, open, close, reactionCounts,
     words, date, watchedDate, trim, badges, scorePill, poster, loadHero, fitLong,
     _edit: showEdit, _cancel: cancel, _save: save, _delete: remove, _count: updateCount, _react: react,
   };
