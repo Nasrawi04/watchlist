@@ -737,6 +737,8 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .guest-btn-primary { background:var(--olive); color:#fff; border:none; border-radius:var(--radius-xs); padding:11px 28px; font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; transition:background var(--trans) var(--ease); }
 .guest-btn-primary:hover { background:var(--olive-2); }
 .guest-btn-secondary { background:transparent; color:var(--text-2); border:1px solid var(--border); border-radius:var(--radius-xs); padding:11px 28px; font-size:14px; cursor:pointer; text-decoration:none; transition:border-color var(--trans) var(--ease),color var(--trans) var(--ease); }
+.guest-browse { display:inline-block; margin-top:1.5rem; font-size:13.5px; font-weight:600; color:var(--olive-light); text-decoration:none; }
+.guest-browse:hover { text-decoration:underline; text-underline-offset:3px; }
 .guest-btn-secondary:hover { border-color:var(--border-olive); color:var(--olive-light); }
 .sort-bar {
   display:flex; gap:6px; flex-wrap:wrap;
@@ -3313,6 +3315,14 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .mss-rename-hint.ok { color:var(--olive-light); font-weight:600; }
 .mss-rename-hint.bad { color:#dc2626; font-weight:600; }
 .mss-rename .confirm-ok:disabled { opacity:.5; cursor:default; }
+
+/* Sign-up prompt for guests (mssJoin, config.js) — the confirm card with links */
+.mss-join .confirm-card { position:relative; max-width:360px; }
+.mss-join-x { position:absolute; top:10px; right:10px; }
+.mss-join-ic { width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); }
+.mss-join .confirm-title { font-size:22px; line-height:1.25; padding:0 12px; }
+.mss-join .confirm-msg { max-width:290px; }
+.mss-join-actions a { display:block; text-align:center; text-decoration:none; }
 
 /* Light mode confirm adjustments */
 [data-theme="light"] .confirm-card { background:var(--bg-2); }
