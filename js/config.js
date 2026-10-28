@@ -1539,6 +1539,34 @@ function mssHoldHTML(e) {
   return `<div class="mss-hold ${upNext ? 'is-up-next' : 'is-break'}"><span class="mss-hold-label">${MSSI18n.lang === 'en' ? (upNext ? 'Up<br>Next' : 'Taking<br>a Break') : escHTML(mssT(upNext ? 'Up Next' : 'Taking a Break'))}</span></div>`;
 }
 
+/* To Be Continued shows with new episodes fully out (MSSSchedule.newOut, tv-schedule.js) — the
+   category pages and your Library mark them; nothing moves until you tap Up Next.
+   → { entryId: { s, n, air } } */
+async function mssNewEpisodes(entries) {
+  const shows = entries.filter(e => e.status === 'ongoing' && e.tmdb_id && e.tmdb_type === 'tv' && e.ratings?._media_type !== 'movie');
+  if (!shows.length) return {};
+  await mssLoadScript('js/tv-schedule.js');
+  if (typeof MSSSchedule === 'undefined') return {};
+  const found = {};
+  for (let i = 0; i < shows.length; i += 4) {
+    const chunk = shows.slice(i, i + 4), ds = await Promise.all(chunk.map(e => MSSSchedule.details(e.tmdb_id)));
+    chunk.forEach((e, j) => { const ep = MSSSchedule.newOut(e, ds[j]); if (ep) found[e.id] = ep; });
+  }
+  return found;
+}
+// "New Season" when the new episode starts a season after yours, else "New Episodes"
+const _mssNewWhat = (e, ep) => ep.s > (Number(e.season) || 0) ? 'Season' : 'Episodes';
+// …on the poster: the same cover as Up Next / Taking a Break, in its own colour
+function mssNewSeasonHoldHTML(e, ep) {
+  if (!ep) return '';
+  const w = _mssNewWhat(e, ep);
+  return `<div class="mss-hold is-new"><span class="mss-hold-label">${MSSI18n.lang === 'en' ? 'New<br>' + w : escHTML(mssT('New ' + w))}</span></div>`;
+}
+// …and a badge like the genre ones (its own colour): "New Season · S3"
+function mssNewSeasonBadgeHTML(e, ep) {
+  return ep ? `<span class="w-ep-badge mss-new-badge">${icon('sparkles', 11)} New ${_mssNewWhat(e, ep)} · S${ep.s}${_mssNewWhat(e, ep) === 'Episodes' ? ' E' + ep.n : ''}</span>` : '';
+}
+
 // Section label + count on the left, Sort / Filter (or other buttons) on the
 // right — the toolbar above the Notes / Lists cards and the profile tabs.
 function mssToolbarHTML(label, count, barHTML = '', noun = 'item') {
