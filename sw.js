@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v126';   // MyScreenFolio — restarted at v1 (was mss-v787)
+const CACHE_VERSION = 'msf-v128';   // MyScreenFolio — restarted at v1 (was mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -51,6 +51,7 @@ const STATIC_ASSETS = [
   'css/style.css',
   'js/i18n.js',
   'js/config.js',
+  'js/emoji-data.js',
   'js/db.js',
   'js/nav.js',
   'js/notif-settings.js',
