@@ -274,7 +274,7 @@ const MSSTabs = (() => {
           <div class="page-stat"><div class="page-stat-num">${top ? '★ ' + Number(top.score).toFixed(1) : '—'}</div><div class="page-stat-label">${top ? `Top: ${escHTML(topShow?.title || '')} S${top.season_number}·E${top.episode_number}` : 'Top episode'}</div></div>
         </div>
         <div class="eg-shows">${shows.map(e => MSSEp.showCardHTML(e, by[e.id], cardOpts)).join('')}</div>`;
-    } catch (err) { console.error('Episodes tab:', err); el.innerHTML = '<div class="mss-empty">Couldn’t load episode ratings.</div>'; }
+    } catch (err) { console.error('Episodes tab:', err); mssErrorPage(mssErrorKind(err), { in: el, error: err }); }
   }
 
   return { notes, lists, episodes, statsHTML, headSkel, toggleStats, _openNote: openNote, _openList: openList };

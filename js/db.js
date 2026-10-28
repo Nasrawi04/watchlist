@@ -36,12 +36,6 @@ async function getPublicEntries(userId) {
   return mssWithPrivateNotes(data || []);
 }
 
-async function getEntry(id) {
-  const { data, error } = await sb.from('entries').select('*').eq('id', id).single();
-  if (error) return null;
-  return (await mssWithPrivateNotes([data]))[0];
-}
-
 async function searchEntries(userId, query) {
   const q = query.toLowerCase().trim();
   const { data, error } = await sb.from('entries')

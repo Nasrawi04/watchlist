@@ -332,7 +332,8 @@ const MSSBrowse = (() => {
     catch (e) {
       if (my !== seq) return;
       console.error('Browse:', e);
-      out.innerHTML = headHTML() + `<div class="mss-empty">${isRateLimitError(e) ? 'TMDB is busy right now — try again in a moment.' : "Couldn't load these right now — try again shortly."}</div>`;
+      out.innerHTML = headHTML() + '<div></div>';
+      mssErrorPage(mssTmdbErrorKind(e, 'tmdb'), { in: out.lastElementChild, error: e });
       return;
     }
     if (my !== seq) return;

@@ -2524,3 +2524,200 @@ function setViewPref(section, view) {
     localStorage.setItem(_VIEW_KEY, JSON.stringify(prefs));
   } catch(e) {}
 }
+
+/* ══════════════════════════════════════════
+   ERROR SCREENS — one look for everything that can go wrong
+   The retro TV from offline.html, with its own screen for each error.
+     mssErrorPage('title')                          → takes over the page (.page-wrap)
+     mssErrorPage(mssErrorKind(err), { error: err }) → offline / rate limit / server / signed out / crash
+     mssErrorPage('private', { text: 'Only Sam’s friends can see this list.' })
+   opts: { eyebrow, title, text, actions, error, retry, in }
+   in: an element — the screen replaces just that section's content (a tab or panel that
+   failed), with a smaller heading and no automatic retry; the rest of the page stays.
+   404.html uses it for links that don't exist; an uncaught error that leaves the
+   page stuck loading shows 'crash' on its own.
+══════════════════════════════════════════ */
+const MSS_ERRORS = {
+  notfound:  { screen: 'static',  plate: 'CH 404',          eyebrow: 'Error 404',           title: 'This page isn’t on the guide',        text: 'The link may be broken, or the page has moved.', actions: ['home', 'discover'] },
+  badlink:   { screen: 'static',  plate: 'NO INPUT',        eyebrow: 'Broken link',         title: 'This link is missing something',      text: 'It doesn’t point to anything we can open. Check the link, or find what you were after with search.', actions: ['search', 'home'] },
+  title:     { screen: 'static',  plate: 'OFF THE AIR',     eyebrow: 'Title not found',     title: 'We can’t find this title',            text: 'It may have been removed from TMDB, or the link is wrong.', actions: ['search', 'discover'] },
+  person:    { screen: 'static',  plate: 'OFF THE AIR',     eyebrow: 'Person not found',    title: 'We can’t find this person',           text: 'They may have been removed from TMDB, or the link is wrong.', actions: ['search', 'discover'] },
+  user:      { screen: 'static',  plate: 'OFF THE AIR',     eyebrow: 'Profile not found',   title: 'This profile doesn’t exist',          text: 'The username may have changed, or the account was deleted.', actions: ['friends', 'home'] },
+  list:      { screen: 'lock',    plate: 'OFF THE AIR',     eyebrow: 'List unavailable',    title: 'This list isn’t available',           text: 'It’s private, or its owner deleted it. If someone shared it with you, ask them for a fresh link.', actions: ['lists', 'home'] },
+  entry:     { screen: 'static',  plate: 'OFF THE AIR',     eyebrow: 'Not in your library', title: 'This title isn’t in your library',    text: 'It may have been removed, or the link points to someone else’s library.', actions: ['library', 'home'] },
+  private:   { screen: 'lock',    plate: 'PRIVATE',         eyebrow: 'Private',             title: 'This is private',                     text: 'Its owner is keeping it to themselves.', actions: ['back', 'home'] },
+  expired:   { screen: 'lock',    plate: 'SESSION ENDED',   eyebrow: 'Signed out',          title: 'Your session has ended',              text: 'For your security you were signed out. Sign in again to pick up where you left off.', actions: ['signin', 'home'] },
+  ratelimit: { screen: 'bars',    plate: 'PLEASE STAND BY', eyebrow: 'Too many requests',   title: 'Taking a quick breather',             text: 'We’re getting a lot of requests right now. We’ll try again on our own in a moment.', actions: ['retry'], auto: 30 },
+  server:    { screen: 'card',    plate: 'TECHNICAL DIFFICULTIES', eyebrow: 'Service unavailable', title: 'We’re having technical difficulties', text: 'MyScreenFolio can’t reach its servers right now. It’s on our end, not yours — your library is safe.', actions: ['retry', 'home'], auto: 20 },
+  tmdb:      { screen: 'card',    plate: 'TECHNICAL DIFFICULTIES', eyebrow: 'TMDB unavailable', title: 'Title info isn’t loading',           text: 'Show and movie details come from TMDB, and it isn’t answering right now. Your library is safe.', actions: ['retry', 'home'], auto: 20 },
+  offline:   { screen: 'static',  plate: 'NO SIGNAL',       eyebrow: 'Connection lost',     title: 'You’re offline',                      text: 'Check your Wi-Fi or mobile data. We’ll load this page as soon as you’re back.', actions: ['retry'], auto: 15 },
+  crash:     { screen: 'cracked', plate: 'ERROR',           eyebrow: 'Something broke',     title: 'This page ran into a problem',        text: 'Something went wrong on our side. Reloading usually fixes it.', actions: ['reload', 'home', 'details'] },
+};
+
+// What went wrong, from a fetch Response, a Supabase error or a thrown Error
+function mssErrorKind(x) {
+  if (!navigator.onLine) return 'offline';
+  if (isRateLimitError(x)) return 'ratelimit';
+  const s = Number(x?.status ?? x?.statusCode) || 0, m = String(x?.message || '');
+  if (s === 429) return 'ratelimit';
+  if (s === 401 || x?.code === 'PGRST301' || /jwt expired|invalid jwt|refresh token/i.test(m)) return 'expired';
+  if (s >= 500 || /failed to fetch|networkerror|load failed|timed? ?out/i.test(m)) return 'server';
+  return 'crash';
+}
+// A TMDB response that wasn't ok: missing (404) → notFound ('title' / 'person'), else rate limit / offline / TMDB down
+const mssTmdbErrorKind = (res, notFound) => res && (res.status === 404 || res.status === 422) ? notFound
+  : (k => k === 'server' || k === 'crash' ? 'tmdb' : k)(mssErrorKind(res));
+
+const _MSS_ERR_ACTS = {
+  home:     ['Go home', 'home'],
+  discover: ['Discover', 'compass'],
+  search:   ['Search', 'search'],
+  back:     ['Go back', 'back'],
+  friends:  ['Find friends', 'users'],
+  lists:    ['Your lists', 'layers'],
+  library:  ['Your library', 'grid'],
+  signin:   ['Sign in', 'user'],
+  retry:    ['Try again', 'refresh'],
+  reload:   ['Reload page', 'refresh'],
+  details:  ['Copy error details', 'copy'],
+};
+const _MSS_ERR_HREF = { home: 'index.html', discover: 'discover.html', friends: 'friends.html', lists: 'lists.html', library: 'library.html', signin: 'login.html' };
+
+function _mssErrScreen(d) {
+  const bars = `<div class="mss-err-bars"><div>${['#C9C2B6', '#C9A34A', '#3E8C8C', '#4F8A3F', '#8A4A8C', '#B2463F', '#3D5BA8'].map(c => `<span style="background:${c}"></span>`).join('')}</div>`
+    + `<div>${['#3D5BA8', '#111', '#8A4A8C', '#111', '#3E8C8C', '#111', '#C9C2B6'].map(c => `<span style="background:${c}"></span>`).join('')}</div>`
+    + `<div><span style="background:#1B2A4A"></span><span style="background:#EDEDED"></span><span style="background:#2A1A3A"></span><span style="background:#0A0A0A;flex:2.6"></span></div></div>`;
+  const noise = '<canvas class="mss-err-noise" width="160" height="100"></canvas>';
+  const layer = {
+    static:  bars + noise,
+    bars:    bars,
+    lock:    '<div class="mss-err-lockbg"></div>',
+    card:    '<div class="mss-err-card"><span></span></div>',
+    cracked: bars + noise + `<svg class="mss-err-crack" viewBox="0 0 160 100" preserveAspectRatio="none" fill="none" stroke="#fff" stroke-linecap="round"><path d="M104 38 L96 18 L99 4 M104 38 L122 26 L140 22 L160 12 M104 38 L128 50 L146 70 L156 100 M104 38 L98 58 L84 74 L78 100 M104 38 L84 40 L60 30 L36 34 L0 26 M96 18 L84 14 M128 50 L140 46 M98 58 L112 70 M60 30 L54 18" stroke-width=".9"/><circle cx="104" cy="38" r="2.4" fill="#fff" stroke="none"/></svg>`,
+  }[d.screen];
+  const lock = d.screen === 'lock' ? icon('lock', 22) : '';
+  return `<div class="mss-err-tv" aria-hidden="true">
+    <svg class="mss-err-ant" viewBox="0 0 200 60" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><g><line x1="100" y1="60" x2="30" y2="4"/><line x1="100" y1="60" x2="170" y2="4"/><circle cx="30" cy="4" r="5" fill="currentColor"/><circle cx="170" cy="4" r="5" fill="currentColor"/></g></svg>
+    <div class="mss-err-body">
+      <div class="mss-err-screen is-${d.screen}">${layer}<div class="mss-err-lines"></div><div class="mss-err-vig"></div>
+        <div class="mss-err-plate" style="--n:${d.plate.length + (lock ? 2 : 0)}">${lock}<span>${escHTML(d.plate)}</span></div></div>
+      <div class="mss-err-foot"><span class="mss-err-grille"><i></i><i></i><i></i><i></i></span><span class="mss-err-knobs"><i class="mss-err-led"></i><i></i><i></i></span></div>
+    </div>
+    <div class="mss-err-legs"><i></i><i></i></div>
+  </div>`;
+}
+
+// A short code under the buttons for support: the HTTP status, else (crashes) the error's code or type
+function _mssErrCode(err, crash) {
+  if (!err) return '';
+  const s = err.status ?? err.statusCode;
+  if (s) return 'Error ' + s;
+  if (isRateLimitError(err)) return 'Error 429';
+  return crash ? (err.code ? 'Error ' + err.code : err.name && err.name !== 'Error' ? err.name : '') : '';
+}
+
+function mssErrorPage(kind, opts = {}) {
+  const k = MSS_ERRORS[kind] ? kind : 'crash', d = { ...MSS_ERRORS[k], ...opts }, inline = !!opts.in;
+  const host = opts.in || document.querySelector('.page-wrap') || document.body, h = inline ? 'h2' : 'h1';
+  if (inline) { d.auto = 0; if (k === 'crash' && !opts.title) d.title = 'This section ran into a problem'; }
+  host.querySelector(':scope > .mss-err')?._mssStop?.();
+  host.querySelector(':scope > .mss-err')?.remove();
+
+  const code = _mssErrCode(d.error, k === 'crash');
+  const acts = d.actions.map((a, i) => {
+    const [label, ic] = _MSS_ERR_ACTS[a], cls = `mss-err-btn${i ? ' is-ghost' : ''}`, inner = `${icon(ic, 16)}<span>${label}</span>`;
+    return _MSS_ERR_HREF[a] ? `<a class="${cls}" href="${_MSS_ERR_HREF[a]}" data-act="${a}">${inner}</a>` : `<button type="button" class="${cls}" data-act="${a}">${inner}</button>`;
+  }).join('');
+  const sec = document.createElement('section');
+  sec.className = 'mss-err fade-up' + (inline ? ' is-inline' : '');
+  sec.dataset.kind = k;
+  sec.innerHTML = `<div class="mss-err-grid">` + _mssErrScreen(d) + `<div class="mss-err-copy">
+      <div class="mss-err-eyebrow">${escHTML(d.eyebrow)}</div>
+      <${h} class="mss-err-title" tabindex="-1">${escHTML(d.title)}</${h}>
+      <p class="mss-err-text">${escHTML(d.text)}</p>
+      <div class="mss-err-acts">${acts}</div>
+      ${d.auto ? `<div class="mss-err-auto" role="status" aria-live="polite"><svg class="mss-err-ring" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9"/><circle class="v" cx="11" cy="11" r="9"/></svg><span></span></div>` : ''}
+      ${code ? `<div class="mss-err-code">${escHTML(code)}</div>` : ''}
+    </div></div>`;
+  if (inline) host.replaceChildren(sec);
+  else { host.classList.add('has-mss-err'); host.appendChild(sec); document.title = d.title + ' — MyScreenFolio'; }
+  sec.setAttribute('aria-label', d.title);
+
+  const retry = () => { if (typeof d.retry === 'function') { sec._mssStop(); d.retry(); } else location.reload(); };
+  const run = {
+    search: () => {
+      const g = document.getElementById('globalSearch');
+      if (g && g.offsetParent) g.focus();
+      else if (document.getElementById('mobileSearchBar') && typeof toggleMobileSearch === 'function') toggleMobileSearch();
+      else location.href = 'discover.html';
+    },
+    back: () => { if (history.length > 1 && document.referrer.startsWith(location.origin)) history.back(); else location.href = 'index.html'; },
+    retry, reload: () => location.reload(),
+    details: async (btn) => {
+      const e = d.error, txt = [`MyScreenFolio — ${d.title}`, `Page: ${location.href}`, `Time: ${new Date().toISOString()}`,
+        `Browser: ${navigator.userAgent}`, e ? `Error: ${e.name || 'Error'}: ${e.message || e}` : '', e?.stack ? String(e.stack).split('\n').slice(0, 8).join('\n') : ''].filter(Boolean).join('\n');
+      try { await navigator.clipboard.writeText(txt); btn.querySelector('span').textContent = 'Copied'; showToast('Error details copied — paste them in your report.'); }
+      catch { showToast('Couldn’t copy — your browser blocked it.', 'err'); }
+    },
+  };
+  sec.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', () => run[b.dataset.act](b)));
+
+  // Auto retry: a countdown that backs off on each reload of the same page (kept for 10 minutes)
+  let timer = null, raf = 0;
+  const onOnline = () => retry();
+  sec._mssStop = () => { clearInterval(timer); cancelAnimationFrame(raf); window.removeEventListener('online', onOnline); };
+  if (d.auto) {
+    let n = 0;
+    try { const s = JSON.parse(sessionStorage.getItem('mss_err_try')) || {}; n = s.u === location.href && Date.now() - s.t < 600000 ? s.n + 1 : 0; sessionStorage.setItem('mss_err_try', JSON.stringify({ u: location.href, t: Date.now(), n })); } catch {}
+    const total = Math.min(d.auto * 2 ** n, 300), ring = sec.querySelector('.mss-err-ring .v'), label = sec.querySelector('.mss-err-auto span');
+    let left = total;
+    const tick = () => { label.textContent = `Trying again in ${left >= 60 ? Math.ceil(left / 60) + ' min' : left + 's'}`; ring.style.strokeDashoffset = String(56.55 * (left / total)); };
+    tick();
+    timer = setInterval(() => { if (document.hidden) return; if (--left <= 0) { sec._mssStop(); label.textContent = 'Trying again…'; retry(); } else tick(); }, 1000);
+    if (k === 'offline') window.addEventListener('online', onOnline);
+  }
+
+  // TV static (one still frame for reduced motion)
+  const cv = sec.querySelector('.mss-err-noise');
+  if (cv) {
+    const cx = cv.getContext('2d'), img = cx.createImageData(cv.width, cv.height), px = img.data;
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let last = 0;
+    const frame = t => {
+      if (!sec.isConnected) return;
+      if (!document.hidden && t - last > 70) {
+        last = t;
+        for (let i = 0; i < px.length; i += 4) { px[i] = px[i + 1] = px[i + 2] = Math.random() * 255 | 0; px[i + 3] = 255; }
+        cx.putImageData(img, 0, 0);
+      }
+      if (!still) raf = requestAnimationFrame(frame);
+    };
+    frame(100);
+  }
+
+  if (!inline) { window.scrollTo({ top: 0, behavior: 'instant' }); sec.querySelector('h1').focus({ preventScroll: true }); }
+  return sec;
+}
+
+// An uncaught error that leaves the page stuck loading → the crash screen (checked twice, 4s apart in total)
+(() => {
+  let t = 0;
+  const stuck = () => {
+    const wrap = document.querySelector('.page-wrap');
+    if (!wrap || wrap.querySelector(':scope > .mss-err')) return false;
+    const h = [...wrap.querySelectorAll('.page-loading, [id$="Loading"]')].filter(el => el.offsetParent !== null && !el.parentElement.closest('.page-loading'))
+      .reduce((a, el) => a + el.getBoundingClientRect().height, 0);
+    return h > 150 && h > wrap.scrollHeight * 0.4;
+  };
+  const caught = err => {
+    const m = String(err?.message || err || '');
+    if (!err || err.name === 'AbortError' || /ResizeObserver|^Script error\.?$/i.test(m)) return;
+    clearTimeout(t);
+    t = setTimeout(() => {
+      if (!stuck()) return;
+      t = setTimeout(() => { if (stuck()) mssErrorPage(mssErrorKind(err), { error: err instanceof Error ? err : new Error(m) }); }, 2500);
+    }, 1500);
+  };
+  window.addEventListener('error', e => caught(e.error || e.message));
+  window.addEventListener('unhandledrejection', e => caught(e.reason));
+})();
