@@ -120,11 +120,11 @@ const MSSRate = (() => {
     return html;
   }
 
-  /* ── Buttons ── */
-  const btn = (key, ico, label, extra = '') =>
-    `<button type="button" class="popup-action-btn${extra}" data-act="${key}" onclick="MSSRate._act('${key}', this)">${icon(ico, 14)} ${label}</button>`;
-
-  function actionsHTML(e) {
+  /* ── Buttons — your entry's own (also used by the Title tab for Watchlist / Up Next
+     titles, which have no Your Entry tab yet: MSSInfo passes ns 'MSSInfo') ── */
+  function entryButtonsHTML(e, keys, ns = 'MSSRate') {
+    const btn = (key, ico, label, extra = '') =>
+      `<button type="button" class="popup-action-btn${extra}" data-act="${key}" onclick="${ns}._act('${key}', this)">${icon(ico, 14)} ${label}</button>`;
     const finished = e.status === 'completed' || e.status === 'ongoing';
     const B = {
       start:   () => e.status === 'queue' || e.status === 'up_next' ? btn('start', 'play', 'Start Watching') : '',
@@ -138,12 +138,13 @@ const MSSRate = (() => {
       card:    () => typeof createShareCard === 'function' && (finished || liveScore(e) != null) ? btn('card', 'image', 'Create Card') : '',
       delete:  () => btn('delete', 'trash', 'Delete', ' popup-action-danger'),
     };
-    const keys = opts.owner ? RATING_POPUP_CONFIG.ownerActions : RATING_POPUP_CONFIG.friendActions;
     return keys.map(k => B[k] ? B[k]() : '').join('');
   }
+  const actionsHTML = e => entryButtonsHTML(e, opts.owner ? RATING_POPUP_CONFIG.ownerActions : RATING_POPUP_CONFIG.friendActions);
+  const act = key => entryAct(key, current, opts, close);
 
-  async function act(key, b) {
-    const e = current;
+  // One of your entry's buttons — opts: the popup's options (from, onChange, onDelete, handlers), close: closes that popup
+  async function entryAct(key, e, opts, close) {
     if (!e) return;
     const uid = async () => window._navUser?.id || (await getCurrentUser()).id;
     if (key === 'edit')    { goToDetail(e.id, opts.from || thisFile()); return; }
@@ -266,6 +267,7 @@ const MSSRate = (() => {
   return {
     forOwnEntry, forFriend, close, config: RATING_POPUP_CONFIG,
     isOpen: () => !!document.getElementById('mssRateOverlay')?.classList.contains('open'),
+    entryButtonsHTML, entryAct,
     _act: act, _comments: () => { const e = current; if (e) opts.onComments(e); }, _vis: saveVis,
   };
 })();
