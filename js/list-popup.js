@@ -191,7 +191,7 @@ const MSSList = (() => {
   // the title, otherwise the TMDB title) — same as "Import" on list-view.html
   async function importList(btn) {
     const me = window._navUser?.id;
-    if (!me) { showToast('Sign in to add lists.', 'err'); return; }
+    if (mssGuestGate('save lists') || !me) return;
     if (!cur) return;
     const { list, o } = cur;
     btn.disabled = true;
