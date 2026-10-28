@@ -7073,3 +7073,46 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 /* Scores are numbers → Bebas Neue, like every other page */
 .lv-card .home-tmdb-score, .lv-list-row .home-tmdb-score { font-family:var(--bebas); font-weight:400; letter-spacing:.3px; font-size:18px; color:var(--olive-light); }
 .lv-list-row .home-tmdb-score { font-size:20px; }
+
+/* ═════════════════════════════════════════════════════════════
+   Emoji picker (MSSEmoji, config.js) — laptops / desktops only
+   ═════════════════════════════════════════════════════════════ */
+/* the smiley in the corner of the box you're typing in */
+.mss-emo-trigger { position:fixed; z-index:1400; width:28px; height:28px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:var(--card); border:0.5px solid var(--border-2); color:var(--text-3); cursor:pointer; box-shadow:var(--shadow);
+  transition:color .15s, border-color .15s, background .15s, transform .15s; }
+.mss-emo-trigger:hover, .mss-emo-trigger:focus-visible { color:var(--olive-light); border-color:var(--border-olive); background:var(--olive-faint); transform:scale(1.06); }
+.mss-emo-trigger:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.mss-emo-trigger svg { width:17px; height:17px; }
+.mss-emo-trigger[hidden] { display:none; }
+/* in a note's B · I · U toolbar */
+.mss-rt-emo svg { width:15px; height:15px; }
+@media (hover:none), (pointer:coarse) { .mss-rt-emo { display:none !important; } }
+
+/* the picker */
+.mss-emo { position:fixed; z-index:1450; width:min(352px, calc(100vw - 16px)); height:min(408px, calc(100vh - 16px)); display:none; flex-direction:column;
+  background:var(--bg-2); border:1.5px solid var(--olive-light); border-radius:var(--radius-lg); box-shadow:4px 4px 0 var(--olive), var(--shadow-lg); overflow:hidden; }
+.mss-emo.open { display:flex; animation:fadeIn .15s var(--ease); }
+.mss-emo-search { display:flex; align-items:center; gap:8px; margin:12px 12px 8px; padding:0 12px; border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); background:var(--bg-3); color:var(--text-3); }
+.mss-emo-search:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.mss-emo-search svg { width:15px; height:15px; flex:none; }
+.mss-emo-search input { flex:1; min-width:0; border:none; background:transparent; color:var(--text); font:14px var(--sans); padding:10px 0; outline:none; }
+.mss-emo-tabs { display:flex; gap:2px; padding:0 8px 6px; border-bottom:0.5px solid var(--border-2); }
+.mss-emo-tab { flex:1; min-width:0; height:32px; border:none; border-radius:var(--radius-sm); background:none; font-size:17px; line-height:1; cursor:pointer; opacity:.55; filter:grayscale(.6);
+  transition:opacity .15s, filter .15s, background .15s; position:relative; }
+.mss-emo-tab:hover { opacity:1; filter:none; background:var(--bg-3); }
+.mss-emo-tab.on { opacity:1; filter:none; background:var(--olive-faint); }
+.mss-emo-tab.on::after { content:''; position:absolute; left:22%; right:22%; bottom:-6px; height:2px; border-radius:2px; background:var(--olive-light); }
+.mss-emo-tab:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
+.mss-emo-grid { flex:1; overflow-y:auto; padding:4px 8px 8px; scrollbar-width:thin; overscroll-behavior:contain; }
+.mss-emo-h { position:sticky; top:-4px; z-index:1; padding:8px 4px 6px; background:var(--bg-2); font:600 10.5px var(--sans); letter-spacing:1.4px; text-transform:uppercase; color:var(--olive-light); }
+.mss-emo-set { display:grid; grid-template-columns:repeat(auto-fill, minmax(36px, 1fr)); }
+.mss-emo-e { aspect-ratio:1; border:none; border-radius:var(--radius-sm); background:none; font-size:23px; line-height:1; cursor:pointer; padding:0;
+  font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; transition:background .1s, transform .1s; }
+.mss-emo-e:hover, .mss-emo-e:focus-visible { background:var(--olive-faint); transform:scale(1.12); outline:none; }
+.mss-emo-e:active { transform:scale(.94); }
+.mss-emo-wait { padding:36px 12px; text-align:center; color:var(--text-3); font-size:13px; }
+.mss-emo-foot { display:flex; align-items:center; gap:10px; padding:8px 14px; border-top:0.5px solid var(--border-2); background:var(--bg-3); min-height:44px; }
+.mss-emo-big { font-size:24px; line-height:1; font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; }
+.mss-emo-name { font-size:12.5px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media(prefers-reduced-motion:reduce) { .mss-emo.open { animation:none; } .mss-emo-e, .mss-emo-trigger { transition:none; } .mss-emo-e:hover { transform:none; } }
