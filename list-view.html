@@ -446,7 +446,7 @@ async function _lvItemsForImport() {
 }
 
 async function importList() {
-  if (!_lvUser) { showToast('Sign in to import lists.', 'err'); return; }
+  if (mssGuestGate('save lists') || !_lvUser) return;
   if (!_lvList) return;
   const btn = document.getElementById('lvImportBtn');
   btn.disabled = true;
@@ -599,7 +599,7 @@ function _lvShowJoinPopup() {
         ${_lvUser
           ? `<button class="popup-action-btn" id="lvjAccept" onclick="_lvJoinRespond(true)">Accept</button>
              <button class="popup-action-btn lvj-ghost" onclick="_lvJoinRespond(false)">Decline</button>`
-          : `<a class="popup-action-btn" href="login.html" style="text-decoration:none;">Sign in to join</a>
+          : `<button type="button" class="popup-action-btn" onclick="mssJoin('join this list')">Join this list</button>
              <button class="popup-action-btn lvj-ghost" onclick="_lvJoinRespond(false)">Not now</button>`}
       </div>
     </div>`;
