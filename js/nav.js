@@ -800,7 +800,7 @@ function toggleMobileUser(e) {
 function toggleUserMenu(e) {
   e.stopPropagation();
   // desktop: your account opens in the same panel as the tabs (_dnavAcct)
-  if (matchMedia('(min-width:1381px)').matches) { _dnavCur === 'acct' ? _dnavHide() : _dnavShow('acct'); return; }
+  if (matchMedia('(min-width:1200px)').matches) { _dnavCur === 'acct' ? _dnavHide() : _dnavShow('acct'); return; }
   const dd = document.getElementById('userMenuDropdown');
   if (!dd) return;
   if (!dd.classList.contains('open')) _navCloseAll('user');
@@ -814,7 +814,7 @@ document.addEventListener('click', () => {
 });
 
 /* ═════════════════════════════════════════════════════════════
-   Desktop (>1380px) — the floating top bar + mega menu
+   Desktop (≥1200px) — the top bar + mega menu
    The same four tabs as the phone bar (Home · Library · Social · You — MSS_TABS).
    Click a tab (or ↓ on it) and a panel drops under the bar, exactly as wide as it —
    click it again, click outside or press Esc to close: the tab's pages as cards (no sub-shortcuts —
@@ -979,7 +979,7 @@ function _dnavInit() {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   Phones / tablets (≤1380px) — bottom bar + top toggles (bottom-nav-plan.md)
+   Phones / tablets (<1200px) — bottom bar + top toggles (bottom-nav-plan.md)
 
    Bottom bar: Home · Library · (+) · Social · You. The open tab sits in an
    olive circle that rises out of a cut-out in the bar; moving to another tab
@@ -3157,7 +3157,7 @@ function _notifPeek(fresh) {
   el.innerHTML = `<span class="np-lead">${lead}</span><span class="np-text">${text}</span><span class="np-go">${icon('arrowRight', 13)}</span>`;
   // Phones / tablets: a banner that drops down over the top bar (swipe it up to
   // dismiss). Computers: just below the top bar, pointing at the bell.
-  const banner = matchMedia('(max-width:1380px)').matches;
+  const banner = matchMedia('(max-width:1199px)').matches;
   el.classList.toggle('banner', banner);
   if (banner) { el.style.top = el.style.right = ''; }
   else {
