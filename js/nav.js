@@ -404,6 +404,7 @@ function _navRenamePopup(uid, name) {
 }
 
 function _updateMobileNavForGuest() {
+  window._navGuest = true;                                     // mssGuestGate (config.js)
   document.querySelectorAll('.nav-auth-only').forEach(el => el.style.display = 'none');
   document.getElementById('bnav')?.classList.add('guest');    // (+) → Sign In
 }
@@ -982,7 +983,7 @@ function _bnavSheet(open, refocus) {
 }
 function _bnavAdd(e) {
   e.stopPropagation();
-  if (document.getElementById('bnav').classList.contains('guest')) { location.href = 'login.html'; return; }
+  if (mssGuestGate('add titles')) return;
   const open = document.getElementById('bnavSheet').hidden;
   if (open) _navCloseAll('add');
   _bnavSheet(open, !open);
@@ -1114,7 +1115,7 @@ function _resetAddModalDropdowns() {
 
 function openAddModal(cat) {
   getCurrentUser().then(user => {
-    if (!user) { window.location.href = 'login.html'; return; }
+    if (!user) { mssJoin('add titles'); return; }
     const modal = document.getElementById('addModal');
     if (!modal) return;
     _resetAddModalDropdowns();
