@@ -546,19 +546,10 @@ function injectChrome() {
     </div>
     <!-- PHONE / TABLET TOP TOGGLES (filled by _mtogRender) -->
     <div class="mtog" id="mtog" hidden><div class="mtog-in" id="mtogIn"></div></div>
-    <!-- DESKTOP LINKS ROW -->
-    <div class="nav-inner">
+    <!-- DESKTOP: the floating bar — the phone bar's four tabs, each with a mega menu (_dnavInit) -->
+    <div class="nav-inner" id="dnav">
       <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenFolio" class="nav-logo-img"></a>
-      <div class="nav-links">
-        ${navLink('index.html',     page, 'home',     'Home')}
-        ${navLink('discover.html',  page, 'compass',  'Discover')}
-        ${navLibraryDropdown(page)}
-        ${navLink('lists.html',      page, 'layers',   'Lists')}
-        ${navLink('notes.html',      page, 'notebook',     'Notes')}
-        ${navLink('episodes.html',   page, 'episodes', 'Episodes')}
-        ${navLink('friends.html',   page, 'users',    'Social')}
-        ${navLink('profile.html',   page, 'user',     'Profile')}
-      </div>
+      <div class="dnav-tabs" role="navigation" aria-label="Main">${_dnavTabsHTML()}</div>
       <div class="nav-right">
         <div class="search-wrap fused-search-wrap">
           <span class="search-icon-wrap">${icon('search')}</span>
@@ -577,6 +568,7 @@ function injectChrome() {
           <div class="nav-user-dropdown" id="userMenuDropdown">${_navAcctMenuHTML()}</div>
         </div>
       </div>
+      <div class="dnav-mega" id="dnavMega" role="region" aria-label="Menu" hidden><div class="dnav-mega-in" id="dnavMegaIn"></div></div>
     </div>`;
 
   /* ── BOTTOM BAR (phones / tablets) ── */
@@ -680,8 +672,8 @@ function injectChrome() {
     +'</div>';
   document.body.appendChild(footerEl);
 
-  markActiveNav();
   _mtogInit();
+  _dnavInit();
 
   // Discover dropdown on both nav search inputs (desktop + mobile)
   initDiscoverSearch('globalSearch', { max: 20, connected: true, includePersons: true });
@@ -693,11 +685,6 @@ function injectChrome() {
   });
 }
 
-/* ── Link builders ── */
-function navLink(href, currentPage, iconName, label) {
-  const active = currentPage === href ? ' active' : '';
-  return `<a class="nav-link${active}" href="${href}" data-page="${href}">${icon(iconName, 14)} ${label}</a>`;
-}
 /* ── Library group (TV Shows / Movies / Anime / Cartoons combined) ── */
 const LIBRARY_PAGES = [
   { href: 'library.html', iconName: 'list',     label: 'Library'  },
@@ -709,22 +696,6 @@ const LIBRARY_PAGES = [
 ];
 function _isLibraryPage(page) {
   return LIBRARY_PAGES.some(p => p.href === page);
-}
-
-/* Desktop: single "Library" trigger that expands a dropdown panel */
-function navLibraryDropdown(page) {
-  const active = _isLibraryPage(page) ? ' active' : '';
-  const items = LIBRARY_PAGES.map(p => {
-    const itemActive = page === p.href ? ' active' : '';
-    return `<a class="nav-lib-link${itemActive}" href="${p.href}" data-page="${p.href}">${icon(p.iconName, 14)} ${p.label}</a>`;
-  }).join('');
-  return `
-    <div class="nav-link-group" id="navLibGroup">
-      <button type="button" class="nav-link nav-link-trigger${active}" onclick="toggleLibraryMenu(event)" aria-haspopup="true">
-        ${icon('grid', 14)} Library ${icon('chevdown', 11)}
-      </button>
-      <div class="nav-lib-dropdown" id="navLibDropdown">${items}</div>
-    </div>`;
 }
 
 /* ── Back to top ──
@@ -799,8 +770,7 @@ function _navCloseAll(except) {
     document.getElementById('userMenuDropdownMobile')?.classList.remove('open');
   }
   if (except !== 'notif' && typeof closeNotifPanel === 'function') closeNotifPanel();
-  document.getElementById('navLibDropdown')?.classList.remove('open');
-  document.getElementById('navLibGroup')?.classList.remove('menu-open');
+  if (except !== 'mega') _dnavHide();
 }
 
 function toggleMobileSearch() {
@@ -835,29 +805,142 @@ function toggleUserMenu(e) {
   dd.classList.toggle('open');
 }
 
-/* ── Library dropdown (desktop) ── */
-function toggleLibraryMenu(e) {
-  e.stopPropagation();
-  document.getElementById('userMenuDropdown')?.classList.remove('open');
-  const dd = document.getElementById('navLibDropdown');
-  const grp = document.getElementById('navLibGroup');
-  if (dd) dd.classList.toggle('open');
-  if (grp) grp.classList.toggle('menu-open', dd?.classList.contains('open'));
-}
-
 /* Close dropdowns when clicking outside */
 document.addEventListener('click', () => {
   document.getElementById('userMenuDropdown')?.classList.remove('open');
   document.getElementById('userMenuDropdownMobile')?.classList.remove('open');
-  document.getElementById('navLibDropdown')?.classList.remove('open');
-  document.getElementById('navLibGroup')?.classList.remove('menu-open');
 });
 
-function markActiveNav() {
-  const page = window.location.pathname.split('/').pop() || 'index.html';
-  document.querySelectorAll('[data-page]').forEach(el => {
-    el.classList.toggle('active', el.dataset.page === page);
+/* ═════════════════════════════════════════════════════════════
+   Desktop (>1380px) — the floating top bar + mega menu
+   The same four tabs as the phone bar (Home · Library · Social · You — MSS_TABS).
+   Hover or focus a tab (↓ steps into it, Esc closes) and a panel drops under the
+   bar, exactly as wide as it: the tab's pages as cards — with their Personal ·
+   Friends · Community / Compare · Blend shortcuts — and on the far right a showcase
+   card for the page you're pointing at, in the Start Exploring cards' look
+   (index.html .xp-card). A soft pill slides under the tab you're on / pointing at.
+═════════════════════════════════════════════════════════════ */
+const DNAV_INFO = {
+  'index.html':                 'Your portfolio at a glance — what you’re watching, what’s next and what friends are up to.',
+  'discover.html':              'Trending now, the Top 250s and hidden gems — find your next obsession.',
+  'library.html':               'Everything you’ve added, in one place — watching, watchlist and watched.',
+  'tv-shows.html':              'The shows you’re watching, waiting on and have finished.',
+  'movies.html':                'Your films, from the watchlist to the ones you’ve rated.',
+  'anime.html':                 'Your anime — series and films.',
+  'cartoons.html':              'Your animated shows and films.',
+  'completed.html':             'Everything you’ve finished, ranked by your scores.',
+  'friends.html':               'Your friends, requests and people you might know.',
+  'friends.html?s=activity':    'What your friends have been watching and rating.',
+  'friends.html?s=compare':     'Line your taste up with a friend’s — or Blend the two.',
+  'friends.html?s=recs':        'Titles your friends sent you, and the ones you sent.',
+  'friends.html?s=epchat':      'Talk about episodes with your friends.',
+  'friends.html?s=night':       'Pick something to watch together.',
+  'friends.html?s=challenges':  'Race your friends to a watching goal.',
+  'friends.html?s=polls':       'Ask your friends what to watch next.',
+  'profile.html':               'Your profile — stats, favourites and taste.',
+  'lists.html':                 'Your lists, ones shared with you and the community’s.',
+  'notes.html':                 'Your thoughts on everything you watch.',
+  'episodes.html':              'Rate episodes and see every show’s chart.',
+  'cabinet.html':               'The medals and achievements you’ve earned.',
+  'export.html':                'Cards, PDFs, spreadsheets and backups of your library.',
+};
+const DNAV_TONE = { home: ['#1E5C26', '#0F2D14'], lib: ['#1D4A7A', '#0B1F36'], social: ['#5B2D7A', '#22102E'], you: ['#8A5A14', '#33210A'] };
+const _dnavTabs = () => MSS_TABS.filter(t => t.items);
+// the phone toggles shorten "TV Shows" to "TV" — here there's room for the full name
+const _dnavLabel = it => LIBRARY_PAGES.find(p => p.href === it.href)?.label || it.label;
+function _dnavTabsHTML() {
+  const where = _mtabWhere();
+  return `<span class="dnav-pill" aria-hidden="true"></span>` + _dnavTabs().map(t =>
+    `<a class="dnav-tab${t.k === where.tab ? ' active' : ''}" href="${t.href}" data-tab="${t.k}"${t.k === 'social' ? ' data-page="friends.html"' : ''} aria-haspopup="true" aria-expanded="false" aria-controls="dnavMega"${t.k === where.tab ? ' aria-current="page"' : ''}>${icon(t.icon, 16)}<span>${t.label}</span>${icon('chevdown', 12)}</a>`).join('');
+}
+let _dnavCur = null, _dnavTimer = null;
+function _dnavShowcase(t, it) {
+  const [a, b] = DNAV_TONE[t.k] || DNAV_TONE.home;
+  return `<a class="dnav-show" href="${it.href}" style="--xp-a:${a};--xp-b:${b}" tabindex="-1" aria-hidden="true">
+      <span class="dnav-show-ghost">${escHTML(_dnavLabel(it))}</span>
+      <span class="dnav-show-orb"><span class="dnav-show-ring"></span><span class="dnav-show-ring r2"></span>${icon(it.icon, 54)}</span>
+      <span class="dnav-show-tx">
+        <span class="dnav-show-badge">${escHTML(t.label)}</span>
+        <span class="dnav-show-title">${escHTML(it.label === 'Inbox' ? 'Recommendations' : _dnavLabel(it))}</span>
+        <span class="dnav-show-sub">${escHTML(DNAV_INFO[it.href] || '')}</span>
+        <span class="dnav-show-cta">Open ${icon('arrowRight', 13)}</span>
+      </span>
+    </a>`;
+}
+function _dnavPick(i) {
+  const t = _dnavTabs().find(x => x.k === _dnavCur), it = t?.items[i];
+  if (!it) return;
+  document.querySelectorAll('#dnavMegaIn .dnav-item').forEach((el, j) => el.classList.toggle('on', j === i));
+  const slot = document.getElementById('dnavShow');
+  if (slot.dataset.i === String(i)) return;
+  slot.dataset.i = i;
+  slot.innerHTML = _dnavShowcase(t, it);
+}
+function _dnavPill(tab) {
+  const pill = document.querySelector('#dnav .dnav-pill');
+  if (!pill) return;
+  if (!tab) { pill.style.opacity = 0; return; }
+  pill.style.opacity = 1;
+  pill.style.width = tab.offsetWidth + 'px';
+  pill.style.transform = `translateX(${tab.offsetLeft}px)`;
+}
+function _dnavShow(k) {
+  const t = _dnavTabs().find(x => x.k === k), mega = document.getElementById('dnavMega');
+  if (!t || !mega) return;
+  document.querySelectorAll('#dnav .dnav-tab').forEach(a => { const on = a.dataset.tab === k; a.classList.toggle('open', on); a.setAttribute('aria-expanded', on); });
+  _dnavPill(document.querySelector(`#dnav .dnav-tab[data-tab="${k}"]`));
+  if (_dnavCur === k && !mega.hidden) return;
+  if (mega.hidden) _navCloseAll('mega');
+  _dnavCur = k;
+  const where = _mtabWhere(), here = where.tab === k ? where.item : -1;
+  mega.setAttribute('aria-label', t.label);
+  document.getElementById('dnavMegaIn').innerHTML = `
+    <div class="dnav-items" style="--cols:${t.items.length > 6 ? 4 : t.items.length > 2 ? 3 : 2}">${t.items.map((it, i) => `
+      <div class="dnav-item${i === here ? ' here' : ''}" data-i="${i}">
+        <a class="dnav-item-main" href="${it.href}"${i === here ? ' aria-current="page"' : ''}>
+          <span class="dnav-item-ic" style="--xp-a:${(DNAV_TONE[k] || DNAV_TONE.home)[0]}">${icon(it.icon, 19)}</span>
+          <span class="dnav-item-tx"><b>${escHTML(_dnavLabel(it))}</b><small>${escHTML(DNAV_INFO[it.href] || '')}</small></span>
+        </a>
+        ${it.sub ? `<div class="dnav-subs">${it.sub.map(([l, h], j) => `<a class="dnav-sub${i === here && j === where.sub ? ' here' : ''}" href="${h}">${escHTML(l)}</a>`).join('')}</div>` : ''}
+      </div>`).join('')}
+    </div>
+    <div class="dnav-show-slot" id="dnavShow" data-i=""></div>`;
+  _dnavPick(Math.max(0, here));
+  mega.hidden = false;
+  requestAnimationFrame(() => mega.classList.add('open'));
+}
+function _dnavHide() {
+  const mega = document.getElementById('dnavMega');
+  clearTimeout(_dnavTimer);
+  if (!mega || mega.hidden) return;
+  mega.classList.remove('open'); mega.hidden = true; _dnavCur = null;
+  document.querySelectorAll('#dnav .dnav-tab').forEach(a => { a.classList.remove('open'); a.setAttribute('aria-expanded', 'false'); });
+  _dnavPill(document.querySelector('#dnav .dnav-tab.active'));
+}
+function _dnavInit() {
+  const bar = document.getElementById('dnav'), mega = document.getElementById('dnavMega');
+  if (!bar || !mega) return;
+  const later = (fn, ms) => { clearTimeout(_dnavTimer); _dnavTimer = setTimeout(fn, ms); };
+  bar.querySelectorAll('.dnav-tab').forEach(a => {
+    a.addEventListener('mouseenter', () => later(() => _dnavShow(a.dataset.tab), mega.hidden ? 90 : 0));
+    a.addEventListener('focus', () => _dnavShow(a.dataset.tab));
+    a.addEventListener('keydown', ev => {
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); _dnavShow(a.dataset.tab); mega.querySelector('.dnav-item-main')?.focus(); }
+      if (ev.key === 'Escape') _dnavHide();
+    });
   });
+  // the logo / search / buttons aren't part of the menu → it closes when you move onto them
+  bar.querySelectorAll(':scope > .nav-logo, :scope > .nav-right').forEach(el => el.addEventListener('mouseenter', () => later(_dnavHide, 160)));
+  bar.addEventListener('mouseleave', () => later(_dnavHide, 240));
+  mega.addEventListener('mouseenter', () => clearTimeout(_dnavTimer));
+  mega.addEventListener('mouseover', ev => { const it = ev.target.closest('.dnav-item'); if (it) _dnavPick(Number(it.dataset.i)); });
+  mega.addEventListener('focusin', ev => { const it = ev.target.closest('.dnav-item'); if (it) _dnavPick(Number(it.dataset.i)); });
+  mega.addEventListener('keydown', ev => { if (ev.key === 'Escape') { const k = _dnavCur; _dnavHide(); bar.querySelector(`.dnav-tab[data-tab="${k}"]`)?.focus(); } });
+  bar.addEventListener('focusout', ev => { if (!bar.contains(ev.relatedTarget)) _dnavHide(); });
+  const settle = () => _dnavPill(bar.querySelector('.dnav-tab.' + (mega.hidden ? 'active' : 'open')));
+  settle();
+  document.fonts?.ready.then(settle);
+  addEventListener('resize', settle);
 }
 
 /* ═════════════════════════════════════════════════════════════
