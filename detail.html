@@ -2154,8 +2154,15 @@ document.addEventListener('DOMContentLoaded', () => {
   _makeShadowDD('dStatus', 'dStatusDD');
   initPage(async (user) => {
     _detUser = user;
-    const e = _detId ? await getEntry(_detId) : null;
-    _detEntry = e || null;
+    // Editing one of your titles: it has to exist and be yours
+    let e = null;
+    if (_detId) {
+      const { data, error } = await sb.from('entries').select('*').eq('id', _detId).maybeSingle();
+      if (error && error.code !== '22P02') { mssErrorPage(mssErrorKind(error), { error }); return; }
+      if (!data || data.user_id !== user?.id) { mssErrorPage('entry'); return; }
+      e = (await mssWithPrivateNotes([data]))[0];
+    }
+    _detEntry = e;
 
     // Populate form
     draftRatings = (e && e.ratings) ? { ...e.ratings } : {};

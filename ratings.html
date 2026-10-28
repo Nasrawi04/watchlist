@@ -211,10 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (_rtOwner) {
       var r = await Promise.all([getProfile(_rtOwner).catch(function(){ return null; }), getPublicEntries(_rtOwner).catch(function(){ return []; })]);
       _rtProfile = r[0]; _rtAll = r[1] || [];
-      if (!_rtProfile) {
-        wrap.innerHTML = '<div class="guest-page-state fade-up"><div class="guest-page-icon">' + icon('user', 36) + '</div><h2 class="guest-page-title">User not found</h2><p class="guest-page-sub">This profile does not exist or has been removed.</p></div>';
-        return;
-      }
+      if (!_rtProfile) { mssErrorPage('user'); return; }
     } else {
       _rtProfile = profile;
       _rtAll = await getEntries(user.id);

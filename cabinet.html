@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try { await cabLoad(); }
     catch (err) {
       console.error('Cabinet:', err);
-      document.getElementById('cabPage').innerHTML = `<div class="mss-empty">Couldn’t load the cabinet — please refresh.</div>`;
+      mssErrorPage(mssErrorKind(err), { error: err });
     }
   });
 });

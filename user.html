@@ -72,10 +72,6 @@
 
 .pub-empty { text-align:center; padding:2rem 1rem; color:var(--text-3); font-size:14px; }
 
-/* ── Not found ── */
-.pub-not-found { text-align:center; padding:5rem 2rem; }
-.pub-nf-icon { margin-bottom:1rem; opacity:.4; }
-.pub-nf-text { font-size:16px; color:var(--text-2); }
 
 /* ── Footer ── */
 .pub-footer {
@@ -139,27 +135,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const username = (params.get('u') || '').trim().replace(/^@/, '').toLowerCase();
 
-  if (!username) { renderNotFound('No username provided.'); return; }
+  if (!username) { mssErrorPage('badlink'); return; }
   document.title = `@${username} — MyScreenFolio`;
 
+  let profile, entries;
   try {
-    const profile = await getProfileByUsername(username);
-    if (!profile) { renderNotFound(`No user named @${username}.`); return; }
-    const entries = await getPublicEntries(profile.id);
-    renderProfile(profile, entries);
+    const { data, error } = await sb.from('profiles').select('*').eq('username', username).maybeSingle();
+    if (error) throw error;
+    if (!data) { mssErrorPage('user', { text: `There’s no one called @${username}. The username may have changed, or the account was deleted.` }); return; }
+    profile = data;
+    entries = await getPublicEntries(profile.id);
   } catch (err) {
     console.error(err);
-    renderNotFound('Something went wrong loading this profile.');
+    mssErrorPage(mssErrorKind(err), { error: err });
+    return;
   }
+  renderProfile(profile, entries);
 });
-
-function renderNotFound(msg) {
-  document.getElementById('pubContent').innerHTML = `
-    <div class="pub-not-found">
-      <div class="pub-nf-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></div>
-      <div class="pub-nf-text">${_pubEsc(msg)}</div>
-    </div>`;
-}
 
 function _pubScore(e) {
   const s = liveScore(e);

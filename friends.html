@@ -1013,14 +1013,14 @@ async function _frCLoad(kind) {
     _frC[kind] = kind === 'notes' ? rows.map(n => ({ ...n, id: n.entry_id })) : rows;
   } catch (err) {
     console.error('Community ' + kind + ':', err);
-    _frC[kind] = 'error';
+    _frC[kind] = { error: err };
   } finally { _frCLoading[kind] = false; }
   if (_frCommunity()) _frRender();
 }
 function _frCPending(kind) {
-  if (_frC[kind] === 'error') {
+  if (_frC[kind]?.error) {
     document.getElementById('frToolbar').style.display = 'none';
-    document.getElementById('frContent').innerHTML = `<div class="mss-empty">Couldn't load community ${kind} right now.</div>`;
+    mssErrorPage(mssErrorKind(_frC[kind].error), { in: document.getElementById('frContent'), error: _frC[kind].error });
     return true;
   }
   if (_frC[kind]) return false;

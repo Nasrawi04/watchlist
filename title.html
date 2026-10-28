@@ -520,38 +520,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initPageGuest(async (user) => {
     _tdUser = user;
-    if (!_tdType || !_tdId || (_tdType !== 'movie' && _tdType !== 'tv')) {
-      renderTdError('Nothing to show here — this link is missing a title.');
-      return;
-    }
+    if (!_tdType || !_tdId || (_tdType !== 'movie' && _tdType !== 'tv')) { mssErrorPage('badlink'); return; }
     await loadTitle();
   });
 });
 
-function renderTdError(msg) {
-  document.getElementById('tdLoading').style.display = 'none';
-  const c = document.getElementById('tdContent');
-  c.style.display = '';
-  c.innerHTML = `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('search', 44)}</div><div class="empty-text">${esc(msg)}</div></div>`;
-}
 /* ── TMDB detail fetchers (separate from nav.js's add-entry helpers —
    these pull credits + videos on top of the base detail payload) ── */
 // "Refresh info" sets this for one load: straight to TMDB, past the device's saved answers and the browser's
 let _tdReload = false;
 const _tdOpts = () => _tdReload ? { cache: 'reload' } : {};
+let _tdFail = null;   // why the title didn't load (TMDB's answer or the error) → which error screen
 async function _tdFetchMovie(id) {
   try {
     const res = await tmdbFetch(`${TMDB_BASE}/movie/${id}?language=en-US&append_to_response=credits,videos,release_dates,recommendations,watch/providers,images&include_image_language=en,null`, _tdOpts());
-    if (!res.ok) return null;
+    if (!res.ok) { _tdFail = res; return null; }
     return await res.json();
-  } catch { return null; }
+  } catch (e) { _tdFail = e; return null; }
 }
 async function _tdFetchTV(id) {
   try {
     const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?language=en-US&append_to_response=credits,videos,aggregate_credits,recommendations,content_ratings,watch/providers,images&include_image_language=en,null`, _tdOpts());
-    if (!res.ok) return null;
+    if (!res.ok) { _tdFail = res; return null; }
     return await res.json();
-  } catch { return null; }
+  } catch (e) { _tdFail = e; return null; }
 }
 // TMDB seasons, cached (the Episodes row and Fan Favorites share them)
 const _tdSeasonCache = {};
@@ -574,10 +566,7 @@ async function _tdFetchSeasons(tvId, nums) {
 
 async function loadTitle() {
   const detail = _tdType === 'movie' ? await _tdFetchMovie(_tdId) : await _tdFetchTV(_tdId);
-  if (!detail || detail.success === false) {
-    renderTdError('Could not load this title — it may not exist on TMDB.');
-    return;
-  }
+  if (!detail || detail.success === false) { mssErrorPage(_tdFail ? mssTmdbErrorKind(_tdFail, 'title') : 'title', { error: _tdFail }); return; }
   _tdDetail = detail;
 
   const titleForMatch = _tdType === 'movie' ? detail.title : detail.name;

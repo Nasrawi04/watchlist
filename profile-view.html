@@ -333,7 +333,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Start loading the friend's profile + library while the nav is still
   // signing in — these don't depend on who's viewing.
-  const profileP = _pvUserId ? getProfile(_pvUserId) : (_pvUsername ? getProfileByUsername(_pvUsername) : Promise.resolve(null));
+  const profileP = _pvUserId || _pvUsername
+    ? sb.from('profiles').select('*').eq(_pvUserId ? 'id' : 'username', _pvUserId || _pvUsername).maybeSingle()
+    : Promise.resolve({ data: null });
   const earlyP = _pvUserId ? Promise.all([
     getPublicEntries(_pvUserId),
     sb.from('favorite_lists').select('*').eq('user_id', _pvUserId).order('created_at', { ascending: true }).then(r => r.data || [], () => []),
@@ -344,18 +346,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     _pvMeProfile = profile;
   });
 
-  // Resolve profile
-  _pvProfile = await profileP;
-  if (_pvProfile && !_pvUserId) _pvUserId = _pvProfile.id;
-
-  if (!_pvProfile) {
-    document.getElementById('pvContent').innerHTML = '<div class="guest-page-state fade-up">'
-      +'<div class="guest-page-icon">'+icon('user',36)+'</div>'
-      +'<h2 class="guest-page-title">User not found</h2>'
-      +'<p class="guest-page-sub">This profile does not exist or has been removed.</p>'
-      +'</div>';
-    return;
-  }
+  // Resolve profile — no link → broken link, no such person → profile not found (a malformed id too)
+  const { data: found, error: pErr } = await profileP;
+  if (pErr && pErr.code !== '22P02') { mssErrorPage(mssErrorKind(pErr), { error: pErr }); return; }
+  _pvProfile = found || null;
+  if (!_pvProfile) { mssErrorPage(_pvUserId || _pvUsername ? 'user' : 'badlink'); return; }
+  if (!_pvUserId) _pvUserId = _pvProfile.id;
 
   document.title = `${_pvProfile.display_name || _pvProfile.username} — MyScreenFolio`;
 

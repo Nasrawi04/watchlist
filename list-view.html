@@ -473,25 +473,20 @@ async function importList() {
 }
 
 async function _lvLoad() {
-  if (!_lvListId) {
-    document.getElementById('lvLoading').innerHTML = `<div class="lv-empty">No list specified.</div>`;
-    return;
-  }
+  if (!_lvListId) { mssErrorPage('badlink'); return; }
   try {
-    let { data: list } = await sb.from('favorite_lists')
+    let { data: list, error } = await sb.from('favorite_lists')
       .select('*, profiles(username, avatar_url)')
       .eq('id', _lvListId)
       .maybeSingle();
+    if (error) throw error;
     // A private list (068) opened from its link: list-view.html?list=…&k=<token>
     if (!list && _lvParams.get('k')) {
       const { data } = await sb.rpc('open_list_link', { p_list: _lvListId, p_token: _lvParams.get('k') });
       list = (data || [])[0] || null;
       if (list) list.profiles = (await sb.from('profiles').select('username, avatar_url').eq('id', list.user_id).maybeSingle()).data;
     }
-    if (!list) {
-      document.getElementById('lvLoading').innerHTML = `<div class="lv-empty">${icon('lock', 28)}<div>This list is private, or it doesn’t exist anymore.</div></div>`;
-      return;
-    }
+    if (!list) { mssErrorPage('list'); return; }
     _lvList = list;
 
     const items = list.items || [];
@@ -553,7 +548,7 @@ async function _lvLoad() {
     document.getElementById('lvContent').style.display = '';
   } catch (err) {
     console.error('Load list error:', err);
-    document.getElementById('lvLoading').innerHTML = `<div class="lv-empty">Couldn't load this list.</div>`;
+    mssErrorPage(mssErrorKind(err), { error: err });
   }
 }
 

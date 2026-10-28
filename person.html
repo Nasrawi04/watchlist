@@ -169,29 +169,24 @@ const TMDB_GENDER = { 0: '', 1: 'Female', 2: 'Male', 3: 'Non-binary' };
 
 document.addEventListener('DOMContentLoaded', () => {
   initPageGuest(async () => {
-    if (!_ppId) { renderPpError('No person specified.'); return; }
+    if (!_ppId) { mssErrorPage('badlink'); return; }
     loadPerson();
   });
 });
 
 async function loadPerson() {
+  let p;
   try {
     const res = await tmdbFetch(`${TMDB_BASE}/person/${_ppId}?language=en-US&append_to_response=combined_credits`);
-    if (!res.ok) { renderPpError('Could not load this person — they may not exist on TMDB.'); return; }
-    const p = await res.json();
-    _ppPerson = p;
-    renderPerson(p);
+    if (!res.ok) { mssErrorPage(mssTmdbErrorKind(res, 'person'), { error: res }); return; }
+    p = await res.json();
   } catch (e) {
     console.error(e);
-    renderPpError('Something went wrong loading this page.');
+    mssErrorPage(mssTmdbErrorKind(e, 'person'), { error: e });
+    return;
   }
-}
-
-function renderPpError(msg) {
-  document.getElementById('ppLoading').style.display = 'none';
-  const c = document.getElementById('ppContent');
-  c.style.display = '';
-  c.innerHTML = `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('search', 44)}</div><div class="empty-text">${esc(msg)}</div></div>`;
+  _ppPerson = p;
+  renderPerson(p);
 }
 
 function renderPerson(p) {

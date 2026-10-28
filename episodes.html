@@ -453,10 +453,11 @@ const _egBack = (() => {
   return { href: 'episodes.html', label: 'Episodes' };
 })();
 async function renderShow() {
-  const page = document.getElementById('egPage');
   const userId = _egUserQ || _egUser.id;
-  const X = await loadState(_egShowId, userId);
-  if (!X) { page.innerHTML = `<div class="mss-empty">Couldn’t load this show.</div>`; return; }
+  let X;
+  try { X = await loadState(_egShowId, userId); }
+  catch (e) { mssErrorPage(mssTmdbErrorKind(e, 'title'), { error: e }); return; }
+  if (!X) { mssErrorPage('title'); return; }
   if (X.readOnly) {
     const { data: p } = await sb.from('profiles').select('username,display_name').eq('id', userId).maybeSingle();
     X.whoName = p?.display_name || p?.username || 'Their';
@@ -1014,7 +1015,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try { if (_egShowId) await renderShow(); else await renderHome(); }
     catch (err) {
       console.error('Episodes:', err);
-      document.getElementById('egPage').innerHTML = `<div class="mss-empty">Couldn’t load episode ratings — please refresh.</div>`;
+      mssErrorPage(mssErrorKind(err), { error: err });
     }
   });
 });

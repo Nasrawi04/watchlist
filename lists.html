@@ -1430,7 +1430,7 @@ async function loadSocialLists() {
     if (_listsMode === 'social') renderSocialLists();
   } catch (err) {
     console.error('Load social lists error:', err);
-    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load social lists right now.</div>`;
+    mssErrorPage(mssErrorKind(err), { in: wrap, error: err });
   }
 }
 

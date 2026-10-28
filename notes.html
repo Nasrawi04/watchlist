@@ -554,7 +554,7 @@ async function loadSocialNotes() {
     if (_notesMode === 'social') renderSocialNotes();
   } catch (err) {
     console.error('Load social notes error:', err);
-    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load social notes right now.</div>`;
+    mssErrorPage(mssErrorKind(err), { in: wrap, error: err });
   }
 }
 
@@ -771,7 +771,7 @@ async function _nuLoadTitleNotes(title) {
     renderSocialNotes();
   } catch (err) {
     console.error('Load title notes error:', err);
-    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load notes for this title.</div>`;
+    mssErrorPage(mssErrorKind(err), { in: wrap, error: err });
   }
 }
 
@@ -811,7 +811,7 @@ async function _nuLoadTmdbNotes() {
     renderSocialNotes();
   } catch (err) {
     console.error('Load title notes error:', err);
-    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load notes for this title.</div>`;
+    mssErrorPage(mssErrorKind(err), { in: wrap, error: err });
   }
 }
 
@@ -864,7 +864,7 @@ async function _nuLoadUserNotes() {
     renderSocialNotes();
   } catch (err) {
     console.error('Load user notes error:', err);
-    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load this user's notes.</div>`;
+    mssErrorPage(mssErrorKind(err), { in: wrap, error: err });
   }
 }
 

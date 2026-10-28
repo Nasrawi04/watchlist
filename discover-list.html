@@ -386,11 +386,9 @@ async function _dlLoadMore() {
     console.error('Discover list fetch error:', e);
     _dlDone = true;
     const endMsg = document.getElementById('dlEndMsg');
-    if (isRateLimitError(e)) {
+    if (!_dlAllItems.length) mssErrorPage(mssTmdbErrorKind(e, 'tmdb'), { error: e });
+    else if (isRateLimitError(e)) {
       endMsg.textContent = "TMDB is busy right now — please refresh in a moment to keep browsing.";
-      endMsg.style.display = '';
-    } else if (_dlAllItems.length === 0) {
-      endMsg.textContent = "Couldn't load this list right now — please try again shortly.";
       endMsg.style.display = '';
     }
   } finally {

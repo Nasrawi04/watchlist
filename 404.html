@@ -1,22 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  // GitHub Pages shows this page for ANY missing path (even /watchlist/a/b/c), so every
+  // link and file here is resolved from the site's folder, not the broken URL's.
+  (function () {
+    var base = /^\/watchlist(\/|$)/.test(location.pathname) ? '/watchlist/' : '/';
+    // Password-reset / sign-in links that land on a wrong path still finish signing in
+    var h = location.hash;
+    if (h && (h.indexOf('type=recovery') > -1 || h.indexOf('access_token') > -1)) { location.replace(base + 'login.html' + h); return; }
+    document.write('<base href="' + base + '">');
+  })();
+</script>
 <script src="js/i18n.js"></script>
-  <title>Redirecting...</title>
-  <script>
-    (function() {
-      var hash = window.location.hash;
-      if (hash && (hash.includes('type=recovery') || hash.includes('access_token'))) {
-        window.location.replace('https://nasrawi04.github.io/watchlist/login.html' + hash);
-        return;
-      }
-      window.location.replace('https://nasrawi04.github.io/watchlist/');
-    })();
-  </script>
+<title>Page not found — MyScreenFolio</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="icons/icon-192.png">
 </head>
 <body>
-  <p>Redirecting...</p>
+<div class="page-wrap"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  initPageGuest(() => { mssErrorPage('notfound'); });
+});
+</script>
 </body>
 </html>

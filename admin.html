@@ -227,7 +227,8 @@ function admTab(key, refresh) {
 }
 function admError(err) {
   console.error(err);
-  document.getElementById('admPanel').innerHTML = `<div class="adm-empty">${err?.code === '42501' ? 'This page is only for the site’s owners.' : 'Couldn’t load that. Check that migrations 036 and 037 have been run, then refresh.'}</div>`;
+  if (err?.code === '42501') { mssErrorPage('private', { eyebrow: 'Owners only', title: 'This page is for the site’s owners', text: 'You need an owner account to open the admin tools.', actions: ['home'] }); return; }
+  document.getElementById('admPanel').innerHTML = `<div class="adm-empty">Couldn’t load that. Check that migrations 036 and 037 have been run, then refresh.</div>`;
 }
 
 /* ── Overview ── */
