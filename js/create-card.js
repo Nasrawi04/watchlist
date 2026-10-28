@@ -30,6 +30,10 @@ function _injectCreateCardOverlay() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             Search &amp; Link to TMDB
           </button>
+          <div id="discoverRetry" class="cc-retry" hidden>
+            <span>Couldn’t get this title’s details from TMDB just now — the card is missing its cast, director and synopsis.</span>
+            <button type="button" onclick="_cardRetryTmdb()" class="popup-action-btn" style="display:inline-flex;">${icon('refresh', 13)} Try TMDB again</button>
+          </div>
         </div>
       </div>
       <div id="createCardFooter">
@@ -79,6 +83,11 @@ let _cardTheme = 'light';
 let _cardPage = 1;
 let _cardDiscoverData = null;
 let _cardDiscoverEntryKey = null;
+let _cardDiscoverFailed = false;   // linked to TMDB, but it didn't answer → "Try TMDB again"
+let _cardTmdbReload = false;
+// Never wait forever on the network: a slow TMDB / poster / cast lookup gives up after a while
+// and the card is drawn with what's there (and offers to try again)
+const _cardTimeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('Timed out')), ms))]);
 
 // id: an entry's id on this page — or the entry itself (export.html picks from your whole library)
 async function createShareCard(id, startPage, restrictToStartPage) {
@@ -189,7 +198,7 @@ function _cardPalette(D) {
 }
 
 function _loadImage(src) {
-  return new Promise((res, rej) => {
+  return _cardTimeout(new Promise((res, rej) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => res(img);
@@ -201,7 +210,7 @@ function _loadImage(src) {
       img2.src = src + (src.includes('?') ? '&' : '?') + '_cb=' + Date.now();
     };
     img.src = src;
-  });
+  }), 12000);
 }
 
 function _wrap(ctx, text, maxW) {
@@ -264,8 +273,7 @@ async function _drawCardPage1(myToken) {
   canvas.style.display = '';
   if (myToken !== _cardRenderToken || _cardPage !== 1 || _cardEntry !== e) return;
 
-  const promptEl = document.getElementById('discoverLinkPrompt');
-  if (promptEl) promptEl.style.display = discoverData ? 'none' : '';
+  _cardPrompt(discoverData);
 
   const D = _cardTheme === 'dark';
   // Site color palette (matching style.css exactly), applied to the
@@ -851,14 +859,32 @@ async function _drawCardPage1(myToken) {
   finalCtx.drawImage(workCanvas, 0, 0);
 }
 
+// Under the preview: not linked to TMDB → "Search & Link to TMDB"; linked but TMDB didn't
+// answer (busy, offline, timed out) → "Try TMDB again"; everything there → nothing
+function _cardPrompt(data) {
+  const el = document.getElementById('discoverLinkPrompt');
+  if (!el) return;
+  const linked = !!(_cardEntry?.tmdb_id && _cardEntry?.tmdb_type);
+  el.style.display = data ? 'none' : '';
+  document.getElementById('discoverLinkBtn').style.display = linked ? 'none' : 'inline-flex';
+  document.getElementById('discoverRetry').hidden = !(linked && _cardDiscoverFailed);
+}
+function _cardRetryTmdb() {
+  _cardDiscoverEntryKey = null; _cardDiscoverData = null; _cardDiscoverFailed = false; _cardTmdbReload = true;
+  document.getElementById('discoverRetry').hidden = true;
+  _drawCard();
+}
+
 async function _fetchDiscoverData(e) {
   const key = (e.tmdb_type || '') + ':' + (e.tmdb_id || '');
   if (_cardDiscoverEntryKey === key && _cardDiscoverData) return _cardDiscoverData;
-  if (!e.tmdb_id || !e.tmdb_type) { _cardDiscoverData = null; _cardDiscoverEntryKey = key; return null; }
+  if (!e.tmdb_id || !e.tmdb_type) { _cardDiscoverData = null; _cardDiscoverEntryKey = key; _cardDiscoverFailed = false; return null; }
   try {
     const extra = e.tmdb_type === 'movie' ? 'credits,release_dates' : 'credits,aggregate_credits,content_ratings';
     const url = `${TMDB_BASE}/${e.tmdb_type}/${e.tmdb_id}?language=en-US&append_to_response=${extra}`;
-    const res = await tmdbFetch(url);
+    // Try again: straight to TMDB, not the request that didn't answer (nor a saved copy)
+    const res = await _cardTimeout(tmdbFetch(url, _cardTmdbReload ? { cache: 'reload' } : {}), 12000);
+    _cardTmdbReload = false;
     if (!res.ok) throw new Error('TMDB fetch failed: ' + res.status);
     const data = await res.json();
 
@@ -877,11 +903,11 @@ async function _fetchDiscoverData(e) {
     // Character-first cast (shared with the info popup, nav.js). Animated
     // titles get character artwork from AniList when it has the show.
     const animated = (data.genres || []).some(g => g.id === 16) || e.cat === 'anime' || e.cat === 'cartoons';
-    const cast = (await mssFetchCast({
+    const cast = (await _cardTimeout(mssFetchCast({
       tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, title: e.title || data.title || data.name,
       year: e.year || (data.release_date || data.first_air_date || '').slice(0, 4), animated,
       origin_country: data.origin_country, original_language: data.original_language,
-    }).catch(() => []))
+    }), 10000).catch(() => []))
       // The card draws `name` bold and `character` muted underneath — so the
       // character goes on top and the actor / voice actor underneath.
       .map(c => ({ name: c.character || c.actor, character: c.character ? c.actor : '', photo: c.photo, isCharacterImage: c.isCharacterImage }));
@@ -903,11 +929,13 @@ async function _fetchDiscoverData(e) {
     const result = { director, writers, cast, production, overview, releaseDate, budget, certification };
     _cardDiscoverData = result;
     _cardDiscoverEntryKey = key;
+    _cardDiscoverFailed = false;
     return result;
   } catch (err) {
     console.error('Discover card fetch error:', err);
     _cardDiscoverData = null;
     _cardDiscoverEntryKey = key;
+    _cardDiscoverFailed = true;
     return null;
   }
 }
@@ -1029,8 +1057,7 @@ async function _drawDiscoverCard(myToken) {
   canvas.style.display = '';
   if (myToken !== _cardRenderToken || _cardPage !== 3 || _cardEntry !== e) return;
 
-  const promptEl = document.getElementById('discoverLinkPrompt');
-  if (promptEl) promptEl.style.display = data ? 'none' : '';
+  _cardPrompt(data);
 
   const D = _cardTheme === 'dark';
   const BG      = D ? '#0A0A0E' : '#E2DAD0'; // --bg
