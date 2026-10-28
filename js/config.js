@@ -995,12 +995,14 @@ const MSSEmoji = (() => {
     if (isRte(field)) { const sel = getSelection(); if (sel.rangeCount && field.contains(sel.anchorNode)) saved = sel.getRangeAt(0).cloneRange(); }
     else saved = [field.selectionStart, field.selectionEnd];
   }
+  function roomFor(f, emoji) {
+    if (isRte(f) || !(f.maxLength > 0) || f.value.length - Math.abs((saved?.[1] ?? 0) - (saved?.[0] ?? 0)) + emoji.length <= f.maxLength) return true;
+    showToast('No room for another one here.', 'err'); return false;
+  }
+  // from the top-5 bar: the box keeps focus, so type it in (Undo works)
   function insert(emoji) {
     const f = field;
-    if (!f || !document.contains(f)) return;
-    if (!isRte(f) && f.maxLength > 0 && f.value.length - Math.abs((saved?.[1] ?? 0) - (saved?.[0] ?? 0)) + emoji.length > f.maxLength) {
-      showToast('No room for another one here.', 'err'); return;
-    }
+    if (!f || !document.contains(f) || !roomFor(f, emoji)) return;
     f.focus({ preventScroll: true });
     if (isRte(f)) {
       const sel = getSelection();
@@ -1017,6 +1019,26 @@ const MSSEmoji = (() => {
     }
     remember();
     used(emoji);
+    posTrigger(); placeBar();
+  }
+  // from the big popup: focus stays in the popup, so put it in at the saved cursor without focusing the box
+  function put(emoji) {
+    const f = field;
+    if (!f || !document.contains(f) || !roomFor(f, emoji)) return false;
+    if (isRte(f)) {
+      let r = saved && f.contains(saved.startContainer) ? saved : null;
+      if (!r) { r = document.createRange(); r.selectNodeContents(f); r.collapse(false); }
+      const t = document.createTextNode(emoji);
+      r.deleteContents(); r.insertNode(t); r.setStartAfter(t); r.collapse(true);
+      saved = r;
+    } else {
+      const [a, b] = saved || [f.value.length, f.value.length];
+      f.setRangeText(emoji, a, b, 'end');
+      saved = [a + emoji.length, a + emoji.length];
+    }
+    f.dispatchEvent(new Event('input', { bubbles: true }));
+    used(emoji);
+    return true;
   }
 
   /* ── the smiley in the corner of the box — part of the page, so it moves with it ── */
@@ -1047,7 +1069,7 @@ const MSSEmoji = (() => {
   }
   function hideTrigger() { if (trigger) { trigger.hidden = true; trigger.remove(); } }
 
-  /* ── your top 5 + "+" (closes on a click elsewhere or Esc) ── */
+  /* ── your top 5 + "+" (stays open while you pick; closes on a click elsewhere, Esc or the smiley) ── */
   function quick(f, anchor) {
     if (!f) return;
     field = f; remember();
@@ -1060,7 +1082,7 @@ const MSSEmoji = (() => {
       bar.addEventListener('click', ev => {
         const b = ev.target.closest('button'); if (!b) return;
         if (b.dataset.more) { closeBar(); all(field); return; }
-        insert(b.dataset.e); closeBar();
+        insert(b.dataset.e);      // stays open — add as many as you like
       });
       bar.addEventListener('keydown', ev => {
         const bs = [...bar.querySelectorAll('button')], i = bs.indexOf(document.activeElement);
@@ -1102,7 +1124,7 @@ const MSSEmoji = (() => {
       <div class="mss-emo-search">${icon('search', 15)}<input type="text" placeholder="Search emoji" aria-label="Search emoji" autocomplete="off" spellcheck="false" data-no-emoji></div>
       <div class="mss-emo-tabs" role="tablist">${[['recent', '🕘', 'Recently used'], ...GROUPS].map(([k, e, l]) => `<button type="button" class="mss-emo-tab" data-tab="${k}" title="${l}" aria-label="${l}">${e}</button>`).join('')}</div>
       <div class="mss-emo-grid"><div class="mss-emo-wait">Loading emoji…</div></div>
-      <div class="mss-emo-foot"><span class="mss-emo-big" aria-hidden="true">😀</span><span class="mss-emo-name">Pick an emoji</span></div>
+      <div class="mss-emo-foot"><span class="mss-emo-big" aria-hidden="true">😀</span><span class="mss-emo-name">Pick an emoji</span><span class="mss-emo-added" aria-live="polite"></span></div>
     </div>`;
     MSSDialog.bind(ov, () => closeAll());
     document.body.appendChild(ov);
@@ -1153,11 +1175,24 @@ const MSSEmoji = (() => {
     load().then(() => { if (MSSDialog.isOpen(ov)) fill(); })
       .catch(() => { ov.querySelector('.mss-emo-grid').innerHTML = '<div class="mss-emo-wait">Emoji didn’t load — check your connection.</div>'; });
   }
-  function closeAll() { if (ov) MSSDialog.close(ov); }
-  // pick one → the popup closes and it goes in where you were typing
+  // closing hands you back to the box, cursor just after what you added
+  function closeAll() {
+    if (!ov || !MSSDialog.isOpen(ov)) return;
+    MSSDialog.close(ov);
+    setTimeout(() => {
+      const f = field; if (!f?.isConnected) return;
+      f.focus({ preventScroll: true });
+      if (isRte(f)) { if (saved && f.contains(saved.startContainer)) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(saved); } }
+      else if (saved) f.setSelectionRange(saved[0], saved[1]);
+    }, 0);
+  }
+  // pick one → it goes in where you were typing; the popup stays open for more
+  let addedT;
   function pick(e) {
-    closeAll();
-    setTimeout(() => insert(e), 0);   // after the popup hands focus back
+    if (!put(e)) return;
+    const n = ov.querySelector('.mss-emo-added');
+    n.textContent = 'Added ' + e;
+    clearTimeout(addedT); addedT = setTimeout(() => { n.textContent = ''; }, 1400);
   }
 
   if (FINE.matches) {
