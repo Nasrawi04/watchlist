@@ -40,6 +40,36 @@ function _libResume() {
   var r = MSSViews.resume();
   if (r) _libOpen(r.id, r.view);
 }
+/* To Be Continued shows with new episodes out (mssNewEpisodes, config.js) — your own Library only:
+   the "New Season" poster cover + badge, first in Watched (default sort) and an Up Next button.
+   Nothing moves until you tap it. */
+var _libNewEps = {}, _libNewKey = null;
+function _libCheckNewEps(){
+  if (LIB_READONLY || typeof mssNewEpisodes !== 'function') return;
+  var key = LIB_ENTRIES().filter(function(e){ return e.status === 'ongoing'; }).map(function(e){ return e.id; }).join(',');
+  if (key === _libNewKey) return;
+  _libNewKey = key;
+  mssNewEpisodes(LIB_ENTRIES()).then(function(found){
+    if (JSON.stringify(found) === JSON.stringify(_libNewEps)) return;
+    _libNewEps = found; renderLibrary();
+  });
+}
+function _libNewEp(e){ return !LIB_READONLY && e.status === 'ongoing' ? _libNewEps[e.id] || null : null; }
+async function _libUpNext(id){
+  var e = LIB_ENTRIES().filter(function(x){ return x.id === id; })[0];
+  if (!e) return;
+  try {
+    await updateProgress(id, _pUser.id, { status: 'up_next' });
+    e.status = 'up_next';
+    showToast('Added to Up Next!');
+    renderLibrary();
+  } catch (err) { console.error(err); showToast('Error updating. Please try again.', 'err'); }
+}
+function _libUpNextBtn(e, grid){
+  return grid
+    ? '<button type="button" class="continue-btn" onclick="event.stopPropagation();_libUpNext(\''+e.id+'\')">'+icon('skipForward',15)+' Up Next</button>'
+    : '<button type="button" class="w-list-action-btn up-next-btn" onclick="event.stopPropagation();_libUpNext(\''+e.id+'\')" title="Watch this next (Up Next)" aria-label="Up Next">'+icon('skipForward',15)+'</button>';
+}
 // Your own title was deleted → drop it and redraw
 function _libRemove(x) {
   _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
@@ -192,6 +222,7 @@ SF.register(LIB_SCOPE, {
   },
   // Paused entries always sink to the bottom of Currently Watching
   postSort: function(sec,list){
+    if (sec==='completed' && SF.getSort(LIB_SCOPE,'completed')==='newest') return list.filter(function(e){return _libNewEp(e);}).concat(list.filter(function(e){return !_libNewEp(e);}));
     return sec==='watching' ? list.filter(function(e){return e.status==='watching';}).concat(list.filter(function(e){return e.status==='up_next';}), list.filter(function(e){return e.status==='paused';})) : list;
   },
   // quick rating edits from the Sort popup — your own library only
@@ -285,7 +316,7 @@ function _libQueueCard(e,grid){
 var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeBadgeQ='<span class="'+(isMq?'type-label':'type-label type-label-tv')+'">'+(isMq?'Movie':'TV Show')+'</span>';return '<div class="w-card" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e)+'</div><div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+(e.year?'<span class="title-year-inline" style="margin-left:8px;">'+escHTML(e.year)+'</span>':'')+'</div></div><div class="w-ep-row">'+typeBadgeQ+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div></div>';}
 // o = { isRanked, ratingKey } from the Watched section's sort
 function _libCompCard(e,i,grid,o){
-  var esc=_libEsc, isRanked=o.isRanked, ratingKey=o.ratingKey;
+  var esc=_libEsc, isRanked=o.isRanked, ratingKey=o.ratingKey, newEp=_libNewEp(e);
   if(grid){
       var sc=liveScore(e)!=null?Number(liveScore(e)).toFixed(2):null;
       var rk=SF.rank(e,i), cls=rk===1?'cg-rank-1':rk===2?'cg-rank-2':rk===3?'cg-rank-3':'cg-rank-other';
@@ -305,13 +336,15 @@ function _libCompCard(e,i,grid,o){
       var isMovieG=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var typeClsG=(isMovieG?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card cg-card-wrap" style="cursor:pointer;">'
-        +'<div class="wg-poster" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+SF.rank(e,i)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsG+'">'+(isMovieG?'Movie':'TV Show')+'</span>'+' </div>'
+        +'<div class="wg-poster" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+SF.rank(e,i)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+mssNewSeasonHoldHTML(e,newEp)+'<span class="'+typeClsG+'">'+(isMovieG?'Movie':'TV Show')+'</span>'+' </div>'
         +'<div class="cg-grid-info" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
         +metaHtml
+        +(newEp?'<div class="w-ep-row">'+mssNewSeasonBadgeHTML(e,newEp)+'</div>':'')
         +'<div class="cg-score-row"><span class="cg-score">'+(sc!=null?'★ '+sc:'—')+'</span></div>'
         +'</div>'
         +'<div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">'
+        +(newEp?_libUpNextBtn(e,true):'')
         +_libCcBtn(e.id)
         +'</div></div>';
   }
@@ -320,12 +353,12 @@ function _libCompCard(e,i,grid,o){
       var isMc=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       return '<div class="fv-entry-block">'
         +'<div class="fv-rank-row" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
-        +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+(SF.rank(e,i)===1?'cg-rank-1':SF.rank(e,i)===2?'cg-rank-2':SF.rank(e,i)===3?'cg-rank-3':'cg-rank-other')+'">'+SF.rank(e,i)+'</div>':''))+'</div>'
+        +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+mssNewSeasonHoldHTML(e,newEp)+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+(SF.rank(e,i)===1?'cg-rank-1':SF.rank(e,i)===2?'cg-rank-2':SF.rank(e,i)===3?'cg-rank-3':'cg-rank-other')+'">'+SF.rank(e,i)+'</div>':''))+'</div>'
         +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
-        +'<div class="fv-rank-meta">'+_libTypeBadge(isMc)+'</div>'
+        +'<div class="fv-rank-meta">'+_libTypeBadge(isMc)+(newEp?mssNewSeasonBadgeHTML(e,newEp):'')+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2; line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(MSSRich.plain(e.notes)))+'&rdquo;</div>':'')
         +renderFavChips(e.ratings,e.cat)
-        +'</div><div class="fv-rank-score">'+(sc!=null?'★ '+sc:'—')+'</div></div>'
+        +'</div><div class="fv-rank-score'+(newEp?' fv-rank-side':'')+'">'+(sc!=null?'★ '+sc:'—')+(newEp?_libUpNextBtn(e,false):'')+'</div></div>'
         +_libCcBtn(e.id)
         +'</div>';
 }
@@ -428,6 +461,7 @@ function _libRender(){
   if(q&&!secs) secs='<div class="sf-search-empty">'+icon('search',22)+'<b>Nothing matches “'+escHTML(q)+'”</b><span>Try another title or year.</span></div>';
   if(loading){loading.style.display='none';loading.innerHTML='';}
   el.style.display='block';
+  _libCheckNewEps();
   // Remember this library's shape — which stats, how many cards per section — so the next loading skeleton matches it
   if(!q&&!_libCatFilter) mssSkeleton.shape('lib_'+LIB_KEY, { stats:(statsHTML.match(/page-stat-label">[^<]*/g)||[]).map(function(x){return x.slice(17);}),
     n:{watching:watching.length,queue:queue.length,completed:completed.length,dropped:dropped.length} });
