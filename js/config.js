@@ -1994,6 +1994,18 @@ const MSSRegion = (() => {
    one of your own titles { kind: 'entry', entry_id, … } ("I watched this"),
    or a list { kind: 'list', list_id, title, count }.
    js/social.js is loaded the first time it's needed. */
+// Loads a script once, even when two places ask at the same time (or it's already on the page)
+const _mssScripts = {};
+function mssLoadScript(src) {
+  if (_mssScripts[src]) return _mssScripts[src];
+  return (_mssScripts[src] = new Promise(res => {
+    const old = document.querySelector(`script[src="${src}"]`);
+    if (old && old.dataset.loaded !== '0') return res();              // a normal <script> tag has already run
+    const sc = old || document.createElement('script');
+    sc.addEventListener('load', res); sc.addEventListener('error', res);
+    if (!old) { sc.src = src; sc.async = true; sc.dataset.loaded = '0'; sc.addEventListener('load', () => { sc.dataset.loaded = '1'; }); document.head.appendChild(sc); }
+  }));
+}
 function mssRecommend(item) {
   if (typeof MSSShare !== 'undefined') return MSSShare.open(item);
   const sc = document.createElement('script');
