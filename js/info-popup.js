@@ -12,6 +12,8 @@
      In your library     → In Your Library (opens Your Entry) · …the same
      Your own entry      → Add to List · Episode Chart · Recommend · Share Title ·
                            Discover · Discover Card
+       …on your Watchlist / Up Next (no Your Entry tab yet) → also Start Watching ·
+                           Up Next · Drop · Edit · Delete + "Who can see this title"
    Everything about YOUR entry (status, Edit, Rewatch, cards, who can see it,
    Delete) is on the "Your Entry" tab — MSSRate, rating-popup.js.
 
@@ -44,6 +46,10 @@ const INFO_POPUP_CONFIG = {
   showCast: true,          // Top Cast (character first, actor underneath)
   castCount: 5,
 };
+
+// Watchlist / Up Next and not rated: nothing to rate yet, so no Your Entry tab — its buttons and
+// "Who can see this title" sit on the Title tab instead (MSSInfo + MSSViews)
+const mssNotStarted = e => !!e && (e.status === 'queue' || e.status === 'up_next') && liveScore(e) == null;
 
 const MSSInfo = (() => {
   const detailCache = {};          // 'movie:123' → TMDB details (+ credits for movies)
@@ -88,6 +94,7 @@ const MSSInfo = (() => {
           <div id="mssInfoDetails"></div>
           <div id="mssInfoCrew"></div>
           <div id="mssInfoCast"></div>
+          <div id="mssInfoVis" class="mr-vis" hidden></div>
         </div>
         <div class="mss-info-actions" id="mssInfoPopupActions"></div>
       </div>`;
@@ -228,7 +235,11 @@ const MSSInfo = (() => {
       card:       () => e && typeof createShareCard === 'function' ? btn('card', 'idCard', 'Discover Card') : '',
     };
     const keys = opts.actions || (opts.owner ? INFO_POPUP_CONFIG.ownerActions : INFO_POPUP_CONFIG.actions);
-    return keys.map(k => B[k] ? B[k]() : '').join('');
+    const html = keys.map(k => B[k] ? B[k]() : '').join('');
+    // not started yet → your entry's buttons here too (MSSRate's, run through MSSInfo._act)
+    return mssNotStarted(e) && typeof MSSRate !== 'undefined'
+      ? MSSRate.entryButtonsHTML(e, ['start', 'upnext'], 'MSSInfo') + html + MSSRate.entryButtonsHTML(e, ['edit', 'drop', 'delete'], 'MSSInfo')
+      : html;
   }
 
   async function act(key, el) {
@@ -241,6 +252,7 @@ const MSSInfo = (() => {
       poster_url: it.poster_url || e?.poster_url, year: it.year || e?.year });
     if (key === 'shareTitle') return mssShareTitle({ tmdb_id: it.tmdb_id, media_type: it.media_type, title: it.title || it._details?.title || it._details?.name });
     if (!e) return;
+    if (['start', 'upnext', 'edit', 'drop', 'delete'].includes(key)) return MSSRate.entryAct(key, e, opts, close);
     if (key === 'lists') { MSSList.addTo(e); return; }                     // opens on top of this popup
     if (key === 'card') { close(); createShareCard(e.id, 3, true); return; }
   }
@@ -269,6 +281,25 @@ const MSSInfo = (() => {
     document.getElementById('mssInfoCrew').innerHTML = loading && it.tmdb_id && INFO_POPUP_CONFIG.showCrew ? skeleton(isMovieType(it.media_type) ? 'Directed By' : 'Created By', 1) : crewHTML(it, d);
     if (loading) document.getElementById('mssInfoCast').innerHTML = it.tmdb_id && INFO_POPUP_CONFIG.showCast ? skeleton('Top Cast', INFO_POPUP_CONFIG.castCount) : '';
     document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, own, user);
+    const e = opts.owner ? it.entry : null, vis = document.getElementById('mssInfoVis');
+    vis.hidden = !mssNotStarted(e);
+    vis.innerHTML = vis.hidden ? '' : mssTitleVisHTML('mssInfoVisSel', e.visibility, '_mssInfoVisPick');
+  }
+  // Who can see this title (073) — saved straight away
+  async function saveVis(v) {
+    const e = opts.owner ? current?.entry : null;
+    if (!e || (e.visibility || 'anyone') === v) return;
+    const prev = e.visibility || 'anyone';
+    try {
+      await updateProgress(e.id, window._navUser?.id || (await getCurrentUser()).id, { visibility: v });
+      e.visibility = v;
+      opts.onChange?.(e);
+      showToast(v === 'private' ? 'Only you can see this title now.' : v === 'friends' ? 'Only your friends can see this title now.' : 'Anyone can see this title now.');
+    } catch (err) {
+      console.error('MSSInfo vis:', err);
+      showToast('Couldn’t save that — try again.', 'err');
+      mssVisSet('mssInfoVisSel', prev);
+    }
   }
   async function fetchDetails(it) {
     const key = `${it.media_type}:${it.tmdb_id}`;
@@ -539,10 +570,12 @@ const MSSInfo = (() => {
   }
 
   return {
-    open, close, fromDiscover, fromEntry, forOwnEntry, discover, quickAdd, addToLibrary, config: INFO_POPUP_CONFIG,
+    open, close, fromDiscover, fromEntry, forOwnEntry, discover, quickAdd, addToLibrary, config: INFO_POPUP_CONFIG, _vis: saveVis,
     _act: act, _closePicker: closePicker, _addPick: addPick, _addGo: addGo, _addClose: addClose,
   };
 })();
+// the title-visibility control calls this by name (mssTitleVisHTML onPick)
+function _mssInfoVisPick(v) { MSSInfo._vis(v); }
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -551,8 +584,9 @@ const MSSInfo = (() => {
    Opens a title in the shared popups (MSSInfo, MSSRate, MSSNote) with a
    switcher on top, so you can move between them without closing
    anything — tap a tab, swipe left / right on the popup, or use the ← →
-   keys. Title = about the title; Your Entry = about your entry (always
-   there for your own titles, rated or not); someone else's shows as
+   keys. Title = about the title; Your Entry = about your entry (your own
+   titles once you've started them — Watchlist / Up Next ones keep their
+   buttons on Title, there's nothing to rate yet); someone else's shows as
    "Their Entry" once they've rated / watched it; Note once there is one.
 
    Tabs are always in the same order — Title · Entry · Note — only the
@@ -587,7 +621,7 @@ const MSSViews = (() => {
   const hasNote = e => !!(e.notes && e.notes.trim());
   // writeNote: your own entry gets the Note view even before it has one (to write it)
   const ORDER = ['info', 'rate', 'note'];
-  const available = (e, o) => ORDER.filter(v => v === 'info' || (v === 'rate' && (o.own || isRated(e))) || (v === 'note' && (hasNote(e) || (o.own && o.writeNote))));
+  const available = (e, o) => ORDER.filter(v => v === 'info' || (v === 'rate' && (isRated(e) || (o.own && !mssNotStarted(e)))) || (v === 'note' && (hasNote(e) || (o.own && o.writeNote))));
   const label = v => v === 'rate' ? (st.o.own ? 'Your Entry' : 'Their Entry') : VIEWS[v].label;
   const cardOf = v => v === 'note' ? document.querySelector('#mssNoteOverlay .note-popup2') : document.getElementById(VIEWS[v].card);
 
