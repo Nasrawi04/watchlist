@@ -395,7 +395,7 @@
   const isRecovery = hash && hash.includes('type=recovery');
   if (isRecovery) return; // Don't redirect — let reset form handle it
   const user = await getCurrentUser();
-  if (user) { window.location.href = 'index.html'; return; }
+  if (user) { window.location.href = mssAfterLogin(); return; }
   const saved = MSSAccounts.list(), box = document.getElementById('authSaved');
   if (!saved.length) return;
   const ava = a => { const u = safeURL(a.avatar_url);
@@ -522,7 +522,7 @@ async function doSignIn(e) {
     showErr('siError', error.message || 'Invalid credentials.');
     btn.disabled = false; btn.textContent = "Let's go →";
   } else {
-    window.location.href = 'index.html';
+    window.location.href = mssAfterLogin();
   }
 }
 
@@ -575,7 +575,7 @@ async function doSignUp(e) {
   }
 
   if (data?.session) {
-    window.location.href = 'index.html';
+    window.location.href = mssAfterLogin();
   } else if (data?.user) {
     document.querySelector('.flip-card__back').innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:1rem 0;text-align:center">
