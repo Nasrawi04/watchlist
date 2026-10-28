@@ -781,7 +781,8 @@ const MSSStudio = (() => {
       close();
       // rated → the Card (scores, breakdown, note); not rated yet → the Discover Card (poster,
       // synopsis, cast) — like a title's own popups offer
-      if (liveScore(e) != null) createShareCard(e); else createShareCard(e, 3, true);
+      (liveScore(e) != null ? createShareCard(e) : createShareCard(e, 3, true))
+        .catch(err => { console.error('Create Card:', err); showToast('Couldn’t open the card — try again.', 'err'); });
       return;
     }
     const list = picked();
