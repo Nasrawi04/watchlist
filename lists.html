@@ -450,9 +450,23 @@ async function loadListsPage() {
     await mssFillHiddenListItems(foreignIds, _listsEntryMap);   // a collaborator's hidden title (073)
   }
   if (_listsMode === 'personal') renderListsPage();
-  if (await MSSList.hydrate(_listsAll) && _listsMode === 'personal') renderListsPage();
+  const hydrated = await MSSList.hydrate(_listsAll);
+  if ((await _listsKeepOrder() || hydrated) && _listsMode === 'personal') renderListsPage();
 
   _mssIdle(() => _fetchSocialLists());                         // warm up Community
+}
+
+// Your lists set to an order (Ratings Highest, Date Watched…) are put back in it — a score
+// changed since (on another page, another device) moves the title to its place — and saved.
+// Returns true when any list moved. (Changes from now on are re-sorted as they're saved: db.js.)
+async function _listsKeepOrder() {
+  let moved = false;
+  for (const l of _listsAll.filter(l => !l._collab && l.sort_mode && l.sort_mode !== 'picked')) {
+    if (!MSSOrder.reorder(l, l.sort_mode, _resolveListItem)) continue;
+    moved = true;
+    await sb.from('favorite_lists').update({ items: l.items }).eq('id', l.id).eq('user_id', _listsUser.id);
+  }
+  return moved;
 }
 
 // Runs a task once the browser is idle (or after a short delay)
