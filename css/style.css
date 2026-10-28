@@ -6728,7 +6728,7 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .mss-vis-link.mss-vis-new { flex:0 0 auto; background:none; border-color:var(--border-2); color:var(--text-2); }
 .mss-vis-link:hover { border-color:var(--olive-light); }
 .mss-vis-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.np-vis-wrap { margin:0 0 12px; }
+.np-vis-wrap { margin:6px 0 0; }   /* under the writing box (scrolls with it), so the box keeps its room */
 @media (max-width:360px) {   /* small phones: icon over the word, so all three read in full */
   .mss-vis-opt { flex-direction:column; gap:3px; min-height:46px; padding:6px 2px; font-size:12px; }
   .mss-vis-new span { display:none; }
@@ -7089,8 +7089,8 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .mss-rt-emo svg { width:15px; height:15px; }
 @media (hover:none), (pointer:coarse) { .mss-rt-emo { display:none !important; } }
 
-/* your five most used + "+" — WhatsApp-style */
-.mss-emo-quick { position:fixed; z-index:1460; display:none; align-items:center; gap:2px; padding:5px; border-radius:999px;
+/* your five most used + "+" — WhatsApp-style; part of the page next to the smiley, so it scrolls under the top bar like the rest */
+.mss-emo-quick { position:absolute; z-index:6; display:none; align-items:center; gap:2px; padding:5px; border-radius:999px;
   background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:3px 3px 0 var(--olive), var(--shadow-lg); }
 .mss-emo-quick.open { display:flex; animation:mssEmoPop .16s var(--ease); }
 @keyframes mssEmoPop { from { opacity:0; transform:translateY(4px) scale(.96); } to { opacity:1; transform:none; } }
