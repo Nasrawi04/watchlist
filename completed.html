@@ -146,8 +146,10 @@
 <script src="js/export-image.js"></script>
 <script src="js/export-studio.js"></script>
 <script src="js/easter-egg.js"></script>
+<script src="js/info-popup.js"></script>
 <script src="js/rating-popup.js"></script>
 <script src="js/list-popup.js"></script>
+<script src="js/note-popup.js"></script>
 <script src="js/comments.js"></script>
 <script>
 let _compUser = null;
@@ -255,11 +257,11 @@ const _CRIGHT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 function cpOpenPopup(id) {
   const e = _allCompleted.find(en => en.id === id);
   if (!e) return;
-  MSSRate.forOwnEntry(e, {
-    onChange: renderMain,
+  MSSViews.open(e, {
+    own: true, start: 'rate', from: 'completed.html',
+    onChange: renderMain, onNoteSaved: renderMain,
     onComments: x => MSSComments.open(x),
     onDelete: x => { _allCompleted = _allCompleted.filter(y => y.id !== x.id); renderStats(); renderMain(); },
-    addToList: true,
   });
 }
 
