@@ -6,13 +6,7 @@
    (tv-schedule.js, loaded here when the page doesn't have it; it waits 3 hours
    between checks). Runs once the page has settled so it never slows it down. */
 function _navReleaseCheck(user) {
-  const run = () => {
-    if (typeof MSSSchedule !== 'undefined') { MSSSchedule.checkReleases(user.id); return; }
-    const sc = document.createElement('script');
-    sc.src = 'js/tv-schedule.js'; sc.async = true;
-    sc.onload = () => { if (typeof MSSSchedule !== 'undefined') MSSSchedule.checkReleases(user.id); };
-    document.head.appendChild(sc);
-  };
+  const run = () => mssLoadScript('js/tv-schedule.js').then(() => { if (typeof MSSSchedule !== 'undefined') MSSSchedule.checkReleases(user.id); });
   ('requestIdleCallback' in window) ? requestIdleCallback(() => setTimeout(run, 1500), { timeout: 6000 }) : setTimeout(run, 3000);
 }
 
