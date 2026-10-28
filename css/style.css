@@ -7116,3 +7116,8 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .mss-emo-big { font-size:24px; line-height:1; font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; }
 .mss-emo-name { font-size:12.5px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media(prefers-reduced-motion:reduce) { .mss-emo.open { animation:none; } .mss-emo-e, .mss-emo-trigger { transition:none; } .mss-emo-e:hover { transform:none; } }
+
+/* Create Card: TMDB didn't answer → say so, with Try again (create-card.js) */
+.cc-retry { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.cc-retry[hidden] { display:none; }
+.cc-retry span { font-size:12.5px; color:var(--text-3); line-height:1.45; max-width:340px; }
