@@ -40,13 +40,6 @@ function _libResume() {
   var r = MSSViews.resume();
   if (r) _libOpen(r.id, r.view);
 }
-// A show you'd caught up on got a new episode (tv-schedule.js moved it to Up Next) → redraw (your own library only)
-document.addEventListener('mss:entries-changed', function(ev){
-  if (LIB_READONLY) return;
-  var d = ev.detail || {}, hit = false;
-  LIB_ENTRIES().forEach(function(e){ if (d.ids && d.ids.indexOf(e.id) > -1 && e.status !== d.status) { e.status = d.status; hit = true; } });
-  if (hit) renderLibrary();
-});
 // Your own title was deleted → drop it and redraw
 function _libRemove(x) {
   _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
