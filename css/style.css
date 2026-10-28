@@ -285,7 +285,7 @@ html[data-theme="light"]::-webkit-scrollbar-thumb {
   flex:1; width:100%;
   --page-px: 48px; --page-pt: 140px;
 }
-@media(max-width:1380px) { .page-wrap { padding:calc(84px + var(--mtog-h, 0px)) 18px 110px; --page-px:18px; --page-pt:calc(84px + var(--mtog-h, 0px)); } }
+@media(max-width:1199px) { .page-wrap { padding:calc(84px + var(--mtog-h, 0px)) 18px 110px; --page-px:18px; --page-pt:calc(84px + var(--mtog-h, 0px)); } }
 
 /* ═════════════════════════════════════════════════════════════
    §01  Top Navigation
@@ -378,12 +378,12 @@ nav {
 [data-theme="light"] .mobile-search-inner {
   background:var(--bg-2); border-color:var(--border-olive);
 }
-/* ── Desktop (>1380px): the full-width bar, as before — solid, square, fixed to the top — with the
+/* ── Desktop (≥1200px): the full-width bar, fixed to the top, translucent like the phone bars — with the
    phone bar's four tabs; each opens the mega menu below it (nav.js _dnavInit) ── */
-:root { --dnav-bar:#0B0B0F; --dnav-bg-2:#17171d; --dnav-line:var(--border); --dnav-shadow:0 22px 44px rgba(0,0,0,.45); }
-[data-theme="light"] { --dnav-bar:#E2DAD0; --dnav-bg-2:#F4EFE8; --dnav-line:rgba(0,0,0,.12); --dnav-shadow:0 22px 40px rgba(70,55,35,.16); }
-@media(min-width:1381px) {
-  nav#mainNav, [data-theme="light"] nav#mainNav { background:var(--dnav-bar); border-bottom:0.5px solid var(--dnav-line); -webkit-backdrop-filter:none; backdrop-filter:none; }
+:root { --dnav-bg-2:#17171d; --dnav-line:var(--border); --dnav-shadow:0 22px 44px rgba(0,0,0,.45); }
+[data-theme="light"] { --dnav-bg-2:#F4EFE8; --dnav-line:rgba(0,0,0,.12); --dnav-shadow:0 22px 40px rgba(70,55,35,.16); }
+@media(min-width:1200px) {
+  nav#mainNav { border-bottom:0.5px solid var(--dnav-line); }   /* translucent + blurred like the phone bars (base nav rules); the mega menu stays solid */
 }
 #mainNav { z-index:410; }   /* above other <nav>s on the page (Discover / Social side menus share the nav rules) */
 .nav-inner { position:relative; height:120px; padding:0 48px; box-sizing:border-box; display:flex; align-items:center; gap:24px; }
@@ -400,6 +400,7 @@ nav {
 .dnav-tab.active { color:var(--olive-light); }
 .dnav-tab.active::after { content:''; position:absolute; bottom:4px; inset-inline:18px; height:2px; border-radius:2px; background:var(--olive-light); }
 @media(max-width:1500px) { .dnav-tab { padding:10px 13px; gap:7px; } .dnav-tab.active::after { inset-inline:13px; } }   /* narrower desktops: a little tighter */
+@media(max-width:1365px) { .nav-inner { padding:0 32px; gap:16px; } .dnav-tabs { padding-inline:4px; } .dnav-tab { padding:10px 11px; } .dnav-tab.active::after { inset-inline:11px; } }   /* small laptops (1200–1365) */
 .dnav-tab.open svg:last-child { transform:rotate(180deg); }
 .dnav-tab:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .dnav-tab .nav-badge { position:absolute; top:4px; inset-inline-end:6px; margin:0; }
@@ -603,7 +604,7 @@ nav {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   §02  Phones / tablets (≤1380px): bottom bar + top toggles
+   §02  Phones / tablets (<1200px): bottom bar + top toggles
    (js/nav.js · bottom-nav-plan.md)
    ═════════════════════════════════════════════════════════════ */
 @property --x { syntax:'<percentage>'; inherits:true; initial-value:10%; }
@@ -699,7 +700,7 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 @media (prefers-reduced-motion: reduce) {
   .bnav, .bnav-ic, .bnav-lb, .mtog, .bnav-sheet { transition:none; animation:none; }
 }
-@media(max-width:1380px) {
+@media(max-width:1199px) {
   .bnav { display:grid; }
   .mtog { display:grid; }
   #notifPanel { padding-bottom:calc(96px + env(safe-area-inset-bottom)); }   /* last ones clear the bar */
@@ -1145,7 +1146,7 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
   position:sticky; top:120px; z-index:200;
   background:var(--bg); margin-inline-start:calc(-50vw + 50%); width:100vw;
 }
-@media(max-width:1380px) { .prof-tabs { top:calc(64px + var(--mtog-vis, 0px)); transition:top .25s var(--ease); } }
+@media(max-width:1199px) { .prof-tabs { top:calc(64px + var(--mtog-vis, 0px)); transition:top .25s var(--ease); } }
 .prof-tab { flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:12px 0; cursor:pointer; border-bottom:2px solid transparent; color:var(--text-3); transition:all .15s; }
 .prof-tab svg { width:18px; height:18px; flex-shrink:0; }
 .prof-tab:hover { color:var(--text); }
@@ -3548,7 +3549,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 /* ═════════════════════════════════════════════════════════════
    §20  Responsive
    ═════════════════════════════════════════════════════════════ */
-@media(max-width:1380px) {
+@media(max-width:1199px) {
   .nav-top   { display:grid !important; }
   .nav-inner { display:none !important; }
   .btn-add { display:none; }
@@ -3685,7 +3686,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .ttp-btn svg { width:17px; height:17px; }
 .ttp-btn:hover:not(.active) { color:var(--text-2); background:var(--card-3); }
 .ttp-btn.active { background:var(--olive); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
-@media(max-width:1380px) {
+@media(max-width:1199px) {
   .theme-toggle-pill { bottom:calc(128px + env(safe-area-inset-bottom)); inset-inline-end:16px; }
   .toast { bottom:calc(126px + env(safe-area-inset-bottom)); }           /* above the bar's raised circle */
 }
@@ -3875,7 +3876,7 @@ a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar, .rc-col.rc-sel .rc-bar {
   .overview-side .stats-box { flex:1 1 auto; min-height:140px; overflow-y:auto; overscroll-behavior-y:contain; scrollbar-width:thin; }
   .overview-side .rc-box { flex:none; }
 }
-@media(min-width:901px) and (max-width:1380px) { .overview-side { max-height:calc(100vh - 194px - 84px); } }   /* room for the bottom bar */
+@media(min-width:901px) and (max-width:1199px) { .overview-side { max-height:calc(100vh - 194px - 84px); } }   /* room for the bottom bar */
 @media(max-width:640px) {
   .stats-row { padding:10px 16px; }
   .stats-label { font-size:13px; }
@@ -4430,7 +4431,7 @@ body { font-size:15px; }
 /* ═════════════════════════════════════════════════════════════
    §38  Tablet-only Nav
    ═════════════════════════════════════════════════════════════ */
-@media (min-width: 641px) and (max-width: 1380px) {
+@media (min-width: 641px) and (max-width: 1199px) {
   .page-wrap { padding:calc(76px + var(--mtog-h, 0px)) 24px 110px; --page-pt:calc(76px + var(--mtog-h, 0px)); }
 
 }
