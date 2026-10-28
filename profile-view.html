@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function _friendBtnHTML() {
   if (!_pvMe) {
-    return '<a href="login.html" class="pv-friend-btn add">Sign in to Follow</a>';
+    return `<button type="button" class="pv-friend-btn add" onclick="mssJoin('follow people')">+ Follow</button>`;
   }
   const f = _pvFriendship;
   if (!f) {
