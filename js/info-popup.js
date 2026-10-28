@@ -215,7 +215,7 @@ const MSSInfo = (() => {
     const e = opts.owner ? it.entry : null;
     const B = {
       queue: () => {
-        if (!user) return `<a class="popup-action-btn" href="login.html" style="text-decoration:none;">${icon('plus', 14)} Sign in to add</a>`;
+        if (!user) return `<button type="button" class="popup-action-btn" onclick="mssJoin('add titles to your Watchlist')">${icon('plus', 14)} Add to Watchlist</button>`;
         if (own === undefined) return `<button type="button" class="popup-action-btn" disabled>${icon('plus', 14)} Add to Watchlist</button>`;
         if (own) return `<button type="button" class="popup-action-btn" onclick="goToDetail(${attrJSON(own.id)}, ${attrJSON(thisFile())})">${icon('check', 14)} In Your Library · View</button>`;
         return btn('queue', 'plus', 'Add to Watchlist');
@@ -411,7 +411,8 @@ const MSSInfo = (() => {
   async function addToQueue(b) {
     const it = current, d = it?._details;
     const user = window._navUser || await getCurrentUser();
-    if (!it || !user) { location.href = 'login.html'; return; }
+    if (!user) { mssJoin('add titles to your Watchlist'); return; }
+    if (!it) return;
     if (b) { if (b.disabled) return; b.disabled = true; b.innerHTML = 'Adding…'; }
     const payload = payloadFor(it, d);
     // Added from a friend's entry → let them know (notify_friend_queued)
@@ -443,7 +444,7 @@ const MSSInfo = (() => {
   // Adds a TMDB title to your Watchlist without opening the popup (Social → Recommendations)
   async function quickAdd(item) {
     const user = window._navUser || await getCurrentUser();
-    if (!user) { location.href = 'login.html'; return null; }
+    if (!user) { mssJoin('add titles to your Watchlist'); return null; }
     let d = null;
     try { d = item.tmdb_id ? await fetchDetails(item) : null; } catch {}
     return quickCreate(payloadFor(item, d), user.id);
