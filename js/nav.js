@@ -817,13 +817,16 @@ document.addEventListener('click', () => {
    Desktop (>1380px) — the floating top bar + mega menu
    The same four tabs as the phone bar (Home · Library · Social · You — MSS_TABS).
    Click a tab (or ↓ on it) and a panel drops under the bar, exactly as wide as it —
-   click it again, click outside or press Esc to close: the tab's pages as cards — with their Personal ·
-   Friends · Community / Compare · Blend shortcuts — and on the far right a showcase
+   click it again, click outside or press Esc to close: the tab's pages as cards (no sub-shortcuts —
+   the pages have their own toggles / side menu), and on the far right a showcase
    card for the page you're pointing at, in the Start Exploring cards' look
    (index.html .xp-card). The tab you're in is olive with an underline, like before, and
    shows the page you're on in place of its name ("TV Shows" for Library…).
 ═════════════════════════════════════════════════════════════ */
 const DNAV_INFO = {
+  'friends.html?s=lists':       'Your friends’ lists — and the ones you make together.',
+  'friends.html?s=notes':       'What your friends wrote about what they watched.',
+  'friends.html?s=blend':       'A mix of picks you and a friend will both enjoy.',
   'index.html':                 'Your portfolio at a glance — what you’re watching, what’s next and what friends are up to.',
   'discover.html':              'Trending now, the Top 250s and hidden gems — find your next obsession.',
   'library.html':               'Everything you’ve added, in one place — watching, watchlist and watched.',
@@ -834,7 +837,7 @@ const DNAV_INFO = {
   'completed.html':             'Everything you’ve finished, ranked by your scores.',
   'friends.html':               'Your friends, requests and people you might know.',
   'friends.html?s=activity':    'What your friends have been watching and rating.',
-  'friends.html?s=compare':     'Line your taste up with a friend’s — or Blend the two.',
+  'friends.html?s=compare':     'Line your taste up with a friend’s, side by side.',
   'friends.html?s=recs':        'Titles your friends sent you, and the ones you sent.',
   'friends.html?s=epchat':      'Talk about episodes with your friends.',
   'friends.html?s=night':       'Pick something to watch together.',
@@ -865,11 +868,36 @@ function _dnavAcct() {
 }
 const _dnavTab = k => k === 'acct' ? _dnavAcct() : _dnavTabs().find(x => x.k === k);
 const _dnavInfo = it => it.info || DNAV_INFO[it.href] || '';
-const _dnavTabs = () => MSS_TABS.filter(t => t.items);
+// Desktop's Social menu also has your friends' Lists and Notes, and Blend on its own, like the
+// Social page's side menu (on phones they sit under You → Lists / Notes → Friends, and Compare → Blend)
+const DNAV_EXTRA = { social: [
+  { after: 'friends.html?s=activity', items: [
+    { label: 'Lists', icon: 'layers', href: 'friends.html?s=lists' },
+    { label: 'Notes', icon: 'notebook', href: 'friends.html?s=notes' },
+  ] },
+  { after: 'friends.html?s=compare', items: [{ label: 'Blend', icon: 'shuffle', href: 'friends.html?s=blend' }] },
+] };
+const _dnavTabs = () => MSS_TABS.filter(t => t.items).map(t => {
+  let items = t.items;
+  (DNAV_EXTRA[t.k] || []).forEach(x => { const at = items.findIndex(it => it.href === x.after) + 1; items = [...items.slice(0, at), ...x.items, ...items.slice(at)]; });
+  return items === t.items ? t : { ...t, items };
+});
+// Where you are, by the desktop tabs: friends.html?s=lists / ?s=notes belong to Social here
+function _dnavWhere() {
+  const u = new URL(location.href), key = u.pathname.split('/').pop() === 'friends.html' && u.searchParams.get('s') ? 'friends.html?s=' + u.searchParams.get('s') : null;
+  for (const t of _dnavTabs()) {
+    const i = key ? t.items.findIndex(it => it.href === key) : -1;
+    if (i >= 0 && (DNAV_EXTRA[t.k] || []).some(x => x.items.some(it => it.href === key))) return { tab: t.k, item: i };
+  }
+  const w = _mtabWhere(), t = _dnavTabs().find(x => x.k === w.tab);
+  // the extra items shift the index — find it again by href
+  const it = w.item >= 0 ? MSS_TABS.find(x => x.k === w.tab).items[w.item] : null;
+  return { tab: w.tab, item: it ? t.items.findIndex(x => x.href === it.href) : -1 };
+}
 // the phone toggles shorten "TV Shows" to "TV" — here there's room for the full name
 const _dnavLabel = it => LIBRARY_PAGES.find(p => p.href === it.href)?.label || it.label;
 function _dnavTabsHTML() {
-  const where = _mtabWhere();
+  const where = _dnavWhere();
   // the tab you're in shows the page you're on — "TV Shows" in place of Library, "Lists" in place of You…
   return _dnavTabs().map(t => {
     const it = t.k === where.tab && where.item >= 0 ? t.items[where.item] : null;
@@ -908,7 +936,7 @@ function _dnavShow(k) {
   if (_dnavCur === k && !mega.hidden) return;
   if (mega.hidden) _navCloseAll('mega');
   _dnavCur = k;
-  const where = _mtabWhere(), page = location.pathname.split('/').pop() || 'index.html';
+  const where = _dnavWhere(), page = location.pathname.split('/').pop() || 'index.html';
   const here = k === 'acct' ? t.items.findIndex(it => it.href === page) : where.tab === k ? where.item : -1;
   const me = safeURL(window._navUserProfile?.avatar_url);
   mega.setAttribute('aria-label', t.label);
@@ -919,7 +947,6 @@ function _dnavShow(k) {
           <span class="dnav-item-ic${it.me && me ? ' is-av' : ''}" style="--xp-a:${(DNAV_TONE[k] || DNAV_TONE.home)[0]}">${it.me && me ? `<img src="${me}" alt="">` : icon(it.icon, 19)}</span>
           <span class="dnav-item-tx"><b translate="${it.me ? 'no' : 'yes'}">${escHTML(_dnavLabel(it))}</b><small>${escHTML(_dnavInfo(it))}</small></span>
         </a>
-        ${it.sub ? `<div class="dnav-subs">${it.sub.map(([l, h], j) => `<a class="dnav-sub${i === here && j === where.sub ? ' here' : ''}" href="${h}">${escHTML(l)}</a>`).join('')}</div>` : ''}
       </div>`).join('')}
     </div>
     <div class="dnav-show-slot" id="dnavShow" data-i=""></div>`;
