@@ -1786,12 +1786,12 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .dash-empty-row .dash-empty-plus { width:36px; height:36px; flex-shrink:0; }
 .dash-empty-lbl { font-family:var(--sans); font-size:11.5px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; }
 /* Picker */
-#dashPickOverlay, #exCardPick {
+#dashPickOverlay {
   position:fixed; inset:0; z-index:1250; background:var(--popup-backdrop);
   display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity .2s;
 }
-#dashPickOverlay.open, #exCardPick.open { opacity:1; pointer-events:auto; }
-#dashPickCard, #exCardPickCard {
+#dashPickOverlay.open { opacity:1; pointer-events:auto; }
+#dashPickCard {
   width:100%; max-width:720px; max-height:min(86dvh, 760px); display:flex; flex-direction:column;
   background:var(--bg-2); border:1.5px solid var(--olive-light); border-radius:var(--radius-lg); box-shadow:4px 4px 0 var(--olive);
 }
@@ -6538,6 +6538,13 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .xs-fmt .xs-what-ic { margin:0; width:30px; height:30px; flex:none; }
 .xs-fmt.on .xs-what-ic { background:var(--olive); color:#fff; }
 .xs-fmt:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+/* Title card (Create Card) chosen in the Studio: the title you picked, before the card opens */
+.xs-card-pv { display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; padding:18px 12px; }
+.xs-card-pv img, .xs-card-pv > span { width:min(150px, 44%); aspect-ratio:2/3; object-fit:cover; border-radius:var(--radius); box-shadow:var(--shadow); background:var(--bg-3);
+  display:flex; align-items:center; justify-content:center; font:600 40px var(--serif); color:var(--olive-light); }
+.xs-card-pv b { font-size:16px; margin-top:4px; }
+.xs-card-pv em { font-style:normal; font-family:var(--bebas); font-size:22px; letter-spacing:.3px; color:var(--olive-light); }
+.xs-card-pv small { font-size:12px; color:var(--text-3); max-width:260px; line-height:1.45; }
 .xs-info { display:flex; gap:10px; padding:12px 14px; border-radius:var(--radius); background:var(--olive-faint); border:1px solid var(--border-olive); font-size:13px; line-height:1.55; color:var(--text-2); }
 .xs-info svg { flex:none; margin-top:2px; color:var(--olive-light); }
 .xs-info b { color:var(--text); }
