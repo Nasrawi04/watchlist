@@ -1994,18 +1994,6 @@ const MSSRegion = (() => {
    one of your own titles { kind: 'entry', entry_id, … } ("I watched this"),
    or a list { kind: 'list', list_id, title, count }.
    js/social.js is loaded the first time it's needed. */
-// Share Title: a link to the title's page — the phone's share list (WhatsApp, Messages…)
-// where there is one, otherwise the link is copied to paste anywhere
-async function mssShareTitle({ tmdb_id, media_type, title }) {
-  if (!tmdb_id) return;
-  const url = new URL(`title.html?type=${media_type === 'movie' ? 'movie' : 'tv'}&id=${encodeURIComponent(tmdb_id)}`, location.href).toString();
-  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-    try { await navigator.share({ title: title || 'MyScreenFolio', text: title ? `${title} on MyScreenFolio` : undefined, url }); return; }
-    catch (e) { if (e?.name === 'AbortError') return; }
-  }
-  try { await navigator.clipboard.writeText(url); showToast('Link copied — paste it anywhere.'); }
-  catch { showToast('Couldn’t copy the link.', 'err'); }
-}
 function mssRecommend(item) {
   if (typeof MSSShare !== 'undefined') return MSSShare.open(item);
   const sc = document.createElement('script');
