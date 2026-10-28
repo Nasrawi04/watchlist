@@ -748,7 +748,9 @@ const MSSRich = (() => {
   const MARK = { b: '**', i: '*', u: '__', s: '~~' };
   function toolbarHTML(id, endHTML = '') {
     return `<div class="mss-rt-row"><div class="mss-rt" role="toolbar" aria-label="Text style" data-for="${id}">${BTNS.map(([k, label, name, key]) =>
-      `<button type="button" class="mss-rt-btn" data-k="${k}" aria-pressed="false" onpointerdown="event.preventDefault()" onclick="MSSRich.cmd('${id}','${k}')" aria-label="${name}${key ? ` (${key})` : ''}" title="${name}${key ? ` (${key})` : ''}">${label}</button>`).join('')}</div>${endHTML}</div>`;
+      `<button type="button" class="mss-rt-btn" data-k="${k}" aria-pressed="false" onpointerdown="event.preventDefault()" onclick="MSSRich.cmd('${id}','${k}')" aria-label="${name}${key ? ` (${key})` : ''}" title="${name}${key ? ` (${key})` : ''}">${label}</button>`).join('')}`
+      // laptops / desktops: emoji (MSSEmoji, below) — phones have their emoji keyboard
+      + `<button type="button" class="mss-rt-btn mss-rt-emo" onpointerdown="event.preventDefault()" onclick="MSSEmoji._tb('${id}', this)" aria-label="Emoji (Ctrl + ;)" title="Emoji (Ctrl + ;)">${icon('smile', 15)}</button></div>${endHTML}</div>`;
   }
   // Styled box → text with markers: the letters with their styles, line by line,
   // then markers only where a style starts or stops. Spaces at the edge of a
@@ -935,6 +937,214 @@ const MSSRich = (() => {
 
   return { html, plain, toolbarHTML, attach, cmd, toMarkup };
 })();
+
+/* ══════════════════════════════════════════
+   EMOJI PICKER — MSSEmoji
+   For laptops and desktops (a mouse or trackpad — phones and tablets have an emoji
+   keyboard): wherever you write — notes, comments, replies, episode chat, polls,
+   recommendations, list names and descriptions, the Export Studio's title, your bio,
+   challenges, Movie Night — a small smiley button sits in the corner of the box while
+   you type in it (in a note's B · I · U toolbar it's a button of its own). Ctrl + ;
+   opens it from the keyboard too.
+   The picker: search, Recently used, then every group (Smileys, People, Animals &
+   Nature, Food, Activities, Travel, Objects, Symbols, Flags). Click an emoji → it goes
+   in where the cursor was and the picker stays open for more; Esc or a click outside
+   closes it. The emoji list (js/emoji-data.js) loads the first time it opens.
+     MSSEmoji.open(field, anchor)   field: a textarea / input / the note editor
+══════════════════════════════════════════ */
+const MSSEmoji = (() => {
+  const FINE = matchMedia('(hover: hover) and (pointer: fine)');
+  // where emoji make sense — never search boxes, usernames, numbers or dates
+  const FIELDS = 'textarea:not([readonly]):not([hidden]):not([data-no-emoji]), .mss-rte, #mssCommentsInput, .det-reply-input, #lsName, #xsTitle, #setDisplayName, #mnT, #chT, .ch-in:not([inputmode]), input[id^="pfO"]';
+  const GROUPS = [['smile', '😀', 'Smileys'], ['people', '👋', 'People'], ['nature', '🐻', 'Animals & Nature'], ['food', '🍔', 'Food & Drink'], ['activity', '⚽', 'Activities'],
+    ['travel', '✈️', 'Travel & Places'], ['objects', '💡', 'Objects'], ['symbols', '❤️', 'Symbols'], ['flags', '🏁', 'Flags']];
+  const RECENT_KEY = 'mss_emoji_recent', RECENT_MAX = 27;
+  let data = null, loading = null, panel = null, trigger = null, field = null, saved = null;
+  const recent = () => { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; } };
+  const isRte = el => el && el.classList?.contains('mss-rte');
+
+  function load() {
+    if (data) return Promise.resolve(data);
+    return loading || (loading = new Promise((ok, no) => {
+      const sc = document.createElement('script');
+      sc.src = 'js/emoji-data.js';
+      // each: e = the emoji, l = its name, n = name + more words to search by
+      sc.onload = () => { data = (window.MSS_EMOJI_DATA || []).map(g => g.split('~').map(x => { const i = x.indexOf('|'), rest = x.slice(i + 1), j = rest.indexOf(';'); return { e: x.slice(0, i), l: j < 0 ? rest : rest.slice(0, j), n: rest.replace(';', ' ') }; })); ok(data); };
+      sc.onerror = () => { loading = null; no(new Error('Emoji didn’t load')); };
+      document.head.appendChild(sc);
+    }));
+  }
+
+  // remember where the cursor was in the field, so an emoji goes in right there
+  function remember() {
+    if (!field) return;
+    if (isRte(field)) { const sel = getSelection(); if (sel.rangeCount && field.contains(sel.anchorNode)) saved = sel.getRangeAt(0).cloneRange(); }
+    else saved = [field.selectionStart, field.selectionEnd];
+  }
+  function insert(emoji) {
+    const f = field;
+    if (!f || !document.contains(f)) return;
+    if (!isRte(f) && f.maxLength > 0 && f.value.length - Math.abs((saved?.[1] ?? 0) - (saved?.[0] ?? 0)) + emoji.length > f.maxLength) {
+      showToast('No room for another one here.', 'err'); return;
+    }
+    f.focus({ preventScroll: true });
+    if (isRte(f)) {
+      const sel = getSelection();
+      if (saved) { sel.removeAllRanges(); sel.addRange(saved); }
+      document.execCommand('insertText', false, emoji);
+    } else {
+      if (saved) f.setSelectionRange(saved[0], saved[1]);
+      // insertText keeps Undo working; older browsers: put it in by hand
+      if (!document.execCommand('insertText', false, emoji)) {
+        const [a, b] = saved || [f.value.length, f.value.length];
+        f.setRangeText(emoji, a, b, 'end');
+        f.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+    remember();
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify([emoji, ...recent().filter(x => x !== emoji)].slice(0, RECENT_MAX))); } catch {}
+  }
+
+  /* ── the picker ── */
+  function build() {
+    panel = document.createElement('div');
+    panel.className = 'mss-emo';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'Emoji');
+    panel.innerHTML = `<div class="mss-emo-search">${icon('search', 15)}<input type="text" placeholder="Search emoji" aria-label="Search emoji" autocomplete="off" spellcheck="false" data-no-emoji></div>
+      <div class="mss-emo-tabs" role="tablist">${[['recent', '🕘', 'Recently used'], ...GROUPS].map(([k, e, l]) => `<button type="button" class="mss-emo-tab" data-tab="${k}" title="${l}" aria-label="${l}">${e}</button>`).join('')}</div>
+      <div class="mss-emo-grid" tabindex="-1"><div class="mss-emo-wait">Loading emoji…</div></div>
+      <div class="mss-emo-foot"><span class="mss-emo-big" aria-hidden="true">😀</span><span class="mss-emo-name">Pick an emoji</span></div>`;
+    document.body.appendChild(panel);
+    const grid = panel.querySelector('.mss-emo-grid'), q = panel.querySelector('input');
+    panel.addEventListener('mousedown', ev => { if (ev.target !== q) ev.preventDefault(); });   // the field keeps its cursor
+    grid.addEventListener('click', ev => { const b = ev.target.closest('.mss-emo-e'); if (b) insert(b.textContent); });
+    const show = ev => { const b = ev.target.closest('.mss-emo-e'); if (!b) return; panel.querySelector('.mss-emo-big').textContent = b.textContent; panel.querySelector('.mss-emo-name').textContent = b.title.charAt(0).toUpperCase() + b.title.slice(1); };
+    grid.addEventListener('mouseover', show); grid.addEventListener('focusin', show);
+    panel.querySelector('.mss-emo-tabs').addEventListener('click', ev => {
+      const t = ev.target.closest('.mss-emo-tab'); if (!t) return;
+      if (q.value) { q.value = ''; fill(); }
+      const sec = grid.querySelector(`[data-sec="${t.dataset.tab}"]`);
+      if (sec) grid.scrollTop = sec.offsetTop - grid.offsetTop;
+    });
+    grid.addEventListener('scroll', mark, { passive: true });
+    q.addEventListener('input', fill);
+    panel.addEventListener('keydown', ev => {
+      if (ev.key === 'Escape') { ev.preventDefault(); close(true); }
+      if (ev.key === 'Enter' && ev.target === q) { const first = grid.querySelector('.mss-emo-e'); if (first) { ev.preventDefault(); insert(first.textContent); } }
+    });
+  }
+  function fill() {
+    const grid = panel.querySelector('.mss-emo-grid'), q = panel.querySelector('input').value.trim().toLowerCase();
+    if (!data) return;
+    const one = x => `<button type="button" class="mss-emo-e" title="${escHTML(x.l)}">${x.e}</button>`;
+    if (q) {
+      // every word has to match; the emoji whose own name fits best come first ("fire" → 🔥 before ❤️‍🔥)
+      const words = q.split(/\s+/), rank = x => x.l === q ? 0 : x.l.startsWith(q) ? 1 : x.l.split(' ').includes(words[0]) ? 2 : x.l.includes(words[0]) ? 3 : 4;
+      const hits = data.flat().filter(x => words.every(w => x.n.includes(w))).map((x, i) => ({ x, i, r: rank(x) })).sort((a, b) => a.r - b.r || a.i - b.i).slice(0, 160).map(h => h.x);
+      grid.innerHTML = hits.length ? `<div class="mss-emo-sec"><div class="mss-emo-h">Results</div><div class="mss-emo-set">${hits.map(one).join('')}</div></div>` : `<div class="mss-emo-wait">No emoji for “${escHTML(q)}”</div>`;
+    } else {
+      const names = new Map(data.flat().map(x => [x.e, x.l]));
+      const rec = recent();
+      grid.innerHTML = (rec.length ? `<div class="mss-emo-sec" data-sec="recent"><div class="mss-emo-h">Recently used</div><div class="mss-emo-set">${rec.map(e => one({ e, l: names.get(e) || '' })).join('')}</div></div>` : '')
+        + data.map((g, i) => `<div class="mss-emo-sec" data-sec="${GROUPS[i][0]}"><div class="mss-emo-h">${GROUPS[i][2]}</div><div class="mss-emo-set">${g.map(one).join('')}</div></div>`).join('');
+      grid.scrollTop = 0;
+    }
+    mark();
+  }
+  // the tab for the group you're looking at lights up
+  function mark() {
+    const grid = panel.querySelector('.mss-emo-grid');
+    let on = null;
+    grid.querySelectorAll('[data-sec]').forEach(s => { if (s.offsetTop - grid.offsetTop <= grid.scrollTop + 8) on = s.dataset.sec; });
+    panel.querySelectorAll('.mss-emo-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === on));
+  }
+  function place(anchor) {
+    const r = (anchor || field).getBoundingClientRect(), w = panel.offsetWidth, h = panel.offsetHeight, vw = innerWidth, vh = innerHeight;
+    const below = r.bottom + 8 + h <= vh - 8 || r.top - 8 - h < 8;
+    panel.style.top = Math.max(8, Math.min(vh - h - 8, below ? r.bottom + 8 : r.top - 8 - h)) + 'px';
+    panel.style.left = Math.max(8, Math.min(vw - w - 8, r.right - w)) + 'px';
+  }
+  function open(f, anchor) {
+    if (!f) return;
+    field = f; remember();
+    if (!panel) build();
+    panel.classList.add('open');
+    panel.querySelector('input').value = '';
+    place(anchor || trigger);
+    load().then(() => { if (panel.classList.contains('open')) { fill(); place(anchor || trigger); } })
+      .catch(() => { panel.querySelector('.mss-emo-grid').innerHTML = '<div class="mss-emo-wait">Emoji didn’t load — check your connection.</div>'; });
+  }
+  function close(refocus) {
+    if (!panel?.classList.contains('open')) return;
+    panel.classList.remove('open');
+    if (refocus && field && document.contains(field)) field.focus({ preventScroll: true });
+  }
+  const isOpen = () => !!panel?.classList.contains('open');
+
+  /* ── the smiley in the corner of the box you're typing in ── */
+  function showTrigger(f) {
+    if (!trigger) {
+      trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'mss-emo-trigger';
+      trigger.title = 'Emoji (Ctrl + ;)';
+      trigger.setAttribute('aria-label', 'Add an emoji');
+      trigger.innerHTML = icon('smile', 17);
+      trigger.addEventListener('mousedown', ev => ev.preventDefault());
+      trigger.addEventListener('click', () => isOpen() ? close(true) : open(field, trigger));
+      document.body.appendChild(trigger);
+    }
+    field = f;
+    trigger.hidden = false;
+    posTrigger();
+  }
+  function posTrigger() {
+    if (!trigger || trigger.hidden || !field) return;
+    const r = field.getBoundingClientRect();
+    if (!r.width || r.bottom < 0 || r.top > innerHeight) { trigger.style.visibility = 'hidden'; return; }
+    trigger.style.visibility = '';
+    const tall = r.height > 56, resizable = field.tagName === 'TEXTAREA' && getComputedStyle(field).resize !== 'none';
+    trigger.style.top = (tall ? r.bottom - 34 : r.top + (r.height - 28) / 2) + 'px';
+    trigger.style.left = (r.right - 34 - (resizable ? 14 : 0)) + 'px';
+  }
+  function hideTrigger() { if (trigger) trigger.hidden = true; }
+
+  if (FINE.matches) {
+    document.addEventListener('focusin', ev => {
+      const t = ev.target;
+      if (panel?.contains(t)) return;
+      if (t.matches?.(FIELDS) && !t.closest('.mss-emo') && !t.disabled) {
+        if (field !== t) close();
+        if (isRte(t) && t.previousElementSibling?.tagName === 'TEXTAREA' && document.querySelector(`.mss-rt[data-for="${t.previousElementSibling.id}"] .mss-rt-emo`)) { field = t; hideTrigger(); return; }   // its toolbar has the button
+        showTrigger(t);
+      } else if (t !== trigger) { hideTrigger(); close(); }
+    });
+    document.addEventListener('focusout', () => setTimeout(() => {
+      const a = document.activeElement;
+      if (!a || a === document.body) { if (!isOpen()) hideTrigger(); }
+    }, 0));
+    ['selectionchange', 'keyup', 'mouseup'].forEach(k => document.addEventListener(k, () => { if (field && document.activeElement === field) remember(); }));
+    document.addEventListener('input', ev => { if (ev.target === field) posTrigger(); });
+    addEventListener('scroll', () => { posTrigger(); if (isOpen()) place(trigger && !trigger.hidden ? trigger : field); }, { passive: true, capture: true });
+    addEventListener('resize', () => { posTrigger(); if (isOpen()) place(trigger && !trigger.hidden ? trigger : field); });
+    document.addEventListener('mousedown', ev => { if (isOpen() && !panel.contains(ev.target) && ev.target !== trigger && !ev.target.closest('.mss-rt-emo')) close(); });
+    document.addEventListener('keydown', ev => {    // Ctrl + ; in a box you can write in
+      if (ev.key === ';' && ev.ctrlKey && !ev.altKey && document.activeElement?.matches?.(FIELDS)) { ev.preventDefault(); isOpen() ? close(true) : open(document.activeElement, trigger && !trigger.hidden ? trigger : document.activeElement); }
+    });
+  }
+  // the button in a note's toolbar (MSSRich.toolbarHTML)
+  function fromToolbar(id, b) {
+    const ta = document.getElementById(id), f = ta?._mssRich?.ed || ta;
+    if (!f) return;
+    if (isOpen() && field === f) { close(true); return; }
+    if (document.activeElement !== f) { if (ta._mssRich) ta.focus(); else f.focus(); }
+    hideTrigger();
+    open(f, b);
+  }
+  return { open, close, _tb: fromToolbar, enabled: () => FINE.matches };
+})();
+
 
 function posterHTML(entry, size) {
   const letter = escHTML((entry.title || '?')[0].toUpperCase());
