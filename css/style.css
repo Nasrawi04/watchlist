@@ -1852,6 +1852,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   cursor:pointer; transition:border-color .15s, transform .15s, box-shadow .15s;
 }
 .nc-card:hover { border-color:var(--border-olive); transform:translateY(-2px); box-shadow:var(--shadow); }
+.nc-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .nc-poster {
   width:86px; aspect-ratio:2/3; flex-shrink:0; align-self:flex-start; border-radius:var(--radius-sm); overflow:hidden;
   background:var(--olive-faint); display:flex; align-items:center; justify-content:center;
