@@ -281,9 +281,9 @@ html[data-theme="light"]::-webkit-scrollbar-thumb {
 /* ── Page layout ── */
 .page-wrap {
   max-width:none; margin:0 auto;
-  padding:124px 48px 120px;
+  padding:140px 48px 120px;
   flex:1; width:100%;
-  --page-px: 48px; --page-pt: 124px;
+  --page-px: 48px; --page-pt: 140px;
 }
 @media(max-width:1380px) { .page-wrap { padding:calc(84px + var(--mtog-h, 0px)) 18px 110px; --page-px:18px; --page-pt:calc(84px + var(--mtog-h, 0px)); } }
 
@@ -378,23 +378,16 @@ nav {
 [data-theme="light"] .mobile-search-inner {
   background:var(--bg-2); border-color:var(--border-olive);
 }
-/* ── Desktop (>1380px): the floating bar — a rounded, translucent container with some air around
-   it; whatever scrolls behind it blurs out (nav.js _dnavInit). Its four tabs open the mega menu. ── */
-:root { --dnav-bg:rgba(20,20,26,.64); --dnav-bg-2:#17171d; --dnav-line:rgba(255,255,255,.09); --dnav-shadow:0 18px 44px rgba(0,0,0,.42), 0 2px 8px rgba(0,0,0,.3); }
-[data-theme="light"] { --dnav-bg:rgba(246,241,234,.66); --dnav-bg-2:#F4EFE8; --dnav-line:rgba(0,0,0,.08); --dnav-shadow:0 18px 40px rgba(70,55,35,.16), 0 2px 8px rgba(70,55,35,.1); }
+/* ── Desktop (>1380px): the full-width bar, as before — solid, square, fixed to the top — with the
+   phone bar's four tabs; each opens the mega menu below it (nav.js _dnavInit) ── */
+:root { --dnav-bar:#0B0B0F; --dnav-bg-2:#17171d; --dnav-line:var(--border); --dnav-shadow:0 22px 44px rgba(0,0,0,.45); }
+[data-theme="light"] { --dnav-bar:#E2DAD0; --dnav-bg-2:#F4EFE8; --dnav-line:rgba(0,0,0,.12); --dnav-shadow:0 22px 40px rgba(70,55,35,.16); }
 @media(min-width:1381px) {
-  nav#mainNav, [data-theme="light"] nav#mainNav { background:none; border:0; -webkit-backdrop-filter:none; backdrop-filter:none; pointer-events:none; }
-  nav#mainNav .nav-inner { pointer-events:auto; }
+  nav#mainNav, [data-theme="light"] nav#mainNav { background:var(--dnav-bar); border-bottom:0.5px solid var(--dnav-line); -webkit-backdrop-filter:none; backdrop-filter:none; }
 }
 #mainNav { z-index:410; }   /* above other <nav>s on the page (Discover / Social side menus share the nav rules) */
-.nav-inner {
-  position:relative; height:74px; margin:14px 24px 0; padding:0 12px 0 22px; box-sizing:border-box;
-  display:flex; align-items:center; gap:18px;
-  border-radius:24px; background:var(--dnav-bg); border:0.5px solid var(--dnav-line); box-shadow:var(--dnav-shadow);
-  -webkit-backdrop-filter:blur(22px) saturate(1.7); backdrop-filter:blur(22px) saturate(1.7);
-}
-.nav-inner .nav-logo { flex-shrink:0; line-height:0; }
-.nav-inner .nav-logo-img { height:50px; width:auto; aspect-ratio:467 / 198; object-fit:cover; object-position:50% 50%; }
+.nav-inner { position:relative; height:120px; padding:0 48px; box-sizing:border-box; display:flex; align-items:center; gap:24px; }
+.nav-inner .nav-logo { flex-shrink:0; }
 .nav-right { margin-inline-start:auto; display:flex; align-items:center; gap:8px; flex-shrink:0; }
 
 /* the four tabs, spread evenly across the bar — click one for its menu; the one you're on is olive with an underline */
@@ -411,11 +404,10 @@ nav {
 .dnav-tab:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .dnav-tab .nav-badge { position:absolute; top:4px; inset-inline-end:6px; margin:0; }
 
-/* the mega menu: under the bar, flush to its width, solid — pages on the left, the showcase on the right */
-.dnav-mega { position:absolute; top:calc(100% + 10px); inset-inline:0; z-index:5; padding:16px; border-radius:24px;
-  background:var(--dnav-bg-2); border:0.5px solid var(--dnav-line); box-shadow:var(--dnav-shadow);   /* solid — only the bar is see-through */
-  opacity:0; transform:translateY(-8px) scale(.99); transform-origin:top center; transition:opacity .22s var(--ease), transform .28s cubic-bezier(.2,.8,.2,1); }
-.dnav-mega::before { content:''; position:absolute; inset-inline:0; top:-12px; height:12px; }   /* bridge the gap — the menu doesn't close on the way down */
+/* the mega menu: straight under the bar, the bar's full width, solid — pages on the left, the showcase on the right */
+.dnav-mega { position:absolute; top:100%; inset-inline:0; z-index:5; padding:20px 48px 24px;
+  background:var(--dnav-bg-2); border-bottom:0.5px solid var(--dnav-line); box-shadow:var(--dnav-shadow);
+  opacity:0; transform:translateY(-6px); transition:opacity .2s var(--ease), transform .25s cubic-bezier(.2,.8,.2,1); }
 .dnav-mega.open { opacity:1; transform:none; }
 .dnav-mega[hidden] { display:none; }
 .dnav-mega-in { display:grid; grid-template-columns:minmax(0, 1fr) 380px; gap:16px; align-items:stretch; }
@@ -820,7 +812,7 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
   display:flex; align-items:flex-end; justify-content:space-between;
   gap:1rem; padding-bottom:1.5rem;
   border-bottom:0.5px solid var(--border);
-  position:sticky; top:100px; z-index:300;   /* just under the floating bar (14 + 74 + 12) */
+  position:sticky; top:114px; z-index:300;
   background:var(--bg);
   padding-top:0.5rem;
   margin-top:-26px;
@@ -1154,7 +1146,7 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 /* ── Profile tabs (profile.html + profile-view.html — one design) ── */
 .prof-tabs {
   display:flex; border-bottom:0.5px solid var(--border);
-  position:sticky; top:100px; z-index:200;
+  position:sticky; top:120px; z-index:200;
   background:var(--bg); margin-inline-start:calc(-50vw + 50%); width:100vw;
 }
 @media(max-width:1380px) { .prof-tabs { top:calc(64px + var(--mtog-vis, 0px)); transition:top .25s var(--ease); } }
