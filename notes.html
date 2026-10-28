@@ -897,39 +897,9 @@ function renderSocialNotes() {
 
   wrap.innerHTML = `<div class="nc-grid">${list.map(_socialNoteCardHTML).join('')}</div>`;
 }
-// One Community note card (also drawn, with sample text, as the loading skeleton)
+// One Community note card (also drawn, with sample text, as the loading skeleton) — MSSNote, note-popup.js
 function _socialNoteCardHTML(n) {
-  const myReaction = _socialNotesMyReactions[n.entry_id];
-  const id = attrJSON(n.entry_id);
-  const initial = (n.username || '?')[0].toUpperCase();
-  const words = MSSNote.words(n.notes);
-  return `<article class="nc-card" onclick="_notesOpenSocial(${id})" data-dbl-like>
-    ${MSSNote.poster(n.poster_url, n.title, 'nc-poster')}
-    <div class="nc-main">
-      <div class="nc-top">
-        <div class="nc-author">
-          <div class="snote-avatar">${safeURL(n.avatar_url) ? `<img src="${safeURL(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
-          <span>@${esc(n.username || 'user')}</span>
-        </div>
-      </div>
-      <div class="nc-top"><div class="nc-title" translate="no">${esc(n.title)}</div>${MSSNote.scorePill(n.final_score)}</div>
-      <div class="nc-tags">${MSSNote.badges(n, { date: MSSNote.date(MSSNote.watchedDate(n), true) })}</div>
-      ${mssIsSpoiler(n) && n.user_id !== _notesUser?.id
-        ? mssSpoilerHTML(`<blockquote class="nc-quote" translate="no">&ldquo;${esc(MSSNote.trim(MSSRich.plain(n.notes)))}&rdquo;</blockquote>`, { compact: true, id: n.entry_id, e: n })
-        : `<blockquote class="nc-quote" translate="no">&ldquo;${esc(MSSNote.trim(MSSRich.plain(n.notes)))}&rdquo;</blockquote>`}
-      <div class="nc-foot">
-        <div class="nc-reacts">
-          <button type="button" class="snote-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="event.stopPropagation();reactToSocialNote(${id}, true)">
-            ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
-          </button>
-          <button type="button" class="snote-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="event.stopPropagation();reactToSocialNote(${id}, false)">
-            ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
-          </button>
-        </div>
-        <span class="nc-words"><b>${words}</b> ${words === 1 ? 'word' : 'words'}</span>
-      </div>
-    </div>
-  </article>`;
+  return MSSNote.communityCardHTML(n, { mine: _socialNotesMyReactions[n.entry_id], me: _notesUser?.id, open: '_notesOpenSocial', react: 'reactToSocialNote' });
 }
 
 
