@@ -309,6 +309,7 @@ async function quickCreate(payload, userId) {
     runtime_m:     payload.runtime_m     || null,
     tmdb_id:       payload.tmdb_id       || null,
     tmdb_type:     payload.tmdb_type     || null,
+    visibility:    payload.visibility    || 'anyone',   // who can see this title (073) — the Add to Library popup
     // Was hardcoded to {} — silently discarding anything the caller
     // passed here (completion year for ended shows, the detailed
     // per-season episode breakdown, the anime/cartoons Movie/TV
