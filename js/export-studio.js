@@ -341,7 +341,7 @@ const MSSStudio = (() => {
       .sort((a, b) => done(a) - done(b) || (liveScore(b) || 0) - (liveScore(a) || 0) || String(a.title || '').localeCompare(String(b.title || '')));
     const row = e => {
       const sc = liveScore(e), on = S.card === e.id, th = thumb(e.poster_url);
-      const meta = [CAT_META?.[e.cat]?.singular, e.year ? String(e.year).slice(0, 4) : '', sc != null ? `★ ${Number(sc).toFixed(2)}` : ''].filter(Boolean).join(' · ');
+      const meta = [CAT_META?.[e.cat]?.singular, e.year ? String(e.year).slice(0, 4) : '', sc != null ? `★ ${Number(sc).toFixed(2)}` : 'Discover Card'].filter(Boolean).join(' · ');
       return `<button type="button" role="radio" class="xs-pk-row${on ? ' on' : ''}" aria-checked="${on}" onclick="MSSStudio._card('${e.id}')">
         <span class="xs-pk-th">${th ? `<img src="${esc(th)}" alt="" loading="lazy">` : esc((e.title || '?')[0])}</span>
         <span class="xs-pk-text"><b translate="no">${esc(e.title || 'Untitled')}</b><small>${esc(meta)}</small></span>
@@ -532,9 +532,10 @@ const MSSStudio = (() => {
     if (!S) return;
     if (fmt('card')) {   // the card itself is made in Create Card — here: which title
       const e = S.all.find(x => x.id === S.card), th = e && safeURL(e.poster_url);
-      $('xsPvLabel').innerHTML = 'Title card<span>next: Card or Discover Card · light or dark</span>';
+      const rated = e && liveScore(e) != null;
+      $('xsPvLabel').innerHTML = `Title card<span>${!e || rated ? 'next: Card or Discover Card · light or dark' : 'not rated yet — a Discover Card'}</span>`;
       $('xsPreview').innerHTML = e ? `<div class="xs-card-pv">${th ? `<img src="${esc(th)}" alt="">` : `<span>${esc((e.title || '?')[0])}</span>`}<b translate="no">${esc(e.title || 'Untitled')}</b>
-          ${liveScore(e) != null ? `<em>★ ${Number(liveScore(e)).toFixed(2)}</em>` : ''}<small>Your poster, scores and note on a card to share — you can hide the note.</small></div>`
+          ${liveScore(e) != null ? `<em>★ ${Number(liveScore(e)).toFixed(2)}</em>` : ''}<small>${rated ? 'Your poster, scores and note on a card to share — you can hide the note.' : 'Not rated yet, so it’s a Discover Card: poster, synopsis, cast and where it’s from. Rate it for the full card.'}</small></div>`
         : `<div class="xs-loading">Pick a title on the left.</div>`;
       $('xsSummary').innerHTML = e ? `<b translate="no">${esc(e.title || 'Untitled')}</b> · an image to share` : 'Pick one of your titles.';
       goLabel(); $('xsAlt').hidden = true; if (!S.busy) $('xsGo').disabled = !e;
@@ -778,7 +779,9 @@ const MSSStudio = (() => {
       const e = S.all.find(x => x.id === S.card);
       if (!e) return;
       close();
-      createShareCard(e);
+      // rated → the Card (scores, breakdown, note); not rated yet → the Discover Card (poster,
+      // synopsis, cast) — like a title's own popups offer
+      if (liveScore(e) != null) createShareCard(e); else createShareCard(e, 3, true);
       return;
     }
     const list = picked();
