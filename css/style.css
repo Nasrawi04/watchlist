@@ -431,10 +431,6 @@ nav {
 .nav-user-wrap.open { border-color:var(--border-olive); background:var(--olive-faint); }
 .nav-user-wrap.open .nav-chevron svg { transform:rotate(180deg); }
 .nav-chevron svg { transition:transform .25s var(--ease); }
-.dnav-subs { display:flex; flex-wrap:wrap; gap:6px; padding-inline-start:54px; }
-.dnav-sub { padding:5px 11px; border-radius:999px; font-size:12px; font-weight:600; color:var(--text-2); text-decoration:none; background:var(--bg-3); border:0.5px solid var(--border-2); transition:all .15s; }
-.dnav-sub:hover, .dnav-sub:focus-visible { color:#fff; background:var(--olive); border-color:var(--olive); outline:none; }
-.dnav-sub.here { color:var(--olive-light); border-color:var(--border-olive); }
 
 /* the showcase — the Start Exploring card's look: colour wash, giant ghost word, an orb with the page's icon */
 .dnav-show-slot { min-height:206px; display:flex; }
