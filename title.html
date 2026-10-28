@@ -273,15 +273,6 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .td-notes-sort-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
 .td-notes-loading, .td-notes-empty { padding:2rem 0; text-align:center; color:var(--text-3); font-size:13.5px; }
 #tdNotesList { display:flex; flex-direction:column; gap:12px; }
-.td-note-card {
-  display:flex; gap:14px; padding:1.1rem 1.25rem;
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  transition:border-color .15s;
-}
-.td-note-card:hover { border-color:var(--border-olive); }
-.td-note-card { cursor:pointer; }
-.td-note-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.td-note-card .td-note-text { display:-webkit-box; -webkit-line-clamp:6; line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
 .td-lists-count { font-family:var(--bebas); font-size:.9em; color:var(--text-3); margin-inline-start:6px; letter-spacing:.5px; }
 .td-lists { margin-bottom:.5rem; }
 .td-list-pos { margin-inline-start:8px; padding:1px 8px; border-radius:4px; background:var(--olive-faint); color:var(--olive-light); font-size:11px; font-weight:700; }
@@ -291,12 +282,8 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
   display:flex; align-items:center; justify-content:center;
 }
 .td-note-avatar img { width:100%; height:100%; object-fit:cover; }
-.td-note-body { flex:1; min-width:0; }
-.td-note-head { display:flex; align-items:center; gap:8px; margin-bottom:5px; flex-wrap:wrap; }
 .td-note-username { font-size:13.5px; font-weight:600; color:var(--text); }
 .td-note-date { font-size:11.5px; color:var(--text-3); }
-.td-note-text { font-size:14px; line-height:1.6; color:var(--text-2); white-space:pre-line; margin-bottom:8px; }
-.td-note-actions { display:flex; gap:14px; }
 .td-note-react-btn {
   display:inline-flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer;
   color:var(--text-3); font-size:12.5px; font-weight:500; padding:2px 0; transition:color .15s;
@@ -306,7 +293,6 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .td-note-react-btn.active-dislike { color:#c0685a; }
 .td-note-react-btn svg { transition:transform .3s, fill .3s; }
 .td-note-react-btn:hover svg { transform:scale(1.15) rotate(-8deg); }
-.td-note-card { position:relative; }
 
 /* ── Cast ── */
 .td-cast-scroll { display:flex; flex-wrap:wrap; gap:20px 18px; }
@@ -1693,33 +1679,17 @@ function _tdRenderNotes() {
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
-  wrap.innerHTML = sorted.slice(0, TD_SHOW).map(n => {
-    const myReaction = _tdNotesReactions[n.entry_id];
-    const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-    const initial = (n.username || '?')[0].toUpperCase();
-    return `<div class="td-note-card" data-dbl-like role="button" tabindex="0" onclick="_tdOpenNote(${attrJSON(n.entry_id)})" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();this.click()}" aria-label="Open @${esc(n.username || 'user')}’s note">
-      <div class="td-note-avatar">${n.avatar_url ? `<img src="${esc(n.avatar_url)}" loading="lazy">` : esc(initial)}</div>
-      <div class="td-note-body">
-        <div class="td-note-head">
-          <span class="td-note-username">@${esc(n.username || 'user')}</span>
-          <span class="td-note-date">${dateStr}</span>
-        </div>
-        ${mssIsSpoiler(n) && n.user_id !== _tdUser?.id ? mssSpoilerHTML(`<div class="td-note-text" translate="no">${esc(MSSNote.trim(MSSRich.plain(n.notes)))}</div>`, { compact: true, e: { tmdb_id: _tdId, tmdb_type: _tdType } }) : `<div class="td-note-text" translate="no">${esc(MSSNote.trim(MSSRich.plain(n.notes)))}</div>`}
-        <div class="td-note-actions" onclick="event.stopPropagation()">
-          <button type="button" class="td-note-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="_tdReactToNote('${n.entry_id}', true)">
-            ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${n.like_count || 0}</span>
-          </button>
-          <button type="button" class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="_tdReactToNote('${n.entry_id}', false)">
-            ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${n.dislike_count || 0}</span>
-          </button>
-          <button class="td-note-react-btn" onclick='openReplyPopup("note", ${attrJSON(n.entry_id)}, ${attrJSON(n.username || "")})'>
-            ${icon('reply', 14)} Replies
-          </button>
-        </div>
-      </div>
-    </div>`;
-  }).join('') + _tdMoreHTML('notes.html', sorted.length, 'notes');
+  // the same cards as the Notes page's Community (MSSNote.communityCardHTML, note-popup.js) — two across on wide screens
+  const d = _tdDetail || {}, info = {
+    title: d.title || d.name || '', poster_url: d.poster_path ? TMDB_IMG + d.poster_path : null,
+    cat: _tdType === 'movie' ? 'movies' : 'tv', tmdb_id: Number(_tdId), tmdb_type: _tdType,
+    genres: (d.genres || []).map(g => g.name), year: (d.release_date || d.first_air_date || '').slice(0, 4),
+  };
+  wrap.innerHTML = `<div class="nc-grid">${sorted.slice(0, TD_SHOW).map(n => MSSNote.communityCardHTML({ ...info, ...n },
+    { mine: _tdNotesReactions[n.entry_id], me: _tdUser?.id, open: '_tdOpenNote', react: '_tdReactToNote', replies: '_tdNoteReplies' })).join('')}</div>`
+    + _tdMoreHTML('notes.html', sorted.length, 'notes');
 }
+function _tdNoteReplies(entryId, username) { openReplyPopup('note', entryId, username); }
 
 // Notes and Lists show the top 4; "View all" opens the Notes / Lists page filtered to this title
 const TD_SHOW = 4;
