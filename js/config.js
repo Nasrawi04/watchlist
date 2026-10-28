@@ -1067,24 +1067,25 @@ const MSSEmoji = (() => {
         if (ev.key === 'Escape') { ev.preventDefault(); closeBar(true); }
         if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { ev.preventDefault(); bs[(i + (ev.key === 'ArrowRight' ? 1 : -1) + bs.length) % bs.length].focus(); }
       });
-      document.body.appendChild(bar);
     }
     bar.innerHTML = top5().map(e => `<button type="button" class="mss-emo-q" data-e="${e}" aria-label="${e}">${e}</button>`).join('')
       + `<button type="button" class="mss-emo-q mss-emo-more" data-more="1" aria-label="More emoji" title="More emoji">${icon('plus', 18)}</button>`;
     bar._at = anchor && anchor.isConnected ? anchor : f;
+    bar._at.after(bar);            // part of the page, next to the smiley: scrolls with it, stays under the top bar
     bar.classList.add('open');
     placeBar();
   }
-  // stays by the smiley while the page (or a popup) scrolls; goes once the smiley is out of sight
-  let barRaf = 0;
+  // above the smiley, or below it when there's no room above (the top of the page / popup)
   function placeBar() {
-    barRaf = 0;
     if (!bar?.classList.contains('open')) return;
-    const r = bar._at.getBoundingClientRect(), w = bar.offsetWidth, h = bar.offsetHeight;
-    if (!bar._at.isConnected || r.bottom < 0 || r.top > innerHeight) { closeBar(); return; }
-    const above = r.top - h - 8 >= 8;
-    bar.style.top = (above ? r.top - h - 8 : r.bottom + 8) + 'px';
-    bar.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.right - w)) + 'px';
+    const a = bar._at, r = a.getBoundingClientRect(), w = bar.offsetWidth, h = bar.offsetHeight;
+    let top = 64;   // under the top bar
+    for (let el = a.parentElement; el && el !== document.body; el = el.parentElement) {
+      if (/(auto|scroll|hidden)/.test(getComputedStyle(el).overflowY)) { top = Math.max(top, el.getBoundingClientRect().top); break; }
+    }
+    const above = r.top - h - 8 >= top;
+    bar.style.top = (above ? a.offsetTop - h - 8 : a.offsetTop + a.offsetHeight + 8) + 'px';
+    bar.style.left = Math.max(a.offsetLeft + a.offsetWidth - w, a.offsetLeft + a.offsetWidth - r.right + 8) + 'px';   // its right edge at the smiley's, never off the left of the screen
   }
   function closeBar(refocus) {
     if (!bar?.classList.contains('open')) return;
@@ -1179,7 +1180,6 @@ const MSSEmoji = (() => {
     ['selectionchange', 'keyup', 'mouseup'].forEach(k => document.addEventListener(k, () => { if (field && document.activeElement === field) remember(); }));
     document.addEventListener('input', ev => { if (ev.target === field) posTrigger(); });
     addEventListener('resize', () => { posTrigger(); placeBar(); });
-    addEventListener('scroll', () => { if (bar?.classList.contains('open') && !barRaf) barRaf = requestAnimationFrame(placeBar); }, { passive: true, capture: true });
     document.addEventListener('mousedown', ev => { if (bar?.classList.contains('open') && !bar.contains(ev.target) && ev.target !== trigger && !ev.target.closest('.mss-rt-emo')) closeBar(); });
     document.addEventListener('keydown', ev => {    // Ctrl + ; in a box you can write in
       const a = document.activeElement;
