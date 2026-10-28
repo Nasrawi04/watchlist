@@ -221,33 +221,7 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 
 .td-hero-actions { margin-top:0.75rem; }
 .td-add-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; justify-content:flex-start; }
-.td-dd { position:relative; flex:0 1 190px; min-width:150px; }
-.td-dd-trigger {
-  width:100%; height:clamp(38px, 6vw, 48px); box-sizing:border-box; display:flex; align-items:center; justify-content:space-between;
-  padding:0 16px; border-radius:var(--radius-sm); cursor:pointer;
-  background:rgba(255,255,255,0.1); border:0.5px solid rgba(255,255,255,0.28); color:#EDEDED;
-  font-size:clamp(12.5px, 1.8vw, 15px); font-family:var(--sans); transition:border-color .15s, background-color .15s;
-}
-.td-dd-trigger:hover { background:rgba(255,255,255,0.16); border-color:rgba(255,255,255,0.4); }
-.td-dd-placeholder .td-dd-trigger { color:rgba(237,237,237,0.55); }
-.td-dd.open .td-dd-trigger {
-  background:rgba(255,255,255,0.16); border-color:var(--olive-light);
-  border-end-start-radius:0; border-end-end-radius:0;
-}
-.td-dd-chevron { transition:transform .15s, color .15s; flex-shrink:0; margin-inline-start:8px; color:#EDEDED; opacity:.7; }
-.td-dd.open .td-dd-chevron { transform:rotate(180deg); opacity:1; }
-.td-dd-menu {
-  display:none; position:absolute; top:100%; inset-inline-start:0; inset-inline-end:0; z-index:20;
-  background:var(--bg-3); box-shadow:var(--shadow-lg);
-  border:0.5px solid var(--olive-light); border-top:none;
-  border-radius:0 0 var(--radius-sm) var(--radius-sm);
-  overflow-y:auto;overscroll-behavior-y:contain; max-height:240px;
-}
-.td-dd.open .td-dd-menu { display:block; }
-.td-dd-opt { padding:12px 16px; font-size:clamp(12.5px, 1.8vw, 15px); color:var(--text); cursor:pointer; transition:background-color .15s; }
-.td-dd-opt:hover { background:var(--bg-2); }
-.td-dd-opt.active { background:var(--olive-faint); color:var(--olive-light); }
-.td-add-row button.btn-save { height:clamp(38px, 6vw, 48px); font-size:clamp(12.5px, 1.8vw, 15px); box-sizing:border-box; padding:0 24px; flex:0 0 auto; white-space:nowrap; }
+.td-add-row button.btn-save { height:clamp(38px, 6vw, 48px); font-size:clamp(12.5px, 1.8vw, 15px); box-sizing:border-box; padding:0 24px; flex:0 0 auto; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }
 .td-in-library {
   display:flex; align-items:center; gap:12px; font-size:clamp(12.5px, 1.8vw, 15px); color:#EDEDED;
   background:rgba(0,0,0,0.35); border:0.5px solid rgba(255,255,255,0.15);
@@ -354,7 +328,7 @@ a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center;
 
 @media(max-width:640px) {
   .td-add-row { flex-direction:column; align-items:stretch; width:100%; }
-  .td-dd, .td-add-row button { width:100%; flex:0 0 auto; }
+  .td-add-row button { width:100%; flex:0 0 auto; justify-content:center; }
   .td-cast-scroll { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px 10px; }
   .td-cast-card { width:100%; }
   .td-cast-photo { width:100%; height:auto; aspect-ratio:1/1; }
@@ -1182,57 +1156,9 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
   `;
 }
 
-function _tdDDHTML(id, options, selected, placeholder) {
-  const selOpt = options.find(o => o.value === selected);
-  const usePlaceholder = !selOpt && placeholder;
-  const label = selOpt ? selOpt.label : (usePlaceholder ? placeholder : options[0].label);
-  const value = selOpt ? selOpt.value : (usePlaceholder ? '' : options[0].value);
-  return `<div class="td-dd${usePlaceholder ? ' td-dd-placeholder' : ''}" id="${id}" data-value="${value}">
-    <button type="button" class="td-dd-trigger" onclick="event.stopPropagation();_tdToggleDD('${id}')">
-      <span class="td-dd-label">${esc(label)}</span>
-      <svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <div class="td-dd-menu">
-      ${options.map(o => `<div class="td-dd-opt${o.value===value?' active':''}" data-value="${o.value}" onclick="event.stopPropagation();_tdSelectDD('${id}','${o.value}')">${esc(o.label)}</div>`).join('')}
-    </div>
-  </div>`;
-}
-
-function _tdToggleDD(id) {
-  const target = document.getElementById(id);
-  const wasOpen = target.classList.contains('open');
-  document.querySelectorAll('.td-dd.open').forEach(el => el.classList.remove('open'));
-  if (!wasOpen) target.classList.add('open');
-}
-
-function _tdSelectDD(id, value) {
-  const el = document.getElementById(id);
-  el.dataset.value = value;
-  el.classList.remove('td-dd-placeholder');
-  const opt = el.querySelector(`.td-dd-opt[data-value="${value}"]`);
-  if (opt) el.querySelector('.td-dd-label').textContent = opt.textContent;
-  el.querySelectorAll('.td-dd-opt').forEach(o => o.classList.toggle('active', o.dataset.value === value));
-  el.classList.remove('open');
-  _updateTdAddValidation();
-}
-
-function _updateTdAddValidation() {
-  const cat = document.getElementById('tdCatDD')?.dataset.value;
-  const status = document.getElementById('tdStatusDD')?.dataset.value;
-  const complete = !!cat && !!status;
-  const msg = document.getElementById('tdValidationMsg');
-  const btn = document.getElementById('tdAddBtn');
-  if (msg) msg.style.display = complete ? 'none' : '';
-  if (btn) btn.disabled = !complete;
-}
-
-document.addEventListener('click', () => {
-  document.querySelectorAll('.td-dd.open').forEach(el => el.classList.remove('open'));
-});
-
 function _tdAddControlsHTML(ownEntry) {
   if (!_tdUser) {
-    return `<button type="button" class="btn-save" onclick="mssJoin('add this to your library')">${icon('plus',14)} Add to Library</button>`;
+    return `<div class="td-add-row"><button type="button" class="btn-save" onclick="mssJoin('add this to your library')">${icon('plus',14)} Add to Library</button></div>`;
   }
   if (ownEntry) {
     const statusLabel = {
@@ -1245,114 +1171,20 @@ function _tdAddControlsHTML(ownEntry) {
     </div>`;
   }
 
-  const isMovie = _tdType === 'movie';
-  const catOptions = isMovie ? [
-    { value:'movies', label:'Movie' },
-    { value:'anime', label:'Anime' },
-    { value:'cartoons', label:'Cartoon' },
-  ] : [
-    { value:'tv', label:'TV Show' },
-    { value:'anime', label:'Anime' },
-    { value:'cartoons', label:'Cartoon' },
-  ];
-  const statusOptions = [
-    { value:'queue', label:'Watchlist' },
-    { value:'up_next', label:'Up Next' },
-    { value:'watching', label:'Currently Watching' },
-    ...(!isMovie ? [{ value:'paused', label:'Taking a Break' }] : []),
-    { value:'completed', label:'Watched' },
-    ...(!isMovie ? [{ value:'ongoing', label:'To Be Continued' }] : []),
-    { value:'dropped', label:'Dropped' },
-  ];
-  return `<div class="td-add-row">
-    ${_tdDDHTML('tdCatDD', catOptions, null, 'Select category…')}
-    ${_tdDDHTML('tdStatusDD', statusOptions, null, 'Select status…')}
-    <button class="btn-save" id="tdAddBtn" onclick="_tdAddToLibrary()" disabled>${icon('plus',14)} Add to Library</button>
-  </div>
-  <div id="tdValidationMsg" style="font-size:12px;color:#e0a45c;background:rgba(224,164,92,0.1);border:0.5px solid rgba(224,164,92,0.3);border-radius:var(--radius-sm);padding:8px 12px;margin-top:10px;">Please select a category and status before adding.</div>`;
+  return `<div class="td-add-row"><button type="button" class="btn-save" id="tdAddBtn" onclick="_tdAddToLibrary()">${icon('plus',14)} Add to Library</button></div>`;
 }
 
-async function _tdAddToLibrary() {
-  if (mssGuestGate('add this to your library') || !_tdUser) return;
-
-  const cat = document.getElementById('tdCatDD')?.dataset.value;
-  if (!cat) { showToast('Please select a category.', 'err'); return; }
-  const status = document.getElementById('tdStatusDD')?.dataset.value;
-  if (!status) { showToast('Please select a status.', 'err'); return; }
-
-  // Guard against rapid double-clicks/double-taps firing this twice before
-  // the first request finishes — this was the actual cause of items getting
-  // added to the watchlist multiple times (two concurrent requests can both
-  // pass the "does this exist yet" check before either one commits).
-  const btn = document.getElementById('tdAddBtn');
-  if (btn && btn.disabled) return;
-  const origBtnHTML = btn ? btn.innerHTML : '';
-  if (btn) { btn.disabled = true; btn.innerHTML = 'Adding…'; }
-
-  const d = _tdDetail;
-  const isMovie = _tdType === 'movie';
-
-  const payload = {
-    title:       isMovie ? d.title : d.name,
-    cat, status,
-    year:        ((isMovie ? d.release_date : d.first_air_date) || '').split('-')[0] || null,
-    description: d.overview || null,
-    genres:      tmdbGenreNames(d.genres),
-    poster_url:  d.poster_path ? TMDB_FULL + d.poster_path : null,
-    tmdb_id:     Number(_tdId),
-    tmdb_type:   _tdType,
-  };
-  if (isMovie) {
-    payload.runtime_h = d.runtime ? Math.floor(d.runtime/60) : null;
-    payload.runtime_m = d.runtime ? (d.runtime%60) : null;
-  } else {
-    payload.total_seasons = d.number_of_seasons || null;
-    payload.total_eps     = d.number_of_episodes || null;
-    // total_seasons/total_eps above are just the aggregate counts — the
-    // detailed per-season breakdown and completion year only ever live
-    // inside ratings, which this payload previously never included at
-    // all, so both were silently lost for every entry added this way.
-    const seasons = (d.seasons || []).filter(s => s.season_number > 0);
-    payload.ratings = { _season_breakdown: seasons.map(s => s.episode_count) };
-    if ((d.status === 'Ended' || d.status === 'Canceled') && d.last_air_date) {
-      payload.ratings._completion_year = d.last_air_date.split('-')[0];
-    }
-  }
-  // Anime/Cartoons mix movie and show entries within the same category —
-  // without this marker, an anime movie added here defaults to being
-  // treated as a show everywhere else in the app.
-  if (cat === 'anime' || cat === 'cartoons') {
-    payload.ratings = { ...(payload.ratings || {}), _media_type: _tdType };
-  }
-
-  try {
-    const entry = await quickCreate(payload, _tdUser.id);
+// The shared Add to Library popup (info-popup.js): where in your library, what it is, who can see it
+function _tdAddToLibrary() {
+  if (mssGuestGate('add this to your library') || !_tdUser || !_tdDetail) return;
+  const d = _tdDetail, movie = _tdType === 'movie';
+  MSSInfo.addToLibrary({ tmdb_id: Number(_tdId), media_type: _tdType, title: movie ? d.title : d.name,
+    year: ((movie ? d.release_date : d.first_air_date) || '').slice(0, 4), poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null },
+  { details: d, onAdded: entry => {
     _tdOwnEntry = entry;
-    showToast('Added to your library!');
-    const addRow = document.querySelector('.td-add-row');
-    if (addRow) addRow.outerHTML = _tdAddControlsHTML(entry);
-  } catch (err) {
-    if (String(err.message).startsWith('DUPLICATE:')) {
-      // Something already added this — likely a near-simultaneous request
-      // that won the race. Rather than leave a broken Add button, fetch
-      // the entry that now exists and switch to the "already in library"
-      // state, same as a normal successful add would.
-      try {
-        const existing = await getOwnEntryByTmdb(_tdUser.id, Number(_tdId), _tdType, payload.title);
-        if (existing) {
-          _tdOwnEntry = existing;
-          const addRow = document.querySelector('.td-add-row');
-          if (addRow) addRow.outerHTML = _tdAddControlsHTML(existing);
-          return;
-        }
-      } catch (e2) { /* fall through to re-enabling the button below */ }
-      showToast('Already in your library.', 'err');
-    } else {
-      showToast('Error adding entry.', 'err');
-      console.error(err);
-    }
-    if (btn) { btn.disabled = false; btn.innerHTML = origBtnHTML; }
-  }
+    const box = document.querySelector('.td-hero-actions');
+    if (box) box.innerHTML = _tdAddControlsHTML(entry);
+  } });
 }
 
 function _tdSeasonsHTML(d) {
