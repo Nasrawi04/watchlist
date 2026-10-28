@@ -1332,19 +1332,13 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 .mr-cc:empty { display:none; }
 .mr-cc .cc-strip { margin-top:4px; }
 #mssRatePopupActions { display:flex; gap:8px; padding:4px 24px 24px; flex-wrap:wrap; }
-/* Wider screens: 3 to a row — Edit · Rewatch · Add to List / Recommend · Share · Create Card —
-   then Delete across the bottom. Phones keep one full-width button per line (§43). */
+/* Wider screens: 3 to a row in the order they're built (status · Rewatch · Rate Episodes · Edit ·
+   Drop · Create Card), then Delete across the bottom. Phones keep one full-width button per line (§43). */
 @media(min-width:601px) {
   #mssRatePopupActions .popup-action-btn { flex:1 1 calc(33.333% - 6px); }
-  #mssRatePopupActions [data-act="edit"]         { order:1; }
-  #mssRatePopupActions [data-act="rewatch"]      { order:2; }
-  #mssRatePopupActions [data-act="lists"]        { order:3; }
-  #mssRatePopupActions [data-act="recommend"]    { order:4; }
-  #mssRatePopupActions [data-act="share"]        { order:5; }
-  #mssRatePopupActions [data-act="card"]         { order:6; }
-  #mssRatePopupActions [data-act="discoverCard"] { order:7; }
-  #mssRatePopupActions [data-act="delete"]       { order:9; flex-basis:100%; }
+  #mssRatePopupActions [data-act="delete"] { order:9; flex-basis:100%; }
 }
+#mssRatePopupActions:empty { display:none; }
 
 /* ── Picker header + list (.rf-*) — the "Link to TMDB" pickers (Create Card, Discover) and detail.html pickers ── */
 .rf-header { display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.25rem 0.75rem; flex-shrink:0; }
@@ -5341,6 +5335,42 @@ html.mss-scroll-locked [role="dialog"] { overscroll-behavior:contain; }
 .la-empty b { color:var(--text); font-size:15px; }
 .la-new { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
 @media(max-width:640px) { #mssListAddOverlay { padding:10px; } .la-card .lc-posters { gap:5px; } }
+
+/* ── Add to Library popup (MSSInfo.addToLibrary, info-popup.js): where · what it is · who can see ── */
+#mssAddOverlay { position:fixed; inset:0; z-index:1350; background:var(--popup-backdrop); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
+#mssAddOverlay.open { opacity:1; pointer-events:auto; }
+#mssAddCard { width:100%; max-width:480px; max-height:90dvh; display:flex; flex-direction:column; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg); }
+.mss-add-head { display:flex; align-items:center; gap:14px; padding:18px 20px 6px; flex-shrink:0; }
+.mss-add-poster { width:52px; aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0; background:var(--olive-faint); color:var(--olive-light); display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:20px; border:0.5px solid var(--border); }
+.mss-add-poster img { width:100%; height:100%; object-fit:cover; }
+.mss-add-who { flex:1; min-width:0; }
+.mss-add-who .lp-eyebrow { margin-bottom:4px; }
+.mss-add-title { font-family:var(--serif); font-size:21px; line-height:1.2; color:var(--text); overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.mss-add-sub { font-size:12px; color:var(--text-3); margin-top:3px; }
+.mss-add-head .sf-close { align-self:flex-start; }
+.mss-add-where { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+.mss-add-cats { display:flex; gap:8px; flex-wrap:wrap; }
+.mss-add-opt { display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:var(--radius-sm); background:var(--bg-3); border:1px solid var(--border); color:var(--text-2); cursor:pointer; text-align:start; font-family:'Manrope',var(--sans); transition:border-color .15s, background-color .15s, color .15s; min-width:0; }
+.mss-add-cats .mss-add-opt { padding:9px 16px; border-radius:999px; }
+.mss-add-opt:hover { border-color:var(--border-olive); color:var(--text); }
+.mss-add-opt.on { background:var(--olive-faint); border-color:var(--olive-light); color:var(--olive-light); }
+.mss-add-opt:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.mss-add-ic { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--bg-2); color:var(--text-3); transition:background-color .15s, color .15s; }
+.mss-add-opt.on .mss-add-ic { background:var(--olive); color:#fff; }
+.mss-add-l { display:flex; flex-direction:column; min-width:0; }
+.mss-add-l b { font-size:13.5px; font-weight:600; color:inherit; }
+.mss-add-l small { font-size:11.5px; color:var(--text-3); margin-top:1px; line-height:1.3; }
+.mss-add-vis { margin:18px 0 6px; }
+#mssAddGo { display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; }
+#mssAddGo:disabled { opacity:.6; cursor:default; }
+@media(max-width:420px) { #mssAddOverlay { padding:10px; } .mss-add-where { grid-template-columns:1fr; } .mss-add-title { font-size:19px; } #mssAddCard .sf-clear-btn { flex:0 0 auto; padding-inline:16px; } }
+
+/* Your Entry tab before there are ratings (rating-popup.js) */
+.mr-unrated { display:flex; align-items:center; gap:12px; padding:14px 16px; margin-bottom:6px; border-radius:var(--radius); background:var(--olive-faint); border:0.5px dashed var(--border-olive); color:var(--olive-light); }
+.mr-unrated svg { flex-shrink:0; }
+.mr-unrated div { display:flex; flex-direction:column; gap:2px; }
+.mr-unrated b { font-size:14px; color:var(--text); }
+.mr-unrated span { font-size:12.5px; color:var(--text-3); line-height:1.4; }
 
 /* ── Rich notes (MSSRich, config.js): toolbar + styled text ── */
 .mss-rt-row { display:flex; align-items:center; gap:4px 8px; flex-wrap:wrap; margin:0 0 8px; }
