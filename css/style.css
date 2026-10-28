@@ -397,17 +397,16 @@ nav {
 .nav-inner .nav-logo-img { height:50px; width:auto; aspect-ratio:467 / 198; object-fit:cover; object-position:50% 50%; }
 .nav-right { margin-inline-start:auto; display:flex; align-items:center; gap:8px; flex-shrink:0; }
 
-/* the four tabs, centred; a soft pill slides under the one you're on / pointing at */
-.dnav-tabs { position:relative; flex:1; display:flex; justify-content:center; align-items:center; gap:4px; }
-.dnav-pill { position:absolute; top:0; left:0; height:100%; border-radius:999px; background:var(--olive-faint); border:0.5px solid var(--border-olive);
-  opacity:0; pointer-events:none; transition:transform .35s cubic-bezier(.35,1.25,.5,1), width .35s cubic-bezier(.35,1.25,.5,1), opacity .2s; }
-.dnav-tabs { width:max-content; flex:0 1 auto; margin-inline:auto; }
-.dnav-tab { position:relative; z-index:1; display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border-radius:999px;
+/* the four tabs, spread evenly across the bar — click one for its menu; the one you're on is olive with an underline */
+.dnav-tabs { flex:1; min-width:0; display:flex; justify-content:space-evenly; align-items:center; padding-inline:12px; }   /* spread evenly between the logo and the right side */
+.dnav-tab { background:none; border:0; cursor:pointer; position:relative; z-index:1; display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border-radius:999px;
   font-family:'Manrope',var(--sans); font-size:14.5px; font-weight:700; color:var(--text-2); text-decoration:none; white-space:nowrap; transition:color .2s; }
 .dnav-tab svg { width:16px; height:16px; flex-shrink:0; }
 .dnav-tab svg:last-child { width:12px; height:12px; opacity:.55; transition:transform .25s var(--ease); }
 .dnav-tab:hover, .dnav-tab.open { color:var(--text); }
 .dnav-tab.active { color:var(--olive-light); }
+.dnav-tab.active::after { content:''; position:absolute; bottom:4px; inset-inline:18px; height:2px; border-radius:2px; background:var(--olive-light); }
+@media(max-width:1500px) { .dnav-tab { padding:10px 13px; gap:7px; } .dnav-tab.active::after { inset-inline:13px; } }   /* narrower desktops: a little tighter */
 .dnav-tab.open svg:last-child { transform:rotate(180deg); }
 .dnav-tab:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .dnav-tab .nav-badge { position:absolute; top:4px; inset-inline-end:6px; margin:0; }
@@ -433,6 +432,13 @@ nav {
 .dnav-item-tx b { font-family:'Manrope',var(--sans); font-size:14.5px; font-weight:800; display:flex; align-items:center; gap:6px; }
 .dnav-item.here .dnav-item-tx b::after { content:''; width:6px; height:6px; border-radius:50%; background:var(--olive-light); }
 .dnav-item-tx small { font-size:12px; line-height:1.4; color:var(--text-3); display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.dnav-item-ic.is-av { padding:0; overflow:hidden; border-radius:50%; }
+.dnav-item-ic.is-av img { width:100%; height:100%; object-fit:cover; }
+.dnav-item.is-out .dnav-item-ic { background:linear-gradient(145deg, #d24b4b, #9e2b2b); }
+.dnav-item.is-out .dnav-item-tx b { color:#e26a6a; }
+.nav-user-wrap.open { border-color:var(--border-olive); background:var(--olive-faint); }
+.nav-user-wrap.open .nav-chevron svg { transform:rotate(180deg); }
+.nav-chevron svg { transition:transform .25s var(--ease); }
 .dnav-subs { display:flex; flex-wrap:wrap; gap:6px; padding-inline-start:54px; }
 .dnav-sub { padding:5px 11px; border-radius:999px; font-size:12px; font-weight:600; color:var(--text-2); text-decoration:none; background:var(--bg-3); border:0.5px solid var(--border-2); transition:all .15s; }
 .dnav-sub:hover, .dnav-sub:focus-visible { color:#fff; background:var(--olive); border-color:var(--olive); outline:none; }
@@ -447,6 +453,7 @@ nav {
 .dnav-show-orb { position:absolute; top:50%; inset-inline-end:26px; width:112px; height:112px; margin-top:-56px; border-radius:50%; display:grid; place-items:center;
   background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); box-shadow:0 14px 34px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.2);
   -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); animation:dnavOrb .55s cubic-bezier(.35,1.35,.5,1); }
+.dnav-show-orb.has-av img { width:100%; height:100%; border-radius:50%; object-fit:cover; }
 .dnav-show-orb svg { width:48px; height:48px; stroke-width:1.5; filter:drop-shadow(0 4px 10px rgba(0,0,0,.3)); }
 .dnav-show-ring { position:absolute; inset:-14px; border-radius:50%; border:1px dashed rgba(255,255,255,.18); animation:dnavSpin 18s linear infinite; }
 .dnav-show-ring.r2 { inset:-30px; border-style:solid; border-color:rgba(255,255,255,.07); animation-duration:30s; animation-direction:reverse; }
@@ -467,7 +474,7 @@ nav {
 @keyframes dnavOrb { from { opacity:0; transform:scale(.6) rotate(-20deg); } }
 @keyframes dnavSpin { to { transform:rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .dnav-pill, .dnav-mega, .dnav-item-ic { transition:none; }
+  .dnav-mega, .dnav-item-ic { transition:none; }
   .dnav-show, .dnav-show-ghost, .dnav-show-orb, .dnav-show-ring, .dnav-show-tx > * { animation:none; }
 }
 @media(max-width:1600px) { .dnav-mega-in { grid-template-columns:minmax(0, 1fr) 330px; } .dnav-items[style*="--cols:4"] { --cols:3 !important; } }
