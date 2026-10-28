@@ -165,6 +165,7 @@
 #notesUserFilterBanner button {
   background:none; border:none; color:var(--olive-light); font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:underline;
 }
+#notesUserFilterBanner a { color:inherit; font-weight:700; text-decoration:underline; text-underline-offset:2px; }
 
 @media(max-width:640px){
   .notes-search-card-header { padding:14px 16px; }
@@ -277,11 +278,15 @@ let _notesActiveId = null;
 let _notesMode = 'personal';
 let _socialNotesRaw = [];
 let _socialNotesMyReactions = {}; // entry_id -> 'like' | 'dislike'
+// From a title page's "View all notes": notes.html?mode=community&tmdb=<id>&type=<movie|tv>&t=<name>
+let _notesTitle = (q => q.get('tmdb') ? { id: Number(q.get('tmdb')), type: q.get('type') === 'tv' ? 'tv' : 'movie', name: q.get('t') || 'this title' } : null)(new URLSearchParams(location.search));
 
 document.addEventListener('DOMContentLoaded', () => {
   attachClearButton('notesUserSearchInput');
   initPage(async (user) => {
-    if (!user) {
+    const q = new URLSearchParams(location.search);
+    // Guests can read Community notes; their own notes need an account
+    if (!user && q.get('mode') !== 'community') {
       document.querySelector('.page-wrap').innerHTML = `
         <div class="guest-page-state fade-up">
           <div class="guest-page-icon">${icon('notebook', 36)}</div>
@@ -291,13 +296,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <a href="login.html" class="guest-btn-primary">Sign In</a>
             <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
           </div>
+          <a class="guest-browse" href="notes.html?mode=community">Browse Community notes →</a>
         </div>`;
       _notesOpenLink();
       return;
     }
     _notesUser = user;
-    const q = new URLSearchParams(location.search);
     if (q.get('mode') === 'community') setNotesMode('social');
+    if (!user) { _notesOpenLink(); return; }
     await loadNotesPage();
     _notesOpenLink();
     if (q.get('add')) {                                 // (+) → Write a note, from another page
@@ -491,6 +497,7 @@ function setNotesSort(order) { SF.setSort('notesMine', 'all', { latest: 'newest'
 // Personal ↔ Community from the phone toggles: switch in place
 window.mssTabGo = url => { setNotesMode(url.searchParams.get('mode') === 'community' ? 'social' : 'personal'); return true; };
 function setNotesMode(mode) {
+  if (mode !== 'social' && mssGuestGate('keep your own notes')) return;
   _notesMode = mode;
   const url = new URL(location.href);                 // ?mode=community — the phone toggles link to it
   if (mode === 'social') url.searchParams.set('mode', 'community'); else url.searchParams.delete('mode');
@@ -501,9 +508,11 @@ function setNotesMode(mode) {
   document.getElementById('notesUserSearchWrap').style.display = mode === 'social' ? '' : 'none';
   // "+ Add Note" / "Edit Note" stay available in both modes — you can add
   // a personal note even while browsing the community feed.
+  if (mode !== 'social' && _notesTitle) _nuForgetTitle();
   if (mode === 'social') {
     _nuFilterUser = null;
     document.getElementById('notesUserFilterBanner').style.display = 'none';
+    if (_notesTitle) { _nuLoadTmdbNotes(); return; }
     loadSocialNotes();
   } else {
     renderNotesPage();
@@ -685,6 +694,7 @@ function _nuSelectResult(i) {
   mssUnlockScroll('nuDropdown');
   _nuResults = []; _nuActive = -1;
 
+  _nuForgetTitle();
   if (r.type === 'user') {
     _nuFilterUser = { id: r.id, username: r.username, avatar_url: r.avatar_url };
     _nuLoadUserNotes();
@@ -694,6 +704,7 @@ function _nuSelectResult(i) {
 }
 
 function _nuClearFilter() {
+  _nuForgetTitle();
   _nuFilterUser = null;
   document.getElementById('notesUserSearchInput').value = '';
   document.getElementById('notesUserFilterBanner').style.display = 'none';
@@ -756,6 +767,46 @@ async function _nuLoadTitleNotes(title) {
     }
 
     document.getElementById('notesPageSub').textContent = `${_socialNotesRaw.length} note${_socialNotesRaw.length !== 1 ? 's' : ''} for "${title}"`;
+    renderSocialNotes();
+  } catch (err) {
+    console.error('Load title notes error:', err);
+    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;color:var(--text-3);">Couldn't load notes for this title.</div>`;
+  }
+}
+
+// Back to the whole Community: drop ?tmdb=…&type=…&t=…
+function _nuForgetTitle() {
+  if (!_notesTitle) return;
+  _notesTitle = null;
+  const url = new URL(location.href);
+  ['tmdb', 'type', 't'].forEach(k => url.searchParams.delete(k));
+  history.replaceState(history.state, '', url.pathname + url.search);
+}
+
+// Every Community note on one title — the same notes as its title page (get_notes_for_title)
+async function _nuLoadTmdbNotes() {
+  const t = _notesTitle, wrap = document.getElementById('notesPageContent');
+  wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;
+  document.getElementById('notesPageStats').innerHTML = '';
+  const banner = document.getElementById('notesUserFilterBanner');
+  banner.style.display = 'flex';
+  banner.innerHTML = `<span>Showing notes for <a href="title.html?id=${t.id}&type=${t.type}" translate="no">${esc(t.name)}</a></span><button onclick="_nuClearFilter()">Clear</button>`;
+  document.getElementById('notesUserSearchInput').value = '';
+  try {
+    const [{ data, error }, { data: one }] = await Promise.all([
+      sb.rpc('get_notes_for_title', { p_tmdb_id: t.id, p_tmdb_type: t.type }),
+      sb.from('entries').select('title, poster_url, cat, genres, year').eq('tmdb_id', t.id).eq('tmdb_type', t.type).not('poster_url', 'is', null).limit(1).maybeSingle(),
+    ]);
+    if (error) throw error;
+    if (_notesTitle !== t) return;                           // cleared while loading
+    const info = one || { title: t.name };
+    _socialNotesRaw = (data || []).map(n => ({ ...n, title: info.title || t.name, poster_url: info.poster_url, cat: info.cat, genres: info.genres, year: info.year, tmdb_id: t.id, tmdb_type: t.type }));
+    if (_notesUser && _socialNotesRaw.length) {
+      const { data: mine } = await sb.from('note_reactions').select('entry_id, is_like').eq('user_id', _notesUser.id).in('entry_id', _socialNotesRaw.map(n => n.entry_id));
+      _socialNotesMyReactions = {};
+      (mine || []).forEach(r => { _socialNotesMyReactions[r.entry_id] = r.is_like ? 'like' : 'dislike'; });
+    }
+    document.getElementById('notesPageSub').textContent = `${_socialNotesRaw.length} note${_socialNotesRaw.length !== 1 ? 's' : ''} for "${t.name}"`;
     renderSocialNotes();
   } catch (err) {
     console.error('Load title notes error:', err);
@@ -834,7 +885,7 @@ function renderSocialNotes() {
   }
   const list = SF.list('notesSocial', 'all');
   if (!searching) mssSkeleton.shape('notes_c', { n: list.length });
-  _renderNotesToolbar(searching ? 'Search Results' : 'Community', list.length, all.length ? SF.bar('notesSocial', 'all') : '');
+  _renderNotesToolbar(_notesTitle ? 'On This Title' : searching ? 'Search Results' : 'Community', list.length, all.length ? SF.bar('notesSocial', 'all') : '');
   if (!all.length) {
     wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
       <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('notebook', 44)}</div>
@@ -931,6 +982,7 @@ let _notesSearchMode = 'add';
 
 
 function openNotesSearchPopup(mode) {
+  if (mssGuestGate('write notes')) return;
   _notesSearchMode = mode;
   document.getElementById('notesSearchCardTitle').textContent = mode === 'edit' ? 'Edit Note' : 'Add Note';
   const input = document.getElementById('notesSearchInput');
