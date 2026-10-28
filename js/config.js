@@ -1529,6 +1529,77 @@ const mssSkeleton = (() => {
   return api;
 })();
 
+/* ══════════════════════════════════════════
+   LIST ORDER — MSSOrder (a list's sort_mode)
+   Used by the lists (MSSList, list-popup.js), the List Studio, and db.js, which
+   re-sorts your lists that keep an order whenever a title in them changes.
+══════════════════════════════════════════ */
+const MSSOrder = (() => {
+  /* ── List order (sort_mode) — ranked and unranked lists ──
+     'picked' (or none) = your own order. Any other mode keeps the list in that
+     order automatically: titles added later slot into place. Titles without the
+     value (e.g. a Discover pick you haven't watched has no watch date) go last. */
+  // Named like the site's Sort menus (sort-filter.js): "Ratings: Highest", "Release Date: Latest"…
+  const ORDER_GROUPS = [
+    ['Ratings',         [['highest', 'Highest'], ['lowest', 'Lowest']]],
+    ['Date Watched',    [['watched_new', 'Latest'], ['watched_old', 'Earliest']]],
+    ['Release Date',    [['release_new', 'Latest'], ['release_old', 'Earliest']]],
+    ['Alphabetical',    [['az', 'A → Z'], ['za', 'Z → A']]],
+    ['Specific Rating', [['enjoyment', 'Enjoyment'], ['story', 'Story & Plot'], ['acting', 'Acting'], ['ending', 'Ending & Payoff']]],
+  ];
+  function orderLabel(mode) {
+    for (const [h, opts] of ORDER_GROUPS) { const o = opts.find(x => x[0] === mode); if (o) return `${h}: ${o[1]}`; }
+    return 'My Order';
+  }
+  function subRating(e, concept) {
+    if (!e || !e.ratings) return null;
+    const animated = e.cat === 'anime' || e.cat === 'cartoons';
+    const key = { story: 'story', enjoyment: 'enjoyment', acting: animated ? 'voice_acting' : 'acting', ending: 'ending' }[concept];
+    const v = key ? e.ratings[key] : null;
+    return typeof v === 'number' ? v : null;
+  }
+  const watchedOn = e => String(e?.completed_date || e?.completed_at || '').slice(0, 10) || null;
+  const releasedOn = e => String(e?.released || e?.release_date || e?.first_air_date || e?.year || '').slice(0, 10) || null;
+  // The value a mode sorts by (null = unknown → last); desc = bigger first
+  function orderValue(e, mode) {
+    if (mode === 'highest' || mode === 'lowest') return liveScore(e) != null ? Number(liveScore(e)) : null;
+    if (mode === 'watched_new' || mode === 'watched_old') return watchedOn(e);
+    if (mode === 'release_new' || mode === 'release_old') return releasedOn(e);
+    if (mode === 'az' || mode === 'za') return (e?.title || '').toLowerCase();
+    return subRating(e, mode);
+  }
+  const DESC = new Set(['highest', 'watched_new', 'release_new', 'za', 'enjoyment', 'story', 'acting', 'ending']);
+  // Sorts [{ id, item }] by mode (stable); returns a new array
+  function sortBy(rows, mode) {
+    if (!mode || mode === 'picked') return rows.slice();
+    return rows.map((r, i) => ({ r, i, v: orderValue(r.item, mode) })).sort((a, b) => {
+      if (a.v == null || b.v == null) return (a.v == null) - (b.v == null) || a.i - b.i;
+      const c = typeof a.v === 'number' ? a.v - b.v : String(a.v).localeCompare(String(b.v));
+      return (DESC.has(mode) ? -c : c) || a.i - b.i;
+    }).map(x => x.r);
+  }
+  // Puts list.items in its mode's order. Titles this page can't look up (resolve → null) keep their
+  // places; the rest are sorted into the remaining places. Returns true when the order changed.
+  function reorder(list, mode, resolve) {
+    if (!mode || mode === 'picked') return false;
+    const items = list.items || [], rows = items.map((id, i) => ({ id, i, item: resolve(id) }));
+    const known = rows.filter(r => r.item), sorted = sortBy(known, mode);
+    const next = items.slice();
+    known.forEach((r, k) => { next[r.i] = sorted[k].id; });
+    const changed = next.some((id, i) => id !== items[i]);
+    list.items = next;
+    return changed;
+  }
+  // Short line for a title under a mode ("Watched 3 Mar 2026", "Released 2014", "8.25")
+  function orderHint(e, mode) {
+    const v = orderValue(e, mode);
+    if (mode === 'watched_new' || mode === 'watched_old') return v ? 'Watched ' + new Date(v + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not watched yet';
+    if (mode === 'release_new' || mode === 'release_old') return v ? 'Released ' + (v.length > 4 ? new Date(v + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { month: 'short', year: 'numeric' }) : v) : 'Release date unknown';
+    return '';
+  }
+  return { ORDER_GROUPS, orderLabel, orderValue, sortBy, reorder, orderHint };
+})();
+
 /* ── Page scroll lock — every popup, panel and dropdown that stops the page
    scrolling uses this pair, with its own key (an id or the overlay element).
    iPhone Safari ignores overflow:hidden on <body>, so the page is pinned
