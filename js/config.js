@@ -1829,16 +1829,82 @@ const mssSkeleton = (() => {
     if (document.querySelector('.page-loading')) return;
     document.querySelectorAll('[data-skel-stats] > .skel-stat').forEach(b => b.remove());
   }
+  /* ── When the content replaces its loader, it rises in (.mss-arrive, style.css) ── */
+  const LOADER = '.page-loading, [id$="Loading"]';
+  const still = matchMedia('(prefers-reduced-motion: reduce)');
+  const arrive = el => {
+    if (still.matches || el.nodeType !== 1 || el.matches(LOADER) || el.closest('.mss-arrive')) return;
+    el.classList.add('mss-arrive');
+    setTimeout(() => el.classList.remove('mss-arrive'), 1100);
+  };
+  const shown = el => !!el.getClientRects().length || [...el.children].some(c => c.getClientRects().length);
+  /* ── A slow load says so: after 1.5s a small chip with a line for the page, changing every
+     2.5s; after 8s it says the connection seems slow (or that you're offline) ── */
+  const FIRST = { 'index.html': 'Getting your home ready…', '': 'Getting your home ready…', 'library.html': 'Pulling your library…', 'tv-shows.html': 'Pulling your library…',
+    'movies.html': 'Pulling your library…', 'anime.html': 'Pulling your library…', 'cartoons.html': 'Pulling your library…', 'completed.html': 'Pulling your library…',
+    'discover.html': 'Finding something to watch…', 'discover-list.html': 'Finding something to watch…', 'friends.html': 'Catching up with your friends…',
+    'title.html': 'Fetching the details…', 'person.html': 'Fetching the details…', 'episodes.html': 'Lining up the episodes…', 'lists.html': 'Gathering the lists…',
+    'list-view.html': 'Gathering the list…', 'notes.html': 'Gathering the notes…', 'profile.html': 'Loading the profile…', 'profile-view.html': 'Loading the profile…',
+    'ratings.html': 'Lining up the ratings…', 'cabinet.html': 'Polishing the trophies…' };
+  const MORE = ['Dusting off the posters…', 'Rewinding the tape…', 'Almost there…'];
+  let slowT = 0, slowIv = 0, slowAt = 0, chip = null;
+  const busy = () => [...document.querySelectorAll('.page-loading')].some(el => {
+    if (!shown(el) || el.closest('.has-mss-err')) return false;
+    const r = (el.getClientRects().length ? el : el.firstElementChild).getBoundingClientRect();
+    return r.bottom > 0 && r.top < innerHeight;
+  });
+  function slowShow() {
+    if (!chip) {
+      chip = document.createElement('div');
+      chip.className = 'mss-slow';
+      chip.setAttribute('role', 'status');
+      chip.innerHTML = '<span class="mss-slow-reel" aria-hidden="true"><i></i></span><span></span>';
+      document.body.appendChild(chip);
+    }
+    const tx = chip.lastElementChild, page = location.pathname.split('/').pop();
+    let i = -1;
+    tx.textContent = FIRST[page] || 'Loading…';
+    requestAnimationFrame(() => chip.classList.add('show'));
+    slowIv = setInterval(() => {
+      if (!busy()) return slowHide();
+      tx.style.opacity = 0;
+      setTimeout(() => {
+        tx.textContent = !navigator.onLine ? 'You’re offline — waiting for a connection…'
+          : Date.now() - slowAt > 8000 ? 'Still loading — your connection seems slow.' : MORE[++i % MORE.length];
+        tx.style.opacity = 1;
+      }, 250);
+    }, 2500);
+  }
+  function slowHide() {
+    clearTimeout(slowT); clearInterval(slowIv); slowT = slowIv = 0;
+    chip?.classList.remove('show');
+  }
+  let raf = 0;
+  const slowCheck = () => {
+    raf = 0;
+    if (!busy()) return slowHide();
+    if (!slowT && !slowIv) { slowAt = Date.now(); slowT = setTimeout(() => { slowT = 0; if (busy()) slowShow(); }, 1500); }
+  };
   function start() {
     scan(document);
     fillStats();
     new MutationObserver(ms => {
-      ms.forEach(m => m.addedNodes.forEach(n => {
-        if (n.nodeType !== 1) return;
-        if (n.matches('.page-loading')) fill(n); else scan(n);
-      }));
+      ms.forEach(m => {
+        if (m.type === 'attributes') {
+          // a loader hidden with style="display:none" → the content next to it arrives
+          if (m.target.matches(LOADER) && !shown(m.target)) requestAnimationFrame(() => [...m.target.parentElement?.children || []].forEach(c => { if (c !== m.target && shown(c)) arrive(c); }));
+          return;
+        }
+        const gone = [...m.removedNodes].some(n => n.nodeType === 1 && (n.matches(LOADER) || n.querySelector?.(LOADER)));
+        m.addedNodes.forEach(n => {
+          if (n.nodeType !== 1) return;
+          if (n.matches('.page-loading')) fill(n); else { scan(n); if (gone) arrive(n); }
+        });
+      });
       sweepStats();
-    }).observe(document.body, { childList: true, subtree: true });
+      if (!raf) raf = requestAnimationFrame(slowCheck);
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    slowCheck();
   }
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
   const api = kind => (KINDS[kind] || KINDS.grid)();
