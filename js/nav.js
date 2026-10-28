@@ -820,7 +820,8 @@ document.addEventListener('click', () => {
    click it again, click outside or press Esc to close: the tab's pages as cards — with their Personal ·
    Friends · Community / Compare · Blend shortcuts — and on the far right a showcase
    card for the page you're pointing at, in the Start Exploring cards' look
-   (index.html .xp-card). The tab you're on is olive with an underline, like before.
+   (index.html .xp-card). The tab you're in is olive with an underline, like before, and
+   shows the page you're on in place of its name ("TV Shows" for Library…).
 ═════════════════════════════════════════════════════════════ */
 const DNAV_INFO = {
   'index.html':                 'Your portfolio at a glance — what you’re watching, what’s next and what friends are up to.',
@@ -869,8 +870,11 @@ const _dnavTabs = () => MSS_TABS.filter(t => t.items);
 const _dnavLabel = it => LIBRARY_PAGES.find(p => p.href === it.href)?.label || it.label;
 function _dnavTabsHTML() {
   const where = _mtabWhere();
-  return _dnavTabs().map(t =>
-    `<button type="button" class="dnav-tab${t.k === where.tab ? ' active' : ''}" data-tab="${t.k}"${t.k === 'social' ? ' data-page="friends.html"' : ''} aria-haspopup="true" aria-expanded="false" aria-controls="dnavMega">${icon(t.icon, 16)}<span>${t.label}</span>${icon('chevdown', 12)}</button>`).join('');
+  // the tab you're in shows the page you're on — "TV Shows" in place of Library, "Lists" in place of You…
+  return _dnavTabs().map(t => {
+    const it = t.k === where.tab && where.item >= 0 ? t.items[where.item] : null;
+    return `<button type="button" class="dnav-tab${t.k === where.tab ? ' active' : ''}" data-tab="${t.k}"${t.k === 'social' ? ' data-page="friends.html"' : ''} aria-haspopup="true" aria-expanded="false" aria-controls="dnavMega"${it ? ` aria-label="${escHTML(t.label + ': ' + _dnavLabel(it))}"` : ''}>${icon(it ? it.icon : t.icon, 16)}<span>${escHTML(it ? _dnavLabel(it) : t.label)}</span>${icon('chevdown', 12)}</button>`;
+  }).join('');
 }
 let _dnavCur = null;
 function _dnavShowcase(t, it) {
