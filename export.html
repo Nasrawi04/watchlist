@@ -128,7 +128,7 @@ const EX_QUICK = [
   { ic: 'bookmark', col: '#5f6b2a', t: 'My watchlist', d: 'Everything you plan to watch.', f: 'PDF', n: 'watchlist', p: { what: 'watchlist' } },
   { ic: 'play', col: '#c0732a', t: 'Currently watching', d: 'What you’re in the middle of, and how far.', f: 'PDF', n: 'watching', p: { what: 'watching' } },
   { ic: 'sparkles', col: '#3e6e8e', t: 'Ask an AI', d: 'Your taste in a message to paste into any AI chat for picks.', f: 'AI', p: { what: 'watched', format: 'ai' } },
-  { ic: 'idCard', col: '#8a5a1c', t: 'Title card', d: 'One title as a card — poster, your scores and note — to share anywhere.', f: 'Image', card: true, wide: true },
+  { ic: 'idCard', col: '#8a5a1c', t: 'Title card', d: 'One title as a card — poster, your scores and note — to share anywhere.', f: 'Image', wide: true, p: { format: 'card' } },
 ];
 const exCount = k => _exAll.filter(e => k === 'watched' ? ['completed', 'ongoing'].includes(e.status) : k === 'watchlist' ? e.status === 'queue' : ['watching', 'up_next', 'paused'].includes(e.status)).length;
 
@@ -136,57 +136,6 @@ function exOpen(preset) {
   const p = window._navUserProfile || {};
   MSSStudio.open({ preset, who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' }, load: () => _exReady });
 }
-/* ── Title card (Create Card, js/create-card.js): pick one of your titles, then the card
-   opens as it does from a title's own page — Card or Discover Card, light or dark ── */
-const EX_CARD_PAGE = 60;
-let _exCardLimit = EX_CARD_PAGE;
-function exCardPick() {
-  let ov = document.getElementById('exCardPick');
-  if (!ov) {
-    ov = document.createElement('div');
-    ov.id = 'exCardPick';
-    ov.innerHTML = `<div id="exCardPickCard" role="dialog" aria-modal="true" aria-labelledby="exCardPickT">
-      <div class="dp-head"><div><div class="dp-eyebrow">Title card</div><div class="dp-title" id="exCardPickT">Pick a title</div></div>
-        <button class="dp-close" onclick="exCardPickClose()" aria-label="Close">${icon('x', 18)}</button></div>
-      <div class="dp-search fused-search-wrap">
-        <input id="exCardSearch" type="text" class="add-friend-input" placeholder="Search your titles…" autocomplete="off" spellcheck="false" oninput="_exCardLimit = EX_CARD_PAGE; exCardRows()">
-        <button type="button" class="fused-search-btn" tabindex="-1" onclick="document.getElementById('exCardSearch').focus()">${icon('search', 16)}<span>Search</span></button>
-      </div>
-      <div class="dp-grid" id="exCardGrid"></div>
-    </div>`;
-    MSSDialog.bind(ov, exCardPickClose);
-    document.body.appendChild(ov);
-  }
-  document.getElementById('exCardSearch').value = '';
-  _exCardLimit = EX_CARD_PAGE;
-  document.getElementById('exCardGrid').innerHTML = '<div class="dp-empty">Loading your library…</div>';
-  MSSDialog.open(ov, { focus: matchMedia('(max-width:640px)').matches ? null : '#exCardSearch' });
-  _exReady.then(exCardRows);
-}
-function exCardPickClose() { MSSDialog.close(document.getElementById('exCardPick')); }
-// Your titles: watched ones first, best-rated first; then the rest A–Z
-function exCardRows() {
-  const q = document.getElementById('exCardSearch').value.trim().toLowerCase();
-  const done = e => ['completed', 'ongoing'].includes(e.status) ? 0 : 1;
-  const list = (_exAll || []).filter(e => !q || (e.title || '').toLowerCase().includes(q))
-    .sort((a, b) => done(a) - done(b) || (liveScore(b) || 0) - (liveScore(a) || 0) || (a.title || '').localeCompare(b.title || ''));
-  const shown = list.slice(0, _exCardLimit);
-  document.getElementById('exCardGrid').innerHTML = list.length ? shown.map(e => `
-    <button type="button" class="dp-item" onclick="exCardMake(${attrJSON(e.id)})">
-      <span class="dp-poster">${posterHTML(e, 'big')}</span>
-      <span class="dp-name" translate="no">${esc(e.title)}</span>
-      ${liveScore(e) != null ? `<span class="dp-score">★ ${Number(liveScore(e)).toFixed(2)}</span>` : ''}
-    </button>`).join('')
-      + (list.length > shown.length ? `<button type="button" class="dp-more" onclick="_exCardLimit += EX_CARD_PAGE; exCardRows()">View more <span>(${list.length - shown.length} left)</span></button>` : '')
-    : `<div class="dp-empty">${q ? `No titles match “${esc(q)}”.` : 'Add a title to your library first.'}</div>`;
-}
-function exCardMake(id) {
-  const e = (_exAll || []).find(x => x.id === id);
-  if (!e) return;
-  exCardPickClose();
-  createShareCard(e);
-}
-
 function exDraw() {
   const page = document.getElementById('exPage');
   page.innerHTML = `<div class="ex-wrap fade-up">
@@ -211,7 +160,7 @@ function exDraw() {
 
     <div class="ex-head"><h3>Quick exports</h3><span>One tap — the Studio opens ready to go</span></div>
     <div class="ex-grid">${EX_QUICK.map((q, i) => {
-      return `<button type="button" class="ex-card${q.wide ? ' ex-card-wide' : ''}" onclick="${q.card ? 'exCardPick()' : `exOpen(EX_QUICK[${i}].p)`}">
+      return `<button type="button" class="ex-card${q.wide ? ' ex-card-wide' : ''}" onclick="exOpen(EX_QUICK[${i}].p)">
         <span class="ex-card-ic" style="--ic:${q.col}" aria-hidden="true">${icon(q.ic, 21)}</span>
         <span class="ex-card-main"><b>${esc(q.t)}</b><small>${esc(q.d)}</small>
           <span class="ex-card-foot"><span class="ex-pill">${esc(q.f)}</span>${q.n ? `<span class="ex-count" data-n="${q.n}"></span>` : ''}</span></span>
