@@ -272,14 +272,7 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .td-notes-sort-btn:hover { border-color:var(--border-olive); color:var(--text); }
 .td-notes-sort-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
 .td-notes-loading, .td-notes-empty { padding:2rem 0; text-align:center; color:var(--text-3); font-size:13.5px; }
-#tdNotesList {
-  max-height:560px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;
-  padding-inline-end:6px; scrollbar-width:thin; scrollbar-color:var(--border-olive) var(--bg-3);
-}
-#tdNotesList::-webkit-scrollbar { width:6px; }
-#tdNotesList::-webkit-scrollbar-track { background:var(--bg-3); border-radius:3px; }
-#tdNotesList::-webkit-scrollbar-thumb { background:var(--border-olive); border-radius:3px; }
-#tdNotesList::-webkit-scrollbar-thumb:hover { background:var(--olive-light); }
+#tdNotesList { display:flex; flex-direction:column; gap:12px; }
 .td-note-card {
   display:flex; gap:14px; padding:1.1rem 1.25rem;
   background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
@@ -334,6 +327,8 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
   font-size:13px; cursor:pointer; transition:background .15s;
 }
 .td-cast-more-btn:hover { background:var(--olive-light); border-color:var(--olive-light); }
+a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center; }
+#tdNotesList > a.td-cast-more-btn { margin-top:2px; }
 
 /* ── Episode detail popup ── */
 #epPopupOverlay {
@@ -453,7 +448,6 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .rp-text { font-size:13.5px; line-height:1.6; color:var(--text-2); white-space:pre-line; margin-bottom:8px; word-break:break-word; }
 .rp-reacts { display:flex; gap:14px; }
 .rp-composer { flex-shrink:0; padding:1rem 1.25rem 1.25rem; border-top:0.5px solid var(--border); }
-.rp-composer[hidden] { display:none; }
 .rp-input { width:100%; min-height:60px; resize:vertical; box-sizing:border-box; margin-bottom:8px; }
 .rp-post { width:100%; justify-content:center; }
 @media(prefers-reduced-motion:reduce) { #replyPopupOverlay { transition:none; } }
@@ -1170,7 +1164,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
     <div id="tdRecs"></div>
     <div id="tdLists"></div>
 
-    <div class="td-section-title">Community Notes</div>
+    <div class="td-section-title">Community Notes <span class="td-lists-count" id="tdNotesCount"></span></div>
     <div class="td-notes-controls">
       <button class="td-notes-sort-btn active" data-sort="popular" onclick="_tdSetNotesSort('popular')">Most Popular</button>
       <button class="td-notes-sort-btn" data-sort="least_popular" onclick="_tdSetNotesSort('least_popular')">Least Popular</button>
@@ -1230,7 +1224,7 @@ document.addEventListener('click', () => {
 
 function _tdAddControlsHTML(ownEntry) {
   if (!_tdUser) {
-    return `<a href="login.html" class="btn-add" style="text-decoration:none">${icon('logout',14)} Sign in to add</a>`;
+    return `<button type="button" class="btn-save" onclick="mssJoin('add this to your library')">${icon('plus',14)} Add to Library</button>`;
   }
   if (ownEntry) {
     const statusLabel = {
@@ -1271,7 +1265,7 @@ function _tdAddControlsHTML(ownEntry) {
 }
 
 async function _tdAddToLibrary() {
-  if (!_tdUser) { window.location.href = 'login.html'; return; }
+  if (mssGuestGate('add this to your library') || !_tdUser) return;
 
   const cat = document.getElementById('tdCatDD')?.dataset.value;
   if (!cat) { showToast('Please select a category.', 'err'); return; }
@@ -1679,6 +1673,8 @@ function _tdNoteLink() {
 function _tdRenderNotes() {
   const wrap = document.getElementById('tdNotesList');
   if (!wrap) return;
+  const count = document.getElementById('tdNotesCount');
+  if (count) count.textContent = _tdNotesRaw.length || '';
   if (!_tdNotesRaw.length) {
     wrap.innerHTML = '<div class="td-notes-empty">No notes yet — be the first to leave one on your entry.</div>';
     return;
@@ -1697,7 +1693,7 @@ function _tdRenderNotes() {
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
-  wrap.innerHTML = sorted.map(n => {
+  wrap.innerHTML = sorted.slice(0, TD_SHOW).map(n => {
     const myReaction = _tdNotesReactions[n.entry_id];
     const dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const initial = (n.username || '?')[0].toUpperCase();
@@ -1722,7 +1718,15 @@ function _tdRenderNotes() {
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + _tdMoreHTML('notes.html', sorted.length, 'notes');
+}
+
+// Notes and Lists show the top 4; "View all" opens the Notes / Lists page filtered to this title
+const TD_SHOW = 4;
+function _tdMoreHTML(page, total, what) {
+  if (total <= TD_SHOW) return '';
+  const q = new URLSearchParams({ mode: 'community', tmdb: _tdId, type: _tdType, t: _tdDetail?.title || _tdDetail?.name || '' });
+  return `<a class="td-cast-more-btn" href="${page}?${esc(q.toString())}">View all ${total} ${what}</a>`;
 }
 
 /* ── Replies popup (someone's note on this title) ── */
@@ -1759,7 +1763,7 @@ function _injectReplyPopupOverlay() {
       </div>
       <div id="replyList" class="rp-list" aria-live="polite"></div>
       <div id="replyComposer" class="rp-composer">
-        <textarea id="replyInput" class="field-input rp-input" maxlength="1000" placeholder="Add a reply…" aria-label="Add a reply"></textarea>
+        <textarea id="replyInput" class="field-input rp-input" maxlength="1000" placeholder="Add a reply…" aria-label="Add a reply" onfocus="if(mssGuestGate('reply'))this.blur()"></textarea>
         <button type="button" class="popup-action-btn rp-post" onclick="_replySubmit()">Post Reply</button>
       </div>
     </div>`;
@@ -1773,7 +1777,6 @@ async function openReplyPopup(kind, targetId, title) {
   _injectReplyPopupOverlay();
   document.getElementById('replyPopupSubtitle').textContent = title ? `On @${title}’s note` : '';
   document.getElementById('replyList').innerHTML = '<div class="td-notes-loading">Loading replies…</div>';
-  document.getElementById('replyComposer').hidden = !_currentUserForReplies();
   MSSDialog.open(document.getElementById('replyPopupOverlay'));
   await _replyLoad();
 }
@@ -1816,7 +1819,7 @@ function _tdOpenNote(entryId) {
 }
 
 /* ── In Lists: every list holding this title (043) — cards + popup like the Lists page ── */
-let _tdLists = [], _tdListMap = {}, _tdListsAll = false;
+let _tdLists = [], _tdListMap = {};
 const _tdListItem = id => MSSList.isTmdbId(id) ? MSSList.tmdb(id) : _tdListMap[id] || null;
 async function _tdLoadLists() {
   const box = document.getElementById('tdLists');
@@ -1827,26 +1830,26 @@ async function _tdLoadLists() {
     _tdLists = data || [];
     if (!_tdLists.length) { box.innerHTML = ''; return; }
     // posters: the first 8 titles of each list (cards show 5, the popup 8)
-    const ids = [...new Set(_tdLists.flatMap(l => (l.items || []).slice(0, 8)))].filter(id => !MSSList.isTmdbId(id));
+    const ids = [...new Set(_tdLists.slice(0, TD_SHOW).flatMap(l => (l.items || []).slice(0, 8)))].filter(id => !MSSList.isTmdbId(id));
     if (ids.length) ((await sb.from('entries').select('*').in('id', ids)).data || []).forEach(e => { _tdListMap[e.id] = e; });
     _tdRenderLists();
-    if (await MSSList.hydrate(_tdLists, 8)) _tdRenderLists();
+    if (await MSSList.hydrate(_tdLists.slice(0, TD_SHOW), 8)) _tdRenderLists();
   } catch (err) { console.error('Lists for title:', err); box.innerHTML = ''; }
 }
 function _tdRenderLists() {
   const box = document.getElementById('tdLists');
   if (!box) return;
-  const shown = _tdListsAll ? _tdLists : _tdLists.slice(0, 8);
+  const shown = _tdLists.slice(0, TD_SHOW);
   box.innerHTML = `<div class="td-section-title">In Lists <span class="td-lists-count">${_tdLists.length}</span></div>
     <div class="lc-grid td-lists">${shown.map((l, i) => MSSList.cardHTML(l, {
       resolve: _tdListItem, onclick: `_tdOpenList(${i})`,
       ownerHTML: MSSList.ownerHTML({ username: l.username, avatar_url: l.avatar_url }),
       metaExtra: l.ranked && l.pos ? `<span class="td-list-pos">#${l.pos} in this list</span>` : '',
     })).join('')}</div>
-    ${_tdLists.length > shown.length ? `<button type="button" class="td-cast-more-btn" onclick="_tdListsAll=true;_tdRenderLists()">See all ${_tdLists.length} lists</button>` : ''}`;
+    ${_tdMoreHTML('lists.html', _tdLists.length, 'lists')}`;
 }
 function _tdOpenList(i) {
-  const l = (_tdListsAll ? _tdLists : _tdLists.slice(0, 8))[i];
+  const l = _tdLists[i];
   if (!l) return;
   const mine = !!_tdUser && l.user_id === _tdUser.id;
   MSSList.open(l, { resolve: _tdListItem, owner: { id: l.user_id, username: l.username, avatar_url: l.avatar_url }, social: !mine });
@@ -1941,7 +1944,7 @@ function _replyRenderList() {
 
 async function _replySubmit() {
   const user = _currentUserForReplies();
-  if (!user) { showToast('Sign in to reply.', 'err'); return; }
+  if (mssGuestGate('reply') || !user) return;
   const input = document.getElementById('replyInput');
   const content = input.value.trim();
   if (!content) return;
