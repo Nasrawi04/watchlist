@@ -180,6 +180,7 @@
 <script src="js/rating-popup.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
+<script src="js/list-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
 <script src="js/discover-categories.js"></script>
 <script>
@@ -441,8 +442,8 @@ function _homeWatchGrid(cards) {
 function _homeOpenInfo(id) {
   const e = (window._homeEntries || []).find(x => x.id === id);
   if (!e) return;
-  MSSInfo.forOwnEntry(e, {
-    from: 'index.html',
+  MSSViews.open(e, {
+    own: true, start: 'info', from: 'index.html',
     onChange: _homeRerender,
     onDelete: x => { window._homeEntries = window._homeEntries.filter(y => y.id !== x.id); _homeRerender(); },
   });
