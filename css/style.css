@@ -7569,3 +7569,5 @@ body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-ins
 .mss-es-art .zz { animation:mssEsZz 2.6s ease-out infinite; transform-box:fill-box; }
 .mss-es-art .zz.d2 { animation-delay:1.3s; }
 @media (prefers-reduced-motion:reduce) { .mss-es-art .bob, .mss-es-art .blink, .mss-es-art .zz { animation:none; } }
+/* Polls' four tabs (Friends · Community · Yours · Completed) on the narrowest phones */
+@media (max-width:360px) { .soc-toggle .pn-toggle-btn { padding-inline:4px; font-size:12px; } }
