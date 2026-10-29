@@ -27,6 +27,8 @@ function _catRemoveEntry(x) {
    cover + badge, sits at the top of the section (default sort) and an Up Next button (markUpNext). */
 let _catNewEps = {};   // entry id → the latest aired episode { s, n, air }
 async function _catCheckNewEps() {
+  // first: shows saved with seasons that aren't out yet → aired counts (mssFixUnaired, config.js)
+  await mssFixUnaired(_catAllRaw, _catUser?.id, () => { _catAll = _applyCatTypeFilter(_catAllRaw); _catRenderStatsAndSections(); });
   const found = await mssNewEpisodes(_catAll);
   if (JSON.stringify(found) === JSON.stringify(_catNewEps)) return;
   _catNewEps = found;
@@ -958,7 +960,7 @@ function _catComments(id) {
   if (e) MSSComments.open(e);
 }
 
-async function adjustEp(id, delta) {
+async function adjustEp(id, delta, rechecked) {
   const entry = _catAll.find(e => e.id === id);
   if (!entry) return;
 
@@ -1007,6 +1009,14 @@ async function adjustEp(id, delta) {
     newEp      = Math.max(0, (entry.episode ?? 0) + delta);
     if (entry.total_eps && newWatched >= entry.total_eps && delta > 0) justFinished = true;
     newSeason  = entry.season || 1;
+  }
+
+  // At the end of what we know has aired: check TMDB once — a new episode may have come out since
+  // (counts only include aired episodes, mssAired) — and if so, step into it instead of finishing
+  if (justFinished && !rechecked && entry.tmdb_id && entry.tmdb_type === 'tv' && typeof _refreshTmdbSeasonData === 'function') {
+    const before = JSON.stringify(entry.ratings?._season_breakdown || []);
+    await _refreshTmdbSeasonData(entry, _catUser.id);
+    if (JSON.stringify(entry.ratings?._season_breakdown || []) !== before) return adjustEp(id, delta, true);
   }
 
   if (!justFinished) {
