@@ -2376,6 +2376,59 @@ function mssGuestGate(what) {
   mssJoin(what);
   return true;
 }
+/* ══════════════════════════════════════════
+   PASSWORDS — MSSPass: the one rule (8–64 characters) and the live guide under a new-password field
+   (sign-up, reset and Settings). MSSPass.mount(boxId, inputId, names?) fills the box with a strength
+   bar + word, a counter that only shows near the limit, and a checklist that ticks off as you type.
+   names() → words the password shouldn't contain (username, email name) — caps it at "Weak".
+   Only the length is enforced (MSSPass.error(p)); the rest is advice. Styles: "Password guide".
+══════════════════════════════════════════ */
+const MSSPass = (() => {
+  const MIN = 8, MAX = 64, NEAR = 10;
+  const error = p => p.length < MIN || p.length > MAX ? `Your password needs to be ${MIN}–${MAX} characters.` : '';
+  function score(p, names = []) {
+    const low = p.toLowerCase();
+    const has = { len: p.length >= MIN && p.length <= MAX, case: /[a-z]/.test(p) && /[A-Z]/.test(p), num: /\d|[^A-Za-z0-9]/.test(p), long: p.length >= 12 };
+    const named = names.map(n => (n || '').trim().toLowerCase()).some(n => n.length >= 3 && low.includes(n));
+    const extras = has.case + has.num + has.long;            // valid → Fair (0–1 extras), Good (2), Strong (all 3)
+    let s = !p ? 0 : !has.len ? 1 : 2 + (extras >= 2) + (extras >= 3);
+    if (named && s > 2) s = 2;
+    return { s, has, named, word: ['Password strength', 'Too short', named ? 'Weak' : 'Fair', 'Good', 'Strong'][s] };
+  }
+  function mount(boxId, inputId, names) {
+    const box = document.getElementById(boxId), input = document.getElementById(inputId);
+    if (!box || !input) return () => {};
+    input.maxLength = MAX;
+    input.setAttribute('aria-describedby', boxId + 'Rules');
+    box.classList.add('mss-pw');
+    box.innerHTML = `<div class="mss-pw-meter" data-s="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="mss-pw-row"><span class="mss-pw-word" aria-live="polite">Password strength</span><span class="mss-pw-count" hidden></span></div>
+      <ul class="mss-pw-rules" id="${boxId}Rules">
+        <li data-r="len"><i aria-hidden="true"></i>${MIN}–${MAX} characters <em>Required</em></li>
+        <li data-r="case"><i aria-hidden="true"></i>Upper and lowercase letters</li>
+        <li data-r="num"><i aria-hidden="true"></i>At least one number or symbol</li>
+        <li data-r="long"><i aria-hidden="true"></i>12 or more characters for extra strength</li>
+        ${names ? '<li data-r="name"><i aria-hidden="true"></i>Avoid using your username or email in it</li>' : ''}
+      </ul>`;
+    const meter = box.querySelector('.mss-pw-meter'), word = box.querySelector('.mss-pw-word'), count = box.querySelector('.mss-pw-count');
+    const update = () => {
+      const p = input.value, r = score(p, names ? names() : []);
+      meter.dataset.s = r.s; word.textContent = r.word; box.dataset.s = r.s;
+      count.hidden = p.length < MAX - NEAR;                   // only once you're near the limit
+      count.textContent = `${p.length} / ${MAX}`;
+      box.querySelectorAll('li[data-r]').forEach(li => {
+        const k = li.dataset.r;
+        li.classList.toggle('ok', k !== 'name' && !!r.has[k]);
+        li.classList.toggle('warn', k === 'len' ? p.length > 0 && !r.has.len : k === 'name' && r.named);
+      });
+    };
+    input.addEventListener('input', update);
+    update();
+    return update;
+  }
+  return { MIN, MAX, error, score, mount };
+})();
+
 function mssJoin(what = 'do that') {
   let ov = document.getElementById('mssJoin');
   if (!ov) {
