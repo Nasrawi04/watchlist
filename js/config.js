@@ -1918,7 +1918,7 @@ const mssSkeleton = (() => {
       chip = document.createElement('div');
       chip.className = 'mss-slow';
       chip.setAttribute('role', 'status');
-      chip.innerHTML = '<span class="mss-slow-reel" aria-hidden="true"><i></i></span><span></span>';
+      chip.innerHTML = '<span class="mss-slow-logo" aria-hidden="true"></span><span></span>';   // the MSF logo, filling up as it loads
       document.body.appendChild(chip);
     }
     const tx = chip.lastElementChild, page = location.pathname.split('/').pop();
