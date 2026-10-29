@@ -2,6 +2,8 @@
    movie-night.js — Social → Movie Night (050_movie_night.sql)
    Pick something to watch together:
      • the host invites friends, optionally sets a date / time
+     • voting is optional (082): "I'll choose" — the host picks the title (now or
+       later, and can change it); "Let everyone vote" — as below
      • anyone in it adds titles (search, or "From your watchlists": titles
        on more than one of your watchlists), one vote each
      • the host locks in the top pick, or hits "Surprise us"
@@ -163,14 +165,15 @@ const MSSNight = (() => {
   }
 
   function card(n) {
-    const id = attrJSON(n.id), open = n.status === 'open', host = n.is_host;
+    const id = attrJSON(n.id), voting = n.voting !== false, open = n.status === 'open' && voting, host = n.is_host;
+    const choosing = n.status === 'open' && !voting;          // no vote: the host is still choosing
     const d = n.scheduled_at ? new Date(n.scheduled_at) : null;
     const going = n.members.filter(m => m.status === 'going').length, invited = n.members.filter(m => m.status === 'invited').length;
     const total = n.options.reduce((s, o) => s + (o.votes || 0), 0);
     const top = Math.max(0, ...n.options.map(o => o.votes || 0));
     const pick = n.options.find(o => o.id === n.pick_id);
     const hostP = n.members.find(m => m.host);
-    const status = n.status === 'cancelled' ? ['Cancelled', 'cancelled'] : n.status === 'decided' ? ['Decided', 'decided'] : ['Voting', 'open'];
+    const status = n.status === 'cancelled' ? ['Cancelled', 'cancelled'] : n.status === 'decided' ? ['Decided', 'decided'] : voting ? ['Voting', 'open'] : ['Choosing', 'open'];
     const people = `<div class="mn-people">
         <div class="mn-avs">${n.members.map(m => `<span class="mn-av ${m.status}" title="${esc(nameOf(m))} — ${m.host ? 'host' : m.status === 'going' ? 'going' : m.status === 'declined' ? 'can’t make it' : 'invited'}">${av(m, 30)}</span>`).join('')}</div>
         <span class="mn-count"><b>${going}</b> going${invited ? ` · ${invited} invited` : ''}</span>
@@ -214,8 +217,14 @@ const MSSNight = (() => {
         ${pick.poster_path ? `<span class="mn-pick-bg" style="background-image:url('${img(pick.poster_path, 'w342')}')" aria-hidden="true"></span><img src="${img(pick.poster_path, 'w342')}" alt="" loading="lazy">` : `<span class="mn-pick-ph">${icon('film', 26)}</span>`}
         <div class="mn-pick-info"><span class="mn-pick-eyebrow">${icon('sparkles', 12)} You’re watching</span>
           <b translate="no">${esc(pick.title)}</b><small>${[pick.year, pick.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small>
-          <div class="mn-pick-acts"><button type="button" class="btn-add-entry" onclick="MSSNight._details(${attrJSON(pick.id)})">${icon('info', 14)} Details & Watchlist</button></div>
+          <div class="mn-pick-acts"><button type="button" class="btn-add-entry" onclick="MSSNight._details(${attrJSON(pick.id)})">${icon('info', 14)} Details & Watchlist</button>${!voting && host && n.status !== 'cancelled' ? `<button type="button" class="rec-btn" onclick="MSSNight._add(${id})" aria-expanded="${!!adding[n.id]}">${icon('edit', 14)} Change</button>` : ''}</div>
         </div></div>` : '';
+    // No vote: the host picks the title (search), and can change it later
+    const chooseBox = !voting && host && n.status !== 'cancelled' && (choosing || adding[n.id]) ? `<div class="mn-choose">
+        <div class="mn-rail-head">${icon('film', 14)}<span>${choosing ? 'Choose what you’re watching' : 'Change what you’re watching'}</span></div>
+        <div class="mn-search"><input id="mnQ-${n.id}" type="search" placeholder="Search a movie or show…" aria-label="Search a movie or show" autocomplete="off" enterkeyhint="search" oninput="MSSNight._q(${id}, this.value)">
+          <div class="mn-hits" id="mnH-${n.id}"></div></div></div>`
+      : choosing && !host ? `<div class="mn-none">${icon('film', 14)} ${esc(nameOf(hostP))} is choosing what you’ll watch.</div>` : '';
     return `<article class="mn-card is-${status[1]}" id="mn-${n.id}">
       <header class="mn-head">
         <div class="mn-date${d ? '' : ' none'}" aria-hidden="true">${d ? `<small>${d.toLocaleDateString(MSSI18n.locale, { month: 'short' })}</small><b>${d.getDate()}</b>` : icon('clock', 20)}</div>
@@ -230,8 +239,9 @@ const MSSNight = (() => {
       </header>
       ${people}
       ${decided}
+      ${chooseBox}
       ${pick && n.status === 'decided' ? afterHTML(n) : ''}
-      ${n.status !== 'cancelled' && (n.options.length || open) ? `<div class="mn-rail-head">${icon('poll', 14)}<span>${open ? 'Vote for one' : 'The votes'}</span>${total ? `<b>${total} ${total === 1 ? 'vote' : 'votes'}</b>` : ''}</div>
+      ${voting && n.status !== 'cancelled' && (n.options.length || open) ? `<div class="mn-rail-head">${icon('poll', 14)}<span>${open ? 'Vote for one' : 'The votes'}</span>${total ? `<b>${total} ${total === 1 ? 'vote' : 'votes'}</b>` : ''}</div>
         ${open && !n.options.length ? `<div class="mn-none">No titles yet — add one, or tap a poster below to put it up for a vote.</div>` : ''}
         <div class="mn-ballot">${n.options.map(optCard).join('')}${addTile}</div>` : ''}
       ${addBox}
@@ -269,6 +279,10 @@ const MSSNight = (() => {
     const n = find(id); if (!n) return;
     const ok = await showConfirm({ title: 'Delete this Movie Night?', message: 'It disappears for everyone, with its votes.', confirmText: 'Delete', iconName: 'trash' });
     if (ok) act('delete_movie_night', { p_night: id });
+  }
+  // No-vote night: the host's choice is the pick (082)
+  async function setPick(id, o) {
+    if (await act('set_movie_night_pick', { p_night: id, p_option: o }, 'Couldn’t save it — try again.')) { adding[id] = false; draw(); showToast(`You’re watching ${o.title}!`); }
   }
   async function addOption(id, o) {
     if (await act('add_movie_night_option', { p_night: id, p_option: o }, 'Couldn’t add it — try again.')) { adding[id] = false; draw(); }
@@ -315,7 +329,7 @@ const MSSNight = (() => {
   function create() {
     const friends = typeof _frAccepted !== 'undefined' ? _frAccepted : [];
     if (!friends.length) { showToast('Add a friend first — then invite them to a Movie Night.', 'err'); return; }
-    form = { mode: 'new', picked: new Set() };
+    form = { mode: 'new', picked: new Set(), voting: false, pick: null };
     popup('New Movie Night', `
         <label class="sf-section-label" for="mnT">Name it</label>
         <input id="mnT" class="pf-input" maxlength="80" placeholder="Movie Night">
@@ -323,9 +337,36 @@ const MSSNight = (() => {
         ${MSSDateRange.when('mnW', { value: null })}
         <div class="sf-section-label">Invite friends <span class="sf-section-hint">(1–19)</span></div>
         <div class="mn-invite" role="group" aria-label="Invite friends">${friends.map(f => `<button type="button" class="soc-chip mn-inv" aria-pressed="false" data-id="${esc(f.friendId)}" onclick="MSSNight._inv(this)">${av(f.friendProfile, 22)}<span translate="no">${esc(nameOf(f.friendProfile))}</span></button>`).join('')}</div>
-        <div class="pf-note">${icon('film', 13)} Add titles once it’s made — we’ll suggest the ones on your watchlists.</div>`,
+        <div class="sf-section-label">What you’ll watch</div>
+        <div class="pn-toggle soc-toggle mn-vote-mode" role="group" aria-label="How you pick">
+          <button type="button" class="pn-toggle-btn active" aria-pressed="true" data-v="0" onclick="MSSNight._voting(false)">${icon('film', 14)} I’ll choose</button>
+          <button type="button" class="pn-toggle-btn" aria-pressed="false" data-v="1" onclick="MSSNight._voting(true)">${icon('poll', 14)} Let everyone vote</button></div>
+        <div id="mnPickBox"></div>`,
       `<button type="button" class="sf-clear-btn" onclick="MSSNight._close()">Cancel</button>
         <button type="button" class="sf-apply-btn" id="mnSave" onclick="MSSNight._save()" disabled>Create</button>`);
+    drawFormPick();
+  }
+  function setVoting(on) {
+    if (!form) return;
+    form.voting = on;
+    document.querySelectorAll('.mn-vote-mode .pn-toggle-btn').forEach(b => { const a = (b.dataset.v === '1') === on; b.classList.toggle('active', a); b.setAttribute('aria-pressed', a); });
+    drawFormPick();
+  }
+  function drawFormPick() {
+    const box = document.getElementById('mnPickBox'); if (!box || !form) return;
+    if (form.voting) { box.innerHTML = `<div class="pf-note">${icon('poll', 13)} Everyone adds titles and votes once it’s made — we’ll suggest the ones on your watchlists. You lock in the winner.</div>`; return; }
+    const h = form.pick;
+    box.innerHTML = h ? `<div class="mn-chosen"><span class="poll-thumb">${h.poster_path ? `<img src="${img(h.poster_path, 'w92')}" alt="" loading="lazy">` : icon('film', 16)}</span>
+          <span class="poll-opt-text"><b translate="no">${esc(h.title)}</b><small>${[h.year, h.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small></span>
+          <button type="button" class="rec-btn" onclick="MSSNight._formPick(null)">Change</button></div>`
+      : `<div class="mn-search"><input id="mnQ-new" type="search" placeholder="Search a movie or show… (optional)" aria-label="Search a movie or show" autocomplete="off" enterkeyhint="search" oninput="MSSNight._q('new', this.value)">
+          <div class="mn-hits" id="mnH-new"></div></div>
+        <div class="pf-note">${icon('film', 13)} No vote — you choose. You can pick it now or later.</div>`;
+  }
+  function formPick(h) {
+    if (!form) return;
+    form.pick = h; drawFormPick();
+    if (!h) document.getElementById('mnQ-new')?.focus();
   }
   function edit(id) {
     const n = find(id); if (!n) return;
@@ -352,8 +393,10 @@ const MSSNight = (() => {
     const btn = document.getElementById('mnSave'); btn.disabled = true;
     try {
       if (form.mode === 'new') {
-        const id = await rpc('create_movie_night', { p_title: t || null, p_when: when, p_friends: [...form.picked], p_options: [] });
-        closeForm(); focus = id; adding[id] = true; await load();
+        const voting = form.voting;
+        const id = await rpc('create_movie_night', { p_title: t || null, p_when: when, p_friends: [...form.picked],
+          p_options: !form.voting && form.pick ? [form.pick] : [], p_voting: form.voting });
+        closeForm(); focus = id; adding[id] = voting; await load();
         showToast('Movie Night made — your friends got an invite');
       } else {
         await rpc('update_movie_night', { p_night: form.id, p_title: t || null, p_when: when, p_clear_when: !w, p_cancel: false });
@@ -371,6 +414,7 @@ const MSSNight = (() => {
   return { mount, create, edit, remove, rsvp, vote, decide, removeOption, redraw: draw,
     _take: openTake, _addBlend: (id, k) => { const t = blendFrom[id]?.[k]; if (t) addOption(id, t.o); }, _cmp: id => { cmpOpen[id] = !cmpOpen[id]; const n = find(id); const b = document.getElementById('mnA-' + id); if (n && b) b.outerHTML = afterHTML(n); },
     _add: id => { adding[id] = !adding[id]; draw(); document.getElementById('mnQ-' + id)?.focus(); },
-    _q: search, _pick: (id, k) => { const h = hits[id]?.[k]; if (h) addOption(id, h); }, _addSugg: addSugg, _details: details,
-    _close: closeForm, _inv: inv, _save: save, _cancelNight: cancelNight };
+    _q: search, _pick: (id, k) => { const h = hits[id]?.[k]; if (!h) return; if (id === 'new') return formPick(h);
+      find(id)?.voting === false ? setPick(id, h) : addOption(id, h); }, _addSugg: addSugg, _details: details,
+    _close: closeForm, _inv: inv, _save: save, _cancelNight: cancelNight, _voting: setVoting, _formPick: formPick };
 })();
