@@ -2820,8 +2820,12 @@ function _notifTabsHTML(active, onclick) {
 }
 function _notifFiltered(tab) { return _notifItems.filter(n => tab === 'all' || _notifSection(n) === tab); }
 function _notifEmptyHTML(tab) {
-  const msg = { all: "You're all caught up", activity: 'No friend activity yet — turn on notifications from a friend\'s profile', social: 'No comments or likes yet', lists: 'No list invites yet', requests: 'No friend requests' }[tab];
-  return `<div class="notif-empty">${icon('bell', 26)}<div>${msg}</div></div>`;
+  const [title, text] = { all: ['All quiet', 'You’re all caught up. Go watch something.'],
+    activity: ['No friend activity yet', 'Turn on notifications from a friend’s profile to hear what they watch.'],
+    social: ['No comments or likes yet', 'Write a note or a list — the applause comes later.'],
+    lists: ['No list invites yet', 'When a friend asks you to build a list together, it shows up here.'],
+    requests: ['No friend requests', 'Nobody knocking right now.'] }[tab];
+  return mssEmpty({ compact: true, art: 'bell', title, text });
 }
 
 // The bell opens a sheet that slides in from the right edge (full height,
