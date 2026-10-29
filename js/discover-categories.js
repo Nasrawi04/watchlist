@@ -682,7 +682,7 @@ function initInlineSearch(inputId, opts = {}) {
         <div class="section-title" style="margin-bottom:0">Results for “${esc(q)}”</div>
         <div class="inline-search-count"><b>${results.length}</b> ${results.length === 1 ? 'result' : 'results'}</div></div>`
       + (results.length ? `<div class="inline-search-grid">${results.map(cardHTML).join('')}</div>`
-        : `<div class="mss-empty">Nothing found for “${esc(q)}”. Try another spelling.</div>`);
+        : mssEmpty({ art: 'search', title: `No luck with “${q}”`, text: 'Check the spelling, or try the original title. TMDB knows a lot, but not everything.' }));
   }
 
   input.addEventListener('input', () => { syncClear(); clearTimeout(timer); timer = setTimeout(run, input.value.trim().length < 2 ? 0 : MSS_SEARCH_MS); });
