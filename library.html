@@ -63,7 +63,7 @@ var _pUser = null, _pProfile = null, _pEntries = [];
 // bfcache with stale data (e.g. an entry just added/edited elsewhere
 // wouldn't show up here) instead of re-running this page's scripts.
 window.addEventListener('pageshow', (event) => {
-  if (event.persisted) location.reload();
+  if (event.persisted && mssDataChangedSince(window._mssPageAt)) location.reload();   // only if something changed since (config.js)
 });
 
 document.addEventListener('DOMContentLoaded', function() {
