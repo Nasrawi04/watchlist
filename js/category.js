@@ -431,7 +431,10 @@ function renderSections(
   html += buildSection('completed',icon('check',15)   + ' Watched',    completed.length, buildCompleted(sc));
   // Dropped (071) — only once you've dropped something here
   if (dropped.length) html += buildSection('dropped', icon('drop',15) + ' Dropped', dropped.length, buildDropped(sd));
-  if (q && !html) html = `<div class="sf-search-empty">${icon('search', 22)}<b>Nothing matches “${escHTML(q)}”</b><span>Try another title or year.</span></div>`;
+  if (q && !html) html = mssEmpty({ art: 'search', title: `No luck with “${q}”`, text: 'Nothing in this category matches. Try another title, a year, or check the spelling.',
+    actions: [{ label: 'Clear search', icon: 'x', onclick: "SF._search('cat', '', true)" }] });
+  // Nothing in this category at all (not just filtered away): one welcome instead of four empty sections
+  if (!q && !_catAllRaw.length) html = _catWelcome();
 
   // Remember this page's shape (its stats, how many cards per section) for the next loading skeleton
   if (!q && _catTypeFilter === 'all') mssSkeleton.shape('cat_' + window.PAGE_CAT, {
@@ -529,8 +532,33 @@ function switchView(section, view) {
 
 /* ════════ CURRENTLY WATCHING ════════ */
 
+/* ── Empty states (mssEmpty in config.js) — one per section; when a section only looks empty
+   because of its filters, it says so and offers to clear them ── */
+function mssStarterSkip() { return _catAllRaw; }                 // starter titles skip what you already have
+document.addEventListener('mss:library-changed', () => renderPage());
+function _catClearFilters(section) { SF.clearFilters('cat', section); renderSections(); }
+function _catEmpty(section, o) {
+  const raw = section === 'watching' ? _catAll.filter(e => e.status === 'watching' || e.status === 'up_next' || e.status === 'paused')
+    : _catAll.filter(e => e.status === section);
+  if (raw.length) return mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters',
+    text: 'Your filters are a little too picky here. Loosen one and try again.',
+    actions: [{ label: 'Clear filters', icon: 'x', onclick: `_catClearFilters('${section}')`, primary: true }] });
+  return mssEmpty({ compact: true, ...o });
+}
 function emptyWatching() {
-  return `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('play',40)}</div><div class="empty-text">Nothing watching yet.<br><a href="#" onclick="openAddModal('${window.PAGE_CAT}');return false" style="color:var(--olive-light)">Add something →</a></div></div>`;
+  const queued = _catAll.some(e => e.status === 'queue');
+  return _catEmpty('watching', { art: 'watching', title: 'Nothing on screen right now',
+    text: queued ? 'The couch is warm and the remote is ready. Start something from your watchlist.' : 'The couch is warm and the remote is ready.',
+    actions: [{ label: 'Add a title', icon: 'plus', onclick: `openAddModal('${window.PAGE_CAT}')`, primary: !queued }] });
+}
+// A category with nothing in it at all: one welcome instead of four empty sections
+function _catWelcome() {
+  const m = CAT_META[window.PAGE_CAT] || {}, lower = t => /^TV /.test(t) ? 'TV ' + t.slice(3).toLowerCase() : t.toLowerCase();
+  return mssEmpty({ art: 'watchlist', title: `No ${lower(m.label || 'titles')} yet`,
+    text: `Every great folio starts with one title. No pressure — but it does look a little lonely in here.`,
+    actions: [{ label: `Add ${/^[aeiou]/i.test(m.singular || '') ? 'an' : 'a'} ${lower(m.singular || 'title')}`, icon: 'plus', onclick: `openAddModal('${window.PAGE_CAT}')`, primary: true },
+      { label: 'Browse Discover', icon: 'compass', href: 'discover.html' }],
+    starter: window.PAGE_CAT });
 }
 
 /* Unified entry point — respects category and per-item type */
@@ -800,7 +828,7 @@ function _droppedScore(e) {
   return sc != null ? `<div class="dropped-score"><span>★ ${Number(sc).toFixed(2)}</span><small>doesn’t count</small></div>` : '';
 }
 function buildDropped(items) {
-  if (!items.length) return `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('drop',40)}</div><div class="empty-text">Nothing here yet.</div></div>`;
+  if (!items.length) return _catEmpty('dropped', { art: 'dropped', title: 'Nothing dropped', text: 'You finish what you start. Respect.' });
   if (getView('dropped') !== 'grid') {
     return `<div class="watch-list">${items.map(e => {
       const _ctx = catContext();
@@ -1052,7 +1080,7 @@ function _showRateNowPopup(entry) {
 
 /* ════════ PAUSED ════════ */
 function buildPaused(items) {
-  if (!items.length) return `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('pause',40)}</div><div class="empty-text">Nothing on pause.</div></div>`;
+  if (!items.length) return _catEmpty('paused', { art: 'paused', title: 'Nothing on pause', text: 'Not a single title on hold. Commitment level: impressive.' });
   return getView('paused') === 'grid' ? renderWatchingGrid(items) : renderPausedList(items);
 }
 
@@ -1122,7 +1150,8 @@ function _queueScope(e) {
 }
 
 function buildQueue(items) {
-  if (!items.length) return `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('bookmark',40)}</div><div class="empty-text">Your watchlist is empty.</div></div>`;
+  if (!items.length) return _catEmpty('queue', { art: 'watchlist', title: 'Your watchlist is empty', text: 'Nothing queued up yet. Future you is going to be so bored.',
+    actions: [{ label: 'Add a title', icon: 'plus', onclick: `openAddModal('${window.PAGE_CAT}')`, primary: true }], starter: window.PAGE_CAT });
   return getView('queue') === 'list' ? renderQueueList(items) : renderQueueGrid(items);
 }
 
@@ -1151,7 +1180,9 @@ function renderQueueList(items) {
 /* _cgBadge and renderCompletedGrid defined above */
 
 function buildCompleted(items, sectionKey = 'completed') {
-  if (!items.length) return `<div class="empty"><div class="empty-icon" style="opacity:.35">${icon('check',40)}</div><div class="empty-text">Nothing here yet.</div></div>`;
+  if (!items.length) return sectionKey === 'ongoing'
+    ? _catEmpty('ongoing', { art: 'episodes', title: 'Nothing waiting on new episodes', text: 'Caught up on a show that’s still airing? It waits here until the next episode drops.' })
+    : _catEmpty('completed', { art: 'watched', title: 'No finished titles yet', text: 'Your trophy shelf is waiting. Finish something and it lands here, ready to rate.' });
   // To Be Continued, default order: shows with new episodes out first
   if (sectionKey === 'ongoing' && SF.getSort('cat', 'ongoing') === 'newest') items = [...items.filter(e => _catNewEps[e.id]), ...items.filter(e => !_catNewEps[e.id])];
   return getView(sectionKey) === 'grid' ? renderCompletedGrid(items, sectionKey) : renderCompletedList(items, sectionKey);
