@@ -24,11 +24,7 @@
 const MSSTabs = (() => {
   const N = { el: null, entries: [], owner: false, name: '', counts: {}, onDelete: null };
   const L = { el: null, lists: null, entries: [], userId: null, owner: false, name: '', collab: {}, map: {}, loading: null };
-  const empty = (ico, title, sub) => `<div class="empty" style="padding:3.5rem 1rem;text-align:center;">
-      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon(ico, 44)}</div>
-      <div class="empty-text" style="color:var(--text-2);margin-bottom:.5rem;">${title}</div>
-      ${sub ? `<div style="font-size:13px;color:var(--text-3);">${sub}</div>` : ''}
-    </div>`;
+  const empty = (art, title, subHTML, actions) => mssEmpty({ art, title, textHTML: subHTML || '', actions });
   const possessive = name => name ? `${escHTML(name)}’s` : 'Their';
 
   /* ══ Overview stats ══ */
@@ -120,15 +116,16 @@ const MSSTabs = (() => {
     const all = withNotes();
     if (!all.length) {
       N.el.innerHTML = N.owner
-        ? empty('notebook', 'No notes yet', 'Write one from any title, or on the <a href="notes.html" style="color:var(--olive-light);font-weight:600;">Notes page</a>.')
-        : empty('notebook', 'No notes yet', '');
+        ? empty('notes', 'No notes yet', 'Hot takes, favourite scenes, that one line you can’t stop quoting. Write one from any title.', [{ label: 'Go to Notes', href: 'notes.html', primary: true }])
+        : empty('notes', 'No notes yet', `${possessive(N.name)} hot takes are still under wraps.`);
       return;
     }
     const list = SF.list('tabNotes', 'all');
     N.el.innerHTML = `<div class="mss-toolbar">${mssToolbarHTML(N.owner ? 'Your Notes' : `${possessive(N.name)} Notes`, list.length, SF.bar('tabNotes', 'all'), 'note')}</div>`
       + (list.length
         ? `<div class="nc-grid">${list.map(e => MSSNote.cardHTML(e, { counts: N.counts[e.id], onclick: `MSSTabs._openNote(${attrJSON(e.id)})`, blurSpoiler: !N.owner })).join('')}</div>`
-        : `<div class="mss-empty">No notes match these filters.</div>`);
+        : mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+          actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('tabNotes', 'all'); MSSTabs._redrawNotes()", primary: true }] }));
   }
   function notes(el, o) {
     Object.assign(N, { el, entries: o.entries || [], owner: !!o.owner, name: o.name || '', onDelete: o.onDelete || null });
@@ -185,8 +182,8 @@ const MSSTabs = (() => {
     if (!L.lists) { L.el.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; return; }
     if (!L.lists.length) {
       L.el.innerHTML = L.owner
-        ? empty('layers', 'No lists yet', 'Create one on the <a href="lists.html" style="color:var(--olive-light);font-weight:600;">Lists page</a> — mix any movies, shows, anime or cartoons.')
-        : empty('layers', 'No lists yet', '');
+        ? empty('lists', 'Start your first list', 'Top 10s, comfort rewatches, guilty pleasures. Number one is up to you.', [{ label: 'Go to Lists', href: 'lists.html', primary: true }])
+        : empty('lists', 'No lists yet', 'Nothing ranked here yet.');
       return;
     }
     const list = SF.list('tabLists', 'all');
@@ -195,7 +192,8 @@ const MSSTabs = (() => {
         ? `<div class="lc-grid">${list.map(l => MSSList.cardHTML(l, {
             resolve, onclick: `MSSTabs._openList(${attrJSON(l.id)})`, metaExtra: metaExtra(l), collabLine: MSSList.collabLineHTML(l, L.collab[l.id]),
           })).join('')}</div>`
-        : `<div class="mss-empty">No lists match these filters.</div>`);
+        : mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+          actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('tabLists', 'all'); MSSTabs._redrawLists()", primary: true }] }));
   }
 
   // Their lists + lists shared with them, collaborators, and every title in them
@@ -261,7 +259,8 @@ const MSSTabs = (() => {
       const by = {}; (rs || []).forEach(r => (by[r.entry_id] = by[r.entry_id] || []).push(r));
       const latest = id => Math.max(...by[id].map(r => +new Date(r.updated_at)));
       const shows = (es || []).filter(e => e.tmdb_id && by[e.id]).sort((a, b) => latest(b.id) - latest(a.id));
-      if (!shows.length) { el.innerHTML = `<div class="mss-empty">${o.owner ? 'No episodes rated yet — rate them from a show’s info popup, or as you watch.' : 'No episode ratings yet.'}</div>`; return; }
+      if (!shows.length) { el.innerHTML = mssEmpty({ art: 'episodes', title: 'No episodes rated yet', text: o.owner ? 'Rate episodes as you watch and the best ones rise to the top here.' : 'Not a single episode rated. Yet.',
+        actions: o.owner ? [{ label: 'Go to Episodes', href: 'episodes.html', primary: true }] : [] }); return; }
       const eps = (rs || []).filter(r => r.episode_number > 0);
       const avg = a => a.length ? a.reduce((x, r) => x + Number(r.score), 0) / a.length : 0;
       const top = eps.length ? eps.reduce((a, b) => (Number(b.score) > Number(a.score) ? b : a)) : null;
@@ -277,5 +276,5 @@ const MSSTabs = (() => {
     } catch (err) { console.error('Episodes tab:', err); mssErrorPage(mssErrorKind(err), { in: el, error: err }); }
   }
 
-  return { notes, lists, episodes, statsHTML, headSkel, toggleStats, _openNote: openNote, _openList: openList };
+  return { notes, lists, episodes, statsHTML, headSkel, toggleStats, _openNote: openNote, _openList: openList, _redrawNotes: renderNotes, _redrawLists: renderLists };
 })();
