@@ -57,8 +57,8 @@
 .cab-bar { height:6px; border-radius:3px; background:var(--bg-3); overflow:hidden; }
 .cab-bar i { display:block; height:100%; border-radius:3px; background:var(--olive-light); }
 .cab-prog small { display:block; margin-top:5px; font-size:11.5px; color:var(--text-3); }
-.cab-empty { padding:24px 16px; border-radius:var(--radius); border:1px dashed var(--border-2); text-align:center; font-size:13.5px; color:var(--text-3); }
-.cab-empty a { color:var(--olive-light); font-weight:600; }
+/* an empty medal shelf: the shared empty state, on a card of its own */
+.mss-es.cab-es { max-width:none; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--card); }
 /* detail popup */
 .cab-pop { max-width:520px; }
 .cab-pop-hero { display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; padding-bottom:6px; }
@@ -202,9 +202,11 @@ function cabDraw() {
       <div class="cab-grid">${CAB.secret.map(secretCard).join('')}</div></section>` : ''}
     ${sec('ach', 'Achievements', `${levels} of ${CAB.ach.length * 4} levels`, `<div class="cab-grid">${CAB.ach.map(achCard).join('')}</div>`)}
     ${sec('official', 'Official', `${official.length} ${official.length === 1 ? 'medal' : 'medals'}`, official.length ? `<div class="cab-grid">${official.map(badgeCard).join('')}</div>`
-      : `<div class="cab-empty">${CAB.own ? `Finish an official challenge and its medal lands here. <a href="friends.html?s=challenges">See the challenges</a>` : 'No official medals yet.'}</div>`)}
+      : mssEmpty({ compact: true, cls: 'cab-es', art: 'medal', title: 'No official medals yet', text: CAB.own ? 'Finish an official challenge and its medal lands right here.' : 'The shelf is polished and waiting.',
+          actions: CAB.own ? [{ label: 'See the challenges', href: 'friends.html?s=challenges', primary: true }] : [] }))}
     ${sec('challenge', 'Challenges', `${chal.length} ${chal.length === 1 ? 'medal' : 'medals'}`, chal.length ? `<div class="cab-grid">${chal.map(badgeCard).join('')}</div>`
-      : `<div class="cab-empty">${CAB.own ? `Race friends in a challenge — 1st gets gold, 2nd silver, everyone after bronze. <a href="friends.html?s=challenges">Start one</a>` : 'No challenge medals yet.'}</div>`)}`;
+      : mssEmpty({ compact: true, cls: 'cab-es', art: 'podium', title: 'No challenge medals yet', text: CAB.own ? 'Race friends in a challenge — 1st gets gold, 2nd silver, everyone after bronze.' : 'No races won (or lost) yet.',
+          actions: CAB.own ? [{ label: 'Start a challenge', icon: 'plus', href: 'friends.html?s=challenges', primary: true }] : [] }))}`;
 }
 function cabTab(k) {
   CAB.tab = k;
