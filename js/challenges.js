@@ -436,14 +436,15 @@ const MSSChallenges = (() => {
     drawChosen();
     document.querySelectorAll('#chfChosen .chf-any')[i]?.focus();
   }
-  let qTimer = null, hits = [];
+  let qTimer = null, hits = [], qLast = '';
   function search(q) {
-    clearTimeout(qTimer);
+    clearTimeout(qTimer); qLast = q;
     const box = document.getElementById('chfHits'); if (!box) return;
     if (q.trim().length < 2) { box.innerHTML = ''; return; }
     qTimer = setTimeout(async () => {
       box.innerHTML = `<div class="pf-r-msg">Searching…</div>`;
       const res = await _tmdbSearch(q.trim(), 8);
+      if (qLast !== q) return;                         // typed on since
       hits = res.filter(r => r.media_type === 'movie' || r.media_type === 'tv').map(r => ({ tmdb_id: r.id, tmdb_type: r.media_type, title: r.title || r.name,
         poster_path: r.poster_path || null, year: (r.release_date || r.first_air_date || '').slice(0, 4) || null }));
       const b2 = document.getElementById('chfHits'); if (!b2) return;
@@ -453,7 +454,7 @@ const MSSChallenges = (() => {
           <span class="poll-thumb">${h.poster_path ? `<img src="https://image.tmdb.org/t/p/w92${esc(h.poster_path)}" alt="" loading="lazy">` : icon('film', 16)}</span>
           <span class="poll-opt-text"><b translate="no">${esc(h.title)}</b><small>${[h.year, h.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}${have ? ' · added' : ''}</small></span></button>`; }).join('')
         : `<div class="pf-r-msg">Nothing found — try another spelling.</div>`;
-    }, 280);
+    }, MSS_SEARCH_MS);
   }
   function pick(k) {
     const h = hits[k]; if (!h || !form) return;
