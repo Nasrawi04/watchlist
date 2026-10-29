@@ -2,272 +2,197 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script src="js/i18n.js"></script>
 <title>Sign In — MyScreenFolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
-/* ── Page ── */
-.auth-page {
-  position:fixed; inset:0;
-  display:flex; flex-direction:column;
-  align-items:center; justify-content:safe center;
-  overflow-y:auto;   /* short phones + saved accounts: scroll instead of cutting the logo off */
-  background:var(--bg); padding:2rem;
-  gap:24px;
-}
+/* ═════════════════════════════════════════════════════════════
+   Sign in / Create account / Reset password
+   Two halves on a computer: the "stage" (a wall of this week's posters
+   drifting behind the logo and what MyScreenFolio does) and the form.
+   On a phone the stage is a short band of posters across the top.
+   Borders, not shadows (the site's rule).
+   ═════════════════════════════════════════════════════════════ */
+body { background:var(--bg); min-height:100dvh; }
+.au { min-height:100dvh; display:grid; grid-template-columns:1fr; }
+@media (min-width:960px) { .au { grid-template-columns:minmax(0, 1.08fr) minmax(440px, 1fr); } }
 
-/* ── Logo ── */
-.auth-logo {
-  font-family:var(--serif); 
-  font-size:28px; 
-  font-weight:500;
-  letter-spacing:3px; 
-  text-transform:uppercase; 
-  color:var(--text);
-  text-align:center;
-  position:relative;
-  display:inline-block;
-  padding-bottom:8px;
+/* ── The stage ── */
+.au-stage { position:relative; overflow:hidden; isolation:isolate; background:#0B0B0F; color:#EDEDED;
+  display:flex; flex-direction:column; justify-content:flex-end; padding:28px 22px 26px; min-height:248px; }
+@media (min-width:960px) { .au-stage { padding:48px 56px; min-height:100dvh; position:sticky; top:0; height:100dvh; } }
+.au-wall { position:absolute; inset:-12% -10%; z-index:-2; display:grid; grid-template-columns:repeat(5, 1fr); gap:12px;
+  transform:rotate(-8deg) scale(1.05); opacity:.55; }
+@media (min-width:960px) { .au-wall { grid-template-columns:repeat(4, 1fr); gap:16px; opacity:.6; } }
+.au-col { display:flex; flex-direction:column; gap:12px; will-change:transform; }   /* moved by the script (drift + drag) */
+@media (min-width:960px) { .au-col { gap:16px; } }
+.au-tile { position:relative; display:block; aspect-ratio:2/3; border-radius:10px; overflow:hidden; border:0.5px solid rgba(255,255,255,.12);
+  background:linear-gradient(160deg, var(--g, #2F4A2A), #0B0B0F); transition:border-color .2s, opacity .2s; }
+/* Posters you can open (the admins' picks or this week's trending): a column stops while you're on it,
+   and you can grab it (mouse) or scroll it (wheel / trackpad) up and down, like Home's Explore row */
+a.au-tile { cursor:pointer; -webkit-tap-highlight-color:transparent; -webkit-user-drag:none; user-select:none; -webkit-user-select:none; }
+.au-wall.can-drag .au-col { cursor:grab; }
+.au-wall.dragging, .au-wall.dragging .au-col, .au-wall.dragging a.au-tile { cursor:grabbing; }
+.au-wall.dragging a.au-tile { pointer-events:none; }
+a.au-tile:hover { border-color:rgba(255,255,255,.7); }
+a.au-tile::after { content:attr(data-name); position:absolute; left:0; right:0; bottom:0; padding:22px 9px 8px;
+  font:600 11.5px/1.3 'Manrope', var(--sans); color:#fff; background:linear-gradient(transparent, rgba(0,0,0,.85));
+  opacity:0; transition:opacity .2s; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+a.au-tile:hover::after { opacity:1; }
+@media (pointer:coarse) { a.au-tile::after { display:none; } }
+.au-tile img { width:100%; height:100%; object-fit:cover; display:block; opacity:0; transition:opacity .6s ease; }
+.au-tile img.in { opacity:1; }
+.au-stage::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
+  background:linear-gradient(180deg, rgba(11,11,15,.55) 0%, rgba(11,11,15,.2) 35%, rgba(11,11,15,.92) 78%, #0B0B0F 100%),
+             radial-gradient(70% 55% at 15% 100%, rgba(74,103,65,.45), transparent 70%); }
+@media (min-width:960px) {
+  .au-stage::before { background:linear-gradient(90deg, rgba(11,11,15,.2), rgba(11,11,15,.55) 60%, rgba(11,11,15,.85)),
+      linear-gradient(180deg, rgba(11,11,15,.7), transparent 30%, transparent 55%, #0B0B0F 96%),
+      radial-gradient(60% 50% at 10% 95%, rgba(74,103,65,.5), transparent 70%); }
 }
+.au-brand { position:absolute; top:22px; left:22px; display:flex; align-items:center; gap:12px; text-decoration:none; color:#EDEDED; }
+@media (min-width:960px) { .au-brand { top:44px; left:56px; } }
+.au-brand img { height:46px; width:auto; display:block; }
+@media (min-width:960px) { .au-brand img { height:60px; } }
+.au-brand span { font-family:var(--serif); font-weight:500; font-size:15px; letter-spacing:3px; }
+.au-brand b { font-weight:500; color:#7EB86C; }
+.au-eyebrow { font-size:11px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase; color:#7EB86C; margin-bottom:10px; }
+.au-head { font-family:var(--serif); font-weight:600; font-size:clamp(28px, 7.5vw, 40px); line-height:1.04; letter-spacing:-.3px; margin:0; max-width:15ch; }
+@media (min-width:960px) { .au-head { font-size:clamp(44px, 4.4vw, 64px); } }
+.au-head em { font-style:normal; color:#7EB86C; }
+.au-feats { display:none; list-style:none; margin:28px 0 0; padding:0; gap:14px; }
+@media (min-width:960px) { .au-feats { display:grid; } }
+.au-feats li { display:flex; align-items:center; gap:14px; font-size:15px; color:rgba(237,237,237,.82); }
+.au-feats i { width:38px; height:38px; border-radius:12px; flex-shrink:0; display:grid; place-items:center; color:#7EB86C;
+  background:rgba(126,184,108,.12); border:0.5px solid rgba(126,184,108,.32); font-style:normal; }
+.au-feats i svg { width:18px; height:18px; }
+.au-credit { display:none; margin-top:30px; font-size:11.5px; color:rgba(237,237,237,.45); }
+@media (min-width:960px) { .au-credit { display:block; } }
 
-.auth-logo em {
-  color:var(--olive-light);
-  font-style:normal;
-  font-weight:400;
-  text-decoration:underline;
-  text-decoration-thickness:2px;
-  text-underline-offset:3px;
-}
+/* ── The form side ── */
+.au-side { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:safe center; gap:16px;
+  padding:22px 16px calc(32px + env(safe-area-inset-bottom)); }
+@media (min-width:960px) { .au-side { padding:48px 40px; } }
+.au-theme { position:absolute; top:14px; right:14px; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; cursor:pointer;
+  background:var(--card-solid); color:var(--text-2); border:0.5px solid var(--border-2); }
+.au-theme:hover { color:var(--text); border-color:var(--border-olive); }
+.au-theme svg { width:18px; height:18px; }
+.au-theme .sun { display:none; }
+[data-theme="dark"] .au-theme .sun { display:block; } [data-theme="dark"] .au-theme .moon { display:none; }
+@media (max-width:959px) { .au-theme { position:fixed; top:calc(12px + env(safe-area-inset-top)); z-index:5; background:rgba(11,11,15,.55); color:#EDEDED; border-color:rgba(255,255,255,.2); } }
+.au-card { width:100%; max-width:420px; background:var(--card-solid); border:0.5px solid var(--border-2); border-radius:22px; padding:24px 22px 22px; }
+@media (min-width:960px) { .au-card { padding:30px 30px 26px; } }
+@media (max-width:959px) { .au-card { margin-top:-28px; position:relative; z-index:2; } }
 
-/* ── Toggle row ── */
-.auth-toggle-row {
-  display:flex; align-items:center; gap:16px;
-}
-.auth-tab {
-  font-size:13px; font-weight:500; color:var(--text-2);
-  cursor:pointer; transition:color var(--trans) var(--ease);
-  -webkit-user-select:none; user-select:none;
-}
-.auth-tab.active {
-  color:var(--text); font-weight:600;
-  text-decoration:underline; text-underline-offset:3px;
-}
-
-/* Slider toggle */
-.slider-track {
-  position:relative; width:50px; height:22px;
-  background:var(--bg-3);
-  border:1.5px solid var(--olive-light);
-  
-  border-radius:5px; cursor:pointer;
-  transition:background 0.3s;
-}
-.slider-thumb {
-  position:absolute; top:1px; left:1px;
-  width:18px; height:18px;
-  background:var(--bg-2);
-  border:1.5px solid var(--olive-light);
-  border-radius:4px;
-  
-  transition:transform 0.3s, box-shadow 0.3s;
-}
-.slider-track.flipped { background:var(--olive-faint); }
-.slider-track.flipped .slider-thumb { transform:translateX(26px); }
-
-/* ── Flip card wrapper ── */
-.flip-card-wrapper {
-  width:340px;
-  perspective:1000px;
-}
-.flip-card-inner {
-  width:100%; min-height:390px; height:auto;
-  position:relative;
-  transform-style:preserve-3d;
-  transition:transform 0.65s cubic-bezier(0.4,0,0.2,1);
-  overflow:visible;
-}
-.flip-card-wrapper.flipped .flip-card-inner { transform:rotateY(180deg); }
-
-/* Reset Password Container */
-.reset-password-container {
-  display:none; opacity:0;
-  animation:fadeIn 0.3s var(--ease);
-}
-.reset-password-container.active { display:block; opacity:1; }
-.reset-password-wrapper {
-  width:340px; perspective:1000px;
-}
-.reset-password-card {
-  background:var(--bg-3); border-radius:var(--radius-lg);
-  border:1.5px solid var(--olive-light); 
-  padding:2rem 1.75rem; min-height:390px; height:auto;
-}
-
-/* Front & back faces */
-.flip-card__front, .flip-card__back, .flip-card__reset {
-  position:absolute; inset-inline-start:0; inset-inline-end:0; top:0;
-  width:100%; min-height:390px; padding:2rem 1.75rem;
-  display:flex; flex-direction:column; justify-content:center;
-  -webkit-backface-visibility:hidden; backface-visibility:hidden;
-  background:var(--bg-3);
-  border-radius:var(--radius-lg);
-  border:1.5px solid var(--olive-light);
-  
-  box-sizing:border-box;
-}
-.flip-card__back { transform:rotateY(180deg); }
-.flip-card__reset { transform:rotateX(180deg); }
-
-/* ── Form elements ── */
-.flip-card__form {
-  display:flex; flex-direction:column; align-items:center; gap:14px;
-}
-.flip-card__title {
-  font-family:var(--serif); font-size:28px; font-weight:500;
-  letter-spacing:1px; color:var(--text); margin-bottom:4px; text-align:center;
-}
-.flip-card__sub {
-  font-size:11px; color:var(--text-3); letter-spacing:1px;
-  margin-top:-4px; margin-bottom:6px; text-align:center;
-}
-.flip-card__input {
-  width:100%; height:44px;
-  border-radius:var(--radius-sm);
-  border:1.5px solid var(--border-2);
-  background:var(--bg-2);
-  
-  font-size:14px; color:var(--text);
-  padding:0 14px; outline:none;
-  transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease), background var(--trans) var(--ease);
-  box-sizing:border-box;
-}
-.flip-card__input::placeholder { color:var(--text-3); }
-.flip-card__input:focus {
-  border-color:var(--olive-light);
-  
-  background:var(--bg-3);
-}
-.flip-card__btn {
-  width:100%; height:44px;
-  border-radius:var(--radius-sm);
-  border:1.5px solid var(--olive-light);
-  background:var(--olive);
-  
-  font-size:14px; font-weight:600; color:#fff;
-  cursor:pointer; letter-spacing:0.3px;
-  transition:transform var(--trans) var(--ease), box-shadow var(--trans) var(--ease), background var(--trans) var(--ease), border-color var(--trans) var(--ease);
-  margin-top:4px;
-  position:relative;
-}
-.flip-card__btn:hover {
-  background:var(--olive-2);
-  border-color:var(--olive-light);
-  
-  transform:translateY(-2px);
-}
-.flip-card__btn:active {
-  
-  transform:translate(2px,2px);
-}
-.flip-card__btn:disabled {
-  opacity:0.55; cursor:not-allowed; transform:none;
-  
-}
-
-.flip-card__error {
-  width:100%; padding:11px 14px; border-radius:var(--radius-sm);
-  background:rgba(220,38,38,0.12); border:1.5px solid rgba(220,38,38,0.4);
-  color:#ff8787; font-size:12px; font-weight:500; text-align:start; display:none;
-  animation:fadeIn 0.2s var(--ease);
-}
-.flip-card__error.show { display:block; }
-.flip-card__hint {
-  font-size:11px; color:var(--text-3);
-  margin-top:-4px; align-self:flex-start;
-}
-
-/* ── Light mode ── */
-[data-theme="light"] .flip-card__front,
-[data-theme="light"] .flip-card__back {
-  background:var(--card);
-  border-color:var(--olive-light);
-  
-}
-[data-theme="light"] .flip-card__input {
-  background:var(--bg-2); border-color:var(--border-2);
-   color:var(--text);
-}
-[data-theme="light"] .flip-card__input:focus {
-  border-color:var(--olive-light); 
-}
-[data-theme="light"] .slider-track {
-  background:var(--bg-3); 
-}
-[data-theme="light"] .slider-thumb {
-  background:var(--bg-3); 
-}
-
-/* ── Sign In Mode Toggle ── */
-.si-mode-toggle {
-  width:100%; display:flex; gap:0; margin-bottom:12px;
-  background:var(--bg-2); border:1.5px solid var(--border-2);
-  border-radius:var(--radius-sm); padding:3px; box-sizing:border-box;
-}
-.si-mode-toggle label {
-  flex:1; display:flex; align-items:center; justify-content:center;
-  cursor:pointer; -webkit-user-select:none; user-select:none; font-size:12px; font-weight:500;
-  color:var(--text-3); transition:all var(--trans) var(--ease);
-  padding:8px 12px; position:relative;
-}
-.si-mode-toggle input[type="radio"] {
-  position:absolute; opacity:0; cursor:pointer;
-}
-.si-mode-toggle input[type="radio"]:checked + span {
-  color:var(--text);
-}
-.si-mode-toggle input[type="radio"]:checked {
-  ~span { color:var(--text); }
-}
-.si-mode-toggle label:has(input:checked) {
-  background:var(--olive-faint); border-radius:var(--radius-xs);
-  color:var(--olive-light); font-weight:600;
-}
-
-/* ── Mobile ── */
-@media(max-width:400px) {
-  .flip-card-wrapper { width:92vw; }
-  .flip-card-inner   { min-height:420px; height:auto; }
-}
-
-/* Saved accounts (MSSAccounts) */
-.auth-saved { display:flex; flex-direction:column; align-items:center; gap:8px; max-width:340px; width:100%; }
+/* saved accounts: one tap, no password */
+.auth-saved { width:100%; max-width:420px; display:flex; flex-direction:column; gap:10px; }
 .auth-saved[hidden] { display:none; }
-.auth-saved-h { font-size:12px; color:var(--text-2); text-align:center; }
-.auth-saved-list { max-width:100%; display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
-.auth-saved-btn {
-  display:inline-flex; align-items:center; gap:8px; min-height:40px;
-  padding:4px 14px 4px 4px; border-radius:999px; cursor:pointer;
-  background:var(--bg-3); color:var(--text); font:600 13px var(--sans, inherit);
-  border:1.5px solid var(--olive-light); 
-  transition:transform var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
-}
-.auth-saved-btn { max-width:100%; }
+.auth-saved-h { font-size:11px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:var(--text-3); }
+.auth-saved-list { display:flex; flex-wrap:wrap; gap:8px; }
+.auth-saved-btn { display:inline-flex; align-items:center; gap:10px; min-height:48px; max-width:100%; padding:5px 16px 5px 5px; border-radius:14px; cursor:pointer;
+  background:var(--card-solid); color:var(--text); font:600 14px var(--sans); border:0.5px solid var(--border-2); transition:border-color .2s, background .2s; }
+.auth-saved-btn:hover { border-color:var(--olive-light); }
+.auth-saved-btn:disabled { opacity:.6; cursor:progress; }
 .auth-saved-btn > span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-.auth-saved-btn:hover { transform:translate(-1px,-1px); }
-.auth-saved-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.auth-saved-btn:disabled { opacity:.6; cursor:wait; }
-.auth-saved-ava {
-  width:30px; height:30px; border-radius:50%; overflow:hidden; flex:none;
-  display:grid; place-items:center; background:var(--olive-faint); color:var(--olive-light); font-size:13px;
-}
+.auth-saved-ava { width:38px; height:38px; border-radius:10px; overflow:hidden; flex-shrink:0; display:grid; place-items:center;
+  background:var(--olive); color:#fff; font-family:var(--serif); font-size:17px; }
 .auth-saved-ava img { width:100%; height:100%; object-fit:cover; }
+
+/* tabs */
+.au-tabs { display:grid; grid-template-columns:1fr 1fr; padding:4px; border-radius:14px; background:var(--bg-2); border:0.5px solid var(--border); margin-bottom:22px; position:relative; }
+.au-tab { position:relative; z-index:1; min-height:42px; border:0; background:none; border-radius:10px; cursor:pointer;
+  font:700 14px var(--sans); color:var(--text-3); transition:color .2s; }
+.au-tab[aria-selected="true"] { color:#fff; }
+.au-tabs::before { content:''; position:absolute; top:4px; bottom:4px; left:4px; width:calc(50% - 4px); border-radius:10px; background:var(--olive);
+  transition:transform .32s cubic-bezier(.3,.9,.3,1.05); }
+.au-tabs.create::before { transform:translateX(100%); }
+.au-tab:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+
+.au-title { font-family:var(--serif); font-weight:600; font-size:26px; line-height:1.1; color:var(--text); margin:0 0 4px; }
+.au-sub { font-size:14px; color:var(--text-2); margin:0 0 20px; line-height:1.5; }
+.au-panel[hidden] { display:none; }
+.au-panel { animation:auIn .35s var(--ease) both; }
+@keyframes auIn { from { opacity:0; transform:translateY(6px); } }
+
+/* fields */
+.au-form { display:flex; flex-direction:column; gap:14px; }
+.au-field { display:flex; flex-direction:column; gap:7px; }
+.au-label-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.au-label { font-size:12.5px; font-weight:700; color:var(--text-2); letter-spacing:.2px; }
+.au-box { position:relative; display:flex; align-items:center; }
+.au-box > svg { position:absolute; left:14px; width:17px; height:17px; color:var(--text-3); pointer-events:none; transition:color .2s; }
+.au-box:focus-within > svg { color:var(--olive-light); }
+.au-input { width:100%; min-height:50px; padding:0 14px 0 42px; border-radius:12px; font:500 15px var(--sans); color:var(--text);
+  background:var(--bg-2); border:1px solid var(--border-2); outline:none; transition:border-color .2s, background .2s; }
+.au-input::placeholder { color:var(--text-3); }
+.au-input:focus { border-color:var(--olive-light); background:var(--card-solid); }
+.au-input.has-eye { padding-right:50px; }
+.au-eye { position:absolute; right:4px; width:44px; height:44px; border:0; border-radius:10px; background:none; color:var(--text-3); cursor:pointer; display:grid; place-items:center; }
+.au-eye:hover { color:var(--text); }
+.au-eye svg { width:18px; height:18px; }
+.au-eye .off { display:none; } .au-eye[aria-pressed="true"] .on { display:none; } .au-eye[aria-pressed="true"] .off { display:block; }
+.au-eye:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
+.au-hint { font-size:12px; color:var(--text-3); line-height:1.4; }
+.au-hint b { color:var(--olive-light); font-weight:700; }
+
+/* Email / Username switch beside the label */
+.au-chips { display:inline-flex; padding:3px; border-radius:10px; background:var(--bg-2); border:0.5px solid var(--border); }
+.au-chips label { position:relative; cursor:pointer; }
+.au-chips input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
+.au-chips span { display:block; padding:6px 11px; border-radius:7px; font-size:12px; font-weight:700; color:var(--text-3); transition:all .2s; }
+.au-chips input:checked + span { background:var(--card-solid); color:var(--text); box-shadow:inset 0 0 0 1px var(--border-2); }
+.au-chips input:focus-visible + span { outline:2px solid var(--olive-light); }
+
+/* password strength */
+.au-meter { display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; }
+.au-meter i { height:4px; border-radius:2px; background:var(--border-2); transition:background .25s; }
+.au-meter[data-s="1"] i:nth-child(-n+1) { background:#D9534F; }
+.au-meter[data-s="2"] i:nth-child(-n+2) { background:#E2B53E; }
+.au-meter[data-s="3"] i:nth-child(-n+3) { background:var(--olive-light); }
+.au-meter[data-s="4"] i { background:var(--olive-light); }
+.au-pass-row { display:flex; justify-content:space-between; gap:10px; }
+
+/* errors */
+.flip-card__error { display:none; align-items:flex-start; gap:9px; padding:11px 13px; border-radius:12px; font-size:13px; line-height:1.45; font-weight:600;
+  color:#E5675F; background:rgba(229,103,95,.1); border:1px solid rgba(229,103,95,.35); }
+[data-theme="light"] .flip-card__error { color:#A8322B; background:rgba(179,55,47,.07); border-color:rgba(179,55,47,.3); }
+.flip-card__error.show { display:flex; }
+.flip-card__error.show::before { content:'!'; flex-shrink:0; width:18px; height:18px; border-radius:50%; display:grid; place-items:center; font-size:11px; font-weight:800; color:#fff; background:currentColor; }
+.flip-card__error.show::before { color:inherit; }
+
+/* buttons + links */
+.au-btn { min-height:52px; border-radius:12px; border:1px solid var(--olive); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  font:700 15px var(--sans); color:#fff; background:var(--olive); transition:filter .2s, transform .12s; margin-top:4px; }
+.au-btn:hover { filter:brightness(1.08); }
+.au-btn:active { transform:scale(.985); }
+.au-btn:disabled { opacity:.7; cursor:progress; filter:none; }
+.au-btn svg { width:17px; height:17px; transition:transform .2s; }
+.au-btn:hover svg { transform:translateX(3px); }
+.au-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
+.au-link { background:none; border:0; padding:6px 0; font:700 13px var(--sans); color:var(--olive-light); cursor:pointer; text-decoration:none; align-self:flex-start; }
+.au-link:hover { text-decoration:underline; }
+.au-link-muted { color:var(--text-3); }
+.au-row-end { display:flex; justify-content:flex-end; margin-top:-6px; }
+.au-guest { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; max-width:420px; min-height:48px; padding:0 16px; border-radius:14px;
+  border:1px dashed var(--border-2); color:var(--text-2); font-size:13.5px; font-weight:600; text-decoration:none; transition:border-color .2s, color .2s; }
+.au-guest:hover { border-color:var(--olive-light); color:var(--text); }
+.au-guest svg { width:16px; height:16px; }
+
+/* done states (check your email) */
+.au-done { display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; padding:8px 0 4px; }
+.au-done-ic { width:64px; height:64px; border-radius:20px; display:grid; place-items:center; color:var(--olive-light); background:var(--olive-faint); border:1px solid var(--border-olive); margin-bottom:4px; }
+.au-done-ic svg { width:28px; height:28px; }
+.au-done p { font-size:14px; color:var(--text-2); line-height:1.6; margin:0; }
+.au-done strong { color:var(--text); word-break:break-all; }
+
+@media (prefers-reduced-motion:reduce) { .au-panel, .au-tabs::before { animation:none !important; transition:none !important; } }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#0B0B0F">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
@@ -277,125 +202,338 @@
 </head>
 <body>
 
-<div class="auth-page">
+<main class="au">
 
-  <!-- Updated Logo with underline exactly under "Screen" -->
-  <div class="auth-logo" translate="no">
-    My<em>Screen</em>Folio
-  </div>
-
-  <!-- Accounts already signed in on this device: one tap, no password -->
-  <div class="auth-saved" id="authSaved" hidden></div>
-
-  <!-- Toggle row -->
-  <div class="auth-toggle-row">
-    <span class="auth-tab active" id="tabSignIn" onclick="setMode(false)">Sign in</span>
-    <div class="slider-track" id="sliderTrack" onclick="toggleMode()">
-      <div class="slider-thumb" id="sliderThumb"></div>
+  <!-- The stage: this week's posters drifting behind what MyScreenFolio is -->
+  <section class="au-stage" aria-label="MyScreenFolio">
+    <div class="au-wall" id="auWall" aria-hidden="true"></div>
+    <a class="au-brand" href="index.html" aria-label="MyScreenFolio home" translate="no">
+      <img src="icons/logo-nav.png" alt="" width="95" height="60">
+    </a>
+    <div>
+      <div class="au-eyebrow">Your screen portfolio</div>
+      <h1 class="au-head">Everything you watch, <em>in one folio.</em></h1>
+      <ul class="au-feats">
+        <li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="m17 2-5 5-5-5"/></svg></i>Track shows, movies, anime and every episode</li>
+        <li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3 6.3 6.9.9-5 4.8 1.2 6.9L12 17.6l-6.1 3.3 1.2-6.9-5-4.8 6.9-.9Z"/></svg></i>Rate what you finish and rank your favourites</li>
+        <li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></i>Share notes and lists, compare taste with friends</li>
+      </ul>
+      <div class="au-credit" id="auCredit">Posters from TMDB · tap one to look around</div>
     </div>
-    <span class="auth-tab" id="tabCreate" onclick="setMode(true)">Create account</span>
-  </div>
+  </section>
 
-  <!-- Flip card -->
-  <div class="flip-card-wrapper" id="flipWrapper">
-    <div class="flip-card-inner">
+  <!-- The form -->
+  <section class="au-side">
+    <button type="button" class="au-theme" onclick="toggleTheme()" aria-label="Switch light / dark">
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
 
-      <!-- FRONT: Sign In -->
-      <div class="flip-card__front">
-        <div class="flip-card__title">Sign In</div>
-        <div class="flip-card__sub">Welcome back</div>
-        <form class="flip-card__form" onsubmit="doSignIn(event)">
-          <div class="flip-card__error" id="siError"></div>
-          <div class="si-mode-toggle">
-            <label>
-              <input type="radio" id="siModeEmail" name="siMode" value="email" checked onchange="setSIMode('email')">
-              <span>Email</span>
-            </label>
-            <label>
-              <input type="radio" id="siModeUsername" name="siMode" value="username" onchange="setSIMode('username')">
-              <span>Username</span>
-            </label>
+    <!-- Accounts already signed in on this device: one tap, no password -->
+    <div class="auth-saved" id="authSaved" hidden></div>
+
+    <div class="au-card">
+      <!-- Sign in · Create account -->
+      <div class="au-tabs" id="auTabs" role="tablist" aria-label="Sign in or create an account">
+        <button type="button" class="au-tab" id="tabSignIn" role="tab" aria-selected="true" aria-controls="siPanel" onclick="setMode(false)">Sign in</button>
+        <button type="button" class="au-tab" id="tabCreate" role="tab" aria-selected="false" aria-controls="suPanel" onclick="setMode(true)">Create account</button>
+      </div>
+
+      <!-- Sign in -->
+      <div class="au-panel" id="siPanel" role="tabpanel" aria-labelledby="tabSignIn">
+        <h2 class="au-title">Welcome back</h2>
+        <p class="au-sub">Pick up right where you left off.</p>
+        <form class="au-form" onsubmit="doSignIn(event)" novalidate>
+          <div class="flip-card__error" id="siError" role="alert"></div>
+          <div class="au-field">
+            <div class="au-label-row">
+              <label class="au-label" for="siEmail" id="siLabel">Email</label>
+              <div class="au-chips" role="radiogroup" aria-label="Sign in with">
+                <label><input type="radio" id="siModeEmail" name="siMode" value="email" checked onchange="setSIMode('email')"><span>Email</span></label>
+                <label><input type="radio" id="siModeUsername" name="siMode" value="username" onchange="setSIMode('username')"><span>Username</span></label>
+              </div>
+            </div>
+            <div class="au-box">
+              <svg id="siIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+              <input class="au-input" id="siEmail" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email">
+            </div>
           </div>
-          <input class="flip-card__input" id="siEmail" type="email"
-                placeholder="Email address" autocomplete="email">
-          <input class="flip-card__input" id="siPass"  type="password"
-                placeholder="Password" autocomplete="current-password">
-          <button class="flip-card__btn" id="btnSignIn" type="submit">Let's go →</button>
-          <a href="#" onclick="goToReset(); return false;" style="font-size:12px;color:var(--text-3);text-decoration:none;margin-top:8px;transition:color var(--trans);" onmouseover="this.style.color='var(--olive-light)'" onmouseout="this.style.color='var(--text-3)'">Forgot password?</a>
+          <div class="au-field">
+            <label class="au-label" for="siPass">Password</label>
+            <div class="au-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input class="au-input has-eye" id="siPass" type="password" placeholder="Your password" autocomplete="current-password">
+              <button type="button" class="au-eye" aria-label="Show password" aria-pressed="false" onclick="auEye(this)">
+                <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19c-6.4 0-10-7-10-7a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.1 9.1 0 0 1 12 4c6.4 0 10 7 10 7a18.6 18.6 0 0 1-2.2 3.2M1 1l22 22"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="au-row-end"><button type="button" class="au-link" onclick="goToReset()">Forgot password?</button></div>
+          <button class="au-btn" id="btnSignIn" type="submit"><span>Let’s go</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </form>
       </div>
 
-      <!-- BACK: Sign Up -->
-      <div class="flip-card__back">
-        <div class="flip-card__title">Create Account</div>
-        <div class="flip-card__sub">Start your portfolio today</div>
-        <form class="flip-card__form" onsubmit="doSignUp(event)">
-          <div class="flip-card__error" id="suError"></div>
-          <input class="flip-card__input" id="suUser" type="text" maxlength="20"
-                placeholder="Username" autocomplete="off"
-                oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()">
-          <div class="flip-card__hint">Letters, numbers and _ only</div>
-          <input class="flip-card__input" id="suEmail" type="email" maxlength="254"
-                placeholder="Email address" autocomplete="email">
-          <input class="flip-card__input" id="suPass"  type="password" maxlength="128"
-                placeholder="Password (min 6)" autocomplete="new-password">
-          <button class="flip-card__btn" id="btnSignUp" type="submit">Create account →</button>
+      <!-- Create account -->
+      <div class="au-panel" id="suPanel" role="tabpanel" aria-labelledby="tabCreate" hidden>
+        <h2 class="au-title">Start your folio</h2>
+        <p class="au-sub">Free, and it takes a minute.</p>
+        <form class="au-form" onsubmit="doSignUp(event)" novalidate>
+          <div class="flip-card__error" id="suError" role="alert"></div>
+          <div class="au-field">
+            <label class="au-label" for="suUser">Username</label>
+            <div class="au-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+              <input class="au-input" id="suUser" type="text" maxlength="20" placeholder="e.g. movienight_sam" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="suUserHint"
+                     oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase(); auUserHint()">
+            </div>
+            <div class="au-hint" id="suUserHint">3–20 letters, numbers or _</div>
+          </div>
+          <div class="au-field">
+            <label class="au-label" for="suEmail">Email</label>
+            <div class="au-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+              <input class="au-input" id="suEmail" type="email" maxlength="254" placeholder="you@example.com" autocomplete="email" inputmode="email">
+            </div>
+          </div>
+          <div class="au-field">
+            <label class="au-label" for="suPass">Password</label>
+            <div class="au-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input class="au-input has-eye" id="suPass" type="password" maxlength="128" placeholder="At least 6 characters" autocomplete="new-password" aria-describedby="suPassHint" oninput="auStrength(this.value)">
+              <button type="button" class="au-eye" aria-label="Show password" aria-pressed="false" onclick="auEye(this)">
+                <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19c-6.4 0-10-7-10-7a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.1 9.1 0 0 1 12 4c6.4 0 10 7 10 7a18.6 18.6 0 0 1-2.2 3.2M1 1l22 22"/></svg>
+              </button>
+            </div>
+            <div class="au-meter" id="suMeter" data-s="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            <div class="au-pass-row"><span class="au-hint" id="suPassHint">At least 6 characters</span><span class="au-hint" id="suPassWord"></span></div>
+          </div>
+          <button class="au-btn" id="btnSignUp" type="submit"><span>Create my folio</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </form>
       </div>
 
-    </div>
-  </div><!-- /flip-card-wrapper -->
-
-  <!-- Reset Password Container (separate) -->
-  <div class="reset-password-container" id="resetContainer">
-    <div class="reset-password-wrapper">
-      <div class="reset-password-card">
-        <div class="flip-card__title">Reset Password</div>
-        <div class="flip-card__sub">Recover your account</div>
-
-        <div id="resetStep1" style="display:block;">
-          <form class="flip-card__form" onsubmit="doForgotPassword(event)">
-            <div class="flip-card__error" id="fpError"></div>
-            <input class="flip-card__input" id="fpEmail" type="email"
-                  placeholder="Email address" autocomplete="email">
-            <button class="flip-card__btn" id="btnForgot" type="submit">Send reset link →</button>
-            <a href="#" onclick="goBackToSignIn(); return false;" style="font-size:12px;color:var(--text-3);text-decoration:none;margin-top:8px;transition:color var(--trans);" onmouseover="this.style.color='var(--olive-light)'" onmouseout="this.style.color='var(--text-3)'">Back to sign in</a>
+      <!-- Reset password -->
+      <div class="au-panel" id="resetContainer" hidden>
+        <div id="resetStep1">
+          <h2 class="au-title">Forgot your password?</h2>
+          <p class="au-sub">Enter your email and we’ll send you a link to set a new one.</p>
+          <form class="au-form" onsubmit="doForgotPassword(event)" novalidate>
+            <div class="flip-card__error" id="fpError" role="alert"></div>
+            <div class="au-field">
+              <label class="au-label" for="fpEmail">Email</label>
+              <div class="au-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+                <input class="au-input" id="fpEmail" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email">
+              </div>
+            </div>
+            <button class="au-btn" id="btnForgot" type="submit"><span>Send reset link</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+            <button type="button" class="au-link au-link-muted" onclick="goBackToSignIn()">← Back to sign in</button>
           </form>
         </div>
-
-        <div id="resetStep2" style="display:none;text-align:center;">
-          <div style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:20px;">Check your email for a reset link. Once you click it, come back here to set your new password.</div>
-          <button class="flip-card__btn" onclick="goBackToSignIn()" style="margin-top:0;">Back to sign in</button>
+        <div id="resetStep2" hidden>
+          <div class="au-done">
+            <div class="au-done-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></div>
+            <h2 class="au-title">Check your email</h2>
+            <p>We’ve sent a reset link. Open it on this device and you’ll come straight back here to set a new password.</p>
+          </div>
+          <button class="au-btn" type="button" onclick="goBackToSignIn()" style="width:100%;margin-top:18px">Back to sign in</button>
         </div>
-
-        <div id="resetStep3" style="display:none;">
-          <form class="flip-card__form" onsubmit="doResetPassword(event)">
-            <div class="flip-card__error" id="rpError"></div>
-            <input class="flip-card__input" id="rpPass"  type="password"
-                  placeholder="New password (min 6)" autocomplete="new-password">
-            <input class="flip-card__input" id="rpPass2" type="password"
-                  placeholder="Confirm password" autocomplete="new-password">
-            <button class="flip-card__btn" id="btnReset" type="submit">Update password →</button>
+        <div id="resetStep3" hidden>
+          <h2 class="au-title">Set a new password</h2>
+          <p class="au-sub">Choose something you haven’t used here before.</p>
+          <form class="au-form" onsubmit="doResetPassword(event)" novalidate>
+            <div class="flip-card__error" id="rpError" role="alert"></div>
+            <div class="au-field">
+              <label class="au-label" for="rpPass">New password</label>
+              <div class="au-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <input class="au-input" id="rpPass" type="password" maxlength="128" placeholder="At least 6 characters" autocomplete="new-password">
+              </div>
+            </div>
+            <div class="au-field">
+              <label class="au-label" for="rpPass2">Confirm it</label>
+              <div class="au-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <input class="au-input" id="rpPass2" type="password" maxlength="128" placeholder="Same again" autocomplete="new-password">
+              </div>
+            </div>
+            <button class="au-btn" id="btnReset" type="submit"><span>Update password</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
           </form>
         </div>
       </div>
     </div>
-  </div><!-- /reset-password-container -->
 
-</div><!-- /auth-page -->
+    <a class="au-guest" href="index.html">
+      Just looking? Browse without an account
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
+  </section>
+</main>
 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <script>
+/* ── The poster wall: titles the admins chose (Admin → Sign-in posters, sql/078) — Anime on the
+   left, Movies and TV Shows down the middle, Cartoons on the right (on a phone the middle gets a
+   third column mixing both). The picks are kept on this device and only fetched again after an admin
+   saves (a tiny "when was it saved?" check each visit). Nothing chosen yet, or it can't load →
+   this week's trending; and until posters arrive, the tiles are the site's colours.
+   Every poster opens its title (guests can look around; title.html offers to sign up to rate it). ── */
+(() => {
+  const wall = document.getElementById('auWall');
+  const wide = matchMedia('(min-width:960px)').matches, per = 7;
+  const tones = ['#2F4A2A', '#6B4A22', '#3B2347', '#22384F', '#1E4A47', '#4A2A22', '#33442A'];
+  const IMG = 'https://image.tmdb.org/t/p/w185', KEY = 'msf_wall';
+  const okPath = p => typeof p === 'string' && /^\/[A-Za-z0-9_-]{5,64}\.(jpg|jpeg|png)$/.test(p);
+  const clean = list => (Array.isArray(list) ? list : [])
+    .filter(t => t && okPath(t.poster) && /^\d{1,9}$/.test(String(t.id)) && (t.type === 'movie' || t.type === 'tv'));
+  let shown = '';
+
+  /* Drift + grab: each column drifts on its own (alternate ones the other way). Hovering a column stops it;
+     drag it with the mouse or scroll over it with the wheel / trackpad to move it yourself either way,
+     and ~1.2s after you let go it carries on from there. A drag isn't a click on the poster under it.
+     Two copies of each column make it loop seamlessly. Reduced motion: no drift, still movable. */
+  const motion = (() => {
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const TILT = Math.cos(8 * Math.PI / 180);            // the wall is tilted 8° — moves follow the pointer
+    let cols = [], drag = null, last = performance.now();
+    const half = col => col.children.length > per ? col.children[per].offsetTop - col.children[0].offsetTop : 0;
+    const put = (st, y) => { const h = st.h || (st.h = half(st.el)); if (h) { y %= h; if (y < 0) y += h; } st.y = y; st.el.style.transform = `translate3d(0, ${-y}px, 0)`; };
+    const later = st => { clearTimeout(st.t); st.busy = true; st.t = setTimeout(() => { st.busy = false; }, 1200); };
+
+    function bind() {
+      cols = [...wall.children].map((el, i) => ({ el, i, y: 0, h: 0, hover: false, busy: false, t: 0,
+        speed: (i % 2 ? -1 : 1) / (60 + i * 14) }));          // share of a loop per second (the old 60s + 14s a column)
+      wall.classList.toggle('can-drag', fine && !!wall.querySelector('a.au-tile'));
+      cols.forEach(st => {
+        put(st, 0);
+        if (fine) {                                             // (a phone's tap would leave it "hovered")
+          st.el.addEventListener('mouseenter', () => { st.hover = true; });
+          st.el.addEventListener('mouseleave', () => { st.hover = false; });
+        }
+        st.el.addEventListener('wheel', e => {
+          if (!wall.classList.contains('can-drag')) return;
+          e.preventDefault();
+          put(st, st.y + (e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY)); later(st);
+        }, { passive: false });
+        st.el.addEventListener('pointerdown', e => {
+          if (e.pointerType !== 'mouse' || e.button !== 0 || !wall.classList.contains('can-drag')) return;
+          e.preventDefault();                                   // no text selection / link dragging
+          drag = { st, y: e.clientY, start: st.y, moved: false };
+          clearTimeout(st.t); st.busy = true;
+        });
+      });
+    }
+    addEventListener('pointermove', e => {
+      if (!drag) return;
+      const dy = (e.clientY - drag.y) / TILT;
+      if (!drag.moved && Math.abs(dy) > 5) { drag.moved = true; wall.classList.add('dragging'); }
+      if (drag.moved) put(drag.st, drag.start - dy);
+    });
+    addEventListener('pointerup', () => {
+      if (!drag) return;
+      const { st, moved } = drag;
+      drag = null; wall.classList.remove('dragging'); later(st);
+      if (moved) {                                            // the drag isn't a click on the poster underneath
+        const stop = ev => { ev.preventDefault(); ev.stopPropagation(); };
+        wall.addEventListener('click', stop, { capture: true, once: true });
+        setTimeout(() => wall.removeEventListener('click', stop, { capture: true }), 50);
+      }
+    });
+    addEventListener('resize', () => cols.forEach(st => { st.h = 0; put(st, st.y); }));
+    if (!reduced) requestAnimationFrame(function step(t) {
+      const dt = Math.min(64, t - last) / 1000; last = t;
+      if (!document.hidden) cols.forEach(st => { if (!st.hover && !st.busy && !(drag && drag.st === st)) put(st, st.y + st.speed * (st.h || half(st.el)) * dt); });
+      requestAnimationFrame(step);
+    });
+    return { bind };
+  })();
+
+  // columns → `per` titles each (repeating a short row), then drawn twice over for the endless drift
+  function draw(columns) {
+    const sig = JSON.stringify(columns);
+    if (sig === shown) return;
+    shown = sig;
+    wall.innerHTML = columns.map((col, c) => {
+      const tiles = Array.from({ length: per * 2 }, (_, i) => {
+        const t = col.length ? col[i % per % col.length] : null, g = tones[(c * 3 + i) % tones.length];
+        return t
+          ? `<a class="au-tile" style="--g:${g}" href="title.html?type=${t.type}&id=${t.id}&from=wall" tabindex="-1" data-name="${escHTML(t.title || '')}"><img src="${IMG}${t.poster}" alt="" decoding="async" onload="this.classList.add('in')"></a>`
+          : `<div class="au-tile" style="--g:${g}"></div>`;
+      }).join('');
+      return `<div class="au-col">${tiles}</div>`;
+    }).join('');
+    motion.bind();
+  }
+  // the admins' rows → this screen's columns (phone: a movies + TV mix in the middle, offset so it never lines up)
+  function fromSlots(slots) {
+    const a = clean(slots?.anime), m = clean(slots?.movies), t = clean(slots?.tv), c = clean(slots?.cartoons);
+    if (!(a.length + m.length + t.length + c.length)) return null;
+    if (wide) return [a, m, t, c];
+    const mix = [];
+    for (let i = 0; i < per; i++) { const src = i % 2 ? t : m; if (src.length) mix.push(src[(i + 3) % src.length]); }
+    return [a, m, mix, t, c];
+  }
+  // any empty row borrows from this week's trending
+  async function trending() {
+    let list = [];
+    try { list = JSON.parse(sessionStorage.getItem('msf_login_trending') || '[]'); } catch {}
+    if (!list.length) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/tmdb/trending/all/week?language=en-US`);
+        if (r.ok) list = ((await r.json()).results || [])
+          .map(x => ({ id: x.id, type: x.media_type, title: x.title || x.name, poster: x.poster_path }));
+        list = clean(list);
+        if (list.length) try { sessionStorage.setItem('msf_login_trending', JSON.stringify(list)); } catch {}
+      } catch {}
+    }
+    return list;
+  }
+  async function paint(slots) {
+    let cols = fromSlots(slots);
+    const n = wide ? 4 : 5;
+    if (!cols || cols.some(col => !col.length)) {
+      const tr = await trending();
+      cols = cols || Array.from({ length: n }, () => []);
+      cols = cols.map((col, i) => col.length ? col : tr.slice(i * per, i * per + per).concat(tr).slice(0, per));
+    }
+    draw(cols);
+  }
+
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch {}
+  // straight away: the copy on this device (or the colours)
+  if (saved?.slots) paint(saved.slots); else draw(Array.from({ length: wide ? 4 : 5 }, () => []));
+  // then: has an admin saved since? (only then fetch the posters again)
+  (async () => {
+    try {
+      const { data: v, error } = await sb.from('sign_in_wall').select('updated_at').eq('id', 1).maybeSingle();
+      if (error) throw error;
+      if (!v) { if (!saved) paint(null); return; }
+      if (saved && saved.at === v.updated_at) return;
+      const { data, error: e2 } = await sb.from('sign_in_wall').select('slots, updated_at').eq('id', 1).maybeSingle();
+      if (e2) throw e2;
+      saved = { at: data.updated_at, slots: data.slots || {} };
+      try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch {}
+      paint(saved.slots);
+    } catch (err) {
+      console.warn('Sign-in posters:', err);
+      if (!saved) paint(null);               // couldn't ask → trending
+    }
+  })();
+})();
+
 /* Redirect if already logged in — but not if this is a password reset */
 (async () => {
   const hash = window.location.hash;
   const isRecovery = hash && hash.includes('type=recovery');
   if (isRecovery) return; // Don't redirect — let reset form handle it
   const user = await getCurrentUser();
-  if (user) { window.location.href = mssAfterLogin(); return; }
+  if (user && !new URLSearchParams(location.search).has('preview')) { window.location.href = mssAfterLogin(); return; }
   const saved = MSSAccounts.list(), box = document.getElementById('authSaved');
   if (!saved.length) return;
   const ava = a => { const u = safeURL(a.avatar_url);
@@ -410,117 +548,112 @@
   box.hidden = false;
 })();
 
-/* ── Toggle mode ── */
-let _signUpMode = false;
-let _resetMode = false;
-
+/* ── Sign in · Create account · Reset ── */
+const $ = id => document.getElementById(id);
+function _auShow(panel) {
+  ['siPanel', 'suPanel', 'resetContainer'].forEach(p => { $(p).hidden = p !== panel; });
+  $('auTabs').hidden = panel === 'resetContainer';
+  clearErrors();
+}
 function setMode(signUp) {
-  _signUpMode = signUp;
-  _resetMode = false;
-  document.getElementById('flipWrapper').classList.toggle('flipped', signUp);
-  document.getElementById('flipWrapper').classList.remove('reset');
-  document.getElementById('sliderTrack').classList.toggle('flipped', signUp);
-  document.getElementById('tabSignIn').classList.toggle('active', !signUp);
-  document.getElementById('tabCreate').classList.toggle('active',  signUp);
-  clearErrors();
+  _auShow(signUp ? 'suPanel' : 'siPanel');
+  $('auTabs').classList.toggle('create', signUp);
+  $('tabSignIn').setAttribute('aria-selected', String(!signUp));
+  $('tabCreate').setAttribute('aria-selected', String(signUp));
+  document.title = (signUp ? 'Create account' : 'Sign In') + ' — MyScreenFolio';
 }
-
-function toggleMode() { setMode(!_signUpMode); }
-
+// Arrow keys move between the two tabs
+$('auTabs').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const toCreate = $('tabSignIn').getAttribute('aria-selected') === 'true';
+  setMode(toCreate); $(toCreate ? 'tabCreate' : 'tabSignIn').focus();
+});
 function goToReset() {
-  _resetMode = true;
-  _signUpMode = false;
-  document.getElementById('flipWrapper').style.display = 'none';
-  document.getElementById('resetContainer').classList.add('active');
-  clearErrors();
-  setTimeout(() => document.getElementById('fpEmail').focus(), 200);
+  _auShow('resetContainer');
+  $('resetStep1').hidden = false; $('resetStep2').hidden = true; $('resetStep3').hidden = true;
+  setTimeout(() => $('fpEmail').focus(), 120);
 }
-
-function goBackToSignIn() {
-  _resetMode = false;
-  _signUpMode = false;
-  document.getElementById('flipWrapper').style.display = 'block';
-  document.getElementById('resetContainer').classList.remove('active');
-  document.getElementById('resetStep1').style.display = 'block';
-  document.getElementById('resetStep2').style.display = 'none';
-  document.getElementById('resetStep3').style.display = 'none';
-  clearErrors();
-}
+function goBackToSignIn() { setMode(false); }
+// Links that say "Create account" land here as login.html#signup
+if (location.hash === '#signup') setMode(true);
 
 /* ── Helpers ── */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function showErr(id, msg) {
-  const el = document.getElementById(id);
+  const el = $(id);
   if (!el) return;
   el.textContent = msg;
   el.classList.toggle('show', !!msg);
 }
-function clearErrors() {
-  ['siError','suError'].forEach(id => showErr(id, ''));
+function clearErrors() { ['siError', 'suError', 'fpError', 'rpError'].forEach(id => showErr(id, '')); }
+function _auBtn(id, text, busy) {
+  const b = $(id); b.disabled = busy; b.querySelector('span').textContent = text;
+}
+// Show / hide a password
+function auEye(btn) {
+  const input = btn.parentElement.querySelector('input'), show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.setAttribute('aria-pressed', String(show));
+  btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+}
+// "Your profile: @name" as you type a username
+function auUserHint() {
+  const v = $('suUser').value;
+  $('suUserHint').innerHTML = v.length >= 3 ? `Your profile: <b translate="no">@${escHTML(v)}</b>` : '3–20 letters, numbers or _';
+}
+// A rough strength guide for a new password
+function auStrength(p) {
+  const s = !p ? 0 : p.length < 6 ? 1 : Math.min(4, 1 + (p.length >= 10) + (/[A-Z]/.test(p) && /[a-z]/.test(p)) + (/\d|[^A-Za-z0-9]/.test(p)));
+  $('suMeter').dataset.s = s;
+  $('suPassWord').textContent = ['', 'Too short', 'Okay', 'Good', 'Strong'][s];
 }
 
-/* ── Sign In Mode Toggle ── */
+/* ── Sign in with Email or Username ── */
 function setSIMode(mode) {
-  const input = document.getElementById('siEmail');
-  if (mode === 'email') {
-    input.type = 'email';
-    input.placeholder = 'Email address';
-    input.autocomplete = 'email';
-  } else {
-    input.type = 'text';
-    input.placeholder = 'Username';
-    input.autocomplete = 'off';
-  }
+  const input = $('siEmail'), email = mode === 'email';
+  input.type = email ? 'email' : 'text';
+  input.placeholder = email ? 'you@example.com' : 'your_username';
+  input.autocomplete = email ? 'email' : 'username';
+  input.inputMode = email ? 'email' : 'text';
+  input.autocapitalize = 'none';
+  $('siLabel').textContent = email ? 'Email' : 'Username';
+  $('siIcon').innerHTML = email ? '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>' : '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>';
   input.value = '';
   showErr('siError', '');
+  input.focus();
 }
 
 /* ── Sign In ── */
 async function doSignIn(e) {
   e.preventDefault();
-  const identifier = document.getElementById('siEmail').value.trim();
-  const pass = document.getElementById('siPass').value;
+  const identifier = $('siEmail').value.trim();
+  const pass = $('siPass').value;
   const mode = document.querySelector('input[name="siMode"]:checked').value;
 
-  if (!identifier || !pass) { showErr('siError','Please fill in all fields.'); return; }
-  showErr('siError','');
-
-  const btn = document.getElementById('btnSignIn');
-  btn.disabled = true; btn.textContent = 'Signing in…';
+  if (!identifier || !pass) { showErr('siError', 'Please fill in both fields.'); return; }
+  if (mode === 'email' && !EMAIL_RE.test(identifier)) { showErr('siError', 'That email doesn’t look right.'); return; }
+  showErr('siError', '');
+  _auBtn('btnSignIn', 'Signing in…', true);
+  const again = () => _auBtn('btnSignIn', 'Let’s go', false);
 
   let email = identifier;
-
-  // If username mode, look up email from username
+  // Username → the email, only if the password is right (014 SQL) — wrong password and
+  // unknown username get the same NULL answer.
   if (mode === 'username') {
     try {
-      // Returns the email only if the password is correct (see 014 SQL) —
-      // wrong password and unknown username get the same NULL response.
       const { data: lookedUpEmail, error } = await sb.rpc('get_email_for_login', { p_username: identifier, p_password: pass });
-      if (error) {
-        if (isRateLimitError(error)) {
-          showErr('siError', 'Too many attempts — please wait a minute and try again.');
-        } else {
-          showErr('siError', 'Could not sign in — please try again.');
-        }
-        btn.disabled = false; btn.textContent = "Let's go →";
-        return;
-      }
-      if (!lookedUpEmail) {
-        showErr('siError', 'Invalid username or password.');
-        btn.disabled = false; btn.textContent = "Let's go →";
-        return;
-      }
+      if (error) { showErr('siError', isRateLimitError(error) ? 'Too many attempts — please wait a minute and try again.' : 'Could not sign in — please try again.'); again(); return; }
+      if (!lookedUpEmail) { showErr('siError', 'That username and password don’t match.'); again(); return; }
       email = lookedUpEmail;
-    } catch(err) {
-      showErr('siError', 'Error looking up username.');
-      btn.disabled = false; btn.textContent = "Let's go →";
-      return;
+    } catch {
+      showErr('siError', 'Couldn’t reach MyScreenFolio — check your connection and try again.'); again(); return;
     }
   }
 
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error) {
-    showErr('siError', error.message || 'Invalid credentials.');
-    btn.disabled = false; btn.textContent = "Let's go →";
+    showErr('siError', /invalid login credentials/i.test(error.message || '') ? 'That email and password don’t match.' : (error.message || 'Couldn’t sign in.'));
+    again();
   } else {
     window.location.href = mssAfterLogin();
   }
@@ -529,165 +662,95 @@ async function doSignIn(e) {
 /* ── Sign Up ── */
 async function doSignUp(e) {
   e.preventDefault();
-  const username = document.getElementById('suUser').value.trim();
-  const email    = document.getElementById('suEmail').value.trim();
-  const pass     = document.getElementById('suPass').value;
+  const username = $('suUser').value.trim();
+  const email    = $('suEmail').value.trim();
+  const pass     = $('suPass').value;
 
-  // e.preventDefault() above means the browser's native type="email"
-  // check never actually runs (native validation only fires on an
-  // unprevented submit) — so this needs a real explicit check, not
-  // just "is it non-empty".
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (username.length < 3)      { showErr('suError', 'Your username needs at least 3 characters.'); return; }
+  if (username.length > 20)     { showErr('suError', 'Your username can be 20 characters at most.'); return; }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) { showErr('suError', 'Usernames can only use letters, numbers and _.'); return; }
+  if (!email)                   { showErr('suError', 'Please add your email.'); return; }
+  if (!EMAIL_RE.test(email))    { showErr('suError', 'That email doesn’t look right.'); return; }
+  if (pass.length < 6)          { showErr('suError', 'Your password needs at least 6 characters.'); return; }
+  if (pass.length > 128)        { showErr('suError', 'Your password can be 128 characters at most.'); return; }
+  showErr('suError', '');
 
-  if (username.length < 3)      { showErr('suError','Username must be at least 3 characters.'); return; }
-  if (username.length > 20)     { showErr('suError','Username must be 20 characters or fewer.'); return; }
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) { showErr('suError','Username can only contain letters, numbers, and _.'); return; }
-  if (!email)                   { showErr('suError','Email is required.'); return; }
-  if (!EMAIL_RE.test(email))    { showErr('suError','Please enter a valid email address.'); return; }
-  if (pass.length < 6)          { showErr('suError','Password must be at least 6 characters.'); return; }
-  if (pass.length > 128)        { showErr('suError','Password must be 128 characters or fewer.'); return; }
-  showErr('suError','');
-
-  const btn = document.getElementById('btnSignUp');
-  btn.disabled = true; btn.textContent = 'Creating account…';
-  if (!(await isUsernameAllowed(username))) {
-    showErr('suError', 'That username isn’t allowed. Please pick another.');
-    btn.disabled = false; btn.textContent = 'Create account →';
-    return;
-  }
+  _auBtn('btnSignUp', 'Creating your folio…', true);
+  const again = () => _auBtn('btnSignUp', 'Create my folio', false);
+  if (!(await isUsernameAllowed(username))) { showErr('suError', 'That username isn’t allowed — please pick another.'); again(); return; }
 
   let data, error;
   try {
-    ({ data, error } = await sb.auth.signUp({
-      email, password: pass,
-      options: { data: { username, display_name: username, email } },
-    }));
-  } catch(err) {
-    showErr('suError', 'Connection error. Please try again.');
-    btn.disabled = false; btn.textContent = 'Create account →';
-    return;
+    ({ data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { username, display_name: username, email } } }));
+  } catch {
+    showErr('suError', 'Couldn’t reach MyScreenFolio — check your connection and try again.'); again(); return;
   }
-
-  if (error) {
-    showErr('suError', error.message || 'Sign up failed.');
-    btn.disabled = false; btn.textContent = 'Create account →';
-    return;
-  }
+  if (error) { showErr('suError', error.message || 'Couldn’t create your account.'); again(); return; }
 
   if (data?.session) {
     window.location.href = mssAfterLogin();
   } else if (data?.user) {
-    document.querySelector('.flip-card__back').innerHTML = `
-      <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:1rem 0;text-align:center">
-        <div style="opacity:.5">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-              stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-            <polyline points="22,6 12,13 2,6"/>
-          </svg>
-        </div>
-        <div style="font-family:var(--serif);font-size:22px;color:var(--text)">Check your email</div>
-        <div style="font-size:13px;color:var(--text-2);line-height:1.6">
-          Confirmation link sent to<br>
-          <strong style="color:var(--text)">${email}</strong>
-        </div>
+    $('suPanel').innerHTML = `<div class="au-done">
+        <div class="au-done-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></div>
+        <h2 class="au-title">Check your email</h2>
+        <p>We sent a confirmation link to<br><strong>${escHTML(email)}</strong>.<br>Open it and your folio is ready.</p>
       </div>`;
   } else {
-    showErr('suError', 'Account created! Please sign in.');
-    btn.disabled = false; btn.textContent = 'Create account →';
+    showErr('suError', 'Account created! Please sign in.'); again();
   }
 }
 
 /* ── Forgot Password ── */
 async function doForgotPassword(e) {
   e.preventDefault();
-  const email = document.getElementById('fpEmail').value.trim();
-  if (!email) { showErr('fpError','Please enter your email address.'); return; }
-  showErr('fpError','');
-
-  const btn = document.getElementById('btnForgot');
-  btn.disabled = true; btn.textContent = 'Sending…';
-
+  const email = $('fpEmail').value.trim();
+  if (!email) { showErr('fpError', 'Please enter your email.'); return; }
+  if (!EMAIL_RE.test(email)) { showErr('fpError', 'That email doesn’t look right.'); return; }
+  showErr('fpError', '');
+  _auBtn('btnForgot', 'Sending…', true);
   try {
-    const { error } = await sb.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://nasrawi04.github.io/watchlist/login.html'
-    });
-    if (error) {
-      showErr('fpError', error.message || 'Failed to send reset email.');
-      btn.disabled = false; btn.textContent = 'Send reset link →';
-    } else {
-      document.getElementById('resetStep1').style.display = 'none';
-      document.getElementById('resetStep2').style.display = 'block';
-      btn.disabled = false;
-    }
-  } catch(err) {
-    showErr('fpError', 'Connection error. Please try again.');
-    btn.disabled = false; btn.textContent = 'Send reset link →';
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://nasrawi04.github.io/watchlist/login.html' });
+    if (error) { showErr('fpError', error.message || 'Couldn’t send the reset email.'); _auBtn('btnForgot', 'Send reset link', false); }
+    else { $('resetStep1').hidden = true; $('resetStep2').hidden = false; _auBtn('btnForgot', 'Send reset link', false); }
+  } catch {
+    showErr('fpError', 'Couldn’t reach MyScreenFolio — check your connection and try again.'); _auBtn('btnForgot', 'Send reset link', false);
   }
 }
 
-/* ── Reset Password ── */
+/* ── Reset Password (from the email's link) ── */
 async function doResetPassword(e) {
   e.preventDefault();
-  const pass1 = document.getElementById('rpPass').value;
-  const pass2 = document.getElementById('rpPass2').value;
-  if (!pass1 || !pass2) { showErr('rpError','Please fill in all fields.'); return; }
-  if (pass1.length < 6) { showErr('rpError','Password must be at least 6 characters.'); return; }
-  if (pass1 !== pass2) { showErr('rpError','Passwords do not match.'); return; }
-  showErr('rpError','');
-
-  const btn = document.getElementById('btnReset');
-  btn.disabled = true; btn.textContent = 'Updating…';
-
+  const pass1 = $('rpPass').value, pass2 = $('rpPass2').value;
+  if (!pass1 || !pass2) { showErr('rpError', 'Please fill in both fields.'); return; }
+  if (pass1.length < 6) { showErr('rpError', 'Your password needs at least 6 characters.'); return; }
+  if (pass1.length > 128) { showErr('rpError', 'Your password can be 128 characters at most.'); return; }
+  if (pass1 !== pass2)  { showErr('rpError', 'Those passwords don’t match.'); return; }
+  showErr('rpError', '');
+  _auBtn('btnReset', 'Updating…', true);
   try {
     const { error } = await sb.auth.updateUser({ password: pass1 });
-    if (error) {
-      showErr('rpError', error.message || 'Failed to reset password.');
-      btn.disabled = false; btn.textContent = 'Update password →';
-    } else {
-      showToast('Password reset successfully!');
-      setTimeout(() => goBackToSignIn(), 1000);
-    }
-  } catch(err) {
-    showErr('rpError', 'Connection error. Please try again.');
-    btn.disabled = false; btn.textContent = 'Update password →';
+    if (error) { showErr('rpError', error.message || 'Couldn’t update your password.'); _auBtn('btnReset', 'Update password', false); }
+    else { showToast('Password updated — you’re all set!'); setTimeout(() => goBackToSignIn(), 1000); }
+  } catch {
+    showErr('rpError', 'Couldn’t reach MyScreenFolio — check your connection and try again.'); _auBtn('btnReset', 'Update password', false);
   }
 }
 
-/* ── Check for reset token in URL ── */
-function _showResetForm() {
-  const fw = document.getElementById('flipWrapper');
-  const rc = document.getElementById('resetContainer');
-  const s1 = document.getElementById('resetStep1');
-  const s3 = document.getElementById('resetStep3');
-  if (fw) fw.style.display = 'none';
-  if (rc) rc.classList.add('active');
-  if (s1) s1.style.display = 'none';
-  if (s3) s3.style.display = 'block';
-}
-
+/* ── Arrived from a reset email: set the session, then the new-password form ── */
 (async () => {
   const hash = window.location.hash.substring(1);
   if (!hash) return;
   const params = new URLSearchParams(hash);
   const accessToken = params.get('access_token');
   const refreshToken = params.get('refresh_token') || '';
-  const type = params.get('type');
-
-  if (type === 'recovery' && accessToken) {
-    // Clear hash first so it doesn't interfere
-    window.history.replaceState({}, document.title, window.location.pathname);
+  if (params.get('type') === 'recovery' && accessToken) {
+    window.history.replaceState({}, document.title, window.location.pathname);   // clear the hash first
     try {
-      const { data, error } = await sb.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken
-      });
+      const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
       if (error) console.warn('setSession:', error.message);
-    } catch(e) {
-      console.warn('setSession exception:', e);
-    }
-    // Always show the reset form — session is now active
-    _showResetForm();
+    } catch (err) { console.warn('setSession exception:', err); }
+    _auShow('resetContainer');
+    $('resetStep1').hidden = true; $('resetStep2').hidden = true; $('resetStep3').hidden = false;
   }
 })();
 </script>
