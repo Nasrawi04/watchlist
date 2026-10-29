@@ -387,6 +387,21 @@ function _libDropCard(e,grid){
 }
 // Never leave the Library stuck on its spinner: if drawing fails, say so
 // (with the reason) so it can be reported/fixed.
+/* ── Empty states (mssEmpty in config.js). Someone else's library just says it plainly; yours suggests what
+   to do next — and an empty Watchlist offers a few popular titles (this category, or one from each). ── */
+function mssStarterSkip(){ return LIB_ENTRIES(); }
+document.addEventListener('mss:library-changed', async function(){
+  if (LIB_READONLY || typeof _pUser === 'undefined' || !_pUser) return;
+  _pEntries = await getEntries(_pUser.id); renderLibrary();
+});
+function _libClearFilters(sec){ SF.clearFilters(LIB_SCOPE, sec); renderLibrary(); }
+function _libEmpty(sec, mine, theirs){
+  if (_libBaseEntries(sec).length) return mssEmpty({ compact:true, art:'filter', title:'Nothing matches these filters',
+    text:'Your filters are a little too picky here. Loosen one and try again.',
+    actions:[{ label:'Clear filters', icon:'x', onclick:"_libClearFilters('"+sec+"')", primary:true }] });
+  if (LIB_READONLY) return mssEmpty({ compact:true, art:mine.art, title:theirs });
+  return mssEmpty(Object.assign({ compact:true }, mine));
+}
 function renderLibrary(){
   try { _libRender(); }
   catch (err) {
@@ -424,27 +439,30 @@ function _libRender(){
 
   // Watching
   var wc;
-  if(!watching.length){wc='<div class="fv-empty">Not watching anything right now.</div>';}
+  if(!watching.length){wc=_libEmpty('watching',{ art:'watching', title:'Nothing on screen right now', text:'The couch is warm and the remote is ready.',
+    actions:[{ label:'Add a title', icon:'plus', onclick:"openAddModal("+(_libCatFilter?"'"+_libCatFilter+"'":'')+")", primary:true }] },'Not watching anything right now');}
   else if(_libWatchView==='grid'){wc=_libGridWrap('libwg','<div class="watching-grid" id="libwg">'+watching.map(function(e){return _libWatchCard(e,true);}).join('')+'</div>');}
   else {wc='<div class="fv-watch-list">'+watching.map(function(e){return _libWatchCard(e,false);}).join('')+'</div>';}
 
   // Queue
   var qc;
-  if(!queue.length){qc='<div class="fv-empty">'+(LIB_READONLY?'Nothing on their watchlist.':'Nothing on your watchlist.')+'</div>';}
+  if(!queue.length){qc=_libEmpty('queue',{ art:'watchlist', title:'Your watchlist is empty', text:'Nothing queued up yet. Future you is going to be so bored.',
+    actions:[{ label:'Add a title', icon:'plus', onclick:"openAddModal("+(_libCatFilter?"'"+_libCatFilter+"'":'')+")", primary:true }, { label:'Browse Discover', icon:'compass', href:'discover.html' }],
+    starter:LIB_SCOPE==='lib' ? (_libCatFilter||'all') : '' },'Nothing on their watchlist');}
   else if(_libQueueView==='grid'){qc=_libGridWrap('libqg','<div class="watching-grid" id="libqg">'+queue.map(function(e){return _libQueueCard(e,true);}).join('')+'</div>');}
   else {qc='<div class="watch-list">'+queue.map(function(e){return _libQueueCard(e,false);}).join('')+'</div>';}
 
   // Completed
   var cOpts={isRanked:_libSort.completed==='highest'||_libSort.completed==='lowest', ratingKey:(_libSort.completed||'').indexOf('rating:')===0?_libSort.completed.slice(7):null};
   var cc;
-  if(!completed.length){cc='<div class="fv-empty">Nothing here yet.</div>';}
+  if(!completed.length){cc=_libEmpty('completed',{ art:'watched', title:'No finished titles yet', text:'Your trophy shelf is waiting. Finish something and it lands here, ready to rate.' },'Nothing watched yet');}
   else if(_libCompView==='grid'){cc=_libGridWrap('libcg','<div class="watching-grid" id="libcg">'+completed.map(function(e,i){return _libCompCard(e,i,true,cOpts);}).join('')+'</div>');}
   else {cc='<div class="fv-ranked-list">'+completed.map(function(e,i){return _libCompCard(e,i,false,cOpts);}).join('')+'</div>';}
 
   // Dropped (071) — where they stopped, the score greyed ("doesn't count"); Pick Back Up is in the title's popup
   var dropped=SF.list(LIB_SCOPE,'dropped');
   var dc;
-  if(!dropped.length){dc='<div class="fv-empty">Nothing here yet.</div>';}
+  if(!dropped.length){dc=_libEmpty('dropped',{ art:'dropped', title:'Nothing dropped', text:'You finish what you start. Respect.' },'Nothing dropped');}
   else if(_libDropView==='grid'){dc=_libGridWrap('libdg','<div class="watching-grid" id="libdg">'+dropped.map(function(e){return _libDropCard(e,true);}).join('')+'</div>');}
   else {dc='<div class="fv-watch-list">'+dropped.map(function(e){return _libDropCard(e,false);}).join('')+'</div>';}
 
@@ -458,7 +476,13 @@ function _libRender(){
     +_libSection('queue',icon('bookmark',14)+' Watchlist',queue.length,'queue','queue',qc)
     +_libSection('completed',icon('check',14)+' Watched',completed.length,'comp','completed',cc)
     +(dropped.length?_libSection('dropped',icon('drop',14)+' Dropped',dropped.length,'drop','dropped',dc):'');   // only once something's dropped
-  if(q&&!secs) secs='<div class="sf-search-empty">'+icon('search',22)+'<b>Nothing matches “'+escHTML(q)+'”</b><span>Try another title or year.</span></div>';
+  if(q&&!secs) secs=mssEmpty({ art:'search', title:'No luck with “'+q+'”', text:'Nothing in this library matches. Try another title, a year, or check the spelling.',
+    actions:[{ label:'Clear search', icon:'x', onclick:"SF._search('"+LIB_SCOPE+"', '', true)" }] });
+  // A brand-new library: one welcome (with a few popular titles) instead of four empty sections
+  if(!q && !LIB_ENTRIES().length) secs = LIB_READONLY ? mssEmpty({ art:'watchlist', title:'Nothing here yet', text:'Their folio is still a blank page.' })
+    : mssEmpty({ art:'watchlist', title:'Your folio starts here', text:'Every great collection starts with one title. No pressure — but it does look a little lonely in here.',
+        actions:[{ label:'Add a title', icon:'plus', onclick:'openAddModal()', primary:true }, { label:'Browse Discover', icon:'compass', href:'discover.html' }],
+        starter: LIB_SCOPE==='lib' ? 'all' : '' });
   if(loading){loading.style.display='none';loading.innerHTML='';}
   el.style.display='block';
   _libCheckNewEps();
