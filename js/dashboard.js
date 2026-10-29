@@ -80,7 +80,7 @@ const MSSDash = (() => {
 
   function draw() {
     const html = DASH_SECTIONS.map(sectionHTML).join('');
-    el.innerHTML = html || `<div class="pv-empty" style="text-align:center;padding:2rem 1rem;color:var(--text-3);font-size:14px;">Nothing picked yet.</div>`;
+    el.innerHTML = html || mssEmpty({ compact: true, art: 'watched', title: 'Nothing picked yet', text: 'No favourites on show here. Yet.' });
     // what was drawn (sections, how many cards / "+" slots) — the next loading skeleton draws the same
     mssSkeleton.shape(opts.editable ? 'dash_own' : 'dash_other', [...el.querySelectorAll('.dash-section')].map(x => ({
       k: x.dataset.key, slim: x.classList.contains('dash-section-empty'), c: x.querySelectorAll('.dash-card').length, e: x.querySelectorAll('.dash-empty').length })));
