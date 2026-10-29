@@ -99,7 +99,7 @@ const MSSPick = (() => {
     o = opts; skip = new Set(); mood = { len: 'any', type: 'any', genre: '', cat: '' };
     if (!o.pool().length) { showToast('Your watchlist is empty — add something first.', 'err'); return; }
     const ov = shell();
-    MSSDialog.open(ov, { focus: '#qpRoll' });
+    MSSDialog.open(ov, { focus: '.qp-card' });      // the popup itself (no button looks pressed); Tab still reaches everything
     drawMoods();
     roll(true);
   }
