@@ -458,7 +458,7 @@ function _catFocus() {
   const key = { watching: 'watching', up_next: 'watching', paused: 'watching', queue: 'queue', completed: 'completed', ongoing: 'ongoing', dropped: 'dropped' }[e.status];
   if (collapsed[key]) toggleSection(key);
   const hit = [...document.querySelectorAll(`#sec-${key} [onclick*="'${CSS.escape(id)}'"]`)][0];
-  const card = hit && (hit.closest('.cc-block, .w-card, .wg-card') || hit);
+  const card = hit && (hit.closest('.w-card, .wg-card, .comp-row') || hit);
   if (!card) { showToast('It’s in your library, but your filters are hiding it.'); return; }
   setTimeout(() => {
     // sideways into view in its row, then the middle of the space under the sticky header
