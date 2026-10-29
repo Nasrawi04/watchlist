@@ -44,8 +44,11 @@ function _libResume() {
    the "New Season" poster cover + badge, first in Watched (default sort) and an Up Next button.
    Nothing moves until you tap it. */
 var _libNewEps = {}, _libNewKey = null;
+var _libFixedUnaired = false;
 function _libCheckNewEps(){
   if (LIB_READONLY || typeof mssNewEpisodes !== 'function') return;
+  // once per visit: shows saved with seasons that aren't out yet → aired counts (mssFixUnaired, config.js)
+  if (!_libFixedUnaired && typeof _pUser !== 'undefined' && _pUser) { _libFixedUnaired = true; mssFixUnaired(LIB_ENTRIES(), _pUser.id, renderLibrary); }
   var key = LIB_ENTRIES().filter(function(e){ return e.status === 'ongoing'; }).map(function(e){ return e.id; }).join(',');
   if (key === _libNewKey) return;
   _libNewKey = key;
