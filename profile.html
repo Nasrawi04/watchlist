@@ -544,9 +544,8 @@ function renderTab0() {
   var el = document.getElementById('overviewContent');
   if (!el) return;
   if (!_pEntries || !_pEntries.length) { // nothing added yet: say so (was a spinner forever)
-    el.innerHTML = '<div class="fr-empty prof-empty"><div class="fr-empty-ic">'+icon('film',26)+'</div><div class="fr-empty-title">Your profile is waiting</div>'
-      +'<div class="fr-empty-text">Add movies and shows you\u2019ve watched — your stats, favorites and top picks show up here.</div>'
-      +'<a class="btn-add-entry" style="display:inline-flex;width:auto;margin-top:14px;text-decoration:none" href="discover.html">'+icon('search',15)+' Find something to add</a></div>';
+    el.innerHTML = mssEmpty({ art:'person', title:'Your profile is waiting', text:'Add what you\u2019ve watched and this fills up with your stats, favourites and top picks. Right now it\u2019s mostly vibes.',
+      actions:[{ label:'Add a title', icon:'plus', onclick:'openAddModal()', primary:true }, { label:'Browse Discover', icon:'compass', href:'discover.html' }] });
     return;
   }
   var _statsHTML = _statsBoxHTML(_pEntries, _pProfile, _profFavLists);
