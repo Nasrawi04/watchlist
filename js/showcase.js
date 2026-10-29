@@ -135,14 +135,16 @@ const MSSShowcase = (() => {
     : E.hits.map((h, i) => `<button type="button" class="pf-r" onclick="MSSShowcase._title(${i})">
         <span class="poll-thumb">${h.poster_path ? `<img src="${IMG}w92${esc(h.poster_path)}" alt="" loading="lazy">` : icon('film', 16)}</span>
         <span class="poll-opt-text"><b translate="no">${esc(h.title || h.name)}</b><small>${esc(((h.release_date || h.first_air_date || '').slice(0, 4)) + (h.media_type === 'movie' ? ' · Movie' : ' · TV Show'))}</small></span></button>`).join('');
-  let qT = null;
+  let qT = null, qLast = '';
   function search(q) {
-    clearTimeout(qT);
+    clearTimeout(qT); qLast = q;
     qT = setTimeout(async () => {
       if (!E) return;
-      E.imgs = []; E.hits = q.trim().length < 2 ? [] : (await _tmdbSearch(q.trim(), 8)).filter(h => h.backdrop_path || h.poster_path);
+      const hits = q.trim().length < 2 ? [] : (await _tmdbSearch(q.trim(), 8)).filter(h => h.backdrop_path || h.poster_path);
+      if (!E || qLast !== q) return;                   // typed on since
+      E.imgs = []; E.hits = hits;
       const box = document.getElementById('scBgHits'); if (box) box.innerHTML = hitsHTML();
-    }, 280);
+    }, MSS_SEARCH_MS);
   }
   async function pickTitle(i) {
     const h = E?.hits[i]; if (!h) return;
