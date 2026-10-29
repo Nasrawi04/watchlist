@@ -1590,11 +1590,9 @@ async function _anilistSearch(query) {
 async function _tmdbSearch(query, limit = 6, includePersons = false) {
   try {
     const url = `${TMDB_BASE}/search/multi?query=${encodeURIComponent(query)}&language=en-US&include_adult=false&page=1`;
-    console.log('[TMDB] searching:', query);
     const res = await tmdbFetch(url);
-    if (!res.ok) { console.error('[TMDB] HTTP error:', res.status, res.statusText); return []; }
+    if (!res.ok) { console.error('[TMDB] search failed:', res.status); return []; }
     const json = await res.json();
-    console.log('[TMDB] results:', json.results?.length || 0);
     const allowed = includePersons ? ['movie', 'tv', 'person'] : ['movie', 'tv'];
     return (json.results || []).filter(r => allowed.includes(r.media_type)).slice(0, limit);
   } catch(e) { console.error('[TMDB] fetch error:', e); return []; }
@@ -2236,6 +2234,7 @@ function initDiscoverSearch(inputId, opts = {}) {
     if (connected) anchor.classList.add('dd-connected-active');
 
     const tmdb = await _tmdbSearch(q, max, includePersons);
+    if (input.value.trim() !== q) return;          // you've typed on since — that newer search will answer
     const results = tmdb.map(r => {
       if (r.media_type === 'person') {
         return {
@@ -2295,11 +2294,12 @@ function initDiscoverSearch(inputId, opts = {}) {
   input.addEventListener('input', () => {
     clearTimeout(_timer);
     if (input.value.trim().length < 2) { _closeDrop(); return; }
-    _timer = setTimeout(_search, 350);
+    _timer = setTimeout(_search, MSS_SEARCH_MS);
   });
 
   input.addEventListener('keydown', e => {
     if (e.key === 'Escape') _closeDrop();
+    if (e.key === 'Enter' && input.value.trim().length >= 2) { clearTimeout(_timer); _search(); }
   });
 
   window.addEventListener('resize', _positionDrop, { passive: true });
@@ -2399,6 +2399,7 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
     // All categories search full TMDB database
     // Only 'movies' filters to movie type only, everything else shows all results
     const tmdb = await _tmdbSearch(q, 20);
+    if (input.value.trim() !== q) return;          // you've typed on since — that newer search will answer
     let filtered = cat === 'movies'
       ? tmdb.filter(r => r.media_type === 'movie')
       : cat === 'tv'
@@ -2420,6 +2421,7 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
     // For anime with few results, supplement with AniList
     if (cat === 'anime' && results.length < 5) {
       const aniResults = await _anilistSearch(q);
+      if (input.value.trim() !== q) return;
       const extra = aniResults.map(m => ({
         _raw: m, _type: 'anilist',
         title: m.title?.english || m.title?.romaji,
@@ -2487,11 +2489,12 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
   input.addEventListener('input', () => {
     clearTimeout(_timer);
     if (input.value.trim().length < 2) { _closeDrop(); return; }
-    _timer = setTimeout(_search, 400);
+    _timer = setTimeout(_search, MSS_SEARCH_MS);
   });
 
   input.addEventListener('keydown', e => {
     if (e.key === 'Escape') _closeDrop();
+    if (e.key === 'Enter' && input.value.trim().length >= 2) { e.preventDefault(); clearTimeout(_timer); _search(); }
   });
 
   window.addEventListener('scroll', _positionDrop, { passive: true });
