@@ -241,7 +241,7 @@ function _discInjectLinkOverlay() {
   document.body.appendChild(el);
   document.getElementById('discLinkSearchInput').addEventListener('input', () => {
     clearTimeout(_discLinkSearchTimer);
-    _discLinkSearchTimer = setTimeout(_discRunLinkSearch, 350);
+    _discLinkSearchTimer = setTimeout(_discRunLinkSearch, MSS_SEARCH_MS);
   });
 }
 
@@ -271,6 +271,7 @@ async function _discRunLinkSearch() {
   const mediaType = _discLinkContext?.derivedType === 'movie' ? 'movie' : 'tv';
   try {
     const data = await _discFetchJSON(`${TMDB_BASE}/search/${mediaType}?language=en-US&query=${encodeURIComponent(query)}`);
+    if (input.value.trim() !== query) return;      // a newer search is on its way
     const results = (data.results || []).slice(0, 8);
     if (!results.length) { resultsEl.innerHTML = '<div class="card-link-msg">No matches found.</div>'; return; }
     resultsEl.innerHTML = results.map(r => {
@@ -684,7 +685,7 @@ function initInlineSearch(inputId, opts = {}) {
         : `<div class="mss-empty">Nothing found for “${esc(q)}”. Try another spelling.</div>`);
   }
 
-  input.addEventListener('input', () => { syncClear(); clearTimeout(timer); timer = setTimeout(run, input.value.trim().length < 2 ? 0 : 280); });
+  input.addEventListener('input', () => { syncClear(); clearTimeout(timer); timer = setTimeout(run, input.value.trim().length < 2 ? 0 : MSS_SEARCH_MS); });
   input.addEventListener('keydown', e => {
     if (e.key === 'Escape') { input.value = ''; syncClear(); run(); }
     if (e.key === 'Enter') { clearTimeout(timer); run(); }
