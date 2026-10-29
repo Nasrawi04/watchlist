@@ -1255,17 +1255,17 @@ function showFinishPopup(title) {
     overlay.id = '_finishOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px;';
     overlay.innerHTML = `
-      <div style="background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:2rem 1.75rem;max-width:360px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
+      <div style="background:var(--bg-3);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);padding:2rem 1.75rem;max-width:360px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
         <div style="width:64px;height:64px;border-radius:50%;background:var(--olive-faint);border:1.5px solid var(--border-olive);display:flex;align-items:center;justify-content:center;">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--olive-light)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
         </div>
         <div style="font-family:var(--serif);font-size:28px;font-weight:500;color:var(--text);" id="_finishTitle">Finished!</div>
         <div style="font-size:13px;color:var(--text-2);line-height:1.6;max-width:260px;">Is the show fully finished, or are there more seasons coming?</div>
         <div style="display:flex;flex-direction:column;gap:8px;width:100%;margin-top:6px;">
-          <button onclick="chooseFinishStatus('completed')" style="width:100%;padding:12px;background:var(--olive);border:1.5px solid var(--olive-light);box-shadow:3px 3px 0 var(--olive-2);border-radius:var(--radius-sm);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">
+          <button onclick="chooseFinishStatus('completed')" style="width:100%;padding:12px;background:var(--olive);border:1.5px solid var(--olive-light);border-radius:var(--radius-sm);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">
             ✓ Watched<div style="font-size:11px;font-weight:400;opacity:.75;margin-top:2px;">The show has ended</div>
           </button>
-          <button onclick="chooseFinishStatus('ongoing')" style="width:100%;padding:11px;background:transparent;border:1.5px solid var(--border-2);box-shadow:2px 2px 0 var(--border-2);border-radius:var(--radius-sm);color:var(--text-2);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans);">
+          <button onclick="chooseFinishStatus('ongoing')" style="width:100%;padding:11px;background:transparent;border:1.5px solid var(--border-2);border-radius:var(--radius-sm);color:var(--text-2);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans);">
             ↻ To Be Continued<div style="font-size:11px;font-weight:400;opacity:.75;margin-top:2px;">More seasons coming</div>
           </button>
         </div>
@@ -1340,7 +1340,7 @@ function _injectQPModal() {
   el.innerHTML = `
     <div id="qpCard" style="
       background:var(--bg-2);border:1.5px solid var(--olive-light);
-      box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);
+      border-radius:var(--radius-lg);
       width:100%;max-width:640px;max-height:90dvh;
       position:relative;box-sizing:border-box;
       display:flex;flex-direction:column;
@@ -1356,7 +1356,7 @@ function _injectQPModal() {
           width:48px;height:66px;flex-shrink:0;border-radius:var(--radius-sm);
           overflow:hidden;background:var(--bg-3);
           display:flex;align-items:center;justify-content:center;
-          box-shadow:var(--shadow);
+          
         "></div>
         <div style="flex:1;min-width:0;">
           <div id="qpTitle" style="font-family:var(--serif);font-size:17px;font-weight:500;line-height:1.2;margin-bottom:4px;color:var(--text)" translate="no"></div>
