@@ -1181,7 +1181,7 @@ function _tdAddToLibrary() {
     year: ((movie ? d.release_date : d.first_air_date) || '').slice(0, 4), poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null },
   { details: d, onAdded: entry => {
     _tdOwnEntry = entry;
-    const box = document.querySelector('.td-hero-actions');
+    const box = document.querySelector('#tdContent .td-hero-actions');   // (not the loading skeleton's copy)
     if (box) box.innerHTML = _tdAddControlsHTML(entry);
   } });
 }
