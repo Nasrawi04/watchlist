@@ -376,7 +376,7 @@ const MSSPolls = (() => {
     if (what === 'mode') { f.options[i] = { ...blankOpt(v), q: o.mode === 'text' ? o.label : o.q, label: v === 'text' ? (o.q || o.label || '') : '' }; draw2(); document.getElementById('pfO' + i)?.focus(); if (v !== 'text') searchFor(i); return; }
     if (what === 'type') {
       if (o.mode === 'text') { o.label = v; o.kind = 'text'; return; }
-      o.q = v; clearTimeout(timers[i]); timers[i] = setTimeout(() => searchFor(i), 300); return;
+      o.q = v; clearTimeout(timers[i]); timers[i] = setTimeout(() => searchFor(i), MSS_SEARCH_MS); return;
     }
     if (what === 'pick') { const h = o.hits?.[v]; if (!h) return; f.options[i] = { ...h, mode: h.kind, picked: true }; return draw2(); }
     if (what === 'unpick') { f.options[i] = { ...blankOpt(o.kind), q: o.label }; draw2(); document.getElementById('pfO' + i)?.focus(); searchFor(i); }
