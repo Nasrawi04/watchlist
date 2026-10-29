@@ -68,7 +68,9 @@ function _socDialog(id, title, onClose) {
 /* ════════════════════════════ POLLS ════════════════════════════ */
 const MSSPolls = (() => {
   const DURATIONS = [[1, '1 hour'], [6, '6 hours'], [24, '1 day'], [72, '3 days'], [168, '7 days']];
-  const SCOPES = [['friends', 'Friends'], ['public', 'Community'], ['mine', 'Yours']];
+  // Friends / Community / Yours show open polls and ones that ended in the last 2 days; after that they
+  // move to Completed — every ended poll you made or voted in (079)
+  const SCOPES = [['friends', 'Friends'], ['public', 'Community'], ['mine', 'Yours'], ['done', 'Completed']];
   let el = null, user = null, scope = 'friends', polls = [], offset = 0, more = false, loading = false, focusId = null, focused = null;
   const open = {};      // poll id → comments shown
   const comments = {};  // poll id → loaded comments
@@ -126,11 +128,12 @@ const MSSPolls = (() => {
       friends: ['Nothing to vote on yet', 'Start a poll — your friends get a notification and can vote and comment.'],
       public: ['No community polls yet', 'Make a poll Public and anyone on MyScreenFolio can vote.'],
       mine: ['You haven’t made a poll yet', 'Ask what to watch next, who the best director is — anything.'],
+      done: ['No finished polls yet', 'Polls you made or voted in land here once they’ve been over for 2 days — results and all, for good.'],
     }[scope];
     feed.innerHTML = list.length
       ? `<div class="poll-list">${list.map(card).join('')}</div>${more ? `<div class="eg-more"><button type="button" class="dp-more" onclick="MSSPolls.more()">Show more</button></div>` : ''}`
-      : `<div class="mss-es">${mssArt('poll')}<div class="mss-es-title">${empty[0]}</div><div class="mss-es-text">${empty[1]}</div>
-          <button type="button" class="mss-es-btn primary" style="margin-top:18px" onclick="MSSPolls.create()">${icon('plus', 15)} New Poll</button></div>`;
+      : mssEmpty({ art: 'poll', title: empty[0], text: empty[1],
+          actions: scope === 'done' ? [] : [{ label: 'New Poll', icon: 'plus', onclick: 'MSSPolls.create()', primary: true }] });
   }
   function setScope(k) {
     scope = k; focused = null;
@@ -138,6 +141,13 @@ const MSSPolls = (() => {
   }
 
   /* ── One poll ── */
+  const ended = p => {                                 // "Ended 3h ago" · "Ended 12 Oct"
+    const at = new Date(p.closes_at), ms = Date.now() - at;
+    if (ms < 36e5) return 'Ended just now';
+    if (ms < 864e5) return `Ended ${Math.round(ms / 36e5)}h ago`;
+    if (ms < 7 * 864e5) return `Ended ${Math.round(ms / 864e5)}d ago`;
+    return 'Ended ' + at.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: at.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+  };
   const left = p => {
     const ms = new Date(p.closes_at) - Date.now();
     if (ms <= 0) return 'Ended';
@@ -172,7 +182,7 @@ const MSSPolls = (() => {
       <header class="poll-by">
         <a href="profile-view.html?id=${encodeURIComponent(a.id || '')}" class="poll-who">${_socAv(a, 36)}<span><b translate="no">${_socEsc(p.is_mine ? 'You' : _socName(a))}</b>
           <small>${_notifTimeAgo(p.created_at)}${p.edited_at ? ' · edited' : ''} · <span title="${p.visibility === 'public' ? 'Anyone can vote' : 'Friends can vote'}">${icon(p.visibility === 'public' ? 'globe' : 'users', 11)} ${p.visibility === 'public' ? 'Public' : 'Friends'}</span></small></span></a>
-        <span class="poll-status${p.is_open ? ' live' : ''}">${p.is_open ? `<i aria-hidden="true"></i>${left(p)}` : `${icon('lock', 11)} Ended`}</span>
+        <span class="poll-status${p.is_open ? ' live' : ''}">${p.is_open ? `<i aria-hidden="true"></i>${left(p)}` : `<span title="${scope === 'done' ? '' : 'Moves to Completed 2 days after it ends'}">${icon('lock', 11)} ${ended(p)}</span>`}</span>
         ${own}
       </header>
       <h3 class="poll-q">${_socEsc(p.question)}</h3>
