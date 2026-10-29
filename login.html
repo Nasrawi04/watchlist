@@ -61,7 +61,7 @@
   position:relative; width:50px; height:22px;
   background:var(--bg-3);
   border:1.5px solid var(--olive-light);
-  box-shadow:3px 3px 0 var(--olive);
+  
   border-radius:5px; cursor:pointer;
   transition:background 0.3s;
 }
@@ -71,7 +71,7 @@
   background:var(--bg-2);
   border:1.5px solid var(--olive-light);
   border-radius:4px;
-  box-shadow:0 2px 0 var(--olive);
+  
   transition:transform 0.3s, box-shadow 0.3s;
 }
 .slider-track.flipped { background:var(--olive-faint); }
@@ -102,7 +102,7 @@
 }
 .reset-password-card {
   background:var(--bg-3); border-radius:var(--radius-lg);
-  border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
+  border:1.5px solid var(--olive-light); 
   padding:2rem 1.75rem; min-height:390px; height:auto;
 }
 
@@ -115,7 +115,7 @@
   background:var(--bg-3);
   border-radius:var(--radius-lg);
   border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);
+  
   box-sizing:border-box;
 }
 .flip-card__back { transform:rotateY(180deg); }
@@ -138,7 +138,7 @@
   border-radius:var(--radius-sm);
   border:1.5px solid var(--border-2);
   background:var(--bg-2);
-  box-shadow:0 2px 4px rgba(0,0,0,0.2), 2px 2px 0 var(--border-2);
+  
   font-size:14px; color:var(--text);
   padding:0 14px; outline:none;
   transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease), background var(--trans) var(--ease);
@@ -147,7 +147,7 @@
 .flip-card__input::placeholder { color:var(--text-3); }
 .flip-card__input:focus {
   border-color:var(--olive-light);
-  box-shadow:0 4px 12px rgba(126,184,108,0.25), 2px 2px 0 var(--olive-light);
+  
   background:var(--bg-3);
 }
 .flip-card__btn {
@@ -155,7 +155,7 @@
   border-radius:var(--radius-sm);
   border:1.5px solid var(--olive-light);
   background:var(--olive);
-  box-shadow:0 4px 12px rgba(74,103,65,0.28), 3px 3px 0 var(--olive-2);
+  
   font-size:14px; font-weight:600; color:#fff;
   cursor:pointer; letter-spacing:0.3px;
   transition:transform var(--trans) var(--ease), box-shadow var(--trans) var(--ease), background var(--trans) var(--ease), border-color var(--trans) var(--ease);
@@ -165,16 +165,16 @@
 .flip-card__btn:hover {
   background:var(--olive-2);
   border-color:var(--olive-light);
-  box-shadow:0 8px 20px rgba(74,103,65,0.35), 3px 3px 0 var(--olive-2);
+  
   transform:translateY(-2px);
 }
 .flip-card__btn:active {
-  box-shadow:0 2px 4px rgba(74,103,65,0.2), 1px 1px 0 var(--olive-2);
+  
   transform:translate(2px,2px);
 }
 .flip-card__btn:disabled {
   opacity:0.55; cursor:not-allowed; transform:none;
-  box-shadow:0 2px 4px rgba(74,103,65,0.15), 2px 2px 0 var(--olive-2);
+  
 }
 
 .flip-card__error {
@@ -194,20 +194,20 @@
 [data-theme="light"] .flip-card__back {
   background:var(--card);
   border-color:var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);
+  
 }
 [data-theme="light"] .flip-card__input {
   background:var(--bg-2); border-color:var(--border-2);
-  box-shadow:2px 2px 0 var(--border-2); color:var(--text);
+   color:var(--text);
 }
 [data-theme="light"] .flip-card__input:focus {
-  border-color:var(--olive-light); box-shadow:2px 2px 0 var(--olive-light);
+  border-color:var(--olive-light); 
 }
 [data-theme="light"] .slider-track {
-  background:var(--bg-3); box-shadow:3px 3px 0 var(--olive);
+  background:var(--bg-3); 
 }
 [data-theme="light"] .slider-thumb {
-  background:var(--bg-3); box-shadow:0 2px 0 var(--olive);
+  background:var(--bg-3); 
 }
 
 /* ── Sign In Mode Toggle ── */
@@ -251,12 +251,12 @@
   display:inline-flex; align-items:center; gap:8px; min-height:40px;
   padding:4px 14px 4px 4px; border-radius:999px; cursor:pointer;
   background:var(--bg-3); color:var(--text); font:600 13px var(--sans, inherit);
-  border:1.5px solid var(--olive-light); box-shadow:2px 2px 0 var(--olive);
+  border:1.5px solid var(--olive-light); 
   transition:transform var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
 }
 .auth-saved-btn { max-width:100%; }
 .auth-saved-btn > span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-.auth-saved-btn:hover { transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--olive); }
+.auth-saved-btn:hover { transform:translate(-1px,-1px); }
 .auth-saved-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .auth-saved-btn:disabled { opacity:.6; cursor:wait; }
 .auth-saved-ava {
