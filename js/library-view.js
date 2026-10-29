@@ -241,6 +241,7 @@ function _libToggleSec(key){
   if(el)el.classList.toggle('open',!_libCollapsed[key]);
   var ch=document.querySelector('#libsec-'+key+' .chevron-btn svg');   // the arrow follows open / closed
   if(ch)ch.style.transform=_libCollapsed[key]?'rotate(-90deg)':'';
+  if(!_libCollapsed[key]) setTimeout(_libCheckMore,420);    // once it has opened
 }
 function _libViewToggle(vk){
   if(vk==='watch'){_libWatchView=_libWatchView==='list'?'grid':'list';localStorage.setItem(LIB_KEY+'libWatchView',_libWatchView);}
@@ -277,6 +278,8 @@ function _libGridWrap(gid,html){
     +html+'</div>';
 }
 /* ── The cards in each section (list or grid) — also drawn by the loading skeleton ── */
+/* how wide the posters show (posterHTML fetches TMDB images only that big) */
+var LIB_GRID_PX='(max-width:640px) 160px, (max-width:1100px) 200px, 280px', LIB_LIST_PX='(max-width:640px) 60px, 96px';
 var _libEsc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
 function _libWatchCard(e,grid){
   var esc=_libEsc;
@@ -288,7 +291,7 @@ function _libWatchCard(e,grid){
       var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
       var ep=isM?rt:(e.season!=null?'S'+e.season+' · E'+(e.episode||0):(e.episode?'Ep '+e.episode:''));
       var _typeCls=(isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
-      return '<div class="wg-card" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
+      return '<div class="wg-card" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big',LIB_GRID_PX)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')
         +(ip?mssHoldHTML(e):'')
         +'<span class="'+_typeCls+'">'+(isM?'Movie':'TV Show')+'</span>'
         +'</div><div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
@@ -307,7 +310,7 @@ function _libWatchCard(e,grid){
       var rt=isM&&(rtH||rtM)?(rtH?rtH+'h '+rtM+'m':rtM+'m'):'';
       var cs=ip?'background:var(--olive-faint);border-color:var(--border-olive);':'';
       return '<div class="fv-w-card" style="cursor:pointer;'+cs+'" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
-        +'<div class="fv-w-poster">'+posterHTML(e)+(ip?mssHoldHTML(e):'')+'</div>'
+        +'<div class="fv-w-poster">'+posterHTML(e,'',LIB_LIST_PX)+(ip?mssHoldHTML(e):'')+'</div>'
         +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+'</div>'
         +(ep?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+ep+'</span></div>':'')
         +(rt?'<div class="fv-w-ep">'+_libTypeBadge(isM)+'<span class="fv-w-ep-badge">'+rt+'</span></div>':'')
@@ -317,8 +320,8 @@ function _libWatchCard(e,grid){
 }
 function _libQueueCard(e,grid){
   var esc=_libEsc;
-  if(grid){var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeClsQ=(isMq?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';return '<div class="wg-card" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsQ+'">'+(isMq?'Movie':'TV Show')+'</span>'+'</div><div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'+(scope?'<div class="wg-genre"><span class="w-ep-badge">'+scope+'</span></div>':'')+'</div></div>';}
-var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeBadgeQ='<span class="'+(isMq?'type-label':'type-label type-label-tv')+'">'+(isMq?'Movie':'TV Show')+'</span>';return '<div class="w-card" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e)+'</div><div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+(e.year?'<span class="title-year-inline" style="margin-left:8px;">'+escHTML(e.year)+'</span>':'')+'</div></div><div class="w-ep-row">'+typeBadgeQ+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div></div>';}
+  if(grid){var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeClsQ=(isMq?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';return '<div class="wg-card" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big',LIB_GRID_PX)+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+'<span class="'+typeClsQ+'">'+(isMq?'Movie':'TV Show')+'</span>'+'</div><div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'+(scope?'<div class="wg-genre"><span class="w-ep-badge">'+scope+'</span></div>':'')+'</div></div>';}
+var scope=_libQueueScope(e);var isMq=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');var typeBadgeQ='<span class="'+(isMq?'type-label':'type-label type-label-tv')+'">'+(isMq?'Movie':'TV Show')+'</span>';return '<div class="w-card" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="w-poster">'+posterHTML(e,'',LIB_LIST_PX)+'</div><div class="w-body"><div class="w-top"><div class="w-title">'+esc(e.title)+(e.year?'<span class="title-year-inline" style="margin-left:8px;">'+escHTML(e.year)+'</span>':'')+'</div></div><div class="w-ep-row">'+typeBadgeQ+(scope?'<span class="w-ep-badge">'+scope+'</span>':'')+'</div></div></div>';}
 // o = { isRanked, ratingKey } from the Watched section's sort
 function _libCompCard(e,i,grid,o){
   var esc=_libEsc, isRanked=o.isRanked, ratingKey=o.ratingKey, newEp=_libNewEp(e);
@@ -341,7 +344,7 @@ function _libCompCard(e,i,grid,o){
       var isMovieG=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       var typeClsG=(isMovieG?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom';
       return '<div class="wg-card cg-card-wrap" style="cursor:pointer;">'
-        +'<div class="wg-poster" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big')+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+SF.rank(e,i)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+mssNewSeasonHoldHTML(e,newEp)+'<span class="'+typeClsG+'">'+(isMovieG?'Movie':'TV Show')+'</span>'+' </div>'
+        +'<div class="wg-poster" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'" style="position:relative;">'+posterHTML(e,'big',LIB_GRID_PX)+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+cls+'">'+SF.rank(e,i)+'</div>':''))+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?'<div class="rewatch-card-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>'+getRewatchCount(e)+'</div>':'')+mssNewSeasonHoldHTML(e,newEp)+'<span class="'+typeClsG+'">'+(isMovieG?'Movie':'TV Show')+'</span>'+' </div>'
         +'<div class="cg-grid-info" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
         +'<div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
         +metaHtml
@@ -358,7 +361,7 @@ function _libCompCard(e,i,grid,o){
       var isMc=e.cat==='movies'||(e.ratings&&e.ratings._media_type==='movie');
       return '<div class="fv-entry-block">'
         +'<div class="fv-rank-row" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
-        +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e)+mssNewSeasonHoldHTML(e,newEp)+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+(SF.rank(e,i)===1?'cg-rank-1':SF.rank(e,i)===2?'cg-rank-2':SF.rank(e,i)===3?'cg-rank-3':'cg-rank-other')+'">'+SF.rank(e,i)+'</div>':''))+'</div>'
+        +'<div class="fv-rank-poster" style="position:relative;">'+posterHTML(e,'',LIB_LIST_PX)+mssNewSeasonHoldHTML(e,newEp)+(ratingKey?_libRatingBadge(e,ratingKey):(isRanked?'<div class="cg-rank-badge '+(SF.rank(e,i)===1?'cg-rank-1':SF.rank(e,i)===2?'cg-rank-2':SF.rank(e,i)===3?'cg-rank-3':'cg-rank-other')+'">'+SF.rank(e,i)+'</div>':''))+'</div>'
         +'<div class="fv-rank-info"><div class="fv-rank-title" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+(typeof rewatchBadgeHTML==='function'&&getRewatchCount(e)>1?rewatchBadgeHTML(e):'')+' </div>'
         +'<div class="fv-rank-meta">'+_libTypeBadge(isMc)+(newEp?mssNewSeasonBadgeHTML(e,newEp):'')+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2; line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(MSSRich.plain(e.notes)))+'&rdquo;</div>':'')
@@ -377,14 +380,14 @@ function _libDropCard(e,grid){
   var esc=_libEsc, dprog=_libDropProg, dscore=_libDropScore;
   if(grid){
       var isM=mssIsMovieEntry(e);
-      return '<div class="wg-card is-dropped" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big')
+      return '<div class="wg-card is-dropped" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'"><div class="wg-poster" style="position:relative;">'+posterHTML(e,'big',LIB_GRID_PX)
         +'<span class="'+(isM?'type-label':'type-label type-label-tv')+' type-label-overlay-bottom">'+(isM?'Movie':'TV Show')+'</span></div>'
         +'<div class="wg-info"><div class="title-year-row"><div class="wg-title">'+esc(e.title)+'</div>'+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
         +'<div class="wg-genre">'+mssDroppedTagHTML(e)+'</div>'+dprog(e,'wg-prog')+dscore(e)
         +'</div></div>';
   }
   return '<div class="fv-w-card is-dropped" style="cursor:pointer;" onclick="_libOpen(this.dataset.id)" data-id="'+e.id+'">'
-    +'<div class="fv-w-poster">'+posterHTML(e)+'</div>'
+    +'<div class="fv-w-poster">'+posterHTML(e,'',LIB_LIST_PX)+'</div>'
     +'<div class="fv-w-body"><div class="fv-w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'+esc(e.title)+(e.year?'<span class="title-year-inline">'+escHTML(e.year)+'</span>':'')+'</div>'
     +'<div class="fv-w-ep">'+_libTypeBadge(mssIsMovieEntry(e))+mssDroppedTagHTML(e)+'</div>'
     +dprog(e,'fv-w-prog')+dscore(e)+'</div>'
@@ -411,6 +414,52 @@ function _libPick(){
   MSSPick.open({ pool:function(){ return _libBaseEntries('queue'); }, all:function(){ return LIB_ENTRIES(); }, user:_pUser, cats:!_libCatFilter,
     onStarted:function(){ document.dispatchEvent(new CustomEvent('mss:library-changed')); } });
 }
+/* ── Big libraries: each section draws its first cards, then more as you scroll near its end
+   (hundreds of cards and posters at once were too much for phones — Safari ran out of memory
+   and reloaded the page). A redraw keeps however many were already showing. ── */
+var LIB_CHUNK=40, _libMore={};
+function _libCards(key,list,fn){
+  var prev=_libMore[key], q=SF.query(LIB_SCOPE)+'|'+_libCatFilter;
+  var n=Math.min(list.length, Math.max(LIB_CHUNK, prev&&prev.q===q ? prev.n : 0, _libBackN));
+  _libMore[key]={list:list,fn:fn,n:n,q:q};
+  var html='';
+  for(var i=0;i<n;i++) html+=fn(list[i],i);
+  return html+(n<list.length?'<div class="lib-more" data-sec="'+key+'" aria-hidden="true"></div>':'');
+}
+function _libGrow(key){
+  var m=_libMore[key], s=document.querySelector('.lib-more[data-sec="'+key+'"]');
+  if(!m||!s) return false;
+  var end=Math.min(m.list.length, m.n+LIB_CHUNK), html='';
+  for(var i=m.n;i<end;i++) html+=m.fn(m.list[i],i);
+  m.n=end;
+  var box=s.parentElement;
+  s.insertAdjacentHTML('beforebegin',html);
+  if(m.n>=m.list.length) s.remove();
+  if(typeof fitTitleYear==='function') fitTitleYear(box);
+  return true;
+}
+/* is this section's "more" marker close to coming into view (inside its own scroll box)? */
+function _libNear(s){
+  if(!s.offsetParent && !s.getClientRects().length) return false;      // a closed section
+  var r=s.getBoundingClientRect(), row=s.closest('.watching-grid');
+  if(row){ var b=row.getBoundingClientRect(); return r.left-b.right<700 && b.top<innerHeight+600 && b.bottom>-600; }
+  var box=s.closest('.accordion-body'), bb=box?box.getBoundingClientRect():{top:0,bottom:innerHeight};
+  return r.top-Math.min(bb.bottom,innerHeight)<1000 && bb.top<innerHeight+600;
+}
+function _libCheckMore(){
+  document.querySelectorAll('.lib-more').forEach(function(s){
+    for(var k=0;k<6 && s.isConnected && _libNear(s);k++) _libGrow(s.dataset.sec);
+  });
+}
+var _libMoreTick=0;
+document.addEventListener('scroll',function(){
+  if(_libMoreTick) return;
+  _libMoreTick=requestAnimationFrame(function(){ _libMoreTick=0; _libCheckMore(); });
+},{capture:true,passive:true});
+addEventListener('resize',function(){ _libCheckMore(); });
+/* coming back from a title to a spot deep in a list: draw enough cards to reach it first */
+var _libBackN=0;
+try{ var _lb=JSON.parse(sessionStorage.getItem('mssScrollBack')||'null'); if(_lb&&_lb.boxes&&Object.keys(_lb.boxes).length) _libBackN=Math.min(400,Math.max.apply(null,Object.keys(_lb.boxes).map(function(k){var b=_lb.boxes[k];return Math.ceil(Math.max(b[0]/150,b[1]/70))+12;}))); }catch(_){}
 function renderLibrary(){
   try { _libRender(); }
   catch (err) {
@@ -450,30 +499,30 @@ function _libRender(){
   var wc;
   if(!watching.length){wc=_libEmpty('watching',{ art:'watching', title:'Nothing on screen right now', text:'The couch is warm and the remote is ready.',
     actions:[{ label:'Add a title', icon:'plus', onclick:"openAddModal("+(_libCatFilter?"'"+_libCatFilter+"'":'')+")", primary:true }] },'Not watching anything right now');}
-  else if(_libWatchView==='grid'){wc=_libGridWrap('libwg','<div class="watching-grid" id="libwg">'+watching.map(function(e){return _libWatchCard(e,true);}).join('')+'</div>');}
-  else {wc='<div class="fv-watch-list">'+watching.map(function(e){return _libWatchCard(e,false);}).join('')+'</div>';}
+  else if(_libWatchView==='grid'){wc=_libGridWrap('libwg','<div class="watching-grid" id="libwg">'+_libCards('watching',watching,function(e){return _libWatchCard(e,true);})+'</div>');}
+  else {wc='<div class="fv-watch-list">'+_libCards('watching',watching,function(e){return _libWatchCard(e,false);})+'</div>';}
 
   // Queue
   var qc;
   if(!queue.length){qc=_libEmpty('queue',{ art:'watchlist', title:'Your watchlist is empty', text:'Nothing queued up yet. Future you is going to be so bored.',
     actions:[{ label:'Add a title', icon:'plus', onclick:"openAddModal("+(_libCatFilter?"'"+_libCatFilter+"'":'')+")", primary:true }, { label:'Browse Discover', icon:'compass', href:'discover.html' }],
     starter:LIB_SCOPE==='lib' ? (_libCatFilter||'all') : '' },'Nothing on their watchlist');}
-  else if(_libQueueView==='grid'){qc=_libGridWrap('libqg','<div class="watching-grid" id="libqg">'+queue.map(function(e){return _libQueueCard(e,true);}).join('')+'</div>');}
-  else {qc='<div class="watch-list">'+queue.map(function(e){return _libQueueCard(e,false);}).join('')+'</div>';}
+  else if(_libQueueView==='grid'){qc=_libGridWrap('libqg','<div class="watching-grid" id="libqg">'+_libCards('queue',queue,function(e){return _libQueueCard(e,true);})+'</div>');}
+  else {qc='<div class="watch-list">'+_libCards('queue',queue,function(e){return _libQueueCard(e,false);})+'</div>';}
 
   // Completed
   var cOpts={isRanked:_libSort.completed==='highest'||_libSort.completed==='lowest', ratingKey:(_libSort.completed||'').indexOf('rating:')===0?_libSort.completed.slice(7):null};
   var cc;
   if(!completed.length){cc=_libEmpty('completed',{ art:'watched', title:'No finished titles yet', text:'Your trophy shelf is waiting. Finish something and it lands here, ready to rate.' },'Nothing watched yet');}
-  else if(_libCompView==='grid'){cc=_libGridWrap('libcg','<div class="watching-grid" id="libcg">'+completed.map(function(e,i){return _libCompCard(e,i,true,cOpts);}).join('')+'</div>');}
-  else {cc='<div class="fv-ranked-list">'+completed.map(function(e,i){return _libCompCard(e,i,false,cOpts);}).join('')+'</div>';}
+  else if(_libCompView==='grid'){cc=_libGridWrap('libcg','<div class="watching-grid" id="libcg">'+_libCards('completed',completed,function(e,i){return _libCompCard(e,i,true,cOpts);})+'</div>');}
+  else {cc='<div class="fv-ranked-list">'+_libCards('completed',completed,function(e,i){return _libCompCard(e,i,false,cOpts);})+'</div>';}
 
   // Dropped (071) — where they stopped, the score greyed ("doesn't count"); Pick Back Up is in the title's popup
   var dropped=SF.list(LIB_SCOPE,'dropped');
   var dc;
   if(!dropped.length){dc=_libEmpty('dropped',{ art:'dropped', title:'Nothing dropped', text:'You finish what you start. Respect.' },'Nothing dropped');}
-  else if(_libDropView==='grid'){dc=_libGridWrap('libdg','<div class="watching-grid" id="libdg">'+dropped.map(function(e){return _libDropCard(e,true);}).join('')+'</div>');}
-  else {dc='<div class="fv-watch-list">'+dropped.map(function(e){return _libDropCard(e,false);}).join('')+'</div>';}
+  else if(_libDropView==='grid'){dc=_libGridWrap('libdg','<div class="watching-grid" id="libdg">'+_libCards('dropped',dropped,function(e){return _libDropCard(e,true);})+'</div>');}
+  else {dc='<div class="fv-watch-list">'+_libCards('dropped',dropped,function(e){return _libDropCard(e,false);})+'</div>';}
 
   // Stats + type filter on top, then the search box (drawn once, so typing keeps
   // its focus), then the sections — only the top and the sections redraw
@@ -505,6 +554,8 @@ function _libRender(){
     if (typeof fitTitleYear === 'function') fitTitleYear(el);
   });
   mssScrollReturn(el);                     // back from a title's Edit page → where you were
+  _libBackN=0;
+  requestAnimationFrame(_libCheckMore);    // a short screen or an open grid may already need the next cards
 }
 
 /* ── Loading skeleton: this page's own stats, search, sections and cards (in the views you
