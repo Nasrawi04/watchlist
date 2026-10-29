@@ -256,6 +256,8 @@ function _libSection(key,title,count,vk,sk,content){
     +'<div class="section-block-header" onclick="_libToggleSec(\''+key+'\')" style="cursor:pointer;">'
     +'<div class="sec-left" style="pointer-events:none;"><div class="section-block-title">'+title+'</div><span class="section-pill">'+count+'</span></div>'
     +'<div class="sec-right" onclick="event.stopPropagation();">'
+    // "Pick for me" on your own Library's Watchlist (MSSPick, js/pick.js)
+    +(key==='queue' && LIB_SCOPE==='lib' && typeof MSSPick!=='undefined' ? MSSPick.buttonHTML('_libPick()', !count) : '')
     +'<div class="view-toggle">'
     +'<button class="vt-btn '+(cv==='list'?'active':'')+'" onclick="_libViewToggle(\''+vk+'\')" title="List">'+icon('list',13)+'</button>'
     +'<button class="vt-btn '+(cv==='grid'?'active':'')+'" onclick="_libViewToggle(\''+vk+'\')" title="Grid">'+icon('grid',13)+'</button>'
@@ -401,6 +403,10 @@ function _libEmpty(sec, mine, theirs){
     actions:[{ label:'Clear filters', icon:'x', onclick:"_libClearFilters('"+sec+"')", primary:true }] });
   if (LIB_READONLY) return mssEmpty({ compact:true, art:mine.art, title:theirs });
   return mssEmpty(Object.assign({ compact:true }, mine));
+}
+function _libPick(){
+  MSSPick.open({ pool:function(){ return _libBaseEntries('queue'); }, all:function(){ return LIB_ENTRIES(); }, user:_pUser, cats:!_libCatFilter,
+    onStarted:function(){ document.dispatchEvent(new CustomEvent('mss:library-changed')); } });
 }
 function renderLibrary(){
   try { _libRender(); }
