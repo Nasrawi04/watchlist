@@ -466,18 +466,16 @@ function renderNotesPage() {
   _renderNotesToolbar('Your Notes', withNotes.length ? SF.list('notesMine', 'all').length : 0, withNotes.length ? SF.bar('notesMine', 'all') : '');
 
   if (!withNotes.length) {
-    document.getElementById('notesPageContent').innerHTML = `
-      <div class="empty" style="padding:4rem 1rem;text-align:center;">
-        <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('notebook', 44)}</div>
-        <div class="empty-text" style="color:var(--text-2);margin-bottom:.5rem;">No notes yet</div>
-        <div style="font-size:13px;color:var(--text-3);">Tap "+ Add Note" to write your first one.</div>
-      </div>`;
+    document.getElementById('notesPageContent').innerHTML = mssEmpty({ art: 'notes', title: 'No notes yet',
+      text: 'Hot takes, favourite scenes, that one line you can’t stop quoting. Write it down before you forget it.',
+      actions: [{ label: 'Write a note', icon: 'plus', onclick: "openNotesSearchPopup('add')", primary: true }] });
     return;
   }
 
   const sorted = SF.list('notesMine', 'all');
   mssSkeleton.shape('notes', { n: withNotes.length });
-  if (!sorted.length) { document.getElementById('notesPageContent').innerHTML = `<div class="mss-empty">No notes match these filters.</div>`; return; }
+  if (!sorted.length) { document.getElementById('notesPageContent').innerHTML = mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('notesMine', 'all'); renderNotesPage()", primary: true }] }); return; }
   document.getElementById('notesPageContent').innerHTML = `<div class="nc-grid">${sorted.map(e =>
     MSSNote.cardHTML(e, { counts: _notesReactionCounts[e.id], onclick: `_notesOpen(${attrJSON(e.id)})` })).join('')}</div>`;
 }
@@ -888,13 +886,14 @@ function renderSocialNotes() {
   if (!searching) mssSkeleton.shape('notes_c', { n: list.length });
   _renderNotesToolbar(_notesTitle ? 'On This Title' : searching ? 'Search Results' : 'Community', list.length, all.length ? SF.bar('notesSocial', 'all') : '');
   if (!all.length) {
-    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
-      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('notebook', 44)}</div>
-      <div class="empty-text" style="color:var(--text-2);">${searching ? 'No notes found.' : 'No public notes yet.'}</div>
-    </div>`;
+    wrap.innerHTML = searching
+      ? mssEmpty({ art: 'search', title: 'No notes here', text: 'Nothing public matches that search yet. Try someone else, or another title.',
+          actions: [{ label: 'Clear search', icon: 'x', onclick: '_nuClearFilter()' }] })
+      : mssEmpty({ art: 'notes', title: 'No public notes yet', text: 'The floor is yours. Say something brave about a finale.' });
     return;
   }
-  if (!list.length) { wrap.innerHTML = `<div class="mss-empty">No notes match these filters.</div>`; return; }
+  if (!list.length) { wrap.innerHTML = mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('notesSocial', 'all'); renderSocialNotes()", primary: true }] }); return; }
 
   wrap.innerHTML = `<div class="nc-grid">${list.map(_socialNoteCardHTML).join('')}</div>`;
 }
