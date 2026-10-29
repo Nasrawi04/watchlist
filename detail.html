@@ -27,17 +27,19 @@
   position:fixed; inset:0; z-index:1300;
   background:rgba(0,0,0,0.6); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
   display:flex; align-items:center; justify-content:center; padding:16px;
-  opacity:0; pointer-events:none; transition:opacity .2s ease;
+  opacity:0; pointer-events:none; visibility:hidden; transition:opacity .2s ease, visibility 0s linear .2s;
 }
-#updateDetailsOverlay.open { opacity:1; pointer-events:auto; }
+#updateDetailsOverlay.open { opacity:1; pointer-events:auto; visibility:visible; transition:opacity .2s ease; }
 
 #posterPickerOverlay {
   position:fixed; inset:0; z-index:1300;
   background:rgba(0,0,0,0.6); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
   display:flex; align-items:center; justify-content:center; padding:16px;
-  opacity:0; pointer-events:none; transition:opacity .2s ease;
+  opacity:0; pointer-events:none; visibility:hidden; transition:opacity .2s ease, visibility 0s linear .2s;
 }
-#posterPickerOverlay.open { opacity:1; pointer-events:auto; }
+/* Closed = hidden for real (visibility), not just see-through: some browsers (Safari) could still let a
+   tap land on the invisible posters, so tapping the page re-picked one ("Poster updated…") */
+#posterPickerOverlay.open { opacity:1; pointer-events:auto; visibility:visible; transition:opacity .2s ease; }
 #posterPickerCard {
   width:100%; max-width:760px; height:82vh; max-height:82vh;
   background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--radius-lg);
@@ -1647,6 +1649,8 @@ function _closePosterPicker() {
   if (!ov) return;
   ov.classList.remove('open');
   mssUnlockScroll('posterPicker');
+  // …and once it has faded, the posters go — nothing is left behind to tap (they reload on the next open)
+  setTimeout(() => { if (!ov.classList.contains('open')) document.getElementById('posterPickerGrid').innerHTML = ''; }, 250);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2012,6 +2016,7 @@ async function _loadTmdbPosterOptions(tmdbId, tmdbType) {
 }
 
 function _selectTmdbPoster(url) {
+  if (!document.getElementById('posterPickerOverlay')?.classList.contains('open')) return;   // only from the open picker
   _posterUrl = url;
   const img = document.getElementById('dPosterImg');
   img.src = url;
