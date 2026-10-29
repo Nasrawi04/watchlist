@@ -4082,6 +4082,19 @@ a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar, .rc-col.rc-sel .rc-bar {
 .qp-genre { width:180px; max-width:100%; }
 .qp-genre .sf-dd-trigger { font-weight:600; font-size:12.5px; }
 .qp-genre .td-dd-menu { max-height:240px; overflow-y:auto; }
+.qp-genre .sf-dd { position:relative; }
+.qp-genre-in { width:100%; padding:0 36px 0 14px !important; cursor:text; font-weight:600; font-size:12.5px; }
+.qp-genre-in::placeholder { color:var(--text); opacity:1; }
+.qp-genre-in.active::placeholder, .qp-genre-in.active { color:#fff; }
+.qp-genre-in:focus { outline:none; border-color:var(--olive-light); }
+.qp-genre-btn { position:absolute; top:50%; right:6px; transform:translateY(-50%); width:28px; height:28px; border-radius:7px; display:grid; place-items:center;
+  border:0; background:none; color:inherit; cursor:pointer; }
+.qp-genre-in.active + .qp-genre-btn { color:#fff; }
+.qp-genre-btn svg { width:13px; height:13px; }
+.sf-dd.open .qp-genre-btn svg { transform:rotate(180deg); }
+.qp-genre .sf-dd.open .qp-genre-in.active + .qp-genre-btn svg { transform:none; }
+#qpGenreMenu .td-dd-opt.hl { background:var(--olive-faint); color:var(--text); }
+#qpGenreMenu .td-dd-opt b { color:var(--olive-light); }
 .qp-foot { position:sticky; bottom:0; display:grid; grid-template-columns:auto auto 1fr; gap:8px; padding:16px 20px 18px; margin-top:12px;
   background:var(--bg-2); border-top:1px solid var(--border); }
 .qp-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:46px; padding:0 16px; border-radius:var(--radius-sm); cursor:pointer;
@@ -5451,13 +5464,24 @@ html[data-theme="light"] {
    transition:opacity .3s, transform .3s; }
 .mss-slow.show { opacity:1; transform:translate(-50%, 0); }
 .mss-slow span { transition:opacity .25s; }
-.mss-slow-reel { width:22px; height:22px; border-radius:50%; border:2px solid var(--olive-light); position:relative; flex-shrink:0; animation:spin 1.6s linear infinite; }
-.mss-slow-reel::before, .mss-slow-reel::after { content:''; position:absolute; left:7px; width:4px; height:4px; border-radius:50%; background:var(--olive-light); }
-.mss-slow-reel::before { top:3px; } .mss-slow-reel::after { bottom:3px; }
-.mss-slow-reel i { position:absolute; inset:7px; border-radius:50%; background:var(--olive-light); }
+/* The MSF logo as the loader: a faint outline of it, filling up with the real logo left to right,
+   then a quick shine, over and over (reduced motion: just the logo) */
+.mss-slow-logo { position:relative; flex-shrink:0; width:46px; aspect-ratio:507 / 320; }
+.mss-slow-logo::before, .mss-slow-logo::after { content:''; position:absolute; inset:0; }
+.mss-slow-logo::before { background:var(--text-3); opacity:.28;
+  -webkit-mask:url(../icons/logo-nav.png) center / contain no-repeat; mask:url(../icons/logo-nav.png) center / contain no-repeat; }
+.mss-slow-logo::after { background:linear-gradient(105deg, transparent 38%, rgba(255,255,255,.55) 50%, transparent 62%) 160% 0 / 250% 100% no-repeat, url(../icons/logo-nav.png) center / contain no-repeat;
+  -webkit-mask:url(../icons/logo-nav.png) center / contain no-repeat; mask:url(../icons/logo-nav.png) center / contain no-repeat;
+  animation:mssLogoFill 1.8s cubic-bezier(.5,0,.3,1) infinite; }
+@keyframes mssLogoFill {
+  0%   { clip-path:inset(0 100% 0 0); background-position:160% 0, center; }
+  55%  { clip-path:inset(0 0 0 0);    background-position:160% 0, center; }
+  80%  { clip-path:inset(0 0 0 0);    background-position:-60% 0, center; opacity:1; }
+  100% { clip-path:inset(0 0 0 0);    background-position:-60% 0, center; opacity:0; }
+}
 @media(max-width:1199px) { .mss-slow { bottom:calc(126px + env(safe-area-inset-bottom)); } }
 @media(prefers-reduced-motion:reduce) {
-  .mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av), .page-loading::before, .page-loading::after, .skel, .skel-txt, .skel-ghost, .page-loading *, .mss-arrive, .mss-arrive *, .mss-slow-reel { animation:none !important; }
+  .mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av), .page-loading::before, .page-loading::after, .skel, .skel-txt, .skel-ghost, .page-loading *, .mss-arrive, .mss-arrive *, .mss-slow-logo::after { animation:none !important; }
 }
 /* ── Right-to-left content language (MSSLang, config.js — Arabic, Hebrew,
    Persian, Urdu, Kurdish): each block of TMDB text (titles, overviews,
