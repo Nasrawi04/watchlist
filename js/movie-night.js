@@ -41,7 +41,7 @@ const MSSNight = (() => {
     const head = `<div class="soc-head"><div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Movie Night</div></div>
       ${user ? `<button type="button" class="btn-add-entry" onclick="MSSNight.create()">${icon('plus', 15)} New Movie Night</button>` : ''}</div>`;
     if (!user) {
-      el.innerHTML = head + `<div class="fr-empty"><div class="fr-empty-ic">${icon('film', 26)}</div><div class="fr-empty-title">Movie nights with friends</div><div class="fr-empty-text">Sign in to pick something to watch together.</div></div>`;
+      el.innerHTML = head + `<div class="mss-es">${mssArt('popcorn')}<div class="mss-es-title">Movie nights with friends</div><div class="mss-es-text">Sign in to pick something to watch together.</div></div>`;
       return;
     }
     el.innerHTML = head + `<div id="mnList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
@@ -61,9 +61,9 @@ const MSSNight = (() => {
   function draw() {
     const box = document.getElementById('mnList'); if (!box) return;
     if (!nights.length) {
-      box.innerHTML = `<div class="fr-empty"><div class="fr-empty-ic">${icon('film', 26)}</div><div class="fr-empty-title">No Movie Nights yet</div>
-        <div class="fr-empty-text">Invite friends, add a few titles (we’ll suggest ones on your watchlists), vote — or let us surprise you.</div>
-        <button type="button" class="btn-add-entry" style="margin:14px auto 0" onclick="MSSNight.create()">${icon('plus', 15)} New Movie Night</button></div>`;
+      box.innerHTML = `<div class="mss-es">${mssArt('popcorn')}<div class="mss-es-title">No Movie Nights yet</div>
+        <div class="mss-es-text">The popcorn’s ready; the only thing missing is a plan. Invite friends, add a few titles (we’ll suggest some from your watchlists), vote — or let us surprise you.</div>
+        <button type="button" class="mss-es-btn primary" style="margin-top:18px" onclick="MSSNight.create()">${icon('plus', 15)} New Movie Night</button></div>`;
       return;
     }
     box.innerHTML = `<div class="mn-list">${nights.map(card).join('')}</div>`;
