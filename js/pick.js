@@ -90,6 +90,7 @@ const MSSPick = (() => {
         </div>
       </div>`;
     MSSDialog.bind(ov, close);
+    ov.querySelector('.qp-card').addEventListener('scroll', () => SF.closeDD(), { passive: true });
     document.body.appendChild(ov);
     return ov;
   }
@@ -105,6 +106,7 @@ const MSSPick = (() => {
   function close() {
     const ov = document.getElementById('qpOverlay');
     if (ov) MSSDialog.close(ov);
+    SF.closeDD();
     clearTimeout(rolling); rolling = 0;
   }
 
@@ -120,11 +122,8 @@ const MSSPick = (() => {
       ${chip(mood.len === 'quick', `${icon('clock', 12)} Something quick`, "MSSPick.mood('len','quick')")}
       ${cats.length > 1 ? cats.map(c => chip(mood.cat === c, esc(CAT_META[c]?.label || c), `MSSPick.mood('cat','${c}')`)).join('') : ''}
       ${mixed && !(cats.length > 1) ? chip(mood.type === 'movie', 'A movie', "MSSPick.mood('type','movie')") + chip(mood.type === 'tv', 'A show', "MSSPick.mood('type','tv')") : ''}
-      ${gs.length ? `<label class="qp-chip qp-select${mood.genre ? ' on' : ''}">${icon('filter', 12)}<span class="sr-only">Genre</span>
-        <select onchange="MSSPick.mood('genre', this.value, true)" aria-label="Genre">
-          <option value=""${mood.genre ? '' : ' selected'}>Any genre</option>
-          ${gs.map(g => `<option value="${esc(g)}"${mood.genre === g ? ' selected' : ''}>${esc(g)}</option>`).join('')}
-        </select><svg class="qp-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></label>` : ''}
+      ${gs.length ? `<div class="qp-genre">${SF.dd('qpGenreDD', mood.genre ? esc(mood.genre) : 'Any genre', !!mood.genre,
+          ['', ...gs].map(g => `<button type="button" class="td-dd-opt${g === mood.genre ? ' active' : ''}" onclick="SF.closeDD();MSSPick.mood('genre', ${attrJSON(g)}, true)">${g ? esc(g) : 'Any genre'}</button>`).join(''))}</div>` : ''}
     </div>`;
   }
   function setMood(k, v, set) {
