@@ -146,15 +146,6 @@ a.au-tile:hover::after { opacity:1; }
 .au-chips input:checked + span { background:var(--card-solid); color:var(--text); box-shadow:inset 0 0 0 1px var(--border-2); }
 .au-chips input:focus-visible + span { outline:2px solid var(--olive-light); }
 
-/* password strength */
-.au-meter { display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; }
-.au-meter i { height:4px; border-radius:2px; background:var(--border-2); transition:background .25s; }
-.au-meter[data-s="1"] i:nth-child(-n+1) { background:#D9534F; }
-.au-meter[data-s="2"] i:nth-child(-n+2) { background:#E2B53E; }
-.au-meter[data-s="3"] i:nth-child(-n+3) { background:var(--olive-light); }
-.au-meter[data-s="4"] i { background:var(--olive-light); }
-.au-pass-row { display:flex; justify-content:space-between; gap:10px; }
-
 /* errors */
 .flip-card__error { display:none; align-items:flex-start; gap:9px; padding:11px 13px; border-radius:12px; font-size:13px; line-height:1.45; font-weight:600;
   color:#E5675F; background:rgba(229,103,95,.1); border:1px solid rgba(229,103,95,.35); }
@@ -262,7 +253,7 @@ a.au-tile:hover::after { opacity:1; }
             <label class="au-label" for="siPass">Password</label>
             <div class="au-box">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <input class="au-input has-eye" id="siPass" type="password" placeholder="Your password" autocomplete="current-password">
+              <input class="au-input has-eye" id="siPass" type="password" maxlength="72" placeholder="Your password" autocomplete="current-password">
               <button type="button" class="au-eye" aria-label="Show password" aria-pressed="false" onclick="auEye(this)">
                 <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                 <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19c-6.4 0-10-7-10-7a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.1 9.1 0 0 1 12 4c6.4 0 10 7 10 7a18.6 18.6 0 0 1-2.2 3.2M1 1l22 22"/></svg>
@@ -293,21 +284,20 @@ a.au-tile:hover::after { opacity:1; }
             <label class="au-label" for="suEmail">Email</label>
             <div class="au-box">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
-              <input class="au-input" id="suEmail" type="email" maxlength="254" placeholder="you@example.com" autocomplete="email" inputmode="email">
+              <input class="au-input" id="suEmail" type="email" maxlength="254" placeholder="you@example.com" autocomplete="email" inputmode="email" oninput="if ($('suPass').value) auPassSU()">
             </div>
           </div>
           <div class="au-field">
             <label class="au-label" for="suPass">Password</label>
             <div class="au-box">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <input class="au-input has-eye" id="suPass" type="password" maxlength="128" placeholder="At least 6 characters" autocomplete="new-password" aria-describedby="suPassHint" oninput="auStrength(this.value)">
+              <input class="au-input has-eye" id="suPass" type="password" maxlength="64" placeholder="8–64 characters" autocomplete="new-password">
               <button type="button" class="au-eye" aria-label="Show password" aria-pressed="false" onclick="auEye(this)">
                 <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                 <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19c-6.4 0-10-7-10-7a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.1 9.1 0 0 1 12 4c6.4 0 10 7 10 7a18.6 18.6 0 0 1-2.2 3.2M1 1l22 22"/></svg>
               </button>
             </div>
-            <div class="au-meter" id="suMeter" data-s="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-            <div class="au-pass-row"><span class="au-hint" id="suPassHint">At least 6 characters</span><span class="au-hint" id="suPassWord"></span></div>
+<div id="suGuide"></div>
           </div>
           <button class="au-btn" id="btnSignUp" type="submit"><span>Create my folio</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </form>
@@ -348,14 +338,19 @@ a.au-tile:hover::after { opacity:1; }
               <label class="au-label" for="rpPass">New password</label>
               <div class="au-box">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <input class="au-input" id="rpPass" type="password" maxlength="128" placeholder="At least 6 characters" autocomplete="new-password">
+                <input class="au-input has-eye" id="rpPass" type="password" maxlength="64" placeholder="8–64 characters" autocomplete="new-password">
+                <button type="button" class="au-eye" aria-label="Show password" aria-pressed="false" onclick="auEye(this)">
+                  <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19c-6.4 0-10-7-10-7a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.1 9.1 0 0 1 12 4c6.4 0 10 7 10 7a18.6 18.6 0 0 1-2.2 3.2M1 1l22 22"/></svg>
+                </button>
               </div>
+              <div id="rpGuide"></div>
             </div>
             <div class="au-field">
               <label class="au-label" for="rpPass2">Confirm it</label>
               <div class="au-box">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <input class="au-input" id="rpPass2" type="password" maxlength="128" placeholder="Same again" autocomplete="new-password">
+                <input class="au-input" id="rpPass2" type="password" maxlength="64" placeholder="Same again" autocomplete="new-password">
               </div>
             </div>
             <button class="au-btn" id="btnReset" type="submit"><span>Update password</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
@@ -600,13 +595,11 @@ function auEye(btn) {
 function auUserHint() {
   const v = $('suUser').value;
   $('suUserHint').innerHTML = v.length >= 3 ? `Your profile: <b translate="no">@${escHTML(v)}</b>` : '3–20 letters, numbers or _';
+  if ($('suPass').value) auPassSU();
 }
-// A rough strength guide for a new password
-function auStrength(p) {
-  const s = !p ? 0 : p.length < 6 ? 1 : Math.min(4, 1 + (p.length >= 10) + (/[A-Z]/.test(p) && /[a-z]/.test(p)) + (/\d|[^A-Za-z0-9]/.test(p)));
-  $('suMeter').dataset.s = s;
-  $('suPassWord').textContent = ['', 'Too short', 'Okay', 'Good', 'Strong'][s];
-}
+// The new-password guide (MSSPass, js/config.js): 8–64 characters, live checklist — sign-up and reset
+const auPassSU = MSSPass.mount('suGuide', 'suPass', () => [$('suUser').value, $('suEmail').value.split('@')[0]]);
+MSSPass.mount('rpGuide', 'rpPass');
 
 /* ── Sign in with Email or Username ── */
 function setSIMode(mode) {
@@ -671,7 +664,7 @@ async function doSignUp(e) {
   if (!/^[a-zA-Z0-9_]+$/.test(username)) { showErr('suError', 'Usernames can only use letters, numbers and _.'); return; }
   if (!email)                   { showErr('suError', 'Please add your email.'); return; }
   if (!EMAIL_RE.test(email))    { showErr('suError', 'That email doesn’t look right.'); return; }
-  if (pass.length < 6)          { showErr('suError', 'Your password needs at least 6 characters.'); return; }
+  if (MSSPass.error(pass))       { showErr('suError', MSSPass.error(pass)); return; }
   if (pass.length > 128)        { showErr('suError', 'Your password can be 128 characters at most.'); return; }
   showErr('suError', '');
 
@@ -722,8 +715,7 @@ async function doResetPassword(e) {
   e.preventDefault();
   const pass1 = $('rpPass').value, pass2 = $('rpPass2').value;
   if (!pass1 || !pass2) { showErr('rpError', 'Please fill in both fields.'); return; }
-  if (pass1.length < 6) { showErr('rpError', 'Your password needs at least 6 characters.'); return; }
-  if (pass1.length > 128) { showErr('rpError', 'Your password can be 128 characters at most.'); return; }
+  if (MSSPass.error(pass1)) { showErr('rpError', MSSPass.error(pass1)); return; }
   if (pass1 !== pass2)  { showErr('rpError', 'Those passwords don’t match.'); return; }
   showErr('rpError', '');
   _auBtn('btnReset', 'Updating…', true);
