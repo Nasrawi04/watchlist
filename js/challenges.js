@@ -41,6 +41,9 @@ const MSSChallenges = (() => {
   let el = null, user = null, list = [], off = { me_official: false, can_official: false, list: [] }, focus = null;
   let picks = {};   // "Let me choose" challenges you're in → your picks (061)
   const showAll = {};
+  // "View ended challenges": older ones you were part of (081) — fetched when you open it
+  let ended = null, endedOpen = false;
+  const offAll = () => off.list.concat(ended?.off || []), listAll = () => list.concat(ended?.list || []);
 
   async function mount(target, u, o = {}) {
     el = target; user = u;
@@ -62,12 +65,14 @@ const MSSChallenges = (() => {
   };
   async function load() {
     const [a, b, pk] = await Promise.allSettled([rpc('get_challenges', {}), rpc('official_challenges', {}), rpc('my_challenge_picks', {})]);
+    if (ended) { ended = null; if (endedOpen) toggleEnded.again = true; }
     picks = pk.value && typeof pk.value === 'object' && !Array.isArray(pk.value) ? pk.value : {};
     if (a.status === 'rejected') showToast('Couldn’t load challenges — try again.', 'err');
     list = (a.value || []).filter(c => !c.official);
     off = { me_official: !!b.value?.me_official, can_official: !!b.value?.can_official, list: b.value?.list || [] };
     const hb = document.getElementById('chHeadBtn'); if (hb) hb.innerHTML = newBtn();
     draw();
+    if (toggleEnded.again) { toggleEnded.again = false; endedOpen = false; toggleEnded(); }
     // opening this page can finish a challenge (get_challenges) → the "You finished!" popup (nav.js, 067)
     if ((a.value || []).some(c => c.my_finished_at) && typeof _navFinishCheck === 'function') _navFinishCheck(500, true);
     if (focus) { requestAnimationFrame(() => document.getElementById('ch-' + focus)?.scrollIntoView({ block: 'start', behavior: 'smooth' })); focus = null; }
@@ -77,13 +82,31 @@ const MSSChallenges = (() => {
     const feat = off.list.length ? `<section class="chf-sec" aria-label="Official challenges"><div class="chf-sec-head">${icon('crown', 14)}<span>Featured</span></div>
         <div class="chf-list">${off.list.map(featured).join('')}</div></section>` : '';
     if (!list.length) {
-      if (feat) { box.innerHTML = feat; return; }
+      if (feat) { box.innerHTML = feat + endedHTML(); return; }
       box.innerHTML = `<div class="mss-es">${mssArt('watched')}<div class="mss-es-title">No challenges yet</div>
         <div class="mss-es-text">Set a goal — “10 horror movies in October”, “50 movies this year” — invite friends, and race to the finish.</div>
-        <button type="button" class="mss-es-btn primary" style="margin-top:18px" onclick="MSSChallenges.create()">${icon('plus', 15)} New Challenge</button></div>`;
+        <button type="button" class="mss-es-btn primary" style="margin-top:18px" onclick="MSSChallenges.create()">${icon('plus', 15)} New Challenge</button></div>` + endedHTML();
       return;
     }
-    box.innerHTML = feat + `<div class="ch-list">${list.map(card).join('')}</div>`;
+    box.innerHTML = feat + `<div class="ch-list">${list.map(card).join('')}</div>` + endedHTML();
+  }
+  function endedHTML() {
+    const n = ended ? ended.off.length + ended.list.length : 0;
+    const body = !endedOpen ? '' : !ended ? `<div class="page-loading" style="padding:1.5rem"><div class="spinner"></div></div>`
+      : !n ? `<div class="ch-ended-empty">No ended challenges yet — the ones you take part in land here once they’re over.</div>`
+      : (ended.off.length ? `<div class="chf-list">${ended.off.map(featured).join('')}</div>` : '')
+        + (ended.list.length ? `<div class="ch-list">${ended.list.map(card).join('')}</div>` : '');
+    return `<section class="ch-ended" aria-label="Ended challenges">
+      <button type="button" class="rec-btn ch-ended-btn" aria-expanded="${endedOpen}" onclick="MSSChallenges._ended()">${icon('clock', 14)} ${endedOpen ? 'Hide ended challenges' : 'View ended challenges'}</button>
+      ${body}</section>`;
+  }
+  async function toggleEnded() {
+    endedOpen = !endedOpen; draw();
+    if (!endedOpen || ended) return;
+    const [a, b] = await Promise.allSettled([rpc('get_challenges', { p_ended: true }), rpc('ended_official_challenges', {})]);
+    if (a.status === 'rejected' && b.status === 'rejected') { endedOpen = false; draw(); showToast('Couldn’t load ended challenges — try again.', 'err'); return; }
+    ended = { list: (a.value || []).filter(c => !c.official), off: b.value || [] };
+    draw();
   }
 
   /* ── An official challenge: medal, story, tags, posters, join / your progress ── */
@@ -110,7 +133,7 @@ const MSSChallenges = (() => {
         ${MSSSpotlight.posters(c, 10)}
         ${c.teams ? teamsBar(c, myT) : ''}
         <div class="chf-foot">${foot}<button type="button" class="rec-btn chf-info" onclick="MSSChallenges.details(${id})">${icon('info', 14)} Details</button><span class="chf-count">${icon('users', 13)} <b>${c.joined}</b> joined${c.finished ? ` · <b>${c.finished}</b> finished` : ''}</span>
-          ${joined && !done ? `<button type="button" class="poll-link poll-danger" onclick="MSSChallenges.respond(${id}, 'leave')">Leave</button>` : ''}</div>
+          ${joined && !done && c.state !== 'ended' ? `<button type="button" class="poll-link poll-danger" onclick="MSSChallenges.respond(${id}, 'leave')">Leave</button>` : ''}</div>
         ${c.can_manage ? `<div class="chf-own">
             <button type="button" class="rec-btn" onclick="MSSChallenges.official(${id})">${icon('edit', 14)} Edit</button>
             <button type="button" class="rec-btn" onclick="MSSChallenges._preview(${id})">${icon('eye', 14)} Preview spotlight</button>
@@ -121,9 +144,9 @@ const MSSChallenges = (() => {
   /* ── Details popup: everything about one challenge, in plain words ── */
   let infoId = null;
   function details(id) {
-    const c = off.list.find(x => x.id === id) || list.find(x => x.id === id); if (!c) return;
+    const c = offAll().find(x => x.id === id) || listAll().find(x => x.id === id); if (!c) return;
     infoId = id;
-    const isOff = !!off.list.find(x => x.id === id), lst = isOff && c.count_mode === 'list', pick = !isOff && !!picks[id];
+    const isOff = !!offAll().find(x => x.id === id), lst = isOff && c.count_mode === 'list', pick = !isOff && !!picks[id];
     const t = c.titles || [], today = iso(new Date());
     const joined = c.my_status === 'joined', invited = c.my_status === 'invited';
     const me = !isOff ? (c.members || []).find(m => m.me) : null;
@@ -191,8 +214,8 @@ const MSSChallenges = (() => {
   function closeInfo() { infoId = null; MSSDialog.close(document.getElementById('chInfo')); }
   async function infoJoin() {
     const id = infoId; if (!id) return;
-    const isOff = !!off.list.find(x => x.id === id);
-    const oc = isOff ? off.list.find(x => x.id === id) : null;
+    const isOff = !!offAll().find(x => x.id === id);
+    const oc = isOff ? offAll().find(x => x.id === id) : null;
     let team = null;
     if (oc?.teams) { closeInfo(); team = await MSSSpotlight.pickTeam(oc); if (!team) return; }
     const ok = isOff ? await act('join_official_challenge', { p_ch: id, p_team: team }) : await act('respond_challenge', { p_ch: id, p_action: 'join' });
@@ -212,7 +235,7 @@ const MSSChallenges = (() => {
     </div>`;
   }
   async function joinOfficial(id) {
-    const c = off.list.find(x => x.id === id); if (!c) return;
+    const c = offAll().find(x => x.id === id); if (!c) return;
     let team = null;
     if (c.teams) { team = await MSSSpotlight.pickTeam(c); if (!team) return; }
     if (await act('join_official_challenge', { p_ch: id, p_team: team })) {
@@ -385,7 +408,7 @@ const MSSChallenges = (() => {
 
   /* ── The official account: make / edit an official challenge ── */
   function official(id) {
-    const c = id ? off.list.find(x => x.id === id) : null;
+    const c = id ? offAll().find(x => x.id === id) : null;
     const today = new Date(), end = new Date(); end.setDate(end.getDate() + 14);
     form = { mode: 'official', id: c?.id || null, medal: c?.medal || MSSMedal.OFFICIAL[0].key, cmode: c ? c.count_mode : 'list',
       titles: (c?.titles || []).map(t => ({ ...t })), goal: c && c.count_mode === 'auto' ? c.goal : 10, cat: c?.cat || '', genre: c?.genre || '', spot: c?.spotlight || '',
@@ -464,7 +487,7 @@ const MSSChallenges = (() => {
     drawChosen();
   }
   function invite(id) {
-    const c = list.find(x => x.id === id); if (!c) return;
+    const c = listAll().find(x => x.id === id); if (!c) return;
     const have = new Set(c.members.map(m => m.id));
     const chips = friendChips(have);
     form = { mode: 'invite', id, picked: new Set() };
@@ -561,6 +584,6 @@ const MSSChallenges = (() => {
 
   return { mount, create, official, invite, respond, remove, details, reload: load, _unpick: unpick, _team: team, _any: toggleAny, _closeInfo: closeInfo, _infoJoin: infoJoin,
     _all: id => { showAll[id] = true; draw(); }, _f: f, _inv: inv, _save: save, _close: closeForm,
-    _joinOfficial: joinOfficial, _preview: id => { const c = off.list.find(x => x.id === id); if (c) MSSSpotlight.preview(c); },
+    _joinOfficial: joinOfficial, _ended: toggleEnded, _preview: id => { const c = offAll().find(x => x.id === id); if (c) MSSSpotlight.preview(c); },
     _q: search, _pick: pick, _rm: i => { form?.titles.splice(i, 1); drawChosen(); } };
 })();
