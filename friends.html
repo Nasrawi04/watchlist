@@ -44,7 +44,7 @@
   position:fixed;
   background:var(--bg-3); border:0.5px solid var(--olive-light); border-top:none;
   border-radius:0 0 var(--radius) var(--radius); z-index:401;   /* above the sticky side nav (400); the page is locked while it’s open */
-  box-shadow:var(--shadow-lg);
+  
   overflow-y:auto; overflow-x:hidden; max-height:320px;
   display:none;
 }
@@ -141,7 +141,7 @@
 .fm-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:var(--fr-gap); }
 @media(max-width:560px) { .fm-grid { grid-template-columns:1fr; } }
 .fm-card { position:relative; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; cursor:pointer; display:flex; flex-direction:column; transition:transform .2s, box-shadow .2s, border-color .2s; }
-.fm-card:hover { transform:translateY(-3px); box-shadow:var(--shadow); border-color:var(--border-olive); }
+.fm-card:hover { transform:translateY(-3px);  border-color:var(--border-olive); }
 .fm-card.is-pinned { border-color:var(--border-olive); }
 .fm-cover { position:relative; height:96px; display:grid; grid-template-columns:repeat(4, 1fr); background:linear-gradient(135deg, var(--olive) 0%, var(--olive-2, #0f2d14) 100%); }
 .fm-cover-tile { position:relative; overflow:hidden; }
@@ -150,7 +150,7 @@
 .fm-cover-empty { grid-column:1/-1; }
 .fm-cover-shade { position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,.05), rgba(0,0,0,.45)); pointer-events:none; }
 .fm-body { padding:0 16px 16px; display:flex; flex-direction:column; align-items:center; text-align:center; flex:1; }
-.fm-av { display:flex; margin-top:-34px; margin-bottom:8px; border-radius:50%; border:3px solid var(--card); box-shadow:0 4px 12px rgba(0,0,0,.18); position:relative; z-index:1; }
+.fm-av { display:flex; margin-top:-34px; margin-bottom:8px; border-radius:50%; border:3px solid var(--card);  position:relative; z-index:1; }
 .fm-name { font-family:var(--serif); font-size:18px; font-weight:600; color:var(--text); line-height:1.2; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .fm-user { font-size:12.5px; color:var(--text-3); margin-top:2px; }
 .fm-stats { display:grid; grid-template-columns:repeat(3, 1fr); width:100%; margin:14px 0 12px; padding:10px 0; border-top:0.5px solid var(--border); border-bottom:0.5px solid var(--border); }
@@ -193,7 +193,7 @@
 .fa-ep-name { font-size:12.5px; color:var(--text-2); margin-top:3px; font-style:italic; }
 .fa-note { margin-top:8px; padding-inline-start:10px; border-inline-start:2px solid var(--border-olive); font-size:13px; font-style:italic; color:var(--text-2); line-height:1.55; }
 .fa-score { font-family:var(--bebas); font-size:22px; color:var(--olive-light); flex-shrink:0; letter-spacing:.3px; }
-.fa-poster { width:54px; height:81px; border-radius:7px; flex-shrink:0; box-shadow:0 3px 10px rgba(0,0,0,.14); }
+.fa-poster { width:54px; height:81px; border-radius:7px; flex-shrink:0; }
 @media(max-width:560px) { .fa-item { gap:11px; padding:11px 12px; } .fa-poster { width:44px; height:66px; } .fa-title { font-size:15.5px; } .fa-score { font-size:18px; } }
 /* Fanned poster stack{ position:relative; height:150px; padding:16px 16px 0; background:linear-gradient(180deg, var(--olive-faint), transparent); }
 
@@ -221,7 +221,7 @@
 .bl-more { width:52px; height:52px; border-radius:50%; margin-inline-start:-14px; border:2px solid var(--card); display:inline-flex; align-items:center; justify-content:center;
   background:var(--bg-3); color:var(--text-2); font-family:var(--bebas); font-size:18px; box-sizing:content-box; }
 .bl-surprise { display:flex; gap:18px; align-items:center; }
-.bl-surprise-poster { width:120px; aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; color:var(--text-3); box-shadow:0 10px 26px rgba(0,0,0,.3); }
+.bl-surprise-poster { width:120px; aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; color:var(--text-3); }
 .bl-surprise-poster img { width:100%; height:100%; object-fit:cover; }
 .bl-surprise-info { display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; }
 .bl-surprise-info b { font-family:var(--serif); font-size:22px; font-weight:600; color:var(--text); line-height:1.2; overflow-wrap:anywhere; }
@@ -349,7 +349,7 @@
 .cp-hero { position:relative; display:flex; gap:20px; align-items:center; padding:20px; border-radius:var(--radius-lg); overflow:hidden; margin-bottom:14px; border:0.5px solid var(--border); isolation:isolate; }
 .cp-hero-bg { position:absolute; inset:-30px; z-index:-2; background-size:cover; background-position:center 30%; filter:blur(24px) saturate(1.2) brightness(.55); transform:scale(1.1); }
 .cp-hero::after { content:''; position:absolute; inset:0; z-index:-1; background:linear-gradient(100deg, rgba(10,18,12,.8), rgba(10,18,12,.35)); }
-.cp-hero-poster { width:100px; aspect-ratio:2/3; border-radius:9px; flex-shrink:0; box-shadow:0 10px 26px rgba(0,0,0,.4); }
+.cp-hero-poster { width:100px; aspect-ratio:2/3; border-radius:9px; flex-shrink:0; }
 .cp-hero-info { min-width:0; color:#fff; }
 .cp-hero-title { font-family:var(--serif); font-size:clamp(21px, 4.8vw, 30px); font-weight:600; line-height:1.15; margin-bottom:8px; color:#fff; }
 .cp-hero-title span { color:rgba(255,255,255,.65); }
@@ -1619,7 +1619,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _frAuthKnown = true;
     if (q.get('with')) _cmpWith = [q.get('with')];          // from a profile's taste match pill
     setSocialSection(_socSection, { keepPoll: true, poll: q.get('poll'), rec: q.get('rec'), box: q.get('box'), ep: q.get('ep'), night: q.get('night'), ch: q.get('ch'), noScroll: true });
-    if (q.get('new') && _socSection === 'polls' && user) {      // (+) → New poll, from another page
+    if (q.get('new') && _socSection === 'polls' && user) { // (+) → New poll, from another page
       const url = new URL(location.href); url.searchParams.delete('new');
       history.replaceState(history.state, '', url.pathname + url.search);
       MSSPolls.create();
