@@ -237,6 +237,19 @@
         </div>
 
         <div class="settings-section fade-up fade-up-1">
+          <div class="settings-title">Screensaver</div>
+          <div class="field-row" style="margin-bottom:0">
+            <div class="push-row">
+              <div class="push-text">
+                <div class="push-name" id="ssLabel">Bouncing logo</div>
+                <div class="push-sub" id="ssDesc">Leave MyScreenFolio alone for a while (3 minutes on a computer, 1 on a phone) and the logo bounces around the screen. Any move or tap brings you straight back. Just for this device.</div>
+              </div>
+              <button type="button" class="push-switch" id="ssSwitch" role="switch" aria-checked="true" aria-labelledby="ssLabel" aria-describedby="ssDesc" title="Screensaver" onclick="toggleScreensaverSetting()"><span aria-hidden="true"></span></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section fade-up fade-up-1">
           <div class="settings-title">Share Profile</div>
           <div class="field-row">
             <div class="field-label">Your Profile Link</div>
@@ -731,6 +744,19 @@ function toggleNotifPopupsSetting() {
   showToast(on ? 'Notification alerts on.' : 'Alerts off — new notifications will just show on the bell.');
 }
 document.addEventListener('DOMContentLoaded', refreshNotifPopupsSetting);
+
+/* ── Screensaver (mssIdle / js/screensaver.js) — on by default, per device ── */
+function refreshScreensaverSetting() {
+  const sw = document.getElementById('ssSwitch');
+  if (sw) sw.setAttribute('aria-checked', String(mssScreensaverOn()));
+}
+function toggleScreensaverSetting() {
+  const on = !mssScreensaverOn();
+  mssSetScreensaver(on);
+  refreshScreensaverSetting();
+  showToast(on ? 'Screensaver on.' : 'Screensaver off on this device.');
+}
+document.addEventListener('DOMContentLoaded', refreshScreensaverSetting);
 
 /* ── Language (MSSLang, config.js + MSSI18n, i18n.js) ──
    Languages with a full site translation first; every other TMDB language
