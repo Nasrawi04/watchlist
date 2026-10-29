@@ -76,7 +76,7 @@ var _rtProfile = null, _rtAll = [];
 var _rtView = localStorage.getItem('rt_view') || 'list';
 var _rtItems = function(){ return MSSCurve.rated(_rtAll).filter(function(e){ return MSSCurve.of(e) === _rtRange.key; }); };
 
-window.addEventListener('pageshow', function(ev){ if (ev.persisted) location.reload(); });   // back/forward cache → fresh data
+window.addEventListener('pageshow', function(ev){ if (ev.persisted && mssDataChangedSince(window._mssPageAt)) location.reload(); });   // back/forward cache → fresh data, only if something changed
 
 SF.register('rt', {
   base: _rtItems,
@@ -173,7 +173,11 @@ function _rtRender() {
   mssSkeleton.shape('rt', { n: Math.min(shown.length, 12) });
   if (!shown.length) {
     grid.className = '';
-    grid.innerHTML = '<div class="lv-empty">' + (q ? 'Nothing matches “' + escHTML(q) + '”.' : all.length ? 'Nothing here matches these filters.' : 'No titles in this range yet.') + '</div>';
+    grid.innerHTML = q ? mssEmpty({ art: 'search', title: 'No luck with “' + q + '”', text: 'Nothing here matches. Try another title, a year, or check the spelling.',
+        actions: [{ label: 'Clear search', icon: 'x', onclick: "SF._search('rt', '', true)" }] })
+      : all.length ? mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('rt', 'all'); SF.refresh('rt', 'all')", primary: true }] })
+      : mssEmpty({ art: 'watched', title: 'No titles in this range yet', text: 'Nothing you’ve rated lands here so far. Give it time — and a few more ratings.' });
     return;
   }
   // numbered when sorted by score (Highest / Lowest)
