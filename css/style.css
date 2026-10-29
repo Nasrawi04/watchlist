@@ -3355,17 +3355,20 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .mss-join .confirm-title { font-size:22px; line-height:1.25; padding:0 12px; }
 .mss-join .confirm-msg { max-width:290px; }
 .mss-join-actions a { display:block; text-align:center; text-decoration:none; }
-/* ── Spotlight: a card you were sent to (title page → "In your library" → its category page, _catFocus) ── */
-.mss-spotlight { position:relative; z-index:2; border-radius:var(--radius); animation:mssSpotlight 3.4s var(--ease) both; }
+/* ── Spotlight: a card you were sent to (title page → "In your library" → its category page, _catFocus).
+   The ring is drawn INSIDE the card (an overlay on top of its poster and content), so a row that
+   clips its cards, or the card's own pieces, can never hide part of it. ── */
+.mss-spotlight { position:relative; }
+.mss-spotlight::after { content:''; position:absolute; inset:0; z-index:5; border-radius:inherit; pointer-events:none;
+  animation:mssSpotlight 3.4s var(--ease) both; }
 @keyframes mssSpotlight {
-  0%   { box-shadow:0 0 0 0 transparent; }
-  12%  { box-shadow:0 0 0 3px var(--olive-light), 0 0 0 10px var(--olive-glow), 0 14px 40px var(--olive-glow); }
-  30%  { box-shadow:0 0 0 3px var(--olive-light), 0 0 0 4px transparent, 0 10px 30px var(--olive-glow); }
-  48%  { box-shadow:0 0 0 3px var(--olive-light), 0 0 0 10px var(--olive-glow), 0 14px 40px var(--olive-glow); }
-  80%  { box-shadow:0 0 0 2px var(--olive-light), 0 0 0 0 transparent; }
-  100% { box-shadow:0 0 0 0 transparent; }
+  0%       { box-shadow:inset 0 0 0 0 transparent; background:transparent; }
+  12%, 48% { box-shadow:inset 0 0 0 3px var(--olive-light), inset 0 0 28px var(--olive-glow); background:var(--olive-faint); }
+  30%      { box-shadow:inset 0 0 0 3px var(--olive-light), inset 0 0 0 transparent; background:transparent; }
+  80%      { box-shadow:inset 0 0 0 2px var(--olive-light), inset 0 0 0 transparent; background:transparent; }
+  100%     { box-shadow:inset 0 0 0 0 transparent; background:transparent; }
 }
-@media (prefers-reduced-motion:reduce) { .mss-spotlight { animation:none; outline:2px solid var(--olive-light); outline-offset:2px; } }
+@media (prefers-reduced-motion:reduce) { .mss-spotlight::after { animation:none; box-shadow:inset 0 0 0 2px var(--olive-light); } }
 /* ── Just watched (mssWatchedPopup, config.js) — centred on every screen ── */
 .mss-done-overlay { position:fixed; inset:0; z-index:2000; display:none; align-items:center; justify-content:center; padding:20px;
   background:var(--popup-backdrop); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
