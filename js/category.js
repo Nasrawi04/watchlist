@@ -1002,70 +1002,24 @@ async function markMovieComplete(event, id) {
     entry.status = 'completed';
     entry.completed_date = isoDate;
     renderSections();
-    _showRateNowPopup(entry.title, id);
+    _showRateNowPopup(entry);
   } catch(e) {
     showToast('Error marking complete.', 'err');
   }
 }
 
-function _showRateNowPopup(title, id) {
-  let overlay = document.getElementById('_rateNowOverlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = '_rateNowOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:950;background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px;';
-    overlay.innerHTML = `
-      <div style="background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);padding:2rem 1.75rem;max-width:400px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
-        <div style="width:64px;height:64px;border-radius:50%;background:var(--olive-faint);border:1.5px solid var(--border-olive);display:flex;align-items:center;justify-content:center;">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--olive-light)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
-        </div>
-        <div id="_rateNowTitle" style="font-family:var(--serif);font-size:26px;font-weight:500;color:var(--text);"></div>
-        <div style="font-size:13px;color:var(--text-2);line-height:1.6;max-width:260px;">Add your ratings to rank it in your collection.</div>
-        <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:4px;">
-          <button id="_rateNowBtn" style="width:100%;padding:12px;background:var(--olive);border:1.5px solid var(--olive-light);box-shadow:3px 3px 0 var(--olive-2);border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">Rate Now</button>
-          <button onclick="document.getElementById('_rateNowOverlay').remove()" style="width:100%;padding:11px;background:transparent;border:1.5px solid var(--border-2);box-shadow:2px 2px 0 var(--border-2);border-radius:var(--radius-sm);color:var(--text-2);font-size:14px;font-weight:500;cursor:pointer;font-family:var(--sans);">Later</button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-  }
-  document.getElementById('_rateNowTitle').textContent = `Finished "${title}"`;
-  document.getElementById('_rateNowBtn').onclick = () => {
-    overlay.remove();
-    sessionStorage.setItem('detailId', id);
-    sessionStorage.setItem('detailFrom', currentFile());
-    window.location.href = 'detail.html';
-  };
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-}
-
-function showFinishedBanner(entry) {
-  // Remove any existing banner
-  document.getElementById('finishedBanner')?.remove();
-
-  const banner = document.createElement('div');
-  banner.id = 'finishedBanner';
-  banner.style.cssText = `
-    position:fixed;bottom:88px;left:50%;transform:translateX(-50%);
-    background:var(--bg-3);border:1.5px solid var(--olive-light);box-shadow:3px 3px 0 var(--olive);
-    border-radius:var(--radius);padding:14px 20px;z-index:800;
-    display:flex;align-items:center;gap:14px;white-space:nowrap;
-    animation:slideUp .25s var(--ease);
-  `;
-  banner.innerHTML = `
-    <div>
-      <div style="font-size:14px;font-weight:600;color:var(--text)">Finished "${escHTML(entry.title)}"!</div>
-      <div style="font-size:12px;color:var(--text-2);margin-top:2px">Mark as watched and add ratings?</div>
-    </div>
-    <button onclick="goToDetail('${entry.id}','${currentFile()}')" style="
-      padding:8px 16px;background:var(--olive);border:1.5px solid var(--olive-light);
-      box-shadow:2px 2px 0 var(--olive-2);border-radius:var(--radius-sm);
-      color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;
-    ">Rate &amp; Complete →</button>
-    <button onclick="this.closest('#finishedBanner').remove()" style="
-      padding:8px;background:transparent;border:none;color:var(--text-3);cursor:pointer;font-size:18px;
-    ">✕</button>`;
-  document.body.appendChild(banner);
-  setTimeout(() => banner.remove(), 8000);
+// Just finished → "Added to Watched" with Rate it (straight to the ratings on its Edit page) · Later.
+// Already rated (e.g. a rewatch) → just a toast.
+function _showRateNowPopup(entry) {
+  if (liveScore(entry) != null) { showToast(`Added to ${entry.status === 'ongoing' ? 'To Be Continued' : 'Watched'}.`); return; }
+  mssWatchedPopup(entry, {
+    onRate: () => {
+      sessionStorage.setItem('detailId', entry.id);
+      sessionStorage.setItem('detailFrom', currentFile());
+      sessionStorage.setItem('detailScrollTo', 'ratings');
+      window.location.href = 'detail.html';
+    },
+  });
 }
 
 /* ════════ PAUSED ════════ */
@@ -1311,7 +1265,7 @@ async function chooseFinishStatus(status) {
     renderSections();
   } catch(e) { showToast('Error updating.', 'err'); return; }
   _finishShowId = null; _finishEntry = null;
-  _showRateNowPopup(entry.title, id);
+  _showRateNowPopup(entry);
 }
 
 function renderFavChips(ratings, cat) {
