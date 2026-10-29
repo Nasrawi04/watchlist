@@ -3101,9 +3101,9 @@ function _notifNightText(m, who) {
     case 'cancelled':   return `${who} cancelled ${t}`;
     case 'rescheduled': return `${who} moved ${t}${when ? ` to ${escHTML(when)}` : ''}`;
     case 'review':      return `${who} ${m.noted ? 'shared their take on' : 'rated'} <b translate="no">${escHTML(m.pick || 'the pick')}</b> from ${t}`;
-    case 'reminder':    return `${t} is today${time ? ` at ${escHTML(time)}` : ''}${m.pick ? ` — <b translate="no">${escHTML(m.pick)}</b>` : ' — time to vote!'}`;
+    case 'reminder':    return `${t} is today${time ? ` at ${escHTML(time)}` : ''}${m.pick ? ` — <b translate="no">${escHTML(m.pick)}</b>` : m.voting === false ? '' : ' — time to vote!'}`;
   }
-  return `${who} invited you to ${t}${when ? ` · ${escHTML(when)}` : ''}`;
+  return `${who} invited you to ${t}${m.pick ? ` to watch <b translate="no">${escHTML(m.pick)}</b>` : ''}${when ? ` · ${escHTML(when)}` : ''}`;
 }
 
 // A friend's episodes (047): one → "watched S2 · E5 of X";
