@@ -7738,3 +7738,16 @@ body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-ins
   .sf-search-go span { display:none; }
   .sf-search-row-split > :last-child :is(button, .sf-trigger) { min-height:50px; min-width:50px; }
 }
+/* ── Challenges: "You finished" the same size as Details; Delete red and as tall as Edit ── */
+.chf-foot .chf-done, .chf-foot .chf-info { box-sizing:border-box; min-height:38px; padding:7px 14px; font-size:13px; line-height:1.2; }
+.chf-foot .chf-done { font-weight:600; }
+.chf-own .rec-btn { box-sizing:border-box; min-height:38px; }
+.chf-own .rec-icon-x, .ch-head .rec-icon-x { box-sizing:border-box; width:38px; height:38px; min-height:38px; color:#c0392b; border-color:rgba(192,57,43,.45); }
+.ch-head .rec-icon-x { width:32px; height:32px; min-height:32px; }
+.chf-own .rec-icon-x:hover, .ch-head .rec-icon-x:hover { color:#fff; background:#c0392b; border-color:#c0392b; }
+[data-theme="dark"] :is(.chf-own, .ch-head) .rec-icon-x { color:#e5735f; border-color:rgba(229,115,95,.45); }
+/* "View ended challenges" */
+.ch-ended { display:flex; flex-direction:column; align-items:center; gap:14px; margin-top:22px; }
+.ch-ended > .chf-list, .ch-ended > .ch-list { width:100%; }
+.ch-ended-btn { min-height:40px; padding:8px 16px; font-size:13px; }
+.ch-ended-empty { color:var(--text-3); font-size:13px; text-align:center; padding:6px 12px 2px; }
