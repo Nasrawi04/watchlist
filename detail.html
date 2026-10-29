@@ -228,82 +228,16 @@
 }
 @media(max-width:600px){.rating-stepper-grid{gap:6px}}
 
-/* ── Completion popup ── */
-.completion-overlay{
-  position:fixed;inset:0;z-index:900;
-  background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
-  display:none;align-items:center;justify-content:center;padding:20px;
-}
-.completion-overlay.open{display:flex;animation:fadeIn .25s var(--ease);}
-.completion-card{
-  background:var(--bg-3);
-  border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive);
-  border-radius:var(--radius-lg);
-  padding:2.5rem 2rem;
-  max-width:380px;width:100%;
-  text-align:center;
-  display:flex;flex-direction:column;align-items:center;gap:12px;
-  animation:slideUp .28s var(--ease);
-}
-.completion-icon{
-  width:72px;height:72px;border-radius:50%;
-  background:var(--olive-faint);border:1.5px solid var(--border-olive);
-  display:flex;align-items:center;justify-content:center;margin-bottom:4px;
-}
-.completion-title{
-  font-family:var(--serif);font-size:32px;font-weight:500;
-  color:var(--text);letter-spacing:-0.5px;
-}
-.completion-sub{
-  font-size:14px;color:var(--text-2);line-height:1.6;
-  max-width:280px;
-}
-.completion-actions{display:flex;flex-direction:column;gap:10px;width:100%;margin-top:8px;}
-.completion-btn-primary{
-  width:100%;padding:13px;
-  background:var(--olive);border:1.5px solid var(--olive-light);
-  box-shadow:3px 3px 0 var(--olive-2);
-  border-radius:var(--radius-sm);color:#fff;
-  font-size:14px;font-weight:600;cursor:pointer;
-  transition:all var(--trans) var(--ease);
-}
-.completion-btn-primary:hover{background:var(--olive-2);}
-.completion-btn-primary:active{transform:translate(3px,3px);box-shadow:none;}
-.completion-btn-secondary{
-  width:100%;padding:12px;
-  background:transparent;border:1.5px solid var(--border-2);
-  box-shadow:2px 2px 0 var(--border-2);
-  border-radius:var(--radius-sm);color:var(--text-2);
-  font-size:14px;font-weight:500;cursor:pointer;
-  transition:all var(--trans) var(--ease);
-}
-.completion-btn-secondary:hover{border-color:var(--border-olive);box-shadow:2px 2px 0 var(--border-olive);color:var(--text);}
-.completion-btn-secondary:active{transform:translate(2px,2px);box-shadow:none;}
-
 @media(max-width:600px){
   .final-score-section{flex-direction:column;align-items:flex-start;gap:1rem}
   .final-score-num{font-size:56px}
   .rdrop-grid{grid-template-columns:1fr}
-  .completion-overlay { padding:16px; align-items:flex-end; }
-  .completion-card {
-    padding:1.75rem 1.25rem;
-    border-radius:var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-sm);
-    max-width:100%;
-    gap:10px;
-  }
-  .completion-icon { width:56px; height:56px; }
-  .completion-icon svg { width:36px; height:36px; }
-  .completion-title { font-size:26px; }
-  .completion-sub { font-size:13px; }
-  .completion-btn-primary { padding:11px; font-size:13px; }
-  .completion-btn-secondary { padding:10px; font-size:13px; }
 }
-@media(max-width:400px){
-  .completion-card { padding:1.25rem 1rem; gap:8px; }
-  .completion-title { font-size:22px; }
-  .completion-sub { font-size:12px; }
-}
+/* "Rate it" from the Watched popup: the ratings glow for a moment so you see where to start */
+#dRateCard { scroll-margin-top:calc(var(--page-pt, 90px) + 12px); }   /* clear of the fixed top bar */
+#dRateCard.mss-rate-here { animation:mssRateHere 1.6s var(--ease) .35s 1 both; }
+@keyframes mssRateHere { 0%,100% { box-shadow:0 0 0 0 transparent; } 30% { box-shadow:0 0 0 3px var(--olive-light), 0 0 30px var(--olive-glow); } }
+@media (prefers-reduced-motion:reduce) { #dRateCard.mss-rate-here { animation:none; } }
 .date-3box { display:flex; gap:8px; align-items:center; }
 .date-3box-input { margin:0 !important; }
 
@@ -899,7 +833,7 @@
       <!-- /det-row-2col: Progress + Notes & Favorites -->
 
       <!-- Ratings card — core and bonus side by side -->
-      <div class="det-card">
+      <div class="det-card" id="dRateCard">
         <div class="det-card-title">Rate This</div>
         <div class="det-ratings-cols">
           <div>
@@ -953,26 +887,6 @@
   </div><!-- /detailLayout -->
 
 
-</div>
-
-<!-- ═══ COMPLETION POPUP ═══ -->
-<div class="completion-overlay" id="completionOverlay">
-  <div class="completion-card">
-    <div class="completion-icon">
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--olive-light)">
-        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
-        <path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
-        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
-        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
-      </svg>
-    </div>
-    <div class="completion-title" id="completionTitle">Finished!</div>
-    <div class="completion-sub" id="completionSub">You completed this title. Give it your ratings to rank it in your collection.</div>
-    <div class="completion-actions">
-      <button class="completion-btn-primary" onclick="closeCompletionPopup()">Rate Now</button>
-      <button class="completion-btn-secondary" onclick="window.location.href='completed.html'">View Completed →</button>
-    </div>
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2292,6 +2206,9 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         document.getElementById('dProgressSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 300);
+    } else if (scrollTo === 'ratings') {
+      sessionStorage.removeItem('detailScrollTo');
+      setTimeout(_detRateHere, 300);
     } else if (scrollTo === 'notes') {
       sessionStorage.removeItem('detailScrollTo');
       setTimeout(() => {
@@ -2320,13 +2237,6 @@ function _setCommentsBtnCount(n) {
   const label = document.getElementById('dCommentsBtnLabel');
   if (label) label.textContent = n ? `Comments (${n})` : 'Comments';
 }
-
-// Close the completion popup on Escape
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
-  const completionOv = document.getElementById('completionOverlay');
-  if (completionOv && completionOv.classList.contains('open')) closeCompletionPopup();
-});
 
 // Reads an integer from an input and clamps it into [min, max] — guards
 // against negative episode/season numbers, an out-of-range runtime
@@ -2441,8 +2351,9 @@ async function doSave() {
     tmdb_type:     _pendingTmdbType,
   };
 
-  // Only show completion popup when transitioning INTO completed for the first time
+  // Just moved into Watched / To Be Continued, and not rated yet → the "Rate it" popup (already rated → straight back)
   const isNewlyCompleted = (status === 'completed' || status === 'ongoing') && _originalStatus !== 'completed' && _originalStatus !== 'ongoing';
+  const needsRating = isNewlyCompleted && liveScore({ ratings: ratingsWithType, cat }) == null;
 
   try {
     const savedMsg = payload.notes ? MSSEgg.savedMsg(egg, 'Saved!') : 'Saved!';
@@ -2460,27 +2371,22 @@ async function doSave() {
     return;
   }
 
-  if (isNewlyCompleted) {
-    showCompletionPopup(title);
+  if (needsRating) {
+    mssWatchedPopup({ title, poster_url: payload.poster_url, status }, {
+      onRate: _detRateHere,                                  // the ratings are right here — just take you to them
+      onLater: () => { window.location.href = _fromPage; },
+    });
   } else {
     setTimeout(() => window.location.href = _fromPage, 700);
   }
 }
 
-/* ── Completion popup ── */
-function showCompletionPopup(title) {
-  document.getElementById('completionTitle').textContent = `Finished "${title}"`;
-  document.getElementById('completionSub').textContent =
-    'Add your ratings to rank it in your collection.';
-  document.getElementById('completionOverlay').classList.add('open');
-  mssLockScroll('completion');
-}
-
-function closeCompletionPopup() {
-  document.getElementById('completionOverlay').classList.remove('open');
-  mssUnlockScroll('completion');
-  // Scroll to ratings section
-  document.querySelector('.ratings-wrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
+// Take you to the ratings on this page (from the Watched popup, or "Rate it" on a list page)
+function _detRateHere() {
+  const box = document.getElementById('dRateCard');
+  if (!box) return;
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  box.classList.remove('mss-rate-here'); void box.offsetWidth; box.classList.add('mss-rate-here');
 }
 
 /* ── Delete ── */
