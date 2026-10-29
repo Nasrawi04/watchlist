@@ -77,8 +77,8 @@ const MSSPolls = (() => {
   async function mount(target, u, o = {}) {
     el = target; user = u;
     if (!user) {
-      el.innerHTML = head(false) + `<div class="fr-empty"><div class="fr-empty-ic">${icon('poll', 26)}</div><div class="fr-empty-title">Polls with your friends</div>
-        <div class="fr-empty-text">Sign in to ask your friends — or everyone — what to watch next.</div></div>`;
+      el.innerHTML = head(false) + `<div class="mss-es">${mssArt('poll')}<div class="mss-es-title">Polls with your friends</div>
+        <div class="mss-es-text">Sign in to ask your friends — or everyone — what to watch next.</div></div>`;
       return;
     }
     if (o.poll) { focusId = o.poll; open[o.poll] = true; }
@@ -129,8 +129,8 @@ const MSSPolls = (() => {
     }[scope];
     feed.innerHTML = list.length
       ? `<div class="poll-list">${list.map(card).join('')}</div>${more ? `<div class="eg-more"><button type="button" class="dp-more" onclick="MSSPolls.more()">Show more</button></div>` : ''}`
-      : `<div class="fr-empty"><div class="fr-empty-ic">${icon('poll', 26)}</div><div class="fr-empty-title">${empty[0]}</div><div class="fr-empty-text">${empty[1]}</div>
-          <button type="button" class="btn-add-entry" style="margin:14px auto 0" onclick="MSSPolls.create()">${icon('plus', 15)} New Poll</button></div>`;
+      : `<div class="mss-es">${mssArt('poll')}<div class="mss-es-title">${empty[0]}</div><div class="mss-es-text">${empty[1]}</div>
+          <button type="button" class="mss-es-btn primary" style="margin-top:18px" onclick="MSSPolls.create()">${icon('plus', 15)} New Poll</button></div>`;
   }
   function setScope(k) {
     scope = k; focused = null;
@@ -531,8 +531,8 @@ const MSSShare = (() => {
       ${user ? `<div class="pn-toggle soc-toggle soc-toggle-sm" role="tablist" aria-label="Received or sent">${[['received', 'Received'], ['sent', 'Sent']].map(([k, l]) =>
         `<button type="button" class="pn-toggle-btn${box === k ? ' active' : ''}" role="tab" aria-selected="${box === k}" onclick="MSSShare._box('${k}')">${l}<span class="rec-box-dot" id="recDot-${k}" hidden></span></button>`).join('')}</div>` : ''}</div>`;
     if (!user) {
-      el.innerHTML = head + `<div class="fr-empty"><div class="fr-empty-ic">${icon('inbox', 26)}</div><div class="fr-empty-title">Titles from your friends</div>
-        <div class="fr-empty-text">Sign in to send friends something to watch — and see what they send you.</div></div>`;
+      el.innerHTML = head + `<div class="mss-es">${mssArt('inbox')}<div class="mss-es-title">Titles from your friends</div>
+        <div class="mss-es-text">Sign in to send friends something to watch — and see what they send you.</div></div>`;
       return;
     }
     el.innerHTML = head + `<div class="rec-chips" id="recChips" role="toolbar" aria-label="Show"></div>
@@ -597,8 +597,8 @@ const MSSShare = (() => {
     const chips = document.getElementById('recChips');
     if (chips) chips.innerHTML = recs.length ? KINDS.map(([k, l, ic]) => `<button type="button" class="rec-chip${kind === k ? ' active' : ''}" aria-pressed="${kind === k}" ${n(k) ? '' : 'disabled'} onclick="MSSShare._kind('${k}')">${icon(ic, 13)} ${l}<b>${n(k)}</b></button>`).join('') : '';
     if (!recs.length) {
-      list.innerHTML = `<div class="fr-empty"><div class="fr-empty-ic">${icon('inbox', 26)}</div><div class="fr-empty-title">${box === 'received' ? 'Your inbox is empty' : 'You haven’t shared anything yet'}</div>
-        <div class="fr-empty-text">${box === 'received' ? 'When a friend sends you something to watch, a title they watched or a list, it lands here.' : 'Press Recommend on any movie or show, Share on one of your own titles, or Share on a list.'}</div></div>`;
+      list.innerHTML = `<div class="mss-es">${mssArt('inbox')}<div class="mss-es-title">${box === 'received' ? 'Your inbox is empty' : 'You haven’t shared anything yet'}</div>
+        <div class="mss-es-text">${box === 'received' ? 'Nobody’s sent you a title yet. Send one first; they’ll get the hint.' : 'Press Recommend on any movie or show, Share on one of your own titles, or Share on a list.'}</div></div>`;
       return;
     }
     const shown = kind === 'all' ? recs : recs.filter(r => (r.kind || 'title') === kind);
