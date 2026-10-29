@@ -332,7 +332,10 @@ async function renderHome() {
   _egHome = { rated, rest, by, byTmdb: Object.fromEntries(shows.map(e => [e.tmdb_id, e])), shown: { rated: PAGE, rest: PAGE } };
   page.innerHTML = _egHomeHTML([epRows.length, rated.length, epRows.length ? '★ ' + fmt(avg(epRows.map(r => Number(r.score)))) : '—',
     top ? '★ ' + fmt(top.score) : '—'], top ? `Top: ${esc(topShow?.title || '')} S${top.season_number}·E${top.episode_number}` : 'Top episode',
-    rated.length || rest.length ? '' : `<div class="mss-empty">Shows you’re watching, taking a break from, waiting on or have watched appear here. Search above to see any show’s episode ratings.</div>`);
+    rated.length || rest.length ? '' : mssEmpty({ art: 'episodes', title: 'No shows here yet',
+      text: 'Shows you’re watching or have watched land here, with every episode scored. Meanwhile, see which episodes everyone else loved — search above, or start with one of these.',
+      actions: [{ label: 'Search a show', icon: 'search', onclick: "document.getElementById('egSearch').focus()", primary: true }, { label: 'Add a show', icon: 'plus', onclick: "openAddModal('tv')" }],
+      starter: { cat: 'tv', open: 'episodes', label: 'Popular shows · see their episode ratings' } }));
   mssSkeleton.shape('eg', { rated: Math.min(rated.length, PAGE), rest: Math.min(rest.length, PAGE) });
   drawHomeShows();
   let t = null;
@@ -348,7 +351,7 @@ async function renderHome() {
         const res = await tmdbFetch(`${TMDB_BASE}/search/tv?language=en-US&query=${encodeURIComponent(q)}`);
         if (document.getElementById('egSearch').value.trim() !== q) return;   // typed on since
         const results = res.ok ? ((await res.json()).results || []).filter(r => r.poster_path).slice(0, 16) : [];
-        box.innerHTML = results.length ? `<div class="eg-shows">${results.map(searchCardHTML).join('')}</div>` : `<div class="mss-empty">No shows match “${esc(q)}”.</div>`;
+        box.innerHTML = results.length ? `<div class="eg-shows">${results.map(searchCardHTML).join('')}</div>` : mssEmpty({ compact: true, art: 'search', title: `No luck with “${q}”`, text: 'Check the spelling, or try the original title. TMDB knows a lot, but not everything.' });
       } catch { box.innerHTML = ''; }
     }, MSS_SEARCH_MS);
   });
@@ -623,7 +626,7 @@ function gridHTML() {
 function graphHTML() {
   const pts = []; let i = 0;
   vis().forEach((sn, si) => (S.eps[sn] || []).forEach(ep => { i++; const v = scoreOf(sn, ep); if (v != null) pts.push({ x: i, v, s: sn, n: ep.n, si }); }));
-  if (!pts.length) return `<div class="mss-empty">Nothing to plot for this source yet.</div>`;
+  if (!pts.length) return mssEmpty({ compact: true, art: 'episodes', title: 'Nothing to plot yet', text: 'No scores for this source so far. Try another source above.' });
   // Phones: drawn at real size (about 13px per episode) and scrolled sideways, so it stays readable
   const narrow = matchMedia('(max-width:640px)').matches;
   const W = narrow ? Math.max(560, i * 13) : 900, H = narrow ? 300 : 340, L = 34, R = 10, T = 12, B = 28, total = i;
