@@ -26,8 +26,8 @@ body { background:var(--bg); min-height:100dvh; }
   min-height:clamp(240px, calc(100svh - 500px), 440px); }   /* phones: taller wall, and Sign in still fits on one screen */
 @media (min-width:960px) { .au-stage { padding:48px 56px; min-height:100dvh; position:sticky; top:0; height:100dvh; } }
 .au-wall { position:absolute; inset:-12% -10%; z-index:-2; display:grid; grid-template-columns:repeat(5, 1fr); gap:12px;
-  transform:rotate(-8deg) scale(1.05); opacity:.55; }
-@media (min-width:960px) { .au-wall { grid-template-columns:repeat(4, 1fr); gap:16px; opacity:.6; } }
+  transform:rotate(-8deg) scale(1.05); opacity:.78; }
+@media (min-width:960px) { .au-wall { grid-template-columns:repeat(4, 1fr); gap:16px; opacity:.8; } }
 .au-col { display:flex; flex-direction:column; gap:12px; will-change:transform; }   /* moved by the script (drift + drag) */
 @media (min-width:960px) { .au-col { gap:16px; } }
 .au-tile { position:relative; display:block; aspect-ratio:2/3; border-radius:10px; overflow:hidden; border:0.5px solid rgba(255,255,255,.12);
@@ -47,11 +47,11 @@ a.au-tile:hover::after { opacity:1; }
 .au-tile img { width:100%; height:100%; object-fit:cover; display:block; opacity:0; transition:opacity .6s ease; }
 .au-tile img.in { opacity:1; }
 .au-stage::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
-  background:linear-gradient(180deg, rgba(11,11,15,.55) 0%, rgba(11,11,15,.2) 35%, rgba(11,11,15,.92) 78%, #0B0B0F 100%),
+  background:linear-gradient(180deg, rgba(11,11,15,.45) 0%, rgba(11,11,15,.08) 30%, rgba(11,11,15,.88) 76%, #0B0B0F 100%),
              radial-gradient(70% 55% at 15% 100%, rgba(74,103,65,.45), transparent 70%); }
 @media (min-width:960px) {
-  .au-stage::before { background:linear-gradient(90deg, rgba(11,11,15,.2), rgba(11,11,15,.55) 60%, rgba(11,11,15,.85)),
-      linear-gradient(180deg, rgba(11,11,15,.7), transparent 30%, transparent 55%, #0B0B0F 96%),
+  .au-stage::before { background:linear-gradient(90deg, rgba(11,11,15,.08), rgba(11,11,15,.3) 60%, rgba(11,11,15,.7)),
+      linear-gradient(180deg, rgba(11,11,15,.55), transparent 26%, transparent 50%, #0B0B0F 94%),
       radial-gradient(60% 50% at 10% 95%, rgba(74,103,65,.5), transparent 70%); }
 }
 .au-brand { position:absolute; top:22px; left:22px; display:flex; align-items:center; gap:12px; text-decoration:none; color:#EDEDED; }
@@ -257,7 +257,7 @@ a.au-tile:hover::after { opacity:1; }
             </div>
             <div class="au-box">
               <svg id="siIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
-              <input class="au-input" id="siEmail" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email">
+              <input class="au-input" id="siEmail" type="email" maxlength="254" placeholder="you@example.com" autocomplete="email" inputmode="email" data-mask="email">
             </div>
           </div>
           <div class="au-field">
@@ -287,7 +287,7 @@ a.au-tile:hover::after { opacity:1; }
             <div class="au-box">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
               <input class="au-input" id="suUser" type="text" maxlength="20" placeholder="e.g. movienight_sam" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="suUserHint"
-                     oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase(); auUserHint()">
+                     data-mask="username" oninput="auUserHint()">
             </div>
             <div class="au-hint" id="suUserHint">3–20 letters, numbers or _</div>
           </div>
@@ -295,7 +295,7 @@ a.au-tile:hover::after { opacity:1; }
             <label class="au-label" for="suEmail">Email</label>
             <div class="au-box">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
-              <input class="au-input" id="suEmail" type="email" maxlength="254" placeholder="you@example.com" autocomplete="email" inputmode="email" oninput="if ($('suPass').value) auPassSU()">
+              <input class="au-input" id="suEmail" type="email" maxlength="254" placeholder="you@example.com" autocomplete="email" inputmode="email" data-mask="email" oninput="if ($('suPass').value) auPassSU()">
             </div>
           </div>
           <div class="au-field">
@@ -325,7 +325,7 @@ a.au-tile:hover::after { opacity:1; }
               <label class="au-label" for="fpEmail">Email</label>
               <div class="au-box">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
-                <input class="au-input" id="fpEmail" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email">
+                <input class="au-input" id="fpEmail" type="email" maxlength="254" placeholder="you@example.com" autocomplete="email" inputmode="email" data-mask="email">
               </div>
             </div>
             <button class="au-btn" id="btnForgot" type="submit"><span>Send reset link</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
@@ -392,7 +392,9 @@ a.au-tile:hover::after { opacity:1; }
   const wall = document.getElementById('auWall');
   const wide = matchMedia('(min-width:960px)').matches, per = 7;
   const tones = ['#2F4A2A', '#6B4A22', '#3B2347', '#22384F', '#1E4A47', '#4A2A22', '#33442A'];
-  const IMG = 'https://image.tmdb.org/t/p/w185', KEY = 'msf_wall';
+  // Sharp on every screen: the browser picks the size it needs (phones ~w342, retina laptops w500–w780)
+  const IMG = 'https://image.tmdb.org/t/p/', KEY = 'msf_wall';
+  const pic = p => `src="${IMG}w342${p}" srcset="${IMG}w342${p} 342w, ${IMG}w500${p} 500w, ${IMG}w780${p} 780w" sizes="(min-width:960px) 20vw, 30vw"`;
   const okPath = p => typeof p === 'string' && /^\/[A-Za-z0-9_-]{5,64}\.(jpg|jpeg|png)$/.test(p);
   const clean = list => (Array.isArray(list) ? list : [])
     .filter(t => t && okPath(t.poster) && /^\d{1,9}$/.test(String(t.id)) && (t.type === 'movie' || t.type === 'tv'));
@@ -468,7 +470,7 @@ a.au-tile:hover::after { opacity:1; }
       const tiles = Array.from({ length: per * 2 }, (_, i) => {
         const t = col.length ? col[i % per % col.length] : null, g = tones[(c * 3 + i) % tones.length];
         return t
-          ? `<a class="au-tile" style="--g:${g}" href="title.html?type=${t.type}&id=${t.id}&from=wall" tabindex="-1" data-name="${escHTML(t.title || '')}"><img src="${IMG}${t.poster}" alt="" decoding="async" onload="this.classList.add('in')"></a>`
+          ? `<a class="au-tile" style="--g:${g}" href="title.html?type=${t.type}&id=${t.id}&from=wall" tabindex="-1" data-name="${escHTML(t.title || '')}"><img ${pic(t.poster)} alt="" decoding="async" onload="this.classList.add('in')"></a>`
           : `<div class="au-tile" style="--g:${g}"></div>`;
       }).join('');
       return `<div class="au-col">${tiles}</div>`;
@@ -624,6 +626,8 @@ function setSIMode(mode) {
   input.autocomplete = email ? 'email' : 'username';
   input.inputMode = email ? 'email' : 'text';
   input.autocapitalize = 'none';
+  input.dataset.mask = email ? 'email' : 'username';      // usernames: lowercase letters, numbers and _ only
+  input.maxLength = email ? 254 : 40;                      // (older accounts can have up to 40)
   $('siLabel').textContent = email ? 'Email' : 'Username';
   $('siIcon').innerHTML = email ? '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>' : '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>';
   input.value = '';
@@ -644,7 +648,7 @@ async function doSignIn(e) {
   _auBtn('btnSignIn', 'Signing in…', true);
   const again = () => _auBtn('btnSignIn', 'Let’s go', false);
 
-  let email = identifier;
+  let email = mode === 'email' ? identifier.toLowerCase() : identifier;
   // Username → the email, only if the password is right (014 SQL) — wrong password and
   // unknown username get the same NULL answer.
   if (mode === 'username') {
@@ -671,7 +675,7 @@ async function doSignIn(e) {
 async function doSignUp(e) {
   e.preventDefault();
   const username = $('suUser').value.trim();
-  const email    = $('suEmail').value.trim();
+  const email    = $('suEmail').value.trim().toLowerCase();
   const pass     = $('suPass').value;
 
   if (username.length < 3)      { showErr('suError', 'Your username needs at least 3 characters.'); return; }
@@ -711,7 +715,7 @@ async function doSignUp(e) {
 /* ── Forgot Password ── */
 async function doForgotPassword(e) {
   e.preventDefault();
-  const email = $('fpEmail').value.trim();
+  const email = $('fpEmail').value.trim().toLowerCase();
   if (!email) { showErr('fpError', 'Please enter your email.'); return; }
   if (!EMAIL_RE.test(email)) { showErr('fpError', 'That email doesn’t look right.'); return; }
   showErr('fpError', '');
