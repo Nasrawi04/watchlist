@@ -5464,24 +5464,18 @@ html[data-theme="light"] {
    transition:opacity .3s, transform .3s; }
 .mss-slow.show { opacity:1; transform:translate(-50%, 0); }
 .mss-slow span { transition:opacity .25s; }
-/* The MSF logo as the loader: a faint outline of it, filling up with the real logo left to right,
-   then a quick shine, over and over (reduced motion: just the logo) */
-.mss-slow-logo { position:relative; flex-shrink:0; width:46px; aspect-ratio:507 / 320; }
-.mss-slow-logo::before, .mss-slow-logo::after { content:''; position:absolute; inset:0; }
-.mss-slow-logo::before { background:var(--text-3); opacity:.28;
-  -webkit-mask:url(../icons/logo-nav.png) center / contain no-repeat; mask:url(../icons/logo-nav.png) center / contain no-repeat; }
-.mss-slow-logo::after { background:linear-gradient(105deg, transparent 38%, rgba(255,255,255,.55) 50%, transparent 62%) 160% 0 / 250% 100% no-repeat, url(../icons/logo-nav.png) center / contain no-repeat;
-  -webkit-mask:url(../icons/logo-nav.png) center / contain no-repeat; mask:url(../icons/logo-nav.png) center / contain no-repeat;
-  animation:mssLogoFill 1.8s cubic-bezier(.5,0,.3,1) infinite; }
-@keyframes mssLogoFill {
-  0%   { clip-path:inset(0 100% 0 0); background-position:160% 0, center; }
-  55%  { clip-path:inset(0 0 0 0);    background-position:160% 0, center; }
-  80%  { clip-path:inset(0 0 0 0);    background-position:-60% 0, center; opacity:1; }
-  100% { clip-path:inset(0 0 0 0);    background-position:-60% 0, center; opacity:0; }
-}
+/* The MSF logo as the loader: it turns round like a coin (on its upright axis — a wide logo
+   spinning flat would wobble the chip), pausing a moment face-on each turn. Two faces, so it
+   never shows back-to-front (reduced motion: still) */
+.mss-slow-logo { position:relative; flex-shrink:0; width:46px; aspect-ratio:507 / 320; transform-style:preserve-3d;
+  animation:mssLogoTurn 1.8s cubic-bezier(.6,0,.35,1) infinite; }
+.mss-slow-logo::before, .mss-slow-logo::after { content:''; position:absolute; inset:0; background:url(../icons/logo-nav.png) center / contain no-repeat;
+  -webkit-backface-visibility:hidden; backface-visibility:hidden; }
+.mss-slow-logo::after { transform:rotateY(180deg); }
+@keyframes mssLogoTurn { 0%, 20% { transform:perspective(160px) rotateY(0deg); } 100% { transform:perspective(160px) rotateY(360deg); } }
 @media(max-width:1199px) { .mss-slow { bottom:calc(126px + env(safe-area-inset-bottom)); } }
 @media(prefers-reduced-motion:reduce) {
-  .mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av), .page-loading::before, .page-loading::after, .skel, .skel-txt, .skel-ghost, .page-loading *, .mss-arrive, .mss-arrive *, .mss-slow-logo::after { animation:none !important; }
+  .mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av), .page-loading::before, .page-loading::after, .skel, .skel-txt, .skel-ghost, .page-loading *, .mss-arrive, .mss-arrive *, .mss-slow-logo { animation:none !important; }
 }
 /* ── Right-to-left content language (MSSLang, config.js — Arabic, Hebrew,
    Persian, Urdu, Kurdish): each block of TMDB text (titles, overviews,
