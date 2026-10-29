@@ -526,7 +526,7 @@ let _tdUser = null, _tdType = null, _tdId = null, _tdDetail = null, _tdOwnEntry 
 // bfcache with stale data (e.g. this title's own-entry status after
 // adding it to the library) instead of re-running this page's scripts.
 window.addEventListener('pageshow', (event) => {
-  if (event.persisted) location.reload();
+  if (event.persisted && mssDataChangedSince(window._mssPageAt)) location.reload();   // only if something changed since (config.js)
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1532,7 +1532,7 @@ function _tdRenderNotes() {
   const count = document.getElementById('tdNotesCount');
   if (count) count.textContent = _tdNotesRaw.length || '';
   if (!_tdNotesRaw.length) {
-    wrap.innerHTML = '<div class="td-notes-empty">No notes yet — be the first to leave one on your entry.</div>';
+    wrap.innerHTML = mssEmpty({ compact: true, art: 'notes', title: 'No notes yet', text: 'Nobody’s said anything about this one. Add it to your library and leave the first note.' });
     return;
   }
 
@@ -1746,7 +1746,7 @@ async function _replyLoad() {
 function _replyRenderList() {
   const listEl = document.getElementById('replyList');
   if (!_replyRaw.length) {
-    listEl.innerHTML = '<div class="td-notes-empty">No replies yet — be the first to say something.</div>';
+    listEl.innerHTML = mssEmpty({ compact: true, art: 'chat', title: 'No replies yet', text: 'Quiet in here. Be the first to say something.' });
     return;
   }
   const sorted = [..._replyRaw].sort((a, b) => {
