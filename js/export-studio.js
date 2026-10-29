@@ -155,9 +155,13 @@ const MSSStudio = (() => {
     d?.seasons.forEach(sn => sn.rows.forEach(r => rows.push([d.show.title, sn.n, r.e, r.name, r.score.toFixed(1), r.band, r.tags.join('; '), ...(S.include.notes ? [r.note] : []), (r.at || '').slice(0, 10)])));
     return '\uFEFF' + rows.map(r => r.map(q).join(',')).join('\r\n');
   }
+  // Nothing to show on the preview page: a small picture + what to do, in the page's own colours
+  function pvEmpty(art, title, text) {
+    return `<div class="xs-pv-empty">${mssArt(art)}<b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div>`;
+  }
   // PDF preview: its first page, the chart (drawn by drawSide into #xsEpPv)
   function epPreviewHTML() {
-    if (!epData()) return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in"><div class="xs-pv-empty">${S.epAll ? 'Rate some episodes of a show first — on its Episodes page.' : 'Loading your episode ratings…'}</div></div></div>`;
+    if (!epData()) return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in">${S.epAll ? pvEmpty('episodes', 'No episodes rated yet', 'Rate a few episodes of a show — on its Episodes page — and its chart lands here.') : `<div class="xs-pv-empty"><span>Loading your episode ratings…</span></div>`}</div></div>`;
     return epSt() ? '<canvas id="xsEpPv" class="xs-img xs-ep-a4" role="img" aria-label="Preview of the first page"></canvas>'
       : `<div class="xs-loading">${S.epSt?.id === S.epShow ? 'Not linked to TMDB — the PDF lists your rated episodes without the chart.' : 'Getting the episodes…'}</div>`;
   }
@@ -461,7 +465,12 @@ const MSSStudio = (() => {
       ${S.what === 'list' && S.list?.description ? `<div class="xs-pv-desc">${esc(S.list.description)}</div>` : ''}
       <div class="xs-pv-stats">${st.map(x => `<span><b${x.word ? ' class="word"' : ''}>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</div>
       ${S.group && !single() && list[0] ? `<div class="xs-pv-group">${esc(CAT_META?.[list[0].cat]?.label || '')}</div>` : ''}
-      ${list.slice(0, 3).map(card).join('') || `<div class="xs-pv-empty">${S.what === 'picked' ? 'Tick some titles to see them here.' : S.what === 'list' ? (S.list ? 'Loading the list…' : 'Choose a list to see it here.') : 'Nothing here yet — pick something else to export.'}</div>`}
+      ${list.slice(0, 3).map(card).join('') || (S.what === 'picked' ? pvEmpty('lists', 'Nothing picked yet', 'Tick the titles you want and they show up here.')
+        : S.what === 'list' ? (S.list ? `<div class="xs-pv-empty"><span>Loading the list…</span></div>` : pvEmpty('lists', 'Choose a list', 'Pick one of your lists (or one shared with you) to export it.'))
+        : S.cat && S.cat !== 'all' && S.all.some(WHAT[S.what]?.test || (() => false)) ? pvEmpty('filter', `No ${(l => /^TV /.test(l) ? 'TV ' + l.slice(3).toLowerCase() : l.toLowerCase())(CAT_META?.[S.cat]?.label || 'titles')} here`, 'Try another category, or All.')
+        : pvEmpty({ watched: 'watched', watchlist: 'watchlist', watching: 'watching' }[S.what] || 'watchlist',
+            { watched: 'Nothing watched yet', watchlist: 'Your watchlist is empty', watching: 'Nothing on screen right now' }[S.what] || 'Nothing here yet',
+            { watched: 'Finish something and it’s ready to export — ranked, rated and looking good.', watchlist: 'Add a few titles and you can share the list of everything you want to see.', watching: 'Start something and you can export what you’re in the middle of.' }[S.what] || 'Pick something else to export.'))}
       ${list.length > 3 ? `<div class="xs-pv-more">+ ${list.length - 3} more ${list.length - 3 === 1 ? 'title' : 'titles'}</div>` : ''}
     </div></div>`;
   }
@@ -474,7 +483,7 @@ const MSSStudio = (() => {
   // The year in review's first page, in the PDF's look
   function yearPreviewHTML() {
     const yv = yearData(), who = S.o.who || {};
-    if (!yv) return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in"><div class="xs-pv-empty">Nothing finished in that year.</div></div></div>`;
+    if (!yv) return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in">${pvEmpty('watched', 'Nothing finished that year', 'Pick another year — or go finish something.')}</div></div>`;
     const mx = Math.max(...yv.months, 1);
     return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in">
       <div class="xs-pv-top"><span class="xs-pv-wm">MY<u>SCREEN</u>FOLIO</span><span>${esc(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))}</span></div>
@@ -490,7 +499,7 @@ const MSSStudio = (() => {
   // The taste profile's first page, in the PDF's look
   function tastePreviewHTML() {
     const t = taste(), who = S.o.who || {};
-    if (!t) return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in"><div class="xs-pv-empty">Rate a few titles first — your taste is worked out from your scores.</div></div></div>`;
+    if (!t) return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in">${pvEmpty('person', 'Your taste is a mystery (for now)', 'Rate a few titles and we’ll work out what you love from your scores.')}</div></div>`;
     const bar = (l, v, n, tag) => `<div class="xs-tp-row"><b>${esc(l)}</b><i><u style="width:${v * 10}%"></u></i><em>${v.toFixed(2)}</em><small>${n} ${n === 1 ? 'title' : 'titles'}</small>${tag ? `<span>${tag}</span>` : ''}</div>`;
     return `<div class="xs-page xs-pv-${S.theme}" aria-hidden="true"><div class="xs-pv-in">
       <div class="xs-pv-top"><span class="xs-pv-wm">MY<u>SCREEN</u>FOLIO</span><span>${esc(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))}</span></div>
