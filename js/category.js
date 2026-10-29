@@ -230,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     _catSearchBox();
     await renderPage();
+    _catFocus();
     // Check if we arrived here from "Add to Watchlist" in profile-view
     var _addTitle = sessionStorage.getItem('addModalTitle');
     var _addCat   = sessionStorage.getItem('addModalCat');
@@ -443,6 +444,33 @@ function renderSections(
     if (typeof fitTitleYear === 'function') fitTitleYear(wrap);
   });
   mssScrollReturn(wrap);                   // back from a title's Edit page → where you were
+}
+
+/* ── ?focus=<entry id> (title page → "In your library"): open its section, bring the
+   card to the middle of the screen and spotlight it for a moment ── */
+function _catFocus() {
+  const url = new URL(location.href), id = url.searchParams.get('focus');
+  if (!id) return;
+  url.searchParams.delete('focus');
+  history.replaceState(history.state, '', url.pathname.split('/').pop() + url.search + url.hash);   // a refresh doesn't do it again
+  const e = _catAll.find(x => x.id === id);
+  if (!e) return;
+  const key = { watching: 'watching', up_next: 'watching', paused: 'watching', queue: 'queue', completed: 'completed', ongoing: 'ongoing', dropped: 'dropped' }[e.status];
+  if (collapsed[key]) toggleSection(key);
+  const hit = [...document.querySelectorAll(`#sec-${key} [onclick*="'${CSS.escape(id)}'"]`)][0];
+  const card = hit && (hit.closest('.cc-block, .w-card, .wg-card') || hit);
+  if (!card) { showToast('It’s in your library, but your filters are hiding it.'); return; }
+  setTimeout(() => {
+    // sideways into view in its row, then the middle of the space under the sticky header
+    const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    card.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+    const top = Math.max(document.querySelector('.cat-page-header')?.getBoundingClientRect().bottom || 0, document.getElementById('mainNav')?.getBoundingClientRect().bottom || 0);
+    const bar = document.querySelector('.bnav-bg'), bottom = bar?.getClientRects().length ? bar.getBoundingClientRect().top : innerHeight;   // the phone bottom bar
+    const r = card.getBoundingClientRect();
+    window.scrollTo({ top: scrollY + r.top - top - Math.max(16, (bottom - top - r.height) / 2), behavior });
+    card.classList.remove('mss-spotlight'); void card.offsetWidth; card.classList.add('mss-spotlight');
+    setTimeout(() => card.classList.remove('mss-spotlight'), 3600);
+  }, 250);
 }
 
 /* ════════ SECTION ACCORDION ════════ */
