@@ -179,7 +179,10 @@ function _catSearchBox() {
   const wrap = document.getElementById('sectionsWrap');
   if (!wrap || document.querySelector('.sf-search[data-scope="cat"]')) return;
   const label = CAT_META[window.PAGE_CAT]?.label || 'library';
-  wrap.insertAdjacentHTML('beforebegin', `<div class="sf-search-row fade-up fade-up-2">${SF.searchHTML('cat', `Search your ${label}…`)}</div>`);
+  // Anime / Cartoons: the Movies / TV Shows filter sits beside the search, like the Library's
+  const typed = window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
+  wrap.insertAdjacentHTML('beforebegin', `<div class="sf-search-row fade-up fade-up-2${typed ? ' sf-search-row-split' : ''}">${SF.searchHTML('cat', `Search your ${label}…`)}${typed ? '<div id="catTypeSlot"></div>' : ''}</div>`);
+  if (typed) _catTypeFilterBar();
 }
 
 function sortBar(section)          { return SF.bar('cat', section); }
@@ -287,7 +290,9 @@ function _catTypeFilterBar() {
   const isAnimated = window.PAGE_CAT === 'anime' || window.PAGE_CAT === 'cartoons';
   if (!isAnimated) { wrap.innerHTML = ''; return; }
   const label = _CAT_TYPES.find(t => t[0] === _catTypeFilter)[1];
-  wrap.innerHTML = `<div class="sf-trigger-row" style="margin:0 0 18px;justify-content:flex-start;">
+  const slot = document.getElementById('catTypeSlot');          // beside the search box, once it's drawn
+  if (slot) wrap.innerHTML = '';
+  (slot || wrap).innerHTML = `<div class="sf-trigger-row" style="${slot ? '' : 'margin:0 0 18px;'}justify-content:flex-start;">
     ${SF.typeFilterButton('openCatTypeFilterPopup()', _catTypeFilter !== 'all' ? label : 'Filter', _catTypeFilter !== 'all')}
   </div>`;
 }
