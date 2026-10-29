@@ -1021,16 +1021,14 @@ function renderListsPage() {
   let html = '';
 
   if (!totalLists) {
-    html = `<div class="empty" style="padding:4rem 1rem;text-align:center;">
-      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('layers', 44)}</div>
-      <div class="empty-text" style="color:var(--text-2);margin-bottom:.5rem;">No lists yet</div>
-      <div style="font-size:13px;color:var(--text-3);">Use "+ New List" to create a custom list — mix any movies, shows, anime, or cartoons together.</div>
-    </div>`;
+    html = mssEmpty({ art: 'lists', title: 'Start your first list', text: 'Top 10s, comfort rewatches, guilty pleasures — mix movies, shows, anime and cartoons. Number one is up to you.',
+      actions: [{ label: 'Create a list', icon: 'plus', onclick: "if(!mssGuestGate('make lists'))MSSListStudio.open()", primary: true }] });
   } else {
     const sorted = SF.list('listsOrder', 'all');
     html = sorted.length
       ? `${_listsReorder ? `<div class="lr-hint">${icon('info', 14)} Drag a card — or use the arrows — to change the order. Changes save automatically.</div>` : ''}<div class="lc-grid${_listsReorder ? ' lc-grid-reorder' : ''}" id="lcGridMine">${sorted.map((l, i, a) => myListCardHTML(l, i, a.length)).join('')}</div>`
-      : `<div style="padding:2rem 0;text-align:center;font-size:13px;color:var(--text-3);">No lists match these filters.</div>`;
+      : mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('listsOrder', 'all'); renderListsPage()", primary: true }] });
   }
 
   document.getElementById('listsPageContent').innerHTML = html;
@@ -1465,13 +1463,15 @@ function renderSocialLists() {
   if (!_listsFilterMode) mssSkeleton.shape('lists_c', { n: source.length });
   _renderListsToolbar(_listsFilterMode?.type === 'title' ? 'On This Title' : _listsFilterMode ? 'Search Results' : 'Community', source.length, baseCount ? SF.bar('social', 'all') : '');
   if (!baseCount) {
-    wrap.innerHTML = `<div class="empty" style="padding:3rem 1rem;text-align:center;">
-      <div class="empty-icon" style="opacity:.4;margin-bottom:1rem;">${icon('layers', 44)}</div>
-      <div class="empty-text" style="color:var(--text-2);">${_listsFilterMode ? 'No lists match that search.' : 'No public lists yet.'}</div>
-    </div>`;
+    wrap.innerHTML = _listsFilterMode
+      ? mssEmpty({ art: 'search', title: 'No lists here', text: 'Nothing public matches that search yet. Try someone else, or another title.',
+          actions: [{ label: 'Clear search', icon: 'x', onclick: '_llClearFilter()' }] })
+      : mssEmpty({ art: 'lists', title: 'No public lists yet', text: 'Somebody has to go first. Might as well be you.',
+          actions: [{ label: 'Create a list', icon: 'plus', onclick: "if(!mssGuestGate('make lists'))MSSListStudio.open()", primary: true }] });
     return;
   }
-  if (!source.length) { wrap.innerHTML = `<div class="mss-empty">No lists match these filters.</div>`; return; }
+  if (!source.length) { wrap.innerHTML = mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('social', 'all'); renderSocialLists()", primary: true }] }); return; }
   const sorted = source;
 
   wrap.innerHTML = `<div class="lc-grid">${sorted.map(l => {
