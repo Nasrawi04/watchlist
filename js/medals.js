@@ -23,6 +23,8 @@
                                        tails — the same for everyone.
    MSSMedal.memberFor(since)           how long they've been here — "12 days" → "5 months"
                                        → "1.5 years" (months as a decimal of a year)
+   MSSMedal.secret(key, o)             a secret medal (077) — Easter eggs; MSSMedal.SECRET
+                                       = { key: { name, about } } (e.g. 'perfect-corner')
    o = { size (px, default 120), locked (grey), label (aria-label — omit for
          decorative use next to a visible name) }
 
@@ -205,5 +207,35 @@ const MSSMedal = (() => {
     return `${t} ${y === 1 ? 'year' : 'years'}`;
   }
 
-  return { challenge, official, achievement, member, memberFor, ACH, LEVEL: LEVEL.slice(1).map(l => l[1]), OFFICIAL: Object.entries(OFF).map(([key, v]) => ({ key, name: v.name })) };
+  // Secret medals (077) — Easter eggs, found not chased. A holographic rim in the screensaver's colours,
+  // a night-dark face, and a scene; "SECRET" on the plate.
+  const SECRET = {
+    'perfect-corner': { name: 'Perfect Corner', about: 'The screensaver’s bouncing logo hit a corner of the screen — exactly. Some people wait years for that.' },
+  };
+  const SCENE_S = {
+    // a screen; the site's own logo (turned gold) tucked perfectly into its bottom-right corner; its trail; a burst from the corner
+    'perfect-corner': id => `<defs><filter id="${id}g" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+        <feFlood flood-color="#E2B53E"/><feComposite in2="SourceAlpha" operator="in"/></filter></defs>
+      <rect x="24" y="26" width="64" height="46" rx="5" fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2"/>
+      <path d="M33 34 L43 41 M49 45 L54 48.5" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="2" stroke-linecap="round" stroke-dasharray="1 5"/>
+      <svg x="55" y="56" width="31" height="13.2" viewBox="20 61 467 198" filter="url(#${id}g)"><image href="icons/logo-nav.png" width="507" height="320"/></svg>
+      <g stroke="#FFF4D2" stroke-width="2.2" stroke-linecap="round"><path d="M91 75l5 5M88 78l2 6M94 72l6 2"/></g>`,
+  };
+  function secret(key, o = {}) {
+    const size = o.size || 120, id = 'mds' + (++uid);
+    return wrap(`<svg class="mss-medal" viewBox="0 0 120 124" width="${size}" height="${(size * 124 / 120).toFixed(1)}">
+      <defs>
+        <linearGradient id="${id}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7EB86C"/><stop offset=".25" stop-color="#8AAFD1"/><stop offset=".5" stop-color="#B48BC9"/><stop offset=".75" stop-color="#E2B53E"/><stop offset="1" stop-color="#5FB3A8"/></linearGradient>
+        <radialGradient id="${id}f" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#2A2840"/><stop offset="1" stop-color="#121219"/></radialGradient>
+        <clipPath id="${id}c"><circle cx="60" cy="58" r="46"/></clipPath>
+      </defs>
+      <circle cx="60" cy="58" r="56" fill="url(#${id}r)"/><circle cx="60" cy="58" r="52" fill="#16151F"/><circle cx="60" cy="58" r="49" fill="url(#${id}r)" opacity=".55"/>
+      <circle cx="60" cy="58" r="46" fill="url(#${id}f)"/>
+      <g clip-path="url(#${id}c)">${SCENE_S[key]?.(id) || ''}</g>
+      <rect x="22" y="99" width="76" height="24" rx="7" fill="url(#${id}r)"/><rect x="24" y="101" width="72" height="20" rx="6" fill="#16151F"/>
+      <text x="60" y="116" text-anchor="middle" font-family="Bebas Neue, Oswald, sans-serif" font-size="14" letter-spacing="1.2" fill="#FFF4D2" textLength="54" lengthAdjust="spacingAndGlyphs">SECRET</text>
+    </svg>`, o);
+  }
+
+  return { challenge, official, achievement, member, memberFor, secret, SECRET, ACH, LEVEL: LEVEL.slice(1).map(l => l[1]), OFFICIAL: Object.entries(OFF).map(([key, v]) => ({ key, name: v.name })) };
 })();
