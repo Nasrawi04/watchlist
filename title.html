@@ -227,11 +227,12 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
   background:rgba(0,0,0,0.35); border:0.5px solid rgba(255,255,255,0.15);
   border-radius:var(--radius-sm); padding:12px 20px; flex-wrap:wrap;
 }
-.td-in-lib-go { display:inline-flex; align-items:center; gap:8px; color:inherit; text-decoration:none; padding:6px 8px; margin:-6px -8px; border-radius:10px; transition:background .18s; }
+.td-in-lib-go { display:inline-flex; align-items:center; gap:8px; color:inherit; font:inherit; background:none; border:0; cursor:pointer; text-align:start; padding:6px 8px; margin:-6px -8px; border-radius:10px; transition:background .18s; }
 .td-in-lib-go b { font-weight:700; }
+.td-in-library a.btn-save { display:inline-flex; align-items:center; justify-content:center; text-align:center; text-decoration:none; }
 .td-in-lib-arrow { display:inline-grid; place-items:center; width:24px; height:24px; border-radius:50%; background:rgba(255,255,255,.12); transition:transform .2s var(--ease), background .2s; }
 .td-in-lib-go:hover { background:rgba(255,255,255,.08); }
-.td-in-lib-go:hover .td-in-lib-arrow { transform:translateX(3px); background:var(--olive); }
+.td-in-lib-go:hover .td-in-lib-arrow { background:var(--olive); }
 .td-in-lib-go:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 
 /* ── Sections ── */
@@ -1156,17 +1157,18 @@ function _tdAddControlsHTML(ownEntry) {
     return `<div class="td-add-row"><button type="button" class="btn-save" onclick="mssJoin('add this to your library')">${icon('plus',14)} Add to Library</button></div>`;
   }
   if (ownEntry) {
-    const statusLabel = {
-      queue:'On your Watchlist', up_next:'Up Next', watching:'Currently Watching', paused:'Taking a Break',
+    const section = {
+      queue:'Watchlist', up_next:'Up Next', watching:'Currently Watching', paused:'Taking a Break',
       completed:'Watched', ongoing:'To Be Continued', dropped:'Dropped'
     }[ownEntry.status] || ownEntry.status;
-    // The status takes you to it in your library: its category page, its section, the card spotlit
+    // The big button takes you to it in your library (its category page, its section, the card spotlit);
+    // the status line is the smaller way in to edit and rate it
     const page = CAT_META[ownEntry.cat]?.page || 'library.html';
     return `<div class="td-in-library">
-      <a class="td-in-lib-go" href="${page}?focus=${encodeURIComponent(ownEntry.id)}" title="Show it in your library">
-        ${icon('check', 16)}<span>In your library — <b>${esc(statusLabel)}</b></span><span class="td-in-lib-arrow" aria-hidden="true">${icon('arrowRight', 13)}</span>
-      </a>
-      <button class="btn-save" onclick="goToDetail('${ownEntry.id}','title.html')">View &amp; Rate →</button>
+      <button type="button" class="td-in-lib-go" onclick="goToDetail('${ownEntry.id}','title.html')" title="Edit and rate it">
+        ${icon('check', 16)}<span>In your library · <b>Edit &amp; Rate</b></span><span class="td-in-lib-arrow" aria-hidden="true">${icon('edit', 12)}</span>
+      </button>
+      <a class="btn-save" href="${page}?focus=${encodeURIComponent(ownEntry.id)}">View in Library — ${esc(section)} →</a>
     </div>`;
   }
 
