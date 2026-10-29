@@ -107,10 +107,6 @@
 .fr-poster, .fa-poster, .cp-hero-poster, .fm-cover-img, .fm-now-poster{ position:relative; overflow:hidden; background:var(--bg-3); }
 .fr-poster img, .fa-poster img, .cp-hero-poster img, .fm-cover-img img, .fm-now-poster img{ width:100%; height:100%; object-fit:cover; display:block; }
 .fr-poster-letter { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--serif); color:var(--olive-light); font-size:18px; }
-.fr-empty { text-align:center; padding:3.5rem 1.25rem; }
-.fr-empty-ic { width:60px; height:60px; margin:0 auto 14px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--olive-faint); color:var(--olive-light); }
-.fr-empty-title { font-family:var(--serif); font-size:19px; font-weight:600; margin-bottom:6px; }
-.fr-empty-text { font-size:13.5px; color:var(--text-3); max-width:420px; margin:0 auto; line-height:1.55; }
 .fr-more { display:block; margin:18px auto 0; padding:11px 26px; border-radius:var(--radius-sm); border:1px solid var(--border-2); background:transparent; color:var(--text-2); font-family:var(--sans); font-weight:600; font-size:13px; cursor:pointer; }
 .fr-more:hover { border-color:var(--border-olive); color:var(--text); }
 .fm-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-2); background:transparent; color:var(--text-2); font-family:var(--sans); font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; transition:all .15s; }
@@ -646,7 +642,7 @@ function _frRender() {
   if (!_frLoaded) { tb.style.display = 'none'; c.innerHTML = `<div class="page-loading" data-skel="fr-page"></div>`; return; }
   if (_frTab !== 'friends' && !_frAccepted.length) {
     tb.style.display = 'none';
-    c.innerHTML = _frEmptyHTML('users', 'Your feed starts with friends', 'Find people by username above — once they accept, their activity, lists and notes show up here.');
+    c.innerHTML = _frEmptyHTML('users', 'Watching solo for now', 'Everything’s better with someone to argue about the ending with. Find people by username above — once they accept, their activity shows up here.');
     return;
   }
   if (_frTab === 'friends') return _frRenderFriends();
@@ -657,7 +653,8 @@ function _frRender() {
   if (_frTab === 'blend') return _frRenderBlend();
 }
 function _frEmptyHTML(ic, title, text) {
-  return `<div class="fr-empty"><div class="fr-empty-ic">${icon(ic, 26)}</div><div class="fr-empty-title">${escHTML(title)}</div><div class="fr-empty-text">${escHTML(text)}</div></div>`;
+  const ART = { users: 'friends', activity: 'friends', layers: 'lists', edit: 'notes', compare: 'compare', search: 'search', shuffle: 'blend' };
+  return mssEmpty({ art: ART[ic] || 'friends', title, text });
 }
 function _frGuestHTML() {
   return `<div class="guest-page-state" style="padding:3rem 1rem;">
@@ -760,7 +757,7 @@ function _frRenderFriends() {
   _frToolbar('Your Friends', _frAccepted.length, _frAccepted.length > 1 ? 'frFriends' : null, _frAccepted.length === 1 ? 'friend' : 'friends');
   document.getElementById('frContent').innerHTML = _frRequestsHTML() + (_frAccepted.length
     ? `<div class="fm-grid">${list.map(_frMemberCard).join('')}</div>`
-    : _frEmptyHTML('users', 'No friends yet', 'Search for someone by username above and send a request.'));
+    : _frEmptyHTML('users', 'Watching solo for now', 'Everything’s better with someone to argue about the ending with. Search for a username above and send a request.'));
 }
 
 /* ══ ACTIVITY ══ */
@@ -922,7 +919,7 @@ function _frRenderLists() {
   // Titles added from Discover ("tmdb:…") — posters arrive, then redraw
   MSSList.hydrate(list, 8).then(changed => { if (changed && _frTab === 'lists' && !_frCommunity()) _frRender(); });
   _frToolbar("Friends' Lists", list.length, 'frLists', list.length === 1 ? 'list' : 'lists');
-  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('layers', 'No lists yet', 'When your friends make lists, they show up here.'); return; }
+  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('layers', 'No lists from friends yet', 'Your friends haven’t ranked anything yet. Make one first and set the trend.'); return; }
   // Same cards + popup as the Lists page (list-popup.js)
   document.getElementById('frContent').innerHTML = `<div class="lc-grid">${list.map(l => MSSList.cardHTML(l, {
     resolve: _frListItem, onclick: `_frOpenList(${attrJSON(l.id)})`, ownerHTML: MSSList.ownerHTML(_frProfiles[l.user_id]),
@@ -961,7 +958,7 @@ SF.register('frNotes', {
 function _frRenderNotes() {
   const list = SF.list('frNotes', 'all');
   _frToolbar("Friends' Notes", list.length, 'frNotes', list.length === 1 ? 'note' : 'notes');
-  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('edit', 'No notes yet', 'Notes your friends write about what they watch will appear here.'); return; }
+  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('edit', 'No notes from friends yet', 'Your friends are keeping their hot takes to themselves. For now.'); return; }
   // Same cards and popup as the Notes page (friend-popups.js + style.css)
   document.getElementById('frContent').innerHTML = `<div class="nc-grid">${list.map(e =>
     MSSFriendPop.noteCardHTML(e, _frProfiles[e.user_id], `_frOpenNote(${attrJSON(e.id)})`)).join('')}</div>`;
