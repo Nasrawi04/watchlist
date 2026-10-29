@@ -1382,7 +1382,7 @@ body.mss-switching #mssNoteOverlay, body.mss-switching #mssNoteOverlay .note-pop
 /* ── Sort & Filter — two separate popups (Sort, Filter), each with its own staged state and Apply/Cancel footer, so nothing takes effect until Apply is pressed. Filter criteria (Genre, Decade) use the same dropdown component as title.html's .td-dd, reimplemented here since that component's structural CSS lives only in title.html's own \3c style> block. ── */
 .sf-trigger-row { display:flex; align-items:center; gap:8px; justify-content:flex-end; margin-bottom:8px; }
 .sf-icon-btn {
-  display:inline-flex; align-items:center; gap:6px;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;   /* centred: on phones (icon only) the button is wider than its icon */
   background:var(--olive-faint); border:0.5px solid var(--border-olive);
   border-radius:var(--radius-sm); padding:7px 12px; min-height:32px;
   color:var(--olive-light); cursor:pointer; transition:background .15s, border-color .15s;
