@@ -2830,3 +2830,53 @@ function mssErrorPage(kind, opts = {}) {
   window.addEventListener('error', e => caught(e.error || e.message));
   window.addEventListener('unhandledrejection', e => caught(e.reason));
 })();
+
+
+/* ══════════════════════════════════════════
+   SCREENSAVER — an Easter egg: leave the site alone (3 minutes on a computer,
+   1 minute on a phone) and the logo bounces around the dimmed screen, DVD-style
+   (js/screensaver.js — loaded only the first time it starts).
+   Never while you're typing, a popup / video is open, a page is loading or
+   showing an error, on the sign-in page, with reduced motion, or when it's
+   switched off in Settings (this device). mssIdle.arm() restarts the wait.
+══════════════════════════════════════════ */
+const mssScreensaverOn = () => { try { return localStorage.getItem('mss_screensaver') !== 'off'; } catch { return true; } };
+function mssSetScreensaver(on) {
+  try { if (on) localStorage.removeItem('mss_screensaver'); else localStorage.setItem('mss_screensaver', 'off'); } catch {}
+  mssIdle.arm();
+}
+const mssIdle = (() => {
+  const WAIT = matchMedia('(pointer: coarse)').matches ? 60000 : 180000;
+  const seen = el => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+  let t = 0;
+  function busy() {
+    const a = document.activeElement;
+    if (a?.matches?.('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return true;               // typing
+    if ([...document.querySelectorAll('[aria-modal="true"], [role="dialog"]')].some(seen)) return true;                   // a popup is open
+    if ([...document.querySelectorAll('video, audio')].some(m => !m.paused && !m.ended)) return true;                     // something's playing
+    if ([...document.querySelectorAll('iframe[src*="youtube"], iframe[src*="vimeo"]')].some(seen)) return true;          // a trailer's open
+    if ([...document.querySelectorAll('.page-loading')].some(seen) || document.querySelector('.mss-err')) return true;    // loading / an error screen
+    return false;
+  }
+  async function fire() {
+    t = 0;
+    const page = location.pathname.split('/').pop();
+    if (!mssScreensaverOn() || page === 'login.html' || page === 'offline.html' || document.hidden
+      || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (busy()) return arm();
+    await mssLoadScript('js/screensaver.js');
+    window.MSSScreensaver?.start();
+  }
+  let at = 0;
+  function arm(ev) {
+    if (ev && t && Date.now() - at < 1000) return;            // a moving mouse: restart the wait at most once a second
+    clearTimeout(t); t = 0; at = Date.now();
+    if (window.MSSScreensaver?.on || document.hidden) return;
+    t = setTimeout(fire, WAIT);
+  }
+  ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => addEventListener(ev, arm, { passive: true, capture: true }));
+  addEventListener('scroll', arm, { passive: true });   // the page itself only — rows that scroll on their own (Home's carousel) don't count
+  document.addEventListener('visibilitychange', arm);
+  arm();
+  return { arm: () => arm() };
+})();
