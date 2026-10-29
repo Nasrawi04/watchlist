@@ -48,7 +48,7 @@
 .notes-search-card {
   width:100%; max-width:480px; max-height:calc(100dvh - 32px); display:flex; flex-direction:column;
   background:var(--bg-2); border:1.5px solid var(--olive-light);
-  box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg);
+   border-radius:var(--radius-lg);
   transform:translateY(16px); transition:transform .25s cubic-bezier(.4,0,.2,1);
   overflow:hidden; margin-top:4vh;
 }
@@ -106,7 +106,7 @@
   position:fixed;
   background:var(--bg-3); border:0.5px solid var(--olive-light); border-top:none;
   border-radius:0 0 var(--radius) var(--radius); z-index:290;
-  box-shadow:var(--shadow-lg);
+  
   overflow-y:auto; overflow-x:hidden; max-height:320px;
   display:none;
 }
@@ -307,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!user) { _notesOpenLink(); return; }
     await loadNotesPage();
     _notesOpenLink();
-    if (q.get('add')) {                                 // (+) → Write a note, from another page
+    if (q.get('add')) { // (+) → Write a note, from another page
       const url = new URL(location.href); url.searchParams.delete('add');
       history.replaceState(history.state, '', url.pathname + url.search);
       openNotesSearchPopup('add');
@@ -545,7 +545,7 @@ function _fetchSocialNotes(force) {
 async function loadSocialNotes() {
   const wrap = document.getElementById('notesPageContent');
   document.getElementById('notesPageSub').textContent = 'Discover what the MyScreenFolio community has to say about the titles they’ve watched.';
-  if (!_socialNotesCache) {                                  // not prefetched yet
+  if (!_socialNotesCache) { // not prefetched yet
     wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;
     document.getElementById('notesPageStats').innerHTML = '';
   }
