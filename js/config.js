@@ -1539,6 +1539,66 @@ function mssHoldHTML(e) {
   return `<div class="mss-hold ${upNext ? 'is-up-next' : 'is-break'}"><span class="mss-hold-label">${MSSI18n.lang === 'en' ? (upNext ? 'Up<br>Next' : 'Taking<br>a Break') : escHTML(mssT(upNext ? 'Up Next' : 'Taking a Break'))}</span></div>`;
 }
 
+/* ── A show's AIRED episodes, season by season (from TMDB's /tv/{id}) ──
+   TMDB lists announced seasons before they air (e.g. a season 4 premiering next year, with
+   placeholder episodes and no dates). Those must not count: otherwise "+" walks you into
+   episodes that don't exist yet, progress says you're not caught up, and the show looks like it
+   has something new. So a season counts only up to the latest episode that has aired:
+     every season before last_episode_to_air's → all its episodes; that season → up to that
+     episode; anything after → not yet. (No last episode on TMDB: seasons whose premiere is past.)
+   → { breakdown: [eps per aired season], seasons, eps } */
+function mssAired(d) {
+  const today = new Date().toISOString().slice(0, 10);
+  const ss = (d?.seasons || []).filter(s => s.season_number > 0).sort((a, b) => a.season_number - b.season_number);
+  const last = d?.last_episode_to_air && d.last_episode_to_air.season_number > 0 && (d.last_episode_to_air.air_date || '') <= today ? d.last_episode_to_air : null;
+  const bd = [];
+  for (const s of ss) {
+    const n = Number(s.episode_count) || 0;
+    if (last) {
+      if (s.season_number < last.season_number) bd.push(n);
+      else if (s.season_number === last.season_number) {
+        // series-wide numbering (One Piece): the episode's place in its season
+        const before = bd.reduce((a, b) => a + b, 0), k = last.episode_number > n && n ? last.episode_number - before : last.episode_number;
+        bd.push(Math.max(0, Math.min(n || k, k)));
+        break;
+      } else break;
+    } else if (s.air_date && s.air_date <= today && n) bd.push(n);
+    else break;
+  }
+  while (bd.length && !bd[bd.length - 1]) bd.pop();
+  return { breakdown: bd, seasons: bd.length || null, eps: bd.reduce((a, b) => a + b, 0) || null };
+}
+
+/* Repair shows saved before mssAired: counts that include seasons not out yet → the aired counts,
+   and progress past the last aired episode → that episode (the show then reads as caught up).
+   Runs on the category pages and the Library for shows you're watching / waiting on (TMDB details
+   are the schedule's, kept 12 h on the device). Calls back when anything changed. */
+async function mssFixUnaired(entries, userId, onChange) {
+  const shows = (entries || []).filter(e => ['watching', 'up_next', 'paused', 'ongoing'].includes(e.status)
+    && e.tmdb_id && e.tmdb_type === 'tv' && e.ratings?._media_type !== 'movie' && Array.isArray(e.ratings?._season_breakdown));
+  if (!shows.length || !userId) return;
+  let changed = false;
+  for (const e of shows) {
+    try {
+      const res = await tmdbFetch(`${TMDB_BASE}/tv/${e.tmdb_id}?language=en-US`);
+      if (!res.ok) continue;
+      const a = mssAired(await res.json());
+      if (!a.breakdown.length) continue;
+      const old = e.ratings._season_breakdown.map(Number).filter(n => n > 0);
+      if (old.length <= a.breakdown.length && old.every((n, i) => n <= a.breakdown[i])) continue;   // nothing unaired stored
+      const upd = { total_seasons: a.seasons, total_eps: a.eps, ratings: { ...e.ratings, _season_breakdown: a.breakdown } };
+      const s = Number(e.season) || 0, n = Number(e.episode) || 0, ls = a.breakdown.length, ln = a.breakdown[ls - 1];
+      if (s > ls || (s === ls && n > ln) || (s === ls && n === ln && e.status === 'watching')) {   // walked into (or up to) episodes not out yet
+        upd.season = ls; upd.episode = ln; upd.watched = a.eps;
+        if (e.status === 'watching') { upd.status = 'ongoing'; showToast(`${e.title}: you’re all caught up — it waits in To Be Continued until new episodes air.`); }
+      }
+      await updateProgress(e.id, userId, upd);
+      Object.assign(e, upd); changed = true;
+    } catch (err) { console.warn('Aired counts:', e.title, err); }
+  }
+  if (changed && typeof onChange === 'function') onChange();
+}
+
 /* To Be Continued shows with new episodes fully out (MSSSchedule.newOut, tv-schedule.js) — the
    category pages and your Library mark them; nothing moves until you tap Up Next.
    → { entryId: { s, n, air } } */
