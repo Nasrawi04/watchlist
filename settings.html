@@ -311,7 +311,8 @@
           <div class="settings-title">Change Password</div>
           <div class="field-row">
             <label class="field-label" for="setNewPassword">New Password</label>
-            <input class="field-input" id="setNewPassword" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+            <input class="field-input" id="setNewPassword" type="password" maxlength="64" placeholder="8–64 characters" autocomplete="new-password">
+            <div id="setPassGuide" style="margin-top:8px"></div>
           </div>
           <button class="btn-save" style="width:100%;margin-top:.25rem" onclick="changePassword()">Update Password</button>
         </div>
@@ -501,13 +502,16 @@ async function saveSettings() {
   }
 }
 
+// The same 8–64 guide as the sign-up page (MSSPass); your username / email shouldn't be in it
+const _setPassGuide = MSSPass.mount('setPassGuide', 'setNewPassword', () => [window._navUser?.email?.split('@')[0], document.getElementById('setUsername')?.value]);
 async function changePassword() {
   const pw = document.getElementById('setNewPassword').value;
-  if (!pw || pw.length < 6) { showToast('Password must be at least 6 characters.', 'err'); return; }
+  if (MSSPass.error(pw)) { showToast(MSSPass.error(pw), 'err'); return; }
   try {
     const { error } = await sb.auth.updateUser({ password: pw });
     if (error) throw error;
     document.getElementById('setNewPassword').value = '';
+    _setPassGuide();
     showToast('Password updated!');
   } catch(e) {
     showToast('Error updating password.', 'err');
