@@ -668,7 +668,7 @@ function admTitlesView() {
   panel.innerHTML = `<input class="field-input adm-search" id="admSearch" type="search" placeholder="Search a title in everyone’s libraries…" aria-label="Search a title" autocomplete="off" value="${esc(_admQuery)}">
     <div id="admResults" aria-live="polite"></div>`;
   const input = document.getElementById('admSearch');
-  input.addEventListener('input', () => { clearTimeout(_admTimer); _admTimer = setTimeout(() => admSearch(input.value), 300); });
+  input.addEventListener('input', () => { clearTimeout(_admTimer); _admTimer = setTimeout(() => admSearch(input.value), MSS_SEARCH_MS); });
   if (!matchMedia('(max-width:640px)').matches) input.focus();
   if (_admQuery) admSearch(_admQuery);
   else document.getElementById('admResults').innerHTML = '<div class="adm-empty">Type at least 2 letters of a title.</div>';
@@ -807,7 +807,7 @@ function admWallPick(k, i) {
   document.getElementById('admPickBody').innerHTML = `<input class="field-input adm-search" id="admPickQ" type="search" placeholder="Search ${label.toLowerCase()}…" aria-label="Search a title" autocomplete="off" data-1p-ignore data-lpignore="true">
     <div id="admPickRes" aria-live="polite"><div class="adm-empty">Type a title.</div></div>`;
   const q = document.getElementById('admPickQ');
-  q.addEventListener('input', () => { clearTimeout(_admTimer); _admTimer = setTimeout(() => _admPickSearch(q.value), 300); });
+  q.addEventListener('input', () => { clearTimeout(_admTimer); _admTimer = setTimeout(() => _admPickSearch(q.value), MSS_SEARCH_MS); });
   MSSDialog.open(ov, { focus: '#admPickQ' });
 }
 function admPickClose() { MSSDialog.close(document.getElementById('admPickOv')); }
