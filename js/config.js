@@ -3115,7 +3115,8 @@ function mssErrorPage(kind, opts = {}) {
    (js/screensaver.js — loaded only the first time it starts).
    Never while you're typing, a popup / video is open, a page is loading or
    showing an error, on the sign-in page, with reduced motion, or when it's
-   switched off in Settings (this device). mssIdle.arm() restarts the wait.
+   switched off in Settings (this device). mssIdle.arm() restarts the wait. It only counts while you're on
+   the site — tab showing and its window in use — and stops the moment you switch away.
 ══════════════════════════════════════════ */
 const mssScreensaverOn = () => { try { return localStorage.getItem('mss_screensaver') !== 'off'; } catch { return true; } };
 function mssSetScreensaver(on) {
@@ -3138,22 +3139,32 @@ const mssIdle = (() => {
   async function fire() {
     t = 0;
     const page = location.pathname.split('/').pop();
-    if (!mssScreensaverOn() || page === 'login.html' || page === 'offline.html' || document.hidden
+    if (!mssScreensaverOn() || page === 'login.html' || page === 'offline.html' || !here()
       || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     if (busy()) return arm();
     await mssLoadScript('js/screensaver.js');
     window.MSSScreensaver?.start();
   }
+  // Only while you're actually on the site: its tab is showing AND its window is the one you're using.
+  // In another tab, another window or another app, the wait doesn't run — it starts fresh when you come back.
+  const here = () => !document.hidden && document.hasFocus();
   let at = 0;
   function arm(ev) {
     if (ev && t && Date.now() - at < 1000) return;            // a moving mouse: restart the wait at most once a second
     clearTimeout(t); t = 0; at = Date.now();
-    if (window.MSSScreensaver?.on || document.hidden) return;
+    if (window.MSSScreensaver?.on || !here()) return;
     t = setTimeout(fire, WAIT);
+  }
+  // Left the site (switched tab / window / app): no waiting, and a running screensaver stops
+  function away() {
+    clearTimeout(t); t = 0;
+    if (window.MSSScreensaver?.on) window.MSSScreensaver.stop();
   }
   ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => addEventListener(ev, arm, { passive: true, capture: true }));
   addEventListener('scroll', arm, { passive: true });   // the page itself only — rows that scroll on their own (Home's carousel) don't count
-  document.addEventListener('visibilitychange', arm);
+  document.addEventListener('visibilitychange', () => document.hidden ? away() : arm());
+  addEventListener('blur', () => setTimeout(() => { if (!document.hasFocus()) away(); }, 0));   // (not when focus just moved into a trailer's frame)
+  addEventListener('focus', () => arm());
   arm();
   return { arm: () => arm() };
 })();
