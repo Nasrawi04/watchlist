@@ -206,7 +206,7 @@
     </div>
     <div class="cat-page-header-right notes-header-btns">
       <button class="btn-add-entry" onclick="openNotesSearchPopup('add')">+ Add Note</button>
-      <button class="btn-add-entry" onclick="openNotesSearchPopup('edit')">Edit Note</button>
+      <button class="btn-add-entry" id="notesEditBtn" onclick="openNotesSearchPopup('edit')">Edit Note</button>
     </div>
   </div>
 
@@ -505,8 +505,9 @@ function setNotesMode(mode) {
   document.querySelectorAll('#notesModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
   document.getElementById('notesPageTitle').textContent = mode === 'personal' ? 'My Notes' : 'Community Notes';
   document.getElementById('notesUserSearchWrap').style.display = mode === 'social' ? '' : 'none';
-  // "+ Add Note" / "Edit Note" stay available in both modes — you can add
-  // a personal note even while browsing the community feed.
+  // "+ Add Note" stays in both modes (you can add a personal note while browsing the
+  // community feed); "Edit Note" only on your own notes
+  document.getElementById('notesEditBtn').hidden = mode === 'social';
   if (mode !== 'social' && _notesTitle) _nuForgetTitle();
   if (mode === 'social') {
     _nuFilterUser = null;
