@@ -54,7 +54,7 @@
   position:relative; width:100%; aspect-ratio:2/3 !important; border-radius:var(--radius-sm);
   overflow:hidden !important; cursor:pointer; border:2px solid transparent;
   transition:border-color .15s, transform .15s;
-  box-shadow:0 2px 10px rgba(0,0,0,0.25);
+  
 }
 .poster-picker-opt:hover { border-color:var(--border-olive); transform:translateY(-2px); }
 .poster-picker-opt.selected { border-color:var(--olive-light); }
@@ -137,7 +137,7 @@
   width:68px;max-height:220px;overflow-y:auto;overscroll-behavior-y:contain;
   background:var(--card-2);border:0.5px solid var(--border-2);border-radius:10px;
   z-index:200;display:none;flex-direction:column;
-  box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  
   scrollbar-width:thin;scrollbar-color:var(--olive) transparent;
 }
 .rdrop-list.open{display:flex}
@@ -274,7 +274,7 @@
 .mcombo-menu {
   display:none; position:absolute; top:calc(100% + 4px); inset-inline-start:0; inset-inline-end:0; z-index:60;
   background:var(--bg-3); border:0.5px solid var(--olive-light); border-radius:var(--radius-sm);
-  box-shadow:var(--shadow-lg); max-height:230px; overflow-y:auto; overscroll-behavior-y:contain; text-align:start;
+   max-height:230px; overflow-y:auto; overscroll-behavior-y:contain; text-align:start;
 }
 .mcombo.open .mcombo-menu { display:block; }
 .mcombo-menu .sel-dd-opt.hl { background:var(--bg-2); }
@@ -288,7 +288,7 @@
 .det-header .detail-poster-wrap {
   width:clamp(96px, 16vw, 160px); height:clamp(144px, 24vw, 240px); flex-shrink:0;
   border-radius:var(--radius); overflow:hidden; position:relative; cursor:pointer;
-  background:var(--bg-3); box-shadow:var(--shadow);
+  background:var(--bg-3); 
   display:flex; align-items:center; justify-content:center;
   border:0.5px solid var(--border);
   font-family:var(--serif); font-size:clamp(32px,6vw,48px); color:var(--olive-light);
@@ -2528,7 +2528,7 @@ function _showDuplicatePopup(title, existing) {
   el.id = 'dupPopupOverlay';
   el.style.cssText = 'position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0.72);-webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;opacity:0;transition:opacity .2s;pointer-events:none;';
   el.innerHTML = `
-    <div id="dupPopupCard" style="background:var(--bg-2);border:1.5px solid var(--olive-light);box-shadow:4px 4px 0 var(--olive);border-radius:var(--radius-lg);width:97%;max-width:440px;padding:28px 28px 24px;box-sizing:border-box;transform:translateY(16px);transition:transform .25s cubic-bezier(.4,0,.2,1);text-align:center;">
+    <div id="dupPopupCard" style="background:var(--bg-2);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);width:97%;max-width:440px;padding:28px 28px 24px;box-sizing:border-box;transform:translateY(16px);transition:transform .25s cubic-bezier(.4,0,.2,1);text-align:center;">
       <div style="color:var(--olive-light);margin-bottom:14px;opacity:.7;">${icon('x', 32)}</div>
       <h2 style="font-family:var(--serif);font-size:22px;font-weight:500;margin-bottom:10px;color:var(--text);">Already in your library</h2>
       <p style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:6px;">
