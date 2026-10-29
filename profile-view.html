@@ -589,7 +589,7 @@ function renderPvOverview() {
   var el = document.getElementById('pvOverviewContent');
   if (!el) return;
   if (!_pvEntries || !_pvEntries.length) {
-    el.innerHTML = '<div class="pv-empty" style="text-align:center;padding:3rem 1rem;color:var(--text-3);font-size:14px;">Nothing added yet.</div>';
+    el.innerHTML = mssEmpty({ art: 'person', title: 'Nothing here yet', text: 'Their folio is still a blank page. Give it time.' });
     return;
   }
   var _statsHTML = _pvStatsBoxHTML();
