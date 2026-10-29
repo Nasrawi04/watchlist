@@ -25,14 +25,14 @@
 .ex-hero { position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0, 1.15fr) minmax(0, 1fr); gap:28px; align-items:center;
   padding:30px 32px; border-radius:22px; border:1px solid var(--border-olive);
   background:radial-gradient(120% 140% at 0% 0%, var(--olive-faint), transparent 60%), radial-gradient(90% 120% at 100% 100%, rgba(126,184,108,.10), transparent 60%), var(--card); }
-.ex-hero-ic { width:54px; height:54px; border-radius:16px; display:grid; place-items:center; background:var(--olive); color:#fff; margin-bottom:16px; box-shadow:0 8px 20px rgba(30,92,38,.28); }
+.ex-hero-ic { width:54px; height:54px; border-radius:16px; display:grid; place-items:center; background:var(--olive); color:#fff; margin-bottom:16px; }
 .ex-hero h2 { margin:0 0 6px; font-family:'Oswald',var(--sans); font-size:26px; font-weight:600; color:var(--text); letter-spacing:.2px; }
 .ex-hero p { margin:0 0 20px; font-size:14px; line-height:1.6; color:var(--text-2); }
 .ex-points { display:flex; flex-wrap:wrap; gap:6px 14px; margin:0 0 22px; padding:0; list-style:none; font-size:12.5px; color:var(--text-2); }
 .ex-points li { display:inline-flex; align-items:center; gap:6px; }
 .ex-points svg { color:var(--olive-light); }
 .ex-go { display:inline-flex; align-items:center; gap:9px; padding:13px 22px; border:none; border-radius:999px; cursor:pointer;
-  background:var(--olive); color:#fff; font:700 14.5px 'Manrope',var(--sans); box-shadow:0 8px 22px rgba(30,92,38,.3); transition:transform .15s, filter .15s; }
+  background:var(--olive); color:#fff; font:700 14.5px 'Manrope',var(--sans);  transition:transform .15s, filter .15s; }
 .ex-go:hover { filter:brightness(1.08); transform:translateY(-1px); }
 .ex-go:active { transform:scale(.97); }
 .ex-go:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
@@ -53,7 +53,7 @@
 .ex-card.ex-card-wide { grid-column:1 / -1; }   /* Title card: a row of its own under the nine (3 across) */
 .ex-card { all:unset; box-sizing:border-box; cursor:pointer; position:relative; display:flex; gap:14px; align-items:flex-start; padding:18px 18px 16px;
   border-radius:18px; background:var(--card); border:0.5px solid var(--border); transition:border-color .15s, transform .15s, box-shadow .15s; }
-.ex-card:hover { border-color:var(--border-olive); transform:translateY(-2px); box-shadow:var(--shadow); }
+.ex-card:hover { border-color:var(--border-olive); transform:translateY(-2px); }
 .ex-card:active { transform:scale(.985); }
 .ex-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .ex-card-ic { flex:none; width:46px; height:46px; border-radius:14px; display:grid; place-items:center; color:#fff; background:var(--ic, var(--olive)); }
