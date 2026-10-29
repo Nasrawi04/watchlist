@@ -1163,7 +1163,13 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
 
 function _tdAddControlsHTML(ownEntry) {
   if (!_tdUser) {
-    return `<div class="td-add-row"><button type="button" class="btn-save" onclick="mssJoin('add this to your library')">${icon('plus',14)} Add to Library</button></div>`;
+    // Came from a poster on the sign-in page → the reason they tapped it: they've seen it and want to rate it
+    const wall = new URLSearchParams(location.search).get('from') === 'wall' ? `<div class="td-wall-nudge">
+        <span class="td-wall-nudge-ic" aria-hidden="true">${icon('ratingStar', 18)}</span>
+        <span class="td-wall-nudge-tx"><b>Seen it?</b><small>Make a free account to rate it — we’ll bring you back here.</small></span>
+        <a class="btn-save" href="login.html#signup" onclick="try{sessionStorage.setItem('mss_next','title.html?type=${_tdType}&id=${String(_tdId).replace(/\D/g, '')}')}catch{}">Sign up to rate it</a>
+      </div>` : '';
+    return `${wall}<div class="td-add-row"><button type="button" class="btn-save" onclick="mssJoin('add this to your library')">${icon('plus',14)} Add to Library</button></div>`;
   }
   if (ownEntry) {
     const section = {
