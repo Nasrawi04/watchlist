@@ -489,7 +489,7 @@ function buildSection(key, title, count, content) {
   </div>`;
 
   const qpBtn = key === 'queue'
-    ? `<button class="qp-trigger" onclick="showQueuePicker()" ${count === 0 ? 'disabled' : ''}>${icon('sparkles',12)} <span class="qp-label">What Should I Watch Next?</span></button>`
+    ? MSSPick.buttonHTML('showQueuePicker()', count === 0)
     : '';
 
   return `<div class="section-block" id="sec-${key}">
@@ -1354,174 +1354,11 @@ function showLoading() {
 function hideLoading() {}
 
 /* ════════ QUEUE PICKER ════════ */
-let _qpItem = null;
-
-function _injectQPModal() {
-  if (document.getElementById('qpOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'qpOverlay';
-  el.style.cssText = `
-    position:fixed;inset:0;z-index:901;
-    background:rgba(0,0,0,0.72);
-    display:flex;align-items:center;justify-content:center;
-    padding:16px;box-sizing:border-box;
-    opacity:0;transition:opacity 220ms var(--ease);
-    pointer-events:none;
-  `;
-  el.innerHTML = `
-    <div id="qpCard" style="
-      background:var(--bg-2);border:1.5px solid var(--olive-light);
-      border-radius:var(--radius-lg);
-      width:100%;max-width:640px;max-height:90dvh;
-      position:relative;box-sizing:border-box;
-      display:flex;flex-direction:column;
-      transform:translateY(18px);transition:transform 260ms var(--ease);
-    ">
-      <!-- header -->
-      <div style="
-        display:flex;align-items:flex-start;gap:12px;
-        padding:16px 16px 12px;border-bottom:0.5px solid var(--border);
-        flex-shrink:0;
-      ">
-        <div id="qpPoster" style="
-          width:48px;height:66px;flex-shrink:0;border-radius:var(--radius-sm);
-          overflow:hidden;background:var(--bg-3);
-          display:flex;align-items:center;justify-content:center;
-          
-        "></div>
-        <div style="flex:1;min-width:0;">
-          <div id="qpTitle" style="font-family:var(--serif);font-size:17px;font-weight:500;line-height:1.2;margin-bottom:4px;color:var(--text)" translate="no"></div>
-          <div id="qpMeta" style="font-size:10px;color:var(--text-3);margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px;"></div>
-          <div style="font-size:11px;color:var(--olive-light);font-weight:500;">From your watchlist</div>
-        </div>
-        <button onclick="closeQueuePicker()" style="
-          background:none;border:none;color:var(--text-3);cursor:pointer;
-          font-size:22px;line-height:1;padding:0;flex-shrink:0;
-          transition:color .15s;
-        " onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-3)'">✕</button>
-      </div>
-      <!-- media section — scrollable, shrinkable -->
-      <div style="flex:1;overflow-y:auto;overscroll-behavior-y:contain;padding:12px 16px;min-height:0;">
-        <div id="qpMediaSection"></div>
-      </div>
-      <!-- actions — always pinned to bottom -->
-      <div style="padding:12px 16px;display:flex;gap:8px;flex-shrink:0;border-top:0.5px solid var(--border);">
-        <button onclick="pickAnother()" style="
-          flex:1;padding:10px 8px;min-height:44px;background:var(--bg-3);border:0.5px solid var(--border);
-          border-radius:var(--radius-xs);font-size:13px;font-weight:500;color:var(--text);
-          cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;
-        " onmouseenter="this.style.background='var(--bg-3)';this.style.borderColor='var(--border-olive)';this.style.color='var(--olive-light)'" onmouseleave="this.style.background='var(--bg-3)';this.style.borderColor='var(--border)';this.style.color='var(--text)'">${icon('sparkles',12)} Another</button>
-        <button class="qp-start" onclick="qpStartWatching()" style="
-          flex:1;padding:10px 8px;min-height:44px;background:var(--olive-light);border:none;
-          border-radius:var(--radius-xs);font-size:13px;font-weight:600;color:#fff;
-          cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;
-        " onmouseenter="this.style.background='var(--olive)'" onmouseleave="this.style.background='var(--olive-light)'">Start Watching</button>
-      </div>
-    </div>`;
-  el.addEventListener('click', e => { if (e.target === el) closeQueuePicker(); });
-  document.body.appendChild(el);
-}
-
+/* "Pick for me" on the Watchlist (MSSPick, js/pick.js): one title from this category's watchlist */
 function showQueuePicker() {
-  const queue = _catAll.filter(e => e.status === 'queue');
-  if (!queue.length) { showToast('Your watchlist is empty.', 'err'); return; }
-  _injectQPModal();
-  _qpItem = queue[Math.floor(Math.random() * queue.length)];
-  _renderQPCard(_qpItem);
-  const ov = document.getElementById('qpOverlay');
-  ov.style.pointerEvents = 'auto';
-  ov.style.opacity = '1';
-  document.getElementById('qpCard').style.transform = 'translateY(0)';
-  mssLockScroll('qp');
+  MSSPick.open({ pool: () => _catAll.filter(e => e.status === 'queue'), all: () => _catAllRaw, user: _catUser,
+    onStarted: () => renderPage() });
 }
-
-function closeQueuePicker() {
-  const ov = document.getElementById('qpOverlay');
-  if (!ov) return;
-  ov.style.opacity = '0';
-  document.getElementById('qpCard').style.transform = 'translateY(18px)';
-  ov.style.pointerEvents = 'none';
-  mssUnlockScroll('qp');
-  _qpItem = null;
-}
-
-function pickAnother() {
-  const queue = _catAll.filter(e => e.status === 'queue');
-  if (!queue.length) return;
-  const others = queue.length > 1 ? queue.filter(e => e.id !== _qpItem?.id) : queue;
-  _qpItem = others[Math.floor(Math.random() * others.length)];
-  const slot = document.getElementById('qpMediaSection');
-  if (!slot) return;
-  slot.style.opacity = '0';
-  slot.style.transform = 'scale(0.94)';
-  // Update header to match new item
-  document.getElementById('qpPoster').innerHTML = posterHTML(_qpItem);
-  document.getElementById('qpTitle').textContent = _qpItem.title;
-  const meta = [CAT_META[_qpItem.cat]?.label, ...(_qpItem.genres||[]).slice(0,2)].filter(Boolean);
-  document.getElementById('qpMeta').innerHTML = meta.map(m =>
-    `<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:12px;padding:1px 6px;font-size:9px;letter-spacing:.3px">${m}</span>`
-  ).join('');
-  setTimeout(() => { _renderQPCardContent(_qpItem); slot.style.opacity = '1'; slot.style.transform = 'scale(1)'; }, 180);
-}
-
-function _renderQPCard(e) {
-  const e_data = e;
-  // Header
-  document.getElementById('qpPoster').innerHTML = posterHTML(e_data);
-  document.getElementById('qpTitle').textContent = e_data.title;
-  const meta = [CAT_META[e_data.cat]?.label, ...(e_data.genres||[]).slice(0,2)].filter(Boolean);
-  document.getElementById('qpMeta').innerHTML = meta.map(m =>
-    `<span style="background:var(--olive-faint);border:0.5px solid var(--border-olive);color:var(--olive-light);border-radius:12px;padding:1px 6px;font-size:9px;letter-spacing:.3px">${m}</span>`
-  ).join('');
-  // Media section
-  _renderQPCardContent(e_data);
-}
-
-function _renderQPCardContent(e) {
-  const slot = document.getElementById('qpMediaSection');
-  if (!slot) return;
-  slot.style.transition = 'opacity 180ms var(--ease), transform 180ms var(--ease)';
-  const posterSrc = safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);">` : '';
-  slot.innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;">
-      <div style="width:100%;max-width:200px;max-height:40vh;aspect-ratio:0.67;border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-3);display:flex;align-items:center;justify-content:center;">
-        ${posterSrc}
-      </div>
-      <div style="width:100%;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;text-align:center;">
-        <div>
-          <div style="font-size:11px;color:var(--text-3);margin-bottom:3px;">Year</div>
-          <div style="font-family:var(--bebas);font-size:15px;color:var(--text);font-weight:400;">${escHTML(e.year || '—')}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text-3);margin-bottom:3px;">Status</div>
-          <div style="font-size:12px;color:var(--olive-light);font-weight:500;padding:3px 8px;background:var(--olive-faint);border:0.5px solid var(--border-olive);border-radius:var(--radius-xs);">On Your Watchlist</div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-async function qpStartWatching() {
-  if (!_qpItem || !_catUser) return;
-  const btn = document.querySelector('.qp-start');
-  if (btn) { btn.disabled = true; btn.textContent = 'Moving…'; }
-  try {
-    await updateProgress(_qpItem.id, _catUser.id, { status: 'watching' });
-    closeQueuePicker();
-    await renderPage();
-  } catch(e) {
-    showToast('Could not move to watching.', 'err');
-    if (btn) { btn.disabled = false; btn.innerHTML = `Start Watching`; }
-  }
-}
-
-// Close QP on Escape
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    const ov = document.getElementById('qpOverlay');
-    if (ov && ov.style.opacity === '1') closeQueuePicker();
-  }
-});
 
 /* rewatchEntry, getRewatchCount, isRewatching, rewatchBadgeHTML, rewatchIconHTML
    defined in rewatch.js (loaded before category.js) */
