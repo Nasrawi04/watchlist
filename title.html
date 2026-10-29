@@ -72,7 +72,7 @@
 }
 .td-poster {
   width:clamp(96px, 24vw, 320px); height:clamp(144px, 36vw, 480px); flex-shrink:0; border-radius:var(--radius); overflow:hidden;
-  background:var(--bg-3); box-shadow:0 10px 30px rgba(0,0,0,0.5);
+  background:var(--bg-3); 
   display:flex; align-items:center; justify-content:center;
 }
 .td-poster img { width:100%; height:100%; object-fit:cover; }
@@ -94,7 +94,7 @@
 .td-meta-row span { display:flex; align-items:center; gap:5px; }
 .td-genres { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:0.85rem; }
 /* Type + genre tags: the site's own tags (.type-label / .w-ep-badge), a touch larger in the hero */
-.td-genres .type-label, .td-genres .w-ep-badge { font-size:clamp(11px, 1.4vw, 13px); padding:4px 10px; box-shadow:0 1px 6px rgba(0,0,0,.25); }
+.td-genres .type-label, .td-genres .w-ep-badge { font-size:clamp(11px, 1.4vw, 13px); padding:4px 10px; }
 .td-director-row {
   display:inline-flex; align-items:center; gap:6px; font-size:13.5px; color:#fff;
   margin-bottom:1.25rem; padding:7px 14px; border-radius:var(--radius-sm);
@@ -141,7 +141,7 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 }
 #wtwOverlay.open { opacity:1; pointer-events:auto; }
 #wtwCard {
-  position:relative; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
+  position:relative; background:var(--bg-2); border:1.5px solid var(--olive-light); 
   border-radius:var(--radius-lg); width:100%; max-width:540px; max-height:90dvh;
   display:flex; flex-direction:column; overflow:hidden; animation:slideUp .25s var(--ease);
 }
@@ -151,7 +151,7 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .wtw-head-art { position:absolute; inset:-12px; background-size:cover; background-position:center 30%; filter:blur(6px) saturate(1.1); transform:scale(1.06); }
 .wtw-head-bg::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(14,18,12,.55) 0%, rgba(14,18,12,.82) 60%, rgba(14,18,12,.95) 100%); }
 .wtw-head-row { display:flex; align-items:flex-end; gap:16px; }
-.wtw-poster { width:64px; aspect-ratio:2/3; border-radius:8px; overflow:hidden; flex-shrink:0; background:rgba(255,255,255,.08); box-shadow:0 8px 24px rgba(0,0,0,.5); }
+.wtw-poster { width:64px; aspect-ratio:2/3; border-radius:8px; overflow:hidden; flex-shrink:0; background:rgba(255,255,255,.08); }
 .wtw-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .wtw-head-text { min-width:0; flex:1; padding-bottom:2px; }
 .wtw-kicker { font-family:var(--sans); font-size:13px; font-weight:600; color:#A9D88F; margin-bottom:4px; }
@@ -198,7 +198,7 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .wtw-group-title small { font-size:12px; font-weight:500; color:var(--text-3); }
 .wtw-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(76px, 1fr)); gap:14px 10px; }
 .wtw-provider { display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; cursor:default; -webkit-user-select:none; user-select:none; }
-.wtw-provider img, .wtw-provider-letter { width:56px; height:56px; border-radius:14px; object-fit:cover; background:var(--bg-3); box-shadow:0 2px 8px rgba(0,0,0,.18), inset 0 0 0 0.5px rgba(255,255,255,.08); }
+.wtw-provider img, .wtw-provider-letter { width:56px; height:56px; border-radius:14px; object-fit:cover; background:var(--bg-3); box-shadow:inset 0 0 0 0.5px rgba(255,255,255,.08); }
 .wtw-provider-letter { display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; color:var(--olive-light); }
 .wtw-provider span { font-size:12px; line-height:1.3; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .wtw-empty { display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px 8px 6px; text-align:center; }
@@ -234,6 +234,15 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .td-in-lib-go:hover { background:rgba(255,255,255,.08); }
 .td-in-lib-go:hover .td-in-lib-arrow { background:var(--olive); }
 .td-in-lib-go:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+/* phones: the big button takes the full width; the edit line above it is small and quiet */
+@media(max-width:640px) {
+  .td-in-library { flex-direction:column; align-items:stretch; gap:10px; padding:12px 14px; }
+  .td-in-lib-go { align-self:center; gap:6px; font-size:12.5px; padding:4px 8px; margin:0; }
+  .td-in-lib-go svg { width:14px; height:14px; }
+  .td-in-lib-arrow { width:20px; height:20px; }
+  .td-in-lib-arrow svg { width:10px; height:10px; }
+  .td-in-library a.btn-save { width:100%; }
+}
 
 /* ── Sections ── */
 .td-section-title {
@@ -348,7 +357,7 @@ a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center;
   }
   .td-poster {
     width:clamp(130px, 46vw, 190px); height:auto; aspect-ratio:2/3;
-    box-shadow:0 8px 24px rgba(0,0,0,0.5);
+    
   }
   .td-hero-info { width:100%; }
   .td-eyebrow { justify-content:center; margin-bottom:.5rem; }
@@ -371,7 +380,7 @@ a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center;
 .td-ep-graph-link { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--olive-light); text-decoration:none; }
 .td-ep-graph-link:hover { text-decoration:underline; text-underline-offset:3px; }
 .td-ep-scores { position:absolute; top:8px; inset-inline-end:8px; display:flex; gap:4px; }
-.td-ep-scores span { padding:2px 7px; border-radius:4px; font-family:var(--bebas); font-size:14px; letter-spacing:.4px; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+.td-ep-scores span { padding:2px 7px; border-radius:4px; font-family:var(--bebas); font-size:14px; letter-spacing:.4px; }
 /* ── Fan Favorites — same tabs + row as Friends & This Title, with the page's
    own episode cards, season blocks and cast photos ── */
 .td-fans-row { align-items:flex-start; }
@@ -400,7 +409,7 @@ a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center;
 }
 #replyPopupOverlay.open { opacity:1; pointer-events:auto; }
 #replyPopupCard {
-  background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive);
+  background:var(--bg-2); border:1.5px solid var(--olive-light); 
   border-radius:var(--radius-lg); width:100%; max-width:560px; max-height:88dvh;
   display:flex; flex-direction:column; overflow:hidden;
 }
@@ -812,7 +821,7 @@ function _fanEpisodeNumbers(pick, d) {
   if (m) return [+m[2], +m[1]];
   m = t.match(/^(?:episode|ep|e)?\s*(\d{1,4})$/);
   const real = _fanRealSeasons(d);
-  if (m && real.length) {                                          // absolute number
+  if (m && real.length) { // absolute number
     let n = +m[1];
     if (real.length === 1) return [real[0].season_number, n];
     if (n <= (real[0].episode_count || 0)) return null;            // "Episode 5" on a multi-season show: unclear
