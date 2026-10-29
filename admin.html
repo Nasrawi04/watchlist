@@ -158,6 +158,42 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-facts dd { margin:2px 0 0; font-weight:600; word-break:break-all; }
 .adm-link { color:var(--olive-light); font-weight:600; font-size:13px; text-decoration:none; }
 .adm-link:hover { text-decoration:underline; }
+/* Sign-in posters */
+.adm-wall-intro { margin-bottom:1rem; }
+.adm-wall-intro .adm-btn { display:inline-flex; align-items:center; gap:6px; text-decoration:none; }
+.adm-wrow { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:14px 16px 16px; margin-bottom:12px; }
+.adm-wrow-h { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.adm-wgrid { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:10px; }
+.adm-wslot { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.adm-wposter { aspect-ratio:2/3; width:100%; padding:0; border-radius:8px; overflow:hidden; cursor:pointer; background:var(--bg-3); border:1px solid var(--border-2); transition:border-color .15s; }
+.adm-wposter:hover { border-color:var(--olive-light); }
+.adm-wposter img { width:100%; height:100%; object-fit:cover; display:block; }
+.adm-wposter.empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:var(--text-3); border-style:dashed; font:600 12px 'Manrope',var(--sans); }
+.adm-wposter.empty:hover { color:var(--olive-light); }
+.adm-wname { font-size:11.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.adm-wacts { display:flex; gap:4px; }
+.adm-wacts button { flex:1; height:26px; border-radius:6px; border:1px solid var(--border-2); background:none; color:var(--text-2); cursor:pointer; display:grid; place-items:center; }
+.adm-wacts button:hover:not(:disabled) { border-color:var(--border-olive); color:var(--text); }
+.adm-wacts button:disabled { opacity:.35; cursor:default; }
+.adm-wacts .flip svg { transform:scaleX(-1); }
+.adm-wsave { position:sticky; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:5; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:6px;
+  padding:10px 12px 10px 16px; margin-right:56px; border-radius:var(--radius); background:var(--card-solid); border:1px solid var(--border-2); font-size:13px; color:var(--text-3); }
+.adm-wsave.dirty { border-color:var(--olive-light); color:var(--text); font-weight:600; }
+.adm-pick { max-width:620px; height:min(760px, calc(100dvh - 32px)); }
+.adm-wpick { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:10px; padding-bottom:16px; }
+.adm-wpick button { aspect-ratio:2/3; padding:0; border-radius:8px; overflow:hidden; cursor:pointer; background:var(--bg-3); border:1px solid var(--border-2); }
+.adm-wpick button:hover, .adm-wpick button:focus-visible { border-color:var(--olive-light); outline:2px solid var(--olive-light); outline-offset:1px; }
+.adm-wpick button.on { border-color:var(--olive-light); outline:2px solid var(--olive-light); outline-offset:1px; }
+.adm-wpick img { width:100%; height:100%; object-fit:cover; display:block; }
+/* Tablets and phones: the row of 7 scrolls sideways (keeps the buttons a proper size), the save bar sits above the bottom bar */
+@media(max-width:900px) {
+  .adm-wgrid { grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:112px; overflow-x:auto; scroll-snap-type:x proximity; padding-bottom:6px; scrollbar-width:thin; }
+  .adm-wslot { scroll-snap-align:start; }
+  .adm-wacts button { height:34px; }
+  .adm-wsave { bottom:calc(96px + env(safe-area-inset-bottom)); margin-right:100px; padding:6px; }   /* clear of the light / dark switch */
+  .adm-wsave > span { display:none; }
+  .adm-wsave .adm-btn { flex:1; white-space:nowrap; }
+}
 @media(max-width:760px) { .adm-grid2 { grid-template-columns:1fr; } }
 @media(max-width:640px) {
   .adm-tiles { grid-template-columns:repeat(2, minmax(0, 1fr)); }
@@ -198,7 +234,7 @@ button.adm-row:hover { border-color:var(--border-olive); }
 <script>
 const esc = s => escHTML(s == null ? '' : String(s));
 const ADM_STATUS = [['watching', 'Watching'], ['up_next', 'Up Next'], ['paused', 'Taking a Break'], ['ongoing', 'To Be Continued'], ['completed', 'Watched'], ['queue', 'Watchlist'], ['dropped', 'Dropped']];
-const ADM_TABS = [['overview', 'Overview'], ['members', 'Members'], ['titles', 'Titles'], ['safety', 'Safety'], ['activity', 'Activity'], ['langs', 'Languages']];
+const ADM_TABS = [['overview', 'Overview'], ['members', 'Members'], ['titles', 'Titles'], ['safety', 'Safety'], ['activity', 'Activity'], ['langs', 'Languages'], ['wall', 'Sign-in posters']];
 const ADM_KIND = { comment: 'Comment', note_reply: 'Note reply', list_reply: 'List reply' };
 const _admNum = n => Number(n || 0).toLocaleString(MSSI18n.locale);
 const _admFmt = d => d ? new Date(d).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
@@ -223,7 +259,7 @@ function admTab(key, refresh) {
   history.replaceState(null, '', '#' + _admTab);
   _admPaintTabs();
   document.getElementById('admPanel').setAttribute('aria-labelledby', 'admTab-' + _admTab);
-  ({ overview: admOverview, members: admMembers, titles: admTitlesView, safety: admSafety, activity: admActivity, langs: admLoadLanguages })[_admTab](refresh);
+  ({ overview: admOverview, members: admMembers, titles: admTitlesView, safety: admSafety, activity: admActivity, langs: admLoadLanguages, wall: admWall })[_admTab](refresh);
 }
 function admError(err) {
   console.error(err);
@@ -687,6 +723,132 @@ async function admAudience(i) {
       const rows = data.filter(r => r.status === k);
       return rows.length ? `<div class="adm-group">${l} · ${rows.length}</div><div class="adm-list">${rows.map(row).join('')}</div>` : '';
     }).join('') || '<div class="adm-empty">No one has this title anymore.</div>'}`;
+}
+
+/* ── Sign-in posters (078): the poster wall on the sign-in page ──
+   4 rows × 7 posters; pick a title, then any of its TMDB posters. Saved for everyone at once;
+   the sign-in page reloads its copy the next time it's opened after a save. */
+const ADM_WALL = [['anime', 'Anime', 'Left edge'], ['movies', 'Movies', 'Centre'], ['tv', 'TV Shows', 'Centre'], ['cartoons', 'Cartoons', 'Right edge']];
+const ADM_WALL_MAX = 7, ADM_POSTER = 'https://image.tmdb.org/t/p/w185';
+let _admWall = null, _admWallAt = null, _admWallDirty = false, _admPick = null;
+async function admWall(refresh) {
+  const panel = document.getElementById('admPanel');
+  if (refresh && _admWallDirty && !(await showConfirm({ title: 'Discard your changes?', message: 'Your poster changes aren’t saved yet.', confirmText: 'Discard' }))) return;
+  if (!_admWall || refresh) {
+    panel.innerHTML = _admSpin();
+    const { data, error } = await sb.from('sign_in_wall').select('slots, updated_at').eq('id', 1).maybeSingle();
+    if (_admTab !== 'wall') return;
+    if (error) { console.error(error); panel.innerHTML = '<div class="adm-empty">Couldn’t load the sign-in posters. Check that migration 078 has been run, then refresh.</div>'; return; }
+    _admWall = {};
+    ADM_WALL.forEach(([k]) => { _admWall[k] = Array.isArray(data?.slots?.[k]) ? data.slots[k].slice(0, ADM_WALL_MAX) : []; });
+    _admWallAt = data?.updated_at || null; _admWallDirty = false;
+  }
+  _admWallDraw();
+}
+function _admWallDraw() {
+  const panel = document.getElementById('admPanel');
+  const slot = (k, p, i) => p
+    ? `<div class="adm-wslot">
+        <button type="button" class="adm-wposter" onclick="admWallPick('${k}', ${i})" aria-label="Change ${esc(p.title)}"><img src="${ADM_POSTER}${esc(p.poster)}" alt="" loading="lazy"></button>
+        <span class="adm-wname" translate="no">${esc(p.title)}</span>
+        <span class="adm-wacts">
+          <button type="button" onclick="admWallMove('${k}', ${i}, -1)" ${i ? '' : 'disabled'} aria-label="Move ${esc(p.title)} earlier">${icon('back', 13)}</button>
+          <button type="button" onclick="admWallMove('${k}', ${i}, 1)" ${i < _admWall[k].length - 1 ? '' : 'disabled'} aria-label="Move ${esc(p.title)} later" class="flip">${icon('back', 13)}</button>
+          <button type="button" onclick="admWallClear('${k}', ${i})" aria-label="Remove ${esc(p.title)}">${icon('x', 13)}</button>
+        </span>
+      </div>`
+    : `<div class="adm-wslot"><button type="button" class="adm-wposter empty" onclick="admWallPick('${k}', ${i})" aria-label="Add a poster">${icon('plus', 20)}<span>Add</span></button></div>`;
+  panel.innerHTML = `<div class="adm-card adm-wall-intro">
+      <div class="adm-card-h"><span class="adm-card-t">The sign-in page’s poster wall</span><span class="adm-card-s">${_admWallAt ? `Saved ${_admAgo(_admWallAt)}` : 'Not saved yet — showing this week’s trending'}</span></div>
+      <div class="adm-filter-txt">Pick titles people will recognise in a glance — the ones that make them want to sign up and rate. Click a slot, find the title, then choose any of its posters. Movies and TV Shows run down the middle; Anime and Cartoons sit on the edges.</div>
+      <div class="adm-actions" style="margin-top:12px"><a class="adm-btn" href="login.html?preview" target="_blank" rel="noopener">${icon('eye', 13)} Preview the sign-in page</a></div>
+    </div>
+    ${ADM_WALL.map(([k, label, where]) => `<section class="adm-wrow" aria-label="${label}">
+      <div class="adm-wrow-h"><span class="adm-card-t">${label}</span><span class="adm-card-s">${where} · ${_admWall[k].length} / ${ADM_WALL_MAX}</span></div>
+      <div class="adm-wgrid">${Array.from({ length: ADM_WALL_MAX }, (_, i) => slot(k, _admWall[k][i], i)).join('')}</div>
+    </section>`).join('')}
+    <div class="adm-wsave${_admWallDirty ? ' dirty' : ''}">
+      <span>${_admWallDirty ? 'Unsaved changes' : 'Everything’s saved'}</span>
+      <button type="button" class="adm-btn on" id="admWallSave" onclick="admWallSave()" ${_admWallDirty ? '' : 'disabled'}>Save for everyone</button>
+    </div>`;
+}
+function _admWallChanged() { _admWallDirty = true; _admWallDraw(); }
+function admWallMove(k, i, d) {
+  const a = _admWall[k], j = i + d;
+  if (j < 0 || j >= a.length) return;
+  [a[i], a[j]] = [a[j], a[i]]; _admWallChanged();
+}
+function admWallClear(k, i) { _admWall[k].splice(i, 1); _admWallChanged(); }
+async function admWallSave() {
+  const b = document.getElementById('admWallSave');
+  b.disabled = true; b.textContent = 'Saving…';
+  const { data, error } = await sb.rpc('set_sign_in_wall', { p_slots: _admWall });
+  if (error) { console.error(error); showToast(error.code === '42501' ? 'Only admins can change these.' : 'Couldn’t save — try again.', 'err'); b.disabled = false; b.textContent = 'Save for everyone'; return; }
+  _admWallAt = data; _admWallDirty = false; _admWallDraw();
+  showToast('Saved — the sign-in page shows these now.');
+}
+addEventListener('beforeunload', e => { if (_admWallDirty) { e.preventDefault(); e.returnValue = ''; } });
+
+// The picker: find the title (that row's kind of thing), then choose one of its posters
+function admWallPick(k, i) {
+  _admPick = { k, i: Math.min(i, _admWall[k].length) };
+  let ov = document.getElementById('admPickOv');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'admPickOv'; ov.className = 'soc-overlay';
+    ov.innerHTML = `<div class="soc-card adm-pick" role="dialog" aria-modal="true" aria-labelledby="admPickT">
+        <div class="sf-header"><div class="sf-title" id="admPickT">Choose a poster</div><button type="button" class="sf-close" onclick="admPickClose()" aria-label="Close">${icon('x', 18)}</button></div>
+        <div class="sf-body" id="admPickBody"></div></div>`;
+    MSSDialog.bind(ov, admPickClose);
+    document.body.appendChild(ov);
+  }
+  const label = ADM_WALL.find(w => w[0] === k)[1];
+  document.getElementById('admPickT').textContent = `${label} · slot ${_admPick.i + 1}`;
+  document.getElementById('admPickBody').innerHTML = `<input class="field-input adm-search" id="admPickQ" type="search" placeholder="Search ${label.toLowerCase()}…" aria-label="Search a title" autocomplete="off" data-1p-ignore data-lpignore="true">
+    <div id="admPickRes" aria-live="polite"><div class="adm-empty">Type a title.</div></div>`;
+  const q = document.getElementById('admPickQ');
+  q.addEventListener('input', () => { clearTimeout(_admTimer); _admTimer = setTimeout(() => _admPickSearch(q.value), 300); });
+  MSSDialog.open(ov, { focus: '#admPickQ' });
+}
+function admPickClose() { MSSDialog.close(document.getElementById('admPickOv')); }
+async function _admPickSearch(q) {
+  const box = document.getElementById('admPickRes'), k = _admPick.k;
+  q = q.trim();
+  if (q.length < 2) { box.innerHTML = '<div class="adm-empty">Type a title.</div>'; return; }
+  box.innerHTML = _admSpin();
+  try {
+    const kind = k === 'movies' ? 'movie' : k === 'tv' ? 'tv' : 'multi';
+    const res = await tmdbFetch(`${TMDB_BASE}/search/${kind}?query=${encodeURIComponent(q)}&include_adult=false&language=en-US`);
+    if (!res.ok) throw res;
+    const hits = ((await res.json()).results || [])
+      .map(r => ({ id: r.id, type: kind === 'multi' ? r.media_type : kind, title: r.title || r.name, year: (r.release_date || r.first_air_date || '').slice(0, 4), poster: r.poster_path }))
+      .filter(r => (r.type === 'movie' || r.type === 'tv') && r.poster).slice(0, 12);
+    if (document.getElementById('admPickQ')?.value.trim() !== q) return;
+    _admPick.hits = hits;
+    box.innerHTML = hits.length ? `<div class="adm-list">${hits.map((h, n) => `<button type="button" class="adm-row" onclick="_admPickTitle(${n})">${_admPoster(ADM_POSTER + h.poster)}
+        <span class="adm-main"><span class="adm-name" translate="no">${esc(h.title)}</span><span class="adm-meta"><span>${h.type === 'movie' ? 'Movie' : 'TV Show'}</span>${h.year ? `<span>${esc(h.year)}</span>` : ''}</span></span>${icon('arrowRight', 15)}</button>`).join('')}</div>`
+      : '<div class="adm-empty">Nothing with a poster matches that.</div>';
+  } catch (err) { console.error(err); box.innerHTML = '<div class="adm-empty">TMDB didn’t answer — try again in a moment.</div>'; }
+}
+async function _admPickTitle(n) {
+  const h = _admPick.hits[n], box = document.getElementById('admPickRes');
+  box.innerHTML = _admSpin();
+  try {
+    const res = await tmdbFetch(`${TMDB_BASE}/${h.type}/${h.id}/images?include_image_language=en,null`);
+    if (!res.ok) throw res;
+    const posters = ((await res.json()).posters || []).sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0) || (b.vote_average || 0) - (a.vote_average || 0)).map(p => p.file_path);
+    if (!posters.includes(h.poster)) posters.unshift(h.poster);
+    _admPick.title = h; _admPick.posters = posters.slice(0, 60);
+    const now = _admWall[_admPick.k][_admPick.i], cur = now && now.id === h.id ? now.poster : '';
+    box.innerHTML = `<button type="button" class="adm-back" onclick="_admPickSearch(document.getElementById('admPickQ').value)">${icon('back', 14)} Back to results</button>
+      <div class="adm-group" translate="no">${esc(h.title)} · ${_admPick.posters.length} posters</div>
+      <div class="adm-wpick">${_admPick.posters.map((p, j) => `<button type="button" onclick="_admPickPoster(${j})" aria-label="Poster ${j + 1}${p === cur ? ' (in use now)' : ''}"${p === cur ? ' class="on"' : ''}><img src="${ADM_POSTER}${esc(p)}" alt="" loading="lazy"></button>`).join('')}</div>`;
+  } catch (err) { console.error(err); box.innerHTML = '<div class="adm-empty">Couldn’t load the posters — try again.</div>'; }
+}
+function _admPickPoster(j) {
+  const h = _admPick.title, row = _admWall[_admPick.k];
+  row[_admPick.i] = { id: h.id, type: h.type, title: h.title, poster: _admPick.posters[j] };
+  admPickClose(); _admWallChanged();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
