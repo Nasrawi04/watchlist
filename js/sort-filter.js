@@ -674,6 +674,7 @@ const SF = (() => {
           oninput="SF._search('${escHTML(scope)}', this.value)" onkeydown="if(event.key==='Escape'&&this.value){event.stopPropagation();SF._search('${escHTML(scope)}','',true)}">
         <span class="sf-search-count" aria-live="polite"></span>
         <button type="button" class="sf-search-clear" onclick="SF._search('${escHTML(scope)}','',true)" aria-label="Clear search">${icon('x', 14)}</button>
+        <button type="button" class="sf-search-go" tabindex="-1" aria-hidden="true" onclick="this.parentElement.querySelector('input').focus()">${icon('search', 16)}<span>Search</span></button>
       </div>`;
   }
   let searchTimer = null;
