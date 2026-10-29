@@ -153,7 +153,7 @@ const MSSEpChat = (() => {
       <div class="soc-tip"><span class="soc-tip-ic">${icon('lock', 16)}</span>
         <div><b>Spoiler-safe chats</b><span>Talk about an episode with friends who’ve seen it. A chat unlocks once your progress reaches that episode — no rating needed.</span></div></div>`;
     if (!user) {
-      el.innerHTML = head + `<div class="fr-empty"><div class="fr-empty-ic">${icon('comment', 26)}</div><div class="fr-empty-title">Episode chat with friends</div><div class="fr-empty-text">Sign in to talk about episodes with your friends.</div></div>`;
+      el.innerHTML = head + `<div class="mss-es">${mssArt('chat')}<div class="mss-es-title">Episode chat with friends</div><div class="mss-es-text">Sign in to talk about episodes with your friends.</div></div>`;
       return;
     }
     el.innerHTML = head + `<div id="epcList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
@@ -166,9 +166,9 @@ const MSSEpChat = (() => {
   function drawList() {
     const box = document.getElementById('epcList'); if (!box) return;
     if (!threads.length) {
-      box.innerHTML = `<div class="fr-empty"><div class="fr-empty-ic">${icon('comment', 26)}</div><div class="fr-empty-title">No episode chats yet</div>
-        <div class="fr-empty-text">Open any episode on the Episodes page and start one — friends who’ve watched it will see it here.</div>
-        <a class="btn-add-entry" style="margin:14px auto 0" href="episodes.html">${icon('episodes', 14)} Go to Episodes</a></div>`;
+      box.innerHTML = `<div class="mss-es">${mssArt('chat')}<div class="mss-es-title">No episode chats yet</div>
+        <div class="mss-es-text">Open any episode on the Episodes page and start one — friends who’ve watched it will see it here.</div>
+        <a class="mss-es-btn primary" style="margin-top:18px" href="episodes.html">${icon('episodes', 14)} Go to Episodes</a></div>`;
       return;
     }
     box.innerHTML = `<div class="epc-list">${threads.map((t, i) => `<button type="button" class="epc-row${t.new ? ' is-new' : ''}${t.unlocked ? '' : ' locked'}" onclick="MSSEpChat._openAt(${i})">
