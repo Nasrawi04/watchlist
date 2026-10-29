@@ -14,10 +14,38 @@ const SUPABASE_URL      = 'https://yqbfjtkcsgyvnablmuzp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxYmZqdGtjc2d5dm5hYmxtdXpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0OTI4MzgsImV4cCI6MjA5NjA2ODgzOH0.ST4H2cpU3ybxPQ76Q2qiNTbwAVFzq3BrEiVpFrD0KAU';
 // ───────────────────────────────────────────
 
+/* ── Steadier loading on phones ──
+   • A read that fails on a network blip (phones switching Wi-Fi / mobile data, a waking radio) is
+     tried again twice, a moment apart, before anything shows an error. Writes are never repeated.
+   • Every write notes the time (mss_data_at), so a page coming back from the browser's back/forward
+     cache only reloads when something actually changed since it was drawn (mssDataChangedSince) —
+     no white flash for a plain "back".
+   • While the page is being left, failed requests (cut off by the browser) don't show error screens. */
+window._mssPageAt = Date.now();
+let _mssLeaving = false;
+addEventListener('pagehide', () => { _mssLeaving = true; });
+addEventListener('beforeunload', () => { _mssLeaving = true; });
+addEventListener('pageshow', () => { _mssLeaving = false; });
+function mssDataChangedSince(t) { try { return Number(localStorage.getItem('mss_data_at') || 0) > t; } catch { return true; } }
+const _MSS_READ_RPC = /\/rest\/v1\/rpc\/(get_|is_|search|check|list_|count_|admin_(find|overview|user_detail|recent|flagged|picture_queue|unstarred|language_requests|title))/;
+async function _mssFetch(input, init = {}) {
+  const url = typeof input === 'string' ? input : input?.url || String(input);
+  const method = String(init.method || input?.method || 'GET').toUpperCase();
+  const read = method === 'GET' || method === 'HEAD' || _MSS_READ_RPC.test(url);
+  if (!read && url.includes('/rest/v1/')) { try { localStorage.setItem('mss_data_at', String(Date.now())); } catch {} }
+  for (let i = 0; ; i++) {
+    try { return await fetch(input, init); }
+    catch (err) {
+      if (!read || i >= 2 || init.signal?.aborted || _mssLeaving || !navigator.onLine) throw err;
+      await new Promise(r => setTimeout(r, 450 * (i + 1) + Math.random() * 250));
+    }
+  }
+}
+
 let sb;
 try {
   const { createClient } = window.supabase;
-  sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: _mssFetch } });
 } catch(e) {
   console.error('Supabase failed to init — check SUPABASE_URL and SUPABASE_ANON_KEY in js/config.js');
 }
@@ -598,10 +626,24 @@ function mssJumpTo(y) {
 (function mssImagePlaceholders() {
   const FRAMED = /poster|still|backdrop|photo|avatar|cast|cover|thumb|-av\b|^av\b|fr-av|snote-avatar|social-list-avatar/;
   const isFramed = el => el && el.tagName === 'IMG' && el.parentElement && FRAMED.test(el.parentElement.className || '');
-  const mark = img => { if (img.complete && img.naturalWidth) img.classList.add('is-loaded'); };
+  /* Only frames on (or about to come on) screen shimmer — a long Library has hundreds of posters
+     waiting to lazy-load, and hundreds of always-running shimmers were too much for phones
+     (Safari would run out of memory and reload the page: the white flash). */
+  const near = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('fx-vis', e.isIntersecting)), { rootMargin: '200px 0px' }) : null;
+  const watch = img => {
+    const f = img.parentElement;
+    if (!f || f._mssFx) return;
+    f._mssFx = 1;
+    if (near) near.observe(f); else f.classList.add('fx-vis');
+  };
+  const mark = img => { if (img.complete && img.naturalWidth) img.classList.add('is-loaded'); else watch(img); };
   document.documentElement.classList.add('mss-img-fx');
-  document.addEventListener('load', e => { if (isFramed(e.target)) e.target.classList.add('is-loaded'); }, true);
-  document.addEventListener('error', e => { if (isFramed(e.target)) e.target.classList.remove('is-loaded'); }, true);
+  document.addEventListener('load', e => {
+    if (!isFramed(e.target)) return;
+    e.target.classList.add('is-loaded');
+    const f = e.target.parentElement; if (f && near) { near.unobserve(f); f._mssFx = 0; f.classList.remove('fx-vis'); }
+  }, true);
+  document.addEventListener('error', e => { if (isFramed(e.target)) { e.target.classList.remove('is-loaded'); watch(e.target); } }, true);
   const scan = root => root.querySelectorAll && root.querySelectorAll('img').forEach(img => { if (isFramed(img)) mark(img); });
   document.addEventListener('DOMContentLoaded', () => {
     scan(document);
@@ -3065,6 +3107,7 @@ function _mssErrCode(err, crash) {
 }
 
 function mssErrorPage(kind, opts = {}) {
+  if (_mssLeaving) return;                 // the page is being left — a request cut off on the way out isn't an error
   const k = MSS_ERRORS[kind] ? kind : 'crash', d = { ...MSS_ERRORS[k], ...opts }, inline = !!opts.in;
   const host = opts.in || document.querySelector('.page-wrap') || document.body, h = inline ? 'h2' : 'h1';
   if (inline) { d.auto = 0; if (k === 'crash' && !opts.title) d.title = 'This section ran into a problem'; }
