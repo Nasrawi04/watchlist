@@ -346,10 +346,11 @@ async function renderHome() {
       try {
         // Searching covers every show — including ones not in your Watching / To Be Continued / Watched
         const res = await tmdbFetch(`${TMDB_BASE}/search/tv?language=en-US&query=${encodeURIComponent(q)}`);
+        if (document.getElementById('egSearch').value.trim() !== q) return;   // typed on since
         const results = res.ok ? ((await res.json()).results || []).filter(r => r.poster_path).slice(0, 16) : [];
         box.innerHTML = results.length ? `<div class="eg-shows">${results.map(searchCardHTML).join('')}</div>` : `<div class="mss-empty">No shows match “${esc(q)}”.</div>`;
       } catch { box.innerHTML = ''; }
-    }, 300);
+    }, MSS_SEARCH_MS);
   });
 }
 // Search results: the same card as your shows (poster, title, tags, line of text) — TMDB score, and your status if it's in your library
@@ -898,11 +899,12 @@ function egComparePick() {
         const list = document.getElementById('egPickList');
         if (q.length < 2) { list.innerHTML = ''; return; }
         const res = await tmdbFetch(`${TMDB_BASE}/search/tv?language=en-US&query=${encodeURIComponent(q)}`);
+        if (document.getElementById('egPickInput')?.value.trim() !== q) return;   // typed on since
         const items = res.ok ? ((await res.json()).results || []).filter(r => r.id !== _egShowId).slice(0, 10) : [];
         list.innerHTML = items.map(r => `<a class="eg-pick" href="episodes.html?show=${_egShowId}&vs=${r.id}${_egUserQ ? '&user=' + encodeURIComponent(_egUserQ) : ''}">
             <span class="eg-pick-poster">${r.poster_path ? `<img src="${TMDB_IMG}${r.poster_path}" alt="">` : ''}</span>
             <span><b translate="no">${esc(r.name)}</b><small>${esc((r.first_air_date || '').slice(0, 4))}</small></span></a>`).join('') || `<div class="sf-empty">No shows match.</div>`;
-      }, 300);
+      }, MSS_SEARCH_MS);
     });
   }
   MSSDialog.open(ov);
