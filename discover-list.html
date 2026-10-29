@@ -175,15 +175,15 @@ function _dlRankCls(rank) {
 
 function _dlCardHTML(it, rank) {
   return MSSCard.poster({ cls: 'dl-card', attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url,
-    rank: _dlIsRanked ? (it._rank || rank) : 0, type: _dlTypeLabel(it) ? it.media_type : null, score: _discFloorScore(it.score) });
+    rank: _dlIsRanked ? rank : 0, type: _dlTypeLabel(it) ? it.media_type : null, score: _discFloorScore(it.score) });
 }
 
 function _dlListRowHTML(it, rank) {
   const posterInner = safeURL(it.poster_url)
     ? `<img src="${safeURL(it.poster_url)}" loading="lazy" data-letter="${escHTML((it.title||'?')[0])}" onerror="mssImgError(this)">`
     : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_dlEsc((it.title||'?')[0].toUpperCase())}</div>`;
-  const rankBadge = _dlIsRanked
-    ? `<div class="cg-rank-badge ${_dlRankCls(it._rank || rank)}">${it._rank || rank}</div>`
+  const rankBadge = _dlIsRanked && rank
+    ? `<div class="cg-rank-badge ${_dlRankCls(rank)}">${rank}</div>`
     : '';
   const scoreStr = _discFloorScore(it.score);
   const typeLabel = _dlTypeLabel(it);
@@ -291,13 +291,24 @@ async function _dlLoadAll() {
   }
 }
 
+/* The #1, #2… badges count what's shown: filtered → 1, 2, 3… within the matches. Only for the
+   ranked orders — Top first / Bottom first and Highest / Lowest rated (bottom-first and lowest
+   count down from the last place); sorted A–Z, by release etc. there are no ranks. */
+function _dlRankOf(n) {
+  const sort = _dlHasSF ? SF.getSort('dl', 'all') : 'rank';
+  if (sort === 'rank' || sort === 'highest') return i => i + 1;
+  if (sort === 'rankRev' || sort === 'lowest') return i => n - i;
+  return () => 0;
+}
 function _dlRenderAll() {
   const grid = document.getElementById('dlGrid');
   const list = _dlSfActive() ? SF.list('dl', 'all') : _dlAllItems;
+  const rankOf = _dlRankOf(list.length);
   grid.className = _dlView === 'list' ? 'dl-list' : 'dl-grid';
   grid.innerHTML = list.length
-    ? list.map((it, i) => _dlView === 'list' ? _dlListRowHTML(it, i + 1) : _dlCardHTML(it, i + 1)).join('')
-    : `<div class="dl-end-msg" style="grid-column:1/-1">Nothing here matches these filters.</div>`;
+    ? list.map((it, i) => _dlView === 'list' ? _dlListRowHTML(it, rankOf(i)) : _dlCardHTML(it, rankOf(i))).join('')
+    : `<div style="grid-column:1/-1">${mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+        actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('dl', 'all'); _dlRenderAll()", primary: true }] })}</div>`;
   _dlObserveNewCards();
   if (_dlHasSF) document.getElementById('dlSfBar').innerHTML = SF.bar('dl', 'all');
 }
