@@ -2376,6 +2376,207 @@ function mssGuestGate(what) {
   mssJoin(what);
   return true;
 }
+/* ── Empty states: one design for every "nothing here yet" (see the "Empty states" styles) ──
+   mssEmpty({ art, title, text, actions:[{ label, icon, href | onclick, primary }], compact, starter })
+   art = a little line illustration in the theme's colours (MSS_ART); starter = 'movies' | 'tv' | 'anime' |
+   'cartoons' | 'all' adds a row of popular titles to add in one tap (only where an empty page would leave
+   you stuck — an empty Watchlist). mssArt(name) is just the picture, for older layouts (.fr-empty etc.). */
+const MSS_ART = {
+  watchlist: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="58" ry="7"/>
+    <g transform="rotate(-8 70 60)"><rect class="i-fill" x="34" y="38" width="76" height="44" rx="6"/><rect class="i-line" x="34" y="38" width="76" height="44" rx="6" opacity=".5"/></g>
+    <g class="bob"><path class="i-fill" d="M48 46h76v14a6 6 0 0 0 0 12v14H48V72a6 6 0 0 0 0-12z"/><path class="i-line" d="M48 46h76v14a6 6 0 0 0 0 12v14H48V72a6 6 0 0 0 0-12z"/>
+    <path class="i-line" d="M100 50v32" stroke-dasharray="3 4" opacity=".6"/><path class="i-line" d="M60 60h28M60 70h18" opacity=".5"/>
+    <path class="i-acc" d="M108 40v22l6-5 6 5V40"/></g></svg>`,
+  watching: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="62" ry="7"/>
+    <rect class="i-fill" x="34" y="24" width="92" height="62" rx="8"/><rect class="i-line" x="34" y="24" width="92" height="62" rx="8"/>
+    <path class="i-line" d="M64 98h32M80 86v12"/><path class="i-line" d="M68 14l12 10 12-10"/>
+    <g class="blink"><path class="i-acc" d="M72 46v16l13-8z"/></g>
+    <circle class="i-dot" cx="118" cy="80" r="2"/></svg>`,
+  watched: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="56" ry="7"/>
+    <path class="i-line" d="M40 98h80"/><path class="i-line" d="M44 98V78M116 98V78"/>
+    <g class="bob"><path class="i-fill" d="M64 30h32v16a16 16 0 0 1-32 0z"/><path class="i-gold" d="M64 30h32v16a16 16 0 0 1-32 0z"/>
+    <path class="i-gold" d="M64 36h-8a8 8 0 0 0 8 12M96 36h8a8 8 0 0 1-8 12M80 62v12M70 78h20"/></g>
+    <path class="i-line" d="M58 22l-4-5M102 22l4-5M80 18v-6" opacity=".6"/></svg>`,
+  paused: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="54" ry="7"/>
+    <g class="bob"><rect class="i-fill" x="58" y="18" width="44" height="80" rx="14"/><rect class="i-line" x="58" y="18" width="44" height="80" rx="14"/>
+    <circle class="i-line" cx="80" cy="44" r="12"/><path class="i-acc" d="M76 39v10M84 39v10"/>
+    <circle class="i-line" cx="70" cy="72" r="2.5"/><circle class="i-line" cx="90" cy="72" r="2.5"/><circle class="i-line" cx="80" cy="84" r="2.5"/></g>
+    <text x="112" y="34" class="zz" font-family="Oswald" font-size="13" fill="var(--olive-light)">z</text><text x="120" y="24" class="zz d2" font-family="Oswald" font-size="10" fill="var(--olive-light)">z</text></svg>`,
+  dropped: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="56" ry="7"/>
+    <path class="i-fill" d="M56 44h48l-5 56H61z"/><path class="i-line" d="M56 44h48l-5 56H61z"/><path class="i-line" d="M50 44h60M70 44v-6h20v6"/>
+    <path class="i-line" d="M72 56v34M88 56v34" opacity=".55"/>
+    <g class="bob"><path class="i-acc" d="M104 22c8 2 12 8 10 16"/><circle class="i-dot" cx="114" cy="40" r="2.4"/></g></svg>`,
+  search: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="56" ry="7"/>
+    <rect class="i-fill" x="30" y="34" width="70" height="44" rx="5"/><rect class="i-line" x="30" y="34" width="70" height="44" rx="5"/>
+    <path class="i-line" d="M30 44h70M30 68h70M40 34v10M52 34v10M64 34v10M76 34v10M88 34v10M40 68v10M52 68v10M64 68v10M76 68v10M88 68v10" opacity=".6"/>
+    <g class="bob"><circle class="i-fill" cx="104" cy="56" r="20"/><circle class="i-acc" cx="104" cy="56" r="20"/><path class="i-acc" d="M118 70l14 14"/>
+    <path class="i-line" d="M97 52q7-6 14 0"/><circle cx="99" cy="60" r="1.6" fill="currentColor"/><circle cx="109" cy="60" r="1.6" fill="currentColor"/></g></svg>`,
+  filter: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="56" ry="7"/>
+    <path class="i-fill" d="M42 26h76l-28 34v28l-20 10V60z"/><path class="i-line" d="M42 26h76l-28 34v28l-20 10V60z"/>
+    <g class="bob"><circle class="i-acc" cx="58" cy="16" r="5"/><circle class="i-acc" cx="80" cy="12" r="5"/><circle class="i-acc" cx="102" cy="16" r="5"/></g></svg>`,
+  friends: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="62" ry="7"/>
+    <path class="i-fill" d="M32 52h40v40H32z"/><path class="i-line" d="M32 92V56a6 6 0 0 1 6-6h28a6 6 0 0 1 6 6v36M28 76h48M34 92v8M70 92v8"/>
+    <path class="i-line" d="M88 92V56a6 6 0 0 1 6-6h28a6 6 0 0 1 6 6v36M84 76h48M90 92v8M126 92v8" opacity=".55" stroke-dasharray="4 5"/>
+    <g class="bob"><path class="i-acc" d="M52 40a8 8 0 1 0 0-.1M40 50c2-6 22-6 24 0"/></g>
+    <path class="i-acc" d="M106 30c-3-5-11-1-7 5l7 7 7-7c4-6-4-10-7-5z"/></svg>`,
+  notes: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="54" ry="7"/>
+    <rect class="i-fill" x="48" y="20" width="58" height="78" rx="6"/><rect class="i-line" x="48" y="20" width="58" height="78" rx="6"/>
+    <path class="i-line" d="M58 38h38M58 50h30" opacity=".55"/><path class="i-acc" d="M58 62h8" />
+    <g class="bob"><path class="i-line" d="M100 86l20-36 8 4-20 36-10 4z"/><path class="i-acc" d="M116 58l8 4"/></g></svg>`,
+  lists: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="58" ry="7"/>
+    <rect class="i-fill" x="40" y="22" width="80" height="76" rx="8"/><rect class="i-line" x="40" y="22" width="80" height="76" rx="8"/>
+    <text x="50" y="45" font-family="Oswald" font-size="13" fill="var(--olive-light)">1</text><text x="50" y="65" font-family="Oswald" font-size="13" fill="currentColor" opacity=".55">2</text><text x="50" y="85" font-family="Oswald" font-size="13" fill="currentColor" opacity=".55">3</text>
+    <path class="i-acc" d="M64 40h36"/><path class="i-line" d="M64 60h28M64 80h20" opacity=".45" stroke-dasharray="3 5"/>
+    <g class="bob"><circle class="i-soft" cx="118" cy="26" r="11"/><path class="i-acc" d="M118 20v12M112 26h12"/></g></svg>`,
+  inbox: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="54" ry="7"/>
+    <path class="i-line" d="M80 98V66"/><path class="i-fill" d="M50 38h50a14 14 0 0 1 14 14v18H50z"/><path class="i-line" d="M64 38h36a14 14 0 0 1 14 14v18H50V52a14 14 0 0 1 14-14 14 14 0 0 1 14 14v18"/>
+    <g class="bob" style="animation-duration:2.4s"><path class="i-acc" d="M114 52V30h12v8h-12"/></g>
+    <path class="i-line" d="M30 30q8-6 14 0" opacity=".45"/><circle class="i-dot" cx="38" cy="22" r="2"/></svg>`,
+  bell: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="52" ry="7"/>
+    <g class="bob"><path class="i-fill" d="M58 80V58a22 22 0 0 1 44 0v22l6 8H52z"/><path class="i-line" d="M58 80V58a22 22 0 0 1 44 0v22l6 8H52z"/>
+    <path class="i-line" d="M72 96a8 8 0 0 0 16 0"/><path class="i-line" d="M70 60q4 3 8 0M84 60q4 3 8 0"/></g>
+    <text x="108" y="38" class="zz" font-family="Oswald" font-size="14" fill="var(--olive-light)">z</text><text x="118" y="26" class="zz d2" font-family="Oswald" font-size="11" fill="var(--olive-light)">z</text></svg>`,
+  episodes: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="60" ry="7"/>
+    <path class="i-line" d="M30 94h100M30 94V26" opacity=".6"/>
+    <rect class="i-fill" x="40" y="74" width="12" height="20" rx="3"/><rect class="i-line" x="40" y="74" width="12" height="20" rx="3" stroke-dasharray="3 4"/>
+    <rect class="i-line" x="60" y="62" width="12" height="32" rx="3" stroke-dasharray="3 4"/><rect class="i-line" x="80" y="68" width="12" height="26" rx="3" stroke-dasharray="3 4"/>
+    <g class="bob"><rect class="i-soft" x="100" y="46" width="12" height="48" rx="3"/><rect class="i-acc" x="100" y="46" width="12" height="48" rx="3"/><path class="i-gold" d="M106 30l2.4 5 5.4.6-4 3.7 1.1 5.3-4.9-2.7-4.9 2.7 1.1-5.3-4-3.7 5.4-.6z"/></g></svg>`,
+  popcorn: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="56" ry="7"/>
+    <path class="i-fill" d="M56 50h48l-7 50H63z"/><path class="i-line" d="M56 50h48l-7 50H63z"/><path class="i-acc" d="M70 50l3 50M90 50l-3 50"/>
+    <g class="bob"><path class="i-line" d="M56 50a9 9 0 0 1 8-12 10 10 0 0 1 16-6 10 10 0 0 1 16 6 9 9 0 0 1 8 12"/>
+    <circle class="i-line" cx="112" cy="30" r="5"/><circle class="i-line" cx="46" cy="36" r="4"/></g></svg>`,
+  poll: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="58" ry="7"/>
+    <rect class="i-fill" x="36" y="22" width="88" height="76" rx="10"/><rect class="i-line" x="36" y="22" width="88" height="76" rx="10"/>
+    <rect class="i-line" x="48" y="36" width="64" height="12" rx="6" opacity=".5"/><rect class="i-line" x="48" y="56" width="64" height="12" rx="6" opacity=".5"/><rect class="i-line" x="48" y="76" width="64" height="12" rx="6" opacity=".5"/>
+    <g class="bob"><rect class="i-soft" x="48" y="56" width="40" height="12" rx="6"/><path class="i-acc" d="M48 62h38"/><path class="i-acc" d="M120 30l4 4 8-9"/></g></svg>`,
+  chat: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="58" ry="7"/>
+    <path class="i-fill" d="M34 30h60a8 8 0 0 1 8 8v28a8 8 0 0 1-8 8H58l-14 12V74H34a8 8 0 0 1-8-8V38a8 8 0 0 1 8-8z"/><path class="i-line" d="M34 30h60a8 8 0 0 1 8 8v28a8 8 0 0 1-8 8H58l-14 12V74H34a8 8 0 0 1-8-8V38a8 8 0 0 1 8-8z"/>
+    <g class="bob"><path class="i-acc" d="M112 46h18a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6h-6v10l-10-10h-2a6 6 0 0 1-6-6V52a6 6 0 0 1 6-6z"/></g>
+    <circle cx="50" cy="52" r="2.6" fill="currentColor"/><circle cx="64" cy="52" r="2.6" fill="currentColor"/><circle cx="78" cy="52" r="2.6" fill="currentColor" class="blink"/></svg>`,
+  compare: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="60" ry="7"/>
+    <rect class="i-fill" x="30" y="28" width="40" height="60" rx="6"/><rect class="i-line" x="30" y="28" width="40" height="60" rx="6"/>
+    <rect class="i-fill" x="90" y="28" width="40" height="60" rx="6"/><rect class="i-line" x="90" y="28" width="40" height="60" rx="6" stroke-dasharray="4 5" opacity=".7"/>
+    <g class="bob"><circle class="i-soft" cx="80" cy="58" r="12"/><path class="i-acc" d="M74 54h12l-3-3M86 62H74l3 3"/></g></svg>`,
+  blend: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="56" ry="7"/>
+    <circle class="i-fill" cx="64" cy="58" r="28"/><circle class="i-line" cx="64" cy="58" r="28"/>
+    <g class="bob"><circle class="i-soft" cx="96" cy="58" r="28"/><circle class="i-acc" cx="96" cy="58" r="28"/></g>
+    <path class="i-gold" d="M80 50l2 4 4.4.5-3.2 3 .9 4.3L80 59.6l-4.1 2.2.9-4.3-3.2-3 4.4-.5z"/></svg>`,
+  person: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="54" ry="7"/>
+    <rect class="i-fill" x="50" y="18" width="60" height="80" rx="8"/><rect class="i-line" x="50" y="18" width="60" height="80" rx="8"/>
+    <g class="bob"><circle class="i-acc" cx="80" cy="48" r="11"/><path class="i-acc" d="M62 80c3-12 33-12 36 0"/></g></svg>`,
+};
+const mssArt = (name, cls = '') => MSS_ART[name] ? `<div class="mss-es-art${cls ? ' ' + cls : ''}" aria-hidden="true">${MSS_ART[name]}</div>` : '';
+function mssEmpty(o = {}) {
+  const act = a => {
+    const inner = `${a.icon ? icon(a.icon, 15) : ''}<span>${escHTML(a.label)}</span>`, cls = `mss-es-btn${a.primary ? ' primary' : ''}`;
+    return a.href ? `<a class="${cls}" href="${escHTML(a.href)}">${inner}</a>`
+      : `<button type="button" class="${cls}" onclick="${escHTML(a.onclick || '')}">${inner}</button>`;
+  };
+  const acts = (o.actions || []).filter(Boolean);
+  return `<div class="mss-es${o.compact ? ' compact' : ''}${o.cls ? ' ' + o.cls : ''}">
+    ${mssArt(o.art)}
+    ${o.title ? `<div class="mss-es-title">${o.titleHTML || escHTML(o.title)}</div>` : ''}
+    ${o.text || o.textHTML ? `<div class="mss-es-text">${o.textHTML || escHTML(o.text)}</div>` : ''}
+    ${acts.length ? `<div class="mss-es-acts">${acts.map(act).join('')}</div>` : ''}
+    ${o.starter ? MSSStarter.slot(o.starter) : ''}
+  </div>`;
+}
+
+/* Starter titles under an empty Watchlist: what's popular right now in this category (Movies → popular
+   movies, Anime → popular anime …; Library → the top one from each). Asked for only when that empty state
+   shows, from lists the whole site shares (one TMDB call per category every 6 hours, kept on the device),
+   so it never slows anything else down. Titles already in your library are skipped (the page says which: mssStarterSkip()). + adds it (the usual
+   Add to Library popup, in the right category); the poster opens the title page. */
+const MSSStarter = (() => {
+  const SRC = {
+    movies:   ['movie', '/movie/popular?language=en-US&page=1'],
+    tv:       ['tv', '/tv/popular?language=en-US&page=1'],
+    anime:    ['tv', '/discover/tv?language=en-US&page=1&sort_by=popularity.desc&with_genres=16&with_original_language=ja'],
+    cartoons: ['tv', '/discover/tv?language=en-US&page=1&sort_by=popularity.desc&with_genres=16&with_original_language=en'],
+  };
+  const LABEL = { movies: 'movies', tv: 'shows', anime: 'anime', cartoons: 'cartoons' };
+  const items = {};                                 // the shown titles, by slot id
+  let n = 0;
+  function slot(cat) {
+    const id = 'mssStart' + (++n);
+    setTimeout(() => fill(id, cat), 0);
+    return `<div class="mss-es-start" id="${id}" hidden>
+      <div class="mss-es-start-h">${cat === 'all' ? 'Popular right now' : `Popular ${LABEL[cat] || 'titles'} right now`} · tap + to add</div>
+      <div class="mss-es-start-row"></div></div>`;
+  }
+  async function top(cat) {
+    const [type, path] = SRC[cat];
+    const get = typeof tmdbFetch === 'function' ? u => tmdbFetch(u) : u => fetch(u);
+    const res = await get(`${SUPABASE_URL}/functions/v1/tmdb${path}`);
+    if (!res.ok) throw res;
+    return ((await res.json()).results || []).filter(r => r.poster_path)
+      .map(r => ({ tmdb_id: r.id, media_type: type, cat, title: r.title || r.name, year: (r.release_date || r.first_air_date || '').slice(0, 4), poster_path: r.poster_path }));
+  }
+  async function fill(id, cat) {
+    const box = document.getElementById(id);
+    if (!box) return;
+    try {
+      const own = new Set((typeof mssStarterSkip === 'function' ? mssStarterSkip() || [] : []).map(e => `${e.tmdb_type || ''}:${e.tmdb_id}`));
+      const fresh = r => !own.has(`${r.media_type}:${r.tmdb_id}`);
+      let list;
+      if (cat === 'all') {
+        const per = await Promise.all(Object.keys(SRC).map(c => top(c).catch(() => [])));
+        const seen = new Set();
+        list = per.map(l => l.find(r => fresh(r) && !seen.has(r.tmdb_id) && seen.add(r.tmdb_id))).filter(Boolean);
+      } else list = (await top(cat)).filter(fresh).slice(0, 4);
+      if (!list.length || !document.getElementById(id)) return;
+      items[id] = list;
+      box.querySelector('.mss-es-start-row').innerHTML = list.map((r, i) => `<div class="mss-es-start-item">
+        <div class="mss-es-start-pic"><a class="mss-es-start-poster" href="title.html?type=${r.media_type}&id=${r.tmdb_id}" title="${escHTML(r.title)}">
+          <img src="https://image.tmdb.org/t/p/w185${escHTML(r.poster_path)}" alt="${escHTML(r.title)}" loading="lazy"></a>
+          <button type="button" class="mss-es-start-add" onclick="MSSStarter.add('${id}', ${i})" aria-label="Add ${escHTML(r.title)}">${icon('plus', 14)}</button></div>
+        <span class="mss-es-start-name" translate="no" aria-hidden="true">${escHTML(r.title)}</span></div>`).join('');
+      box.hidden = false;
+    } catch (err) { console.warn('Starter titles:', err); }
+  }
+  function add(id, i) {
+    const r = items[id]?.[i];
+    if (!r) return;
+    if (typeof MSSInfo === 'undefined' || !MSSInfo.addToLibrary) { location.href = `title.html?type=${r.media_type}&id=${r.tmdb_id}`; return; }
+    MSSInfo.addToLibrary({ tmdb_id: r.tmdb_id, media_type: r.media_type, title: r.title, year: r.year, cat: r.cat,
+      poster_url: 'https://image.tmdb.org/t/p/w500' + r.poster_path },
+      { onAdded: entry => { if (entry) document.dispatchEvent(new CustomEvent('mss:library-changed', { detail: { entry } })); } });
+  }
+  return { slot, add };
+})();
+
+/* ── Input masks: fields that fix themselves as you type. Put data-mask on an input:
+     username — lowercase letters, numbers and _ (a pasted "@name" loses the @), up to the field's maxlength
+     email    — no spaces
+     int      — digits only (years, days, goals…)
+     rating   — 0–10, one decimal ("8,5" → "8.5", "12" → "10")
+   Number fields without a step (seasons, episodes, minutes…) also refuse e / + / - / . keys.
+   This runs before the field's own handlers, so they always see the tidied value. ── */
+const MSSMask = {
+  username: (v, max) => v.replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, max > 0 ? max : 40),
+  email: v => v.replace(/\s+/g, ''),
+  int: (v, max) => v.replace(/\D/g, '').slice(0, max > 0 ? max : 12),
+  rating: v => {
+    v = v.replace(/,/g, '.').replace(/[^\d.]/g, '').replace(/^(\d*\.\d?).*$/, '$1').replace(/^0+(\d)/, '$1');
+    const m = v.match(/^\d{0,2}(\.\d?)?/); v = m ? m[0] : '';
+    return parseFloat(v) > 10 ? '10' : v;
+  },
+};
+document.addEventListener('input', e => {
+  const el = e.target, fn = el?.dataset && MSSMask[el.dataset.mask];
+  if (!fn) return;
+  const v = fn(el.value, el.maxLength);
+  if (v === el.value) return;
+  let pos = null;
+  try { pos = el.selectionStart - (el.value.length - v.length); } catch {}
+  el.value = v;
+  try { if (pos != null) el.setSelectionRange(Math.max(0, pos), Math.max(0, pos)); } catch { /* email fields can't */ }
+}, true);
+document.addEventListener('keydown', e => {
+  const el = e.target;
+  if (el?.type === 'number' && !el.step && !e.ctrlKey && !e.metaKey && ['e', 'E', '+', '-', '.', ','].includes(e.key)) e.preventDefault();
+}, true);
+
 /* Search-as-you-type: wait this long after the last key before asking TMDB, so "Avengers" is one
    search, not eight. Every TMDB search box uses it (Enter searches straight away where there's a box
    to press it in); searches also need 2+ characters, and answers to older searches are dropped. */
