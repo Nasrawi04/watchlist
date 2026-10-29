@@ -2461,6 +2461,20 @@ const MSS_ART = {
     <circle class="i-fill" cx="64" cy="58" r="28"/><circle class="i-line" cx="64" cy="58" r="28"/>
     <g class="bob"><circle class="i-soft" cx="96" cy="58" r="28"/><circle class="i-acc" cx="96" cy="58" r="28"/></g>
     <path class="i-gold" d="M80 50l2 4 4.4.5-3.2 3 .9 4.3L80 59.6l-4.1 2.2.9-4.3-3.2-3 4.4-.5z"/></svg>`,
+  medal: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="50" ry="7"/>
+    <path class="i-line" d="M62 14l14 34M98 14 84 48" opacity=".7"/><path class="i-acc" d="M70 14l10 24 10-24"/>
+    <g class="bob"><circle class="i-fill" cx="80" cy="70" r="24"/><circle class="i-gold" cx="80" cy="70" r="24"/><circle class="i-gold" cx="80" cy="70" r="16" opacity=".55"/>
+    <path class="i-gold" d="M80 60l3 6.2 6.8.9-5 4.7 1.2 6.7L80 75.3l-6 3.2 1.2-6.7-5-4.7 6.8-.9z"/></g>
+    <path class="i-line" d="M116 40l4-4M122 52h6M42 40l-4-4M32 52h6" opacity=".5"/></svg>`,
+  podium: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="62" ry="7"/>
+    <rect class="i-fill" x="62" y="58" width="36" height="42" rx="3"/><rect class="i-line" x="62" y="58" width="36" height="42" rx="3"/>
+    <rect class="i-fill" x="26" y="72" width="36" height="28" rx="3"/><rect class="i-line" x="26" y="72" width="36" height="28" rx="3"/>
+    <rect class="i-fill" x="98" y="80" width="36" height="20" rx="3"/><rect class="i-line" x="98" y="80" width="36" height="20" rx="3"/>
+    <text x="80" y="86" text-anchor="middle" font-family="Oswald" font-size="14" fill="currentColor" opacity=".6">1</text>
+    <text x="44" y="92" text-anchor="middle" font-family="Oswald" font-size="12" fill="currentColor" opacity=".5">2</text>
+    <text x="116" y="96" text-anchor="middle" font-family="Oswald" font-size="11" fill="currentColor" opacity=".5">3</text>
+    <g class="bob"><circle class="i-gold" cx="80" cy="40" r="9"/><path class="i-gold" d="M80 36v8"/></g>
+    <circle class="i-silver" cx="44" cy="58" r="7"/><circle class="i-bronze" cx="116" cy="68" r="6"/></svg>`,
   person: `<svg viewBox="0 0 160 120"><ellipse class="i-ground" cx="80" cy="106" rx="54" ry="7"/>
     <rect class="i-fill" x="50" y="18" width="60" height="80" rx="8"/><rect class="i-line" x="50" y="18" width="60" height="80" rx="8"/>
     <g class="bob"><circle class="i-acc" cx="80" cy="48" r="11"/><path class="i-acc" d="M62 80c3-12 33-12 36 0"/></g></svg>`,
@@ -2497,11 +2511,14 @@ const MSSStarter = (() => {
   const LABEL = { movies: 'movies', tv: 'shows', anime: 'anime', cartoons: 'cartoons' };
   const items = {};                                 // the shown titles, by slot id
   let n = 0;
-  function slot(cat) {
-    const id = 'mssStart' + (++n);
+  // starter = a category, or { cat, open: 'episodes', label } to show posters that open somewhere else (no +)
+  const modes = {};
+  function slot(starter) {
+    const id = 'mssStart' + (++n), o = typeof starter === 'object' ? starter : { cat: starter }, cat = o.cat;
+    modes[id] = o;
     setTimeout(() => fill(id, cat), 0);
     return `<div class="mss-es-start" id="${id}" hidden>
-      <div class="mss-es-start-h">${cat === 'all' ? 'Popular right now' : `Popular ${LABEL[cat] || 'titles'} right now`} · tap + to add</div>
+      <div class="mss-es-start-h">${o.label ? escHTML(o.label) : `${cat === 'all' ? 'Popular right now' : `Popular ${LABEL[cat] || 'titles'} right now`} · tap + to add`}</div>
       <div class="mss-es-start-row"></div></div>`;
   }
   async function top(cat) {
@@ -2526,10 +2543,11 @@ const MSSStarter = (() => {
       } else list = (await top(cat)).filter(fresh).slice(0, 4);
       if (!list.length || !document.getElementById(id)) return;
       items[id] = list;
+      const eps = modes[id]?.open === 'episodes';
       box.querySelector('.mss-es-start-row').innerHTML = list.map((r, i) => `<div class="mss-es-start-item">
-        <div class="mss-es-start-pic"><a class="mss-es-start-poster" href="title.html?type=${r.media_type}&id=${r.tmdb_id}" title="${escHTML(r.title)}">
-          <img src="https://image.tmdb.org/t/p/w185${escHTML(r.poster_path)}" alt="${escHTML(r.title)}" loading="lazy"></a>
-          <button type="button" class="mss-es-start-add" onclick="MSSStarter.add('${id}', ${i})" aria-label="Add ${escHTML(r.title)}">${icon('plus', 14)}</button></div>
+        <div class="mss-es-start-pic"><a class="mss-es-start-poster" href="${eps ? `episodes.html?show=${r.tmdb_id}` : `title.html?type=${r.media_type}&id=${r.tmdb_id}`}" title="${escHTML(r.title)}">
+          <img src="https://image.tmdb.org/t/p/w342${escHTML(r.poster_path)}" alt="${escHTML(r.title)}" loading="lazy"></a>
+          ${eps ? '' : `<button type="button" class="mss-es-start-add" onclick="MSSStarter.add('${id}', ${i})" aria-label="Add ${escHTML(r.title)}">${icon('plus', 14)}</button>`}</div>
         <span class="mss-es-start-name" translate="no" aria-hidden="true">${escHTML(r.title)}</span></div>`).join('');
       box.hidden = false;
     } catch (err) { console.warn('Starter titles:', err); }
