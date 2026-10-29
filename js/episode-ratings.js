@@ -148,7 +148,7 @@ const MSSEp = (() => {
   function scoreHTML() {
     const b = band(st.score);
     return `<div class="ep-score ep-band-${b.key}" id="mssEpScore">
-      <input type="text" inputmode="decimal" class="ep-score-input" id="mssEpScoreInput" value="${st.score.toFixed(1)}" maxlength="4"
+      <input type="text" inputmode="decimal" data-mask="rating" class="ep-score-input" id="mssEpScoreInput" value="${st.score.toFixed(1)}" maxlength="4"
              aria-label="Episode score, 1 to 10" oninput="MSSEp._typed(this.value)" onchange="MSSEp._typedDone(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
       <span id="mssEpBand">${b.name}</span></div>`;
   }
