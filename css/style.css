@@ -4072,20 +4072,18 @@ a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar, .rc-col.rc-sel .rc-bar {
 .qp-moods { padding:14px 20px 4px; }
 .qp-moods-h { display:block; font-size:11px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; }
 .qp-chips { display:flex; flex-wrap:wrap; gap:7px; }
-.qp-chip { display:inline-flex; align-items:center; gap:5px; min-height:34px; padding:0 13px; border-radius:999px; cursor:pointer;
+.qp-chip { display:inline-flex; align-items:center; gap:6px; height:40px; padding:0 14px; border-radius:var(--radius-sm); cursor:pointer;   /* same shape as the genre dropdown */
   font:600 12.5px 'Manrope',var(--sans); color:var(--text-2); background:var(--card-solid); border:1px solid var(--border-2); transition:all .15s; }
 .qp-chip svg { width:12px; height:12px; }
 .qp-chip:hover { border-color:var(--olive-light); color:var(--text); }
 .qp-chip.on { background:var(--olive); border-color:var(--olive); color:#fff; }
-/* the genre dropdown, dressed as a chip (a real <select>: the phone's own picker opens) */
-.qp-select { position:relative; padding-inline:12px 30px; }
-.qp-select select { appearance:none; -webkit-appearance:none; border:0; background:transparent; color:inherit; font:inherit; cursor:pointer; outline:none; padding:0; max-width:160px; text-overflow:ellipsis; }
-.qp-select select option { color:var(--text); background:var(--bg-2); }
-.qp-select .qp-caret { position:absolute; right:11px; top:50%; width:12px; height:12px; transform:translateY(-50%); pointer-events:none; }
-.qp-select:focus-within { outline:2px solid var(--olive-light); outline-offset:2px; }
+/* the genre picker: the site's own dropdown (SF.dd), as tall as the mood buttons */
+.qp-genre { width:180px; max-width:100%; }
+.qp-genre .sf-dd-trigger { font-weight:600; font-size:12.5px; }
+.qp-genre .td-dd-menu { max-height:240px; overflow-y:auto; }
 .qp-foot { position:sticky; bottom:0; display:grid; grid-template-columns:auto auto 1fr; gap:8px; padding:16px 20px 18px; margin-top:12px;
   background:var(--bg-2); border-top:1px solid var(--border); }
-.qp-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:46px; padding:0 16px; border-radius:12px; cursor:pointer;
+.qp-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:46px; padding:0 16px; border-radius:var(--radius-sm); cursor:pointer;
   font:700 14px 'Manrope',var(--sans); color:var(--text); background:var(--card-solid); border:1px solid var(--border-2); transition:border-color .15s, background .15s; }
 .qp-btn svg { width:16px; height:16px; flex-shrink:0; }
 .qp-btn:hover:not(:disabled) { border-color:var(--olive-light); }
