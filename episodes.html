@@ -31,7 +31,7 @@
 .eg-back:hover, .eg-back:focus-visible { opacity:1; }
 .eg-hero-inner { position:relative; z-index:2; display:flex; align-items:flex-end; gap:clamp(1rem, 3vw, 2.5rem); padding:3.5rem calc(var(--page-px) + 1rem) 0; }
 .eg-hero-poster { width:clamp(130px, 15vw, 205px); aspect-ratio:2/3; flex-shrink:0; border-radius:var(--radius); overflow:hidden; background:var(--bg-3);
-  box-shadow:0 14px 34px rgba(0,0,0,.5); margin-bottom:calc(-1 * var(--eg-dip)); }
+   margin-bottom:calc(-1 * var(--eg-dip)); }
 .eg-hero-poster img { width:100%; height:100%; object-fit:cover; display:block; }
 .eg-hero-info { flex:1; min-width:0; padding-bottom:clamp(2.6rem, 5vw, 3.6rem); }
 .eg-hero-eyebrow { font-size:clamp(10.5px, 1.2vw, 12px); font-weight:600; letter-spacing:2.6px; text-transform:uppercase; color:#8FD177; margin-bottom:.6rem; }
@@ -75,14 +75,14 @@
 .eg-grid.eg-fit .eg-cell { width:100%; min-width:54px; }   /* 5+ seasons: columns share the width */
 .eg-cell { width:clamp(54px, 11vw, 168px); height:36px; border-radius:7px; padding:0; border:none; cursor:pointer; font-family:var(--bebas); font-size:18px; letter-spacing:.4px;
   display:flex; align-items:center; justify-content:center; transition:transform .12s, box-shadow .12s; box-shadow:inset 0 0 0 0.5px rgba(0,0,0,.06); }
-button.eg-cell:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,0,0,.12); }
+button.eg-cell:hover { transform:translateY(-1px); }
 .eg-cell:focus-visible { outline:2px solid var(--text); outline-offset:2px; }
 .eg-cell.eg-empty { background:transparent; border:1.5px dashed var(--border-2); color:var(--text-3); }
 .eg-cell.eg-unaired { background:var(--bg-3); opacity:.55; color:transparent; cursor:default; }
 .eg-cell.eg-best { box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
 .eg-cell.eg-worst { box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--band-bad); }
-.eg-cell.ep-band-perfect { box-shadow:inset 0 0 0 1px rgba(255,240,190,.55), 0 2px 10px rgba(214,167,44,.35); }
-.eg-cell.ep-band-perfect.eg-best { box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--text), 0 2px 12px rgba(214,167,44,.45); }
+.eg-cell.ep-band-perfect { box-shadow:inset 0 0 0 1px rgba(255,240,190,.55); }
+.eg-cell.ep-band-perfect.eg-best { box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
 .eg-cell.eg-diff-up { background:#2f6e3a; color:#fff; } .eg-cell.eg-diff-down { background:#a8433b; color:#fff; } .eg-cell.eg-diff-same { background:var(--bg-3); color:var(--text-2); }
 .eg-avg { background:var(--bg-3); }
 .eg-avg th.eg-ep { background:var(--bg-3); color:var(--text); }
@@ -155,7 +155,7 @@ button.eg-tile:focus-visible { outline:2px solid var(--olive-light); outline-off
 /* episode popup */
 #egEpOverlay { position:fixed; inset:0; z-index:904; background:var(--popup-backdrop); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
 #egEpOverlay.open { opacity:1; pointer-events:auto; }
-#egEpCard { width:100%; max-width:min(97vw, 560px); max-height:90dvh; overflow-y:auto; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg); position:relative; }
+#egEpCard { width:100%; max-width:min(97vw, 560px); max-height:90dvh; overflow-y:auto; background:var(--bg-2); border:1.5px solid var(--olive-light);  border-radius:var(--radius-lg); position:relative; }
 .eg-pop-scores { display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:8px; margin:14px 0; }
 .eg-pop-score { border-radius:var(--radius); padding:10px; text-align:center; background:var(--olive-faint); border:0.5px solid var(--border-olive); color:var(--olive-light); }
 .eg-pop-score[class*="ep-band-"] { border-color:transparent; }
@@ -173,7 +173,7 @@ button.eg-tile:focus-visible { outline:2px solid var(--olive-light); outline-off
 .eg-season-all svg { display:none; } .eg-season-all.on svg { display:inline; }
 .eg-season-grid .td-season-block { width:clamp(108px, 13vw, 140px); }
 .td-season-block-poster { position:relative; }
-.eg-season-check { position:absolute; top:6px; inset-inline-end:6px; width:24px; height:24px; border-radius:50%; background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.3); }
+.eg-season-check { position:absolute; top:6px; inset-inline-end:6px; width:24px; height:24px; border-radius:50%; background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center; }
 .eg-cmp-bar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:1.25rem auto 1.5rem; max-width:860px; padding:14px 16px; border-radius:var(--radius); background:var(--olive-faint); border:0.5px solid var(--border-olive); }
 .eg-cmp-bar-ic { width:40px; height:40px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; }
 .eg-cmp-bar-text { flex:1; min-width:200px; display:flex; flex-direction:column; gap:2px; }
@@ -195,7 +195,7 @@ button.eg-tile:focus-visible { outline:2px solid var(--olive-light); outline-off
 .eg-cmp-table small { font-family:'Manrope',var(--sans); font-size:11px; color:var(--text-3); }
 .eg-overlay { position:fixed; inset:0; z-index:906; background:var(--popup-backdrop); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 200ms var(--ease); }
 .eg-overlay.open { opacity:1; pointer-events:auto; }
-.eg-dialog { width:100%; max-width:440px; max-height:90dvh; display:flex; flex-direction:column; background:var(--bg-2); border:1.5px solid var(--olive-light); box-shadow:4px 4px 0 var(--olive); border-radius:var(--radius-lg); }
+.eg-dialog { width:100%; max-width:440px; max-height:90dvh; display:flex; flex-direction:column; background:var(--bg-2); border:1.5px solid var(--olive-light);  border-radius:var(--radius-lg); }
 .eg-dialog .sf-body { overflow-y:auto; }
 .eg-pick-search { margin:0; }
 .eg-pick-list { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
@@ -209,7 +209,7 @@ button.eg-tile:focus-visible { outline:2px solid var(--olive-light); outline-off
 .eg-dialog.eg-ex-dialog { max-width:min(96vw, 760px); }
 .eg-ex-body { display:grid; grid-template-columns:minmax(0, 1.1fr) minmax(0, 1fr); gap:20px; align-items:start; }
 .eg-ex-preview { position:relative; display:flex; align-items:center; justify-content:center; min-height:220px; padding:10px; border-radius:var(--radius); background:var(--bg-3); }
-.eg-ex-preview canvas { display:block; max-width:100%; max-height:min(52dvh, 460px); width:auto; height:auto; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.18); transition:opacity .15s; }
+.eg-ex-preview canvas { display:block; max-width:100%; max-height:min(52dvh, 460px); width:auto; height:auto; border-radius:8px;  transition:opacity .15s; }
 .eg-ex-busy { position:absolute; inset:0; display:none; align-items:center; justify-content:center; }
 .eg-ex-preview.busy canvas { opacity:.35; } .eg-ex-preview.busy .eg-ex-busy { display:flex; }
 .eg-ex-opts { display:flex; flex-direction:column; gap:14px; }
@@ -807,7 +807,7 @@ function egSeasonPick() {
       <div class="sf-footer"><button type="button" class="sf-clear-btn" onclick="egSeasonSet(null)">Show all</button><button type="button" class="sf-apply-btn" onclick="egSeasonClose()">Done</button></div>
     </div>`;
   const row = ov.querySelector('.eg-season-grid');
-  row.addEventListener('wheel', ev => {      // a mouse wheel moves the row sideways
+  row.addEventListener('wheel', ev => { // a mouse wheel moves the row sideways
     if (Math.abs(ev.deltaY) <= Math.abs(ev.deltaX) || row.scrollWidth <= row.clientWidth) return;
     ev.preventDefault(); row.scrollLeft += (getComputedStyle(row).direction === 'rtl' ? -1 : 1) * ev.deltaY;
   }, { passive: false });
