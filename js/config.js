@@ -2253,6 +2253,8 @@ const MSSDialog = (() => {
       // Capture phase + stop: only the top popup closes, not page popups underneath
       ev.preventDefault(); ev.stopImmediatePropagation();
       if (MSSPicker.closeOpen()) return;              // an open picker in it closes first
+      const dd = cardOf(ov).querySelector('.sf-dd.open');   // …and so does an open dropdown (Filter, Pick for me's genre…)
+      if (dd) { dd.classList.remove('open'); const m = dd.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; dd.querySelector('[aria-expanded]')?.setAttribute('aria-expanded', 'false'); return; }
       (ov._mssClose || (() => close(ov)))();
       return;
     }
