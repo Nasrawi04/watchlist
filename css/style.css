@@ -4029,6 +4029,7 @@ a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar, .rc-col.rc-sel .rc-bar {
 .qp-card { width:100%; max-width:640px; max-height:calc(100dvh - 32px); overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column;
   background:var(--bg-2); border:1px solid var(--border-2); border-radius:var(--radius-lg); transform:translateY(14px) scale(.98); transition:transform .3s var(--spring); }
 #qpOverlay.open .qp-card { transform:none; }
+.qp-card:focus { outline:none; }
 .qp-hero { position:relative; isolation:isolate; overflow:hidden; padding:18px 20px 22px; color:#EDEDED; background:#0B0B0F; flex-shrink:0; }
 .qp-backdrop { position:absolute; inset:-30px; z-index:-2; background:#16161b center/cover no-repeat; filter:blur(18px) saturate(1.15); opacity:.7; transform:scale(1.08); transition:background-image .3s; }
 .qp-hero::after { content:''; position:absolute; inset:0; z-index:-1; background:linear-gradient(180deg, rgba(11,11,15,.35), rgba(11,11,15,.82) 70%, rgba(11,11,15,.95)); }
