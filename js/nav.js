@@ -3197,7 +3197,11 @@ if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (_mssSwReloaded) return;
     _mssSwReloaded = true;
-    location.reload();
+    // Not in the middle of what you're doing (that was the white flash while a page loaded):
+    // the page swaps to the new version the next time it's out of sight — switching app or tab —
+    // and any page you open from now on is already the new one.
+    if (document.hidden) { location.reload(); return; }
+    document.addEventListener('visibilitychange', () => { if (document.hidden) location.reload(); });
   });
 }
 
