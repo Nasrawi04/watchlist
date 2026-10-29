@@ -413,10 +413,10 @@ nav {
 .dnav-mega[hidden] { display:none; }
 .dnav-mega-in { display:grid; grid-template-columns:minmax(0, 1fr) 380px; gap:16px; align-items:stretch; }
 .dnav-items { display:grid; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); gap:8px; align-content:start; }
-.dnav-item { display:flex; flex-direction:column; gap:10px; padding:14px; border-radius:18px; border:0.5px solid transparent; transition:background .18s, border-color .18s; }
+.dnav-item { display:flex; flex-direction:column; border-radius:18px; border:0.5px solid transparent; transition:background .18s, border-color .18s; }
 .dnav-item.on { background:var(--card); border-color:var(--border-2); }
-.dnav-item-main { display:flex; align-items:flex-start; gap:12px; color:var(--text); text-decoration:none; border-radius:12px; }
-.dnav-item-main:focus-visible { outline:2px solid var(--olive-light); outline-offset:4px; }
+.dnav-item-main { flex:1; display:flex; align-items:flex-start; gap:12px; padding:14px; color:var(--text); text-decoration:none; border-radius:18px; cursor:pointer; }   /* the whole card is the link */
+.dnav-item-main:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
 .dnav-item-ic { width:42px; height:42px; flex-shrink:0; border-radius:13px; display:grid; place-items:center; color:#fff;
   background:linear-gradient(145deg, color-mix(in srgb, var(--xp-a) 85%, #fff 15%), var(--xp-a)); box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 4px 12px rgba(0,0,0,.18);
   transition:transform .3s cubic-bezier(.35,1.35,.5,1); }
@@ -3355,6 +3355,50 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .mss-join .confirm-title { font-size:22px; line-height:1.25; padding:0 12px; }
 .mss-join .confirm-msg { max-width:290px; }
 .mss-join-actions a { display:block; text-align:center; text-decoration:none; }
+/* ── Just watched (mssWatchedPopup, config.js) — centred on every screen ── */
+.mss-done-overlay { position:fixed; inset:0; z-index:2000; display:none; align-items:center; justify-content:center; padding:20px;
+  background:var(--popup-backdrop); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+.mss-done-overlay.open { display:flex; animation:fadeIn .2s var(--ease); }
+.mss-done { position:relative; width:100%; max-width:380px; max-height:calc(100dvh - 40px); overflow:auto; text-align:center;
+  padding:28px 24px 22px; border-radius:24px; background:var(--card-solid); border:0.5px solid var(--border-2);
+  box-shadow:0 30px 70px -20px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.03) inset;
+  background-image:radial-gradient(120% 70% at 50% 0%, var(--olive-faint), transparent 70%);
+  animation:mssDoneIn .42s cubic-bezier(.2,.9,.25,1.15) both; }
+.mss-done-x { position:absolute; top:12px; right:12px; }
+[dir="rtl"] .mss-done-x { right:auto; left:12px; }
+.mss-done-art { position:relative; width:112px; margin:4px auto 18px; }
+.mss-done-glow { position:absolute; inset:-26px; border-radius:50%; background:radial-gradient(circle, var(--olive-glow), transparent 68%); }
+.mss-done-poster { position:relative; aspect-ratio:2/3; border-radius:14px; overflow:hidden; transform:rotate(-3deg);
+  background:linear-gradient(160deg, var(--olive), var(--olive-2)); box-shadow:0 18px 34px -12px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08);
+  animation:mssDonePoster .6s cubic-bezier(.2,.9,.25,1.2) .05s both; }
+.mss-done-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.mss-done-poster span { position:absolute; inset:0; display:grid; place-items:center; font-family:var(--serif); font-size:44px; color:#fff; }
+.mss-done-tick { position:absolute; right:-12px; bottom:-10px; width:40px; height:40px; border-radius:50%; display:grid; place-items:center;
+  background:var(--olive-light); color:#fff; border:3px solid var(--card-solid); box-shadow:0 6px 14px rgba(0,0,0,.3);
+  animation:mssDoneTick .5s cubic-bezier(.2,1.4,.4,1) .35s both; }
+[data-theme="dark"] .mss-done-tick { color:#0B120A; }
+.mss-done-spark { position:absolute; left:50%; top:50%; width:6px; height:6px; margin:-3px; border-radius:50%; background:var(--olive-light);
+  opacity:0; animation:mssDoneSpark .9s ease-out .4s both; transform:rotate(var(--a)) translateY(0); }
+.mss-done-spark:nth-child(odd) { background:var(--gold-accent); width:5px; height:5px; }
+.mss-done-eyebrow { font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:8px; }
+.mss-done-title { font-family:var(--serif); font-weight:600; font-size:clamp(22px, 6vw, 28px); line-height:1.15; color:var(--text); margin:0 0 8px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.mss-done-msg { font-size:14px; line-height:1.6; color:var(--text-2); margin:0 auto 20px; max-width:300px; }
+.mss-done-actions { display:flex; flex-direction:column; gap:10px; }
+.mss-done-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; border-radius:999px; border:1px solid transparent;
+  font:700 14.5px/1 var(--sans); cursor:pointer; background:var(--olive); color:#fff; box-shadow:0 10px 24px -12px var(--olive-glow);
+  transition:transform .15s, filter .2s, border-color .2s; }
+.mss-done-btn:hover { filter:brightness(1.08); transform:translateY(-1px); }
+.mss-done-btn:active { transform:scale(.97); }
+.mss-done-btn.is-ghost { background:transparent; color:var(--text-2); border-color:var(--border-2); box-shadow:none; font-weight:600; }
+.mss-done-btn.is-ghost:hover { color:var(--text); border-color:var(--border-olive); filter:none; }
+.mss-done-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
+@keyframes mssDoneIn { from { opacity:0; transform:translateY(14px) scale(.96); } }
+@keyframes mssDonePoster { from { opacity:0; transform:rotate(-10deg) scale(.85); } }
+@keyframes mssDoneTick { from { opacity:0; transform:scale(.3); } }
+@keyframes mssDoneSpark { 0% { opacity:0; transform:rotate(var(--a)) translateY(0); } 25% { opacity:1; } 100% { opacity:0; transform:rotate(var(--a)) translateY(-92px); } }
+@media (prefers-reduced-motion:reduce) { .mss-done, .mss-done * { animation:none !important; } .mss-done-spark { display:none; } }
+@media (max-width:380px) { .mss-done { padding:24px 18px 18px; } .mss-done-art { width:96px; } }
 
 /* Light mode confirm adjustments */
 [data-theme="light"] .confirm-card { background:var(--bg-2); }
