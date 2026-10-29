@@ -371,9 +371,10 @@ const MSSInfo = (() => {
       payload.runtime_h = d?.runtime ? Math.floor(d.runtime / 60) : null;
       payload.runtime_m = d?.runtime ? d.runtime % 60 : null;
     } else if (d) {
-      payload.total_seasons = d.number_of_seasons || null;
-      payload.total_eps = d.number_of_episodes || null;
-      payload.ratings = { _season_breakdown: (d.seasons || []).filter(s => s.season_number > 0).map(s => s.episode_count) };
+      const aired = mssAired(d);                     // seasons / episodes that are out (not announced ones)
+      payload.total_seasons = aired.seasons;
+      payload.total_eps = aired.eps;
+      payload.ratings = { _season_breakdown: aired.breakdown };
       if ((d.status === 'Ended' || d.status === 'Canceled') && d.last_air_date) payload.ratings._completion_year = d.last_air_date.slice(0, 4);
     }
     if (cat === 'anime' || cat === 'cartoons') payload.ratings = { ...(payload.ratings || {}), _media_type: it.media_type };
