@@ -7506,3 +7506,29 @@ body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-ins
   .td-wall-nudge { flex-wrap:wrap; }
   .td-wall-nudge .btn-save { width:100%; justify-content:center; text-align:center; }
 }
+
+/* ── Password guide (MSSPass in config.js): sign-up, reset password and Settings ── */
+.mss-pw { display:flex; flex-direction:column; gap:7px; }
+.mss-pw-meter { display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; }
+.mss-pw-meter i { height:4px; border-radius:2px; background:var(--border-2); transition:background .25s; }
+.mss-pw-meter[data-s="1"] i:nth-child(-n+1) { background:#D9534F; }
+.mss-pw-meter[data-s="2"] i:nth-child(-n+2) { background:#E2B53E; }
+.mss-pw-meter[data-s="3"] i:nth-child(-n+3), .mss-pw-meter[data-s="4"] i { background:var(--olive-light); }
+.mss-pw-row { display:flex; justify-content:space-between; gap:10px; font-size:12px; line-height:1.4; color:var(--text-3); }
+.mss-pw-word { font-weight:700; }
+.mss-pw[data-s="1"] .mss-pw-word { color:#D9534F; }
+.mss-pw[data-s="2"] .mss-pw-word { color:#B8862A; }
+.mss-pw[data-s="3"] .mss-pw-word, .mss-pw[data-s="4"] .mss-pw-word { color:var(--olive-light); }
+.mss-pw-count { font-variant-numeric:tabular-nums; }
+.mss-pw-rules { list-style:none; margin:2px 0 0; padding:10px 12px; display:grid; gap:6px; border-radius:10px; background:var(--bg-2); border:0.5px solid var(--border); }
+.mss-pw-rules li { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-3); line-height:1.35; transition:color .2s; }
+.mss-pw-rules li i { width:16px; height:16px; flex-shrink:0; border-radius:50%; border:1.5px solid var(--border-2); display:grid; place-items:center; transition:all .2s; }
+.mss-pw-rules li.ok { color:var(--text); }
+.mss-pw-rules li.ok i { border-color:var(--olive-light); background:var(--olive-light); }
+.mss-pw-rules li.ok i::after { content:''; width:7px; height:4px; border:solid var(--card-solid); border-width:0 0 2px 2px; transform:translateY(-1px) rotate(-45deg); }
+.mss-pw-rules li.warn { color:#D9534F; }
+.mss-pw-rules li.warn i { border-color:#D9534F; }
+.mss-pw-rules em { font-style:normal; font-size:10.5px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-3); margin-inline-start:auto; }
+.mss-pw-rules li.ok em { color:var(--olive-light); }
+.mss-pw-rules li[data-r="name"] { display:none; }
+.mss-pw-rules li[data-r="name"].warn { display:flex; }
