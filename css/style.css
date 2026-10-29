@@ -3355,6 +3355,17 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .mss-join .confirm-title { font-size:22px; line-height:1.25; padding:0 12px; }
 .mss-join .confirm-msg { max-width:290px; }
 .mss-join-actions a { display:block; text-align:center; text-decoration:none; }
+/* ── Spotlight: a card you were sent to (title page → "In your library" → its category page, _catFocus) ── */
+.mss-spotlight { position:relative; z-index:2; border-radius:var(--radius); animation:mssSpotlight 3.4s var(--ease) both; }
+@keyframes mssSpotlight {
+  0%   { box-shadow:0 0 0 0 transparent; }
+  12%  { box-shadow:0 0 0 3px var(--olive-light), 0 0 0 10px var(--olive-glow), 0 14px 40px var(--olive-glow); }
+  30%  { box-shadow:0 0 0 3px var(--olive-light), 0 0 0 4px transparent, 0 10px 30px var(--olive-glow); }
+  48%  { box-shadow:0 0 0 3px var(--olive-light), 0 0 0 10px var(--olive-glow), 0 14px 40px var(--olive-glow); }
+  80%  { box-shadow:0 0 0 2px var(--olive-light), 0 0 0 0 transparent; }
+  100% { box-shadow:0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion:reduce) { .mss-spotlight { animation:none; outline:2px solid var(--olive-light); outline-offset:2px; } }
 /* ── Just watched (mssWatchedPopup, config.js) — centred on every screen ── */
 .mss-done-overlay { position:fixed; inset:0; z-index:2000; display:none; align-items:center; justify-content:center; padding:20px;
   background:var(--popup-backdrop); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
@@ -3385,7 +3396,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .mss-done-msg { font-size:14px; line-height:1.6; color:var(--text-2); margin:0 auto 20px; max-width:300px; }
 .mss-done-actions { display:flex; flex-direction:column; gap:10px; }
-.mss-done-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; border-radius:999px; border:1px solid transparent;
+.mss-done-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; border-radius:var(--radius-sm); border:1px solid transparent;
   font:700 14.5px/1 var(--sans); cursor:pointer; background:var(--olive); color:#fff; box-shadow:0 10px 24px -12px var(--olive-glow);
   transition:transform .15s, filter .2s, border-color .2s; }
 .mss-done-btn:hover { filter:brightness(1.08); transform:translateY(-1px); }
