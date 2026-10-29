@@ -7685,3 +7685,23 @@ body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-ins
 @media (prefers-reduced-motion:reduce) { .mss-es-art .bob, .mss-es-art .blink, .mss-es-art .zz { animation:none; } }
 /* Polls' four tabs (Friends · Community · Yours · Completed) on the narrowest phones */
 @media (max-width:360px) { .soc-toggle .pn-toggle-btn { padding-inline:4px; font-size:12px; } }
+
+/* ── Section headers (Currently Watching · Watchlist · To Be Continued · Watched · Dropped) ──
+   on the category pages and the Library: a bigger icon, name and count — they read too small,
+   on phones above all. (Overrides the older per-width sizes above.) */
+.section-block-title { font-size:16px; gap:9px; }
+.section-block-title svg { width:18px; height:18px; flex-shrink:0; }
+.section-pill { font-size:15px; padding:2px 10px; border-radius:7px; line-height:1.3; }
+.sec-left { gap:10px; }
+@media (max-width:640px) {
+  .section-block-title { font-size:15px; gap:7px; white-space:nowrap; }
+  .section-block-title svg { width:17px; height:17px; }
+  .section-pill { font-size:14px; padding:2px 8px; flex-shrink:0; }
+  .section-block-header { padding:12px 10px; }
+  .sec-left { gap:8px; }
+}
+@media (max-width:385px) {
+  .section-block-title { font-size:14px; gap:6px; white-space:normal; }
+  .section-block-title svg { width:16px; height:16px; }
+  .section-pill { font-size:13px; padding:1px 7px; flex-shrink:0; }
+}
