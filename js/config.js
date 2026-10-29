@@ -2376,6 +2376,11 @@ function mssGuestGate(what) {
   mssJoin(what);
   return true;
 }
+/* Search-as-you-type: wait this long after the last key before asking TMDB, so "Avengers" is one
+   search, not eight. Every TMDB search box uses it (Enter searches straight away where there's a box
+   to press it in); searches also need 2+ characters, and answers to older searches are dropped. */
+const MSS_SEARCH_MS = 300;
+
 /* ══════════════════════════════════════════
    PASSWORDS — MSSPass: the one rule (8–64 characters) and the live guide under a new-password field
    (sign-up, reset and Settings). MSSPass.mount(boxId, inputId, names?) fills the box with a strength
