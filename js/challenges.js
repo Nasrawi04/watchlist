@@ -48,7 +48,7 @@ const MSSChallenges = (() => {
     const head = `<div class="soc-head"><div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Challenges</div></div>
       ${user ? `<span id="chHeadBtn">${newBtn()}</span>` : ''}</div>`;
     if (!user) {
-      el.innerHTML = head + `<div class="fr-empty"><div class="fr-empty-ic">${icon('trophy', 26)}</div><div class="fr-empty-title">Challenges with friends</div><div class="fr-empty-text">Sign in to race your friends to a watching goal.</div></div>`;
+      el.innerHTML = head + `<div class="mss-es">${mssArt('watched')}<div class="mss-es-title">Challenges with friends</div><div class="mss-es-text">Sign in to race your friends to a watching goal.</div></div>`;
       return;
     }
     el.innerHTML = head + `<div id="chList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
@@ -78,9 +78,9 @@ const MSSChallenges = (() => {
         <div class="chf-list">${off.list.map(featured).join('')}</div></section>` : '';
     if (!list.length) {
       if (feat) { box.innerHTML = feat; return; }
-      box.innerHTML = `<div class="fr-empty"><div class="fr-empty-ic">${icon('trophy', 26)}</div><div class="fr-empty-title">No challenges yet</div>
-        <div class="fr-empty-text">Set a goal — “10 horror movies in October”, “50 movies this year” — invite friends, and race to the finish.</div>
-        <button type="button" class="btn-add-entry" style="margin:14px auto 0" onclick="MSSChallenges.create()">${icon('plus', 15)} New Challenge</button></div>`;
+      box.innerHTML = `<div class="mss-es">${mssArt('watched')}<div class="mss-es-title">No challenges yet</div>
+        <div class="mss-es-text">Set a goal — “10 horror movies in October”, “50 movies this year” — invite friends, and race to the finish.</div>
+        <button type="button" class="mss-es-btn primary" style="margin-top:18px" onclick="MSSChallenges.create()">${icon('plus', 15)} New Challenge</button></div>`;
       return;
     }
     box.innerHTML = feat + `<div class="ch-list">${list.map(card).join('')}</div>`;
@@ -330,7 +330,7 @@ const MSSChallenges = (() => {
         <div class="ch-goal">
           <div class="ch-step" role="group" aria-label="Goal">
             <button type="button" class="ch-step-btn" aria-label="One less" onclick="MSSChallenges._f('step', -1)">${icon('minus', 16)}</button>
-            <input id="chG" inputmode="numeric" pattern="[0-9]*" maxlength="3" value="${goal}" aria-label="Goal — titles to watch" oninput="MSSChallenges._f('goal', this.value)">
+            <input id="chG" inputmode="numeric" pattern="[0-9]*" data-mask="int" maxlength="3" value="${goal}" aria-label="Goal — titles to watch" oninput="MSSChallenges._f('goal', this.value)">
             <button type="button" class="ch-step-btn" aria-label="One more" onclick="MSSChallenges._f('step', 1)">${icon('plus', 16)}</button>
           </div>
           ${seg('goal', [5, 10, 25, 50, 100].map(n => [n, n]), goal)}
