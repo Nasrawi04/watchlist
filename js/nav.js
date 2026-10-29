@@ -1604,9 +1604,10 @@ async function _tmdbTV(id) {
     const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?language=en-US`);
     const data = await res.json();
 
-    // Fetch per-season episode counts (skip specials = season 0)
-    const seasons = (data.seasons || []).filter(s => s.season_number > 0);
-    data._season_breakdown = seasons.map(s => s.episode_count);
+    // Episode counts per season — only what has AIRED (announced seasons don't count yet: mssAired)
+    const aired = mssAired(data);
+    data._season_breakdown = aired.breakdown;
+    data._aired_seasons = aired.seasons; data._aired_eps = aired.eps;
 
     return data;
   } catch { return null; }
@@ -1636,8 +1637,8 @@ function _tmdbToEntry(result, detail) {
 
   if (detail) {
     if (!isMovie) {
-      entry.total_seasons = detail.number_of_seasons || null;
-      entry.total_eps     = detail.number_of_episodes || null;
+      entry.total_seasons = detail._aired_seasons ?? detail.number_of_seasons ?? null;   // aired only (mssAired)
+      entry.total_eps     = detail._aired_eps ?? detail.number_of_episodes ?? null;
       entry._season_breakdown = detail._season_breakdown || [];
       // Only set completion year if show has actually ended
       const status = detail.status; // 'Ended', 'Canceled', 'In Production', 'Returning Series' etc
@@ -1872,10 +1873,12 @@ async function _refreshTmdbSeasonData(entry, userId, rerender) {
     if (!res.ok) return;
     const data = await res.json();
 
-    const seasons = (data.seasons || []).filter(s => s.season_number > 0);
-    const newBreakdown = seasons.map(s => s.episode_count);
-    const newTotalSeasons = data.number_of_seasons || newBreakdown.length || null;
-    const newTotalEps = data.number_of_episodes || newBreakdown.reduce((a, b) => a + b, 0) || null;
+    // Aired episodes only — a season that's announced but not out yet doesn't count (mssAired)
+    const aired = mssAired(data);
+    const newBreakdown = aired.breakdown;
+    const newTotalSeasons = aired.seasons;
+    const newTotalEps = aired.eps;
+    if (!newBreakdown.length) return;
     // Latest aired episode's date — used for the "Episode: Latest/Earliest"
     // sort option, which needs to reflect how recently a show has actually
     // aired new content, not just when it was originally released.
@@ -1884,8 +1887,10 @@ async function _refreshTmdbSeasonData(entry, userId, rerender) {
     const oldTotalSeasons = Number(entry.total_seasons) || 0;
     const oldTotalEps = Number(entry.total_eps) || 0;
     const oldLastEpDate = entry.ratings?._last_episode_date || null;
-    const hasNewData = (newTotalSeasons && newTotalSeasons > oldTotalSeasons) ||
-                        (newTotalEps && newTotalEps > oldTotalEps) ||
+    const oldBreakdown = JSON.stringify((entry.ratings?._season_breakdown || []).map(Number));
+    const hasNewData = (newTotalSeasons && newTotalSeasons !== oldTotalSeasons) ||
+                        (newTotalEps && newTotalEps !== oldTotalEps) ||
+                        oldBreakdown !== JSON.stringify(newBreakdown) ||
                         (newLastEpDate && newLastEpDate !== oldLastEpDate);
     if (!hasNewData) return;
 
@@ -1903,7 +1908,7 @@ async function _refreshTmdbSeasonData(entry, userId, rerender) {
     entry.total_eps = newTotalEps;
     entry.ratings = newRatings;
     if (typeof rerender === 'function') rerender();
-    showToast(`${entry.title}: updated to ${newTotalSeasons} season${newTotalSeasons !== 1 ? 's' : ''}`);
+    if (newTotalSeasons > oldTotalSeasons && oldTotalSeasons) showToast(`${entry.title}: updated to ${newTotalSeasons} season${newTotalSeasons !== 1 ? 's' : ''}`);
   } catch (err) {
     // Silent failure — this is a background convenience check, not a
     // user-initiated action, so it shouldn't surface an error toast for
