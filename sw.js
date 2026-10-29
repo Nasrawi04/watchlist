@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v162';   // MyScreenFolio — restarted at v1 (was mss-v787)
+const CACHE_VERSION = 'msf-v191';   // MyScreenFolio — restarted at v1 (was mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -58,6 +58,7 @@ const STATIC_ASSETS = [
   'js/discover-categories.js',
   'js/sort-filter.js',
   'js/category.js',
+  'js/pick.js',
   'js/rewatch.js',
   'js/create-card.js',
   'js/export.js',
