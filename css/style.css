@@ -5348,9 +5348,20 @@ body { font-size:15px; }
    ═════════════════════════════════════════════════════════════ */
 .mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av) > img { transition:opacity .25s ease; }
 .mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av) > img:not(.is-loaded) { opacity:0; }
-.mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av):has(> img:not(.is-loaded)) {
+.mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av).fx-vis:has(> img:not(.is-loaded)) {
   background-image:var(--aw-sweep); background-size:300vw 100vh; background-attachment:fixed; background-repeat:no-repeat; animation:mssSweep 2.1s var(--aw-ease) infinite;
 }
+/* Phones and tablets: the light crosses each box on its own (no screen-wide fixed background —
+   Safari repaints those on every frame and runs out of memory on long pages) */
+@media (pointer: coarse) {
+  .mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av).fx-vis:has(> img:not(.is-loaded)),
+  .skel, .page-loading:not(.has-skel)::before, .page-loading:not(.has-skel)::after, .skel-ghost {
+    background-attachment:scroll !important; background-size:300% 100% !important; animation-name:mssSweepEl !important; }
+  .has-skel :is([class*="poster"], .skel-cover:not(.skel-round)).skel { background-size:min(34px, 34%) auto, 300% 100% !important; background-attachment:scroll, scroll !important; animation-name:mssSweepPlayEl !important; }
+  .skel-txt { background:var(--aw-sweep) 150% 0 / 300% 100% no-repeat scroll, var(--skel-bg) !important; animation-name:mssSweepEl !important; }
+}
+@keyframes mssSweepEl { from { background-position:-50% 0; } to { background-position:150% 0; } }
+@keyframes mssSweepPlayEl { from { background-position:50% 46%, -50% 0; } to { background-position:50% 46%, 150% 0; } }
 /* ── Page loaders: skeletons shaped like the page (mssSkeleton, config.js) ──
    The boxes use the page's own card / grid / stat classes, so they size and
    scale exactly like the loaded page; everything inside is relative (%, em,
