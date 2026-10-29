@@ -520,7 +520,7 @@ nav {
   display:flex; align-items:center; justify-content:center; cursor:pointer;
   background:transparent; border:none; color:var(--text-3); transition:color .15s, background .15s;
 }
-.hero-search-clear[hidden] { display:none; }
+.hero-search-clear[hidden], .btn-add-entry[hidden] { display:none; }
 .hero-search-clear:hover { color:var(--text); background:var(--olive-faint); }
 .hero-search-clear:focus-visible { outline:2px solid var(--olive-light); outline-offset:1px; }
 .hero-search-btn {
@@ -830,7 +830,7 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .cat-page-sub { font-family:'Manrope',var(--sans); font-weight:500; font-size:14.5px; color:var(--text-2); margin-top:6px; }
 
 .btn-add-entry {
-  display:flex; align-items:center; gap:8px;
+  display:flex; align-items:center; justify-content:center; text-align:center; gap:8px;
   background:var(--olive); border:0.5px solid var(--olive);
   border-radius:var(--radius-sm); color:#fff;
   font-size:13px; font-weight:500; padding:9px 18px; cursor:pointer;
