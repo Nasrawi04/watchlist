@@ -273,21 +273,22 @@ const MSSNight = (() => {
   async function addOption(id, o) {
     if (await act('add_movie_night_option', { p_night: id, p_option: o }, 'Couldn’t add it — try again.')) { adding[id] = false; draw(); }
   }
-  let qTimer = null;
+  let qTimer = null; const qLast = {};
   function search(id, q) {
-    clearTimeout(qTimer);
+    clearTimeout(qTimer); qLast[id] = q;
     const box = document.getElementById('mnH-' + id); if (!box) return;
     if (q.trim().length < 2) { box.innerHTML = ''; return; }
     qTimer = setTimeout(async () => {
       box.innerHTML = `<div class="pf-r-msg">Searching…</div>`;
       const res = await _tmdbSearch(q.trim(), 6);
+      if (qLast[id] !== q) return;                     // typed on since
       hits[id] = res.map(r => ({ tmdb_id: r.id, tmdb_type: r.media_type, title: r.title || r.name, poster_path: r.poster_path, year: (r.release_date || r.first_air_date || '').slice(0, 4) }));
       const b2 = document.getElementById('mnH-' + id); if (!b2) return;
       b2.innerHTML = hits[id].length ? hits[id].map((h, k) => `<button type="button" class="pf-r" onclick="MSSNight._pick(${attrJSON(id)}, ${k})">
           <span class="poll-thumb">${h.poster_path ? `<img src="${img(h.poster_path, 'w92')}" alt="" loading="lazy">` : icon('film', 16)}</span>
           <span class="poll-opt-text"><b translate="no">${esc(h.title)}</b><small>${[h.year, h.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small></span></button>`).join('')
         : `<div class="pf-r-msg">Nothing found — try another spelling.</div>`;
-    }, 280);
+    }, MSS_SEARCH_MS);
   }
   function addSugg(id, key) {
     const [t, tid] = key.split(':');
