@@ -2399,6 +2399,49 @@ function mssJoin(what = 'do that') {
   ov.querySelector('#mssJoinT').textContent = 'Sign up to ' + what;
   MSSDialog.open(ov, { focus: '.confirm-ok' });
 }
+/* ══════════════════════════════════════════
+   JUST WATCHED — mssWatchedPopup(entry, { onRate, onLater })
+   After you finish something that isn't rated yet: the poster with a tick,
+   "Added to Watched" (or To Be Continued), and Rate it · Later.
+   Centred on every screen. Closing it (✕, backdrop, Esc) counts as Later.
+   (Already rated → pages skip it and just carry on.)
+══════════════════════════════════════════ */
+function mssWatchedPopup(entry, { onRate, onLater } = {}) {
+  document.getElementById('mssDone')?.remove();
+  const tbc = entry.status === 'ongoing', url = safeURL(entry.poster_url);
+  const ov = document.createElement('div');
+  ov.className = 'mss-done-overlay';
+  ov.id = 'mssDone';
+  ov.innerHTML = `<div class="mss-done" role="dialog" aria-modal="true" aria-labelledby="mssDoneT" aria-describedby="mssDoneM">
+      <button type="button" class="dp-close mss-done-x" aria-label="Close">${icon('x', 18)}</button>
+      <div class="mss-done-art" aria-hidden="true">
+        <span class="mss-done-glow"></span>
+        ${[0, 1, 2, 3, 4, 5, 6, 7].map(i => `<i class="mss-done-spark" style="--a:${i * 45}deg"></i>`).join('')}
+        <div class="mss-done-poster">${url ? `<img src="${url}" alt="">` : `<span>${escHTML((entry.title || '?')[0].toUpperCase())}</span>`}</div>
+        <span class="mss-done-tick">${icon('check', 18)}</span>
+      </div>
+      <div class="mss-done-eyebrow">${tbc ? 'Added to To Be Continued' : 'Added to Watched'}</div>
+      <h2 class="mss-done-title" id="mssDoneT" translate="no">${escHTML(entry.title || 'Untitled')}</h2>
+      <p class="mss-done-msg" id="mssDoneM">${tbc ? 'Caught up! Rate what you’ve seen so far to rank it in your collection.' : 'Nice one! Rate it now to rank it among everything you’ve watched.'}</p>
+      <div class="mss-done-actions">
+        <button type="button" class="mss-done-btn" data-go="rate">${icon('ratingStar', 16)}<span>Rate it</span></button>
+        <button type="button" class="mss-done-btn is-ghost" data-go="later">Later</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  let done = false;
+  const finish = go => {
+    if (done) return;
+    done = true;
+    MSSDialog.close(ov);
+    setTimeout(() => ov.remove(), 250);
+    (go === 'rate' ? onRate : onLater)?.();
+  };
+  MSSDialog.bind(ov, () => finish('later'));
+  ov.querySelector('.mss-done-x').addEventListener('click', () => finish('later'));
+  ov.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => finish(b.dataset.go)));
+  MSSDialog.open(ov, { focus: '[data-go="rate"]' });
+}
 // Any Sign in / Create account link remembers this page, so you come back to it
 document.addEventListener('click', ev => {
   const a = ev.target.closest?.('a[href^="login.html"]'), page = location.pathname.split('/').pop() || 'index.html';
