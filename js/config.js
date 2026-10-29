@@ -629,14 +629,12 @@ function mssJumpTo(y) {
   /* Only frames on (or about to come on) screen shimmer — a long Library has hundreds of posters
      waiting to lazy-load, and hundreds of always-running shimmers were too much for phones
      (Safari would run out of memory and reload the page: the white flash). */
-  /* Phones, tablets and iPads get no moving light at all (the frame just waits, then the picture fades in) */
-  const still = matchMedia('(pointer: coarse)').matches;
-  const near = still ? null : 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('fx-vis', e.isIntersecting)), { rootMargin: '200px 0px' }) : null;
+  const near = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('fx-vis', e.isIntersecting)), { rootMargin: '200px 0px' }) : null;
   const watch = img => {
     const f = img.parentElement;
     if (!f || f._mssFx) return;
     f._mssFx = 1;
-    if (near) near.observe(f); else if (!still) f.classList.add('fx-vis');
+    if (near) near.observe(f); else f.classList.add('fx-vis');
   };
   const mark = img => { if (img.complete && img.naturalWidth) img.classList.add('is-loaded'); else watch(img); };
   document.documentElement.classList.add('mss-img-fx');
@@ -657,6 +655,7 @@ function mssJumpTo(y) {
 function mssImgError(img) {
   const n = Number(img.dataset.retry || 0);
   img.dataset.retry = n + 1;
+  if (img.hasAttribute('srcset')) { img.removeAttribute('srcset'); img.removeAttribute('sizes'); }   // retries go through src
   const src = (img.getAttribute('src') || '').replace(/[?&]r=\d+$/, '');
   if (n === 0) {
     setTimeout(() => { img.src = src + (src.includes('?') ? '&' : '?') + 'r=' + Date.now(); }, 700 + Math.random() * 600);
@@ -1283,10 +1282,17 @@ const MSSEmoji = (() => {
 })();
 
 
-function posterHTML(entry, size) {
+function posterHTML(entry, size, sizes) {
   const letter = escHTML((entry.title || '?')[0].toUpperCase());
   const url = safeURL(entry.poster_url), lock = mssHiddenBadgeHTML(entry);   // your Friends / Only-me titles (073)
   if (url) {
+    /* sizes (the poster's shown width, e.g. '64px'): a TMDB poster is fetched only as big as that
+       box needs on this screen, not the saved 500px one (a big Library has hundreds) */
+    const m = sizes && /^(https:\/\/image\.tmdb\.org\/t\/p\/)(?:w\d+|original)(\/.+)$/.exec(url);
+    if (m) {
+      const at = w => `${m[1]}w${w}${m[2]} ${w}w`;
+      return `<img src="${m[1]}w185${m[2]}" srcset="${at(92)}, ${at(185)}, ${at(342)}, ${at(500)}" sizes="${sizes}" alt="" loading="lazy" decoding="async" data-letter="${letter}" onerror="mssImgError(this)">${lock}`;
+    }
     return `<img src="${url}" alt="" loading="lazy" data-letter="${letter}" onerror="mssImgError(this)">${lock}`;
   }
   const sz = size === 'big' ? '52px' : size === 'sm' ? '22px' : '36px';
