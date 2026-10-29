@@ -629,12 +629,14 @@ function mssJumpTo(y) {
   /* Only frames on (or about to come on) screen shimmer — a long Library has hundreds of posters
      waiting to lazy-load, and hundreds of always-running shimmers were too much for phones
      (Safari would run out of memory and reload the page: the white flash). */
-  const near = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('fx-vis', e.isIntersecting)), { rootMargin: '200px 0px' }) : null;
+  /* Phones, tablets and iPads get no moving light at all (the frame just waits, then the picture fades in) */
+  const still = matchMedia('(pointer: coarse)').matches;
+  const near = still ? null : 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('fx-vis', e.isIntersecting)), { rootMargin: '200px 0px' }) : null;
   const watch = img => {
     const f = img.parentElement;
     if (!f || f._mssFx) return;
     f._mssFx = 1;
-    if (near) near.observe(f); else f.classList.add('fx-vis');
+    if (near) near.observe(f); else if (!still) f.classList.add('fx-vis');
   };
   const mark = img => { if (img.complete && img.naturalWidth) img.classList.add('is-loaded'); else watch(img); };
   document.documentElement.classList.add('mss-img-fx');
