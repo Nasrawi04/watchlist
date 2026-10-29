@@ -7433,3 +7433,42 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
   .mss-err-acts .mss-err-btn { flex:1 1 100%; }
   .mss-err-body { border-radius:20px; } .mss-err-screen { border-radius:11px; } .mss-err-grille i { width:14px; }
 }
+
+
+/* ═════════════════════════════════════════════════════════════
+   Screensaver (js/screensaver.js) — the bouncing-logo Easter egg.
+   The logo is one solid colour (its PNG is the mask), easing to the next
+   colour at each bounce, with a soft glow in the same colour.
+   ═════════════════════════════════════════════════════════════ */
+.mss-ss { position:fixed; inset:0; z-index:3000; overflow:hidden; pointer-events:none; opacity:0; transition:opacity .6s ease;
+  background:rgba(4,4,8,.42); touch-action:none; }
+html[data-theme="light"] .mss-ss { background:rgba(30,22,14,.36); }
+.mss-ss.on { opacity:1; pointer-events:auto; cursor:none; }
+.mss-ss.out { transition-duration:.25s; }
+.mss-ss-logo { position:absolute; left:0; top:0; width:clamp(110px, 20vw, 230px); aspect-ratio:507 / 320; will-change:transform;
+  background:var(--ss-c, #7EB86C); transition:background-color .45s ease;
+  -webkit-mask:url(../icons/logo-nav.png) center / contain no-repeat; mask:url(../icons/logo-nav.png) center / contain no-repeat;
+  filter:drop-shadow(0 0 18px color-mix(in srgb, var(--ss-c, #7EB86C) 55%, transparent)); }
+/* "Your folio is resting" — its own little floating card, so it never reads as page text */
+.mss-ss-hint { position:absolute; left:50%; bottom:calc(34px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:2;
+  display:flex; align-items:center; gap:12px; padding:12px 18px 12px 12px; border-radius:16px; white-space:nowrap; color:#fff;
+  background:rgba(12,12,16,.78); -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3);
+  border:1px solid rgba(255,255,255,.14); box-shadow:0 16px 40px rgba(0,0,0,.45); opacity:0; }
+.mss-ss.on .mss-ss-hint { animation:mssSsHintIn .6s ease 1.2s forwards; }
+.mss-ss-hint-ic { width:36px; height:36px; border-radius:11px; display:grid; place-items:center; flex-shrink:0;
+  background:color-mix(in srgb, var(--ss-c, #7EB86C) 26%, transparent); color:var(--ss-c, #7EB86C); transition:background .45s, color .45s; }
+.mss-ss-hint-ic svg { width:19px; height:19px; animation:mssSsNod 3.2s ease-in-out infinite; }
+.mss-ss-hint-tx { display:flex; flex-direction:column; gap:2px; text-align:start; }
+.mss-ss-hint-tx b { font-family:var(--serif); font-weight:500; font-size:16px; letter-spacing:.5px; }
+.mss-ss-hint-tx small { font-size:12px; font-weight:600; color:rgba(255,255,255,.62); }
+.mss-ss-burst { position:absolute; width:0; height:0; pointer-events:none; }
+.mss-ss-burst i { position:absolute; width:7px; height:7px; margin:-3.5px; border-radius:50%; background:var(--ss-c, #7EB86C); transform:rotate(var(--a)); animation:mssSsBurst .9s ease-out forwards; }
+/* toasts (the corner!) show above it, clear of the hint */
+body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-inset-bottom)); }
+@media (max-width:1199px) {   /* clear of the phone / tablet bottom bar */
+  .mss-ss-hint { bottom:calc(118px + env(safe-area-inset-bottom)); }
+  body.mss-ss-running .toast { bottom:calc(196px + env(safe-area-inset-bottom)); }
+}
+@keyframes mssSsHintIn { from { opacity:0; transform:translate(-50%, 10px); } to { opacity:1; transform:translate(-50%, 0); } }
+@keyframes mssSsNod { 0%,100% { transform:rotate(-8deg); } 50% { transform:rotate(8deg); } }
+@keyframes mssSsBurst { from { opacity:1; transform:rotate(var(--a)) translateY(0); } to { opacity:0; transform:rotate(var(--a)) translateY(var(--d)); } }
