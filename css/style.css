@@ -2722,7 +2722,12 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .xs-pv-badge.none b { font-family:'Manrope',var(--sans); font-weight:600; font-size:calc(var(--u) * 2.6); color:var(--t3); }
 .xs-pv-badge small { font-family:'Oswald',var(--sans); font-size:calc(var(--u) * 1.9); font-weight:600; letter-spacing:calc(var(--u) * .4); text-transform:uppercase; color:var(--t3); }
 .xs-pv-more { text-align:center; font-size:calc(var(--u) * 3); color:var(--t3); margin-top:calc(var(--u) * 2); position:relative; z-index:1; }
-.xs-pv-empty { padding:calc(var(--u) * 20) 0; text-align:center; color:var(--t3); font-size:calc(var(--u) * 3.6); }
+.xs-pv-empty { display:flex; flex-direction:column; align-items:center; gap:calc(var(--u) * 1.6); padding:calc(var(--u) * 14) calc(var(--u) * 6); text-align:center; color:var(--t3); font-size:calc(var(--u) * 3.6); }
+/* the illustration, in the preview page's own colours (it can be dark or light whatever the site's theme) */
+.xs-pv-empty .mss-es-art { width:calc(var(--u) * 40); height:calc(var(--u) * 30); margin:0 0 calc(var(--u) * 2); color:var(--t3);
+  --olive-light:var(--ac); --ill-fill:color-mix(in srgb, var(--t1) 4%, transparent); --ill-ground:color-mix(in srgb, var(--ac) 12%, transparent); --olive-faint:color-mix(in srgb, var(--ac) 14%, transparent); }
+.xs-pv-empty b { font-family:'Oswald',var(--sans); font-weight:600; font-size:calc(var(--u) * 5.2); color:var(--t1); letter-spacing:.2px; }
+.xs-pv-empty span { max-width:calc(var(--u) * 92); line-height:1.5; color:var(--t2); }
 @media(max-width:860px) {
   .soc-card.xs-card { height:calc(100dvh - 24px); }
   .xs-grid { display:block; overflow-y:auto; overscroll-behavior-y:contain; }
@@ -7557,6 +7562,8 @@ body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-ins
 .i-line { fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .i-acc  { fill:none; stroke:var(--olive-light); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .i-gold { fill:none; stroke:var(--gold-accent); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.i-silver { fill:none; stroke:#A9AEB5; stroke-width:2; }
+.i-bronze { fill:none; stroke:#B87A4B; stroke-width:2; }
 .i-fill { fill:var(--ill-fill); }
 .i-ground { fill:var(--ill-ground); }
 .i-dot { fill:var(--olive-light); }
