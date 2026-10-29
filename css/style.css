@@ -87,7 +87,7 @@
    §26  Profile Stats Box
    §27  Completed Grid
           · Rank badge (used everywhere a list is ranked)
-   §28  What Should I Watch Next (Popup)
+   §28  Pick for me (js/pick.js)
    §29  VIEW: Completed Grid (container)
    §30  Score Badge System
    §31  Global Spacing + Typography
@@ -4008,19 +4008,99 @@ a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar, .rc-col.rc-sel .rc-bar {
 /* The card itself — no overflow:hidden so content shows, allow full height */
 
 /* ═════════════════════════════════════════════════════════════
-   §28  What Should I Watch Next (Popup)
+   §28  Pick for me (js/pick.js)
    ═════════════════════════════════════════════════════════════ */
-.qp-trigger {
-  display:flex; align-items:center; gap:5px;
-  background:transparent; border:0.5px solid var(--border-olive);
-  border-radius:var(--radius-xs); color:var(--olive-light);
-  font-size:11px; font-weight:500; padding:5px 10px; cursor:pointer;
-  transition:all var(--trans) var(--ease); white-space:nowrap;
+.qp-trigger {                              /* "Pick for me": as tall as the list / grid switch next to it */
+  display:inline-flex; align-items:center; justify-content:center; gap:7px; align-self:stretch; min-height:30px;
+  background:var(--olive-faint); border:1px solid var(--border-olive); border-radius:var(--radius-xs);
+  color:var(--olive-light); font:700 12.5px 'Manrope',var(--sans); padding:0 12px; cursor:pointer; white-space:nowrap;
+  transition:background .18s, border-color .18s, color .18s;
 }
-.qp-trigger:hover  { background:var(--olive-faint); }
-.qp-trigger:active { transform:scale(0.97); }
+.qp-trigger:hover { background:var(--olive); border-color:var(--olive); color:#fff; }
+.qp-trigger:hover svg { animation:qpWobble .5s ease; }
 .qp-trigger:disabled { opacity:.35; cursor:not-allowed; pointer-events:none; }
-.qp-trigger svg { width:12px; height:12px; flex-shrink:0; }
+.qp-trigger svg { width:16px; height:16px; flex-shrink:0; }
+@keyframes qpWobble { 30% { transform:rotate(-14deg); } 65% { transform:rotate(10deg); } }
+
+/* The popup */
+#qpOverlay { position:fixed; inset:0; z-index:1300; display:flex; align-items:center; justify-content:center; padding:16px;
+  background:var(--popup-backdrop); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .22s ease, visibility 0s linear .22s; }
+#qpOverlay.open { opacity:1; visibility:visible; pointer-events:auto; transition:opacity .22s ease; }
+.qp-card { width:100%; max-width:640px; max-height:calc(100dvh - 32px); overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column;
+  background:var(--bg-2); border:1px solid var(--border-2); border-radius:var(--radius-lg); transform:translateY(14px) scale(.98); transition:transform .3s var(--spring); }
+#qpOverlay.open .qp-card { transform:none; }
+.qp-hero { position:relative; isolation:isolate; overflow:hidden; padding:18px 20px 22px; color:#EDEDED; background:#0B0B0F; flex-shrink:0; }
+.qp-backdrop { position:absolute; inset:-30px; z-index:-2; background:#16161b center/cover no-repeat; filter:blur(18px) saturate(1.15); opacity:.7; transform:scale(1.08); transition:background-image .3s; }
+.qp-hero::after { content:''; position:absolute; inset:0; z-index:-1; background:linear-gradient(180deg, rgba(11,11,15,.35), rgba(11,11,15,.82) 70%, rgba(11,11,15,.95)); }
+.qp-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.qp-eyebrow { display:inline-flex; align-items:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#9FD38C; }
+.qp-eyebrow svg { width:16px; height:16px; }
+#qpOverlay.rolling .qp-eyebrow svg { animation:qpSpin .6s linear infinite; }
+@keyframes qpSpin { to { transform:rotate(360deg); } }
+.qp-x { width:38px; height:38px; border-radius:50%; display:grid; place-items:center; cursor:pointer; color:#EDEDED; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); }
+.qp-x:hover { background:rgba(255,255,255,.16); }
+.qp-main { display:flex; gap:18px; align-items:flex-end; }
+.qp-poster { flex-shrink:0; width:128px; aspect-ratio:2/3; border-radius:12px; overflow:hidden; display:grid; place-items:center; text-decoration:none;
+  background:#1d1d24; border:1px solid rgba(255,255,255,.22); }
+.qp-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.qp-poster.land { animation:qpLand .45s var(--spring); }
+@keyframes qpLand { 0% { transform:scale(.88) rotate(-3deg); } 100% { transform:none; } }
+.qp-letter { font-family:var(--serif); font-size:42px; color:#7EB86C; }
+.qp-info { min-width:0; flex:1; display:flex; flex-direction:column; gap:6px; padding-bottom:2px; }
+.qp-count { font-size:11.5px; font-weight:700; color:rgba(237,237,237,.6); }
+.qp-title { margin:0; font-family:var(--serif); font-weight:600; font-size:clamp(24px, 5vw, 32px); line-height:1.08; letter-spacing:.2px; color:#fff; overflow-wrap:anywhere; }
+.qp-meta { font-size:13.5px; color:rgba(237,237,237,.82); }
+#qpVote { white-space:nowrap; }
+.qp-vote { color:#E2B53E; font-weight:800; } .qp-meta small { color:rgba(237,237,237,.5); font-size:11px; }
+.qp-genres { display:flex; flex-wrap:wrap; gap:6px; margin-top:2px; }
+.qp-genres span { font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:999px; color:#CFE8C5; background:rgba(126,184,108,.16); border:1px solid rgba(126,184,108,.35); }
+.qp-body { padding:18px 20px 4px; display:flex; flex-direction:column; gap:14px; }
+.qp-overview { margin:0; font-size:14.5px; line-height:1.6; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
+.qp-overview:empty { display:none; }
+.qp-skel { display:block; height:12px; margin:6px 0; border-radius:6px; background:var(--card-2); }
+.qp-skel.short { width:60%; }
+.qp-credit { display:flex; flex-wrap:wrap; gap:4px 18px; font-size:13px; color:var(--text-2); }
+.qp-credit:empty { display:none; }
+.qp-credit b { color:var(--text-3); font-weight:700; font-size:11px; letter-spacing:.8px; text-transform:uppercase; margin-inline-end:4px; }
+.qp-why { border:1px solid var(--border-olive); background:var(--olive-faint); border-radius:var(--radius); padding:12px 14px; }
+.qp-why-h { font-size:11px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:var(--olive-light); margin-bottom:8px; }
+.qp-why ul { list-style:none; margin:0; padding:0; display:grid; gap:7px; }
+.qp-why li { display:flex; gap:9px; align-items:flex-start; font-size:13.5px; line-height:1.45; color:var(--text); }
+.qp-why li svg { width:15px; height:15px; flex-shrink:0; margin-top:2px; color:var(--olive-light); }
+.qp-none { font-size:14px; color:var(--text-2); padding:6px 0 10px; }
+.qp-link { margin-inline-start:6px; background:none; border:0; padding:0; color:var(--olive-light); font:700 14px 'Manrope',var(--sans); cursor:pointer; text-decoration:underline; }
+.qp-moods { padding:14px 20px 4px; }
+.qp-moods-h { display:block; font-size:11px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; }
+.qp-chips { display:flex; flex-wrap:wrap; gap:7px; }
+.qp-chip { display:inline-flex; align-items:center; gap:5px; min-height:34px; padding:0 13px; border-radius:999px; cursor:pointer;
+  font:600 12.5px 'Manrope',var(--sans); color:var(--text-2); background:var(--card-solid); border:1px solid var(--border-2); transition:all .15s; }
+.qp-chip svg { width:12px; height:12px; }
+.qp-chip:hover { border-color:var(--olive-light); color:var(--text); }
+.qp-chip.on { background:var(--olive); border-color:var(--olive); color:#fff; }
+/* the genre dropdown, dressed as a chip (a real <select>: the phone's own picker opens) */
+.qp-select { position:relative; padding-inline:12px 30px; }
+.qp-select select { appearance:none; -webkit-appearance:none; border:0; background:transparent; color:inherit; font:inherit; cursor:pointer; outline:none; padding:0; max-width:160px; text-overflow:ellipsis; }
+.qp-select select option { color:var(--text); background:var(--bg-2); }
+.qp-select .qp-caret { position:absolute; right:11px; top:50%; width:12px; height:12px; transform:translateY(-50%); pointer-events:none; }
+.qp-select:focus-within { outline:2px solid var(--olive-light); outline-offset:2px; }
+.qp-foot { position:sticky; bottom:0; display:grid; grid-template-columns:auto auto 1fr; gap:8px; padding:16px 20px 18px; margin-top:12px;
+  background:var(--bg-2); border-top:1px solid var(--border); }
+.qp-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:46px; padding:0 16px; border-radius:12px; cursor:pointer;
+  font:700 14px 'Manrope',var(--sans); color:var(--text); background:var(--card-solid); border:1px solid var(--border-2); transition:border-color .15s, background .15s; }
+.qp-btn svg { width:16px; height:16px; flex-shrink:0; }
+.qp-btn:hover:not(:disabled) { border-color:var(--olive-light); }
+.qp-btn:disabled { opacity:.4; cursor:default; }
+.qp-btn.primary { background:var(--olive); border-color:var(--olive); color:#fff; }
+.qp-btn.primary:hover:not(:disabled) { background:var(--olive-2); }
+@media (max-width:520px) {
+  .qp-hero { padding:14px 16px 18px; }
+  .qp-poster { width:96px; }
+  .qp-main { gap:14px; }
+  .qp-body, .qp-moods { padding-inline:16px; }
+  .qp-foot { grid-template-columns:1fr 1fr; padding:12px 16px calc(14px + env(safe-area-inset-bottom)); }
+  .qp-foot .primary { grid-column:1 / -1; order:-1; }
+}
+@media (prefers-reduced-motion:reduce) { .qp-poster.land, .qp-trigger:hover svg, #qpOverlay.rolling .qp-eyebrow svg { animation:none; } }
 
 /* ═════════════════════════════════════════════════════════════
    §29  VIEW: Completed Grid (container)
@@ -4324,7 +4404,7 @@ body { font-size:15px; }
 
   /* ── QP button: icon only on mobile ── */
   .qp-label { display:none; }
-  .qp-trigger { padding:6px 8px; }
+  .qp-trigger { padding:0 10px; }
 
   /* ── Sort bar ── */
   .sort-bar { gap:3px; padding:8px 14px 10px; margin-bottom:12px; margin-inline-start:-14px; margin-inline-end:-14px; background:var(--card-solid); }
@@ -4454,7 +4534,6 @@ body { font-size:15px; }
   .fav-chip { font-size:10px; padding:2px 7px; }
 
   @media (max-width: 768px) {
-    .qp-trigger { font-size:10px; padding:5px 8px; }
   }
 }
 
@@ -7069,7 +7148,7 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 
 /* ── Your Friends / Only-me titles (073): a small lock on your own poster ── */
 .w-poster, .wg-poster, .fv-w-poster, .fv-rank-poster, .q-poster, .comp-poster, .dp-poster,
-#mssRatePoster, #mssCommentsPoster, #qpPoster { position:relative; }
+#mssRatePoster, #mssCommentsPoster { position:relative; }
 .mss-hidden-badge {
   position:absolute; bottom:6px; inset-inline-end:6px; z-index:3; width:22px; height:22px; border-radius:50%;
   display:grid; place-items:center; background:rgba(10,10,14,.74); color:#fff; 
