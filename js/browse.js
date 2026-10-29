@@ -299,7 +299,7 @@ const MSSBrowse = (() => {
   function drawResults() {
     out.innerHTML = headHTML() + (S.items.length
       ? `<div class="inline-search-grid" id="brwGrid">${S.items.map(card).join('')}</div>${moreHTML()}`
-      : `<div class="mss-empty">Nothing matches all of these. Try fewer choices.</div>`);
+      : mssEmpty({ art: 'filter', title: 'Nothing matches all of these', text: 'That’s a very specific mood. Try fewer choices.' }));
   }
   function show(on) {
     document.body.classList.toggle('disc-browsing', on);
