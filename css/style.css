@@ -7476,7 +7476,8 @@ body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-ins
   :is(.vt-btn, .chevron-btn) { width:36px; height:36px; }                                  /* list / grid, open / close */
   .sf-icon-btn { min-width:36px; min-height:36px; }                                        /* sort / filter */
   .prof-tab { min-height:44px; }
-  :is(.ep-btn, .ttp-btn, .sf-icon-btn, .vt-btn, .chevron-btn, .fm-icon-btn, .mss-rt-btn, .w-list-action-btn, .fav-cast-btn,
+  /* :where = no weight, so anything already placed absolutely (a popup's ✕…) stays where it is */
+  :where(.ep-btn, .ttp-btn, .sf-icon-btn, .vt-btn, .chevron-btn, .fm-icon-btn, .mss-rt-btn, .w-list-action-btn, .fav-cast-btn,
       .qp-trigger, .input-clear-btn, .notes-search-card-close, .tmdb-lock-btn, .push-switch, .dp-close, .sf-close,
       .genre-opt, .pn-toggle-btn, .td-notes-sort-btn, .mss-vis-opt, .prof-edit-btn, .prof-share-btn, .td-refresh, .sel-dd-trigger,
       .btn-add-entry, .fm-btn, .td-trailer-link, .mtog-btn, .disc-see-all, .push-link, .settings-back-link, .td-ep-graph-link,
