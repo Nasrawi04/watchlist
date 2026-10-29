@@ -46,6 +46,7 @@
 /* the MSF Member medal (075): a touch of gold */
 .cab-member { border-color:rgba(214,167,44,.55) !important; background:radial-gradient(80% 70% at 50% 25%, rgba(233,183,58,.16), transparent 70%), var(--card) !important; }
 .cab-member .cab-card-lv b { color:var(--text); font-size:14px; }
+.cab-secret { border-color:rgba(180,139,201,.5) !important; background:radial-gradient(80% 70% at 50% 25%, rgba(138,175,209,.14), transparent 70%), var(--card) !important; }
 .cab-card-name { font-size:14px; font-weight:700; color:var(--text); line-height:1.25; overflow-wrap:anywhere; }
 .cab-card-lv { font-size:12px; color:var(--text-3); }
 .cab-card-lv b { color:var(--olive-light); font-weight:700; }
@@ -102,7 +103,7 @@
    Opening your own cabinet saves any newly reached levels (sync_achievements).
 ═══════════════════════════════════════════════════════════════ */
 const esc = s => escHTML(s == null ? '' : String(s));
-const CAB = { user: null, who: null, own: true, ach: [], badges: [], member: null, tab: 'all', name: '' };
+const CAB = { user: null, who: null, own: true, ach: [], badges: [], member: null, secret: [], tab: 'all', name: '' };
 const num = n => Number(n || 0).toLocaleString(MSSI18n.locale);
 const when = d => new Date(d).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' });
 const topLevel = a => Math.max(0, ...(a.earned || []).map(e => e.level));
@@ -122,6 +123,7 @@ async function cabLoad() {
   CAB.ach = Array.isArray(ach) ? ach : [];
   CAB.badges = (Array.isArray(badges) ? badges : []).filter(b => b.kind === 'official' || b.kind === 'challenge');
   CAB.member = (Array.isArray(badges) ? badges : []).find(b => b.kind === 'member') || null;   // the MSF Member medal (075)
+  CAB.secret = (Array.isArray(badges) ? badges : []).filter(b => b.kind === 'secret');          // secret medals — Easter eggs (077)
   CAB.name = prof ? (prof.display_name || prof.username || 'Their') : '';
   try { localStorage.setItem('mss_ach_sync', String(Date.now())); } catch {}
   cabDraw();
@@ -168,6 +170,11 @@ function memberCard(b) {
     ${MSSMedal.member({ size: 96 })}<span class="cab-card-name">MSF Member</span>
     <span class="cab-card-lv"><b>${esc(long)}</b></span><span class="cab-card-lv">Since ${when(b.earned_at)}</span></button>`;
 }
+// A secret medal (077) — only ever shown once found; nobody's told what the others are
+function secretCard(b) {
+  return `<button type="button" class="cab-card cab-secret" onclick="cabSecret('${b.id}')" aria-label="${esc(b.title)} — secret medal, found ${when(b.earned_at)}">
+    ${MSSMedal.secret(b.medal, { size: 96 })}<span class="cab-card-name" translate="no">${esc(b.title)}</span><span class="cab-card-lv">Secret</span><span class="cab-card-lv">${when(b.earned_at)}</span></button>`;
+}
 function cabDraw() {
   const page = document.getElementById('cabPage');
   const official = CAB.badges.filter(b => b.kind === 'official'), chal = CAB.badges.filter(b => b.kind === 'challenge');
@@ -182,7 +189,7 @@ function cabDraw() {
       <div class="cab-sub">${CAB.own ? 'Every medal you’ve earned — and how close you are to the next one.' : 'Every medal they’ve earned so far.'}</div>
     </div></div>
     <div class="cab-stats">
-      <div class="cab-stat hl"><b>${levels + official.length + chal.length + (CAB.member ? 1 : 0)}</b><span>Medals in total</span></div>
+      <div class="cab-stat hl"><b>${levels + official.length + chal.length + (CAB.member ? 1 : 0) + CAB.secret.length}</b><span>Medals in total</span></div>
       <div class="cab-stat"><b>${levels}<small style="font-size:18px;color:var(--text-3)"> / ${CAB.ach.length * 4}</small></b><span>Achievement levels${maxed ? ` · ${maxed} maxed` : ''}</span></div>
       <div class="cab-stat"><b>${official.length}</b><span>Official medals</span></div>
       <div class="cab-stat"><b>${chal.length}</b><span>Challenge medals</span></div>
@@ -191,6 +198,8 @@ function cabDraw() {
       `<button type="button" role="tab" class="pn-toggle-btn${CAB.tab === k ? ' active' : ''}" aria-selected="${CAB.tab === k}" onclick="cabTab('${k}')">${l}</button>`).join('')}</div></div>
     ${CAB.member && CAB.tab === 'all' ? `<section class="cab-sec" aria-label="Member"><div class="cab-sec-head"><h2 class="cab-sec-title">Member</h2><span class="cab-sec-count">${CAB.own ? 'Yours since day one' : 'Since day one'}</span></div>
       <div class="cab-grid">${memberCard(CAB.member)}</div></section>` : ''}
+    ${CAB.secret.length && CAB.tab === 'all' ? `<section class="cab-sec" aria-label="Secrets"><div class="cab-sec-head"><h2 class="cab-sec-title">Secrets</h2><span class="cab-sec-count">${CAB.own ? 'You found these' : 'Found'}</span></div>
+      <div class="cab-grid">${CAB.secret.map(secretCard).join('')}</div></section>` : ''}
     ${sec('ach', 'Achievements', `${levels} of ${CAB.ach.length * 4} levels`, `<div class="cab-grid">${CAB.ach.map(achCard).join('')}</div>`)}
     ${sec('official', 'Official', `${official.length} ${official.length === 1 ? 'medal' : 'medals'}`, official.length ? `<div class="cab-grid">${official.map(badgeCard).join('')}</div>`
       : `<div class="cab-empty">${CAB.own ? `Finish an official challenge and its medal lands here. <a href="friends.html?s=challenges">See the challenges</a>` : 'No official medals yet.'}</div>`)}
@@ -248,6 +257,16 @@ function cabMember() {
       <div class="cab-pop-sub"><b style="color:var(--text)">${esc(MSSMedal.memberFor(b.earned_at))}</b> on MyScreenFolio</div>
       <div class="cab-pop-sub">Joined ${when(b.earned_at)}</div>
       <p class="cab-pop-about">${CAB.own ? 'Everyone here has one — and it grows with you, counting every day since you joined.' : 'Everyone here has one — it counts every day since they joined.'}</p>
+    </div>`);
+}
+function cabSecret(id) {
+  const b = CAB.secret.find(x => x.id === id); if (!b) return;
+  const D = MSSMedal.SECRET[b.medal] || { name: b.title, about: '' };
+  cabPopup(`<div class="cab-pop-hero">
+      <div class="cab-medal-in">${MSSMedal.secret(b.medal, { size: 150, label: `${D.name} — secret medal` })}</div>
+      <h3 class="cab-pop-title" id="cabPopTitle">${esc(D.name)}</h3>
+      <div class="cab-pop-sub">Secret medal · found ${when(b.earned_at)}</div>
+      <p class="cab-pop-about">${esc(D.about)}</p>
     </div>`);
 }
 function cabBadge(id) {
