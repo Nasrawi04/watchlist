@@ -299,11 +299,13 @@
 <script src="js/episode-ratings.js"></script>
 <script src="js/medals.js"></script>
 <script src="js/showcase.js"></script>
+<script src="js/follows.js"></script>
 <script>
 let _pvMe = null, _pvMeProfile = null;
 let _pvUserId = null, _pvUsername = null, _pvProfile = null;
 let _pvEntries = [];
-let _pvFriendship = null;
+let _pvFollow = null;      // you and them (get_follow_state, 083): who follows who, counts, can you see their things
+let _pvRel = 'none';       // none | follows_you | requested | following | friends
 let _pvNotifyOn = false;   // am I subscribed to this friend's activity? (off by default)
 let _pvMatch = null;       // taste match with a friend (mssTasteMatch, config.js)
 
@@ -361,17 +363,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Friendship, notify-me state, entries and lists — all at once
-  const [friendships, sub, early] = await Promise.all([
-    _pvMe ? getFriendships(_pvMe.id).catch(() => []) : Promise.resolve([]),
+  // Follow state, notify-me state, entries and lists — all at once
+  const [follow, sub, early] = await Promise.all([
+    getFollowState(_pvUserId).catch(() => null),
     _pvMe ? sb.from('activity_subscriptions').select('target_id').eq('subscriber_id', _pvMe.id).eq('target_id', _pvUserId).limit(1).then(r => r.data || [], () => []) : Promise.resolve([]),
     earlyP || Promise.all([
       getPublicEntries(_pvUserId),
       sb.from('favorite_lists').select('*').eq('user_id', _pvUserId).order('created_at', { ascending: true }).then(r => r.data || [], () => []),
     ]),
   ]);
-  _pvFriendship = friendships.find(function(f){ return f.friendId === _pvUserId; }) || null;
-  _pvNotifyOn = !!(_pvFriendship && _pvFriendship.status === 'accepted' && sub.length);
+  _pvFollow = follow || { i_follow: 'none', follows_me: 'none', is_private: !!_pvProfile.is_private, can_see: !_pvProfile.is_private, followers: null, following: null, friends: null };
+  _pvRel = _pvMe ? followRelation(_pvFollow) : 'none';
+  _pvNotifyOn = !!(_pvCanBell() && sub.length);
   _pvEntries = early[0];
   _pvFavLists = early[1];
 
@@ -381,7 +384,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (tab > 0 && tab <= 5) pvTabSwitch(tab);
   _libResume();
   // Friends: how your tastes line up — your own titles, quietly, then the pill by the buttons
-  if (_pvFriendship && _pvFriendship.status === 'accepted') {
+  if (_pvRel === 'friends') {
     getEntries(_pvMe.id).then(mine => {
       _pvMatch = mssTasteMatch(mine, _pvEntries);
       const b = document.getElementById('pvBtns'); if (b) b.innerHTML = _friendBtnHTML();
@@ -391,24 +394,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function _friendBtnHTML() {
   if (!_pvMe) {
-    return `<button type="button" class="pv-friend-btn add" onclick="mssJoin('follow people')">+ Follow</button>`;
+    return `<button type="button" class="pv-friend-btn add" onclick="mssJoin('follow people')">${icon('plus', 13)} Follow</button>`;
   }
-  const f = _pvFriendship;
-  if (!f) {
-    return '<button class="pv-friend-btn add" onclick="pvSendRequest()">+ Follow</button>';
-  }
-  if (f.status === 'accepted') {
-    return '<button class="pv-friend-btn friends" onclick="pvUnfriend()" title="Click to unfriend">✓ Friends</button>'
-      + _pvNotifyBtnHTML() + _pvMatchHTML();
-  }
-  if (f.status === 'pending' && f.iRequested) {
-    return '<button class="pv-friend-btn pending" onclick="pvCancelRequest()">Requested ✕</button>';
-  }
-  if (f.status === 'pending' && !f.iRequested) {
-    return '<button class="pv-friend-btn accept" onclick="pvAccept()">Accept</button>'
-            +'<button class="pv-friend-btn decline" onclick="pvDecline()">Decline</button>';
-  }
-  return '<button class="pv-friend-btn add" onclick="pvSendRequest()">+ Follow</button>';
+  var rel = _pvRel, f = _pvFollow || {};
+  // They asked to follow you (your account is private): let them in, or not
+  var ask = f.follows_me === 'pending'
+    ? '<span class="pv-ask">' + icon('users', 13) + ' Wants to follow you</span><button class="pv-friend-btn accept" onclick="pvRespond(true)">Accept</button><button class="pv-friend-btn decline" onclick="pvRespond(false)">Decline</button>'
+    : '';
+  var main = '<button class="pv-friend-btn ' + (rel === 'friends' ? 'friends' : rel === 'following' ? 'following' : rel === 'requested' ? 'pending' : 'add') + '" onclick="pvFollowTap()"'
+    + (rel === 'friends' ? ' title="You follow each other — tap to unfollow"' : rel === 'following' ? ' title="Tap to unfollow"' : rel === 'requested' ? ' title="Tap to cancel your request"' : '') + '>'
+    + MSSFollow.btnLabel(rel) + (rel === 'requested' ? ' ✕' : '') + '</button>';
+  return ask + main + (_pvCanBell() ? _pvNotifyBtnHTML() : '') + (rel === 'friends' ? _pvMatchHTML() : '');
 }
 
 /* Friend-activity notifications toggle — OFF by default. When on, you're
@@ -419,9 +415,13 @@ function _pvMatchHTML() {
   return m != null ? '<a class="pv-friend-btn pv-match' + (m >= 80 ? ' hi' : '') + '" href="friends.html?s=compare&with=' + encodeURIComponent(_pvUserId) + '" title="Based on ' + _pvMatch.rated.length + ' titles you have both rated — see the full comparison">'
     + icon('compare', 12) + ' ' + m + '% taste match</a>' : '';
 }
+// The bell: anyone you follow — when their notification setting includes you (084)
+function _pvCanBell() {
+  return (_pvRel === 'following' || _pvRel === 'friends') && !!(_pvFollow && _pvFollow.notify_ok !== false);
+}
 function _pvNotifyBtnHTML() {
   return _pvNotifyOn
-    ? '<button class="pv-friend-btn pv-notify on" onclick="pvToggleNotify()" title="Turn off notifications for this friend"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications On</button>'
+    ? '<button class="pv-friend-btn pv-notify on" onclick="pvToggleNotify()" title="Turn off notifications for them"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications On</button>'
     : '<button class="pv-friend-btn pv-notify" onclick="pvToggleNotify()" title="Get notified about what they watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.9 17.9 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Notify Me</button>';
 }
 async function pvToggleNotify() {
@@ -452,7 +452,7 @@ mssSkeleton.define('pvprofile', function() {
   var tab = +new URLSearchParams(location.search).get('tab') || 0;
   var tabs = _pvTabsHTML().replace(/ class="prof-tab active"/, ' class="prof-tab"').replace(new RegExp('(class="prof-tab)(" onclick="pvTab\\(' + tab + ',)'), '$1 active$2')
     .replace(/class="prof-tab(s|-select)"/g, 'class="prof-tab$1" data-skel-keep');   // tabs stay as they are
-  var btns = '<button class="pv-friend-btn">' + icon('check', 13) + ' Friends</button><button class="pv-friend-btn">' + icon('bell', 13) + ' Notify Me</button>';
+  var btns = '<button class="pv-friend-btn">' + icon('check', 13) + ' Following</button>';
   return (MSSTabs.headSkel(btns) + tabs + '<div class="prof-panel active">' + (tab ? mssSkeleton('grid') : mssSkeleton('overview')) + '</div>').replace(/ id="[^"]*"/g, '');
 });
 
@@ -490,6 +490,7 @@ function renderProfile() {
 
 
   var friendBtnHTML = _friendBtnHTML();
+  var locked = !!(_pvFollow && !_pvFollow.can_see);
   var avHTML = safeURL(p.avatar_url)
     ? '<img src="'+safeURL(p.avatar_url)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
     : esc((un[0]||'?').toUpperCase());
@@ -503,11 +504,20 @@ function renderProfile() {
     +(p.bio?'<div class="prof-bio">'+esc(p.bio)+'</div>':'')
     +(p.quote?'<div class="prof-quote">'+esc(p.quote)+'</div>':'')
     +'</div></div>'
-    +'<div class="prof-stat-boxes">'
-    +MSSTabs.statsHTML(_pvEntries)
-    +'</div>'
+    +_pvCountsHTML()
+    +(locked ? '' : '<div class="prof-stat-boxes">'+MSSTabs.statsHTML(_pvEntries)+'</div>')
     +'<div class="prof-header-actions"><div id="pvBtns">'+friendBtnHTML+'</div></div>'
     +'</div>';
+  _pvCanSeeDrawn = !locked;
+  // A private account you don't follow: just who they are, and a way in
+  if (locked) {
+    document.getElementById('pvContent').innerHTML = header + '<div class="pv-locked fade-up">'
+      + '<span class="pv-locked-ic">' + icon('lock', 26) + '</span>'
+      + '<div class="pv-locked-title">This account is private</div>'
+      + '<div class="pv-locked-text">' + (_pvRel === 'requested' ? 'Your request is waiting — once @' + esc(un) + ' accepts, their titles, ratings, lists and notes show here.'
+          : 'Follow @' + esc(un) + ' to see their titles, ratings, lists and notes. They’ll get a request to let you in.') + '</div></div>';
+    return;
+  }
 
   var panel0 = '<div class="prof-panel active" id="pvPanel0"><div id="pvOverviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>';
   var panel1 = '<div class="prof-panel" id="pvPanel1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>';
@@ -605,66 +615,40 @@ function renderPvOverview() {
 /* ── Tab 1: Library — the same Library as library.html / your profile
    (js/library-view.js), read-only. Its cards open this page's popups. ── */
 
-/* ── Friend request actions ── */
-async function pvSendRequest() {
-  if (!_pvMe || !_pvProfile?.username) return;
+/* ── Follow / unfollow, and answering their request (083) ── */
+async function pvFollowTap() {
+  if (!_pvMe) return;
+  var before = _pvRel;
   try {
-    await sendFriendRequest(_pvMe.id, _pvProfile.username);
-    showToast('Friend request sent!');
-    // Refresh friendship status
-    const friendships = await getFriendships(_pvMe.id);
-    _pvFriendship = friendships.find(f => f.friendId === _pvUserId) || null;
-    document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
-  } catch(e) { showToast(e.message || 'Error sending request', 'err'); }
+    var r = await MSSFollow.tap(_pvUserId, before, { username: _pvProfile && _pvProfile.username });
+    if (r == null) return;
+    await pvRefreshFollow();
+    // Now able to see a private account's things (or not any more) → draw the page again
+    if (_pvFollow.can_see !== _pvCanSeeDrawn) location.reload();
+  } catch (e) { showToast((e && e.hint) || 'Something went wrong — try again.', 'err'); }
 }
-
-async function pvCancelRequest() {
-  if (!_pvFriendship) return;
-  const ok = await showConfirm({ title:'Cancel request?', message:'Cancel your friend request to @' + (_pvProfile?.username||'') + '?', confirmText:'Cancel Request', iconName:'users' });
-  if (!ok) return;
-  await removeFriendship(_pvFriendship.id);
-  _pvFriendship = null;
-  document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
-  showToast('Request cancelled');
+async function pvRespond(ok) {
+  try {
+    await respondFollowRequest(_pvUserId, ok);
+    showToast(ok ? '@' + (_pvProfile && _pvProfile.username || '') + ' follows you now' : 'Request declined');
+    await pvRefreshFollow();
+  } catch (e) { showToast('Something went wrong — try again.', 'err'); }
 }
-
-async function pvUnfriend() {
-  if (!_pvFriendship) return;
-  const ok = await showConfirm({ title:'Remove friend?', message:'Remove @' + (_pvProfile?.username||'') + ' from your friends?', confirmText:'Unfriend', iconName:'users' });
-  if (!ok) return;
-  await removeFriendship(_pvFriendship.id);
-  _pvFriendship = null;
-  document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
-  showToast('Removed from friends');
+async function pvRefreshFollow() {
+  _pvFollow = await getFollowState(_pvUserId).catch(function(){ return _pvFollow; });
+  _pvRel = followRelation(_pvFollow);
+  _pvNotifyOn = !!(_pvCanBell() && _pvFollow && _pvFollow.notify_on);
+  var b = document.getElementById('pvBtns'); if (b) b.innerHTML = _friendBtnHTML();
+  var c = document.getElementById('pvCounts'); if (c) c.outerHTML = _pvCountsHTML();
 }
-
-async function pvAccept() {
-  if (!_pvFriendship) return;
-  await respondFriendRequest(_pvFriendship.id, true);
-  const friendships = await getFriendships(_pvMe.id);
-  _pvFriendship = friendships.find(f => f.friendId === _pvUserId) || null;
-  document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
-  showToast('Now friends with @' + (_pvProfile?.username||''));
+function _pvCountsHTML() {
+  return '<div id="pvCounts">' + MSSFollow.countsHTML(_pvFollow, _pvUserId, (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '', false) + '</div>';
 }
-
-async function pvDecline() {
-  if (!_pvFriendship) return;
-  await respondFriendRequest(_pvFriendship.id, false);
-  _pvFriendship = null;
-  document.getElementById('pvBtns').innerHTML = _friendBtnHTML() ;
-  showToast('Request declined');
-}
-
-
-
-
-
-
-
-
-
 
 var _pvFavLists = [];
+var _pvCanSeeDrawn = true;
+// Follows changed in the list popup (e.g. you followed them from their Followers) → buttons + counts
+document.addEventListener('mss:follows-changed', function(){ if (_pvProfile) pvRefreshFollow(); });
 
 </script>
 
