@@ -41,8 +41,8 @@ function _libResume() {
   if (r) _libOpen(r.id, r.view);
 }
 /* To Be Continued shows with new episodes out (mssNewEpisodes, config.js) — your own Library only:
-   the "New Season" poster cover + badge, first in Watched (default sort) and an Up Next button.
-   Nothing moves until you tap it. */
+   the "New Season" poster cover + badge — no buttons here (Up Next lives on the category pages).
+   On the Library page they come first in Watched (default sort); on your profile they stay put. */
 var _libNewEps = {}, _libNewKey = null;
 var _libFixedUnaired = false;
 function _libCheckNewEps(){
@@ -58,21 +58,6 @@ function _libCheckNewEps(){
   });
 }
 function _libNewEp(e){ return !LIB_READONLY && e.status === 'ongoing' ? _libNewEps[e.id] || null : null; }
-async function _libUpNext(id){
-  var e = LIB_ENTRIES().filter(function(x){ return x.id === id; })[0];
-  if (!e) return;
-  try {
-    await updateProgress(id, _pUser.id, { status: 'up_next' });
-    e.status = 'up_next';
-    showToast('Added to Up Next!');
-    renderLibrary();
-  } catch (err) { console.error(err); showToast('Error updating. Please try again.', 'err'); }
-}
-function _libUpNextBtn(e, grid){
-  return grid
-    ? '<button type="button" class="continue-btn" onclick="event.stopPropagation();_libUpNext(\''+e.id+'\')">'+icon('skipForward',15)+' Up Next</button>'
-    : '<button type="button" class="w-list-action-btn up-next-btn" onclick="event.stopPropagation();_libUpNext(\''+e.id+'\')" title="Watch this next (Up Next)" aria-label="Up Next">'+icon('skipForward',15)+'</button>';
-}
 // Your own title was deleted → drop it and redraw
 function _libRemove(x) {
   _pEntries = _pEntries.filter(function(en){ return en.id !== x.id; });
@@ -225,7 +210,8 @@ SF.register(LIB_SCOPE, {
   },
   // Paused entries always sink to the bottom of Currently Watching
   postSort: function(sec,list){
-    if (sec==='completed' && SF.getSort(LIB_SCOPE,'completed')==='newest') return list.filter(function(e){return _libNewEp(e);}).concat(list.filter(function(e){return !_libNewEp(e);}));
+    // (your Library page only — on your profile they stay where they are)
+    if (sec==='completed' && LIB_SCOPE==='lib' && SF.getSort(LIB_SCOPE,'completed')==='newest') return list.filter(function(e){return _libNewEp(e);}).concat(list.filter(function(e){return !_libNewEp(e);}));
     return sec==='watching' ? list.filter(function(e){return e.status==='watching';}).concat(list.filter(function(e){return e.status==='up_next';}), list.filter(function(e){return e.status==='paused';})) : list;
   },
   // quick rating edits from the Sort popup — your own library only
@@ -352,7 +338,6 @@ function _libCompCard(e,i,grid,o){
         +'<div class="cg-score-row"><span class="cg-score">'+(sc!=null?'★ '+sc:'—')+'</span></div>'
         +'</div>'
         +'<div onclick="event.stopPropagation()" style="padding:0 10px 10px;display:flex;flex-direction:column;gap:4px;">'
-        +(newEp?_libUpNextBtn(e,true):'')
         +_libCcBtn(e.id)
         +'</div></div>';
   }
@@ -366,7 +351,7 @@ function _libCompCard(e,i,grid,o){
         +'<div class="fv-rank-meta">'+_libTypeBadge(isMc)+(newEp?mssNewSeasonBadgeHTML(e,newEp):'')+'</div>'
         +(e.notes?'<div style="font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2; line-clamp:2;-webkit-box-orient:vertical;">&ldquo;'+esc(_trimNotes(MSSRich.plain(e.notes)))+'&rdquo;</div>':'')
         +renderFavChips(e.ratings,e.cat)
-        +'</div><div class="fv-rank-score'+(newEp?' fv-rank-side':'')+'">'+(sc!=null?'★ '+sc:'—')+(newEp?_libUpNextBtn(e,false):'')+'</div></div>'
+        +'</div><div class="fv-rank-score">'+(sc!=null?'★ '+sc:'—')+'</div></div>'
         +_libCcBtn(e.id)
         +'</div>';
 }
