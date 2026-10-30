@@ -738,8 +738,6 @@ function _frMemberCard(f) {
 }
 
 function _frRequestsHTML() {
-  const name = _fProfile?.display_name || _fProfile?.username || '';
-  const counts = _frFollowState ? `<div class="fr-counts">${MSSFollow.countsHTML(_frFollowState, _fUser.id, name, true)}</div>` : '';
   const inc = _frIncoming.length ? `<section class="fr-req">
       <div class="fr-req-head"><span class="fr-req-title">${icon('bell', 14)} Follow requests</span><span class="fr-tab-dot">${_frIncoming.length}</span></div>
       <div class="fl-list">${_frIncoming.map(p => MSSFollow.rowHTML(p, { kind: 'requests', own: true })).join('')}</div>
@@ -752,16 +750,146 @@ function _frRequestsHTML() {
       <button type="button" class="fr-sent-toggle" onclick="_frSentOpen=!_frSentOpen;_frRender()">Sent requests <b>${_frOutgoing.length}</b> ${icon('arrowRight', 12)}</button>
       ${_frSentOpen ? `<div class="fl-list">${_frOutgoing.map(p => MSSFollow.rowHTML(p, { kind: 'sent' })).join('')}</div>` : ''}
     </section>` : '';
-  return counts + inc + back + out;
+  return inc + back + out;
+}
+
+/* ── Friends · Following · Followers (083) ──
+   A switch over the cards. Opened from a profile's counts (?people=followers[&of=<id>&u=<name>])
+   the page shows just that list — no switch, a Back link and whose people they are. ── */
+let _frPeople = 'friends', _frOf = null, _frOfName = '', _frFixed = false;
+const _frPeopleData = {};       // 'kind:userId' → { items, more, stats, busy }
+const _frPKey = () => `${_frPeople}:${_frOf || _fUser?.id}`;
+function _frPeopleHead() {
+  if (_frFixed) {
+    const whose = _frOf ? `@${escHTML(_frOfName)}` : 'Your';
+    const label = { friends: 'Friends', following: 'Following', followers: 'Followers' }[_frPeople];
+    return `<div class="fr-people-head"><button type="button" class="ns-back" onclick="_frPeopleBack()">${icon('back', 14)} Back</button>
+      <div class="fr-people-title">${whose} <b>${label}</b></div></div>`;
+  }
+  const st = _frFollowState || {};
+  const n = k => st[k] != null ? `<span class="fr-people-n">${Number(st[k]).toLocaleString(MSSI18n.locale)}</span>` : '';
+  return `<div class="pn-toggle soc-toggle fr-people-toggle" role="tablist" aria-label="Friends, following and followers">${[['friends', 'Friends'], ['following', 'Following'], ['followers', 'Followers']].map(([k, l]) =>
+    `<button type="button" role="tab" class="pn-toggle-btn${_frPeople === k ? ' active' : ''}" aria-selected="${_frPeople === k}" onclick="_frSetPeople('${k}')">${l}${n(k)}</button>`).join('')}</div>`;
+}
+function _frSetPeople(k) {
+  _frPeople = k;
+  const url = new URL(location.href);
+  if (k === 'friends') url.searchParams.delete('view'); else url.searchParams.set('view', k);
+  history.replaceState(history.state, '', url.pathname + url.search);
+  _frRender();
+}
+function _frPeopleBack() {
+  if (history.length > 1 && document.referrer && new URL(document.referrer).origin === location.origin) history.back();
+  else location.href = _frOf ? `profile-view.html?id=${encodeURIComponent(_frOf)}&u=${encodeURIComponent(_frOfName)}` : 'profile.html';
 }
 
 function _frRenderFriends() {
-  const list = SF.list('frFriends', 'all');
-  mssSkeleton.shape('fr', { n: Math.min(_frAccepted.length, 8) });
-  _frToolbar('Your Friends', _frAccepted.length, _frAccepted.length > 1 ? 'frFriends' : null, _frAccepted.length === 1 ? 'friend' : 'friends');
-  document.getElementById('frContent').innerHTML = _frRequestsHTML() + (_frAccepted.length
-    ? `<div class="fm-grid">${list.map(_frMemberCard).join('')}</div>`
-    : _frEmptyHTML('users', 'Watching solo for now', 'Everything’s better with someone to argue about the ending with. Find people above and follow them — when they follow you back, you’re friends.'));
+  // Your friends — the full cards, with requests and people to follow back
+  if (_frPeople === 'friends' && !_frOf) {
+    const list = SF.list('frFriends', 'all');
+    mssSkeleton.shape('fr', { n: Math.min(_frAccepted.length, 8) });
+    _frToolbar(_frFixed ? 'Your Friends' : 'Your Friends', _frAccepted.length, _frAccepted.length > 1 ? 'frFriends' : null, _frAccepted.length === 1 ? 'friend' : 'friends');
+    document.getElementById('frContent').innerHTML = _frPeopleHead() + (_frFixed ? '' : _frRequestsHTML()) + (_frAccepted.length
+      ? `<div class="fm-grid">${list.map(_frMemberCard).join('')}</div>`
+      : _frEmptyHTML('users', 'Watching solo for now', 'Everything’s better with someone to argue about the ending with. Find people above and follow them — when they follow you back, you’re friends.'));
+    return;
+  }
+  _frRenderPeople();
+}
+
+// Following / Followers (yours), or someone else's Friends / Following / Followers
+async function _frLoadPeople(more) {
+  const key = _frPKey(), who = _frOf || _fUser.id;
+  const d = _frPeopleData[key] || (_frPeopleData[key] = { items: [], more: false, stats: {}, busy: false, loaded: false });
+  if (d.busy) return;
+  d.busy = true;
+  try {
+    const got = await getFollowList(who, _frPeople, more ? d.items.length : 0);
+    const ids = got.map(p => p.id);
+    const [ents, profs] = ids.length ? await Promise.all([
+      sb.from('entries').select('*').in('user_id', ids).order('updated_at', { ascending: false }).limit(3000).then(r => r.data || [], () => []),
+      sb.from('profiles').select('id, top_picks').in('id', ids).then(r => r.data || [], () => []),
+    ]) : [[], []];
+    const tp = Object.fromEntries(profs.map(x => [x.id, x.top_picks]));
+    got.forEach(p => {
+      const mine = ents.filter(e => e.user_id === p.id);
+      mine.forEach(e => { window._frEntryMap[e.id] = e; });
+      d.stats[p.id] = { ...computeStats(mine), watchingNow: mine.find(e => e.status === 'watching') || null,
+        latest: mine[0] || null, posters: _frCoverPosters({ top_picks: tp[p.id] }, mine), locked: p.is_private && p.i_follow !== 'accepted' && p.id !== _fUser.id };
+    });
+    d.items = more ? d.items.concat(got) : got;
+    d.more = got.length === 60;
+  } catch (e) { console.warn(e); showToast('Couldn’t load these — try again.', 'err'); }
+  d.busy = false; d.loaded = true;
+  if (_frPKey() === key && _frTab === 'friends') _frRenderPeople();
+}
+function _frRenderPeople() {
+  const d = _frPeopleData[_frPKey()];
+  const label = { friends: 'Friends', following: 'Following', followers: 'Followers' }[_frPeople];
+  const tb = document.getElementById('frToolbar'); tb.style.display = 'none';
+  const c = document.getElementById('frContent');
+  if (!d || !d.loaded) {
+    c.innerHTML = _frPeopleHead() + `<div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>`;
+    if (!d || !d.busy) _frLoadPeople();
+    return;
+  }
+  const own = !_frOf;
+  const empty = { following: own ? ['Not following anyone yet', 'Find people above and follow them — their profiles show up here.'] : ['Not following anyone yet', 'Nobody here yet.'],
+    followers: own ? ['No followers yet', 'Share your profile — when people follow you, they show up here.'] : ['No followers yet', 'Nobody here yet.'],
+    friends: ['No friends yet', 'When two people follow each other, they’re friends.'] }[_frPeople];
+  c.innerHTML = _frPeopleHead()
+    + `<div class="fr-people-count"><b>${d.items.length}${d.more ? '+' : ''}</b> ${label.toLowerCase()}</div>`
+    + (d.items.length ? `<div class="fm-grid">${d.items.map(p => _frPersonCard(p, d.stats[p.id] || {}, own)).join('')}</div>`
+        + (d.more ? `<button type="button" class="rec-btn fl-more" onclick="_frLoadPeople(true)">Show more</button>` : '')
+      : _frEmptyHTML('users', empty[0], empty[1]));
+}
+// A person's card — the same look as a friend's: their favourites, stats, what they're watching
+function _frPersonCard(p, st, own) {
+  const un = p.username || 'unknown', rel = followRelation(p), id = attrJSON(p.id), me = p.id === _fUser?.id;
+  const cover = st.posters || [];
+  const now = st.watchingNow, last = st.latest;
+  return `<article class="fm-card" onclick="viewFriend(${id}, ${attrJSON(un)})">
+    <div class="fm-cover">
+      ${cover.length ? cover.map(e => `<div class="fm-cover-tile">${_frPosterHTML(e, 'fm-cover-img')}</div>`).join('') : '<div class="fm-cover-empty"></div>'}
+      <div class="fm-cover-shade"></div>
+      ${rel === 'follows_you' && _frPeople !== 'followers' ? `<span class="fm-match">Follows you</span>` : ''}
+    </div>
+    <div class="fm-body">
+      <div class="fm-av">${_frAvHTML(p, 64)}</div>
+      <div class="fm-name">${escHTML(p.display_name || un)}</div>
+      <div class="fm-user">@${escHTML(un)}${p.is_private ? ` ${icon('lock', 11)}` : ''}</div>
+      ${st.locked ? `<div class="fm-now fm-now-idle fm-locked"><span>${icon('lock', 13)} Private account</span></div>` : `
+      <div class="fm-stats">
+        <div><b>${st.completed || 0}</b><span>Watched</span></div>
+        <div><b>${st.avgScore || '—'}</b><span>Avg Score</span></div>
+        <div><b>${st.queue || 0}</b><span>Watchlist</span></div>
+      </div>
+      ${now ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(now.id)}, 'started')">${_frPosterHTML(now, 'fm-now-poster')}<span><small>Watching now</small>${escHTML(now.title)}</span></button>`
+        : last ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(last.id)}, 'logged')">${_frPosterHTML(last, 'fm-now-poster')}<span><small>Latest</small>${escHTML(last.title)}</span></button>`
+        : `<div class="fm-now fm-now-idle"><span><small>Latest</small>No activity yet</span></div>`}`}
+      <div class="fm-actions" onclick="event.stopPropagation()">
+        ${me ? `<button class="fm-btn" onclick="location.href='profile.html'">Your profile</button>` : `<button class="fm-btn ${rel === 'none' || rel === 'follows_you' ? 'fm-btn-primary' : ''}" onclick="_frPeopleTap(${id}, this)">${MSSFollow.btnLabel(rel)}</button>`}
+        <button class="fm-btn" onclick="viewFriend(${id}, ${attrJSON(un)})">Profile</button>
+        ${own && _frPeople === 'followers' ? `<button class="fm-icon-btn fm-danger" title="Remove follower" aria-label="Remove @${escHTML(un)} from your followers" onclick="_frPeopleRemove(${id})">${icon('x', 13)}</button>` : ''}
+      </div>
+    </div>
+  </article>`;
+}
+async function _frPeopleTap(uid, btn) {
+  const d = _frPeopleData[_frPKey()], p = d?.items.find(x => x.id === uid); if (!p) return;
+  btn.disabled = true;
+  try {
+    const r = await MSSFollow.tap(uid, followRelation(p), { username: p.username });
+    if (r != null) { p.i_follow = r === 'following' ? 'accepted' : r === 'requested' ? 'pending' : 'none'; }
+  } catch (e) { showToast(e?.hint || 'Something went wrong — try again.', 'err'); }
+  btn.disabled = false;
+}
+async function _frPeopleRemove(uid) {
+  const d = _frPeopleData[_frPKey()], p = d?.items.find(x => x.id === uid);
+  const ok = await showConfirm({ title: 'Remove this follower?', message: `@${p?.username || ''} won’t be told. They stop following you${p?.i_follow === 'accepted' ? ' — and you stop being friends' : ''}.`, confirmText: 'Remove', iconName: 'users' });
+  if (!ok) return;
+  try { await removeFollower(uid); showToast('Removed from your followers'); document.dispatchEvent(new CustomEvent('mss:follows-changed', { detail: { id: uid } })); }
+  catch { showToast('Something went wrong — try again.', 'err'); }
 }
 
 /* ══ ACTIVITY ══ */
@@ -1611,12 +1739,18 @@ document.addEventListener('DOMContentLoaded', () => {
   attachClearButton('addFriendInput');
   const q = new URLSearchParams(location.search);
   const sec = q.get('s');                    // opens on Friends unless a link asks for a section
+  // A profile's Followers / Following / Friends count → just that list (no switch)
+  const ppl = q.get('people'), view = q.get('view');
+  if (['friends', 'following', 'followers'].includes(ppl)) { _frPeople = ppl; _frFixed = true; _frOf = q.get('of') || null; _frOfName = q.get('u') || ''; }
+  if (_frFixed) document.body.classList.add('fr-fixed');
+  else if (['following', 'followers'].includes(view)) _frPeople = view;
   _socSection = _SOC.some(x => x.key === sec) ? sec : 'friends';
   if (_SOC.find(x => x.key === _socSection).panel === 'socFriends') _frTab = _socSection;
   _socNav();
   _frRender();
   initPage(async (user) => {
     _fUser = user;
+    if (user && _frOf === user.id) _frOf = null;              // your own list
     _frAuthKnown = true;
     if (q.get('with')) _cmpWith = [q.get('with')];          // from a profile's taste match pill
     setSocialSection(_socSection, { keepPoll: true, poll: q.get('poll'), rec: q.get('rec'), box: q.get('box'), ep: q.get('ep'), night: q.get('night'), ch: q.get('ch'), noScroll: true });
@@ -1656,7 +1790,7 @@ async function doUnfriend(userId, username) {
   catch (e) { showToast('Something went wrong — try again.', 'err'); }
 }
 // Any follow / unfollow / request answered (here or in a popup) → this page catches up
-document.addEventListener('mss:follows-changed', () => { if (_fUser) loadFriends(); });
+document.addEventListener('mss:follows-changed', () => { if (!_fUser) return; Object.keys(_frPeopleData).forEach(k => delete _frPeopleData[k]); loadFriends(); });
 
 /* ── Live username search dropdown ── */
 let _udTimer = null;
