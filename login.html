@@ -148,6 +148,17 @@ a.au-tile:hover::after { opacity:1; }
 .au-eye .off { display:none; } .au-eye[aria-pressed="true"] .on { display:none; } .au-eye[aria-pressed="true"] .off { display:block; }
 .au-eye:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
 .au-hint { font-size:12px; color:var(--text-3); line-height:1.4; }
+/* Public / Private account (083) */
+.au-priv { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.au-priv-opt { display:flex; align-items:center; gap:10px; min-height:54px; padding:8px 12px; border-radius:12px; text-align:start; cursor:pointer;
+  background:var(--bg-2); border:1px solid var(--border-2); color:var(--text-2); font:inherit; transition:border-color .2s, background .2s; }
+.au-priv-opt svg { width:18px; height:18px; flex-shrink:0; color:var(--text-3); }
+.au-priv-opt span { display:flex; flex-direction:column; min-width:0; }
+.au-priv-opt b { font-size:14px; color:var(--text); }
+.au-priv-opt small { font-size:11.5px; color:var(--text-3); line-height:1.3; }
+.au-priv-opt.on { border-color:var(--olive-light); background:var(--olive-faint); }
+.au-priv-opt.on svg { color:var(--olive-light); }
+.au-priv-opt:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .au-hint b { color:var(--olive-light); font-weight:700; }
 
 /* Email / Username switch beside the label */
@@ -309,6 +320,18 @@ a.au-tile:hover::after { opacity:1; }
               </button>
             </div>
 <div id="suGuide"></div>
+          </div>
+          <div class="au-field">
+            <div class="au-label" id="suPrivLabel">Account</div>
+            <div class="au-priv" role="radiogroup" aria-labelledby="suPrivLabel">
+              <button type="button" class="au-priv-opt on" role="radio" aria-checked="true" data-priv="0" onclick="auPriv(false)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                <span><b>Public</b><small>Anyone can follow you</small></span></button>
+              <button type="button" class="au-priv-opt" role="radio" aria-checked="false" data-priv="1" onclick="auPriv(true)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span><b>Private</b><small>You approve followers</small></span></button>
+            </div>
+            <div class="au-hint">You can change this any time in Settings.</div>
           </div>
           <button class="au-btn" id="btnSignUp" type="submit"><span>Create my folio</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </form>
@@ -672,6 +695,12 @@ async function doSignIn(e) {
 }
 
 /* ── Sign Up ── */
+// Public (default) or Private account (083) — saved with the sign-up, made into the profile by the database
+let _auPrivate = false;
+function auPriv(on) {
+  _auPrivate = !!on;
+  document.querySelectorAll('.au-priv-opt').forEach(b => { const a = (b.dataset.priv === '1') === _auPrivate; b.classList.toggle('on', a); b.setAttribute('aria-checked', a); });
+}
 async function doSignUp(e) {
   e.preventDefault();
   const username = $('suUser').value.trim();
@@ -693,7 +722,7 @@ async function doSignUp(e) {
 
   let data, error;
   try {
-    ({ data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { username, display_name: username, email } } }));
+    ({ data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { username, display_name: username, email, is_private: _auPrivate ? 'true' : 'false' } } }));
   } catch {
     showErr('suError', 'Couldn’t reach MyScreenFolio — check your connection and try again.'); again(); return;
   }
