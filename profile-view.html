@@ -404,7 +404,10 @@ function _friendBtnHTML() {
   var main = '<button class="pv-friend-btn ' + (rel === 'friends' ? 'friends' : rel === 'following' ? 'following' : rel === 'requested' ? 'pending' : 'add') + '" onclick="pvFollowTap()"'
     + (rel === 'friends' ? ' title="You follow each other — tap to unfollow"' : rel === 'following' ? ' title="Tap to unfollow"' : rel === 'requested' ? ' title="Tap to cancel your request"' : '') + '>'
     + MSSFollow.btnLabel(rel) + (rel === 'requested' ? ' ✕' : '') + '</button>';
-  return ask + main + (_pvCanBell() ? _pvNotifyBtnHTML() : '') + (rel === 'friends' ? _pvMatchHTML() : '');
+  // They follow you → you can take them off your followers (they aren't told)
+  var rm = f.follows_me === 'accepted'
+    ? '<div class="pv-rm-row"><button type="button" class="pv-rm" onclick="pvRemoveFollower()">' + icon('x', 12) + ' Remove @' + escHTML((_pvProfile && _pvProfile.username) || '') + ' from your followers</button></div>' : '';
+  return ask + main + (_pvCanBell() ? _pvNotifyBtnHTML() : '') + (rel === 'friends' ? _pvMatchHTML() : '') + rm;
 }
 
 /* Friend-activity notifications toggle — OFF by default. When on, you're
@@ -627,6 +630,13 @@ async function pvFollowTap() {
     if (_pvFollow.can_see !== _pvCanSeeDrawn) location.reload();
   } catch (e) { showToast((e && e.hint) || 'Something went wrong — try again.', 'err'); }
 }
+async function pvRemoveFollower() {
+  var un = (_pvProfile && _pvProfile.username) || '';
+  var ok = await showConfirm({ title: 'Remove this follower?', message: '@' + un + ' won’t be told. They stop following you' + (_pvRel === 'friends' ? ' — and you stop being friends (you still follow them).' : '.'), confirmText: 'Remove', iconName: 'users' });
+  if (!ok) return;
+  try { await removeFollower(_pvUserId); showToast('Removed from your followers'); await pvRefreshFollow(); }
+  catch (e) { showToast('Something went wrong — try again.', 'err'); }
+}
 async function pvRespond(ok) {
   try {
     await respondFollowRequest(_pvUserId, ok);
@@ -642,7 +652,7 @@ async function pvRefreshFollow() {
   var c = document.getElementById('pvCounts'); if (c) c.outerHTML = _pvCountsHTML();
 }
 function _pvCountsHTML() {
-  return '<div id="pvCounts">' + MSSFollow.countsHTML(_pvFollow, _pvUserId, (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '', false) + '</div>';
+  return '<div id="pvCounts">' + MSSFollow.countsHTML(_pvFollow, _pvUserId, (_pvProfile && _pvProfile.username) || '', false) + '</div>';
 }
 
 var _pvFavLists = [];
