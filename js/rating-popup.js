@@ -10,7 +10,9 @@
      Your own entry → Start Watching · Up Next · Pick Back Up · Rewatch (when they apply) ·
                       Rate Episodes (shows) · Edit · Drop · Create Card (once rated) · Delete
                       + "Who can see this title"
-     Someone else's → no buttons (+ "<Name>'s rating" line when you pass their profile)
+     Someone else's → Comments (on their entry) · Add to Watchlist (straight onto yours — or
+                      "In Your Library" once it's there; they're told you added it)
+                      (+ "<Name>'s rating" line when you pass their profile)
 
    Usage (pages open it through MSSViews.open — info-popup.js):
      MSSRate.forOwnEntry(entry, {
@@ -33,7 +35,7 @@
 const RATING_POPUP_CONFIG = {
   // Your Entry tab: everything about YOUR entry — the title's own buttons are on the Title tab (MSSInfo)
   ownerActions:  ['start', 'upnext', 'pickup', 'rewatch', 'rateEps', 'edit', 'drop', 'card', 'delete'],
-  friendActions: [],
+  friendActions: ['comments', 'queue'],
 };
 
 const MSSRate = (() => {
@@ -137,11 +139,44 @@ const MSSRate = (() => {
       // your score card — once there's something to put on it (the Title tab has the Discover Card)
       card:    () => typeof createShareCard === 'function' && (finished || liveScore(e) != null) ? btn('card', 'image', 'Create Card') : '',
       delete:  () => btn('delete', 'trash', 'Delete', ' popup-action-danger'),
+      // someone else's entry
+      comments: () => typeof MSSComments !== 'undefined' ? btn('comments', 'comment', 'Comments') : '',
+      queue:    () => window._navUser && e.user_id !== window._navUser.id && typeof MSSInfo !== 'undefined' ? btn('queue', 'plus', 'Add to Watchlist') : '',
     };
     return keys.map(k => B[k] ? B[k]() : '').join('');
   }
   const actionsHTML = e => entryButtonsHTML(e, opts.owner ? RATING_POPUP_CONFIG.ownerActions : RATING_POPUP_CONFIG.friendActions);
-  const act = key => entryAct(key, current, opts, close);
+  const act = (key, b) => key === 'comments' ? openComments() : key === 'queue' ? addToWatchlist(b) : entryAct(key, current, opts, close);
+  function openComments() { const e = current; if (!e) return; (opts.onComments || (x => MSSComments.open(x)))(e); }
+  // Their title → your Watchlist in one tap (they're told, as from the Title tab)
+  async function addToWatchlist(b) {
+    const e = current; if (!e || !b || b.disabled) return;
+    const user = window._navUser; if (!user) { mssJoin('add titles to your Watchlist'); return; }
+    b.disabled = true;
+    try { sessionStorage.setItem('mssQueuedFrom', JSON.stringify({ owner: e.user_id, entry: e.id, title: e.title, t: Date.now() })); } catch {}
+    try {
+      const movie = e.tmdb_type ? e.tmdb_type === 'movie' : isMovie(e);
+      const mine = await MSSInfo.quickAdd({ tmdb_id: e.tmdb_id || null, media_type: movie ? 'movie' : 'tv', title: e.title, year: e.year, poster_url: e.poster_url, cat: e.cat, entry: e });
+      if (!mine) { b.disabled = false; return; }
+      showUndoToast(`Added “${e.title}” to your Watchlist`, async () => { await deleteEntry(mine.id, user.id); markOwned(false); });
+      markOwned(true);
+    } catch (err) {
+      try { sessionStorage.removeItem('mssQueuedFrom'); } catch {}
+      if (String(err?.message).startsWith('DUPLICATE:')) { showToast('Already in your library.'); markOwned(true); }
+      else { console.error(err); showToast(typeof isRateLimitError === 'function' && isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Could not add — try again.', 'err'); b.disabled = false; }
+    }
+  }
+  function markOwned(on) {
+    const b = document.querySelector('#mssRatePopupActions [data-act="queue"]'); if (!b) return;
+    b.disabled = !!on;
+    b.innerHTML = on ? `${icon('check', 14)} In Your Library` : `${icon('plus', 14)} Add to Watchlist`;
+  }
+  // Already in your library? → the button says so (checked once the popup is open)
+  async function checkOwned(e) {
+    const uid = window._navUser?.id;
+    if (!uid || !e || e.user_id === uid || typeof getOwnEntryByTmdb !== 'function') return;
+    try { const own = await getOwnEntryByTmdb(uid, e.tmdb_id, e.tmdb_type, e.title); if (own && current === e) markOwned(true); } catch {}
+  }
 
   // One of your entry's buttons — opts: the popup's options (from, onChange, onDelete, handlers), close: closes that popup
   async function entryAct(key, e, opts, close) {
@@ -224,9 +259,10 @@ const MSSRate = (() => {
         : 'They haven’t rated it yet.'}</span></div></div>` : '')
       + bodyHTML(e, !o.owner, !!o.hideNotes)
       + (o.owner ? `<div class="mr-vis">${mssTitleVisHTML('mssRateVis', e.visibility, '_mssRateVisPick')}</div>` : '');   // yours: who can see it (073)
-    $('mssRateCc').innerHTML = o.onComments
+    $('mssRateCc').innerHTML = o.onComments && o.owner          // (someone else's: a Comments button below instead)
       ? `<button type="button" class="cc-strip" onclick="MSSRate._comments()">${icon('comment', 11)}<span>Comments</span></button>` : '';
     $('mssRatePopupActions').innerHTML = actionsHTML(e);
+    if (!o.owner) checkOwned(e);
     MSSDialog.open($('mssRateOverlay'));
     $('mssRateCard').scrollTop = 0;
   }
