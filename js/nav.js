@@ -1112,11 +1112,11 @@ function _bnavDo(k) {
     location.href = 'friends.html?s=polls&new=1';
   }
 }
-/* Red dot on Social while friend requests are waiting */
+/* Red dot on Social while follow requests are waiting */
 function _bnavDot(n) {
   const a = document.querySelector('#bnav [data-tab="social"]'); if (!a) return;
   a.querySelector('.bnav-dot')?.remove();
-  if (n > 0) a.insertAdjacentHTML('beforeend', `<span class="bnav-dot"><span class="sr-only">, ${n} friend request${n === 1 ? '' : 's'}</span></span>`);
+  if (n > 0) a.insertAdjacentHTML('beforeend', `<span class="bnav-dot"><span class="sr-only">, ${n} follow request${n === 1 ? '' : 's'}</span></span>`);
 }
 
 /* ── Top toggles ── */
@@ -2553,7 +2553,7 @@ function fitTitleYear(root) {
      social    — comment (on your title / your comment / your note), like (your note, list or
                  reply on a note) — 066
      lists     — list_invite, list_invite_accepted
-     requests  — friend_request
+     requests  — new_follower, follow_request, follow_accepted (083) · friend_request (before 083)
    Rows are created by the database (021/022 SQL); here we list them,
    act on them, mark them read and delete them.
 ══════════════════════════════════════════ */
@@ -2561,10 +2561,10 @@ let _notifUser = null;
 let _notifItems = [];
 let _notifTab = 'all';
 const NOTIF_SECTIONS = [
-  ['all', 'All'], ['episodes', 'New Releases'], ['social', 'Comments & Likes'], ['activity', 'Friend Activity'], ['lists', 'Lists'], ['requests', 'Friend Requests'],
+  ['all', 'All'], ['episodes', 'New Releases'], ['social', 'Comments & Likes'], ['activity', 'Friend Activity'], ['lists', 'Lists'], ['requests', 'Followers'],
 ];
 function _notifSection(n) {
-  if (n.type === 'friend_request') return 'requests';
+  if (n.type === 'friend_request' || n.type === 'new_follower' || n.type === 'follow_request' || n.type === 'follow_accepted') return 'requests';
   if (n.type === 'new_episode' || n.type === 'new_release') return 'episodes';
   if (n.type === 'comment' || n.type === 'like') return 'social';
   if (n.type === 'list_invite' || n.type === 'list_invite_accepted' || n.type === 'list_invite_declined') return 'lists';
@@ -2620,19 +2620,26 @@ async function _notifLoad(limit) {
     const actorIds  = [...new Set(list.map(n => n.actor_id).filter(Boolean))];
     const listIds   = [...new Set(list.map(n => n.list_id).filter(Boolean))];
     const friendIds = [...new Set(list.map(n => n.friendship_id).filter(Boolean))];
-    const [profiles, lists, friendships, invites] = await Promise.all([
+    const folIds = [...new Set(list.filter(n => ['new_follower', 'follow_request', 'follow_accepted'].includes(n.type)).map(n => n.actor_id).filter(Boolean))];
+    const [profiles, lists, friendships, invites, toMe, fromMe] = await Promise.all([
       actorIds.length  ? sb.from('profiles').select('id, username, display_name, avatar_url').in('id', actorIds) : { data: [] },
       listIds.length   ? sb.from('favorite_lists').select('id, title').in('id', listIds) : { data: [] },
       friendIds.length ? sb.from('friendships').select('id, status').in('id', friendIds) : { data: [] },
       listIds.length   ? sb.from('list_collaborators').select('list_id, status').eq('user_id', _notifUser.id).in('list_id', listIds) : { data: [] },
+      folIds.length    ? sb.from('follows').select('follower_id, status').eq('followee_id', _notifUser.id).in('follower_id', folIds) : { data: [] },
+      folIds.length    ? sb.from('follows').select('followee_id, status').eq('follower_id', _notifUser.id).in('followee_id', folIds) : { data: [] },
     ]);
+    // who follows you / who you follow, among these people — for Accept / Follow back (083)
+    const FT = Object.fromEntries((toMe.data || []).map(f => [f.follower_id, f.status]));
+    const FF = Object.fromEntries((fromMe.data || []).map(f => [f.followee_id, f.status]));
     const P = Object.fromEntries((profiles.data || []).map(p => [p.id, p]));
     const L = Object.fromEntries((lists.data || []).map(l => [l.id, l]));
     const F = Object.fromEntries((friendships.data || []).map(f => [f.id, f.status]));
     const I = Object.fromEntries((invites.data || []).map(c => [c.list_id, c.status]));
     _notifItems = list.map(n => ({ ...n, actor: P[n.actor_id] || null, list: L[n.list_id] || null,
       friendStatus: n.friendship_id ? (F[n.friendship_id] || 'gone') : null,
-      inviteStatus: n.type === 'list_invite' ? (I[n.list_id] || 'gone') : null }));
+      inviteStatus: n.type === 'list_invite' ? (I[n.list_id] || 'gone') : null,
+      followsMe: n.actor_id ? (FT[n.actor_id] || 'none') : null, iFollow: n.actor_id ? (FF[n.actor_id] || 'none') : null }));
     _notifRenderBadge();
     if (document.getElementById('notifPanel')?.classList.contains('open')) _notifRenderPanel();
     if (typeof renderNotificationsPage === 'function') renderNotificationsPage();
@@ -2696,11 +2703,23 @@ function _notifItemHTML(n, opts = {}) {
   const idA = attrJSON(n.id);
   if (n.type === 'friend_request') {
     text = `${who} sent you a friend request`; icon2 = 'users';
-    if (n.friendStatus === 'pending') {
-      actions = `<button class="notif-act notif-act-yes" onclick="_notifFriend(event, ${attrJSON(n.friendship_id)}, true)">Accept</button>
-                 <button class="notif-act" onclick="_notifFriend(event, ${attrJSON(n.friendship_id)}, false)">Decline</button>`;
-    } else if (n.friendStatus === 'accepted') actions = `<span class="notif-state">You're now friends</span>`;
+    if (n.friendStatus === 'accepted') actions = `<span class="notif-state">You're now friends</span>`;
     href = 'friends.html';
+  } else if (n.type === 'new_follower' || n.type === 'follow_request' || n.type === 'follow_accepted') {
+    // Following (083): "started following you" · "wants to follow you" (private account) · "accepted your request"
+    const aid = attrJSON(n.actor_id), friends = n.iFollow === 'accepted' && n.followsMe === 'accepted';
+    text = n.type === 'follow_request' ? `${who} wants to follow you` : n.type === 'follow_accepted' ? `${who} accepted your follow request`
+      : `${who} ${n.meta?.back ? 'followed you back' : 'started following you'}`;
+    icon2 = 'users';
+    const backBtn = `<button class="notif-act notif-act-yes" onclick="_notifFollow(event, ${aid}, 'follow')">Follow back</button>`;
+    if (n.type === 'follow_request' && n.followsMe === 'pending')
+      actions = `<button class="notif-act notif-act-yes" onclick="_notifFollow(event, ${aid}, 'accept')">Accept</button>
+                 <button class="notif-act" onclick="_notifFollow(event, ${aid}, 'decline')">Decline</button>`;
+    else if (friends) actions = `<span class="notif-state">You're friends</span>`;
+    else if (n.iFollow === 'pending') actions = `<span class="notif-state">Requested</span>`;
+    else if (n.followsMe === 'accepted' && n.iFollow === 'none') actions = (n.type === 'follow_request' ? `<span class="notif-state">Follows you</span>` : '') + backBtn;
+    else if (n.type === 'follow_request' && n.followsMe === 'none') actions = `<span class="notif-state">Declined</span>`;
+    href = n.actor ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}&u=${encodeURIComponent(n.actor.username || '')}` : 'friends.html';
   } else if (n.type === 'list_invite') {
     text = `${who} invited you to collaborate on ${title}`; icon2 = 'layers';
     if (n.inviteStatus === 'pending') {
@@ -2829,7 +2848,7 @@ function _notifEmptyHTML(tab) {
     activity: ['No friend activity yet', 'Turn on notifications from a friend’s profile to hear what they watch.'],
     social: ['No comments or likes yet', 'Write a note or a list — the applause comes later.'],
     lists: ['No list invites yet', 'When a friend asks you to build a list together, it shows up here.'],
-    requests: ['No friend requests', 'Nobody knocking right now.'] }[tab];
+    requests: ['No new followers', 'Nobody new right now.'] }[tab];
   return mssEmpty({ compact: true, art: 'bell', title, text });
 }
 
@@ -2941,20 +2960,22 @@ async function _notifDelete(ev, id) {
   try { await sb.from('notifications').delete().eq('id', id); } catch {}
 }
 
-async function _notifFriend(ev, friendshipId, accept) {
+// Follow notifications (083): accept / decline a request, or follow back
+async function _notifFollow(ev, userId, what) {
   ev.stopPropagation();
   const btns = ev.currentTarget.parentElement.querySelectorAll('button');
   btns.forEach(b => b.disabled = true);
   try {
-    await respondFriendRequest(friendshipId, accept);
-    showToast(accept ? 'Friend request accepted!' : 'Friend request declined.');
+    if (what === 'follow') { const r = await followUser(userId); showToast(r === 'requested' ? 'Request sent' : 'Following back — you’re friends now!'); }
+    else { await respondFollowRequest(userId, what === 'accept'); showToast(what === 'accept' ? 'Accepted — they follow you now' : 'Request declined'); }
     await _notifLoad();
+    document.dispatchEvent(new CustomEvent('mss:follows-changed', { detail: { id: userId } }));
     if (_notifUser) {
       const pending = await countPendingRequests(_notifUser.id).catch(() => 0);
       document.querySelectorAll('[data-page="friends.html"] .nav-badge').forEach(b => { b.textContent = pending; b.style.display = pending ? '' : 'none'; });
       _bnavDot(pending);
     }
-  } catch (e) { btns.forEach(b => b.disabled = false); showToast('Something went wrong — try again.', 'err'); }
+  } catch (e) { btns.forEach(b => b.disabled = false); showToast(e?.hint || 'Something went wrong — try again.', 'err'); }
 }
 
 async function _notifInvite(ev, listId, accept) {
@@ -3023,6 +3044,9 @@ function _notifShortText(n) {
   const list = n.list ? `“${escHTML(n.list.title)}”` : 'a list';
   switch (n.type) {
     case 'friend_request':       return `${who} sent you a friend request`;
+    case 'new_follower':         return `${who} ${n.meta?.back ? 'followed you back' : 'started following you'}`;
+    case 'follow_request':       return `${who} wants to follow you`;
+    case 'follow_accepted':      return `${who} accepted your follow request`;
     case 'list_invite':          return `${who} invited you to ${list}`;
     case 'list_invite_accepted': return `${who} joined ${list}`;
     case 'list_invite_declined': return `${who} declined your invite to ${list}`;
