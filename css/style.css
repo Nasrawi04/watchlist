@@ -7775,3 +7775,5 @@ body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-ins
 .mn-chosen { display:flex; align-items:center; gap:12px; padding:10px 12px; border:0.5px solid var(--border-olive); border-radius:var(--radius-sm); background:var(--olive-faint); }
 .mn-chosen .poll-opt-text { flex:1; min-width:0; }
 .mn-chosen .rec-btn { flex-shrink:0; }
+/* Detail page genre buttons on phones: taller for tapping, so centre the text in them */
+@media (pointer: coarse) { .genre-picker .genre-opt { display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; line-height:1.2; } }
