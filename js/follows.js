@@ -3,7 +3,7 @@
    You follow people; when you follow each other you're friends. A private
    account's followers are let in one at a time (follow requests).
 
-   MSSFollow.countsHTML(state, userId, name, own)  the "12 Followers · 30 Following · 8 Friends" row
+   MSSFollow.countsHTML(state, userId, username, own)  the "12 Followers · 30 Following · 8 Friends" row — each opens friends.html?people=…
    MSSFollow.open(userId, kind, name, own)         the list popup (kind: followers | following | friends | requests)
    MSSFollow.rowHTML(p, ctx)                        one person: avatar, name, the right button
    MSSFollow.btnLabel(rel)                          'Follow' / 'Follow back' / 'Requested' / 'Following' / 'Friends'
@@ -34,7 +34,9 @@ const MSSFollow = (() => {
     const open = own || st.can_see;
     return `<div class="fl-counts" role="group" aria-label="Followers, following and friends">${KINDS.map(([k, l]) => {
       const inner = `<b>${fmt(st[k])}</b><span>${Number(st[k]) === 1 && k !== 'following' ? l.slice(0, -1) : l}</span>`;
-      return open ? `<button type="button" class="fl-count" onclick="MSSFollow.open(${attrJSON(userId)}, '${k}', ${attrJSON(name || '')}, ${!!own}, ${own ? Number(st.requests) || 0 : 0})">${inner}</button>`
+      // → the Social page on just that list (friends.html?people=…)
+      const href = `friends.html?people=${k}${own ? '' : `&of=${encodeURIComponent(userId)}&u=${encodeURIComponent(name || '')}`}`;
+      return open ? `<a class="fl-count" href="${href}">${inner}</a>`
         : `<span class="fl-count">${inner}</span>`;
     }).join('')}</div>`;
   }
@@ -48,7 +50,7 @@ const MSSFollow = (() => {
     if (ctx.kind === 'requests') act = `<button type="button" class="fm-btn fm-btn-primary" onclick="MSSFollow._respond(${id}, true, this)">Accept</button>
         <button type="button" class="fm-btn" onclick="MSSFollow._respond(${id}, false, this)">Decline</button>`;
     else if (p.id !== me) act = `<button type="button" class="fl-btn ${btnCls(rel)}" onclick="MSSFollow._tapRow(${id}, this)">${btnLabel(rel)}</button>`;
-    if (ctx.own && ctx.kind === 'followers') act += `<button type="button" class="fm-icon-btn fm-danger" title="Remove follower" aria-label="Remove @${esc(p.username)} from your followers" onclick="MSSFollow._remove(${id}, this)">${icon('x', 13)}</button>`;
+    if (ctx.own && (ctx.kind === 'followers' || ctx.kind === 'friends')) act += `<button type="button" class="fm-icon-btn fm-danger" title="Remove follower" aria-label="Remove @${esc(p.username)} from your followers" onclick="MSSFollow._remove(${id}, this)">${icon('x', 13)}</button>`;
     return `<div class="fl-row" data-id="${esc(p.id)}">
       <button type="button" class="fl-who" onclick="MSSFollow._view(${id}, ${attrJSON(p.username || '')})">${av(p, 42)}
         <span><b translate="no">${esc(nameOf(p))}</b><small>${p.display_name ? '@' + esc(p.username) : ''}${p.is_private ? ` ${icon('lock', 11)}` : ''}${rel === 'follows_you' && ctx.kind !== 'requests' && ctx.kind !== 'back' ? `<em>Follows you</em>` : ''}</small></span></button>
