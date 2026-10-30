@@ -70,7 +70,7 @@ const MSSPolls = (() => {
   const DURATIONS = [[1, '1 hour'], [6, '6 hours'], [24, '1 day'], [72, '3 days'], [168, '7 days']];
   // Friends / Community / Yours show open polls and ones that ended in the last 2 days; after that they
   // move to Completed — every ended poll you made (080); polls you only voted in just leave the feeds
-  const SCOPES = [['friends', 'Friends'], ['public', 'Community'], ['mine', 'Yours'], ['done', 'Completed']];
+  const SCOPES = [['friends', 'Following'], ['public', 'Community'], ['mine', 'Yours'], ['done', 'Completed']];   // Following: yours, friends' and people you follow (083)
   let el = null, user = null, scope = 'friends', polls = [], offset = 0, more = false, loading = false, focusId = null, focused = null;
   const open = {};      // poll id → comments shown
   const comments = {};  // poll id → loaded comments
@@ -79,8 +79,8 @@ const MSSPolls = (() => {
   async function mount(target, u, o = {}) {
     el = target; user = u;
     if (!user) {
-      el.innerHTML = head(false) + `<div class="mss-es">${mssArt('poll')}<div class="mss-es-title">Polls with your friends</div>
-        <div class="mss-es-text">Sign in to ask your friends — or everyone — what to watch next.</div></div>`;
+      el.innerHTML = head(false) + `<div class="mss-es">${mssArt('poll')}<div class="mss-es-title">Polls with your followers</div>
+        <div class="mss-es-text">Sign in to ask your followers — or everyone — what to watch next.</div></div>`;
       return;
     }
     if (o.poll) { focusId = o.poll; open[o.poll] = true; }
@@ -125,7 +125,7 @@ const MSSPolls = (() => {
     if (!feed) return;
     const list = focused ? [focused, ...polls.filter(p => p.id !== focused.id)] : polls;
     const empty = {
-      friends: ['Nothing to vote on yet', 'Start a poll — your friends get a notification and can vote and comment.'],
+      friends: ['Nothing to vote on yet', 'Start a poll — your followers get a notification and can vote and comment. Polls from people you follow show here too.'],
       public: ['No community polls yet', 'Make a poll Public and anyone on MyScreenFolio can vote.'],
       mine: ['You haven’t made a poll yet', 'Ask what to watch next, who the best director is — anything.'],
       done: ['No finished polls yet', 'Polls you made land here once they’ve been over for 2 days — results and all, for good.'],
@@ -181,7 +181,7 @@ const MSSPolls = (() => {
     return `<article class="poll-card${p.is_open ? '' : ' ended'}" id="poll-${p.id}">
       <header class="poll-by">
         <a href="profile-view.html?id=${encodeURIComponent(a.id || '')}" class="poll-who">${_socAv(a, 36)}<span><b translate="no">${_socEsc(p.is_mine ? 'You' : _socName(a))}</b>
-          <small>${_notifTimeAgo(p.created_at)}${p.edited_at ? ' · edited' : ''} · <span title="${p.visibility === 'public' ? 'Anyone can vote' : 'Friends can vote'}">${icon(p.visibility === 'public' ? 'globe' : 'users', 11)} ${p.visibility === 'public' ? 'Public' : 'Friends'}</span></small></span></a>
+          <small>${_notifTimeAgo(p.created_at)}${p.edited_at ? ' · edited' : ''} · <span title="${p.visibility === 'public' ? 'Anyone can vote' : 'Followers can vote'}">${icon(p.visibility === 'public' ? 'globe' : 'users', 11)} ${p.visibility === 'public' ? 'Public' : 'Followers'}</span></small></span></a>
         <span class="poll-status${p.is_open ? ' live' : ''}">${p.is_open ? `<i aria-hidden="true"></i>${left(p)}` : `<span title="${scope === 'done' ? '' : p.is_mine ? 'Moves to Completed 2 days after it ends' : 'Leaves this feed 2 days after it ends'}">${icon('lock', 11)} ${ended(p)}</span>`}</span>
         ${own}
       </header>
@@ -345,7 +345,7 @@ const MSSPolls = (() => {
       <div id="pfOpts">${f.options.map(optionRow).join('')}</div>
       ${!f.locked && f.options.length < 6 ? `<button type="button" class="poll-link pf-add" onclick="MSSPolls._f('add')">${icon('plus', 13)} Add an option</button>` : ''}
       <div class="sf-section-label">Who can vote</div>
-      <div class="pn-toggle soc-toggle">${[['friends', 'Friends', 'users'], ['public', 'Everyone', 'globe']].map(([k, l, ic]) =>
+      <div class="pn-toggle soc-toggle">${[['friends', 'Followers', 'users'], ['public', 'Everyone', 'globe']].map(([k, l, ic]) =>
         `<button type="button" class="pn-toggle-btn${f.visibility === k ? ' active' : ''}" aria-pressed="${f.visibility === k}" onclick="MSSPolls._f('vis', 0, '${k}')">${icon(ic, 13)} ${l}</button>`).join('')}</div>
       <div class="sf-section-label">${editing ? 'Ends' : 'Open for'}</div>
       <div class="pf-chips">${editing ? `<button type="button" class="pf-chip${f.hours == null ? ' active' : ''}" onclick="MSSPolls._f('hours', 0, null)">Keep as is</button>` : ''}${DURATIONS.map(([h, l]) =>
@@ -411,7 +411,7 @@ const MSSPolls = (() => {
         const id = await _socRpc('create_poll', { p_question: q, p_visibility: f.visibility, p_hours: f.hours, p_options: opts });
         close(); focusId = id;
         if (scope !== 'mine' && f.visibility === 'friends' && scope === 'public') scope = 'friends';
-        await load(true); showToast('Poll posted — your friends will see it.');
+        await load(true); showToast('Poll posted — your followers will see it.');
       }
     } catch (err) {
       showToast(_socErr(err, 'Couldn’t save the poll — try again.'), 'err');
