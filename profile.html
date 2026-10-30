@@ -311,6 +311,7 @@
           <div class="prof-quote" id="profQuote" translate="no" style="display:none"></div>
         </div>
       </div>
+      <div id="profCounts"></div>
       <div class="prof-stat-boxes" id="profStats"></div>
       <div class="prof-header-actions" id="profHeaderBtns">
         <a href="settings.html" class="prof-edit-btn" id="profEditBtn" style="display:none">Edit Profile</a>
@@ -385,6 +386,7 @@
 <script src="js/profile-tabs.js"></script>
 <script src="js/medals.js"></script>
 <script src="js/showcase.js"></script>
+<script src="js/follows.js"></script>
 <script>
 /* ── State ── */
 var _pUser = null, _pProfile = null, _pEntries = [], _activeTab = 0;
@@ -468,7 +470,19 @@ function populateHeader() {
   document.getElementById('profStats').innerHTML = MSSTabs.statsHTML(_pEntries);
   document.getElementById('profEditBtn').style.display = '';
   var sb=document.getElementById('profShareBtn'); if(sb) sb.style.display='';
+  _profCounts();
 }
+// Followers · Following · Friends (083) — and, for a private account, the requests waiting
+function _profCounts() {
+  getFollowState(_pUser.id).then(function(st) {
+    var el = document.getElementById('profCounts'); if (!el || !st) return;
+    var name = (_pProfile && (_pProfile.display_name || _pProfile.username)) || '';
+    el.innerHTML = MSSFollow.countsHTML(st, _pUser.id, name, true)
+      + (st.requests ? '<button type="button" class="fl-req-chip" onclick="MSSFollow.open(' + attrJSON(_pUser.id) + ', \'requests\', ' + attrJSON(name) + ', true, ' + st.requests + ')">'
+          + icon('users', 13) + ' ' + st.requests + ' follow request' + (st.requests === 1 ? '' : 's') + '</button>' : '');
+  }).catch(function(){});
+}
+document.addEventListener('mss:follows-changed', function(){ if (_pUser) _profCounts(); });
 
 /* ── Tabs ── */
 function switchTab(n) {
@@ -582,7 +596,7 @@ function openShareProfile() {
     popup.id = 'profSharePopup';
     popup.innerHTML = '<div class="prof-share-card">'
       +'<div class="prof-share-title">Share Profile</div>'
-      +'<div class="prof-share-sub">Anyone with this link can view your profile and send you a friend request.</div>'
+      +'<div class="prof-share-sub">Anyone with this link can view your profile and follow you.</div>'
       +'<div class="prof-share-link" id="profShareLink" onclick="profCopyLink()">'
       +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
       +'<span id="profShareUrl"></span>'
