@@ -494,6 +494,7 @@
 <script src="js/list-popup.js"></script>
 <script src="js/sort-filter.js"></script>
 <script src="js/social.js"></script>
+<script src="js/follows.js"></script>
 <script src="js/episode-chat.js"></script>
 <script src="js/date-range.js"></script>
 <script src="js/movie-night.js"></script>
@@ -517,7 +518,7 @@ let _friendships = [];
 const _PIN_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>`;
 const _PIN_SVG_FILLED = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>`;
 let _frTab = 'friends';
-let _frAccepted = [], _frIncoming = [], _frOutgoing = [];
+let _frAccepted = [], _frIncoming = [], _frOutgoing = [], _frBack = [], _frFollowState = null;   // requests to you · your sent requests · followers to follow back · your counts (083)
 let _frEntries = [], _frLists = [], _frEpRatings = [], _frProfiles = {}, _frStats = {}, _frLoaded = false;
 let _frSentOpen = false;
 let _frAuthKnown = false;          // until sign-in is checked, show a spinner (never the signed-out view)
@@ -560,10 +561,14 @@ const _FR_CAT_OPTS = [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'
 
 /* ── Loading ── */
 async function loadFriends() {
-  [_friendships, _fProfile] = await Promise.all([getFriendships(_fUser.id), getProfile(_fUser.id)]);
+  // Friends = people you follow who follow you back (083) — the friendships table keeps them;
+  // follow requests (yours waiting / sent), people who follow you that you could follow back, your counts
+  let followers;
+  [_friendships, _fProfile, _frIncoming, _frOutgoing, followers, _frFollowState] = await Promise.all([getFriendships(_fUser.id), getProfile(_fUser.id),
+    getFollowList(_fUser.id, 'requests').catch(() => []), getFollowList(_fUser.id, 'sent').catch(() => []),
+    getFollowList(_fUser.id, 'followers').catch(() => []), getFollowState(_fUser.id).catch(() => null)]);
   _frAccepted = _friendships.filter(f => f.status === 'accepted');
-  _frIncoming = _friendships.filter(f => f.status === 'pending' && !f.iRequested);
-  _frOutgoing = _friendships.filter(f => f.status === 'pending' && f.iRequested);
+  _frBack = followers.filter(p => p.i_follow === 'none').slice(0, 6);
   _frProfiles = Object.fromEntries(_frAccepted.map(f => [f.friendId, f.friendProfile || {}]));
   const ids = _frAccepted.map(f => f.friendId);
   if (ids.length) {
@@ -598,7 +603,7 @@ async function loadFriends() {
   });
   _frLoaded = true;
   const sub = document.getElementById('friendsPageSub');
-  if (sub) sub.textContent = `${_frAccepted.length} friend${_frAccepted.length === 1 ? '' : 's'}${_frIncoming.length ? ` · ${_frIncoming.length} request${_frIncoming.length === 1 ? '' : 's'}` : ''}`;
+  if (sub) sub.textContent = `${_frAccepted.length} friend${_frAccepted.length === 1 ? '' : 's'}${_frIncoming.length ? ` · ${_frIncoming.length} follow request${_frIncoming.length === 1 ? '' : 's'}` : ''}`;
   ['frFriends', 'frActivity', 'frLists', 'frNotes', 'frShared'].forEach(k => SF.invalidate && SF.invalidate(k));
   Object.keys(_frMatchMemo).forEach(k => delete _frMatchMemo[k]);
   _frRender();
@@ -642,7 +647,7 @@ function _frRender() {
   if (!_frLoaded) { tb.style.display = 'none'; c.innerHTML = `<div class="page-loading" data-skel="fr-page"></div>`; return; }
   if (_frTab !== 'friends' && !_frAccepted.length) {
     tb.style.display = 'none';
-    c.innerHTML = _frEmptyHTML('users', 'Watching solo for now', 'Everything’s better with someone to argue about the ending with. Find people by username above — once they accept, their activity shows up here.');
+    c.innerHTML = _frEmptyHTML('users', 'Watching solo for now', 'Everything’s better with someone to argue about the ending with. Find people above and follow them — once you follow each other, their activity shows up here.');
     return;
   }
   if (_frTab === 'friends') return _frRenderFriends();
@@ -660,7 +665,7 @@ function _frGuestHTML() {
   return `<div class="guest-page-state" style="padding:3rem 1rem;">
     <div class="guest-page-icon">${icon('users', 32)}</div>
     <h2 class="guest-page-title" style="font-size:19px;">See what your friends are watching</h2>
-    <p class="guest-page-sub">Sign in to add friends, follow their activity, and compare your taste.</p>
+    <p class="guest-page-sub">Sign in to follow people, see what your friends watch, and compare your taste.</p>
     <div class="guest-cta"><a href="login.html" class="guest-btn-primary">Sign In</a><a href="login.html#signup" class="guest-btn-secondary">Create Account</a></div>
   </div>`;
 }
@@ -726,29 +731,28 @@ function _frMemberCard(f) {
       <div class="fm-actions" onclick="event.stopPropagation()">
         <button class="fm-btn fm-btn-primary" onclick="_frCompareWith(${attrJSON(f.friendId)})">${icon('compare', 13)} Compare</button>
         <button class="fm-btn" onclick="viewFriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">Profile</button>
-        <button class="fm-icon-btn fm-danger" title="Remove friend" aria-label="Remove friend" onclick="doUnfriend(${attrJSON(f.id)}, ${attrJSON(un)})">${icon('x', 13)}</button>
+        <button class="fm-icon-btn fm-danger" title="Unfollow" aria-label="Unfollow @${escHTML(un)}" onclick="doUnfriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">${icon('x', 13)}</button>
       </div>
     </div>
   </article>`;
 }
 
 function _frRequestsHTML() {
-  if (!_frIncoming.length && !_frOutgoing.length) return '';
+  const name = _fProfile?.display_name || _fProfile?.username || '';
+  const counts = _frFollowState ? `<div class="fr-counts">${MSSFollow.countsHTML(_frFollowState, _fUser.id, name, true)}</div>` : '';
   const inc = _frIncoming.length ? `<section class="fr-req">
-      <div class="fr-req-head"><span class="fr-req-title">${icon('bell', 14)} Friend requests</span><span class="fr-tab-dot">${_frIncoming.length}</span></div>
-      ${_frIncoming.map(f => { const p = f.friendProfile || {}; const un = p.username || 'unknown';
-        return `<div class="fr-req-row" id="pc-${f.id}">
-          <button type="button" class="fr-req-who" onclick="viewFriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">${_frAvHTML(p, 42)}<span><b translate="no">${escHTML(p.display_name || '@' + un)}</b>${p.display_name ? `<small>@${escHTML(un)}</small>` : '<small>wants to be friends</small>'}</span></button>
-          <div class="fr-req-actions"><button class="fm-btn fm-btn-primary" onclick="doAccept(${attrJSON(f.id)})">Accept</button><button class="fm-btn" onclick="doDecline(${attrJSON(f.id)})">Decline</button></div>
-        </div>`; }).join('')}
+      <div class="fr-req-head"><span class="fr-req-title">${icon('bell', 14)} Follow requests</span><span class="fr-tab-dot">${_frIncoming.length}</span></div>
+      <div class="fl-list">${_frIncoming.map(p => MSSFollow.rowHTML(p, { kind: 'requests', own: true })).join('')}</div>
+    </section>` : '';
+  const back = _frBack.length ? `<section class="fr-req fr-back">
+      <div class="fr-req-head"><span class="fr-req-title">${icon('users', 14)} Follow back to be friends</span></div>
+      <div class="fl-list">${_frBack.map(p => MSSFollow.rowHTML(p, { kind: 'back' })).join('')}</div>
     </section>` : '';
   const out = _frOutgoing.length ? `<section class="fr-sent${_frSentOpen ? ' open' : ''}">
       <button type="button" class="fr-sent-toggle" onclick="_frSentOpen=!_frSentOpen;_frRender()">Sent requests <b>${_frOutgoing.length}</b> ${icon('arrowRight', 12)}</button>
-      ${_frSentOpen ? _frOutgoing.map(f => { const p = f.friendProfile || {}; const un = p.username || 'unknown';
-        return `<div class="fr-req-row" id="pc-${f.id}"><div class="fr-req-who">${_frAvHTML(p, 34)}<span><b>@${escHTML(un)}</b><small>Pending</small></span></div>
-          <button class="fm-btn" onclick="doCancelRequest(${attrJSON(f.id)})">Cancel</button></div>`; }).join('') : ''}
+      ${_frSentOpen ? `<div class="fl-list">${_frOutgoing.map(p => MSSFollow.rowHTML(p, { kind: 'sent' })).join('')}</div>` : ''}
     </section>` : '';
-  return inc + out;
+  return counts + inc + back + out;
 }
 
 function _frRenderFriends() {
@@ -757,7 +761,7 @@ function _frRenderFriends() {
   _frToolbar('Your Friends', _frAccepted.length, _frAccepted.length > 1 ? 'frFriends' : null, _frAccepted.length === 1 ? 'friend' : 'friends');
   document.getElementById('frContent').innerHTML = _frRequestsHTML() + (_frAccepted.length
     ? `<div class="fm-grid">${list.map(_frMemberCard).join('')}</div>`
-    : _frEmptyHTML('users', 'Watching solo for now', 'Everything’s better with someone to argue about the ending with. Search for a username above and send a request.'));
+    : _frEmptyHTML('users', 'Watching solo for now', 'Everything’s better with someone to argue about the ending with. Find people above and follow them — when they follow you back, you’re friends.'));
 }
 
 /* ══ ACTIVITY ══ */
@@ -1646,63 +1650,13 @@ async function togglePinFriend(friendId) {
   }
 }
 
-async function doAccept(friendshipId) {
-  const el = document.getElementById('pc-' + friendshipId);
-  if (el) el.style.opacity = '0.4';
-  try {
-    await respondFriendRequest(friendshipId, true);
-    showToast('Friend added!');
-    await loadFriends();
-  } catch(e) {
-    if (el) el.style.opacity = '';
-    showToast('Error.', 'err');
-  }
+// Unfollowing a friend (you stop being friends; MSSFollow asks first)
+async function doUnfriend(userId, username) {
+  try { const r = await MSSFollow.tap(userId, 'friends', { username }); if (r != null) showToast('Unfollowed'); }
+  catch (e) { showToast('Something went wrong — try again.', 'err'); }
 }
-
-async function doDecline(friendshipId) {
-  const el = document.getElementById('pc-' + friendshipId);
-  // Optimistic: remove immediately, restore it if the request fails.
-  if (el) el.remove();
-  try {
-    await respondFriendRequest(friendshipId, false);
-    await loadFriends();
-  } catch(e) {
-    showToast('Error.', 'err');
-    await loadFriends(); // reconcile back to truth since we already removed the card
-  }
-}
-
-async function doUnfriend(friendshipId, username) {
-  const ok = await showConfirm({
-    title: 'Remove friend?',
-    message: `@${username} will be removed from your friends list.`,
-    confirmText: 'Remove',
-    iconName: 'users'
-  });
-  if (!ok) return;
-  const el = document.getElementById('fc-' + friendshipId);
-  if (el) el.remove();
-  try {
-    await removeFriendship(friendshipId);
-    showToast('Removed.');
-    await loadFriends();
-  } catch(e) {
-    showToast('Error.', 'err');
-    await loadFriends();
-  }
-}
-
-async function doCancelRequest(friendshipId) {
-  const el = document.getElementById('pc-' + friendshipId);
-  if (el) el.remove();
-  try {
-    await removeFriendship(friendshipId);
-    await loadFriends();
-  } catch(e) {
-    showToast('Error.', 'err');
-    await loadFriends();
-  }
-}
+// Any follow / unfollow / request answered (here or in a popup) → this page catches up
+document.addEventListener('mss:follows-changed', () => { if (_fUser) loadFriends(); });
 
 /* ── Live username search dropdown ── */
 let _udTimer = null;
