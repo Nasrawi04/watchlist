@@ -462,54 +462,35 @@ async function getFriendships(userId) {
   }));
 }
 
-async function getPendingIncoming(userId) {
-  const all = await getFriendships(userId);
-  return all.filter(f => f.status === 'pending' && !f.iRequested);
+/* ── Following (083): you follow people; following each other = friends.
+   A private account's followers are let in one by one (follow requests).
+   Friendships (above) are kept in step by the database — read-only here. ── */
+const _rpcOr = async (fn, args) => { const { data, error } = await sb.rpc(fn, args); if (error) throw error; return data; };
+// → 'following' | 'requested'
+function followUser(userId)               { return _rpcOr('follow_user', { p_user: userId }); }
+function unfollowUser(userId)             { return _rpcOr('unfollow_user', { p_user: userId }); }
+function respondFollowRequest(userId, ok) { return _rpcOr('respond_follow_request', { p_user: userId, p_accept: !!ok }); }
+function removeFollower(userId)           { return _rpcOr('remove_follower', { p_user: userId }); }
+function setAccountPrivate(on)            { return _rpcOr('set_account_private', { p_on: !!on }); }
+// { i_follow, follows_me ('none'|'pending'|'accepted'), is_private, can_see, followers, following, friends, requests (yours) }
+function getFollowState(userId)           { return _rpcOr('get_follow_state', { p_user: userId }); }
+// kind: 'followers' | 'following' | 'friends' | 'requests' (yours) | 'sent' (yours)
+async function getFollowList(userId, kind, offset = 0) { return (await _rpcOr('get_follow_list', { p_user: userId, p_kind: kind, p_offset: offset })) || []; }
+// How you and someone stand, as one word — for buttons
+function followRelation(st) {
+  if (!st) return 'none';
+  if (st.i_follow === 'accepted' && st.follows_me === 'accepted') return 'friends';
+  if (st.i_follow === 'accepted') return 'following';
+  if (st.i_follow === 'pending') return 'requested';
+  if (st.follows_me === 'accepted') return 'follows_you';
+  return 'none';
 }
 
-async function sendFriendRequest(myUserId, targetUsername) {
-  const clean = targetUsername.toLowerCase().trim();
-  if (!clean || clean.length < 3) throw new Error('Please enter a valid username.');
-
-  // Resolve username → user id (uses maybeSingle to avoid error on 0 rows)
-  const { data: profile, error: pe } = await sb.from('profiles').select('id').eq('username', clean).maybeSingle();
-  if (pe || !profile) throw new Error(`@${clean} not found — check the username and try again`);
-  if (profile.id === myUserId) throw new Error("You can't add yourself");
-
-  // Check both directions separately (more reliable than complex .or() syntax)
-  const [{ data: f1 }, { data: f2 }] = await Promise.all([
-    sb.from('friendships').select('id,status').eq('requester_id', myUserId).eq('addressee_id', profile.id).maybeSingle(),
-    sb.from('friendships').select('id,status').eq('requester_id', profile.id).eq('addressee_id', myUserId).maybeSingle(),
-  ]);
-  const existing = f1 || f2;
-
-  if (existing) {
-    if (existing.status === 'accepted') throw new Error('You are already friends');
-    if (existing.status === 'pending')  throw new Error('A request is already pending');
-    // 'declined' — clean up old record so a fresh request can be sent
-    await sb.from('friendships').delete().eq('id', existing.id);
-  }
-
-  const { error } = await sb.from('friendships').insert({ requester_id: myUserId, addressee_id: profile.id });
-  if (error) throw error;
-}
-
-async function respondFriendRequest(friendshipId, accept) {
-  const { error } = await sb.from('friendships')
-    .update({ status: accept ? 'accepted' : 'declined' })
-    .eq('id', friendshipId);
-  if (error) throw error;
-}
-
-async function removeFriendship(friendshipId) {
-  const { error } = await sb.from('friendships').delete().eq('id', friendshipId);
-  if (error) throw error;
-}
-
+// Follow requests waiting for you (a private account) — the nav's badge
 async function countPendingRequests(userId) {
-  const { count } = await sb.from('friendships')
-    .select('id', { count: 'exact', head: true })
-    .eq('addressee_id', userId)
+  const { count } = await sb.from('follows')
+    .select('follower_id', { count: 'exact', head: true })
+    .eq('followee_id', userId)
     .eq('status', 'pending');
   return count || 0;
 }
