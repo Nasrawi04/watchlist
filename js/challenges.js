@@ -337,8 +337,16 @@ const MSSChallenges = (() => {
     MSSDialog.open(ov, { focus: '#chT' });
   }
   function closeForm() { MSSDialog.close(document.getElementById('chForm')); form = null; }
-  const friendChips = exclude => (typeof _frAccepted !== 'undefined' ? _frAccepted : []).filter(f => !exclude.has(f.friendId))
-    .map(f => `<button type="button" class="soc-chip mn-inv" aria-pressed="false" data-id="${esc(f.friendId)}" onclick="MSSChallenges._inv(this)">${av(f.friendProfile, 22)}<span translate="no">${esc(nameOf(f.friendProfile))}</span></button>`).join('');
+  // Who you can invite: your friends, then your followers (083) — loaded once per popup
+  let followers = [];
+  const loadFollowers = () => (typeof getFollowList === 'function' && user ? getFollowList(user.id, 'followers').catch(() => []) : Promise.resolve([])).then(l => { followers = l; });
+  const friendChips = exclude => {
+    const fr = (typeof _frAccepted !== 'undefined' ? _frAccepted : []).map(f => ({ id: f.friendId, p: f.friendProfile, tag: '' }));
+    const ids = new Set(fr.map(x => x.id));
+    const fo = followers.filter(p => !ids.has(p.id)).map(p => ({ id: p.id, p, tag: 'Follows you' }));
+    return fr.concat(fo).filter(x => !exclude.has(x.id))
+      .map(x => `<button type="button" class="soc-chip mn-inv" aria-pressed="false" data-id="${esc(x.id)}" onclick="MSSChallenges._inv(this)">${av(x.p, 22)}<span translate="no">${esc(nameOf(x.p))}</span>${x.tag ? `<small class="ch-chip-tag">${x.tag}</small>` : ''}</button>`).join('');
+  };
   // A row of equal buttons (Goal presets, What counts, date ranges) — one is pressed
   const seg = (key, items, on) => `<div class="ch-seg" role="group">${items.map(([v, l, ic]) =>
     `<button type="button" class="ch-seg-btn${String(v) === String(on) ? ' active' : ''}" data-${key}="${v}" aria-pressed="${String(v) === String(on)}"
@@ -368,7 +376,8 @@ const MSSChallenges = (() => {
   const modeTip = m => m === 'pick'
     ? `<span class="soc-tip-ic">${icon('check', 15)}</span><div><b>Everyone chooses what counts</b><span>When someone marks a title Watched between these dates, we ask “Does this count?” — great for “Marvel movies” or “comfort rewatches”.</span></div>`
     : `<span class="soc-tip-ic">${icon('sparkles', 15)}</span><div><b>Counts automatically</b><span>Anything you mark Watched between these dates that fits counts toward the goal.</span></div>`;
-  function create() {
+  async function create() {
+    await loadFollowers();
     const today = new Date(), end = new Date(); end.setDate(end.getDate() + 30);
     form = { mode: 'new', picked: new Set(), goal: 10, cat: '', genre: '', fmode: 'auto' };
     const chips = friendChips(new Set());
@@ -381,7 +390,7 @@ const MSSChallenges = (() => {
         ${kindHTML('', '')}
         ${datesHTML(iso(today), iso(end))}
         <div class="soc-tip" id="chModeTip">${modeTip('auto')}</div>
-        ${chips ? inviteHead('Invite friends', 'up to 99') + `<div class="mn-invite" role="group" aria-label="Invite friends">${chips}</div>` : ''}`,
+        ${chips ? inviteHead('Invite friends &amp; followers', 'up to 99') + `<div class="mn-invite" role="group" aria-label="Invite friends">${chips}</div>` : ''}`,
       `<button type="button" class="sf-clear-btn" onclick="MSSChallenges._close()">Cancel</button>
         <button type="button" class="sf-apply-btn" id="chSave" onclick="MSSChallenges._save()">Start Challenge</button>`);
   }
@@ -486,13 +495,14 @@ const MSSChallenges = (() => {
     document.getElementById('chfHits').innerHTML = '';
     drawChosen();
   }
-  function invite(id) {
+  async function invite(id) {
     const c = listAll().find(x => x.id === id); if (!c) return;
+    await loadFollowers();
     const have = new Set(c.members.map(m => m.id));
     const chips = friendChips(have);
     form = { mode: 'invite', id, picked: new Set() };
     popup('Invite Friends', chips ? inviteHead(esc(c.title), `${100 - c.members.length} spots left`) + `<div class="mn-invite" role="group" aria-label="Invite friends">${chips}</div>`
-      : `<div class="soc-tip"><span class="soc-tip-ic">${icon('users', 15)}</span><div><b>Everyone’s in</b><span>All your friends are already in this challenge.</span></div></div>`,
+      : `<div class="soc-tip"><span class="soc-tip-ic">${icon('users', 15)}</span><div><b>Everyone’s in</b><span>All your friends and followers are already in this challenge.</span></div></div>`,
       `<button type="button" class="sf-clear-btn" onclick="MSSChallenges._close()">Close</button>
         ${chips ? `<button type="button" class="sf-apply-btn" id="chSave" onclick="MSSChallenges._save()" disabled>Invite</button>` : ''}`);
   }
