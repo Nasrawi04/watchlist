@@ -250,6 +250,19 @@
         </div>
 
         <div class="settings-section fade-up fade-up-1">
+          <div class="settings-title">Account Privacy</div>
+          <div class="field-row" style="margin-bottom:0">
+            <div class="push-row">
+              <div class="push-text">
+                <div class="push-name" id="privLabel">Private account</div>
+                <div class="push-sub" id="privDesc">Only people you let in can see your titles, ratings, lists, notes and medals — following you becomes a request you accept or decline. Everyone else just sees your name, photo, bio and follower counts. When it's off, anyone can follow you and see your public things.</div>
+              </div>
+              <button type="button" class="push-switch" id="privSwitch" role="switch" aria-checked="false" aria-labelledby="privLabel" aria-describedby="privDesc" title="Private account" onclick="togglePrivateAccount()"><span aria-hidden="true"></span></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section fade-up fade-up-1">
           <div class="settings-title">Share Profile</div>
           <div class="field-row">
             <div class="field-label">Your Profile Link</div>
@@ -276,9 +289,9 @@
               <span>Username</span>
               <span class="field-hint" id="usernameHint"></span>
             </label>
-            <input class="field-input" id="setUsername" placeholder="your_username" maxlength="30"
-                   autocomplete="off" spellcheck="false"
-                   oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();checkUsernameLive()">
+            <input class="field-input" id="setUsername" placeholder="your_username" maxlength="20"
+                   autocomplete="off" spellcheck="false" autocapitalize="none" data-mask="username"
+                   oninput="checkUsernameLive()">
           </div>
           <div class="field-row">
             <label class="field-label" for="setDisplayName">Display Name</label>
@@ -390,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _sProfile = profile;
     populateSettings();
     syncThemeButtons();
+    document.getElementById('privSwitch')?.setAttribute('aria-checked', String(!!profile?.is_private));
   });
 });
 
@@ -477,6 +491,8 @@ async function saveSettings() {
   if (!username || username.length < 3) {
     showToast('Username must be at least 3 characters.', 'err'); return;
   }
+  // 3–20 for new usernames (same as signing up); an older, longer one can stay as it is
+  if (username !== _sProfile?.username && username.length > 20) { showToast('Usernames can be 20 characters at most.', 'err'); return; }
   const available = await checkUsernameAvailable(username, _sUser.id);
   if (!available) { showToast('That username is taken. Try another.', 'err'); return; }
   if (username !== _sProfile?.username && !(await isUsernameAllowed(username))) {
@@ -748,6 +764,25 @@ function toggleNotifPopupsSetting() {
   showToast(on ? 'Notification alerts on.' : 'Alerts off — new notifications will just show on the bell.');
 }
 document.addEventListener('DOMContentLoaded', refreshNotifPopupsSetting);
+
+/* ── Private account (083) — going public lets everyone who asked in ── */
+async function togglePrivateAccount() {
+  const sw = document.getElementById('privSwitch'); if (!sw || !_sUser) return;
+  const on = sw.getAttribute('aria-checked') !== 'true';
+  if (!on) {
+    const ok = await showConfirm({ title: 'Make your account public?', message: 'Anyone can follow you and see your public titles, ratings, lists and notes. Anyone waiting on a follow request is let in.', confirmText: 'Go Public', iconName: 'users', danger: false });
+    if (!ok) return;
+  }
+  sw.disabled = true;
+  try {
+    await setAccountPrivate(on);
+    sw.setAttribute('aria-checked', String(on));
+    if (_sProfile) _sProfile.is_private = on;
+    try { localStorage.setItem('mss_data_at', String(Date.now())); } catch {}
+    showToast(on ? 'Your account is private — new followers need your OK.' : 'Your account is public.');
+  } catch (e) { showToast('Couldn’t change that — try again.', 'err'); }
+  sw.disabled = false;
+}
 
 /* ── Screensaver (mssIdle / js/screensaver.js) — on by default, per device ── */
 function refreshScreensaverSetting() {
