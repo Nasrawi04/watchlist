@@ -35,7 +35,7 @@
 .np-page-list .notif-text { font-size:14px; }
 .np-page-list .notif-card { max-width:420px; }
 .np-page-list .notif-card-poster { width:44px; height:66px; }
-.np-page-list .notif-empty { padding:4rem 1rem; }
+.np-page-list .mss-es { padding-block:4rem; }   /* the notifications page: more room than the panel */
 @media(max-width:640px) {
   .np-page-actions { width:100%; }
   .np-page-btn { flex:1; justify-content:center; padding:9px 10px; font-size:12.5px; }
@@ -61,7 +61,7 @@
   <div class="np-page-head fade-up">
     <div>
       <h1 class="np-page-title">Notifications</h1>
-      <div class="np-page-sub" id="npSub">New releases, comments and likes, friend activity, list invites and friend requests — all in one place.</div>
+      <div class="np-page-sub" id="npSub">New releases, comments and likes, friend activity, list invites and new followers — all in one place.</div>
     </div>
     <div class="np-page-actions">
       <button class="np-page-btn primary" id="npReadAll" onclick="npMarkAllRead()">Mark all read</button>
@@ -95,7 +95,7 @@ function renderNotificationsPage() {
   document.querySelector('.np-page-title').textContent = set ? 'Notification Settings' : 'Notifications';
   document.getElementById('npSub').textContent = set
     ? 'Alerts, and what your friends get notified about when you watch, rate or drop something.'
-    : 'New releases, comments and likes, friend activity, list invites and friend requests — all in one place.';
+    : 'New releases, comments and likes, friend activity, list invites and new followers — all in one place.';
   document.querySelector('.np-page-actions').hidden = set;
   document.getElementById('npTabs').hidden = set;
   if (set) {
