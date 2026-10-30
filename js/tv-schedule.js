@@ -28,9 +28,11 @@
 ═══════════════════════════════════════════════════════════════ */
 
 const MSSSchedule = (() => {
-  const STORE = 'mss_tv_sched_v2', TTL = 12 * 36e5, DAY = 864e5;
+  const STORE = 'mss_tv_sched_v3',   // v3: fresh TMDB details for everyone (a stale schedule kept showing "new episodes")
+        TTL = 12 * 36e5, DAY = 864e5;
   const TRACKED = ['watching', 'up_next', 'paused', 'ongoing', 'queue'];
   const esc = s => escHTML(s == null ? '' : String(s));
+  try { localStorage.removeItem('mss_tv_sched_v2'); } catch {}          // (the old copy)
   const cache = (() => { try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch { return {}; } })();
   const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
   const dateOf = s => s ? new Date(s + 'T12:00:00') : null;
@@ -46,7 +48,8 @@ const MSSSchedule = (() => {
     const hit = cache[id];
     if (hit && Date.now() - hit.t < TTL) return hit.d;
     try {
-      const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?language=en-US`);
+      // straight from TMDB (not the device's day-old copy) — the schedule is about what's out now
+      const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?language=en-US`, { cache: 'reload' });
       if (!res.ok) return hit?.d || null;
       const x = await res.json();
       // Series-wide episode numbers (One Piece) → the episode's place in its season
@@ -71,7 +74,7 @@ const MSSSchedule = (() => {
   }
 
   async function load(uid) {
-    const { data } = await sb.from('entries').select('id,title,status,poster_url,tmdb_id,tmdb_type,season,episode,ratings,created_at,completed_date,completed_at')
+    const { data } = await sb.from('entries').select('id,title,status,poster_url,tmdb_id,tmdb_type,season,episode,watched,ratings,created_at,completed_date,completed_at')
       .eq('user_id', uid).eq('tmdb_type', 'tv').not('tmdb_id', 'is', null).in('status', TRACKED);
     const list = (data || []).filter(e => !(e.ratings?._media_type === 'movie'));
     const out = [];
@@ -294,6 +297,10 @@ const MSSSchedule = (() => {
     const todayS = ymd(new Date());
     const aired = [d.last, d.next].filter(x => x?.air && x.air < todayS).sort((a, b) => b.s - a.s || b.n - a.n)[0];
     if (!aired) return null;
+    // Already watched as many episodes as have aired (up to and including that one)? Then nothing's new —
+    // whatever the stored season / episode say (shows whose numbering changed, or saved before mssAired)
+    const airedTotal = (d.seasons || []).filter(x => x.s > 0 && x.s < aired.s).reduce((a, x) => a + (Number(x.eps) || 0), 0) + aired.n;
+    if (Number(e.watched) >= airedTotal) return null;
     if (e.season != null && e.episode != null) return aired.s > e.season || (aired.s === e.season && aired.n > e.episode) ? aired : null;
     const done = e.completed_at ? ymd(new Date(e.completed_at)) : (e.completed_date || ymd(new Date(e.created_at)));
     return aired.air > done ? aired : null;
