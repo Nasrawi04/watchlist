@@ -643,11 +643,13 @@ const MSSViews = (() => {
     try {
       closeAll();
       Object.values(VIEWS).forEach(x => { const el = document.getElementById(x.slot); if (el) el.innerHTML = ''; });
-      const cbs = { from: o.from, onChange: o.onChange, onDelete: o.onDelete, noRefresh: st.refreshed, handlers: o.handlers, onComments: o.onComments };
+      // Comments on every entry (yours: the strip; someone else's: a button) — when comments.js is on the page
+      const onComments = o.onComments || (typeof MSSComments !== 'undefined' ? x => MSSComments.open(x) : undefined);
+      const cbs = { from: o.from, onChange: o.onChange, onDelete: o.onDelete, noRefresh: st.refreshed, handlers: o.handlers, onComments };
       if (v === 'info') o.own ? MSSInfo.forOwnEntry(e, cbs) : MSSInfo.fromEntry(e);
       // Ratings view: no Notes block when there's a Note tab right beside it
       const hideNotes = st.views.includes('note');
-      if (v === 'rate') o.own ? MSSRate.forOwnEntry(e, { ...cbs, hideNotes }) : MSSRate.forFriend(e, o.profile, { hideNotes });
+      if (v === 'rate') o.own ? MSSRate.forOwnEntry(e, { ...cbs, hideNotes }) : MSSRate.forFriend(e, o.profile, { hideNotes, onComments });
       if (v === 'note') MSSNote.open(e, o.own
         ? { counts: st.counts, editable: true, eyebrow: 'Your Note', onSaved: x => { o.onNoteSaved?.(x); } }
         : { counts: st.counts, profile: o.profile, react: true, onReact: o.onReact,
