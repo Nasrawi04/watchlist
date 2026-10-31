@@ -12,8 +12,8 @@
          full note. editable → "Edit Note" with the 500-word editor and
          the spoiler toggle; read-only → spoiler notes stay blurred until
          revealed. Someone else's note: profile → their avatar + @username
-         on top; react → 👍 / 👎 buttons (onReact(state) after a change) and
-         "See Ratings" when the Info · Ratings · Note switcher has Ratings.
+         on top; react → 👍 / 👎 buttons (onReact(state) after a change).
+         (Their ratings are the switcher's Entry tab — no button for them.)
      MSSNote.reactionCounts(entryIds) → { entryId: { like, dislike } }
 
    Small helpers the Notes page also uses for its Community notes:
@@ -216,7 +216,7 @@ const MSSNote = (() => {
     ['mssNoteEditBody', 'mssNoteEditFooter'].forEach(id => { $(id).style.display = 'none'; });
     fitLong(document.querySelector('#mssNoteOverlay .np-card'), words(e.notes));
   }
-  // Your note: Edit · Close. Someone else's: 👍 / 👎 · See Ratings · Close
+  // Your note: Edit · Close. Someone else's: 👍 / 👎 · Close
   function viewFooter() {
     const el = document.getElementById('mssNoteViewPopupActions');
     if (opts.editable) {
@@ -225,10 +225,9 @@ const MSSNote = (() => {
         + `<button type="button" class="popup-action-btn np-ghost" onclick="MSSNote.close()">Close</button>`;
       return;
     }
-    const rate = typeof MSSViews !== 'undefined' && MSSViews.has('rate');
+    // (no "See Ratings" — inside the Title · Their Entry · Note switcher it's a tab already)
     el.innerHTML = (opts.react ? mssReactButtonsHTML(reactState, 'MSSNote._react(true)', 'MSSNote._react(false)') : '')
-      + (rate ? `<button type="button" class="popup-action-btn np-grow" onclick="MSSViews.show('rate')">${icon('ratingStar', 14)} See Ratings</button>` : '')
-      + `<button type="button" class="popup-action-btn np-ghost${rate ? '' : ' np-grow'}" onclick="MSSViews.has('note') ? MSSViews.close() : MSSNote.close()">Close</button>`;
+      + `<button type="button" class="popup-action-btn np-ghost np-grow" onclick="MSSViews.has('note') ? MSSViews.close() : MSSNote.close()">Close</button>`;
   }
   async function react(isLike) {
     const e = current;
