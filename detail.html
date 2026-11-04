@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
 <title>MyScreenFolio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ── TMDB-locked fields — title, year, completion year, description,
@@ -345,6 +344,13 @@
 .det-title-input:focus { border-color:var(--olive-light); }
 
 /* Release + Completed combined into a single unified box */
+/* …that drops the word "Year" from its labels when the column is too narrow for it (it used to squeeze the
+   Release year box until the Completion field sat on top of it) */
+.det-year-wrap { container-type:inline-size; width:100%; }
+@container (max-width:420px) {
+  .det-year-label-full { display:none; }
+  .det-year-field { padding:8px 12px; gap:6px; }
+}
 .det-year-box {
   display:flex; align-items:stretch; width:fit-content; max-width:100%;
   background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius-sm);
@@ -578,18 +584,18 @@
           </div>
         </div>
 
-        <div class="det-year-box">
+        <div class="det-year-wrap"><div class="det-year-box">
           <button class="tmdb-lock-btn" id="tmdbLockBtn-year" onclick="_toggleTmdbFieldLock('year')" title="Synced from TMDB — click to edit manually"></button>
           <div class="det-year-field">
             <label>Release<span class="det-year-label-full"> Year</span></label>
-            <input class="det-year-input" id="dYear" type="text" inputmode="numeric" maxlength="4" placeholder="Year" aria-label="Release year">
+            <input class="det-year-input" id="dYear" type="text" inputmode="numeric" data-mask="int" maxlength="4" placeholder="Year" aria-label="Release year">
           </div>
           <div class="det-year-divider" id="detYearDivider"></div>
           <div class="det-year-field" id="completionYearGroup">
             <label>Completion<span class="det-year-label-full"> Year</span></label>
-            <input class="det-year-input" id="dCompletionYear" type="text" inputmode="numeric" maxlength="4" placeholder="—" aria-label="Completion year">
+            <input class="det-year-input" id="dCompletionYear" type="text" inputmode="numeric" data-mask="int" maxlength="4" placeholder="—" aria-label="Completion year">
           </div>
-        </div>
+        </div></div>
         <div class="det-field-hint" id="yearHint" role="status" aria-live="polite"></div>
 
         <!-- Who can see this title (073) — saved with the entry -->
@@ -598,7 +604,7 @@
         <div class="field-group" id="completedOnGroup" style="display:none;margin-top:1.25rem;margin-bottom:0;">
           <div class="field-label">Watched On</div>
           <div class="date-3box" id="completedDateWrap">
-            <input class="field-input date-3box-input" id="dDay" type="text" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="Day" style="width:64px;text-align:center">
+            <input class="field-input date-3box-input" id="dDay" type="text" inputmode="numeric" data-mask="int" maxlength="2" placeholder="DD" aria-label="Day" style="width:64px;text-align:center">
             <select id="dMonth" style="display:none" aria-hidden="true" tabindex="-1">
               <option value=""></option>
               <option value="01">January</option><option value="02">February</option>
@@ -616,7 +622,7 @@
               <svg class="mcombo-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
               <div class="mcombo-menu" id="dMonthList" role="listbox"></div>
             </div>
-            <input class="field-input date-3box-input" id="dCYear" type="text" inputmode="numeric" maxlength="4" placeholder="YYYY" aria-label="Year" style="width:84px;text-align:center">
+            <input class="field-input date-3box-input" id="dCYear" type="text" inputmode="numeric" data-mask="int" maxlength="4" placeholder="YYYY" aria-label="Year" style="width:84px;text-align:center">
           </div>
           <div class="det-field-hint" id="dateHint" role="status" aria-live="polite"></div>
         </div>
@@ -891,7 +897,7 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/db.js"></script>
@@ -1059,7 +1065,7 @@ function buildRatingStepper(key, label) {
     <div class="rating-stepper-controls">
       <button class="ep-btn" onclick="stepRating('${key}',-0.5)" style="width:32px;height:32px;font-size:16px;">−</button>
       <input class="rating-stepper-val${hasVal?' has-val':''}" id="sval-${key}"
-             type="text" inputmode="decimal" value="${display}" placeholder="—"
+             type="text" inputmode="decimal" data-mask="rating" maxlength="4" value="${display}" placeholder="—"
              onchange="typeRating('${key}',this.value)"
              onblur="typeRating('${key}',this.value)">
       <button class="ep-btn" onclick="stepRating('${key}',+0.5)" style="width:32px;height:32px;font-size:16px;">+</button>
@@ -1365,7 +1371,7 @@ function _onUpdateDetailsSearchInput(query) {
       const posterEl = r.poster_path
         ? `<img src="${TMDB_FULL}${r.poster_path}" loading="lazy">`
         : (title[0] || '?').toUpperCase();
-      return `<div class="card-link-result" onclick="_pickUpdateDetailsMatch(${i})">
+      return `<div class="card-link-result" onclick="_pickUpdateDetailsMatch(${i})"${MSSAge.attr(r.media_type, r.id)}>
         <div class="card-link-result-poster">${posterEl}</div>
         <div>
           <div class="card-link-result-title" translate="no">${escHTML(title)}</div>
@@ -1638,6 +1644,7 @@ function _injectPosterPickerOverlay() {
       <button class="popup-action-btn" style="width:100%;justify-content:center;" onclick="_closePosterPicker();document.getElementById('posterFile').click()">
         ${icon('image', 14)} Upload Your Own
       </button>
+      ${mssUploadRuleHTML()}
     </div>
   </div>`;
   el.addEventListener('click', ev => { if (ev.target === el) _closePosterPicker(); });

@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
 <title>MyScreenFolio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 .pp-wrap { max-width:none; }
@@ -107,7 +106,6 @@
 }
 .pp-credit-role { margin-top:2px; font-size:clamp(10.5px, 2.6vw, 11.5px); color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-.pp-empty { padding:3rem 1rem; text-align:center; color:var(--text-3); font-size:14px; }
 
 @media(max-width:760px) {
   .pp-layout { grid-template-columns:1fr; gap:1.5rem; }
@@ -151,7 +149,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
@@ -284,7 +282,7 @@ function _ppHTML(p) {
         ${allCredits.length ? `
           <div class="pp-sf-row"><div id="ppSfBar" class="pp-sf-bar"></div></div>
           <div id="ppCredits"></div>
-        ` : `<div class="pp-empty">${_ppMode === 'directing' ? 'No directing/creator credits found.' : 'No known credits found.'}</div>`}
+        ` : mssEmpty({ art: 'person', title: 'No credits yet', text: _ppMode === 'directing' ? 'TMDB doesn’t list anything they’ve directed or created.' : 'TMDB doesn’t know their work yet. Mysterious.' })}
       </div>
     </div>
   ` };
@@ -327,7 +325,7 @@ function _ppCreditGrid(list, byScore) {
       score: cr.vote_average, origin_country: cr.origin_country, original_language: cr.original_language,
     };
     const sc = cr.vote_count && cr.vote_average ? (Math.floor(cr.vote_average * 10) / 10).toFixed(1) : null;
-    return MSSCard.poster({ cls: 'pp-card', onclick: `MSSInfo.fromDiscover(window._ppItems['${key}'])`, title, year,
+    return MSSCard.poster({ cls: 'pp-card', onclick: `MSSInfo.fromDiscover(window._ppItems['${key}'])`, title, year, age: [cr.media_type, cr.id],
       rank: byScore && it.score != null ? i + 1 : 0,   // numbered when sorted by score
       poster: TMDB_IMG.replace('w185', 'w500') + cr.poster_path, type: isMovie ? 'movie' : 'tv', score: sc,
       below: roleLabel ? `<div class="pp-credit-role">${esc(roleLabel)}</div>` : '' });
@@ -371,7 +369,8 @@ function _ppDrawCredits() {
   mssKeepScroll(box, () => {
     box.innerHTML = shown.length
       ? sec('ppMovies', _ppMode === 'directing' ? 'Movies Directed' : 'Movies', movies) + sec('ppTv', _ppMode === 'directing' ? 'Shows Created' : 'TV Shows', tv)
-      : `<div class="pp-empty">Nothing matches these filters.</div>`;
+      : mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('pp', 'all'); SF.refresh('pp', 'all')", primary: true }] });
   });
 }
 

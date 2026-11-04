@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
 <title>MyScreenFolio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 .home-tmdb-poster-fallback {
@@ -88,6 +87,7 @@
       </span>
       <button type="button" class="popup-action-btn" id="lvShareBtn" hidden onclick="_lvShare()"><span class="lv-import-btn-label">Share with Friends</span></button>
       <button type="button" class="popup-action-btn" id="lvExportBtn" hidden onclick="_lvExport()"><span class="lv-import-btn-label" id="lvExportLabel">Export List</span></button>
+      <button type="button" class="mss-report-link" id="lvReportBtn" hidden onclick="mssReport('list', _lvList?.id)">Report</button>
     </div>
 
     <div class="lv-controls">
@@ -102,7 +102,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
@@ -111,7 +111,7 @@
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/sort-filter.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/vendor/jspdf-2.5.1.umd.min.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/export.js"></script>
 <script src="js/taste-profile.js"></script>
@@ -207,7 +207,7 @@ function _lvOpenInfo(id) {
 
 function _lvCardHTML(e, rank) {
   const scoreStr = _lvOwnScoreHTML(e);
-  return MSSCard.poster({ cls: 'lv-card', onclick: `_lvOpenInfo(${attrJSON(e.id)})`, title: e.title, year: e.year, poster: e.poster_url,
+  return MSSCard.poster({ cls: 'lv-card', onclick: `_lvOpenInfo(${attrJSON(e.id)})`, title: e.title, year: e.year, poster: e.poster_url, age: [e.tmdb_type || e.media_type, e.tmdb_id],
     rank: rank == null ? 0 : rank + 1, typeHTML: _lvTypeLabel(e) ? `<span class="${_lvTypeCls(e)} type-label-overlay-bottom">${_lvTypeLabel(e)}</span>` : '',
     scoreHTML: scoreStr });
 }
@@ -303,14 +303,15 @@ function _lvRenderGrid() {
   grid.className = _lvView === 'list' ? 'lv-list' : 'lv-grid';
   if (!_lvItems.length) {
     grid.className = '';
-    grid.innerHTML = `<div class="lv-empty">This list is empty.</div>`;
+    grid.innerHTML = mssEmpty({ art: 'lists', title: 'This list is empty', text: 'A list with nothing on it is just a title with big plans.' });
     return;
   }
   const shown = SF.list('lv', 'all');
   document.getElementById('lvSfBar').innerHTML = SF.bar('lv', 'all');
   if (!shown.length) {
     grid.className = '';
-    grid.innerHTML = `<div class="lv-empty">Nothing in this list matches these filters.</div>`;
+    grid.innerHTML = mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('lv', 'all'); SF.refresh('lv', 'all')", primary: true }] });
     return;
   }
   // Number badges (same corner badges as the category pages):
@@ -529,6 +530,9 @@ async function _lvLoad() {
     document.getElementById('lvExportBtn').hidden = !_lvUser;
     document.getElementById('lvExportLabel').innerHTML = `${icon('download', 15)} Export List`;
     document.getElementById('lvImportPopupActions').style.display = isOwn ? 'none' : '';
+    const rep = document.getElementById('lvReportBtn');
+    rep.hidden = !_lvUser || isOwn || !!list.official;
+    rep.innerHTML = `${icon('flag', 12)} Report`;
     if (!isOwn && _lvUser) {
       // Collaborators already have this list in their Lists — no Import
       const { data: collab } = await sb.from('list_collaborators')

@@ -6,8 +6,7 @@
 <script src="js/i18n.js"></script>
 <title>Admin — MyScreenFolio</title>
 <meta name="robots" content="noindex">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ── Admin (site owners only — app_admins, migrations 036 / 037).
@@ -126,6 +125,22 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-pic { margin:0; display:flex; flex-direction:column; gap:6px; min-width:0; }
 .adm-pic img { width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:8px; background:var(--bg-3); display:block; }
 .adm-pic.round img { aspect-ratio:1; border-radius:50%; }
+/* Reports (086) */
+.adm-reports .adm-card-h { align-items:center; }
+.adm-rep-toggle { margin-inline-start:auto; }
+.adm-rep { display:flex; flex-direction:column; gap:8px; padding:12px 0; border-top:0.5px solid var(--border); }
+.adm-rep.done { opacity:.7; }
+.adm-rep-top { display:flex; align-items:flex-start; gap:10px; }
+.adm-rep-top .adm-main { display:flex; flex-direction:column; gap:4px; flex:1; min-width:0; }
+.adm-rep-pic { width:48px; height:72px; object-fit:cover; border-radius:6px; flex-shrink:0; background:var(--bg-3); }
+.adm-rep-pic.round { width:52px; height:52px; border-radius:50%; }
+.adm-rep-reason { padding:1px 7px; border-radius:4px; background:rgba(229,115,115,.14); color:#e57373; font-weight:600; }
+.adm-rep-note { font-size:12.5px; color:var(--text-2); padding-inline-start:10px; border-inline-start:2px solid var(--border-olive); }
+.adm-rep-by { font-size:11.5px; color:var(--text-3); }
+.adm-rep-link { color:var(--olive-light); }
+.adm-rep .adm-actions { flex-wrap:wrap; }
+.adm-sus-days { display:flex; gap:8px; width:100%; }
+.adm-sus-days .adm-btn { flex:1; min-height:42px; }
 .adm-pic figcaption { display:flex; flex-direction:column; font-size:12.5px; font-weight:600; min-width:0; }
 .adm-pic figcaption span, .adm-pic figcaption small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .adm-pic figcaption small { font-weight:500; color:var(--text-3); }
@@ -227,7 +242,7 @@ button.adm-row:hover { border-color:var(--border-olive); }
   <div id="admPanel" role="tabpanel" class="fade-up fade-up-2"><div class="page-loading"><div class="spinner"></div></div></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
@@ -248,11 +263,11 @@ const _admAv = (p, cls = 'adm-av') => { const u = safeURL(p?.avatar_url); return
 const _admPoster = u => `<span class="adm-poster">${safeURL(u) ? `<img src="${safeURL(u)}" alt="" loading="lazy">` : ''}</span>`;
 const _admTitleHref = t => t.tmdb_id ? `title.html?id=${Number(t.tmdb_id)}&type=${t.tmdb_type === 'movie' ? 'movie' : 'tv'}` : null;
 const _admSpin = () => '<div class="page-loading"><div class="spinner"></div></div>';
-let _admTab = 'overview', _admQuery = '', _admUserQuery = '', _admTitles = [], _admTimer = null, _admLangOpen = 0, _admFlagOpen = 0, _admPicOpen = 0;
+let _admTab = 'overview', _admQuery = '', _admUserQuery = '', _admTitles = [], _admTimer = null, _admLangOpen = 0, _admFlagOpen = 0, _admPicOpen = 0, _admReportOpen = 0;
 
 function _admPaintTabs() {
   document.getElementById('admTabs').innerHTML = ADM_TABS.map(([k, l]) =>
-    `<button type="button" role="tab" id="admTab-${k}" class="pn-toggle-btn${k === _admTab ? ' active' : ''}" aria-selected="${k === _admTab}" aria-controls="admPanel" onclick="admTab('${k}')">${l}${k === 'langs' && _admLangOpen ? `<span class="adm-tab-count" aria-label="${_admLangOpen} open">${_admLangOpen}</span>` : ''}${k === 'safety' && _admFlagOpen + _admPicOpen ? `<span class="adm-tab-count warn" aria-label="${_admFlagOpen + _admPicOpen} to look at">${_admFlagOpen + _admPicOpen}</span>` : ''}</button>`).join('');
+    `<button type="button" role="tab" id="admTab-${k}" class="pn-toggle-btn${k === _admTab ? ' active' : ''}" aria-selected="${k === _admTab}" aria-controls="admPanel" onclick="admTab('${k}')">${l}${k === 'langs' && _admLangOpen ? `<span class="adm-tab-count" aria-label="${_admLangOpen} open">${_admLangOpen}</span>` : ''}${k === 'safety' && _admFlagOpen + _admPicOpen + _admReportOpen ? `<span class="adm-tab-count warn" aria-label="${_admFlagOpen + _admPicOpen + _admReportOpen} to look at">${_admFlagOpen + _admPicOpen + _admReportOpen}</span>` : ''}</button>`).join('');
 }
 function admTab(key, refresh) {
   _admTab = ADM_TABS.some(([k]) => k === key) ? key : 'overview';
@@ -353,8 +368,9 @@ async function admUser(id) {
   if (_admTab !== 'members') { _admTab = 'members'; history.replaceState(null, '', '#members'); _admPaintTabs(); }
   const panel = document.getElementById('admPanel');
   panel.innerHTML = _admSpin();
-  const { data: u, error } = await sb.rpc('admin_user_detail', { p_user: id });
+  const [{ data: u, error }, { data: ms }] = await Promise.all([sb.rpc('admin_user_detail', { p_user: id }), sb.rpc('admin_member_status', { p_user: id })]);
   if (error || !u) return admError(error);
+  const st = ms || {}, until = st.suspended_until;          // 089: a suspension's end; age group (088) — never the date of birth
   const tile = (n, l) => `<div class="adm-tile"><div class="adm-tile-n">${_admNum(n)}</div><div class="adm-tile-l">${l}</div></div>`;
   const lang = u.language ? MSSLang.name(u.language) : 'English';
   panel.innerHTML = `<button type="button" class="adm-back" onclick="admMembers()">${icon('back', 14)} All members</button>
@@ -367,6 +383,7 @@ async function admUser(id) {
       <div><dt>Joined</dt><dd>${_admFmt(u.created_at)}</dd></div>
       <div><dt>Last signed in</dt><dd>${_admAgo(u.last_sign_in_at)}</dd></div>
       <div><dt>Language</dt><dd translate="no">${esc(lang)}</dd></div>
+      <div><dt>Age group</dt><dd>${ADM_AGE[st.age_group] || 'Not given yet'}</dd></div>
     </dl>
     ${u.id === window._navUser?.id ? '' : `<div class="adm-card adm-filter">
       <div class="adm-card-h"><span class="adm-card-t">Admin</span><span class="adm-card-s">${u.is_admin ? 'on' : 'off'}</span></div>
@@ -379,11 +396,13 @@ async function admUser(id) {
       <div class="adm-actions" style="margin-top:12px"><button type="button" class="adm-btn${u.is_official ? '' : ' on'}" onclick="admOfficial('${esc(u.id)}', ${!u.is_official})">${u.is_official ? 'Turn off official' : 'Make official'}</button></div>
     </div>
     ${u.is_admin ? '' : `<div class="adm-card adm-filter adm-modcard${u.banned ? ' banned' : ''}">
-      <div class="adm-card-h"><span class="adm-card-t">${u.banned ? 'Banned' : 'Moderation'}</span><span class="adm-card-s">${u.banned ? `since ${_admFmt(u.banned.banned_at)}` : `${u.strikes || 0} ${u.strikes === 1 ? 'strike' : 'strikes'}${u.mild ? ` · ${u.mild} mild` : ''}`}</span></div>
+      <div class="adm-card-h"><span class="adm-card-t">${u.banned ? (until ? 'Suspended' : 'Banned') : 'Moderation'}</span><span class="adm-card-s">${u.banned ? (until ? `until ${_admFmt(until)}` : `since ${_admFmt(u.banned.banned_at)}`) : `${u.strikes || 0} ${u.strikes === 1 ? 'strike' : 'strikes'}${u.mild ? ` · ${u.mild} mild` : ''}`}</span></div>
       ${(u.flags || []).length ? (u.flags || []).slice(0, 8).map(_admFlagLine).join('') : '<div class="adm-filter-txt">No flags.</div>'}
       <div class="adm-actions" style="margin-top:12px">
-        ${u.banned ? `<button type="button" class="adm-btn on" onclick="admUnban('${esc(u.id)}', ${attrJSON(u.username)})">Unban</button>`
-          : `<button type="button" class="adm-btn danger" onclick="admBan('${esc(u.id)}', ${attrJSON(u.username)})">Ban</button>`}
+        ${u.banned ? `<button type="button" class="adm-btn on" onclick="admUnban('${esc(u.id)}', ${attrJSON(u.username)})">${until ? 'Lift suspension' : 'Unban'}</button>`
+          : `<button type="button" class="adm-btn" onclick="admWarn('${esc(u.id)}', ${attrJSON(u.username)})">Warn</button>
+             <button type="button" class="adm-btn danger" onclick="admSuspend('${esc(u.id)}', ${attrJSON(u.username)})">Suspend</button>
+             <button type="button" class="adm-btn danger" onclick="admBan('${esc(u.id)}', ${attrJSON(u.username)})">Ban</button>`}
         ${(u.flags || []).some(f => !f.reviewed) ? `<button type="button" class="adm-btn" onclick="admClearFlags('${esc(u.id)}')">Mark flags reviewed</button>` : ''}
         <button type="button" class="adm-btn danger" onclick="admDeleteUser('${esc(u.id)}', ${attrJSON(u.username)})">Delete account</button>
       </div></div>`}
@@ -443,16 +462,135 @@ const _admHitWords = hits => (hits || []).length ? `<span class="adm-hitwords"><
 async function admSafety() {
   const panel = document.getElementById('admPanel');
   panel.innerHTML = _admSpin();
-  const [flagged, pics, scan] = await Promise.all([sb.rpc('admin_flagged_users'), sb.rpc('admin_picture_queue'), sb.rpc('admin_moderation_scan')]);
+  const [flagged, pics, scan, reps] = await Promise.all([sb.rpc('admin_flagged_users'), sb.rpc('admin_picture_queue'), sb.rpc('admin_moderation_scan'), sb.rpc('admin_reports', { p_status: _admRepShow })]);
   if (_admTab !== 'safety') return;
   if (flagged.error && scan.error) return admError(flagged.error);
   const need = n => `<div class="adm-card adm-filter"><div class="adm-card-s">This needs migration ${n} — run it in Supabase, then refresh.</div></div>`;
   _admFlagOpen = (flagged.data || []).filter(u => u.open > 0 && !u.banned).length;
   _admPicOpen = (pics.data || []).length;
+  _admReports = reps.data || [];
+  if (_admRepShow === 'open') _admReportOpen = _admRepGroups(_admReports).length;
   _admPaintTabs();
-  panel.innerHTML = (flagged.error ? need('040') : _admFlaggedHTML(flagged.data || []))
+  panel.innerHTML = (reps.error ? need('086') : _admReportsHTML())
+    + (flagged.error ? need('040') : _admFlaggedHTML(flagged.data || []))
     + (pics.error ? need('041') : _admPicturesHTML(pics.data || []))
     + (scan.error ? need('038') : _admFilterHTML(scan.data));
+}
+
+/* Reports (086): what people reported — one row per reported thing, however many reported it.
+   Dismiss · Remove it (the comment / poll / list…, the note's text, an uploaded poster, a
+   profile photo) · Ban the person · View member. The reported person never sees who reported them. */
+let _admReports = [], _admRepShow = 'open';
+const ADM_REP_KIND = { user: 'Profile', comment: 'Comment', note_reply: 'Note reply', list_reply: 'List reply', note: 'Note', entry: 'Title pictures',
+  list: 'List', poll: 'Poll', poll_comment: 'Poll comment', episode_chat: 'Episode chat' };
+const ADM_REP_REASON = { spam: 'Spam', harassment: 'Harassment', offensive: 'Hateful / offensive', sexual: 'Sexual', copyright: 'Stolen picture / work', other: 'Other' };
+// what "Remove" takes away for each kind (admin_delete_content)
+const ADM_REP_REMOVE = { comment: ['comment', 'Remove comment'], note_reply: ['note_reply', 'Remove reply'], list_reply: ['list_reply', 'Remove reply'],
+  note: ['note', 'Remove note text'], entry: ['poster', 'Remove poster'], list: ['list', 'Delete list'], poll: ['poll', 'Delete poll'],
+  poll_comment: ['poll_comment', 'Remove comment'], episode_chat: ['episode_chat', 'Remove message'], user: ['avatar', 'Remove photo'] };
+function _admRepGroups(list) {
+  const m = new Map();
+  list.forEach(r => { const k = r.kind + ':' + r.target_id; if (!m.has(k)) m.set(k, []); m.get(k).push(r); });
+  return [...m.values()];
+}
+function _admReportsHTML() {
+  const groups = _admRepGroups(_admReports), open = _admRepShow === 'open';
+  return `<div class="adm-card adm-filter adm-reports">
+    <div class="adm-card-h"><span class="adm-card-t">Reports</span><span class="adm-card-s">${open ? 'what members reported — newest first' : 'closed lately'}</span>
+      <button type="button" class="adm-btn adm-rep-toggle" onclick="admReportsShow('${open ? 'done' : 'open'}')">${open ? 'Show closed' : 'Show open'}</button></div>
+    ${groups.length ? groups.map(_admRepHTML).join('') : `<div class="adm-filter-txt">${open ? 'No reports waiting. When someone reports a comment, list, poll, note or person, it shows up here.' : 'Nothing closed yet.'}</div>`}
+  </div>`;
+}
+function _admRepHTML(g) {
+  const r = g[0], o = r.owner || {}, cx = r.ctx || {}, open = r.status === 'open';
+  const reasons = [...new Set(g.map(x => x.reason))];
+  const pic = r.kind === 'entry' ? safeURL(cx.poster_url) : r.kind === 'user' ? safeURL(cx.avatar_url) : '';
+  const rm = ADM_REP_REMOVE[r.kind];
+  const canRemove = open && rm && !(r.kind === 'user' && !cx.avatar_url) && !(r.kind === 'entry' && !cx.poster_url);
+  const where = r.kind === 'list' ? `<a class="adm-rep-link" href="list-view.html?list=${encodeURIComponent(r.target_id)}" target="_blank" rel="noopener">Open list</a>`
+    : r.kind === 'episode_chat' && cx.show ? `<span translate="no">${esc(cx.show)} · S${Number(cx.season)} E${Number(cx.episode)}</span>`
+    : (r.kind === 'note' || r.kind === 'entry') && cx.title ? `<span translate="no">on ${esc(cx.title)}</span>` : '';
+  return `<div class="adm-rep${open ? '' : ' done'}">
+    <div class="adm-rep-top">${_admAv(o)}
+      <span class="adm-main">
+        <span class="adm-meta"><span class="adm-kind warn">${ADM_REP_KIND[r.kind] || esc(r.kind)}</span><b translate="no" style="color:var(--text)">@${esc(o.username || '(deleted)')}</b>${o.banned ? '<span class="adm-kind">Banned</span>' : ''}${where}<span>${_admAgo(r.created_at)}</span></span>
+        <span class="adm-meta">${reasons.map(x => `<span class="adm-rep-reason">${ADM_REP_REASON[x] || esc(x)}</span>`).join('')}<span>${g.length === 1 ? 'reported once' : `reported by ${g.length} people`}</span>${r.owner_reports > 1 ? `<span>${r.owner_reports} things of theirs reported</span>` : ''}${!open ? `<span>${r.status === 'actioned' ? 'Acted on' : 'Dismissed'} ${_admAgo(r.reviewed_at)}</span>` : ''}</span>
+      </span>
+      ${pic ? `<img class="adm-rep-pic${r.kind === 'user' ? ' round' : ''}" src="${pic}" alt="" loading="lazy">` : ''}
+    </div>
+    ${r.excerpt ? `<span class="adm-quote adm-excerpt" translate="no">${esc(r.excerpt)}</span>` : ''}
+    ${g.filter(x => x.details).map(x => `<div class="adm-rep-note"><b translate="no">@${esc(x.reporter?.username || '?')}:</b> ${esc(x.details)}</div>`).join('')}
+    <div class="adm-rep-by">From ${g.map(x => `<span translate="no">@${esc(x.reporter?.username || '?')}</span>`).join(', ')}</div>
+    ${open ? `<div class="adm-actions">
+      ${o.id ? `<button type="button" class="adm-btn" onclick="admUser('${esc(o.id)}')">View member</button>` : ''}
+      <button type="button" class="adm-btn" onclick="admReportDone(${Number(r.id)}, 'dismissed')">Dismiss</button>
+      ${o.id ? `<button type="button" class="adm-btn" onclick="admReportWarn(${Number(r.id)})">Warn</button>` : ''}
+      ${canRemove ? `<button type="button" class="adm-btn danger" onclick="admReportRemove(${Number(r.id)})">${rm[1]}</button>` : ''}
+      ${o.id && !o.banned ? `<button type="button" class="adm-btn danger" onclick="admReportSuspend(${Number(r.id)})">Suspend</button>
+        <button type="button" class="adm-btn danger" onclick="admReportBan(${Number(r.id)})">Ban</button>` : ''}
+    </div>` : ''}
+  </div>`;
+}
+function admReportsShow(st) { _admRepShow = st; admSafety(); }
+// action ('removed' | 'banned' | 'suspended' | 'warned') → the people who reported it and its owner get a notification (087 / 089)
+async function admReportDone(id, status, quiet, action) {
+  const { error } = await sb.rpc('admin_resolve_report', { p_id: id, p_status: status, p_action: action || null });
+  if (error) { console.error(error); showToast('Couldn’t save that. Try again.', 'err'); return false; }
+  if (!quiet) { showToast(status === 'dismissed' ? 'Report dismissed.' : 'Done.'); admSafety(); }
+  return true;
+}
+async function admReportRemove(id) {
+  const r = _admReports.find(x => x.id === id); if (!r) return;
+  const [kind, label] = ADM_REP_REMOVE[r.kind];
+  const msg = { note: 'Their note’s text is cleared — the title stays in their library.', poster: 'Their uploaded poster is taken off — the title goes back to its normal poster.',
+    avatar: 'Their profile photo is taken off.', list: 'The whole list is deleted.', poll: 'The poll, its votes and comments are deleted.' }[kind] || 'It’s deleted for everyone.';
+  if (!(await showConfirm({ title: label + '?', message: msg + ' This can’t be undone.', confirmText: label.split(' ')[0], iconName: 'trash' }))) return;
+  const { error } = await sb.rpc('admin_delete_content', { p_kind: kind, p_id: r.target_id });
+  if (error) { console.error(error); showToast('Couldn’t remove it. Run migration 086 if you haven’t.', 'err'); return; }
+  if (await admReportDone(id, 'actioned', true, 'removed')) { showToast('Removed — they’ve been told.'); admSafety(); }
+}
+// Warn: nothing is removed — they're told what broke the rules
+async function admReportWarn(id) {
+  const r = _admReports.find(x => x.id === id), o = r?.owner; if (!o?.id) return;
+  if (!(await showConfirm({ title: `Warn @${o.username}?`, message: `They get a notification that their ${(ADM_REP_KIND[r.kind] || 'post').toLowerCase()} broke the community rules (${ADM_REP_REASON[r.reason] || r.reason}). Nothing is removed.`, confirmText: 'Warn', iconName: 'info', danger: false }))) return;
+  if (await admReportDone(id, 'actioned', true, 'warned')) { showToast(`@${o.username} has been warned.`); admSafety(); }
+}
+// Suspend: a ban with an end date — 7 days, or longer when asked
+function admSuspendAsk(username) {
+  return new Promise(resolve => {
+    const el = document.createElement('div');
+    el.className = 'confirm-overlay';
+    el.innerHTML = `<div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="admSusT" aria-describedby="admSusM">
+        <div class="confirm-icon" aria-hidden="true">${icon('lock', 36)}</div>
+        <div class="confirm-title" id="admSusT">Suspend @${esc(username)}?</div>
+        <div class="confirm-msg" id="admSusM">They can’t sign in or post until it ends, and they’re told why. How long?</div>
+        <div class="adm-sus-days" role="group" aria-label="How long">${[7, 30, 90].map(d => `<button type="button" class="adm-btn danger" data-d="${d}">${d} days</button>`).join('')}</div>
+        <div class="confirm-actions"><button type="button" class="confirm-cancel" data-d="0">Cancel</button></div>
+      </div>`;
+    const done = d => { MSSDialog.close(el); setTimeout(() => el.remove(), 300); resolve(d); };
+    MSSDialog.bind(el, () => done(0));
+    el.addEventListener('click', ev => { const b = ev.target.closest('[data-d]'); if (b) done(Number(b.dataset.d)); });
+    document.body.appendChild(el);
+    MSSDialog.open(el, { focus: el.querySelector('[data-d="7"]') });
+  });
+}
+async function admReportSuspend(id) {
+  const r = _admReports.find(x => x.id === id), o = r?.owner; if (!o?.id) return;
+  const days = await admSuspendAsk(o.username); if (!days) return;
+  const { error } = await sb.rpc('admin_suspend_user', { p_user: o.id, p_days: days, p_reason: 'Reported: ' + (ADM_REP_REASON[r.reason] || r.reason) });
+  if (error) { console.error(error); showToast(/ADMIN/.test(error.message || '') ? 'Admins can’t be suspended.' : 'Couldn’t suspend. Run migration 089 if you haven’t.', 'err'); return; }
+  await admReportDone(id, 'actioned', true, 'suspended');
+  showToast(`@${o.username} is suspended for ${days} days.`);
+  admSafety();
+}
+async function admReportBan(id) {
+  const r = _admReports.find(x => x.id === id), o = r?.owner; if (!o?.id) return;
+  if (!(await showConfirm({ title: `Ban @${o.username}?`, message: 'They’re signed out, can’t sign back in and can’t post anything. You can unban them later from their member page.', confirmText: 'Ban', iconName: 'lock' }))) return;
+  const { error } = await sb.rpc('admin_ban_user', { p_user: o.id, p_reason: 'Reported: ' + (ADM_REP_REASON[r.reason] || r.reason) });
+  if (error) { console.error(error); showToast(/ADMIN/.test(error.message || '') ? 'Admins can’t be banned.' : 'Couldn’t ban. Try again.', 'err'); return; }
+  await admReportDone(id, 'actioned', true, 'banned');
+  showToast(`@${o.username} is banned.`);
+  admSafety();
 }
 
 /* Flagged members: strikes = severe words, refused / removed pictures, blocked usernames */
@@ -490,6 +628,37 @@ async function admBan(id, username) {
   if (error) { console.error(error); showToast(/ADMIN/.test(error.message || '') ? 'Admins can’t be banned.' : 'Couldn’t ban. Try again.', 'err'); return; }
   showToast(`@${username} is banned.`);
   _admTab === 'safety' ? admSafety() : admUser(id);
+}
+const ADM_AGE = { child: 'Under 13 (locked out)', teen13: '13–15', teen16: '16–17', adult: '18+' };
+async function admSuspend(id, username) {
+  const days = await admSuspendAsk(username); if (!days) return;
+  const { error } = await sb.rpc('admin_suspend_user', { p_user: id, p_days: days, p_reason: 'Broke the community rules' });
+  if (error) { console.error(error); showToast(/ADMIN/.test(error.message || '') ? 'Admins can’t be suspended.' : 'Couldn’t suspend. Run migration 089 if you haven’t.', 'err'); return; }
+  showToast(`@${username} is suspended for ${days} days.`);
+  admUser(id);
+}
+// A warning from the member page: pick what it's about, add a note if you like
+function admWarn(id, username) {
+  const el = document.createElement('div');
+  el.className = 'confirm-overlay';
+  el.innerHTML = `<form class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="admWarnT" novalidate>
+      <div class="confirm-icon" aria-hidden="true">${icon('info', 36)}</div>
+      <div class="confirm-title" id="admWarnT">Warn @${esc(username)}</div>
+      <select class="field-input" id="admWarnWhy" aria-label="What it's about">${Object.entries(ADM_REP_REASON).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
+      <textarea class="field-input" id="admWarnNote" rows="3" maxlength="300" placeholder="A note for them (optional)" aria-label="A note for them (optional)" style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
+      <div class="confirm-actions"><button type="button" class="confirm-cancel">Cancel</button><button type="submit" class="confirm-ok is-safe">Send warning</button></div>
+    </form>`;
+  const close = () => { MSSDialog.close(el); setTimeout(() => el.remove(), 300); };
+  MSSDialog.bind(el, close);
+  el.querySelector('.confirm-cancel').addEventListener('click', close);
+  el.querySelector('form').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const { error } = await sb.rpc('admin_warn_user', { p_user: id, p_reason: el.querySelector('#admWarnWhy').value, p_note: el.querySelector('#admWarnNote').value });
+    if (error) { console.error(error); showToast('Couldn’t send that. Run migration 089 if you haven’t.', 'err'); return; }
+    close(); showToast(`@${username} has been warned.`);
+  });
+  document.body.appendChild(el);
+  MSSDialog.open(el, { focus: el.querySelector('select') });
 }
 async function admUnban(id, username) {
   const { error } = await sb.rpc('admin_unban_user', { p_user: id });
@@ -864,6 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sb.rpc('admin_language_requests').then(({ data: l }) => { if (l) { _admLangOpen = l.filter(r => r.status === 'open').length; _admPaintTabs(); } });
     sb.rpc('admin_flagged_users').then(({ data: f }) => { if (f) { _admFlagOpen = f.filter(u => u.open > 0 && !u.banned).length; _admPaintTabs(); } });
     sb.rpc('admin_picture_queue').then(({ data: p }) => { if (p) { _admPicOpen = p.length; _admPaintTabs(); } });
+    sb.rpc('admin_report_count').then(({ data: n }) => { if (n != null) { _admReportOpen = Number(n) || 0; _admPaintTabs(); } });
   });
 });
 </script>

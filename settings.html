@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
 <title>Settings — MyScreenFolio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ── Settings layout — wide, two-column ── */
@@ -169,6 +168,7 @@
             <div class="avatar-info">
               <button class="btn-save" onclick="document.getElementById('avatarFile').click()">Change Photo</button>
               <div class="avatar-hint">JPG or PNG · max 5MB<br>Tap photo or button to upload</div>
+              <div id="avatarRule"></div>
               <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="_avatarCropStart(event)">
             </div>
           </div>
@@ -186,6 +186,7 @@
               <input type="range" id="avatarCropZoom" min="1" max="3" step="0.01" value="1" style="flex:1;accent-color:var(--olive-light);" oninput="_avatarCropUpdateZoom(this.value)">
               <span style="font-size:12px;color:var(--text-3);">+</span>
             </div>
+            <div id="avatarCropRule"></div>
             <div style="display:flex;gap:10px;">
               <button class="fav-edit-btn" style="flex:1;justify-content:center;" onclick="_avatarCropCancel()">Cancel</button>
               <button class="btn-save" style="flex:1;" onclick="_avatarCropConfirm()">Use Photo</button>
@@ -387,7 +388,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
@@ -403,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _sProfile = profile;
     populateSettings();
     syncThemeButtons();
+    ['avatarRule', 'avatarCropRule'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = mssUploadRuleHTML(); });
     document.getElementById('privSwitch')?.setAttribute('aria-checked', String(!!profile?.is_private));
   });
 });

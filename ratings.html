@@ -11,8 +11,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
 <title>Ratings — MyScreenFolio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ratings.html — looks like a list page (list-view.html, styles in style.css "List page look") */
@@ -50,7 +49,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
@@ -103,11 +102,13 @@ function _rtRank(n) {
   if (n == null) return '';
   return '<div class="cg-rank-badge ' + (n === 1 ? 'cg-rank-1' : n === 2 ? 'cg-rank-2' : n === 3 ? 'cg-rank-3' : 'cg-rank-other') + '">' + n + '</div>';
 }
+// someone else's ratings: titles above your age limit are locked (088)
+function _rtAge(e) { return _rtOwner ? MSSAge.attr(e.tmdb_type || (e.cat === 'movies' ? 'movie' : 'tv'), e.tmdb_id) : ''; }
 function _rtRow(e, n) {
   var img = safeURL(e.poster_url)
     ? '<img src="' + safeURL(e.poster_url) + '" alt="" loading="lazy" data-letter="' + escHTML((e.title || '?')[0]) + '" onerror="mssImgError(this)">'
     : '<div class="home-tmdb-poster-fallback" style="font-size:18px">' + escHTML((e.title || '?')[0].toUpperCase()) + '</div>';
-  return '<div class="lv-list-row lv-in-view" role="button" tabindex="0" onclick="_rtOpen(' + attrJSON(e.id) + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}">'
+  return '<div class="lv-list-row lv-in-view" role="button" tabindex="0"' + _rtAge(e) + ' onclick="_rtOpen(' + attrJSON(e.id) + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}">'
     + '<div class="lv-list-poster" style="position:relative">' + img + mssHiddenBadgeHTML(e) + _rtRank(n) + '</div>'
     + '<div style="min-width:0"><div class="lv-list-title-row"><div class="lv-list-title" translate="no">' + escHTML(e.title) + '</div>'
     + (e.year ? '<span class="title-year-inline">' + escHTML(e.year) + '</span>' : '') + '</div>'
@@ -116,6 +117,7 @@ function _rtRow(e, n) {
 }
 function _rtCard(e, n) {
   return MSSCard.poster({ cls: 'lv-card lv-in-view', onclick: '_rtOpen(' + attrJSON(e.id) + ')', title: e.title, year: e.year, poster: e.poster_url,
+    age: _rtOwner ? [e.tmdb_type || (e.cat === 'movies' ? 'movie' : 'tv'), e.tmdb_id] : null,
     rank: n || 0, typeHTML: _rtTypeLabel(e).replace('">', ' type-label-overlay-bottom">'), scoreHTML: _rtScore(e) });
 }
 

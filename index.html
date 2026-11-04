@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
 <title>MyScreenFolio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
   /* Hide nav search bar on home page — hero search replaces it */
@@ -172,7 +171,7 @@
   <div id="guestCta" style="margin-top:3rem"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
@@ -469,7 +468,7 @@ async function renderHomeFriends(user) {
   rows.forEach(e => { _homeFriendEntries[e.id] = e; });
   const cards = rows.map(e => {
     const p = _homeFriendProfiles[e.user_id] || {}, u = safeURL(p.avatar_url), name = p.username || 'friend', sc = liveScore(e), drop = e.status === 'dropped';
-    return MSSCard.poster({ onclick: `_homeOpenFriend('${e.id}')`, title: e.title, year: e.year, posterHTML: posterHTML(e, 'big'), typeHTML: getTypeBadgeOverlay(e, 'latest'),
+    return MSSCard.poster({ onclick: `_homeOpenFriend('${e.id}')`, title: e.title, year: e.year, posterHTML: posterHTML(e, 'big'), typeHTML: getTypeBadgeOverlay(e, 'latest'), age: [e.tmdb_type, e.tmdb_id],
       cls: drop ? 'is-dropped' : '',
       overPoster: `<span class="hf-av" aria-hidden="true">${u ? `<img src="${u}" alt="" loading="lazy">` : escHTML(name[0].toUpperCase())}</span>`,
       below: `<div class="hf-who"><b translate="no">@${escHTML(name)}</b> · ${drop ? 'dropped · ' : ''}${escHTML(_notifTimeAgo(at(e)))}</div>`,

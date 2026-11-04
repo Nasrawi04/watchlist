@@ -11,8 +11,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
 <title>Profile — MyScreenFolio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 .pv-section { margin-bottom:2.5rem; }
@@ -279,7 +278,7 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
@@ -407,7 +406,10 @@ function _friendBtnHTML() {
   // They follow you → you can take them off your followers (they aren't told)
   var rm = f.follows_me === 'accepted'
     ? '<div class="pv-rm-row"><button type="button" class="pv-rm" onclick="pvRemoveFollower()">' + icon('x', 12) + ' Remove @' + escHTML((_pvProfile && _pvProfile.username) || '') + ' from your followers</button></div>' : '';
-  return ask + main + (_pvCanBell() ? _pvNotifyBtnHTML() : '') + (rel === 'friends' ? _pvMatchHTML() : '') + rm;
+  // Report this person (report.js · 086) — the profile, its photo, name and bio
+  var un = (_pvProfile && _pvProfile.username) || '';
+  var rep = '<div class="pv-rm-row pv-report-row"><button type="button" class="pv-rm pv-report" onclick="mssReport(\'user\', _pvUserId, { what: \'@' + escHTML(un).replace(/'/g, '') + '\' })">' + icon('flag', 12) + ' Report @' + escHTML(un) + '</button></div>';
+  return ask + main + (_pvCanBell() ? _pvNotifyBtnHTML() : '') + (rel === 'friends' ? _pvMatchHTML() : '') + rm + rep;
 }
 
 /* Friend-activity notifications toggle — OFF by default. When on, you're

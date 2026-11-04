@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v207';   // MyScreenFolio — restarted at v1 (was mss-v787)
+const CACHE_VERSION = 'msf-v213';   // MyScreenFolio — restarted at v1 (was mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -13,8 +13,7 @@ const STATIC_CACHE  = `${CACHE_VERSION}-static`;
    survive deploys. */
 const IMAGE_CACHE   = 'mss-images';
 const FONT_CACHE    = 'mss-fonts';
-const VENDOR_CACHE  = 'mss-vendor';
-const KEEP_CACHES   = [STATIC_CACHE, IMAGE_CACHE, FONT_CACHE, VENDOR_CACHE];
+const KEEP_CACHES   = [STATIC_CACHE, IMAGE_CACHE, FONT_CACHE];   // (the old CDN cache, mss-vendor, is cleared — libraries live in js/vendor now)
 const IMAGE_CACHE_MAX = 500;   // oldest posters dropped past this
 
 /* Static assets to pre-cache on install */
@@ -59,7 +58,9 @@ const STATIC_ASSETS = [
   'js/sort-filter.js',
   'js/category.js',
   'js/pick.js',
-  'js/follows.js',
+  'js/follows.js', 'js/report.js',
+  'css/fonts.css',
+  'js/vendor/supabase-2.118.0.js',
   'js/rewatch.js',
   'js/create-card.js',
   'js/export.js',
@@ -201,15 +202,8 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Third-party libraries (Supabase JS etc.) — served instantly from cache,
-  // refreshed in the background.
-  if (url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'cdnjs.cloudflare.com') {
-    event.respondWith(staleWhileRevalidate(request, VENDOR_CACHE));
-    return;
-  }
-
-  // Google Fonts — cache first
-  if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
+  // The site's own font files (fonts/, css/fonts.css) — they never change, so cache first
+  if (url.origin === self.location.origin && /\/fonts\/[^/]+\.(woff2|ttf)$/.test(url.pathname)) {
     event.respondWith(cacheFirst(request, FONT_CACHE));
     return;
   }
@@ -252,23 +246,6 @@ async function cacheFirst(request, cacheName, maxEntries) {
   }
 }
 
-async function staleWhileRevalidate(request, cacheName) {
-  const cache  = await caches.open(cacheName);
-  const cached = await cache.match(request);
-
-  // Background refresh always checks with the server (no-cache = revalidate,
-  // a quick 304 when nothing changed) so a stale HTTP-cache copy can't win.
-  // (A page navigation can't be re-created with options, so it's fetched by URL.)
-  const fresh = request.mode === 'navigate'
-    ? fetch(request.url, { cache: 'no-cache', credentials: 'same-origin' })
-    : fetch(request, { cache: 'no-cache' });
-  const fetchPromise = fresh.then(response => {
-    if (response.ok) cache.put(request, response.clone());
-    return response;
-  }).catch(() => null);
-
-  return cached || await fetchPromise || caches.match('offline.html');
-}
 
 async function networkFirstFresh(request, cacheName, timeoutMs) {
   const cache = await caches.open(cacheName);

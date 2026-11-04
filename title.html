@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
 <title>MyScreenFolio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 .td-wrap { max-width:none; }
@@ -422,7 +421,8 @@ a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center;
 .rp-main { flex:1; min-width:0; }
 .rp-by { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
 .rp-text { font-size:13.5px; line-height:1.6; color:var(--text-2); white-space:pre-line; margin-bottom:8px; word-break:break-word; }
-.rp-reacts { display:flex; gap:14px; }
+.rp-reacts { display:flex; gap:14px; align-items:center; }
+.rp-reacts .rp-report { margin-inline-start:auto; }
 .rp-composer { flex-shrink:0; padding:1rem 1.25rem 1.25rem; border-top:0.5px solid var(--border); }
 .rp-input { width:100%; min-height:60px; resize:vertical; box-sizing:border-box; margin-bottom:8px; }
 .rp-post { width:100%; justify-content:center; }
@@ -487,7 +487,7 @@ a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center;
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
@@ -581,6 +581,7 @@ async function _tdFetchSeasons(tvId, nums) {
 }
 
 async function loadTitle() {
+  if (!(await MSSAge.page(_tdType, _tdId))) return;   // age-restricted for this account (088)
   const detail = _tdType === 'movie' ? await _tdFetchMovie(_tdId) : await _tdFetchTV(_tdId);
   if (!detail || detail.success === false) { mssErrorPage(_tdFail ? mssTmdbErrorKind(_tdFail, 'title') : 'title', { error: _tdFail }); return; }
   _tdDetail = detail;
@@ -1245,6 +1246,7 @@ async function _selectSeason(el) {
   el.classList.add('active');
 
   const epsWrap = document.getElementById('tdEpisodesList');
+  if (!epsWrap) return;                            // no episode list on the page (a show TMDB has no episodes for yet)
   epsWrap.innerHTML = '<div class="td-season-loading">Loading episodes…</div>';
 
   const tvId = el.dataset.tv, seasonNum = el.dataset.season;
@@ -1775,6 +1777,7 @@ function _replyRenderList() {
           <button type="button" class="td-note-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="_replyReact('${r.id}', false)">
             ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 13)} <span>${r.dislike_count || 0}</span>
           </button>
+          ${_tdUser && r.user_id && r.user_id !== _tdUser.id ? `<button type="button" class="mss-report-link rp-report" onclick="mssReport('${_replyKind === 'list' ? 'list_reply' : 'note_reply'}', '${r.id}', { what: 'this reply' })" aria-label="Report this reply">${icon('flag', 12)} Report</button>` : ''}
         </div>
       </div>
     </div>`;

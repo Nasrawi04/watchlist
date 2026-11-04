@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script src="js/i18n.js"></script>
 <title>Sign In — MyScreenFolio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ═════════════════════════════════════════════════════════════
@@ -142,6 +141,9 @@ a.au-tile:hover::after { opacity:1; }
 .au-input::placeholder { color:var(--text-3); }
 .au-input:focus { border-color:var(--olive-light); background:var(--card-solid); }
 .au-input.has-eye { padding-right:50px; }
+.au-select { padding:0 34px 0 14px; appearance:none; -webkit-appearance:none; cursor:pointer;
+  background:var(--bg-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 14px; }
+.au-select:focus { background-color:var(--card-solid); }
 .au-eye { position:absolute; right:4px; width:44px; height:44px; border:0; border-radius:10px; background:none; color:var(--text-3); cursor:pointer; display:grid; place-items:center; }
 .au-eye:hover { color:var(--text); }
 .au-eye svg { width:18px; height:18px; }
@@ -190,6 +192,9 @@ a.au-tile:hover::after { opacity:1; }
 .au-link:hover { text-decoration:underline; }
 .au-link-muted { color:var(--text-3); }
 .au-row-end { display:flex; justify-content:flex-end; margin-top:-6px; }
+.au-row-split { justify-content:space-between; align-items:center; gap:10px; }
+.au-remember { display:inline-flex; align-items:center; gap:8px; min-height:40px; font-size:13px; font-weight:600; color:var(--text-2); cursor:pointer; }
+.au-remember input { width:17px; height:17px; margin:0; accent-color:var(--olive-light); cursor:pointer; }
 .au-guest { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; max-width:420px; min-height:48px; padding:0 16px; border-radius:14px;
   border:1px dashed var(--border-2); color:var(--text-2); font-size:13.5px; font-weight:600; text-decoration:none; transition:border-color .2s, color .2s; }
 .au-guest:hover { border-color:var(--olive-light); color:var(--text); }
@@ -282,7 +287,10 @@ a.au-tile:hover::after { opacity:1; }
               </button>
             </div>
           </div>
-          <div class="au-row-end"><button type="button" class="au-link" onclick="goToReset()">Forgot password?</button></div>
+          <div class="au-row-end au-row-split">
+            <label class="au-remember"><input type="checkbox" id="siRemember" checked> Remember me</label>
+            <button type="button" class="au-link" onclick="goToReset()">Forgot password?</button>
+          </div>
           <button class="au-btn" id="btnSignIn" type="submit"><span>Let’s go</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </form>
       </div>
@@ -320,6 +328,11 @@ a.au-tile:hover::after { opacity:1; }
               </button>
             </div>
 <div id="suGuide"></div>
+          </div>
+          <div class="au-field">
+            <div class="au-label" id="suBirthLabel">Date of birth</div>
+            <div class="mss-birth-row au-birth" role="group" aria-labelledby="suBirthLabel" aria-describedby="suBirthHint" id="suBirth"></div>
+            <div class="au-hint" id="suBirthHint">Private — it never shows on your profile.</div>
           </div>
           <div class="au-field">
             <div class="au-label" id="suPrivLabel">Account</div>
@@ -401,7 +414,7 @@ a.au-tile:hover::after { opacity:1; }
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script>
 /* ── The poster wall: titles the admins chose (Admin → Sign-in posters, sql/078) — Anime on the
@@ -684,6 +697,7 @@ async function doSignIn(e) {
     }
   }
 
+  MSSRemember.set($('siRemember').checked);          // unticked → signed out when the browser closes
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error) {
     showErr('siError', /invalid login credentials/i.test(error.message || '') ? 'That email and password don’t match.' : (error.message || 'Couldn’t sign in.'));
@@ -694,6 +708,9 @@ async function doSignIn(e) {
 }
 
 /* ── Sign Up ── */
+const AU_UNDER_13 = 'Sorry — you need to be 13 or older to make a MyScreenFolio account.';
+const _auAgeBlocked = () => { try { return Date.now() - Number(localStorage.getItem('mss_age_block') || 0) < 86400000; } catch { return false; } };
+document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('suBirth'); if (b) b.innerHTML = mssBirthFieldsHTML('suBirth', 'au-input au-select'); });
 // Public (default) or Private account (083) — saved with the sign-up, made into the profile by the database
 let _auPrivate = false;
 function auPriv(on) {
@@ -713,6 +730,12 @@ async function doSignUp(e) {
   if (!EMAIL_RE.test(email))    { showErr('suError', 'That email doesn’t look right.'); return; }
   if (MSSPass.error(pass))       { showErr('suError', MSSPass.error(pass)); return; }
   if (pass.length > 128)        { showErr('suError', 'Your password can be 128 characters at most.'); return; }
+  // Birthday (088): 13 and up. An under-13 answer blocks sign-up on this device for a day.
+  if (_auAgeBlocked())          { showErr('suError', AU_UNDER_13); return; }
+  const birth = mssBirthValue('suBirth');
+  if (!birth)                   { showErr('suError', 'Please add your date of birth.'); return; }
+  if (birth === 'invalid')      { showErr('suError', 'That date doesn’t exist — check the day.'); return; }
+  if (mssAgeFrom(birth) < 13) { try { localStorage.setItem('mss_age_block', String(Date.now())); } catch {} showErr('suError', AU_UNDER_13); return; }
   showErr('suError', '');
 
   _auBtn('btnSignUp', 'Creating your folio…', true);
@@ -721,11 +744,12 @@ async function doSignUp(e) {
 
   let data, error;
   try {
-    ({ data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { username, display_name: username, email, is_private: _auPrivate ? 'true' : 'false' } } }));
+    MSSRemember.set(true);
+    ({ data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { username, display_name: username, email, is_private: _auPrivate ? 'true' : 'false', birth } } }));
   } catch {
     showErr('suError', 'Couldn’t reach MyScreenFolio — check your connection and try again.'); again(); return;
   }
-  if (error) { showErr('suError', error.message || 'Couldn’t create your account.'); again(); return; }
+  if (error) { showErr('suError', /UNDER_13/.test(error.message || '') ? AU_UNDER_13 : error.message || 'Couldn’t create your account.'); again(); return; }
 
   if (data?.session) {
     window.location.href = mssAfterLogin();
