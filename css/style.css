@@ -409,6 +409,9 @@ nav {
 .dnav-mega[hidden] { display:none; }
 .dnav-mega-in { display:grid; grid-template-columns:minmax(0, 1fr) 380px; gap:16px; align-items:stretch; }
 .dnav-items { display:grid; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); gap:8px; align-content:start; }
+.dnav-groups { display:grid; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); gap:8px; align-content:start; }
+.dnav-group { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.dnav-group-h { padding:4px 14px 6px; font-size:10.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:var(--olive-light); }
 .dnav-item { display:flex; flex-direction:column; border-radius:18px; border:0.5px solid transparent; transition:background .18s, border-color .18s; }
 .dnav-item.on { background:var(--card); border-color:var(--border-2); }
 .dnav-item-main { flex:1; display:flex; align-items:flex-start; gap:12px; padding:14px; color:var(--text); text-decoration:none; border-radius:18px; cursor:pointer; }   /* the whole card is the link */
@@ -420,7 +423,7 @@ nav {
 .dnav-item-tx { min-width:0; display:flex; flex-direction:column; gap:3px; }
 .dnav-item-tx b { font-family:'Manrope',var(--sans); font-size:14.5px; font-weight:800; display:flex; align-items:center; gap:6px; }
 .dnav-item.here .dnav-item-tx b::after { content:''; width:6px; height:6px; border-radius:50%; background:var(--olive-light); }
-.dnav-item-tx small { font-size:12px; line-height:1.4; color:var(--text-3); display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.dnav-item-tx small { font-size:12px; line-height:1.4; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .dnav-item-ic.is-av { padding:0; overflow:hidden; border-radius:50%; }
 .dnav-item-ic.is-av img { width:100%; height:100%; object-fit:cover; }
 .dnav-item.is-out .dnav-item-ic { background:linear-gradient(145deg, #d24b4b, #9e2b2b); }
@@ -633,6 +636,11 @@ nav {
 .mtog-sub .mtog-btn { flex:1 1 0; min-width:0; flex-direction:row; border-radius:0; padding:10px 4px; font-size:13px; font-weight:600; color:var(--text-3); }
 .mtog-sub .mtog-btn + .mtog-btn { border-inline-start:0.5px solid var(--border-2); }
 .mtog-sub .mtog-btn.on { background:var(--olive); color:#fff; }
+.mtog-btn.nav-msg-btn { position:relative; }
+.mtog-btn .mtog-badge { top:4px; inset-inline-end:calc(50% - 24px); }
+.mtog-sub.scroll { overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:none; }
+.mtog-sub.scroll::-webkit-scrollbar { display:none; }
+.mtog-sub.scroll .mtog-btn { flex:1 0 auto; padding:10px 14px; white-space:nowrap; }
 @container mtog (max-width:330px) { .mtog-main:not(.two):not(.grid) .mtog-btn { font-size:10.5px; letter-spacing:-.1px; } }
 .mtog-in { container:mtog / inline-size; }
 
@@ -701,7 +709,7 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
   .mtog { display:grid; }
   #notifPanel { padding-bottom:calc(96px + env(safe-area-inset-bottom)); }   /* last ones clear the bar */
   /* the toggles replace these page switchers */
-  #listsModeToggle, #notesModeToggle, #socNavDD, #socSideNav, #frScope .soc-toggle { display:none !important; }
+  #listsModeToggle, #notesModeToggle { display:none !important; }
   body > .site-footer { padding-bottom:calc(1.2rem + 96px + env(safe-area-inset-bottom)); }   /* clear the bar */
 }
 /* Phones in the browser (Safari / Chrome, not the installed app): the bar sits flat on the
@@ -1171,6 +1179,8 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .pn-toggle-btn + .pn-toggle-btn { border-inline-start:0.5px solid var(--border-2); }
 .pn-toggle-btn:hover { color:var(--text); }
 .pn-toggle-btn.active { background:var(--olive); color:#fff; }
+[data-theme="light"] .pn-toggle-btn:not(.active) { color:var(--text-2); }   /* --text-3 is too faint on the light toggle */
+[data-theme="light"] .pn-toggle-btn:not(.active):hover { color:var(--text); }
 .pn-toggle-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
 
 /* ── Info · Ratings · Note switcher (MSSViews, info-popup.js) ──
@@ -1497,6 +1507,7 @@ input.sf-dd-trigger { cursor:text; display:block; padding:0 14px; }
 
 /* ── Notifications (bell in the top bar) ── */
 .notif-btn { position:relative; }
+.nav-msg-btn { text-decoration:none; }
 /* Phone / tablet bell — the same look as the computer one, 40px like the search button */
 .notif-btn-mobile, .notif-btn-desktop {
   width:38px; height:38px; border-radius:50%; flex-shrink:0; cursor:pointer;
@@ -3644,7 +3655,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
   --border-2:     rgba(0,0,0,0.2);
   --text:         #1A1A1A;
   --text-2:       #4A4A4A;
-  --text-3:       #6A6A6A;
+  --text-3:       #5C5C5C;   /* at least 4.5:1 on the page and card colours */
 }
 
 [data-theme="light"] nav { background:rgba(226,218,208,0.93); }
@@ -5752,8 +5763,6 @@ button.disc-side-link { width:100%; background:none; font:inherit; font-size:13.
 button.disc-side-link:hover { background:var(--bg-3); }
 button.disc-side-link.active { background:var(--olive-faint); }
 button.disc-side-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.disc-side-link .soc-nav-count { margin-inline-start:auto; font-family:var(--bebas); font-size:15px; letter-spacing:.3px; color:var(--text-3); }
-.disc-side-link .fr-tab-dot { margin-inline-start:auto; }
 .disc-side-head { font-size:10px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:var(--text-3); padding:6px 14px 8px; }
 .disc-main { flex:1; min-width:0; }
 @media(max-width:900px) {
@@ -5778,7 +5787,8 @@ button.disc-side-link:focus-visible { outline:2px solid var(--olive-light); outl
 }
 .soc-av { border-radius:50%; overflow:hidden; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; font-family:var(--serif); font-weight:600; }
 .soc-av img { width:100%; height:100%; object-fit:cover; }
-.soc-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:1rem; }
+.soc-head { display:flex; align-items:flex-end; justify-content:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:1rem; }
+.soc-head-start { justify-content:flex-start; }
 .soc-toggle { margin:0 0 1.25rem; max-width:100%; }
 .soc-toggle .pn-toggle-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; }
 .poll-link { background:none; border:none; padding:4px 2px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-family:'Manrope',var(--sans); font-size:12.5px; font-weight:600; color:var(--text-2); }
@@ -7592,12 +7602,12 @@ body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-ins
       .qp-trigger, .input-clear-btn, .notes-search-card-close, .tmdb-lock-btn, .push-switch, .dp-close, .sf-close,
       .genre-opt, .pn-toggle-btn, .td-notes-sort-btn, .mss-vis-opt, .prof-edit-btn, .prof-share-btn, .td-refresh, .sel-dd-trigger,
       .btn-add-entry, .fm-btn, .td-trailer-link, .mtog-btn, .disc-see-all, .push-link, .settings-back-link, .td-ep-graph-link,
-      .xp-all, .fr-sent-toggle, .footer-tmdb-link, .cc-strip, .sec-left, .td-in-lib-go, .export-btn, .det-back) { position:relative; }
+      .xp-all, .footer-tmdb-link, .cc-strip, .sec-left, .td-in-lib-go, .export-btn, .det-back) { position:relative; }
   :is(.ep-btn, .ttp-btn, .sf-icon-btn, .vt-btn, .chevron-btn, .fm-icon-btn, .mss-rt-btn, .w-list-action-btn, .fav-cast-btn,
       .qp-trigger, .input-clear-btn, .notes-search-card-close, .tmdb-lock-btn, .push-switch, .dp-close, .sf-close,
       .genre-opt, .pn-toggle-btn, .td-notes-sort-btn, .mss-vis-opt, .prof-edit-btn, .prof-share-btn, .td-refresh, .sel-dd-trigger,
       .btn-add-entry, .fm-btn, .td-trailer-link, .mtog-btn, .disc-see-all, .push-link, .settings-back-link, .td-ep-graph-link,
-      .xp-all, .fr-sent-toggle, .footer-tmdb-link, .cc-strip, .sec-left, .td-in-lib-go, .export-btn, .det-back,
+      .xp-all, .footer-tmdb-link, .cc-strip, .sec-left, .td-in-lib-go, .export-btn, .det-back,
       .fm-pin, .mr-close, .back-to-top)::after {
     content:''; position:absolute; inset:min(0px, calc((100% - 44px) / 2)); border-radius:inherit;
   }
@@ -7838,7 +7848,6 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 /* Friends page: your counts, requests and people to follow back */
 .fr-counts .fl-counts { justify-content:flex-start; margin:0 0 14px; }
 .fr-back .fl-list, .fr-req .fl-list { margin-top:6px; }
-.fr-sent .fl-list { margin-top:8px; }
 /* someone else's profile: follow buttons, their request, a private account */
 .pv-friend-btn.following { background:var(--olive-faint); color:var(--olive-light); border:0.5px solid var(--border-olive); }
 .pv-friend-btn svg { width:13px; height:13px; }

@@ -14,7 +14,7 @@
    MSSChallenges.mount(el, user, { ch })   the section (ch: scroll to that one)
    MSSChallenges.details(id)                the Details popup — how it works, the titles, the medal
 
-   Uses friends.html's _frAccepted for the invite lists, the shared Social
+   Uses social-core.js's _frAccepted for the invite lists, the shared Social
    popup (_socDialog, social.js), the filter dropdown (SF.dd, sort-filter.js),
    the date range picker (MSSDateRange, date-range.js), medals.js, spotlights.js
    (tags, poster strip, preview) and the Polls / Inbox button styles.
@@ -48,8 +48,7 @@ const MSSChallenges = (() => {
   async function mount(target, u, o = {}) {
     el = target; user = u;
     if (o.ch) focus = o.ch;
-    const head = `<div class="soc-head"><div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Challenges</div></div>
-      ${user ? `<span id="chHeadBtn">${newBtn()}</span>` : ''}</div>`;
+    const head = user ? `<div class="soc-head"><span id="chHeadBtn">${newBtn()}</span></div>` : '';
     if (!user) {
       el.innerHTML = head + `<div class="mss-es">${mssArt('watched')}<div class="mss-es-title">Challenges with friends</div><div class="mss-es-text">Sign in to race your friends to a watching goal.</div></div>`;
       return;
@@ -71,6 +70,8 @@ const MSSChallenges = (() => {
     list = (a.value || []).filter(c => !c.official);
     off = { me_official: !!b.value?.me_official, can_official: !!b.value?.can_official, list: b.value?.list || [] };
     const hb = document.getElementById('chHeadBtn'); if (hb) hb.innerHTML = newBtn();
+    const n = list.length + off.list.length;
+    if (n) window.MSSSocial?.count(`${n} ${n === 1 ? 'challenge' : 'challenges'}`);
     draw();
     if (toggleEnded.again) { toggleEnded.again = false; endedOpen = false; toggleEnded(); }
     // opening this page can finish a challenge (get_challenges) → the "You finished!" popup (nav.js, 067)

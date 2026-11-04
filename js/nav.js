@@ -631,6 +631,9 @@ function injectChrome() {
         <button class="btn-add" onclick="openAddModal()">
           ${icon('plus', 14)} Add
         </button>
+        <a class="notif-btn notif-btn-desktop nav-auth-only nav-msg-btn" href="messages.html" aria-label="Messages">
+          ${icon('inbox', 17)}<span class="notif-badge" data-msg-badge></span>
+        </a>
         <button class="notif-btn notif-btn-desktop nav-auth-only" onclick="toggleNotifPanel(event)" aria-label="Notifications">
           ${icon('bell', 17)}<span class="notif-badge" data-notif-badge></span>
         </button>
@@ -891,15 +894,13 @@ document.addEventListener('click', () => {
    The same four tabs as the phone bar (Home · Library · Social · You — MSS_TABS).
    Click a tab (or ↓ on it) and a panel drops under the bar, exactly as wide as it —
    click it again, click outside or press Esc to close: the tab's pages as cards (no sub-shortcuts —
-   the pages have their own toggles / side menu), and on the far right a showcase
+   the pages have their own toggles), and on the far right a showcase
    card for the page you're pointing at, in the Start Exploring cards' look
    (index.html .xp-card). The tab you're in is olive with an underline, like before, and
    shows the page you're on in place of its name ("TV Shows" for Library…).
 ═════════════════════════════════════════════════════════════ */
 const DNAV_INFO = {
-  'friends.html?s=lists':       'Your friends’ lists — and the ones you make together.',
-  'friends.html?s=notes':       'What your friends wrote about what they watched.',
-  'friends.html?s=blend':       'A mix of picks you and a friend will both enjoy.',
+  'blend.html':       'A mix of picks you and a friend will both enjoy.',
   'index.html':                 'Your portfolio at a glance — what you’re watching, what’s next and what friends are up to.',
   'discover.html':              'Trending now, the Top 250s and hidden gems — find your next obsession.',
   'library.html':               'Everything you’ve added, in one place — watching, watchlist and watched.',
@@ -909,13 +910,12 @@ const DNAV_INFO = {
   'cartoons.html':              'Your animated shows and films.',
   'completed.html':             'Everything you’ve finished, ranked by your scores.',
   'friends.html':               'Your friends, requests and people you might know.',
-  'friends.html?s=activity':    'What your friends have been watching and rating.',
-  'friends.html?s=compare':     'Line your taste up with a friend’s, side by side.',
-  'friends.html?s=recs':        'Titles your friends sent you, and the ones you sent.',
-  'friends.html?s=epchat':      'Talk about episodes with your friends.',
-  'friends.html?s=night':       'Pick something to watch together.',
-  'friends.html?s=challenges':  'Race your friends to a watching goal.',
-  'friends.html?s=polls':       'Ask your friends what to watch next.',
+  'activity.html':    'What your friends have been watching and rating.',
+  'compare.html':     'Line your taste up with a friend’s, side by side.',
+  'episode-chat.html':      'Talk about episodes with your friends.',
+  'movie-night.html':       'Pick something to watch together.',
+  'challenges.html':  'Race your friends to a watching goal.',
+  'polls.html':       'Ask your friends what to watch next.',
   'profile.html':               'Your profile — stats, favourites and taste.',
   'lists.html':                 'Your lists, ones shared with you and the community’s.',
   'notes.html':                 'Your thoughts on everything you watch.',
@@ -941,30 +941,31 @@ function _dnavAcct() {
 }
 const _dnavTab = k => k === 'acct' ? _dnavAcct() : _dnavTabs().find(x => x.k === k);
 const _dnavInfo = it => it.info || DNAV_INFO[it.href] || '';
-// Desktop's Social menu also has your friends' Lists and Notes, and Blend on its own, like the
-// Social page's side menu (on phones they sit under You → Lists / Notes → Friends, and Compare → Blend)
-const DNAV_EXTRA = { social: [
-  { after: 'friends.html?s=activity', items: [
-    { label: 'Lists', icon: 'layers', href: 'friends.html?s=lists' },
-    { label: 'Notes', icon: 'notebook', href: 'friends.html?s=notes' },
-  ] },
-  { after: 'friends.html?s=compare', items: [{ label: 'Blend', icon: 'shuffle', href: 'friends.html?s=blend' }] },
+// Desktop's Social menu, in two groups. (On phones the same groups are the top toggles.)
+const DNAV_GROUPS = { social: [
+  ['People', [
+    { label: 'Friends', icon: 'users', href: 'friends.html' },
+    { label: 'Activity', icon: 'activity', href: 'activity.html' },
+    { label: 'Compare', icon: 'compare', href: 'compare.html' },
+    { label: 'Blend', icon: 'shuffle', href: 'blend.html' },
+  ]],
+  ['Together', [
+    { label: 'Movie Night', icon: 'film', href: 'movie-night.html' },
+    { label: 'Challenges', icon: 'trophy', href: 'challenges.html' },
+    { label: 'Polls', icon: 'poll', href: 'polls.html' },
+    { label: 'Episode Chat', icon: 'comment', href: 'episode-chat.html' },
+  ]],
 ] };
-const _dnavTabs = () => MSS_TABS.filter(t => t.items).map(t => {
-  let items = t.items;
-  (DNAV_EXTRA[t.k] || []).forEach(x => { const at = items.findIndex(it => it.href === x.after) + 1; items = [...items.slice(0, at), ...x.items, ...items.slice(at)]; });
-  return items === t.items ? t : { ...t, items };
-});
-// Where you are, by the desktop tabs: friends.html?s=lists / ?s=notes belong to Social here
+const _dnavTabs = () => MSS_TABS.filter(t => t.items).map(t => DNAV_GROUPS[t.k] ? { ...t, groups: DNAV_GROUPS[t.k], items: DNAV_GROUPS[t.k].flatMap(([, items]) => items) } : t);
+// Where you are, by the desktop tabs: everything in a group belongs to Social here
 function _dnavWhere() {
-  const u = new URL(location.href), key = u.pathname.split('/').pop() === 'friends.html' && u.searchParams.get('s') ? 'friends.html?s=' + u.searchParams.get('s') : null;
+  const key = _mtabKey(new URL(location.href));
   for (const t of _dnavTabs()) {
-    const i = key ? t.items.findIndex(it => it.href === key) : -1;
-    if (i >= 0 && (DNAV_EXTRA[t.k] || []).some(x => x.items.some(it => it.href === key))) return { tab: t.k, item: i };
+    const i = t.groups ? t.items.findIndex(it => it.href === key) : -1;
+    if (i >= 0) return { tab: t.k, item: i };
   }
   const w = _mtabWhere(), t = _dnavTabs().find(x => x.k === w.tab);
-  // the extra items shift the index — find it again by href
-  const it = w.item >= 0 ? MSS_TABS.find(x => x.k === w.tab).items[w.item] : null;
+  const it = w.item >= 0 && w.tab !== 'social' ? MSS_TABS.find(x => x.k === w.tab).items[w.item] : null;
   return { tab: w.tab, item: it ? t.items.findIndex(x => x.href === it.href) : -1 };
 }
 // the phone toggles shorten "TV Shows" to "TV" — here there's room for the full name
@@ -986,7 +987,7 @@ function _dnavShowcase(t, it) {
       <span class="dnav-show-orb${av ? ' has-av' : ''}"><span class="dnav-show-ring"></span><span class="dnav-show-ring r2"></span>${av ? `<img src="${av}" alt="">` : icon(it.icon, 54)}</span>
       <span class="dnav-show-tx">
         <span class="dnav-show-badge">${escHTML(t.label)}</span>
-        <span class="dnav-show-title">${escHTML(it.label === 'Inbox' ? 'Recommendations' : _dnavLabel(it))}</span>
+        <span class="dnav-show-title">${escHTML(_dnavLabel(it))}</span>
         <span class="dnav-show-sub">${escHTML(_dnavInfo(it))}</span>
         <span class="dnav-show-cta">${it.act ? escHTML(it.label) : 'Open'} ${icon('arrowRight', 13)}</span>
       </span>
@@ -1013,15 +1014,17 @@ function _dnavShow(k) {
   const here = k === 'acct' ? t.items.findIndex(it => it.href === page) : where.tab === k ? where.item : -1;
   const me = safeURL(window._navUserProfile?.avatar_url);
   mega.setAttribute('aria-label', t.label);
-  document.getElementById('dnavMegaIn').innerHTML = `
-    <div class="dnav-items" style="--cols:${t.items.length > 6 ? 4 : t.items.length > 2 ? 3 : 2}">${t.items.map((it, i) => `
+  const card = (it, i) => `
       <div class="dnav-item${i === here ? ' here' : ''}${it.out ? ' is-out' : ''}" data-i="${i}">
         <a class="dnav-item-main" ${it.act ? `href="#" role="button" onclick="${it.act};return false"` : `href="${it.href}"`}${i === here ? ' aria-current="page"' : ''}>
           <span class="dnav-item-ic${it.me && me ? ' is-av' : ''}" style="--xp-a:${(DNAV_TONE[k] || DNAV_TONE.home)[0]}">${it.me && me ? `<img src="${me}" alt="">` : icon(it.icon, 19)}</span>
           <span class="dnav-item-tx"><b translate="${it.me ? 'no' : 'yes'}">${escHTML(_dnavLabel(it))}</b><small>${escHTML(_dnavInfo(it))}</small></span>
         </a>
-      </div>`).join('')}
-    </div>
+      </div>`;
+  let at = 0;
+  document.getElementById('dnavMegaIn').innerHTML = `
+    ${t.groups ? `<div class="dnav-groups" style="--cols:${t.groups.length}">${t.groups.map(([label, items]) => `<div class="dnav-group" role="group" aria-label="${label}"><div class="dnav-group-h">${label}</div>${items.map(it => card(it, at++)).join('')}</div>`).join('')}</div>`
+      : `<div class="dnav-items" style="--cols:${t.items.length > 6 ? 4 : t.items.length > 2 ? 3 : 2}">${t.items.map(card).join('')}</div>`}
     <div class="dnav-show-slot" id="dnavShow" data-i=""></div>`;
   _dnavPick(Math.max(0, here));
   mega.hidden = false;
@@ -1060,9 +1063,9 @@ function _dnavInit() {
    (+) opens a small menu: Add a title · Write a note · New list · New poll.
 
    Top toggles: the Lists / Notes toggle made for phones — full width, pinned
-   under the top bar, one row per tab (Social: two even rows of four; You: two of three).
-   Lists, Notes and Compare get a second, joined row. Every item is a link to
-   a real page (or a ?s= / ?mode= of one); a page can switch in place instead
+   under the top bar, one row per tab (You: two rows of three).
+   Social's groups, Lists and Notes get a second, joined row (Social's scrolls sideways). Every item is a link to
+   a real page (or a ?view= of one); a page can switch in place instead
    by setting window.mssTabGo(url) → true. Pages that change their own URL
    call mssTabsRefresh(). Scrolling down folds the toggles away; scrolling up
    brings them back.
@@ -1078,20 +1081,15 @@ const MSS_TABS = [
   { k: 'lib', label: 'Library', icon: 'grid', href: 'library.html',
     items: LIBRARY_PAGES.map(p => ({ label: p.label === 'TV Shows' ? 'TV' : p.label, icon: p.iconName, href: p.href })) },
   { k: 'add' },
-  { k: 'social', label: 'Social', icon: 'users', href: 'friends.html', rows: 4, items: [
-    { label: 'Friends', icon: 'users', href: 'friends.html' },
-    { label: 'Activity', icon: 'activity', href: 'friends.html?s=activity' },
-    { label: 'Compare', icon: 'compare', href: 'friends.html?s=compare', sub: [['Compare', 'friends.html?s=compare'], ['Blend', 'friends.html?s=blend']] },
-    { label: 'Inbox', icon: 'inbox', href: 'friends.html?s=recs' },
-    { label: 'Ep Chat', icon: 'comment', href: 'friends.html?s=epchat' },
-    { label: 'Movie Night', icon: 'film', href: 'friends.html?s=night' },
-    { label: 'Challenges', icon: 'trophy', href: 'friends.html?s=challenges' },
-    { label: 'Polls', icon: 'poll', href: 'friends.html?s=polls' },
+  { k: 'social', label: 'Social', icon: 'users', href: 'friends.html', items: [
+    { label: 'People', icon: 'users', href: 'friends.html', scroll: true, sub: [['Friends', 'friends.html'], ['Activity', 'activity.html'], ['Compare', 'compare.html'], ['Blend', 'blend.html']] },
+    { label: 'Together', icon: 'film', href: 'movie-night.html', scroll: true, sub: [['Movie Night', 'movie-night.html'], ['Challenges', 'challenges.html'], ['Polls', 'polls.html'], ['Episode Chat', 'episode-chat.html']] },
+    { label: 'Messages', icon: 'inbox', href: 'messages.html', msg: true },   // desktop: the icon next to the bell
   ] },
   { k: 'you', label: 'You', icon: 'user', href: 'profile.html', rows: 3, items: [
     { label: 'Profile', icon: 'user', href: 'profile.html' },
-    { label: 'Lists', icon: 'layers', href: 'lists.html', sub: [['Personal', 'lists.html'], ['Friends', 'friends.html?s=lists'], ['Community', 'lists.html?mode=community']] },
-    { label: 'Notes', icon: 'notebook', href: 'notes.html', sub: [['Personal', 'notes.html'], ['Friends', 'friends.html?s=notes'], ['Community', 'notes.html?mode=community']] },
+    { label: 'Lists', icon: 'layers', href: 'lists.html', sub: [['Mine', 'lists.html'], ['Friends', 'lists.html?view=friends'], ['Community', 'lists.html?view=community']] },
+    { label: 'Notes', icon: 'notebook', href: 'notes.html', sub: [['Mine', 'notes.html'], ['Friends', 'notes.html?view=friends'], ['Community', 'notes.html?view=community']] },
     { label: 'Episodes', icon: 'episodes', href: 'episodes.html' },
     { label: 'Medals', icon: 'trophy', href: 'cabinet.html' },
     { label: 'Export', icon: 'download', href: 'export.html' },
@@ -1101,9 +1099,8 @@ const _BNAV_YOU_PAGES = ['notifications.html', 'settings.html'];
 
 /* Where this URL sits: { tab, item, sub } (item / sub are indexes, -1 = none) */
 function _mtabKey(u) {
-  const page = u.pathname.split('/').pop() || 'index.html', q = u.searchParams;
-  if (page === 'friends.html' && q.get('s') && q.get('s') !== 'friends') return page + '?s=' + q.get('s');
-  if ((page === 'lists.html' || page === 'notes.html') && q.get('mode') === 'community') return page + '?mode=community';
+  const page = u.pathname.split('/').pop() || 'index.html';
+  if (page === 'lists.html' || page === 'notes.html') { const v = mssViewOf(u.search); return v === 'mine' ? page : `${page}?view=${v}`; }
   return page;
 }
 function _mtabWhere(href = location.href) {
@@ -1181,15 +1178,18 @@ function _bnavDo(k) {
   if (k === 'note') return page === 'notes.html' && typeof openNotesSearchPopup === 'function' ? openNotesSearchPopup('add') : (location.href = 'notes.html?add=1');
   if (k === 'list') return page === 'lists.html' && typeof MSSListStudio !== 'undefined' ? MSSListStudio.open() : (location.href = 'lists.html?new=1');
   if (k === 'poll') {
-    if (page === 'friends.html' && typeof setSocialSection === 'function') { setSocialSection('polls'); MSSPolls.create(); return; }
-    location.href = 'friends.html?s=polls&new=1';
+    if (page === 'polls.html' && typeof MSSPolls !== 'undefined') return MSSPolls.create();
+    location.href = 'polls.html?new=1';
   }
 }
-/* Red dot on Social while follow requests are waiting */
-function _bnavDot(n) {
+/* Red dot on Social while follow requests or messages are waiting */
+let _bnavReq = 0, _bnavMsg = 0;
+function _bnavDot(n) { _bnavReq = n; _bnavDotPaint(); }
+function _bnavDotPaint() {
   const a = document.querySelector('#bnav [data-tab="social"]'); if (!a) return;
   a.querySelector('.bnav-dot')?.remove();
-  if (n > 0) a.insertAdjacentHTML('beforeend', `<span class="bnav-dot"><span class="sr-only">, ${n} follow request${n === 1 ? '' : 's'}</span></span>`);
+  const why = [_bnavReq > 0 && `${_bnavReq} follow request${_bnavReq === 1 ? '' : 's'}`, _bnavMsg > 0 && `${_bnavMsg} new message${_bnavMsg === 1 ? '' : 's'}`].filter(Boolean).join(', ');
+  if (why) a.insertAdjacentHTML('beforeend', `<span class="bnav-dot"><span class="sr-only">, ${why}</span></span>`);
 }
 
 /* ── Top toggles ── */
@@ -1199,16 +1199,20 @@ function _mtogRender() {
   const w = _mtabWhere(), t = MSS_TABS.find(x => x.k === w.tab);
   if (w.item < 0 || !t?.items) { box.hidden = true; inner.innerHTML = ''; _mtogSize(); return; }
   const cur = (i, on) => on ? ` class="mtog-btn on" aria-current="page"` : ` class="mtog-btn"`;
-  const btn = (it, i) => `<a href="${it.href}"${cur(i, i === w.item)} onclick="return _mtogGo(event, this)">${icon(it.icon, 18)}<span>${it.label}</span></a>`;
+  const btn = (it, i) => `<a href="${it.href}"${cur(i, i === w.item).replace(/class="/, `class="${it.msg ? 'nav-msg-btn ' : ''}`)} onclick="return _mtogGo(event, this)">${icon(it.icon, 18)}<span>${it.label}</span>${it.msg ? '<span class="notif-badge mtog-badge" data-msg-badge></span>' : ''}</a>`;
   const rows = t.rows ? [t.items.slice(0, t.rows), t.items.slice(t.rows)] : [t.items];
   const it = t.items[w.item];
   inner.innerHTML = `<div class="mtog-main${t.rows ? ' grid' : ''}${t.items.length === 2 ? ' two' : ''}"${t.rows ? ` style="--cols:${t.rows}"` : ''} role="navigation" aria-label="${t.label}">
       ${rows.map((r, ri) => `<div class="mtog-row">${r.map((x, i) => btn(x, i + (ri ? t.rows : 0))).join('')}</div>`).join('')}
     </div>
-    ${it.sub ? `<div class="mtog-sub" role="navigation" aria-label="${it.label}">${it.sub.map(([l, h], i) =>
+    ${it.sub ? `<div class="mtog-sub${it.scroll ? ' scroll' : ''}" role="navigation" aria-label="${it.label}">${it.sub.map(([l, h], i) =>
       `<a href="${h}"${cur(i, i === w.sub)} onclick="return _mtogGo(event, this)">${l}</a>`).join('')}</div>` : ''}`;
   box.hidden = false;
   _mtogSize();
+  if (t.items.some(x => x.msg)) _navMsgBadge(_navMsgCount);
+  // a row that scrolls sideways: bring the page you're on into view
+  const row = inner.querySelector('.mtog-sub.scroll'), on = row?.querySelector('.on');
+  if (on) row.scrollLeft = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
 }
 window.mssTabsRefresh = _mtogRender;
 function _mtogGo(e, a) {
@@ -2639,10 +2643,28 @@ function _notifSection(n) {
   return 'activity';
 }
 
+/* Messages: how many are waiting. Desktop shows it on the icon next to the bell; phones on
+   Social's Messages toggle and the dot on the Social tab. Follows new notifications, and
+   MSSShare tells it when you've read some. */
+let _navMsgCount = 0;
+function _navMsgBadge(count) {
+  _navMsgCount = count;
+  _bnavMsg = count; _bnavDotPaint();
+  document.querySelectorAll('[data-msg-badge]').forEach(b => { b.textContent = count > 9 ? '9+' : count; b.classList.toggle('show', count > 0); });
+  document.querySelectorAll('.nav-msg-btn').forEach(a => {
+    a.setAttribute('aria-label', count > 0 ? `Messages, ${count} new` : 'Messages');
+    if ((location.pathname.split('/').pop() || '') === 'messages.html') a.setAttribute('aria-current', 'page');
+  });
+}
+async function _navMsgRefresh() {
+  try { const { data, error } = await sb.rpc('inbox_unread_count'); if (!error) _navMsgBadge(Number(data) || 0); } catch {}
+}
+
 function _notifInit(user) {
   if (!user || _notifUser) return;
   _notifUser = user;
   _notifLoad();
+  _navMsgRefresh();
   _notifLive(user);
   // Movie Night (050): a reminder on the day of a dated night — checked when the app opens (every 20 min at most)
   try {
@@ -2654,7 +2676,7 @@ function _notifInit(user) {
   } catch {}
   // Safety net if the live connection drops (and when coming back to the tab)
   setInterval(() => _notifLoad(), 60000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) _notifLoad(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { _notifLoad(); _navMsgRefresh(); } });
 }
 
 /* Live updates: Supabase Realtime pushes each new notification row the
@@ -2664,7 +2686,7 @@ function _notifInit(user) {
 let _notifLiveTimer = null;
 function _notifLive(user) {
   if (!sb || typeof sb.channel !== 'function') return;
-  const reload = () => { clearTimeout(_notifLiveTimer); _notifLiveTimer = setTimeout(() => _notifLoad(), 300); };
+  const reload = () => { clearTimeout(_notifLiveTimer); _notifLiveTimer = setTimeout(() => { _notifLoad(); _navMsgRefresh(); }, 300); };
   try {
     sb.channel('mss-notif-' + user.id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, reload)
@@ -2788,7 +2810,7 @@ function _notifItemHTML(n, opts = {}) {
     else if (n.iFollow === 'pending') actions = `<span class="notif-state">Requested</span>`;
     else if (n.followsMe === 'accepted' && n.iFollow === 'none') actions = (n.type === 'follow_request' ? `<span class="notif-state">Follows you</span>` : '') + backBtn;
     else if (n.type === 'follow_request' && n.followsMe === 'none') actions = `<span class="notif-state">Declined</span>`;
-    href = n.actor ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}&u=${encodeURIComponent(n.actor.username || '')}` : 'friends.html';
+    href = n.type === 'follow_request' ? 'friends.html?view=requests' : n.actor ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}&u=${encodeURIComponent(n.actor.username || '')}` : 'friends.html';
   } else if (n.type === 'list_invite') {
     text = `${who} invited you to collaborate on ${title}`; icon2 = 'layers';
     if (n.inviteStatus === 'pending') {
@@ -2822,7 +2844,7 @@ function _notifItemHTML(n, opts = {}) {
       text = `${who} ${_notifFriendEpText(m, t)}`; icon2 = 'tv';
       if (m.tmdb_id) href = `episodes.html?show=${encodeURIComponent(m.tmdb_id)}${n.actor_id ? `&user=${encodeURIComponent(n.actor_id)}` : ''}`;
     }
-    if (n.type === 'friend_note') { text = `${who} wrote a note on ${t}`; icon2 = 'notebook'; href = 'friends.html?s=notes'; }
+    if (n.type === 'friend_note') { text = `${who} wrote a note on ${t}`; icon2 = 'notebook'; href = 'notes.html?view=friends'; }
     extra = (n.type === 'friend_episode' && _notifEpCount(m) === 1 && m.tmdb_id ? mssEpNameHTML(m.tmdb_id, m.season, m.episode, 'notif-quote') : '') + _notifTitleCard(m);
   } else if (n.type === 'friend_list') {
     const m = n.meta || {};
@@ -2841,20 +2863,20 @@ function _notifItemHTML(n, opts = {}) {
     text = n.type === 'friend_poll' ? `${who} started a poll: ${q}` : `${who} commented on your poll ${q}`;
     icon2 = n.type === 'friend_poll' ? 'poll' : 'comment';
     if (n.type === 'poll_comment' && m.excerpt) extra = `<div class="notif-quote" translate="no">${escHTML(m.excerpt)}</div>`;
-    href = m.poll_id ? `friends.html?s=polls&poll=${encodeURIComponent(m.poll_id)}` : 'friends.html?s=polls';
+    href = m.poll_id ? `polls.html?poll=${encodeURIComponent(m.poll_id)}` : 'polls.html';
   } else if (n.type === 'friend_rec') {
     const m = n.meta || {};
     const t = `<b translate="no">${escHTML(m.title || 'something')}</b>`;
     text = m.kind === 'entry' ? `${who} shared that they watched ${t}` : m.kind === 'list' ? `${who} shared their list ${t}` : `${who} recommended ${t} to you`;
     icon2 = m.kind === 'list' ? 'layers' : 'send';
     extra = (m.message ? `<div class="notif-quote" translate="no">${escHTML(m.message)}</div>` : '') + (m.kind === 'list' ? '' : _notifTitleCard({ ...m, media_type: m.tmdb_type }));
-    href = m.rec_id ? `friends.html?s=recs&box=received&rec=${encodeURIComponent(m.rec_id)}` : 'friends.html?s=recs';
+    href = m.rec_id ? `messages.html?box=received&rec=${encodeURIComponent(m.rec_id)}` : 'messages.html';
   } else if (n.type === 'challenge') {
     // Challenges (051): an invite, or someone reaching the goal
     const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'a challenge')}</b>`;
     text = m.kind === 'finished' ? `${who} finished ${t} — ${escHTML(m.goal)} watched!` : `${who} challenged you: ${t}${m.goal ? ` · watch ${escHTML(m.goal)}` : ''}`;
     icon2 = 'trophy';
-    href = m.challenge_id ? `friends.html?s=challenges&ch=${encodeURIComponent(m.challenge_id)}` : 'friends.html?s=challenges';
+    href = m.challenge_id ? `challenges.html?ch=${encodeURIComponent(m.challenge_id)}` : 'challenges.html';
   } else if (n.type === 'achievement') {
     // Achievements (060): the first time, one "check your cabinet" for everything already earned
     const m = n.meta || {}, more = (Number(m.count) || 1) - 1;
@@ -2867,20 +2889,20 @@ function _notifItemHTML(n, opts = {}) {
     const m = n.meta || {};
     text = _notifNightText(m, who); icon2 = m.kind === 'review' ? 'ratingStar' : m.kind === 'decided' ? 'sparkles' : m.kind === 'cancelled' ? 'x' : m.kind === 'reminder' ? 'clock' : 'film';
     if (m.kind === 'decided' && m.pick) extra = _notifTitleCard({ title: m.pick, poster_url: m.poster_url, tmdb_type: m.tmdb_type, media_type: m.tmdb_type });
-    href = m.night_id ? `friends.html?s=night&night=${encodeURIComponent(m.night_id)}` : 'friends.html?s=night';
+    href = m.night_id ? `movie-night.html?night=${encodeURIComponent(m.night_id)}` : 'movie-night.html';
   } else if (n.type === 'episode_chat') {
     // Episode chat (049): only sent to friends who've watched the episode too
     const m = n.meta || {};
     text = `${who} commented on S${escHTML(m.season)} · E${escHTML(m.episode)} of <b translate="no">${escHTML(m.title || 'a show')}</b>`; icon2 = 'comment';
     if (m.body) extra = `<div class="notif-quote" translate="no">${escHTML(m.body)}</div>`;
-    href = `friends.html?s=epchat&ep=${encodeURIComponent(`${m.tmdb_id}:${m.season}:${m.episode}`)}`;
+    href = `episode-chat.html?ep=${encodeURIComponent(`${m.tmdb_id}:${m.season}:${m.episode}`)}`;
   } else if (n.type === 'rec_reply') {
     // Inbox conversation (048): their reply, or what they did with what you sent
     const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'it')}</b>`;
     text = _notifRecReplyText(m, who, t);
     icon2 = m.code ? ({ added: 'plus', had_it: 'check', started: 'play', finished: 'check', saved_list: 'layers' }[m.code] || 'inbox') : 'comment';
     if (!m.code && m.body) extra = `<div class="notif-quote" translate="no">${escHTML(m.body)}</div>`;
-    href = m.rec_id ? `friends.html?s=recs&box=${m.box === 'sent' ? 'sent' : 'received'}&rec=${encodeURIComponent(m.rec_id)}` : 'friends.html?s=recs';
+    href = m.rec_id ? `messages.html?box=${m.box === 'sent' ? 'sent' : 'received'}&rec=${encodeURIComponent(m.rec_id)}` : 'messages.html';
   } else if (n.type === 'comment' || n.type === 'like') {
     // Comments, replies and likes on your things (066)
     const m = n.meta || {};

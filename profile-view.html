@@ -417,7 +417,7 @@ function _friendBtnHTML() {
    something, writes a note or makes a list (022 / 047). */
 function _pvMatchHTML() {
   const m = _pvMatch && _pvMatch.pct;
-  return m != null ? '<a class="pv-friend-btn pv-match' + (m >= 80 ? ' hi' : '') + '" href="friends.html?s=compare&with=' + encodeURIComponent(_pvUserId) + '" title="Based on ' + _pvMatch.rated.length + ' titles you have both rated — see the full comparison">'
+  return m != null ? '<a class="pv-friend-btn pv-match' + (m >= 80 ? ' hi' : '') + '" href="compare.html?with=' + encodeURIComponent(_pvUserId) + '" title="Based on ' + _pvMatch.rated.length + ' titles you have both rated — see the full comparison">'
     + icon('compare', 12) + ' ' + m + '% taste match</a>' : '';
 }
 // The bell: anyone you follow — when their notification setting includes you (084)

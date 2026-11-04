@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v224';   // MyScreenFolio — restarted at v1 (was mss-v787)
+const CACHE_VERSION = 'msf-v229';   // MyScreenFolio — restarted at v1 (was mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -29,6 +29,14 @@ const STATIC_ASSETS = [
   'cartoons.html',
   'completed.html',
   'friends.html',
+  'activity.html',
+  'compare.html',
+  'blend.html',
+  'movie-night.html',
+  'challenges.html',
+  'polls.html',
+  'episode-chat.html',
+  'messages.html',
   'profile.html',
   'profile-view.html',
   'lists.html',
@@ -48,6 +56,7 @@ const STATIC_ASSETS = [
   'user.html',
   'offline.html',
   'css/style.css',
+  'css/social.css',
   'js/i18n.js',
   'js/config.js',
   'js/emoji-data.js',
@@ -91,6 +100,8 @@ const STATIC_ASSETS = [
   'js/tv-schedule.js',
   'js/browse.js',
   'js/social.js',
+  'js/social-core.js',
+  'js/social-nav.js',
   'js/episode-chat.js',
   'js/movie-night.js',
   'js/date-range.js',

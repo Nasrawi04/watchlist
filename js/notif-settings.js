@@ -6,7 +6,6 @@
        • Alerts — "New notification alerts" (mssNotifPopupsOn / mssSetNotifPopups, nav.js),
          the same switch as Settings → Notifications
        • One switch per kind of notification (profiles.notif_off, set_notif_receive).
-         Follow requests always arrive.
      Sending — who hears about what you do
        • Who: Friends & followers · Friends only · No one (profiles.activity_audience,
          set_activity_audience). Activity pings go to people in it who turned on
@@ -21,11 +20,12 @@
 const NS_RECEIVE = [
   ['releases',     'New releases',          'New episodes and releases of titles in your library'],
   ['activity',     'Activity from people',  'What people you turned “Notify me” on for are watching'],
+  ['requests',     'Follow requests',       'Someone asks to follow your private account. Requests still wait on the Friends page'],
   ['followers',    'New followers',         'Someone follows you, or accepts your follow request'],
   ['comments',     'Comments & replies',    'On your titles, notes, lists and comments'],
   ['likes',        'Likes',                 'On your notes, lists and replies'],
   ['polls',        'Polls',                 'New polls from people you follow, and comments on yours'],
-  ['inbox',        'Inbox',                 'Titles and lists sent to you, and replies'],
+  ['inbox',        'Messages',              'Titles and lists sent to you, and replies'],
   ['lists',        'List invites',          'Invites to collaborate on a list, and answers to yours'],
   ['movie_night',  'Movie Night',           'Invites, picks, changes and reminders'],
   ['challenges',   'Challenges',            'Invites and finishes'],
@@ -71,7 +71,7 @@ const MSSNotifSettings = (() => {
         </section>
         <section class="ns-card" aria-labelledby="nsGetT">
           <div class="ns-title" id="nsGetT">Notify me about</div>
-          <p class="ns-desc">Switch off anything you don’t want. Follow requests always come through.</p>
+          <p class="ns-desc">Switch off anything you don’t want.</p>
           <div id="nsGetList"><div class="ns-loading">Loading…</div></div>
         </section>
         <div class="ns-sec-head"><span class="ns-sec-ic">${icon('share', 15)}</span><div><div class="ns-sec-title">Sending</div><div class="ns-sec-sub">Who hears about what you do</div></div></div>

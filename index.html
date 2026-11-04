@@ -475,7 +475,7 @@ async function renderHomeFriends(user) {
       score: !drop && sc != null ? Number(sc).toFixed(2) : '',
       scoreHTML: drop ? mssDroppedTagHTML(e) : '' });
   }).join('');
-  _homeHScrollSection('homeFriends', 'homeFriendsGrid', 'Your friends', 'Friends Activity', cards, 'friends.html?s=activity');
+  _homeHScrollSection('homeFriends', 'homeFriendsGrid', 'Your friends', 'Friends Activity', cards, 'activity.html');
 }
 function _homeOpenFriend(id) {
   const e = _homeFriendEntries[id];
@@ -549,7 +549,7 @@ function _homeDone(id) { _homeReady.add(id); _homeLayout(); }
   const rows = {
     homeWatching: () => keep(_HOME_WATCH_HEAD) + (mssSkeleton.shape('home')?.one ? _homeWatchOne(ent()) : _homeWatchGrid(n(6, () => _homeWatchCard(ent())))),
     homeFriends: () => keep(_homeRowHTML('', 'Your friends', 'Friends Activity', n(6, () => poster({ overPoster: '<span class="hf-av"></span>',
-      below: '<div class="hf-who"><b>@friend</b> · 2d ago</div>', score: '8.50', typeHTML: '<span class="type-label type-label-overlay-bottom">TV Show</span>' })), 'friends.html?s=activity')),
+      below: '<div class="hf-who"><b>@friend</b> · 2d ago</div>', score: '8.50', typeHTML: '<span class="type-label type-label-overlay-bottom">TV Show</span>' })), 'activity.html')),
     homeRecs: () => keep(_homeRowHTML('', 'Based on your favorites', MSSRecs.category.title, n(6, () => poster({ type: 'tv', score: '7.90' })), MSSRecs.category.href)),
     homeWatchlist: () => keep(_homeRowHTML('', 'Saved', 'From Your Watchlist', n(6, () => poster({ typeHTML: '<span class="type-label type-label-overlay-bottom">TV Show</span>' })))),
     homeRecentlyViewed: () => keep(_homeRowHTML('', 'History', 'Recently Viewed', n(6, () => poster({ year: '' })))),

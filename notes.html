@@ -209,11 +209,8 @@
     </div>
   </div>
 
-  <!-- Personal / Social toggle -->
-  <div class="pn-toggle fade-up" id="notesModeToggle">
-    <button class="pn-toggle-btn active" data-mode="personal" onclick="setNotesMode('personal')">Personal</button>
-    <button class="pn-toggle-btn" data-mode="social" onclick="setNotesMode('social')">Community</button>
-  </div>
+  <!-- Mine / Friends / Community -->
+  <div id="notesModeWrap"></div>
 
   <!-- Stat boxes -->
   <div class="page-stats fade-up fade-up-1" id="notesPageStats"></div>
@@ -268,6 +265,7 @@
 <script src="js/rating-popup.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
+<script src="js/friend-popups.js"></script>
 <script src="js/list-popup.js"></script>
 <script>
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -275,18 +273,19 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replac
 let _notesUser = null;
 let _notesEntries = [];
 let _notesActiveId = null;
-let _notesMode = 'personal';
+let _notesMode = mssViewOf();   // mine | friends | community
 let _socialNotesRaw = [];
 let _socialNotesMyReactions = {}; // entry_id -> 'like' | 'dislike'
-// From a title page's "View all notes": notes.html?mode=community&tmdb=<id>&type=<movie|tv>&t=<name>
+// From a title page's "View all notes": notes.html?view=community&tmdb=<id>&type=<movie|tv>&t=<name>
 let _notesTitle = (q => q.get('tmdb') ? { id: Number(q.get('tmdb')), type: q.get('type') === 'tv' ? 'tv' : 'movie', name: q.get('t') || 'this title' } : null)(new URLSearchParams(location.search));
 
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('notesModeWrap').innerHTML = mssViewToggleHTML('notesModeToggle', 'Whose notes', _notesMode, 'setNotesMode');
   attachClearButton('notesUserSearchInput');
   initPage(async (user) => {
     const q = new URLSearchParams(location.search);
     // Guests can read Community notes; their own notes need an account
-    if (!user && q.get('mode') !== 'community') {
+    if (!user && _notesMode !== 'community') {
       document.querySelector('.page-wrap').innerHTML = `
         <div class="guest-page-state fade-up">
           <div class="guest-page-icon">${icon('notebook', 36)}</div>
@@ -296,13 +295,13 @@ document.addEventListener('DOMContentLoaded', () => {
             <a href="login.html" class="guest-btn-primary">Sign In</a>
             <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
           </div>
-          <a class="guest-browse" href="notes.html?mode=community">Browse Community notes →</a>
+          <a class="guest-browse" href="notes.html?view=community">Browse Community notes →</a>
         </div>`;
       _notesOpenLink();
       return;
     }
     _notesUser = user;
-    if (q.get('mode') === 'community') setNotesMode('social');
+    if (_notesMode !== 'mine') setNotesMode(_notesMode);
     if (!user) { _notesOpenLink(); return; }
     await loadNotesPage();
     _notesOpenLink();
@@ -338,7 +337,7 @@ let _notesReactionCounts = {}; // entry_id -> { like, dislike }
    so switching tabs is instant. */
 async function loadNotesPage() {
   _notesEntries = await getEntries(_notesUser.id) || [];
-  if (_notesMode === 'personal') renderNotesPage();            // ← first paint
+  if (_notesMode === 'mine') renderNotesPage();            // ← first paint
   const withNotes = _notesEntries.filter(e => e.notes && e.notes.trim());
   if (withNotes.length) {
     const { data: reactions } = await sb.from('note_reactions').select('entry_id, is_like').in('entry_id', withNotes.map(e => e.id));
@@ -348,7 +347,7 @@ async function loadNotesPage() {
       if (r.is_like) _notesReactionCounts[r.entry_id].like++;
       else _notesReactionCounts[r.entry_id].dislike++;
     });
-    if (_notesMode === 'personal') renderNotesPage();
+    if (_notesMode === 'mine') renderNotesPage();
   }
   const idle = fn => ('requestIdleCallback' in window) ? requestIdleCallback(fn, { timeout: 2500 }) : setTimeout(fn, 1200);
   idle(() => _fetchSocialNotes().catch(() => {}));            // warm up Community
@@ -421,6 +420,8 @@ SF.register('notesSocial', {
     least_popular: (a, b) => (Number(b.dislike_count) - Number(a.dislike_count)) || (_snScore(a) - _snScore(b)),
   },
   choiceFilters: () => [{
+    key: 'type', label: 'Type', options: [['', 'All Types'], ['tv', 'TV Shows'], ['movie', 'Movies']], test: (n, v) => n.tmdb_type === v,
+  }, {
     key: 'owner', label: 'Whose Notes',
     options: [['', 'Everyone'], ['others', 'Other People'], ['mine', 'Mine']],
     test: (n, v) => v === 'mine' ? n.user_id === _notesUser?.id : n.user_id !== _notesUser?.id,
@@ -431,17 +432,17 @@ SF.register('notesSocial', {
 /* ── Loading skeleton: the toolbar and note cards (yours, or Community's) with sample
    text masked into placeholders — as many as last time (mssSkeleton, config.js) ── */
 mssSkeleton.define('notes-page', () => {
-  const social = _notesMode === 'social' || new URLSearchParams(location.search).get('mode') === 'community';
-  const n = Math.min(Math.max(mssSkeleton.shape(social ? 'notes_c' : 'notes')?.n ?? 3, 1), 6);
+  const social = _notesMode !== 'mine', friends = _notesMode === 'friends';
+  const n = Math.min(Math.max(mssSkeleton.shape(friends ? 'notes_f' : social ? 'notes_c' : 'notes')?.n ?? 3, 1), 6);
   const note = { id: '', entry_id: '', title: 'Sample title', cat: 'tv', genres: ['Drama'], year: 2024, username: 'username', final_score: 8,
     completed_date: '2026-01-01', status: 'completed', ratings: { story: 8 }, notes: 'A sample note, long enough to run across the card the way a real one does.' };
   const card = social ? () => _socialNoteCardHTML(note) : () => MSSNote.cardHTML(note, { counts: { like: 0, dislike: 0 } });
-  return `<div class="mss-toolbar">${mssToolbarHTML(social ? 'Community' : 'Your Notes', n, SF.bar(social ? 'notesSocial' : 'notesMine', 'all'), 'note')
+  return `<div class="mss-toolbar">${mssToolbarHTML(friends ? 'Friends’ Notes' : social ? 'Community' : 'Your Notes', n, SF.bar(friends ? 'notesFriends' : social ? 'notesSocial' : 'notesMine', 'all'), 'note')
       .replace(/class="(mss-toolbar-title|sort-bar[^"]*)"/g, 'class="$1" data-skel-keep')}</div>
     <div class="nc-grid">${Array.from({ length: n }, card).join('')}</div>`.replace(/ onclick="[^"]*"/g, '');
 });
 // Header pieces that wait for your notes: the line under the title and the stat boxes
-if (new URLSearchParams(location.search).get('mode') !== 'community') {
+if (_notesMode === 'mine') {
   document.getElementById('notesPageSub').textContent = 'Your personal thoughts, reactions, and memories from everything you watch.';
   mssSkeleton.stats(document.getElementById('notesPageStats'), ['Notes', 'Words Written', 'Avg. Words / Note', 'Likes Received']);
 }
@@ -492,30 +493,98 @@ function _notesOpen(id) {
 
 function setNotesSort(order) { SF.setSort('notesMine', 'all', { latest: 'newest', earliest: 'oldest', az: 'alpha', za: 'zalpha', longest: 'note_long' }[order] || order); }
 
-// Personal ↔ Community from the phone toggles: switch in place
-window.mssTabGo = url => { setNotesMode(url.searchParams.get('mode') === 'community' ? 'social' : 'personal'); return true; };
+// The phone toggles: switch in place
+window.mssTabGo = url => { setNotesMode(mssViewOf(url.search)); return true; };
 function setNotesMode(mode) {
-  if (mode !== 'social' && mssGuestGate('keep your own notes')) return;
+  if (mode !== 'community' && mssGuestGate(mode === 'friends' ? 'see your friends’ notes' : 'keep your own notes')) return;
   _notesMode = mode;
-  const url = new URL(location.href);                 // ?mode=community — the phone toggles link to it
-  if (mode === 'social') url.searchParams.set('mode', 'community'); else url.searchParams.delete('mode');
-  history.replaceState(history.state, '', url.pathname + url.search);
-  window.mssTabsRefresh?.();
-  document.querySelectorAll('#notesModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-  document.getElementById('notesPageTitle').textContent = mode === 'personal' ? 'My Notes' : 'Community Notes';
-  document.getElementById('notesUserSearchWrap').style.display = mode === 'social' ? '' : 'none';
-  // "+ Add Note" stays in both modes (you can add a personal note while browsing the
-  // community feed); "Edit Note" only on your own notes
-  document.getElementById('notesEditBtn').hidden = mode === 'social';
-  if (mode !== 'social' && _notesTitle) _nuForgetTitle();
-  if (mode === 'social') {
+  mssSetView(mode);
+  mssPaintViewToggle('notesModeToggle', mode);
+  document.getElementById('notesPageTitle').textContent = { mine: 'My Notes', friends: 'Friends’ Notes', community: 'Community Notes' }[mode];
+  document.getElementById('notesUserSearchWrap').style.display = mode === 'community' ? '' : 'none';
+  // "+ Add Note" stays in every view (you can add a personal note while reading others');
+  // "Edit Note" only on your own notes
+  document.getElementById('notesEditBtn').hidden = mode !== 'mine';
+  if (mode !== 'community' && _notesTitle) _nuForgetTitle();
+  if (mode === 'community') {
     _nuFilterUser = null;
     document.getElementById('notesUserFilterBanner').style.display = 'none';
     if (_notesTitle) { _nuLoadTmdbNotes(); return; }
     loadSocialNotes();
+  } else if (mode === 'friends') {
+    loadFriendsNotes();
   } else {
     renderNotesPage();
   }
+}
+
+/* ── Friends' notes: fetched when the view is first opened ── */
+let _friendsNotes = null, _friendsNotesPromise = null, _friendsNotesWho = {};
+function _fetchFriendsNotes() {
+  return _friendsNotesPromise ||= (async () => {
+    const { ids, profiles } = await mssMyFriends(_notesUser.id);
+    _friendsNotesWho = profiles;
+    if (!ids.length) return (_friendsNotes = []);
+    const { data, error } = await sb.from('entries').select('*').in('user_id', ids)
+      .or('notes.not.is.null,note_visibility.neq.anyone').order('updated_at', { ascending: false }).limit(1000);   // Friends / Private notes (069) live elsewhere
+    if (error) throw error;
+    const rows = await mssWithPrivateNotes(data || []);
+    return (_friendsNotes = rows.filter(e => e.notes && e.notes.trim()));
+  })().catch(err => { _friendsNotesPromise = null; throw err; });
+}
+async function loadFriendsNotes() {
+  const wrap = document.getElementById('notesPageContent');
+  document.getElementById('notesPageSub').textContent = 'What your friends wrote about what they watched.';
+  if (!_friendsNotes) {
+    document.getElementById('notesToolbar').style.display = 'none';
+    document.getElementById('notesPageStats').innerHTML = '';
+    wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;
+  }
+  try {
+    await _fetchFriendsNotes();
+    if (_notesMode === 'friends') renderFriendsNotes();
+  } catch (err) {
+    console.error('Load friends notes error:', err);
+    mssErrorPage(mssErrorKind(err), { in: wrap, error: err });
+  }
+}
+SF.register('notesFriends', {
+  base: () => _friendsNotes || [],
+  render: () => renderFriendsNotes(),
+  watched: () => true,          // Year Watched filter
+  defaultSort: 'newest',
+  addedDate: e => e.completed_date || e.updated_at,
+  presets: {
+    added: { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Oldest']] },
+    ..._NOTE_LEN_PRESET,
+  },
+  sorts: () => ['added', 'length', 'ratings', 'alpha'],
+  filters: () => ['genre', 'score', 'length'],
+  compare: _noteLenCompare,
+  choiceFilters: () => [
+    { key: 'who', label: 'Friend', options: [['', 'Everyone'], ...Object.entries(_friendsNotesWho).map(([id, p]) => [id, p.display_name || p.username || 'Friend'])], test: (e, v) => e.user_id === v },
+    { key: 'cat', label: 'Type', options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']] },
+  ],
+});
+function renderFriendsNotes() {
+  const wrap = document.getElementById('notesPageContent'), all = _friendsNotes || [];
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  document.getElementById('notesPageStats').innerHTML = all.length ? `
+    <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Notes</div></div>
+    <div class="page-stat"><div class="page-stat-num">${new Set(all.map(e => e.user_id)).size}</div><div class="page-stat-label">Friends</div></div>
+    <div class="page-stat"><div class="page-stat-num">${new Set(all.map(e => e.tmdb_id ? `${e.tmdb_type}:${e.tmdb_id}` : (e.title || '').trim().toLowerCase())).size}</div><div class="page-stat-label">Titles Discussed</div></div>
+    <div class="page-stat"><div class="page-stat-num">${all.filter(e => new Date(e.updated_at).getTime() >= weekAgo).length}</div><div class="page-stat-label">New This Week</div></div>` : '';
+  const list = SF.list('notesFriends', 'all');
+  mssSkeleton.shape('notes_f', { n: all.length });
+  _renderNotesToolbar('Friends’ Notes', list.length, all.length ? SF.bar('notesFriends', 'all') : '');
+  if (!all.length) { wrap.innerHTML = mssEmpty({ art: 'notes', title: 'No notes from friends yet', text: 'Your friends are keeping their hot takes to themselves. For now.' }); return; }
+  if (!list.length) { wrap.innerHTML = mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('notesFriends', 'all'); renderFriendsNotes()", primary: true }] }); return; }
+  wrap.innerHTML = `<div class="nc-grid">${list.map(e => MSSFriendPop.noteCardHTML(e, _friendsNotesWho[e.user_id], `_openFriendNote(${attrJSON(e.id)})`)).join('')}</div>`;
+}
+function _openFriendNote(id) {
+  const e = (_friendsNotes || []).find(x => x.id === id);
+  if (e) MSSViews.open(e, { start: 'note', profile: _friendsNotesWho[e.user_id] || {} });
 }
 
 function setSocialNotesSort(val) { SF.setSort('notesSocial', 'all', val === 'latest' ? 'newest' : val); }
@@ -549,7 +618,7 @@ async function loadSocialNotes() {
   }
   try {
     _socialNotesRaw = await _fetchSocialNotes();
-    if (_notesMode === 'social') renderSocialNotes();
+    if (_notesMode === 'community') renderSocialNotes();
   } catch (err) {
     console.error('Load social notes error:', err);
     mssErrorPage(mssErrorKind(err), { in: wrap, error: err });

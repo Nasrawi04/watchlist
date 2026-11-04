@@ -1568,7 +1568,7 @@ function _tdNoteReplies(entryId, username) { openReplyPopup('note', entryId, use
 const TD_SHOW = 4;
 function _tdMoreHTML(page, total, what) {
   if (total <= TD_SHOW) return '';
-  const q = new URLSearchParams({ mode: 'community', tmdb: _tdId, type: _tdType, t: _tdDetail?.title || _tdDetail?.name || '' });
+  const q = new URLSearchParams({ view: 'community', tmdb: _tdId, type: _tdType, t: _tdDetail?.title || _tdDetail?.name || '' });
   return `<a class="td-cast-more-btn" href="${page}?${esc(q.toString())}">View all ${total} ${what}</a>`;
 }
 

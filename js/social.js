@@ -2,7 +2,7 @@
    social.js — Social: Polls (MSSPolls) + Inbox / sharing (MSSShare)
    Database: 045_social_polls_recs.sql (everything goes through its RPCs).
 
-   MSSPolls.mount(el, user, { poll })   the Polls section on Social (friends.html)
+   MSSPolls.mount(el, user, { poll })   the Polls page (polls.html)
      • Friends · Community · Yours feeds, open polls first, 20 at a time
      • a poll: 2–6 options — a movie / show, an actor / director (TMDB) or
        text; for Friends or Public; open 1 hour – 7 days
@@ -17,7 +17,7 @@
        'entry'            "I watched this" — one of your titles; friends open it
                           in Info · Ratings · Note        { entry_id, title, poster_url, year, media_type }
        'list'             a custom list                    { list_id, title, count }
-   MSSShare.inbox(el, user)             Social → Inbox: Received / Sent, filter chips
+   MSSShare.inbox(el, user)             the Messages page (messages.html): Received / Sent, filter chips
                                         (All · To Watch · Watched · Lists), Add to
                                         Watchlist / rating & note / Open list, Hide, Unsend
    MSSShare.refreshCount(user)          how many are waiting (MSSShare.count)
@@ -87,10 +87,7 @@ const MSSPolls = (() => {
     await load(true);
   }
   function head(canCreate = true) {
-    return `<div class="soc-head">
-        <div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Polls</div></div>
-        ${canCreate ? `<button type="button" class="btn-add-entry" onclick="MSSPolls.create()">${icon('plus', 15)} New Poll</button>` : ''}
-      </div>`;
+    return canCreate ? `<div class="soc-head"><button type="button" class="btn-add-entry" onclick="MSSPolls.create()">${icon('plus', 15)} New Poll</button></div>` : '';
   }
   function toolbar() {
     return `<div class="pn-toggle soc-toggle" role="tablist" aria-label="Which polls">${SCOPES.map(([k, l]) =>
@@ -533,15 +530,15 @@ const MSSShare = (() => {
   const full = {};     // rec id → whole thread shown
   async function refreshCount(u) {
     try { api.count = Number(await _socRpc('inbox_unread_count', {})) || 0; } catch { api.count = 0; }
+    if (typeof _navMsgBadge === 'function') _navMsgBadge(api.count);
     return api.count;
   }
   async function inbox(target, u, o = {}) {
     el = target; user = u;
     if (o.box === 'sent' || o.box === 'received') box = o.box;
     if (o.rec) { focusRec = o.rec; kind = 'all'; }
-    const head = `<div class="soc-head"><div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Inbox</div></div>
-      ${user ? `<div class="pn-toggle soc-toggle soc-toggle-sm" role="tablist" aria-label="Received or sent">${[['received', 'Received'], ['sent', 'Sent']].map(([k, l]) =>
-        `<button type="button" class="pn-toggle-btn${box === k ? ' active' : ''}" role="tab" aria-selected="${box === k}" onclick="MSSShare._box('${k}')">${l}<span class="rec-box-dot" id="recDot-${k}" hidden></span></button>`).join('')}</div>` : ''}</div>`;
+    const head = user ? `<div class="soc-head soc-head-start"><div class="pn-toggle soc-toggle soc-toggle-sm" role="tablist" aria-label="Received or sent">${[['received', 'Received'], ['sent', 'Sent']].map(([k, l]) =>
+        `<button type="button" class="pn-toggle-btn${box === k ? ' active' : ''}" role="tab" aria-selected="${box === k}" onclick="MSSShare._box('${k}')">${l}<span class="rec-box-dot" id="recDot-${k}" hidden></span></button>`).join('')}</div></div>` : '';
     if (!user) {
       el.innerHTML = head + `<div class="mss-es">${mssArt('inbox')}<div class="mss-es-title">Titles from your friends</div>
         <div class="mss-es-text">Sign in to send friends something to watch — and see what they send you.</div></div>`;
@@ -561,7 +558,7 @@ const MSSShare = (() => {
     // Sent: their responses are right there on the cards, so opening the tab reads them
     // (they stay highlighted as New for this visit)
     if (box === 'sent') markRead(recs.filter(r => r.unread), true);
-    refreshCount(user).then(() => { if (typeof _socNav === 'function') _socNav(); drawBoxDots(); });
+    refreshCount(user).then(drawBoxDots);
     if (focusRec) {
       const r = recs.find(x => x.id === focusRec);
       if (r) { seen(r); requestAnimationFrame(() => { const n = document.getElementById('rec-' + r.id); n?.scrollIntoView({ block: 'center', behavior: 'smooth' }); n?.querySelector('textarea')?.focus({ preventScroll: true }); }); }
@@ -581,7 +578,7 @@ const MSSShare = (() => {
     list.forEach(r => { if (!keepNew) r.unread = false; if (box === 'received') r.seen_at = r.seen_at || new Date().toISOString(); });
     if (keepNew) list.forEach(r => { r._readLocal = true; });
     _socRpc('mark_rec_read', { p_ids: list.map(r => r.id) }).then(() => {
-      refreshCount(user).then(() => { if (typeof _socNav === 'function') _socNav(); drawBoxDots(); });
+      refreshCount(user).then(drawBoxDots);
       if (typeof _notifLoad === 'function') _notifLoad();
       // "already had it" is posted by the database — pick it up
       if (box === 'received' && list.some(r => r.in_library && !r.replies.some(q => q.kind === 'auto'))) reload();
@@ -698,7 +695,7 @@ const MSSShare = (() => {
       await MSSInfo.quickAdd(itemOf(r));                  // the database posts "added it to their watchlist"
       r.in_library = true; r.unread = false;
       showToast(`Added “${r.title}” to your Watchlist — ${_socName(r.person)} will see it`);
-      reload(); refreshCount(user).then(() => { if (typeof _socNav === 'function') _socNav(); });
+      reload(); refreshCount(user);
     } catch (err) {
       if (String(err?.message).startsWith('DUPLICATE:')) { r.in_library = true; seen(r); redraw(r); showToast('Already in your library.'); return; }
       showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Could not add — try again.', 'err');
@@ -717,7 +714,7 @@ const MSSShare = (() => {
       r.unread = false; r.seen_at = r.seen_at || (box === 'received' ? new Date().toISOString() : r.seen_at);
       redraw(r);
       showToast(`Sent to ${_socName(r.person)}`);
-      refreshCount(user).then(() => { if (typeof _socNav === 'function') _socNav(); });
+      refreshCount(user);
     } catch (err) { btns.forEach(b => { b.disabled = false; }); showToast(_socErr(err, 'Couldn’t send — try again.'), 'err'); }
   }
   async function remove(id) {
@@ -728,7 +725,7 @@ const MSSShare = (() => {
     try {
       await _socRpc('remove_rec', { p_id: id });
       recs = recs.filter(r => r.id !== id);
-      drawRecs(); refreshCount(user).then(() => { if (typeof _socNav === 'function') _socNav(); });
+      drawRecs(); refreshCount(user);
     } catch (err) { showToast(_socErr(err), 'err'); }
   }
   const touch = id => { const r = recs.find(x => x.id === id); seen(r); return r; };

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Activity — MyScreenFolio</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/social.css">
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap fr-page">
+
+  <div class="cat-page-header fade-up">
+    <div>
+      <div class="fr-eyebrow">Your circle</div>
+      <h1 class="cat-page-title">Activity</h1>
+      <div class="cat-page-sub" id="socPageSub">What your friends have been watching and rating.</div>
+    </div>
+  </div>
+  <div class="pn-toggle soc-strip" id="socStrip" role="navigation" aria-label="People"></div>
+
+  <section aria-label="Activity">
+    <div class="fr-toolbar" id="frToolbar"></div>
+    <div id="frContent" class="fade-up fade-up-1"><div class="page-loading" data-skel="fr-page"></div></div>
+  </section>
+
+</div>
+
+<script src="js/vendor/supabase-2.118.0.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/rating-popup.js"></script>
+<script src="js/easter-egg.js"></script>
+<script src="js/note-popup.js"></script>
+<script src="js/episode-ratings.js"></script>
+<script src="js/list-popup.js"></script>
+<script src="js/sort-filter.js"></script>
+<script src="js/social.js"></script>
+<script src="js/follows.js"></script>
+<script src="js/social-core.js"></script>
+<script src="js/social-nav.js"></script>
+<script>
+/* ══ ACTIVITY ══ */
+SF.register('frActivity', {
+  base: () => _frEvents(),
+  render: () => _frRender(),
+  defaultSort: 'newest',
+  presets: { added: { header: 'Date', opts: [['newest', 'Latest'], ['oldest', 'Oldest']] } },
+  sorts: () => ['added', 'ratings', 'alpha'],
+  filters: () => ['score', 'length'],
+  addedDate: x => x._at,
+  choiceFilters: () => [
+    { key: 'who',  label: 'Friend',   options: _frFriendOptions(), test: (x, v) => x.user_id === v },
+    { key: 'ev',   label: 'Activity', options: [['', 'Everything'], ...Object.entries(_FR_ACT).map(([k, a]) => [k, a.label])], test: (x, v) => x._ev === v },
+    { key: 'cat',  label: 'Type',     options: _FR_CAT_OPTS },
+  ],
+});
+function _frDayLabel(dt) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d0 = new Date(dt); d0.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - d0) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff > 0 && diff < 7) return d0.toLocaleDateString(MSSI18n.locale, { weekday: 'long' });
+  return d0.toLocaleDateString(MSSI18n.locale, { month: 'long', day: 'numeric', year: d0.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+}
+let _frActShown = 40;
+function _frRenderActivity() {
+  const list = SF.list('frActivity', 'all');
+  _frToolbar('Activity', list.length, 'frActivity', list.length === 1 ? 'update' : 'updates');
+  if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('activity', 'Nothing here yet', 'Try another friend or clear the filter.'); return; }
+  const byDate = (SF.getSort('frActivity', 'all') || 'newest') === 'newest' || SF.getSort('frActivity', 'all') === 'oldest';
+  let html = '<div class="fa-feed">', lastDay = '';
+  list.slice(0, _frActShown).forEach(x => {
+    const a = _FR_ACT[x._ev], sc = _frScore(x);
+    const day = _frDayLabel(x._at);
+    if (byDate && day !== lastDay) { html += `<div class="fa-day">${day}</div>`; lastDay = day; }
+    if (x._ev === 'rated_ep') {
+      const r = x._epr, what = r.episode_number ? `S${r.season_number} · E${r.episode_number}` : `Season ${r.season_number}`;
+      html += `<article class="fa-item" onclick="location.href='episodes.html?show=${encodeURIComponent(x.tmdb_id)}&user=${encodeURIComponent(r.user_id)}'">
+        <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
+        <div class="fa-body">
+          <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> rated ${what} of</div>
+          <div class="fa-title" translate="no">${escHTML(x.title)}</div>
+          <div class="fa-meta">${_frTypeBadge(x)}<span>${x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
+        </div>
+        <div class="fa-score ep-score-chip ep-band-${MSSEp.band(r.score).key}">${Number(r.score).toFixed(1)}</div>
+        ${_frPosterHTML(x, 'fa-poster')}
+      </article>`;
+      return;
+    }
+    if (x._ev === 'list') {
+      const n = (x._list.items || []).length;
+      html += `<article class="fa-item" onclick="_frOpenList(${attrJSON(x._list.id)})">
+        <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
+        <div class="fa-body">
+          <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
+          <div class="fa-title" translate="no">${escHTML(x.title)}</div>
+          <div class="fa-meta"><span class="w-ep-badge">${n} ${n === 1 ? 'title' : 'titles'}</span><span>${x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
+        </div>
+        ${(() => { const first = (x._list.items || []).map(_frListItem).find(Boolean); return first ? _frPosterHTML(first, 'fa-poster') : ''; })()}
+      </article>`;
+      return;
+    }
+    html += _frActItemHTML(x, a, sc);
+  });
+  html += '</div>';
+  if (list.length > _frActShown) html += `<button class="fr-more" onclick="_frActShown+=40;_frRender()">Show more</button>`;
+  document.getElementById('frContent').innerHTML = html;
+  mssFillEpNames(document.getElementById('frContent'));
+}
+
+// One activity update (also drawn, with sample text, as the loading skeleton)
+function _frActItemHTML(x, a, sc) {
+  return `<article class="fa-item" onclick="_frOpenEvent(${attrJSON(x.id.split(':')[0])}, '${x._ev}')">
+    <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
+    <div class="fa-body">
+      <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}${x._ev === 'episode' ? ` S${_frEpOf(x).s} · E${_frEpOf(x).e} of` : ''}</div>
+      <div class="fa-title" translate="no">${escHTML(x.title)}${x.year ? ` <span>${escHTML(String(x.year).slice(0, 4))}</span>` : ''}</div>
+      ${x._ev === 'episode' && x.tmdb_id ? mssEpNameHTML(x.tmdb_id, _frEpOf(x).s, _frEpOf(x).e, 'fa-ep-name') : ''}
+      <div class="fa-meta">${_frTypeBadge(x)}${x._ev === 'dropped' && mssDroppedAt(x) ? `<span class="w-ep-badge">at ${escHTML(mssDroppedAt(x))}</span>` : ''}<span>${x._ev === 'finished' || x._ev === 'logged' ? x._at.toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
+      ${x._ev === 'note' ? `<div class="fa-note">${mssIsSpoiler(x) ? mssSpoilerTag(x) : `&ldquo;${escHTML(MSSRich.plain(x.notes).trim().split(/\s+/).slice(0, 30).join(' '))}${MSSRich.plain(x.notes).trim().split(/\s+/).length > 30 ? '…' : ''}&rdquo;`}</div>` : ''}
+    </div>
+    ${(x._ev === 'finished' || x._ev === 'logged' || x._ev === 'caught_up') && sc != null ? `<div class="fa-score">★ ${sc.toFixed(2)}</div>` : ''}
+    ${_frPosterHTML(x, 'fa-poster')}
+  </article>`;
+}
+
+/* Loading skeleton: the toolbar and activity updates with sample text, masked into placeholders */
+mssSkeleton.define('fr-page', () => {
+  const x = { id: 's:finished', _ev: 'finished', user_id: '', title: 'Sample title', year: 2024, cat: 'tv', final_score: 8, _at: new Date() };
+  return _frSkelKeep(`<div class="fr-toolbar">${_frToolbarHTML('Activity', 12, 'frActivity', 'updates')}</div>`)
+    + `<div class="fa-feed"><div class="fa-day">Today</div>${Array.from({ length: 6 }, () => _frActItemHTML(x, _FR_ACT.finished, 8)).join('')}</div>`;
+});
+function _frRender() {
+  if (_frGateAuth() || _frGateData()) return;
+  _frRenderActivity();
+}
+MSSSocial.boot('activity', { friends: true, render: true });
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+
+<div id="udDropdown" class="username-dropdown"></div>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/i18n.js"></script>
+<title>Compare — MyScreenFolio</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/social.css">
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E5C26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div class="page-wrap fr-page">
+
+  <div class="cat-page-header fade-up">
+    <div>
+      <div class="fr-eyebrow">Your circle</div>
+      <h1 class="cat-page-title">Compare</h1>
+      <div class="cat-page-sub" id="socPageSub">Line your taste up with a friend’s, side by side.</div>
+    </div>
+  </div>
+  <div class="pn-toggle soc-strip" id="socStrip" role="navigation" aria-label="People"></div>
+
+  <section aria-label="Compare">
+    <div class="fr-toolbar" id="frToolbar"></div>
+    <div id="frContent" class="fade-up fade-up-1"><div class="page-loading" data-skel="fr-page"></div></div>
+  </section>
+
+</div>
+
+<script src="js/vendor/supabase-2.118.0.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/rating-popup.js"></script>
+<script src="js/easter-egg.js"></script>
+<script src="js/note-popup.js"></script>
+<script src="js/episode-ratings.js"></script>
+<script src="js/list-popup.js"></script>
+<script src="js/sort-filter.js"></script>
+<script src="js/social.js"></script>
+<script src="js/follows.js"></script>
+<script src="js/social-core.js"></script>
+<script src="js/social-nav.js"></script>
+<script>
+/* ══ COMPARE ══
+   1) choose who to compare with   2) see your taste match + shared titles
+   (sortable / filterable)   3) open a title for the full side-by-side. */
+// Titles you share with the selected friend(s) — one group per title
+function _cmpGroups() {
+  const me = _fUser.id, pick = new Set(_cmpWith);
+  const idx = {};
+  const add = e => { const k = _cmpKeyOf(e); (idx[k] ||= { id: k, key: k, title: e.title, year: e.year, cat: e.cat, poster_url: e.poster_url, ratings: e.ratings, byUser: {} }); if (!idx[k].byUser[e.user_id]) idx[k].byUser[e.user_id] = e; if (!idx[k].poster_url) idx[k].poster_url = e.poster_url; };
+  _cmpMine.forEach(add);
+  _frEntries.filter(e => pick.has(e.user_id)).forEach(add);
+  return Object.values(idx).filter(g => g.byUser[me] && _cmpWith.some(u => g.byUser[u])).map(g => {
+    const mine = _frScore(g.byUser[me]);
+    const theirs = _cmpWith.map(u => g.byUser[u]).filter(Boolean).map(_frScore).filter(v => v != null);
+    const avgTheirs = theirs.length ? theirs.reduce((a, b) => a + b, 0) / theirs.length : null;
+    return { ...g, _mine: mine, _theirs: avgTheirs, _diff: mine != null && avgTheirs != null ? avgTheirs - mine : null };
+  });
+}
+SF.register('frShared', {
+  base: () => _cmpMine ? _cmpGroups().filter(g => !_cmpQuery || (g.title || '').toLowerCase().includes(_cmpQuery.toLowerCase())) : [],
+  render: () => _frRender(),
+  defaultSort: 'agree',
+  presets: {
+    agreement: { header: 'Agreement', opts: [['agree', 'Most In Sync'], ['disagree', 'Biggest Difference']] },
+    scores:    { header: 'Scores', opts: [['yours', 'Your Top Rated'], ['theirs', 'Their Top Rated']] },
+  },
+  sorts: () => ['agreement', 'scores', 'alpha'],
+  filters: () => [],
+  compare: {
+    agree: (a, b) => (a._diff == null) - (b._diff == null) || Math.abs(a._diff ?? 99) - Math.abs(b._diff ?? 99),
+    disagree: (a, b) => (a._diff == null) - (b._diff == null) || Math.abs(b._diff ?? -1) - Math.abs(a._diff ?? -1),
+    yours: (a, b) => (b._mine ?? -1) - (a._mine ?? -1),
+    theirs: (a, b) => (b._theirs ?? -1) - (a._theirs ?? -1),
+  },
+  choiceFilters: () => [
+    { key: 'cat', label: 'Type', options: _FR_CAT_OPTS },
+    { key: 'rated', label: 'Scores', options: [['', 'All Shared'], ['both', 'Rated by both']], test: (g, v) => g._diff != null },
+  ],
+});
+
+// Taste match with one friend: how closely your scores line up
+// (shared formula: mssTasteMatch, config.js — also on friend cards and profiles)
+async function _frRenderCompare() {
+  const c = document.getElementById('frContent');
+  if (!_cmpMine) { document.getElementById('frToolbar').style.display = 'none'; c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; await _cmpLoad(); if (_frTab !== 'compare') return; }
+  _cmpWith = _cmpWith.filter(u => _frProfiles[u]);
+  // 1) Who
+  const picker = `<section class="cp-pick">
+      <div class="cp-pick-head"><div class="fr-toolbar-title">Compare with</div><div class="cp-pick-hint">${_cmpWith.length ? `${_cmpWith.length} selected · tap to change` : 'Pick one or more friends'}</div></div>
+      <div class="cp-pick-row">${_frAccepted.map(f => { const on = _cmpWith.includes(f.friendId);
+        return `<button type="button" class="cp-person${on ? ' on' : ''}" aria-pressed="${on}" onclick="_cmpToggle(${attrJSON(f.friendId)})">${_frAvHTML(f.friendProfile, 52)}<span translate="no">${escHTML(_frName(f.friendId))}</span>${on ? `<i>${icon('check', 11)}</i>` : ''}</button>`; }).join('')}</div>
+    </section>`;
+  if (!_cmpWith.length) {
+    document.getElementById('frToolbar').style.display = 'none';
+    c.innerHTML = picker + _frEmptyHTML('compare', 'Who do you want to compare with?', 'Choose a friend above to see how your taste lines up — shared titles, score differences, favorites and notes.');
+    return;
+  }
+  if (_cmpKey) return _cmpShowTitle(picker);
+  // 2) Taste match cards
+  const matches = `<div class="cp-matches">${_cmpWith.map(uid => { const m = _cmpMatch(uid);
+    const ring = m.pct != null ? m.pct : 0;
+    return `<div class="cp-match">
+      <div class="cp-ring" style="--p:${ring}"><div><b>${m.pct != null ? m.pct + '%' : '—'}</b><span>match</span></div></div>
+      <div class="cp-match-info">
+        <div class="cp-match-name">You & ${escHTML(_frName(uid))}</div>
+        <div class="cp-match-stats"><span><b>${m.shared}</b> shared</span><span><b>${m.rated}</b> rated by both</span>${m.avgDiff != null ? `<span><b>±${m.avgDiff.toFixed(1)}</b> avg difference</span>` : ''}</div>
+        ${m.loved ? `<div class="cp-match-line">${icon('heart', 12)} You both love <b translate="no">${escHTML(m.loved.m.title)}</b></div>` : ''}
+        ${m.split ? `<div class="cp-match-line">${icon('zap', 12)} Split on <b translate="no">${escHTML(m.split.m.title)}</b> — you ${m.split.a.toFixed(1)}, them ${m.split.b.toFixed(1)}</div>` : ''}
+      </div>
+    </div>`; }).join('')}</div>`;
+  // 3) Shared titles
+  const list = SF.list('frShared', 'all');
+  document.getElementById('frToolbar').style.display = 'none';
+  // Shared-titles toolbar sits between the match cards and the list
+  c.innerHTML = picker + matches + `
+    <div class="fr-toolbar" id="cmpToolbar"><div class="fr-toolbar-label"><div class="fr-toolbar-title">Shared Titles</div><div class="fr-toolbar-count"><b>${list.length}</b> ${list.length === 1 ? 'title' : 'titles'}</div></div>${SF.bar('frShared', 'all')}</div>
+    <div class="cp-search fused-search-wrap"><input id="cmpInput" class="add-friend-input" placeholder="Search shared titles…" autocomplete="off" spellcheck="false" value="${escHTML(_cmpQuery)}" oninput="_cmpQuery=this.value;SF.invalidate&&SF.invalidate('frShared');_cmpRenderList()"><button type="button" class="fused-search-btn" tabindex="-1" onclick="document.getElementById('cmpInput').focus()">${icon('search', 16)}</button></div>
+    <div id="cmpList"></div>`;
+  _cmpRenderList();
+}
+function _cmpRenderList() {
+  const el = document.getElementById('cmpList'); if (!el) return;
+  const list = SF.list('frShared', 'all');
+  const cnt = document.querySelector('#cmpToolbar .fr-toolbar-count b'); if (cnt) cnt.textContent = list.length;
+  el.innerHTML = list.length ? `<div class="cp-list">${list.slice(0, 120).map(g => {
+    const cols = [_fUser.id, ..._cmpWith].map(u => { const e = g.byUser[u]; const sc = e ? _frScore(e) : null;
+      return `<div class="cp-cell${u === _fUser.id ? ' me' : ''}"><span>${u === _fUser.id ? 'You' : escHTML(_frName(u))}</span><b>${e ? (sc != null ? '★ ' + sc.toFixed(2) : '—') : '·'}</b></div>`; }).join('');
+    const d = g._diff;
+    // Same card as the Library's list view; score columns are a fixed width
+    // so they line up row to row however many friends are compared
+    return `<div class="fv-rank-row cp-row" role="button" tabindex="0" onclick="_cmpOpen(${attrJSON(g.key)})" onkeydown="if(event.key==='Enter')this.click()" style="--cp-n:${_cmpWith.length + 1}">
+      <div class="fv-rank-poster">${posterHTML(g)}</div>
+      <div class="fv-rank-info">
+        <div class="fv-rank-title" translate="no">${escHTML(g.title)}${g.year ? `<span class="title-year-inline">${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
+        <div class="fv-rank-meta">${_frTypeBadge(g)}${d != null ? `<span class="cp-delta ${Math.abs(d) < .5 ? 'same' : d > 0 ? 'up' : 'down'}">${Math.abs(d) < .5 ? 'In sync' : (d > 0 ? '+' : '') + d.toFixed(1) + ' vs you'}</span>` : ''}</div>
+      </div>
+      <div class="cp-cells">${cols}</div>
+    </div>`;
+  }).join('')}</div>` : _frEmptyHTML('search', _cmpQuery ? 'No shared titles match' : 'Nothing shared yet', _cmpQuery ? 'Try a different search.' : 'Once you both log the same title, it shows up here.');
+}
+function _cmpToggle(uid) {
+  _cmpWith = _cmpWith.includes(uid) ? _cmpWith.filter(u => u !== uid) : [..._cmpWith, uid];
+  _cmpKey = null; SF.invalidate && SF.invalidate('frShared'); _frRender();
+}
+function _cmpOpen(key) { _cmpKey = key; _frRender(); document.getElementById('frContent').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function _cmpBack() { _cmpKey = null; _frRender(); }
+
+const _CMP_STATUS = { completed: 'Watched', ongoing: 'To Be Continued', watching: 'Watching', paused: 'Taking a Break', up_next: 'Up Next', queue: 'Watchlist', dropped: 'Dropped' };
+function _cmpFavTags(uid, e) {
+  const p = _cmpProfiles[uid] || {}, tags = [], pos = arr => Array.isArray(arr) ? arr.indexOf(e.id) : -1;
+  let i = pos(p.top_picks); if (i >= 0) tags.push(`Top Favorite #${i + 1}`);
+  i = pos(p.recommended); if (i >= 0) tags.push('Would Recommend');
+  const k = { tv: 'fav_tv', movies: 'fav_movies', anime: 'fav_anime', cartoons: 'fav_cartoons' }[e.cat];
+  i = pos(p[k]); if (i >= 0) tags.push(`Top 5 ${CAT_META[e.cat]?.label || ''} #${i + 1}`);
+  return tags;
+}
+function _cmpListsFor(uid, e) {
+  const lists = uid === _fUser.id ? _cmpMyLists : _frLists.filter(l => l.user_id === uid);
+  return lists.filter(l => (l.items || []).includes(e.id)).map(l => l.title);
+}
+function _cmpShowTitle(picker) {
+  const g = _cmpGroups().find(x => x.key === _cmpKey);
+  const c = document.getElementById('frContent');
+  document.getElementById('frToolbar').style.display = 'none';
+  if (!g) { _cmpKey = null; return _frRender(); }
+  const me = _fUser.id;
+  const people = [me, ..._cmpWith].filter(u => g.byUser[u]);
+  const name = u => u === me ? 'You' : _frName(u);
+  const prof = u => u === me ? (_cmpProfiles[me] || _fProfile) : (_cmpProfiles[u] || _frProfiles[u]);
+  const myScore = _frScore(g.byUser[me]);
+  const scored = people.map(u => _frScore(g.byUser[u])).filter(v => v != null);
+  const avg = scored.length ? scored.reduce((a, b) => a + b, 0) / scored.length : null;
+  // Ratings can be saved as numbers or numeric text — read both, so nobody's
+  // breakdown shows up empty / half-filled
+  const rv = (e, key) => { const v = e?.ratings?.[key]; if (v === '' || v == null) return null; const n = Number(v); return isNaN(n) ? null : n; };
+  const anyEntry = Object.values(g.byUser)[0] || {};
+  const { core = [], bonus = [] } = getRatings(g.cat, g.cat === 'movies' || anyEntry.ratings?._media_type === 'movie' || anyEntry.tmdb_type === 'movie') || {};
+  const animated = g.cat === 'anime' || g.cat === 'cartoons';
+  const allRows = [...core, ...(animated ? [] : [{ key: 'animation', label: 'Animation Quality' }]), ...bonus];
+  const rows = allRows.filter(r => people.some(u => rv(g.byUser[u], r.key) != null));
+  // Headline stats
+  const pairs = people.filter(u => u !== me).map(u => _frScore(g.byUser[u])).filter(v => v != null);
+  const spread = scored.length > 1 ? Math.max(...scored) - Math.min(...scored) : null;
+  const closest = myScore != null && pairs.length ? Math.min(...pairs.map(v => Math.abs(v - myScore))) : null;
+  const finished = people.filter(u => ['completed', 'ongoing'].includes(g.byUser[u].status)).length;
+  let agree = null;                                         // categories within 1 point of each other
+  const both = rows.filter(r => people.filter(u => rv(g.byUser[u], r.key) != null).length > 1);
+  if (both.length) agree = Math.round(100 * both.filter(r => { const v = people.map(u => rv(g.byUser[u], r.key)).filter(x => x != null); return Math.max(...v) - Math.min(...v) <= 1; }).length / both.length);
+  // best-rated category among ones at least two of you rated
+  const topRow = both.map(r => { const v = people.map(u => rv(g.byUser[u], r.key)).filter(x => x != null); return { r, avg: v.reduce((a, b) => a + b, 0) / v.length }; }).sort((a, b) => b.avg - a.avg)[0];
+  const card = u => {
+    const e = g.byUser[u], sc = _frScore(e);
+    const diff = u !== me && sc != null && myScore != null ? sc - myScore : null;
+    const fav = _cmpFavTags(u, e), lists = _cmpListsFor(u, e);
+    return `<div class="cp-pcard${u === me ? ' me' : ''}">
+      <div class="cp-pcard-head">${_frAvHTML(prof(u), 34)}<b translate="no">${escHTML(name(u))}</b></div>
+      <div class="cp-pcard-score">${sc != null ? sc.toFixed(2) : '—'}</div>
+      <div class="cp-delta ${diff == null ? 'none' : Math.abs(diff) < .5 ? 'same' : diff > 0 ? 'up' : 'down'}">${diff == null ? (u === me ? 'Your score' : '&nbsp;') : Math.abs(diff) < .5 ? 'In sync with you' : (diff > 0 ? '+' : '') + diff.toFixed(2) + ' vs you'}</div>
+      <div class="cp-pcard-status">${escHTML(_CMP_STATUS[e.status] || e.status)}${e.completed_date ? ` · ${_frDate(e.completed_date).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}</div>
+      <div class="cp-tags">${fav.map(t => `<span class="cp-tag fav">${escHTML(t)}</span>`).join('')}${lists.map(t => `<span class="cp-tag">${icon('layers', 10)} ${escHTML(t)}</span>`).join('')}${!fav.length && !lists.length ? '<span class="cp-tag-none">Not in favorites or lists</span>' : ''}</div>
+    </div>`;
+  };
+  c.innerHTML = picker + `
+    <button class="cp-back" onclick="_cmpBack()">${icon('arrowRight', 13)} Shared titles</button>
+    <div class="cp-hero">
+      <div class="cp-hero-bg" style="background-image:${cssURL(g.poster_url)}"></div>
+      ${_frPosterHTML(g, 'cp-hero-poster')}
+      <div class="cp-hero-info">
+        <div class="cp-hero-title" translate="no">${escHTML(g.title)}${g.year ? ` <span>${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
+        <div class="fa-meta">${_frTypeBadge(g)}</div>
+        <div class="cp-hero-stats">
+          <div><b>${avg != null ? '★ ' + avg.toFixed(2) : '—'}</b><span>Group avg</span></div>
+          <div><b>${myScore != null ? '★ ' + myScore.toFixed(2) : '—'}</b><span>Your score</span></div>
+          <div><b>${spread != null ? spread.toFixed(2) : '—'}</b><span>Score gap</span></div>
+          ${closest != null ? `<div><b>${closest.toFixed(2)}</b><span>Closest to you</span></div>` : ''}
+          ${agree != null ? `<div><b>${agree}%</b><span>Ratings agree</span></div>` : ''}
+          <div><b>${finished}/${people.length}</b><span>Finished</span></div>
+        </div>
+        ${topRow ? `<div class="cp-hero-line">${icon('ratingStar', 12)} Rated highest together: <b>${escHTML(topRow.r.label)}</b> (${topRow.avg.toFixed(1)} avg)</div>` : ''}
+      </div>
+    </div>
+    <div class="cp-pcards">${people.map(card).join('')}</div>
+    ${rows.length ? `<div class="fr-toolbar-title cp-sec">Ratings breakdown</div>
+    <div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Category</th>${people.map(u => `<th translate="no">${escHTML(name(u))}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r => { const vals = people.map(u => rv(g.byUser[u], r.key)); const nums = vals.filter(v => v != null); const top = nums.length > 1 ? Math.max(...nums) : null;
+        return `<tr><td>${escHTML(r.label)}</td>${vals.map(v => `<td class="${v != null && v === top ? 'best' : ''}">${v != null ? v.toFixed(1) : '—'}</td>`).join('')}</tr>`; }).join('')}
+        <tr class="cp-total"><td>Final score</td>${people.map(u => { const v = _frScore(g.byUser[u]); return `<td>${v != null ? '★ ' + v.toFixed(2) : '—'}</td>`; }).join('')}</tr></tbody></table></div>` : ''}
+    ${people.some(u => g.byUser[u].notes && g.byUser[u].notes.trim()) ? `<div class="fr-toolbar-title cp-sec">Notes</div>
+    <div class="fn-grid">${people.filter(u => g.byUser[u].notes && g.byUser[u].notes.trim()).map(u => { const e = g.byUser[u];
+      const text = `<blockquote class="fn-text mss-rich" translate="no">${MSSRich.html(e.notes)}</blockquote>`;
+      return `<article class="fn-card"><div class="fn-by">${_frAvHTML(prof(u), 22)}<span translate="no">${escHTML(name(u))}</span></div>${mssIsSpoiler(e) && u !== me ? mssSpoilerHTML(text, { compact: true, id: e.id, e }) : text}</article>`; }).join('')}</div>` : ''}`;
+}
+
+mssSkeleton.define('fr-page', () => mssSkeleton('rows'));
+function _frRender() {
+  if (_frGateAuth() || _frGateData()) return;
+  _frRenderCompare();
+}
+MSSSocial.boot('compare', { friends: true, render: true, start: (user, q) => { if (q.get('with')) _cmpWith = [q.get('with')]; } });
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+
+<div id="udDropdown" class="username-dropdown"></div>
+</body>
+</html>

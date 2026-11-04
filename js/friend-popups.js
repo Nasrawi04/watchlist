@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   friend-popups.js — a friend's note card (Friends page)
+   friend-popups.js — a friend's note card (Notes page, Friends view)
 
    MSSFriendPop.noteCardHTML(entry, profile, onclick)
                                          — the Notes-page community card

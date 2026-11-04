@@ -133,7 +133,7 @@ const MSSNote = (() => {
   function communityCardHTML(n, { mine, me, open, react, replies } = {}) {
     const id = attrJSON(n.entry_id), w = words(n.notes);
     const quote = `<blockquote class="nc-quote" translate="no">&ldquo;${esc(trim(MSSRich.plain(n.notes)))}&rdquo;</blockquote>`;
-    const btn = (like, on) => `<button type="button" class="snote-react-btn ${on ? (like ? 'active-like' : 'active-dislike') : ''}"${like ? ' data-like' : ''} aria-label="${like ? 'Like' : 'Dislike'}" aria-pressed="${on}" onclick="event.stopPropagation();${react}(${id}, ${like})">
+    const btn = (like, on) => `<button type="button" class="snote-react-btn ${on ? (like ? 'active-like' : 'active-dislike') : ''}"${like ? ' data-like' : ''} aria-label="${like ? 'Like' : 'Dislike'}: ${like ? (n.like_count || 0) : (n.dislike_count || 0)}" aria-pressed="${on}" onclick="event.stopPropagation();${react}(${id}, ${like})">
             ${icon(like ? (on ? 'thumbsUpFilled' : 'thumbsUp') : (on ? 'thumbsDownFilled' : 'thumbsDown'), 14)} <span>${(like ? n.like_count : n.dislike_count) || 0}</span>
           </button>`;
     return `<article class="nc-card" onclick="${open}(${id})"${n.user_id !== me ? MSSAge.attr(n.tmdb_type, n.tmdb_id, true) : ''} data-dbl-like role="button" tabindex="0" aria-label="Open @${esc(n.username || 'user')}’s note" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();this.click()}">

@@ -10,11 +10,11 @@
      • Going / Can't make it; a reminder on the day (nav.js → movie_night_reminders)
      • After the movie (052): everyone's take on the pick side by side — score,
        note, favourite, lists — a group score, highlights and a ratings comparison
-     • From your Blend: suggestions from the group's Blend (friends.html, _blendGroup)
+     • From your Blend: suggestions from the group's Blend (blend.html, _blendGroup)
 
    MSSNight.mount(el, user, { night })   the section (night: open that one)
 
-   Uses friends.html's friends (_frAccepted, _frProfiles, _frEntries, _cmpLoad /
+   Uses social-core.js's friends (_frAccepted, _frProfiles, _frEntries, _cmpLoad /
    _cmpMine) for the invite list and the watchlist suggestions. Uses the date +
    time picker (MSSDateRange.when, date-range.js) in the popups, the shared
    poster card (MSSCard.poster) for the ballot and the suggestion rails, and
@@ -40,8 +40,7 @@ const MSSNight = (() => {
   async function mount(target, u, o = {}) {
     el = target; user = u;
     if (o.night) focus = o.night;
-    const head = `<div class="soc-head"><div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Movie Night</div></div>
-      ${user ? `<button type="button" class="btn-add-entry" onclick="MSSNight.create()">${icon('plus', 15)} New Movie Night</button>` : ''}</div>`;
+    const head = user ? `<div class="soc-head"><button type="button" class="btn-add-entry" onclick="MSSNight.create()">${icon('plus', 15)} New Movie Night</button></div>` : '';
     if (!user) {
       el.innerHTML = head + `<div class="mss-es">${mssArt('popcorn')}<div class="mss-es-title">Movie nights with friends</div><div class="mss-es-text">Sign in to pick something to watch together.</div></div>`;
       return;
@@ -53,6 +52,7 @@ const MSSNight = (() => {
   async function load() {
     Object.keys(reviews).forEach(k => delete reviews[k]);
     try { nights = await rpc('get_movie_nights', {}) || []; } catch { nights = []; showToast('Couldn’t load Movie Nights — try again.', 'err'); }
+    if (nights.length) window.MSSSocial?.count(`${nights.length} ${nights.length === 1 ? 'movie night' : 'movie nights'}`);
     draw();
     if (focus) { requestAnimationFrame(() => document.getElementById('mn-' + focus)?.scrollIntoView({ block: 'start', behavior: 'smooth' })); focus = null; }
   }
@@ -148,7 +148,7 @@ const MSSNight = (() => {
     });
     return Object.values(tally).filter(t => t.who.size >= 2).sort((a, b) => b.who.size - a.who.size).slice(0, 8);
   }
-  // From the group's Blend (friends.html _blendFor): loved by someone here, new to others
+  // From the group's Blend (social-core.js _blendFor): loved by someone here, new to others
   const blendFrom = {};    // night id → items (kept so a tap can add one)
   function blendSuggestions(n, skip) {
     if (typeof _blendFor !== 'function' || typeof _cmpMine === 'undefined' || !_cmpMine) return [];

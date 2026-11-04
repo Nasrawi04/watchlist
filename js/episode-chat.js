@@ -11,7 +11,7 @@
    MSSEpChat.counts(tmdbId)          → { 'S:E': { count, unlocked, new } } for a show
    MSSEpChat.chipHTML(c, onclick)    the little 💬 count for an episode row
    MSSEpChat.mount(el, user, o)      Social → Episode Chat (o.open = 'tmdb:s:e')
-   MSSEpChat.unread(user)            new messages across all your threads (side nav)
+   MSSEpChat.unread(user)            new messages across all your threads (the sub-nav strip)
 
    Requires config.js (icon, escHTML, safeURL, MSSDialog), nav.js (_notifTimeAgo,
    mssEpName). Styles: §52 in style.css (message bar shared with Inbox: .rec-input).
@@ -150,8 +150,7 @@ const MSSEpChat = (() => {
   }
   async function mount(target, u, o = {}) {
     el = target; user = u;
-    const head = `<div class="soc-head"><div><div class="section-eyebrow">Social</div><div class="section-title" style="margin-bottom:0">Episode Chat</div></div></div>
-      <div class="soc-tip"><span class="soc-tip-ic">${icon('lock', 16)}</span>
+    const head = `<div class="soc-tip"><span class="soc-tip-ic">${icon('lock', 16)}</span>
         <div><b>Spoiler-safe chats</b><span>Talk about an episode with friends who’ve seen it. A chat unlocks once your progress reaches that episode — no rating needed.</span></div></div>`;
     if (!user) {
       el.innerHTML = head + `<div class="mss-es">${mssArt('chat')}<div class="mss-es-title">Episode chat with friends</div><div class="mss-es-text">Sign in to talk about episodes with your friends.</div></div>`;
@@ -160,7 +159,8 @@ const MSSEpChat = (() => {
     el.innerHTML = head + `<div id="epcList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
     try { threads = await rpc('my_episode_chats', {}) || []; } catch { threads = []; showToast('Couldn’t load episode chats — try again.', 'err'); }
     MSSEpChat.count = threads.reduce((n, t) => n + (t.new || 0), 0);
-    if (typeof _socNav === 'function') _socNav();
+    window.MSSSocial?.paint();
+    if (threads.length) window.MSSSocial?.count(`${threads.length} ${threads.length === 1 ? 'chat' : 'chats'}`);
     drawList();
     if (o.open) { const [t, s, e] = String(o.open).split(':').map(Number); const th = threads.find(x => x.tmdb_id === t && x.season === s && x.episode === e); openThread(th || { tmdb_id: t, season: s, episode: e }); }
   }
@@ -187,7 +187,7 @@ const MSSEpChat = (() => {
   function openThread(t) {
     open({ tmdb_id: t.tmdb_id, season: t.season, episode: t.episode, show: t.show_title, poster_path: t.poster_path },
       { onChange: () => { if (!t.new) return; const n = t.new; t.new = 0; drawList();
-          MSSEpChat.count = Math.max(0, (MSSEpChat.count || 0) - n); if (typeof _socNav === 'function') _socNav(); } });
+          MSSEpChat.count = Math.max(0, (MSSEpChat.count || 0) - n); window.MSSSocial?.paint(); } });
   }
 
   return { open, close, counts, chipHTML, mount, unread, count: 0,

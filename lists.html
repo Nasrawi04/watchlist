@@ -289,11 +289,8 @@ body.lr-no-select { user-select:none; -webkit-user-select:none; cursor:grabbing;
     </div>
   </div>
 
-  <!-- Personal / Social toggle -->
-  <div class="pn-toggle fade-up" id="listsModeToggle">
-    <button class="pn-toggle-btn active" data-mode="personal" onclick="setListsMode('personal')">Personal</button>
-    <button class="pn-toggle-btn" data-mode="social" onclick="setListsMode('social')">Community</button>
-  </div>
+  <!-- Mine / Friends / Community -->
+  <div id="listsModeWrap"></div>
 
   <!-- Stat boxes -->
   <div class="page-stats fade-up fade-up-1" id="listsPageStats"></div>
@@ -345,12 +342,6 @@ function goToDetail(id, from) {
   window.location.href = 'detail.html';
 }
 
-function _favNavScroll(id, dir) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  var target = el.scrollWidth > el.clientWidth ? el : (el.closest('.grid-nav-wrap') || el);
-  target.scrollBy({ left: dir * (target.clientWidth * 0.75 || 220), behavior: 'smooth' });
-}
 
 // Runtime (movies) / season+episode count (shows) badge — same logic as
 // category.js's _entryMeta(), inlined here since lists.html doesn't
@@ -359,7 +350,6 @@ function _favNavScroll(id, dir) {
 let _listsUser = null;
 let _listsEntries = [];
 let _listsAll = [];
-let _listsOrderSort = 'default';
 
 let _listsEntryMap = {};
 // List items can be either a personal entry's UUID (existing behavior)
@@ -374,15 +364,11 @@ function _resolveListItem(id) {
   return _listsEntryMap[id] || null;
 }
 
-let _listsMode = 'personal';
-let _socialListsSort = 'popular';
-let _socialListsRaw = [];
+let _listsMode = mssViewOf();   let _socialListsRaw = [];
 let _socialListsMyReactions = {}; // list_id -> 'like' | 'dislike'
 
 // Picker state
 
-// Popup state
-let _favPopupId = null;
 
 // Returning via browser back/forward can restore this page from the
 // bfcache with stale data (e.g. an entry just added/edited elsewhere
@@ -392,11 +378,12 @@ window.addEventListener('pageshow', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('listsModeWrap').innerHTML = mssViewToggleHTML('listsModeToggle', 'Whose lists', _listsMode, 'setListsMode');
   attachClearButton('listsSearchInput');
   initPage(async (user) => {
     const q = new URLSearchParams(location.search);
     // Guests can look through Community lists; their own lists need an account
-    if (!user && q.get('mode') !== 'community') {
+    if (!user && _listsMode !== 'community') {
       document.querySelector('.page-wrap').innerHTML = `
         <div class="guest-page-state fade-up">
           <div class="guest-page-icon">${icon('layers', 36)}</div>
@@ -406,18 +393,18 @@ document.addEventListener('DOMContentLoaded', () => {
             <a href="login.html" class="guest-btn-primary">Sign In</a>
             <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
           </div>
-          <a class="guest-browse" href="lists.html?mode=community">Browse Community lists →</a>
+          <a class="guest-browse" href="lists.html?view=community">Browse Community lists →</a>
         </div>`;
       return;
     }
-    if (!user) { setListsMode('social'); return; }
+    if (!user) { setListsMode('community'); return; }
     _listsUser = user;
     MSSListStudio.init({
       lists: () => _listsAll, entries: () => _listsEntries, resolve: _resolveListItem, save: saveFavoriteList,
       afterSave: (list, isNew) => { if (isNew) _listsAll.push(list); renderListsPage(); },
       collab: id => openCollabPicker(id),
     });
-    if (q.get('mode') === 'community') setListsMode('social');
+    if (_listsMode !== 'mine') setListsMode(_listsMode);
     if (q.get('new')) { // (+) → New list, from another page
       const url = new URL(location.href); url.searchParams.delete('new');
       history.replaceState(history.state, '', url.pathname + url.search);
@@ -426,8 +413,8 @@ document.addEventListener('DOMContentLoaded', () => {
     await loadListsPage();
   });
 });
-// Personal ↔ Community from the phone toggles: switch in place
-window.mssTabGo = url => { setListsMode(url.searchParams.get('mode') === 'community' ? 'social' : 'personal'); return true; };
+// The phone toggles: switch in place
+window.mssTabGo = url => { setListsMode(mssViewOf(url.search)); return true; };
 
 /* Personal loads first and shows as soon as YOUR lists + entries arrive.
    Shared lists, other people's entries and titles added from Discover
@@ -442,7 +429,7 @@ async function loadListsPage() {
   _listsEntries = entries || [];
   _listsAll = lists || [];
   _listsEntryMap = Object.fromEntries(_listsEntries.map(e => [e.id, e]));
-  if (_listsMode === 'personal') renderListsPage();            // ← first paint
+  if (_listsMode === 'mine') renderListsPage();            // ← first paint
 
   _ensureListSortOrder().catch(() => {});                       // one-off backfill, no need to wait
   await _loadCollabData();
@@ -454,9 +441,9 @@ async function loadListsPage() {
     (foreignRows || []).forEach(e => { _listsEntryMap[e.id] = e; });
     await mssFillHiddenListItems(foreignIds, _listsEntryMap);   // a collaborator's hidden title (073)
   }
-  if (_listsMode === 'personal') renderListsPage();
+  if (_listsMode === 'mine') renderListsPage();
   const hydrated = await MSSList.hydrate(_listsAll);
-  if ((await _listsKeepOrder() || hydrated) && _listsMode === 'personal') renderListsPage();
+  if ((await _listsKeepOrder() || hydrated) && _listsMode === 'mine') renderListsPage();
 
   _mssIdle(() => _fetchSocialLists());                         // warm up Community
 }
@@ -563,11 +550,8 @@ async function setListRanked(listId, value) {
     const socialList = _socialListsRaw?.find?.(l => l.id === listId);
     if (socialList) socialList.ranked = value;
 
-    if (_listsMode === 'social') {
-      renderSocialLists();
-    } else {
-      renderListsPage();
-    }
+    if (_listsMode === 'community') renderSocialLists();
+    else if (_listsMode === 'mine') renderListsPage();
     if (_slPopupListId === listId) _renderListPopup();
     showToast(value ? 'Marked as ranked!' : 'Marked as unranked.');
   } catch (err) {
@@ -970,18 +954,18 @@ function myListCardHTML(list, idx, total) {
 /* ── Loading skeleton: the toolbar and list cards (yours, or Community's) with sample
    names masked into placeholders — as many as last time (mssSkeleton, config.js) ── */
 mssSkeleton.define('lists', () => {
-  const social = _listsMode === 'social' || new URLSearchParams(location.search).get('mode') === 'community';
-  const n = Math.min(Math.max(mssSkeleton.shape(social ? 'lists_c' : 'lists')?.n ?? 4, 1), 8);
+  const social = _listsMode !== 'mine', friends = _listsMode === 'friends';
+  const n = Math.min(Math.max(mssSkeleton.shape(friends ? 'lists_f' : social ? 'lists_c' : 'lists')?.n ?? 4, 1), 8);
   const list = { title: 'Sample list name', items: [1, 2, 3, 4, 5] };
   const card = () => `<div class="lc-card">${MSSList.cardInnerHTML(list, {
     resolve: () => ({ title: 'Sample', cat: 'tv' }),
     ownerHTML: social ? '<div class="social-list-owner"><div class="social-list-avatar">U</div><div class="social-list-username">@username</div></div>' : '' })}</div>`;
-  return `<div class="mss-toolbar">${mssToolbarHTML(social ? 'Community' : 'Your Lists', n, SF.bar(social ? 'social' : 'listsOrder', 'all'), 'list')
+  return `<div class="mss-toolbar">${mssToolbarHTML(friends ? 'Friends’ Lists' : social ? 'Community' : 'Your Lists', n, SF.bar(friends ? 'listsFriends' : social ? 'social' : 'listsOrder', 'all'), 'list')
       .replace(/class="(mss-toolbar-title|sort-bar[^"]*)"/g, 'class="$1" data-skel-keep')}</div>
     <div class="lc-grid">${Array.from({ length: n }, card).join('')}</div>`;
 });
 // Header pieces that wait for your lists: the line under the title and the stat boxes
-if (new URLSearchParams(location.search).get('mode') !== 'community') {
+if (_listsMode === 'mine') {
   document.getElementById('listsPageSub').textContent = 'Your personal collections, curated your way — from watchlists to favorites and beyond.';
   mssSkeleton.stats(document.getElementById('listsPageStats'), ['Lists', 'Titles Saved', 'Ranked Lists', 'Collaborative']);
 }
@@ -1127,25 +1111,107 @@ SF.register('social', {
 });
 
 function setListsMode(mode) {
-  if (mode !== 'social' && mssGuestGate('make your own lists')) return;
+  if (mode !== 'community' && mssGuestGate(mode === 'friends' ? 'see your friends’ lists' : 'make your own lists')) return;
   _listsMode = mode;
-  const url = new URL(location.href);                 // ?mode=community — the phone toggles link to it
-  if (mode === 'social') url.searchParams.set('mode', 'community'); else url.searchParams.delete('mode');
-  history.replaceState(history.state, '', url.pathname + url.search);
-  window.mssTabsRefresh?.();
-  document.querySelectorAll('#listsModeToggle .pn-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-  document.getElementById('listsPageTitle').textContent = mode === 'personal' ? 'My Lists' : 'Community Lists';
-  document.getElementById('listsSearchWrap').style.display = mode === 'social' ? '' : 'none';
-  // "New List" stays available in both modes — you can start a new
-  // personal list even while browsing the community feed.
-  if (mode !== 'social') _llForgetTitle();
-  if (mode === 'social') {
+  mssSetView(mode);
+  mssPaintViewToggle('listsModeToggle', mode);
+  document.getElementById('listsPageTitle').textContent = { mine: 'My Lists', friends: 'Friends’ Lists', community: 'Community Lists' }[mode];
+  document.getElementById('listsSearchWrap').style.display = mode === 'community' ? '' : 'none';
+  // "New List" stays available in every view — you can start a new
+  // personal list even while browsing someone else's.
+  if (mode !== 'community') _llForgetTitle();
+  if (mode === 'community') {
     _listsFilterMode = null;
     document.getElementById('listsFilterBanner').style.display = 'none';
     loadSocialLists();
+  } else if (mode === 'friends') {
+    loadFriendsLists();
   } else {
     renderListsPage();
   }
+}
+
+/* ── Friends' lists: fetched when the view is first opened ── */
+let _friendsLists = null, _friendsListsPromise = null, _friendsListsWho = {};
+function _fetchFriendsLists() {
+  return _friendsListsPromise ||= (async () => {
+    const { ids, profiles } = await mssMyFriends(_listsUser.id);
+    _friendsListsWho = profiles;
+    if (!ids.length) return (_friendsLists = []);
+    const { data, error } = await sb.from('favorite_lists').select('*').in('user_id', ids).eq('cat', 'custom').order('created_at', { ascending: false });
+    if (error) throw error;
+    const lists = data || [];
+    // Their titles for the poster previews (Discover titles hydrate after)
+    const foreign = [...new Set(lists.flatMap(l => l.items || []))].filter(id => !MSSList.isTmdbId(id) && !_listsEntryMap[id]);
+    if (foreign.length) {
+      const { data: rows } = await sb.from('entries').select('*').in('id', foreign.slice(0, 1000));
+      (rows || []).forEach(e => { _listsEntryMap[e.id] = e; });
+    }
+    MSSList.hydrate(lists, 8).then(changed => { if (changed && _listsMode === 'friends') renderFriendsLists(); });
+    return (_friendsLists = lists);
+  })().catch(err => { _friendsListsPromise = null; throw err; });
+}
+async function loadFriendsLists() {
+  const wrap = document.getElementById('listsPageContent');
+  document.getElementById('listsPageSub').textContent = 'What your friends are ranking and collecting.';
+  if (!_friendsLists) {
+    document.getElementById('listsToolbar').style.display = 'none';
+    document.getElementById('listsPageStats').innerHTML = '';
+    wrap.innerHTML = `<div class="page-loading" data-skel="lists"></div>`;
+  }
+  try {
+    await _fetchFriendsLists();
+    if (_listsMode === 'friends') renderFriendsLists();
+  } catch (err) {
+    console.error('Load friends lists error:', err);
+    mssErrorPage(mssErrorKind(err), { in: wrap, error: err });
+  }
+}
+SF.register('listsFriends', {
+  base: () => _friendsLists || [],
+  render: () => renderFriendsLists(),
+  defaultSort: 'newest',
+  presets: {
+    added: { header: 'Created', opts: [['newest', 'Newest'], ['oldest', 'Oldest']] },
+    size:  { header: 'Size', opts: [['size_big', 'Most Titles'], ['size_small', 'Fewest Titles']] },
+  },
+  sorts: () => ['added', 'size', 'alpha'],
+  filters: () => [],
+  addedDate: l => l.created_at,
+  compare: {
+    size_big: (a, b) => (b.items || []).length - (a.items || []).length,
+    size_small: (a, b) => (a.items || []).length - (b.items || []).length,
+  },
+  choiceFilters: () => [
+    { key: 'who', label: 'Friend', options: [['', 'Everyone'], ...Object.entries(_friendsListsWho).map(([id, p]) => [id, p.display_name || p.username || 'Friend'])], test: (l, v) => l.user_id === v },
+    { key: 'rank', label: 'Ranking', options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked']], test: (l, v) => v === 'yes' ? l.ranked === true : l.ranked === false },
+  ],
+});
+function renderFriendsLists() {
+  const wrap = document.getElementById('listsPageContent'), all = _friendsLists || [];
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  document.getElementById('listsPageStats').innerHTML = all.length ? `
+    <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Lists</div></div>
+    <div class="page-stat"><div class="page-stat-num">${new Set(all.map(l => l.user_id)).size}</div><div class="page-stat-label">Friends</div></div>
+    <div class="page-stat"><div class="page-stat-num">${new Set(all.flatMap(l => l.items || [])).size}</div><div class="page-stat-label">Titles Featured</div></div>
+    <div class="page-stat"><div class="page-stat-num">${all.filter(l => new Date(l.created_at).getTime() >= weekAgo).length}</div><div class="page-stat-label">New This Week</div></div>` : '';
+  const list = SF.list('listsFriends', 'all');
+  mssSkeleton.shape('lists_f', { n: all.length });
+  _renderListsToolbar('Friends’ Lists', list.length, all.length ? SF.bar('listsFriends', 'all') : '');
+  if (!all.length) {
+    wrap.innerHTML = mssEmpty({ art: 'lists', title: 'No lists from friends yet', text: 'Your friends haven’t ranked anything yet. Make one first and show them how it’s done.',
+      actions: [{ label: 'Create a list', icon: 'plus', onclick: 'MSSListStudio.open()', primary: true }] });
+    return;
+  }
+  if (!list.length) { wrap.innerHTML = mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
+      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('listsFriends', 'all'); renderFriendsLists()", primary: true }] }); return; }
+  wrap.innerHTML = `<div class="lc-grid">${list.map(l => MSSList.cardHTML(l, {
+    resolve: _resolveListItem, onclick: `_openFriendList(${attrJSON(l.id)})`, ownerHTML: MSSList.ownerHTML(_friendsListsWho[l.user_id]),
+  })).join('')}</div>`;
+}
+function _openFriendList(id) {
+  const l = (_friendsLists || []).find(x => x.id === id);
+  if (l) MSSList.open(l, { resolve: _resolveListItem, owner: _friendsListsWho[l.user_id] || {}, social: true });
 }
 
 /* ── Search — users, list names, and item (title) names — same live
@@ -1344,7 +1410,7 @@ function _llForgetTitle() {
   const url = new URL(location.href);
   ['tmdb', 'type', 't'].forEach(k => url.searchParams.delete(k));
   history.replaceState(history.state, '', url.pathname + url.search);
-  if (_listsMode === 'social') document.getElementById('listsPageSub').textContent = 'Explore collections from the community and discover what others are watching.';
+  if (_listsMode === 'community') document.getElementById('listsPageSub').textContent = 'Explore collections from the community and discover what others are watching.';
 }
 
 // Every list holding one title — the same lists as its title page (get_lists_for_title).
@@ -1369,7 +1435,7 @@ async function _llLoadTitle() {
     const lists = (data || []).map(l => byId.get(l.id) || l);
     _listsFilterMode = { type: 'title', label: t.name, lists, pos: Object.fromEntries((data || []).map(l => [l.id, l.pos])) };
     document.getElementById('listsPageSub').textContent = `${lists.length} list${lists.length !== 1 ? 's' : ''} with "${t.name}"`;
-    MSSList.hydrate(add).then(changed => { if (changed && _listsMode === 'social') renderSocialLists(); });
+    MSSList.hydrate(add).then(changed => { if (changed && _listsMode === 'community') renderSocialLists(); });
   } catch (err) {
     console.error('Lists for title:', err);
     _listsFilterMode = { type: 'title', label: t.name, lists: [] };
@@ -1384,7 +1450,7 @@ function _resolveSocialItem(id) {
   return _socialEntryMap[id] || null;
 }
 let _listsFilterMode = null; // { type: 'user'|'item'|'title', label, lists, pos? }
-// From a title page's "View all lists": lists.html?mode=community&tmdb=<id>&type=<movie|tv>&t=<name>
+// From a title page's "View all lists": lists.html?view=community&tmdb=<id>&type=<movie|tv>&t=<name>
 let _listsTitle = (q => q.get('tmdb') ? { id: Number(q.get('tmdb')), type: q.get('type') === 'tv' ? 'tv' : 'movie', name: q.get('t') || 'this title' } : null)(new URLSearchParams(location.search));
 
 // Fetches Community data once (also used to prefetch in the background);
@@ -1408,7 +1474,7 @@ function _fetchSocialLists(force) {
     _socialListsMyReactions = {};
     (reactRes.data || []).forEach(r => { _socialListsMyReactions[r.list_id] = r.is_like ? 'like' : 'dislike'; });
     _socialListsCache = lists;
-    MSSList.hydrate(lists).then(changed => { if (changed && _listsMode === 'social') renderSocialLists(); });
+    MSSList.hydrate(lists).then(changed => { if (changed && _listsMode === 'community') renderSocialLists(); });
     return lists;
   })().catch(err => { _socialListsPromise = null; throw err; });
   return _socialListsPromise;
@@ -1424,7 +1490,7 @@ async function loadSocialLists() {
   try {
     _socialListsRaw = await _fetchSocialLists();
     if (_listsTitle) await _llLoadTitle();
-    if (_listsMode === 'social') renderSocialLists();
+    if (_listsMode === 'community') renderSocialLists();
   } catch (err) {
     console.error('Load social lists error:', err);
     mssErrorPage(mssErrorKind(err), { in: wrap, error: err });
@@ -1487,10 +1553,10 @@ function renderSocialLists() {
       <div class="lc-meta">${MSSList.countHTML(items.length)}${l.ranked && _listsFilterMode?.pos?.[l.id] ? `<span class="ll-pos">#${_listsFilterMode.pos[l.id]} in this list</span>` : ''}</div>
       ${MSSList.postersHTML(items, _resolveSocialItem)}
       <div class="social-list-reactions">
-        <button type="button" class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like" aria-pressed="${myReaction === 'like'}" onclick="event.stopPropagation();reactToSocialList(${id}, true)">
+        <button type="button" class="social-list-react-btn ${myReaction === 'like' ? 'active-like' : ''}" data-like aria-label="Like: ${l.like_count || 0}" aria-pressed="${myReaction === 'like'}" onclick="event.stopPropagation();reactToSocialList(${id}, true)">
           ${icon(myReaction === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)} <span>${l.like_count || 0}</span>
         </button>
-        <button type="button" class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike" aria-pressed="${myReaction === 'dislike'}" onclick="event.stopPropagation();reactToSocialList(${id}, false)">
+        <button type="button" class="social-list-react-btn ${myReaction === 'dislike' ? 'active-dislike' : ''}" aria-label="Dislike: ${l.dislike_count || 0}" aria-pressed="${myReaction === 'dislike'}" onclick="event.stopPropagation();reactToSocialList(${id}, false)">
           ${icon(myReaction === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)} <span>${l.dislike_count || 0}</span>
         </button>
       </div>

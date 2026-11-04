@@ -2,7 +2,7 @@
    list-popup.js — List card + read-only list popup (v632)
 
    The Lists page's card design, shared by the Lists page, the Friends
-   page's Lists tab and the Lists tab on profile.html / profile-view.html:
+   view and the Lists tab on profile.html / profile-view.html:
 
      MSSList.cardHTML(list, { resolve, onclick, ownerHTML, metaExtra, collabLine })
        → the lc-card: title + Ranked/Unranked pill, title count, optional

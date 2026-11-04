@@ -72,6 +72,30 @@ function mssGenreList(list) {
 // TMDB genre ids → the site's names, in English whatever the content language
 function mssGenreNames(ids) { return [...new Set((ids || []).flatMap(id => _mssGenreById[id] || []))]; }
 
+/* Lists and Notes: Mine · Friends · Community. The URL says which: ?view=friends | community
+   (older links: ?mode=community). */
+function mssViewOf(search = location.search) {
+  const q = new URLSearchParams(search), v = q.get('view') || (q.get('mode') === 'community' ? 'community' : '');
+  return v === 'friends' || v === 'community' ? v : 'mine';
+}
+function mssSetView(view) {
+  const url = new URL(location.href);
+  url.searchParams.delete('mode');
+  if (view === 'mine') url.searchParams.delete('view'); else url.searchParams.set('view', view);
+  history.replaceState(history.state, '', url.pathname + url.search);
+  window.mssTabsRefresh?.();
+}
+const mssViewToggleHTML = (id, label, cur, fn) => `<div class="pn-toggle fade-up" id="${id}" role="tablist" aria-label="${label}">${[['mine', 'Mine'], ['friends', 'Friends'], ['community', 'Community']].map(([k, l]) =>
+  `<button type="button" class="pn-toggle-btn${cur === k ? ' active' : ''}" role="tab" aria-selected="${cur === k}" data-view="${k}" onclick="${fn}('${k}')">${l}</button>`).join('')}</div>`;
+function mssPaintViewToggle(id, view) {
+  document.querySelectorAll(`#${id} .pn-toggle-btn`).forEach(b => { const on = b.dataset.view === view; b.classList.toggle('active', on); b.setAttribute('aria-selected', on); });
+}
+// Your friends, for a Friends view: { ids, profiles }
+async function mssMyFriends(userId) {
+  const accepted = (await getFriendships(userId)).filter(f => f.status === 'accepted');
+  return { ids: accepted.map(f => f.friendId), profiles: Object.fromEntries(accepted.map(f => [f.friendId, f.friendProfile || {}])) };
+}
+
 /* Active Sessions (091, 092): this device was signed out from another one → leave. The short wait lets
    a normal sign-out here finish first: it ends this session too, and then there's nothing to do. */
 let _mssEnding = false;
@@ -1946,7 +1970,7 @@ const mssSkeleton = (() => {
   const SKEL_BY_PAGE = {
     'completed.html': 'completed', 'notes.html': 'notes', 'lists.html': 'lists', 'episodes.html': 'episodes',
     'title.html': 'title', 'person.html': 'person', 'detail.html': 'detail', 'list-view.html': 'grid',
-    'user.html': 'profile', 'profile-view.html': 'profile', 'friends.html': 'rows', 'notifications.html': 'rows', 'cabinet.html': 'grid',
+    'user.html': 'profile', 'profile-view.html': 'profile', 'friends.html': 'rows', 'activity.html': 'rows', 'compare.html': 'rows', 'blend.html': 'rows', 'movie-night.html': 'rows', 'challenges.html': 'rows', 'polls.html': 'rows', 'episode-chat.html': 'rows', 'messages.html': 'rows', 'notifications.html': 'rows', 'cabinet.html': 'grid',
   };
   const page = location.pathname.split('/').pop() || 'index.html';
   function kindFor(el) {
@@ -2028,7 +2052,7 @@ const mssSkeleton = (() => {
      2.5s; after 8s it says the connection seems slow (or that you're offline) ── */
   const FIRST = { 'index.html': 'Getting your home ready…', '': 'Getting your home ready…', 'library.html': 'Pulling your library…', 'tv-shows.html': 'Pulling your library…',
     'movies.html': 'Pulling your library…', 'anime.html': 'Pulling your library…', 'cartoons.html': 'Pulling your library…', 'completed.html': 'Pulling your library…',
-    'discover.html': 'Finding something to watch…', 'discover-list.html': 'Finding something to watch…', 'friends.html': 'Catching up with your friends…',
+    'discover.html': 'Finding something to watch…', 'discover-list.html': 'Finding something to watch…', 'friends.html': 'Catching up with your friends…', 'activity.html': 'Catching up with your friends…', 'compare.html': 'Lining up your tastes…', 'blend.html': 'Mixing your tastes…', 'movie-night.html': 'Dimming the lights…', 'challenges.html': 'Checking the scoreboard…', 'polls.html': 'Counting the votes…', 'episode-chat.html': 'Catching up on the chat…', 'messages.html': 'Checking your messages…',
     'title.html': 'Fetching the details…', 'person.html': 'Fetching the details…', 'episodes.html': 'Lining up the episodes…', 'lists.html': 'Gathering the lists…',
     'list-view.html': 'Gathering the list…', 'notes.html': 'Gathering the notes…', 'profile.html': 'Loading the profile…', 'profile-view.html': 'Loading the profile…',
     'ratings.html': 'Lining up the ratings…', 'cabinet.html': 'Polishing the trophies…' };
@@ -2269,7 +2293,7 @@ const MSSRegion = (() => {
   return { KEY, guess };
 })();
 
-/* ── Share with friends (lands in their Social → Inbox) ──
+/* ── Share with friends (lands in their Messages) ──
    item: a title { tmdb_id, media_type: 'movie'|'tv', title, poster_url, year },
    one of your own titles { kind: 'entry', entry_id, … } ("I watched this"),
    or a list { kind: 'list', list_id, title, count }.

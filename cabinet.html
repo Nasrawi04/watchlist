@@ -202,10 +202,10 @@ function cabDraw() {
     ${sec('ach', 'Achievements', `${levels} of ${CAB.ach.length * 4} levels`, `<div class="cab-grid">${CAB.ach.map(achCard).join('')}</div>`)}
     ${sec('official', 'Official', `${official.length} ${official.length === 1 ? 'medal' : 'medals'}`, official.length ? `<div class="cab-grid">${official.map(badgeCard).join('')}</div>`
       : mssEmpty({ compact: true, cls: 'cab-es', art: 'medal', title: 'No official medals yet', text: CAB.own ? 'Finish an official challenge and its medal lands right here.' : 'The shelf is polished and waiting.',
-          actions: CAB.own ? [{ label: 'See the challenges', href: 'friends.html?s=challenges', primary: true }] : [] }))}
+          actions: CAB.own ? [{ label: 'See the challenges', href: 'challenges.html', primary: true }] : [] }))}
     ${sec('challenge', 'Challenges', `${chal.length} ${chal.length === 1 ? 'medal' : 'medals'}`, chal.length ? `<div class="cab-grid">${chal.map(badgeCard).join('')}</div>`
       : mssEmpty({ compact: true, cls: 'cab-es', art: 'podium', title: 'No challenge medals yet', text: CAB.own ? 'Race friends in a challenge — 1st gets gold, 2nd silver, everyone after bronze.' : 'No races won (or lost) yet.',
-          actions: CAB.own ? [{ label: 'Start a challenge', icon: 'plus', href: 'friends.html?s=challenges', primary: true }] : [] }))}`;
+          actions: CAB.own ? [{ label: 'Start a challenge', icon: 'plus', href: 'challenges.html', primary: true }] : [] }))}`;
 }
 function cabTab(k) {
   CAB.tab = k;
@@ -280,7 +280,7 @@ function cabBadge(id) {
       <h3 class="cab-pop-title" id="cabPopTitle" translate="no">${esc(b.title)}</h3>
       <div class="cab-pop-sub">${sub}</div>
       <div class="cab-pop-sub">Earned ${when(b.earned_at)}</div>
-      ${b.challenge_id && CAB.own ? `<a class="rec-btn" style="margin-top:8px;text-decoration:none" href="friends.html?s=challenges&ch=${encodeURIComponent(b.challenge_id)}">${icon('trophy', 14)} Open the challenge</a>` : ''}
+      ${b.challenge_id && CAB.own ? `<a class="rec-btn" style="margin-top:8px;text-decoration:none" href="challenges.html?ch=${encodeURIComponent(b.challenge_id)}">${icon('trophy', 14)} Open the challenge</a>` : ''}
     </div>`);
 }
 
