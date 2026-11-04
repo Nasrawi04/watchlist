@@ -34,12 +34,33 @@ async function _mssFetch(input, init = {}) {
   const read = method === 'GET' || method === 'HEAD' || _MSS_READ_RPC.test(url);
   if (!read && url.includes('/rest/v1/')) { try { localStorage.setItem('mss_data_at', String(Date.now())); } catch {} }
   for (let i = 0; ; i++) {
-    try { return await fetch(input, init); }
-    catch (err) {
+    try {
+      const res = await fetch(input, init);
+      if (res.status === 401 && url.includes('/rest/v1/')) res.clone().json().then(b => { if (b?.code === 'SESSION_ENDED') mssSessionEnded(); }).catch(() => {});
+      return res;
+    } catch (err) {
       if (!read || i >= 2 || init.signal?.aborted || _mssLeaving || !navigator.onLine) throw err;
       await new Promise(r => setTimeout(r, 450 * (i + 1) + Math.random() * 250));
     }
   }
+}
+
+/* Active Sessions (091, 092): this device was signed out from another one → leave. The short wait lets
+   a normal sign-out here finish first: it ends this session too, and then there's nothing to do. */
+let _mssEnding = false;
+function mssSessionEnded() {
+  if (_mssEnding) return;
+  _mssEnding = true;
+  setTimeout(async () => {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+      MSSAccounts.forget(session.user.id);
+      await sb.auth.signOut({ scope: 'local' });
+    } catch {}
+    try { localStorage.removeItem(sb.auth.storageKey); sessionStorage.clear(); } catch {}
+    window.location.href = 'login.html?ended=1';
+  }, 800);
 }
 
 /* Remember me (login.html): unticked → the sign-in lasts until the browser is closed.
