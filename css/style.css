@@ -177,7 +177,7 @@
 
   --text:         #EDEDED;
   --text-2:       #A8A8A8;
-  --text-3:       #808080; /* #808080 lands at ~4.7:1. */
+  --text-3:       #868686; /* at least 4.5:1 on the card colours too (#19191C ≈ 4.8:1) */
 
   --serif: 'Oswald', Georgia, sans-serif;
   --bebas: 'Bebas Neue', var(--sans);
@@ -3756,6 +3756,8 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 .vt-btn svg { width:14px; height:14px; }
 .vt-btn:hover { color:var(--text-2); }
 .vt-btn.active { background:var(--olive); color:#fff; }
+[data-theme="light"] .vt-btn:not(.active) { color:var(--text-2); }   /* --text-3 is too faint on the light toggle */
+[data-theme="light"] .vt-btn:not(.active):hover { color:var(--text); }
 
 .accordion-chevron svg { width:16px; height:16px; transition:transform 220ms var(--ease); }
 
