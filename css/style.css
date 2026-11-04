@@ -5539,6 +5539,14 @@ html[data-theme="light"] {
 @media(hover:hover) { .mss-pick-opt:hover { background:var(--bg-2); } [data-theme="light"] .mss-pick-opt:hover { background:#E2DACE; } }
 @media(max-width:640px) { .mss-pick-search input, .mss-pick-trigger { font-size:16px; } }   /* 16px: iPhone doesn't zoom in */
 .mss-pick-trigger:disabled { opacity:.6; cursor:progress; }
+/* typed: you type in the field; the list floats over everything, kept on screen by place() in MSSPicker */
+.mss-pick-typed .mss-pick-trigger { cursor:text; }
+.mss-pick-typed .mss-pick-trigger:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
+.mss-pick-typed .mss-pick-trigger input { flex:1; width:100%; min-width:0; height:100%; padding:0; background:none; border:none; outline:none; color:var(--text); font:inherit; }
+.mss-pick-typed .mss-pick-trigger input::placeholder { color:var(--text-3); opacity:1; }
+.mss-pick-typed .mss-pick-chevron { cursor:pointer; box-sizing:content-box; padding:10px 0 10px 2px; }
+.mss-pick-typed.open .mss-pick-trigger { border-end-start-radius:var(--radius-sm); border-end-end-radius:var(--radius-sm); }
+.mss-pick-typed .mss-pick-menu { position:fixed; top:0; left:0; inset-inline:auto; z-index:60; border-top:0.5px solid var(--olive-light); border-radius:var(--radius-sm); }
 
 /* ── Title logos (tmdbTitleHTML, nav.js): name artwork in place of the written title ── */
 .mss-logo { display:block; width:auto; height:auto; max-width:min(100%, 540px); max-height:clamp(64px, 10vw, 140px); object-fit:contain; filter:drop-shadow(0 2px 12px rgba(0,0,0,.55)) drop-shadow(0 0 1px rgba(0,0,0,.35)); }
@@ -7933,7 +7941,11 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 @media (prefers-reduced-motion: reduce) { .mss-teen [data-age] :is(img, [style*="background-image"]) { transition:none; transform:none; } }
 /* Birth month + year (nav.js _navBirthPopup, login.html sign-up) */
 .mss-birth-row { display:flex; gap:8px; width:100%; }
-.mss-birth-row select { flex:1; min-width:0; min-height:44px; }
-.mss-birth-row .mss-birth-m { flex:1.5; }
-.mss-birth-row .mss-birth-d { flex:.8; }
+.mss-birth-row > .mss-pick { flex:1 1 0; min-width:0; }
+.mss-birth-form { display:contents; }
+.mss-birth-row > .mss-birth-d { flex-grow:.85; }
+.mss-birth-row > .mss-birth-m { flex-grow:1.25; }
+.mss-birth-row .mss-pick-trigger { padding:0 8px 0 10px; gap:2px; }
+@media(max-width:360px) { .mss-birth-row { gap:6px; } .mss-birth-row .mss-pick-trigger { padding:0 6px 0 8px; } }
+.mss-birth-row .mss-pick-opt { text-align:start; }
 .notif-mod-note { font-style:italic; color:var(--text-2); }
