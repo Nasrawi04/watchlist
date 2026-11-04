@@ -1555,7 +1555,7 @@ function _tdRenderNotes() {
   const d = _tdDetail || {}, info = {
     title: d.title || d.name || '', poster_url: d.poster_path ? TMDB_IMG + d.poster_path : null,
     cat: _tdType === 'movie' ? 'movies' : 'tv', tmdb_id: Number(_tdId), tmdb_type: _tdType,
-    genres: (d.genres || []).map(g => g.name), year: (d.release_date || d.first_air_date || '').slice(0, 4),
+    genres: tmdbGenreNames(d.genres), year: (d.release_date || d.first_air_date || '').slice(0, 4),
   };
   wrap.innerHTML = `<div class="nc-grid">${sorted.slice(0, TD_SHOW).map(n => MSSNote.communityCardHTML({ ...info, ...n },
     { mine: _tdNotesReactions[n.entry_id], me: _tdUser?.id, open: '_tdOpenNote', react: '_tdReactToNote', replies: '_tdNoteReplies' })).join('')}</div>`

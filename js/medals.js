@@ -69,7 +69,7 @@ const MSSMedal = (() => {
     shows:          { name: 'Shows finished',    em: 'tvDone',    about: 'Shows — anime and cartoons too — you’ve marked Watched.' },
     anime:          { name: 'Anime fan',         em: 'anime',     about: 'Anime you’ve watched.' },
     cartoons:       { name: 'Cartoon fan',       em: 'cartoons',  about: 'Cartoons you’ve watched.' },
-    genres:         { name: 'Genres explored',   em: 'compass',   about: 'Different genres among what you’ve watched — there are 19.' },
+    genres:         { name: 'Genres explored',   em: 'compass',   about: 'Different genres among what you’ve watched — there are 24.' },
     lists:          { name: 'Lists made',        em: 'list',      about: 'Lists you’ve made.' },
     notes:          { name: 'Notes written',     em: 'note',      about: 'Titles you’ve written a note on.' },
     challenges:     { name: 'Challenges joined', em: 'trophy',    about: 'Challenges you’ve joined — friends’ and official.' },

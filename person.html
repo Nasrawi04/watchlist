@@ -351,11 +351,10 @@ function _ppCreditGrid(list, byScore) {
 /* ── Sort & Filter (the site's own Sort / Filter buttons, js/sort-filter.js) ──
    Sorts: Release Date (newest first by default) · A–Z · Ratings (TMDB score — titles
    with under 20 votes go last and aren't numbered) · Popularity. Filters: genre, year, score. */
-const _PP_GENRES = { 10759: ['Action', 'Adventure'], 10765: ['Science Fiction', 'Fantasy'], 10768: ['War'], 10762: ['Family'] };   // TV-only genres → the site's list
 function _ppItem(cr) {
   const date = (cr.media_type === 'movie' ? cr.release_date : cr.first_air_date) || '';
   return { cr, media_type: cr.media_type, title: (cr.media_type === 'movie' ? cr.title : cr.name) || '', date, year: date.slice(0, 4) || null,
-    genres: [...new Set((cr.genre_ids || []).flatMap(g => _PP_GENRES[g] || (TMDB_GENRE_EN[g] ? [TMDB_GENRE_EN[g]] : [])))],
+    genres: mssGenreNames(cr.genre_ids),
     score: (cr.vote_count || 0) >= 20 && cr.vote_average ? cr.vote_average : null, popularity: cr.popularity || 0 };
 }
 const _ppByDate = dir => (a, b) => (!a.date || !b.date) ? !a.date - !b.date : dir * a.date.localeCompare(b.date);   // undated always last

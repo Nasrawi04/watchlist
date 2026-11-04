@@ -45,6 +45,21 @@ async function _mssFetch(input, init = {}) {
   }
 }
 
+/* The site's one genre list: every TMDB genre → [its movie genre id, its TV genre id]. Every filter,
+   dropdown and saved title uses these names. TMDB's combined TV genres count as both halves
+   ("Action & Adventure" is Action and Adventure), and some genres only exist on one side. */
+const MSS_GENRES = {
+  Action: [28, 10759], Adventure: [12, 10759], Animation: [16, 16], Comedy: [35, 35], Crime: [80, 80],
+  Documentary: [99, 99], Drama: [18, 18], Family: [10751, 10751], Fantasy: [14, 10765], History: [36, null],
+  Horror: [27, null], Kids: [null, 10762], Music: [10402, null], Mystery: [9648, 9648], News: [null, 10763],
+  Reality: [null, 10764], Romance: [10749, null], 'Science Fiction': [878, 10765], Soap: [null, 10766],
+  Talk: [null, 10767], Thriller: [53, null], 'TV Movie': [10770, null], War: [10752, 10768], Western: [37, 37],
+};
+const _mssGenreById = {};
+Object.entries(MSS_GENRES).forEach(([name, ids]) => new Set(ids).forEach(id => { if (id) (_mssGenreById[id] = _mssGenreById[id] || []).push(name); }));
+// TMDB genre ids → the site's names, in English whatever the content language
+function mssGenreNames(ids) { return [...new Set((ids || []).flatMap(id => _mssGenreById[id] || []))]; }
+
 /* Active Sessions (091, 092): this device was signed out from another one → leave. The short wait lets
    a normal sign-out here finish first: it ends this session too, and then there's nothing to do. */
 let _mssEnding = false;

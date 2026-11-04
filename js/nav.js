@@ -1624,17 +1624,6 @@ function getReleaseDateValue(e) {
   return y ? new Date(String(y) + '-06-15').getTime() : 0;
 }
 
-/* ── Genre ID → label mapping ── */
-const TMDB_GENRE_MAP = {
-  28:'Action', 12:'Adventure', 16:'Animation', 35:'Comedy',
-  80:'Crime', 99:'Documentary', 18:'Drama', 10751:'Family',
-  14:'Fantasy', 36:'History', 27:'Horror', 10402:'Music',
-  9648:'Mystery', 10749:'Romance', 878:'Sci-Fi', 53:'Thriller',
-  10752:'War', 37:'Western', 10759:'Action', 10762:'Animation',
-  10763:'News', 10764:'Reality', 10765:'Sci-Fi', 10766:'Soap',
-  10767:'Talk', 10768:'War', 10770:'TV Movie'
-};
-
 /* ── AniList GraphQL query ── */
 async function _anilistSearch(query) {
   try {
@@ -1697,7 +1686,7 @@ async function _tmdbMovie(id) {
 /* ── Map TMDB result → entry fields ── */
 function _tmdbToEntry(result, detail) {
   const isMovie = result.media_type === 'movie';
-  const genres  = (result.genre_ids || []).map(id => TMDB_GENRE_MAP[id]).filter(Boolean).slice(0, 5);
+  const genres  = mssGenreNames(result.genre_ids).slice(0, 5);
   const year    = isMovie
     ? (result.release_date || '').split('-')[0]
     : (result.first_air_date || '').split('-')[0];
@@ -2160,16 +2149,8 @@ async function tmdbFetch(url, opts = {}) {
   return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }
 
-/* TMDB genres in English, whatever the content language — saved entries
-   keep the same genre names (filters, stats, the genre picker). */
-const TMDB_GENRE_EN = {
-  28:'Action', 12:'Adventure', 16:'Animation', 35:'Comedy', 80:'Crime', 99:'Documentary', 18:'Drama',
-  10751:'Family', 14:'Fantasy', 36:'History', 27:'Horror', 10402:'Music', 9648:'Mystery', 10749:'Romance',
-  878:'Science Fiction', 10770:'TV Movie', 53:'Thriller', 10752:'War', 37:'Western',
-  10759:'Action & Adventure', 10762:'Kids', 10763:'News', 10764:'Reality', 10765:'Sci-Fi & Fantasy',
-  10766:'Soap', 10767:'Talk', 10768:'War & Politics',
-};
-const tmdbGenreNames = genres => (genres || []).map(g => TMDB_GENRE_EN[g.id] || g.name).filter(Boolean);
+/* A title's TMDB genres → the site's names (MSS_GENRES, config.js) */
+const tmdbGenreNames = genres => [...new Set((genres || []).flatMap(g => _mssGenreById[g.id] || [g.name]).filter(Boolean))];
 
 /* Title logos — TMDB's name artwork (images.logos), shown instead of the written
    title where a title has one. Fetch details with append_to_response=…,images and
@@ -2333,7 +2314,7 @@ function initDiscoverSearch(inputId, opts = {}) {
         year:  (isMovie ? r.release_date : r.first_air_date || '').split('-')[0],
         thumb: r.poster_path ? TMDB_IMG + r.poster_path : null,
         label: isMovie ? 'Movie' : 'TV Show',
-        genres: (r.genre_ids || []).map(gid => TMDB_GENRE_MAP[gid]).filter(Boolean).slice(0, 2),
+        genres: mssGenreNames(r.genre_ids).slice(0, 2),
       };
     });
 
@@ -2492,7 +2473,7 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
         year:  (isMovie ? r.release_date : r.first_air_date || '').split('-')[0],
         thumb: r.poster_path ? TMDB_IMG + r.poster_path : null,
         label: isMovie ? 'Movie' : 'TV Show',
-        genres: (r.genre_ids || []).map(id => TMDB_GENRE_MAP[id]).filter(Boolean).slice(0, 2)
+        genres: mssGenreNames(r.genre_ids).slice(0, 2)
       };
     });
 

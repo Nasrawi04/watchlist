@@ -28,13 +28,6 @@ const MSSBrowse = (() => {
   const NOW = new Date().getFullYear();
   const today = () => new Date().toISOString().slice(0, 10);
 
-  // Site genre → [movie genre id, TV genre id] (TMDB keeps two lists)
-  const GENRES = {
-    Action: [28, 10759], Adventure: [12, 10759], Comedy: [35, 35], Crime: [80, 80], Documentary: [99, 99],
-    Drama: [18, 18], Family: [10751, 10751], Fantasy: [14, 10765], History: [36, null], Horror: [27, null],
-    Music: [10402, null], Mystery: [9648, 9648], Romance: [10749, null], 'Science Fiction': [878, 10765],
-    Thriller: [53, null], War: [10752, 10768], Western: [37, 37],
-  };
   const COUNTRIES = ['US', 'GB', 'CA', 'AU', 'IE', 'FR', 'DE', 'ES', 'IT', 'PT', 'NL', 'BE', 'SE', 'DK', 'NO', 'FI', 'PL', 'HR',
     'TR', 'RU', 'JP', 'KR', 'CN', 'HK', 'TW', 'TH', 'IN', 'IR', 'EG', 'AE', 'SA', 'NG', 'ZA', 'MX', 'BR', 'AR', 'CO'];
   const TYPES = [['', 'All types'], ['movie', 'Movies'], ['tv', 'TV Shows'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
@@ -118,7 +111,7 @@ const MSSBrowse = (() => {
       </div>`;
     mountField('type', 'Type', TYPES);
     mountField('year', 'Year', yearOptions());
-    mountField('genre', 'Genre', [['', 'Any genre'], ...Object.keys(GENRES).map(g => [g, g, g === 'Science Fiction' ? ['Sci-Fi', 'SciFi'] : []])]);
+    mountField('genre', 'Genre', [['', 'Any genre'], ...Object.keys(MSS_GENRES).map(g => [g, g, g === 'Science Fiction' ? ['Sci-Fi', 'SciFi'] : []])]);
     mountField('country', 'Country', [['', 'Any country'], ...countries]);
     mountField('region', 'Watch in', regionOptions(), onRegion, 'Choose a country');
     mountField('service', 'Service', serviceOptions());
@@ -188,7 +181,7 @@ const MSSBrowse = (() => {
 
   /* ── Results ── */
   function sources() {
-    const g = q.genre ? GENRES[q.genre] : null, yr = yearRange(q.year), r = region();
+    const g = q.genre ? MSS_GENRES[q.genre] : null, yr = yearRange(q.year), r = region();
     const kinds = { '': [['movie'], ['tv']], movie: [['movie', 'no-anim']], tv: [['tv', 'no-anim']],
       anime: [['movie', 'anime'], ['tv', 'anime']], cartoons: [['movie', 'cartoon'], ['tv', 'cartoon']] }[q.type || ''];
     const cinema = q.service === 'cinema' || q.service === 'cinema_soon', len = lengths(F());
@@ -196,11 +189,11 @@ const MSSBrowse = (() => {
       if (cinema && t !== 'movie') return null;                      // cinemas show movies
       if (t === 'movie' ? len.shows && !len.movies : len.movies && !len.shows) return null;   // only one kind's length set
       const gid = g ? g[t === 'movie' ? 0 : 1] : null;
-      if (g && !gid) return null;                                   // e.g. Horror has no TV genre on TMDB
+      if (g && !gid) return null;                                   // e.g. Horror has no TV genre on TMDB, Kids no movie one
       const p = new URLSearchParams({ language: 'en-US', include_adult: 'false' });
-      const genres = [gid, kind === 'anime' || kind === 'cartoon' ? 16 : null].filter(Boolean);
+      const genres = [...new Set([gid, kind === 'anime' || kind === 'cartoon' ? 16 : null])].filter(Boolean);
       if (genres.length) p.set('with_genres', genres.join(','));
-      if (kind === 'no-anim') p.set('without_genres', '16');
+      if (kind === 'no-anim' && gid !== 16) p.set('without_genres', '16');
       if (kind === 'anime') p.set('with_original_language', 'ja');
       if (q.country) p.set('with_origin_country', q.country);
       if (cinema) {                                                   // cinema release dates in that country (TMDB: 2 = limited, 3 = wide)

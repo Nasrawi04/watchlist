@@ -53,21 +53,6 @@ async function _discOfficialPoster(type, id) {
   } catch { return null; }
 }
 
-// TMDB genre ids → the site's genre names (same list the Genre filter
-// uses). TV's combined genres map onto both halves.
-const _DISC_GENRE_NAMES = {
-  28: ['Action'], 12: ['Adventure'], 16: ['Animation'], 35: ['Comedy'], 80: ['Crime'],
-  99: ['Documentary'], 18: ['Drama'], 10751: ['Family'], 14: ['Fantasy'], 36: ['History'],
-  27: ['Horror'], 10402: ['Music'], 9648: ['Mystery'], 10749: ['Romance'], 878: ['Science Fiction'],
-  53: ['Thriller'], 10770: ['TV Movie'], 10752: ['War'], 37: ['Western'],
-  10759: ['Action', 'Adventure'], 10765: ['Science Fiction', 'Fantasy'], 10768: ['War'], 10762: ['Family'],
-};
-function _discGenreNames(ids) {
-  const out = new Set();
-  (ids || []).forEach(id => (_DISC_GENRE_NAMES[id] || []).forEach(n => out.add(n)));
-  return [...out];
-}
-
 // Normalizes a raw TMDB result (movie or tv) into the shape every
 // Discover card expects: { id, media_type, title, poster_url, year, score, origin_country }
 function _discNormalize(r, mediaType) {
@@ -82,7 +67,7 @@ function _discNormalize(r, mediaType) {
     origin_country: r.origin_country || [],
     original_language: r.original_language || '',
     genre_ids: r.genre_ids || [],
-    genres: _discGenreNames(r.genre_ids),
+    genres: mssGenreNames(r.genre_ids),
     overview: r.overview || '',
   };
 }

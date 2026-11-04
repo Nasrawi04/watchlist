@@ -29,7 +29,7 @@ const MSSChallenges = (() => {
     return `<span class="soc-av" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .42)}px">${u ? `<img src="${u}" alt="" loading="lazy">` : esc((p?.username || '?')[0].toUpperCase())}</span>`;
   };
   const CATS = [['', 'Anything'], ['movies', 'Movies'], ['tv', 'TV Shows'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
-  const GENRES = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'Horror', 'Mystery', 'Romance', 'Science Fiction', 'Thriller', 'War', 'Western'];
+  const GENRES = Object.keys(MSS_GENRES);
   const day = d => new Date(d + 'T12:00:00');
   const fmtDay = d => day(d).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: day(d).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
   const iso = d => { const x = new Date(d); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().slice(0, 10); };
