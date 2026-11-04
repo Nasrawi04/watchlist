@@ -239,6 +239,7 @@ async function _fillNavUser(user) {
   _navAdminCheck();
   _navAgeCheck(user.id);
   _navAccountCheck(profile);
+  _navSessionCheck();
   _navReleaseCheck(user);
   _navSpotlight();
   _navMemberMedal(user.id);
@@ -319,6 +320,12 @@ async function _navAdminCheck() {
 //  • suspended by an admin → a popup that only signs out;
 //  • username breaks the word filter (made before it existed, or a word
 //    added since) → must pick a new one. Neither popup can be dismissed.
+// Active Sessions (091): checked on every page, so a signed-out device leaves on its next page load.
+// If the check can't run, nothing happens (never signs anyone out by mistake).
+async function _navSessionCheck() {
+  try { const { data } = await sb.rpc('session_alive'); if (data === false) mssSessionEnded(); } catch {}
+}
+
 async function _navAccountCheck(profile) {
   const uid = window._navUser?.id, name = profile?.username;
   if (!uid || !name || document.getElementById('mssRenameOverlay')) return;
