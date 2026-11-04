@@ -575,6 +575,7 @@ a.au-tile:hover::after { opacity:1; }
   if (isRecovery) return; // Don't redirect — let reset form handle it
   const user = await getCurrentUser();
   if (user && !new URLSearchParams(location.search).has('preview')) { window.location.href = mssAfterLogin(); return; }
+  if (new URLSearchParams(location.search).has('ended')) showErr('siError', 'This device was signed out from your account’s Active Sessions. Sign in again if that was you.');
   const saved = MSSAccounts.list(), box = document.getElementById('authSaved');
   if (!saved.length) return;
   const ava = a => { const u = safeURL(a.avatar_url);
