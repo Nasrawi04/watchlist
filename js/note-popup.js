@@ -57,7 +57,7 @@ const MSSNote = (() => {
   }
   function badges(e, { genres = 3, dateLabel = '', date: d = '' } = {}) {
     return typeBadge(e)
-      + (e.genres || []).slice(0, genres).map(g => `<span class="w-ep-badge" ${NB}>${esc(g)}</span>`).join('')
+      + mssGenreList(e.genres).slice(0, genres).map(g => `<span class="w-ep-badge" ${NB}>${esc(g)}</span>`).join('')
       + (d ? `<span class="w-ep-badge" ${NB}>${dateLabel ? esc(dateLabel) + ' ' : ''}${esc(d)}</span>` : '');
   }
 

@@ -57,6 +57,18 @@ const MSS_GENRES = {
 };
 const _mssGenreById = {};
 Object.entries(MSS_GENRES).forEach(([name, ids]) => new Set(ids).forEach(id => { if (id) (_mssGenreById[id] = _mssGenreById[id] || []).push(name); }));
+// A saved or typed-in genre list → each genre once, in the site's own name (the database does the same: 096)
+const _MSS_GENRE_ALIAS = { 'sci-fi': ['Science Fiction'], 'sci-fi & fantasy': ['Science Fiction', 'Fantasy'], 'action & adventure': ['Action', 'Adventure'], 'war & politics': ['War'] };
+const _mssGenreCase = Object.fromEntries(Object.keys(MSS_GENRES).map(n => [n.toLowerCase(), n]));
+function mssGenreList(list) {
+  const out = new Map();
+  (Array.isArray(list) ? list : []).forEach(g => {
+    const key = String(g ?? '').trim();
+    if (!key) return;
+    (_MSS_GENRE_ALIAS[key.toLowerCase()] || [_mssGenreCase[key.toLowerCase()] || key]).forEach(n => { if (!out.has(n.toLowerCase())) out.set(n.toLowerCase(), n); });
+  });
+  return [...out.values()];
+}
 // TMDB genre ids → the site's names, in English whatever the content language
 function mssGenreNames(ids) { return [...new Set((ids || []).flatMap(id => _mssGenreById[id] || []))]; }
 
@@ -1363,7 +1375,7 @@ function posterHTML(entry, size, sizes) {
 
 function genreHTML(genres, max) {
   if (!genres || !genres.length) return '';
-  const shown = max ? genres.slice(0, max) : genres;
+  const once = mssGenreList(genres), shown = max ? once.slice(0, max) : once;
   return shown.map(g => `<span class="genre-dot">${escHTML(g)}</span>`).join('');
 }
 

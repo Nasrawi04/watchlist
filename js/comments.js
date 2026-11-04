@@ -81,7 +81,7 @@ const MSSComments = (() => {
     replyFor = null;
     $('mssCommentsPoster').innerHTML = posterHTML(e);
     $('mssCommentsTitle').textContent = e.title || '';
-    const tags = [CAT_META?.[e.cat]?.label, ...(e.genres || []).slice(0, 2)].filter(Boolean);
+    const tags = [CAT_META?.[e.cat]?.label, ...mssGenreList(e.genres).slice(0, 2)].filter(Boolean);
     $('mssCommentsTags').innerHTML = tags.map(t => `<span class="w-ep-badge">${escHTML(t)}</span>`).join('');
     $('mssCommentsCount').textContent = '';
     $('mssCommentsInput').value = '';

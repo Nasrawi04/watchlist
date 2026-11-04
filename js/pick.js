@@ -237,7 +237,7 @@ const MSSPick = (() => {
       <div class="qp-count">${list.length === n ? `1 of ${n} on your watchlist` : `1 of ${list.length} that fit · ${n} on your watchlist`}</div>
       <h2 class="qp-title" id="qpTitle" translate="no">${esc(e.title)}</h2>
       <div class="qp-meta">${bits.map(esc).join(' · ')}<span id="qpVote"></span></div>
-      ${(e.genres || []).length ? `<div class="qp-genres">${e.genres.slice(0, 4).map(g => `<span>${esc(g)}</span>`).join('')}</div>` : ''}`;
+      ${(e.genres || []).length ? `<div class="qp-genres">${mssGenreList(e.genres).slice(0, 4).map(g => `<span>${esc(g)}</span>`).join('')}</div>` : ''}`;
     const why = reasons(e);
     document.getElementById('qpBody').innerHTML = `
       <p class="qp-overview" id="qpOverview">${e.tmdb_id ? '<span class="qp-skel"></span><span class="qp-skel"></span><span class="qp-skel short"></span>' : ''}</p>

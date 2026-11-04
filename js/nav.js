@@ -1373,7 +1373,7 @@ async function modalQuickCreate() {
       status:        document.getElementById('mStatus').dataset.value,
       year:          prefill.year          || document.getElementById('mYear')?.value || null,
       description:   prefill.description   || null,
-      genres:        prefill.genres        || [],
+      genres:        mssGenreList(prefill.genres),
       poster_url:    prefill.poster_url    || null,
       total_seasons: prefill.total_seasons || null,
       total_eps:     prefill.total_eps     || null,
@@ -1722,7 +1722,7 @@ function _tmdbToEntry(result, detail) {
 function _anilistToEntry(media) {
   const title  = media.title?.english || media.title?.romaji || '';
   const year   = media.startDate?.year ? String(media.startDate.year) : '';
-  const genres = (media.genres || []).slice(0, 5);
+  const genres = mssGenreList(media.genres).slice(0, 5);
   const poster = media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || null;
   const desc   = (media.description || '').replace(/<[^>]+>/g, '').trim();
   const isMovie = media.format === 'MOVIE';
@@ -2156,7 +2156,7 @@ const tmdbGenreNames = genres => [...new Set((genres || []).flatMap(g => _mssGen
 async function mssSyncEntryGenres(entry, detail) {
   if (!entry?.id || !entry.tmdb_id || entry.genres_synced === true || entry.user_id !== window._navUser?.id || !Array.isArray(detail?.genres)) return null;
   entry.genres_synced = true;
-  const have = entry.genres || [], add = tmdbGenreNames(detail.genres).filter(g => MSS_GENRES[g] && !have.includes(g));
+  const have = mssGenreList(entry.genres), add = tmdbGenreNames(detail.genres).filter(g => MSS_GENRES[g] && !have.includes(g));
   const genres = [...have, ...add];
   try {
     const { error } = await sb.from('entries').update({ genres, genres_synced: true }).eq('id', entry.id).eq('user_id', entry.user_id);
@@ -2501,7 +2501,7 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
         year:  m.startDate?.year ? String(m.startDate.year) : '',
         thumb: m.coverImage?.medium || null,
         label: m.format === 'MOVIE' ? 'Movie' : 'TV Show',
-        genres: (m.genres || []).slice(0, 2)
+        genres: mssGenreList(m.genres).slice(0, 2)
       }));
       results = [...results, ...extra].slice(0, 20);
     }

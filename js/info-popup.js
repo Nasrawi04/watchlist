@@ -126,7 +126,7 @@ const MSSInfo = (() => {
     const cat = it.cat || guessCat(it, d);
     const movie = isMovieType(it.media_type);
     const label = (typeof CAT_META !== 'undefined' && CAT_META[cat]?.label) || (movie ? 'Movie' : 'TV Show');
-    const genres = (it.entry && it.genres?.length) ? it.genres : d ? (d.genres || []).map(g => g.name) : (it.genres || []);
+    const genres = (it.entry && it.genres?.length) ? mssGenreList(it.genres) : d ? tmdbGenreNames(d.genres) : mssGenreList(it.genres);
     const score = INFO_POPUP_CONFIG.showTmdbScore ? (d?.vote_average || it.score) : null;
     return `<span class="${movie ? 'type-label' : 'type-label type-label-tv'}">${esc(label)}</span>`
       + genres.slice(0, 4).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('')

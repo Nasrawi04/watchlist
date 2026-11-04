@@ -2289,7 +2289,7 @@ async function doSave() {
   const cat     = document.getElementById('dCat').value;
   const mediaType = getMediaType();
   const isMovie = mediaType === 'movie';
-  const genres  = [...new Set([...document.querySelectorAll('.genre-opt.selected')].map(o => o.dataset.genre))];   // (the hidden loading placeholder has a copy of the picker)
+  const genres  = mssGenreList([...document.querySelectorAll('#detailLayout .genre-opt.selected')].map(o => o.dataset.genre));   // #detailLayout: the hidden loading placeholder has a copy of the picker
 
   // ── Musts validation ──
   if (!genres.length) {

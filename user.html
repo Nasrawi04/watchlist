@@ -166,7 +166,7 @@ function _pubPoster(e) {
 
 function _pubTags(e) {
   const cat = CAT_META[e.cat];
-  const genres = (e.genres || []).slice(0, 3).map(g => `<span class="genre-dot">${_pubEsc(g)}</span>`).join('');
+  const genres = mssGenreList(e.genres).slice(0, 3).map(g => `<span class="genre-dot">${_pubEsc(g)}</span>`).join('');
   return `<div class="pub-tags">${cat ? `<span class="cat-badge">${_pubEsc(cat.label)}</span>` : ''}${genres}</div>`;
 }
 

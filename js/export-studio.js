@@ -424,7 +424,7 @@ const MSSStudio = (() => {
         const r = await tmdbFetch(`${TMDB_BASE}/${type}/${tid}?language=en-US`); if (!r.ok) return;
         const d = await r.json();
         tm[pid] = { id: pid, title: type === 'movie' ? d.title : d.name, year: ((type === 'movie' ? d.release_date : d.first_air_date) || '').slice(0, 4),
-          cat: type === 'movie' ? 'movies' : 'tv', genres: (d.genres || []).map(g => g.name), poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null, tmdb_id: Number(tid), tmdb_type: type };
+          cat: type === 'movie' ? 'movies' : 'tv', genres: tmdbGenreNames(d.genres), poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null, tmdb_id: Number(tid), tmdb_type: type };
       } catch {}
     }));
     if (S?.list !== l) return;

@@ -241,7 +241,7 @@ const MSSRate = (() => {
     const label = CAT_META[e.cat]?.label || '';
     $('mssRateTags').innerHTML =
       (label ? `<span class="${isMovie(e) ? 'type-label' : 'type-label type-label-tv'}">${esc(label)}</span>` : '') +
-      (e.genres || []).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('') +
+      mssGenreList(e.genres).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('') +
       (typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 ? rewatchBadgeHTML(e) : '');
     const where = { queue: 'On your Watchlist', up_next: 'Up Next', watching: 'Watching', paused: 'Taking a Break' }[e.status];
     const dateRow = (where ? `<span class="w-ep-badge">${where}${e.status === 'watching' && !isMovie(e) && (e.season || e.episode) ? ` · S${Number(e.season) || 1} · E${Number(e.episode) || 0}` : ''}</span>` : '') +

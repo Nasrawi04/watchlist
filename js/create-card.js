@@ -412,7 +412,7 @@ async function _drawCardPage1(myToken) {
     ctx.restore();
     iy += titleLines.length * (tFS + 2) + 14;
 
-    const genres = (e.genres || []).slice(0, 4);
+    const genres = mssGenreList(e.genres).slice(0, 4);
     if (genres.length) {
       const gh = pillRow(genres, INFO_X, iy, INFO_W, '#ffffff', INK, INK);
       iy += gh + 14;
@@ -1211,7 +1211,7 @@ async function _drawDiscoverCard(myToken) {
     hy += 15 + 22;
 
     if (e.genres?.length && infoW > 0) {
-      hy += pillRow(e.genres.slice(0, 4), infoX, hy, infoW) + 12;
+      hy += pillRow(mssGenreList(e.genres).slice(0, 4), infoX, hy, infoW) + 12;
     }
 
     if (data?.budget) {
