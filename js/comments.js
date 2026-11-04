@@ -65,6 +65,7 @@ const MSSComments = (() => {
       const id = b.dataset.id;
       if (b.dataset.mcm === 'reply') reply(id, b.dataset.user);
       else if (b.dataset.mcm === 'del') del(id);
+      else if (b.dataset.mcm === 'report') mssReport('comment', id);
       else if (b.dataset.mcm === 'send') postReply(id);
       else if (b.dataset.mcm === 'cancel') closeReply();
     });
@@ -97,7 +98,8 @@ const MSSComments = (() => {
   function itemHTML(c, me, isReply) {
     const user = c.profiles?.username || 'Unknown';
     const who = mssProfileLinkHTML({ id: c.author_id, username: c.profiles?.username }, '@' + escHTML(user));
-    const del = c.author_id === me ? `<button type="button" class="cc-del" data-mcm="del" data-id="${escHTML(c.id)}">Delete</button>` : '';
+    const del = c.author_id === me ? `<button type="button" class="cc-del" data-mcm="del" data-id="${escHTML(c.id)}">Delete</button>`
+      : me ? `<button type="button" class="cc-del cc-report" data-mcm="report" data-id="${escHTML(c.id)}" title="Report this comment">Report</button>` : '';
     if (isReply) return `<div class="det-reply-item">
         <div class="det-reply-author">${who}</div>
         <div class="det-reply-text" translate="no">${mention(c.content)}</div>

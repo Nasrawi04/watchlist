@@ -237,6 +237,7 @@ async function _fillNavUser(user) {
   // The account's content language (set on another device) → this device, once
   MSSLang.adopt(profile).then(r => { if (r) location.reload(); });
   _navAdminCheck();
+  _navAgeCheck(user.id);
   _navAccountCheck(profile);
   _navReleaseCheck(user);
   _navSpotlight();
@@ -326,19 +327,83 @@ async function _navAccountCheck(profile) {
   let st = null;
   try { const { data, error } = await sb.rpc('mss_my_status'); if (!error && data && typeof data.banned === 'boolean') st = data; } catch {}
   if (!st) st = { banned: false, username_ok: await isUsernameAllowed(name) };   // before migration 040
-  if (st.banned === true) return _navSuspended();
+  if (st.banned === true) return _navSuspended(st.until);
   if (st.username_ok !== false) { try { sessionStorage.setItem('mss_account_ok', key); } catch {} return; }
   _navRenamePopup(uid, name);
 }
-function _navSuspended() {
+/* ── Age (088): 13–17 accounts don't get mature titles (MSSAge, config.js).
+   Accounts made before birth dates were asked for give theirs once; an
+   under-13 date locks the account (MyScreenFolio is for 13 and up). ── */
+async function _navAgeCheck(uid) {
+  const { data, error } = await sb.rpc('my_age');
+  if (error) { MSSAge.setGroup(null, null); return; }   // 088 not run yet — no limits
+  MSSAge.setGroup(uid, data || 'unknown');              // no date yet → limited like 13–15 until they give it
+  if (data === 'child') _navAgeLocked();
+  else if (!data && !/login\.html$/.test(location.pathname)) _navBirthPopup(uid);
+}
+function _navAgeLocked() {
+  if (document.getElementById('mssAgeLockOverlay')) return;
+  const el = document.createElement('div');
+  el.className = 'confirm-overlay';
+  el.id = 'mssAgeLockOverlay';
+  el.innerHTML = `<div class="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="mssAgeLockT" aria-describedby="mssAgeLockM">
+      <div class="confirm-icon" aria-hidden="true">${icon('lock', 36)}</div>
+      <div class="confirm-title" id="mssAgeLockT">MyScreenFolio is for ages 13 and up</div>
+      <div class="confirm-msg" id="mssAgeLockM">This account can’t be used. If the birth date was entered by mistake, contact the site’s owners.</div>
+      <div class="confirm-actions"><button type="button" class="confirm-ok is-safe" onclick="handleLogout()">Sign out</button></div>
+    </div>`;
+  MSSDialog.bind(el, () => {});
+  document.body.appendChild(el);
+  MSSDialog.open(el, { focus: el.querySelector('button') });
+}
+function _navBirthPopup(uid) {
+  if (document.getElementById('mssBirthOverlay')) return;
+  const el = document.createElement('div');
+  el.className = 'confirm-overlay';
+  el.id = 'mssBirthOverlay';
+  el.innerHTML = `<form class="confirm-card mss-rename" role="dialog" aria-modal="true" aria-labelledby="mssBirthT" aria-describedby="mssBirthMsg" novalidate>
+      <div class="confirm-icon" aria-hidden="true">${icon('user', 36)}</div>
+      <div class="confirm-title" id="mssBirthT">What’s your date of birth?</div>
+      <div class="confirm-msg" id="mssBirthMsg">Everyone on MyScreenFolio gives it once, so age-restricted titles stay away from younger members. It’s private — it never shows on your profile — and it can’t be changed later.</div>
+      <div class="mss-birth-row" role="group" aria-label="Date of birth">${mssBirthFieldsHTML('mssBirth')}</div>
+      <div class="mss-rename-hint bad" id="mssBirthHint" aria-live="polite"></div>
+      <div class="confirm-actions">
+        <button type="button" class="confirm-cancel" onclick="handleLogout()">Sign out</button>
+        <button type="submit" class="confirm-ok is-safe" id="mssBirthSave" disabled>Save</button>
+      </div>
+    </form>`;
+  MSSDialog.bind(el, () => {});                        // can't be skipped — only saved, or signed out
+  document.body.appendChild(el);
+  const save = el.querySelector('#mssBirthSave'), hint = el.querySelector('#mssBirthHint');
+  el.querySelectorAll('select').forEach(x => x.addEventListener('change', () => { save.disabled = !mssBirthValue('mssBirth'); hint.textContent = ''; }));
+  el.querySelector('form').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const v = mssBirthValue('mssBirth');
+    if (!v) return;
+    if (v === 'invalid') { hint.textContent = 'That date doesn’t exist — check the day.'; return; }
+    save.disabled = true; save.textContent = 'Saving…';
+    const { data, error } = await sb.rpc('set_birth_date', { p_birth: v });
+    if (error) { hint.textContent = error.hint || 'Couldn’t save — try again.'; save.disabled = false; save.textContent = 'Save'; return; }
+    MSSDialog.close(el);
+    setTimeout(() => el.remove(), 300);
+    MSSAge.setGroup(uid, data);
+    if (data === 'child') _navAgeLocked();
+    else { showToast('Saved — thanks!'); if (data !== 'adult') setTimeout(() => location.reload(), 600); }
+  });
+  MSSDialog.open(el, { focus: el.querySelector('select') });
+}
+
+function _navSuspended(until) {
   if (document.getElementById('mssSuspendedOverlay')) return;
   const el = document.createElement('div');
   el.className = 'confirm-overlay';
   el.id = 'mssSuspendedOverlay';
   el.innerHTML = `<div class="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="mssSuspTitle" aria-describedby="mssSuspMsg">
       <div class="confirm-icon" aria-hidden="true">${icon('lock', 36)}</div>
-      <div class="confirm-title" id="mssSuspTitle">Your account is suspended</div>
-      <div class="confirm-msg" id="mssSuspMsg">This account broke MyScreenFolio’s community rules, so it can’t be used anymore. If you think this is a mistake, contact the site’s owners.</div>
+      <div class="confirm-title" id="mssSuspTitle">${until ? 'Your account is suspended' : 'Your account is banned'}</div>
+      <div class="confirm-msg" id="mssSuspMsg">${until
+        ? `This account broke MyScreenFolio’s community rules. It can be used again on ${escHTML(new Date(until).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'long', year: 'numeric' }))}.`
+        : 'This account broke MyScreenFolio’s community rules, so it can’t be used anymore.'} If you think this is a mistake, contact the site’s owners.</div>
       <div class="confirm-actions"><button type="button" class="confirm-ok is-safe" onclick="handleLogout()">Sign out</button></div>
     </div>`;
   MSSDialog.bind(el, () => {});
@@ -398,6 +463,7 @@ function _navRenamePopup(uid, name) {
 }
 
 function _updateMobileNavForGuest() {
+  MSSAge.setGroup(null, null);   // guests see every title (088)
   window._navGuest = true;                                     // mssGuestGate (config.js)
   document.querySelectorAll('.nav-auth-only').forEach(el => el.style.display = 'none');
   document.getElementById('bnav')?.classList.add('guest');    // (+) → Sign In
@@ -2270,7 +2336,7 @@ function initDiscoverSearch(inputId, opts = {}) {
     }
 
     drop.innerHTML = results.map((r, i) => `
-      <div class="tmdb-item" data-i="${i}">
+      <div class="tmdb-item" data-i="${i}"${r.type === 'person' ? '' : MSSAge.attr(r.type, r.id)}>
         <div class="tmdb-thumb${r.type === 'person' ? ' tmdb-thumb-round' : ''}">
           ${r.thumb ? `<img src="${r.thumb}" loading="lazy">` : '<div class="tmdb-thumb-ph"></div>'}
         </div>
@@ -2444,7 +2510,7 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
     }
 
     drop.innerHTML = results.map((r, i) => `
-      <div class="tmdb-item" data-i="${i}">
+      <div class="tmdb-item" data-i="${i}"${r._type === 'tmdb' ? MSSAge.attr(r._raw.media_type, r._raw.id) : ''}>
         <div class="tmdb-thumb">
           ${r.thumb ? `<img src="${r.thumb}" loading="lazy">` : '<div class="tmdb-thumb-ph"></div>'}
         </div>
@@ -2680,7 +2746,7 @@ function _notifTypeLabel(meta) {
 function _notifTitleCard(meta) {
   const m = meta || {};
   const poster = safeURL(m.poster_url);
-  return `<div class="notif-card">
+  return `<div class="notif-card"${MSSAge.attr(m.tmdb_type || m.media_type, m.tmdb_id, 'soft')}>
     <div class="notif-card-poster">${poster ? `<img src="${poster}" alt="" loading="lazy" onerror="mssImgError(this)" data-letter="${escHTML((m.title || '?')[0])}">` : escHTML((m.title || '?')[0].toUpperCase())}</div>
     <div class="notif-card-info">
       <div class="notif-card-title" translate="no">${escHTML(m.title || 'Untitled')}</div>
@@ -2694,6 +2760,7 @@ function _notifItemHTML(n, opts = {}) {
   const who = `<b>${name}</b>`;
   const title = n.list ? `<b>&ldquo;${escHTML(n.list.title)}&rdquo;</b>` : 'a list';
   const av = n.type === 'achievement' ? `<span class="notif-av-ach">${icon('trophy', 18)}</span>`
+    : n.type === 'report_actioned' || n.type === 'moderation_notice' ? `<span class="notif-av-ach notif-av-mod">${icon('flag', 17)}</span>`
     : (n.type === 'new_episode' || n.type === 'new_release') && safeURL(n.meta?.poster_url)
     ? `<img src="${safeURL(n.meta.poster_url)}" alt="">`
     : n.actor && safeURL(n.actor.avatar_url)
@@ -2754,7 +2821,7 @@ function _notifItemHTML(n, opts = {}) {
       if (m.tmdb_id) href = `episodes.html?show=${encodeURIComponent(m.tmdb_id)}${n.actor_id ? `&user=${encodeURIComponent(n.actor_id)}` : ''}`;
     }
     if (n.type === 'friend_note') { text = `${who} wrote a note on ${t}`; icon2 = 'notebook'; href = 'friends.html?s=notes'; }
-    extra = (n.type === 'friend_episode' && !(m.count > 1) && m.tmdb_id ? mssEpNameHTML(m.tmdb_id, m.season, m.episode, 'notif-quote') : '') + _notifTitleCard(m);
+    extra = (n.type === 'friend_episode' && _notifEpCount(m) === 1 && m.tmdb_id ? mssEpNameHTML(m.tmdb_id, m.season, m.episode, 'notif-quote') : '') + _notifTitleCard(m);
   } else if (n.type === 'friend_list') {
     const m = n.meta || {};
     text = `${who} made a new list <b translate="no">&ldquo;${escHTML(m.title || 'Untitled')}&rdquo;</b>`; icon2 = 'layers';
@@ -2819,6 +2886,10 @@ function _notifItemHTML(n, opts = {}) {
     if (m.excerpt) extra = `<div class="notif-quote" translate="no">${escHTML(m.excerpt)}</div>`;
     if (m.kind !== 'list') extra += _notifTitleCard(m);
     href = _notifSocialHref(m);
+  } else if (n.type === 'report_actioned' || n.type === 'moderation_notice') {
+    // Reports (087): the admins acted on something — never says who reported it
+    text = _notifModText(n); icon2 = n.type === 'report_actioned' ? 'check' : 'info';
+    if (n.meta?.excerpt && n.meta.kind !== 'user') extra = `<div class="notif-quote" translate="no">${escHTML(n.meta.excerpt)}</div>`;
   } else if (n.type === 'friend_queued') {
     text = `${who} added something from your library to their watchlist`; icon2 = 'plus';
     extra = _notifTitleCard(n.meta);
@@ -3037,6 +3108,28 @@ function _notifDroppedAt(m) {
   return m.episode > 0 ? ` at S${Number(m.season) || 1} · E${Number(m.episode)}` : '';
 }
 
+// Reports (087) — to the people who reported it, and to the person it belonged to
+const _NOTIF_MOD_WHAT = { comment: 'comment', note_reply: 'reply', list_reply: 'reply', note: 'note', entry: 'poster', list: 'list',
+  poll: 'poll', poll_comment: 'poll comment', episode_chat: 'episode chat message', user: 'profile' };
+const _NOTIF_MOD_WHY = { spam: 'spam', harassment: 'harassment', offensive: 'hateful or offensive content', sexual: 'sexual content', copyright: 'using someone else’s picture or work', other: 'breaking the community rules' };
+function _notifModText(n) {
+  const m = n.meta || {}, what = _NOTIF_MOD_WHAT[m.kind] || 'post';
+  const on = m.title && (m.kind === 'note' || m.kind === 'entry') ? ` on <b translate="no">${escHTML(m.title)}</b>` : '';
+  if (n.type === 'report_actioned') {
+    return `<b>Thanks for your report.</b> ` + (m.action === 'banned' || m.action === 'suspended' || m.action === 'warned' ? `We took action on the account behind the ${what} you reported.`
+      : m.action === 'removed' ? (m.kind === 'user' ? 'We removed the profile photo you reported.' : `We removed the ${what}${on} you reported.`)
+      : `We took action on the ${what}${on} you reported.`);
+  }
+  const why = _NOTIF_MOD_WHY[m.reason] || 'breaking the community rules';
+  const note = m.note ? ` <span class="notif-mod-note">“${escHTML(m.note)}”</span>` : '';
+  if (m.action === 'banned') return `<b>Your account was banned</b> for breaking the community rules (${escHTML(why)}).`;
+  if (m.action === 'suspended') return `<b>Your account was suspended${m.until ? ` until ${escHTML(new Date(m.until).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' }))}` : ''}</b> for breaking the community rules (${escHTML(why)}). Repeat breaks can get it banned.`;
+  if (m.action === 'warned') return `<b>Warning:</b> ${m.kind === 'user' ? 'your account' : `your ${what}${on}`} broke the community rules (${escHTML(why)}).${note} Please keep to the rules — repeat breaks can get an account suspended.`;
+  const gone = m.kind === 'user' ? 'Your profile photo was removed' : m.kind === 'entry' ? `The poster you uploaded${on} was removed`
+    : m.kind === 'note' ? `The text of your note${on} was removed` : `Your ${what} was removed`;
+  return `<b>${m.action === 'removed' ? gone : `We took action on your ${what}${on}`}</b> for ${escHTML(why)}. Please keep to the community rules — repeat breaks can get an account suspended.`;
+}
+
 // One short line describing a notification
 function _notifShortText(n) {
   const who = `<b translate="no">${escHTML(n.actor ? (n.actor.display_name || n.actor.username) : 'Someone')}</b>`;
@@ -3069,6 +3162,7 @@ function _notifShortText(n) {
     case 'challenge':            return n.meta?.kind === 'finished' ? `${who} finished ${t}` : `${who} challenged you: ${t}`;
     case 'episode_chat':         return `${who} commented on S${escHTML(n.meta?.season)} · E${escHTML(n.meta?.episode)} of ${t}`;
     case 'comment': case 'like': return _notifSocialText(n, who);
+    case 'report_actioned': case 'moderation_notice': return _notifModText(n);
     case 'friend_rec':           return n.meta?.kind === 'entry' ? `${who} shared that they watched ${t}` : n.meta?.kind === 'list' ? `${who} shared a list` : `${who} recommended ${t} to you`;
   }
   return 'New notification';
@@ -3132,8 +3226,14 @@ function _notifNightText(m, who) {
 
 // A friend's episodes (047): one → "watched S2 · E5 of X";
 // a run → "watched 3 episodes of X — S2 · E3–E5" (or S1 · E9 – S2 · E2 across seasons)
+// How many episodes a "watched N episodes" run is — within one season the range says it
+// (older notifications stored a running total that could be off — 085)
+function _notifEpCount(m) {
+  const s = +m.season || 1, e = +m.episode || 1, fs = +m.from_season || s, fe = +m.from_episode || e;
+  return fs === s ? Math.max(1, e - fe + 1) : Math.max(1, +m.count || 1);
+}
 function _notifFriendEpText(m, t) {
-  const s = +m.season || 1, e = +m.episode || 1, fs = +m.from_season || s, fe = +m.from_episode || e, c = +m.count || 1;
+  const s = +m.season || 1, e = +m.episode || 1, fs = +m.from_season || s, fe = +m.from_episode || e, c = _notifEpCount(m);
   if (c <= 1 || (fs === s && fe === e)) return `watched S${s} · E${e} of ${t}`;
   return `watched ${c} episodes of ${t} — ${fs === s ? `S${s} · E${fe}–E${e}` : `S${fs} · E${fe} – S${s} · E${e}`}`;
 }

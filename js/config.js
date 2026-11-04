@@ -42,6 +42,25 @@ async function _mssFetch(input, init = {}) {
   }
 }
 
+/* Remember me (login.html): unticked → the sign-in lasts until the browser is closed.
+   A cookie with no expiry date marks this browser session; when the browser
+   opens again without it, the saved sign-in is cleared before Supabase starts.
+   (Age checks and everything else work the same either way.) */
+const MSSRemember = {
+  set(on) {
+    try { localStorage.setItem('mss_remember', on ? '1' : '0'); } catch {}
+    document.cookie = 'mss_live=1; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+  },
+  check() {
+    try {
+      if (localStorage.getItem('mss_remember') !== '0' || /(?:^|;\s*)mss_live=1/.test(document.cookie)) return;
+      Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k));
+      localStorage.removeItem('mss_remember');
+    } catch {}
+  },
+};
+MSSRemember.check();
+
 let sb;
 try {
   const { createClient } = window.supabase;
@@ -136,6 +155,7 @@ const ICONS = {
   repeat:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>`,
   bell:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
   layers:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
+  flag:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`,
   info:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
   activity: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
   skipForward: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>`,
@@ -444,8 +464,9 @@ const isUsernameBlockedError = e => /USERNAME_NOT_ALLOWED/.test(e?.message || ''
    (migration 041). The model (~4 MB) only downloads the first time someone
    picks a picture. If it can't load, the upload goes ahead. */
 const MSSImageCheck = (() => {
-  const TF = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js';
-  const NSFW = 'https://cdn.jsdelivr.net/npm/nsfwjs@4.4.0/dist/browser/nsfwjs.min.js';
+  // served from this site (js/vendor) — fixed versions, and no outside server sees the upload page
+  const TF = 'js/vendor/tfjs-4.22.0.min.js';
+  const NSFW = 'js/vendor/nsfwjs-4.4.0.min.js';
   let modelP = null;
   const script = src => new Promise((res, rej) => {
     const s = document.createElement('script');
@@ -651,6 +672,11 @@ function mssJumpTo(y) {
       .observe(document.body, { childList: true, subtree: true });
   });
 })();
+
+/* The upload rule, shown wherever you can upload a picture (profile photo, your own poster) */
+function mssUploadRuleHTML() {
+  return `<p class="mss-upload-rule">${icon('info', 13)}<span>Only upload pictures you own or have the right to use — not someone else’s photo or artwork without permission. Pictures that break this can be reported and removed.</span></p>`;
+}
 
 function mssImgError(img) {
   const n = Number(img.dataset.retry || 0);
@@ -1808,9 +1834,11 @@ const MSSCard = (() => {
         <div class="title-year-row"><div class="q-title" style="margin-bottom:0;" translate="no">${escHTML(o.title || '')}</div>${o.year ? `<span class="title-year-inline">${escHTML(String(o.year).slice(0, 4))}</span>` : ''}</div>
         ${o.below || ''}${o.score ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${escHTML(o.score)}</span></div>` : o.scoreHTML ? `<div class="home-tmdb-meta-row">${o.scoreHTML}</div>` : ''}
       </div>`;
-    if (o.href) return `<a class="${cls}" href="${escHTML(o.href)}" style="text-decoration:none;color:inherit">${inner}</a>`;
+    // o.age: [type, id] → locked for 13–17 accounts when mature; [type, id, true] → left out (MSSAge)
+    const age = o.age ? MSSAge.attr(o.age[0], o.age[1], o.age[2]) : '';
+    if (o.href) return `<a class="${cls}" href="${escHTML(o.href)}" style="text-decoration:none;color:inherit"${age}>${inner}</a>`;
     const click = o.attrs || (o.onclick ? `onclick="${o.onclick}"` : '');
-    return `<div class="${cls}" ${click} role="button" tabindex="0" ${KEYS}>${inner}</div>`;
+    return `<div class="${cls}" ${click} role="button" tabindex="0" ${KEYS}${age}>${inner}</div>`;
   }
   return { poster, img, typeTag };
 })();
@@ -2209,6 +2237,13 @@ function mssLoadScript(src) {
     sc.addEventListener('load', res); sc.addEventListener('error', res);
     if (!old) { sc.src = src; sc.async = true; sc.dataset.loaded = '0'; sc.addEventListener('load', () => { sc.dataset.loaded = '1'; }); document.head.appendChild(sc); }
   }));
+}
+/* Report something — js/report.js loads the first time (MSSReport, 086_reports.sql).
+   kind: user · comment · note_reply · list_reply · note · entry · list · poll · poll_comment · episode_chat */
+function mssReport(kind, id, opts) {
+  if (!window._navUser?.id) return typeof mssJoin === 'function' ? mssJoin('report things') : null;
+  mssLoadScript('js/report.js').then(() => typeof MSSReport !== 'undefined'
+    ? MSSReport.open(kind, id, opts) : showToast('Couldn’t open that right now — try again.', 'err'));
 }
 function mssRecommend(item) {
   if (typeof MSSShare !== 'undefined') return MSSShare.open(item);
@@ -3049,6 +3084,7 @@ const MSS_ERRORS = {
   server:    { screen: 'card',    plate: 'TECHNICAL DIFFICULTIES', eyebrow: 'Service unavailable', title: 'We’re having technical difficulties', text: 'MyScreenFolio can’t reach its servers right now. It’s on our end, not yours — your library is safe.', actions: ['retry', 'home'], auto: 20 },
   tmdb:      { screen: 'card',    plate: 'TECHNICAL DIFFICULTIES', eyebrow: 'TMDB unavailable', title: 'Title info isn’t loading',           text: 'Show and movie details come from TMDB, and it isn’t answering right now. Your library is safe.', actions: ['retry', 'home'], auto: 20 },
   offline:   { screen: 'static',  plate: 'NO SIGNAL',       eyebrow: 'Connection lost',     title: 'You’re offline',                      text: 'Check your Wi-Fi or mobile data. We’ll load this page as soon as you’re back.', actions: ['retry'], auto: 15 },
+  age:       { screen: 'lock',    plate: 'AGE RESTRICTED',  eyebrow: 'Age-restricted',      title: 'This title is age-restricted',        text: 'It’s rated for older viewers, so it isn’t available on your account.', actions: ['back', 'discover'] },
   crash:     { screen: 'cracked', plate: 'ERROR',           eyebrow: 'Something broke',     title: 'This page ran into a problem',        text: 'Something went wrong on our side. Reloading usually fixes it.', actions: ['reload', 'home', 'details'] },
 };
 
@@ -3280,4 +3316,176 @@ const mssIdle = (() => {
   addEventListener('focus', () => arm());
   arm();
   return { arm: () => arm() };
+})();
+
+// Date of birth — day / month / year pickers (nav.js pop-up, login.html sign-up). mssBirthValue(prefix) → 'YYYY-MM-DD' or ''
+function mssBirthFieldsHTML(prefix, cls = 'field-input') {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const y = new Date().getFullYear();
+  return `<select class="${cls} mss-birth-d" id="${prefix}D" aria-label="Day"><option value="">Day</option>${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select>
+    <select class="${cls} mss-birth-m" id="${prefix}M" aria-label="Month"><option value="">Month</option>${months.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select>
+    <select class="${cls} mss-birth-y" id="${prefix}Y" aria-label="Year"><option value="">Year</option>${Array.from({ length: 101 }, (_, i) => y - i).map(v => `<option value="${v}">${v}</option>`).join('')}</select>`;
+}
+function mssBirthValue(prefix) {
+  const d = Number(document.getElementById(prefix + 'D')?.value), m = Number(document.getElementById(prefix + 'M')?.value), y = Number(document.getElementById(prefix + 'Y')?.value);
+  if (!d || !m || !y) return '';
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCMonth() !== m - 1) return 'invalid';                     // 31 February…
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+// Whole years old on today's date, from 'YYYY-MM-DD'
+function mssAgeFrom(iso) {
+  const [y, m, d] = iso.split('-').map(Number), now = new Date();
+  return now.getFullYear() - y - ((now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d)) ? 1 : 0);
+}
+
+/* ══════════════════════════════════════════
+   AGE RESTRICTIONS — MSSAge (088_age_restrictions.sql)
+   Each title has a level from TMDB's ratings (public.title_ratings, filled by
+   the tmdb edge function /age): 1 all ages · 2 older kids · 3 13–15 · 4 16+ ·
+   5 18+ (and anything with no rating anywhere). Accounts get up to:
+     13–15 ('teen13') → 3    16–17 ('teen16') → 4    18+ ('adult') → 5
+     signed in without a date of birth yet ('unknown') → 3    guests → 5
+   The database also refuses a title above that going into a library.
+
+   Mark a title anywhere on the page:
+     <div data-age="movie:550">…</div>         → blurred + 16+/18+ lock, taps blocked (search, someone's library…)
+     <div data-age="tv:1396" data-age-hide>    → left out entirely (Discover, recommendations)
+   Nothing else is needed — marked titles stay blurred until they're known to
+   be fine (no flash of a restricted poster), then unblur or lock.
+     MSSAge.restricted()            → true when this account has a limit
+     await MSSAge.allowed(type, id) → false when it's above the limit
+     await MSSAge.guard(type, id)   → same, and tells them why
+     await MSSAge.filter(list, fn)  → the list without what they can't see (fn(item) → [type, id])
+     MSSAge.attr(type, id, hide)    → ' data-age="…"' to drop into markup
+══════════════════════════════════════════ */
+const MSSAge = (() => {
+  const LV_KEY = 'mss_age_lv2', G_KEY = 'mss_age_g';
+  const MAX = { adult: 5, teen16: 4, teen13: 3, unknown: 3, child: 0 };
+  let group = null, observer = null, timer = null, readyRes;
+  const readyP = new Promise(r => { readyRes = r; });
+  // the account's group is known (nav.js) — or 4 s passed, so a page never hangs on it
+  const ready = () => Promise.race([readyP, new Promise(r => setTimeout(r, 4000))]);
+  const levels = new Map();                       // 'movie:550' → 1…5
+  try { localStorage.removeItem('mss_age_lv'); Object.entries(JSON.parse(localStorage.getItem(LV_KEY) || '{}')).forEach(([k, v]) => levels.set(k, v)); } catch {}
+  const keyOf = (type, id) => {
+    const t = String(type || '').toLowerCase();
+    return (t === 'movie' || t === 'tv') && /^\d+$/.test(String(id || '')) ? `${t}:${id}` : '';
+  };
+  function persist() {
+    try { localStorage.setItem(LV_KEY, JSON.stringify(Object.fromEntries([...levels.entries()].slice(-4000)))); } catch {}
+  }
+  const max = () => (group in MAX ? MAX[group] : 5);
+  const restricted = () => max() < 5;
+  const MSG = 'This title is age-restricted for your account.';
+
+  // The account's group — remembered per account on this device, so a restricted
+  // account's pages blur from the first paint, before the database answers.
+  function setGroup(uid, g) {
+    group = g || null;
+    try { uid && group ? localStorage.setItem(G_KEY, JSON.stringify({ uid, g: group })) : localStorage.removeItem(G_KEY); } catch {}
+    unwatch();
+    document.documentElement.classList.toggle('mss-teen', restricted());
+    if (restricted()) watch();
+    readyRes();
+  }
+
+  // Levels for many titles: this device's copy → the shared table → the edge function (fills the table)
+  async function load(keys) {
+    const want = [...new Set(keys.filter(Boolean))].filter(k => !levels.has(k));
+    if (!want.length) return;
+    try {
+      const by = { movie: [], tv: [] };
+      want.forEach(k => { const [t, i] = k.split(':'); by[t].push(i); });
+      const or = ['movie', 'tv'].filter(t => by[t].length).map(t => `and(tmdb_type.eq.${t},tmdb_id.in.(${by[t].join(',')}))`).join(',');
+      const { data } = await sb.from('title_ratings').select('tmdb_type, tmdb_id, level').or(or);
+      (data || []).forEach(r => levels.set(`${r.tmdb_type}:${r.tmdb_id}`, r.level));
+    } catch {}
+    const rest = want.filter(k => !levels.has(k));
+    for (let i = 0; i < rest.length; i += 40) {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/tmdb/age?ids=${rest.slice(i, i + 40).join(',')}`, { headers: { apikey: SUPABASE_ANON_KEY } });
+        if (res.ok) Object.entries(await res.json()).forEach(([k, v]) => { if (v && v.level) levels.set(k, v.level); });
+      } catch {}
+    }
+    persist();
+  }
+  const ok = k => levels.has(k) && levels.get(k) <= max();
+  async function allowed(type, id) {
+    await ready();
+    if (!restricted()) return true;
+    const k = keyOf(type, id);
+    if (!k) return true;                           // not a TMDB title (added by hand) — nothing to check
+    await load([k]);
+    return ok(k);
+  }
+  async function guard(type, id) {
+    if (await allowed(type, id)) return true;
+    showToast(MSG, 'err');
+    return false;
+  }
+  async function filter(list, fn) {
+    await ready();
+    if (!restricted() || !Array.isArray(list)) return list;
+    const keys = list.map(x => { const [t, i] = fn(x) || []; return keyOf(t, i); });
+    await load(keys);
+    return list.filter((x, n) => !keys[n] || ok(keys[n]));
+  }
+  // hide: true → left out · 'soft' → blurred + locked, but taps go through to what it sits in
+  function attr(type, id, hide) {
+    const k = keyOf(type, id);
+    return k ? ` data-age="${k}"${hide === 'soft' ? ' data-age-soft' : hide ? ' data-age-hide' : ''}` : '';
+  }
+  // '16+' / '18+' for a title above the limit, else ''
+  const badge = k => levels.has(k) && !ok(k) ? (levels.get(k) >= 5 ? '18+' : '16+') : '';
+
+  // Marked titles on the page → unblurred (fine) or locked / left out
+  async function scan() {
+    if (!restricted()) return;
+    const els = [...document.querySelectorAll('[data-age]:not(.age-ok):not(.age-locked)')];
+    if (!els.length) return;
+    await load(els.map(el => el.dataset.age));
+    els.forEach(el => {
+      const k = el.dataset.age;
+      if (!levels.has(k)) return;                  // not answered — stays blurred, tried again on the next change
+      if (ok(k)) el.classList.add('age-ok');
+      else { el.classList.add('age-locked'); el.dataset.ageBadge = badge(k); el.setAttribute('aria-disabled', 'true'); if (!el.title) el.title = 'Age-restricted'; }
+    });
+  }
+  const soon = () => { clearTimeout(timer); timer = setTimeout(scan, 60); };
+  function watch() {
+    if (observer || typeof MutationObserver === 'undefined') return;
+    const start = () => {
+      observer = new MutationObserver(soon);
+      observer.observe(document.body, { childList: true, subtree: true });
+      soon();
+    };
+    document.body ? start() : document.addEventListener('DOMContentLoaded', start, { once: true });
+  }
+  function unwatch() {
+    observer?.disconnect(); observer = null;
+    document.querySelectorAll('.age-locked, .age-ok').forEach(el => { el.classList.remove('age-locked', 'age-ok'); el.removeAttribute('aria-disabled'); delete el.dataset.ageBadge; });
+  }
+  // A tap on a locked (or still-checking) title does nothing but say why
+  document.addEventListener('click', ev => {
+    if (!restricted()) return;
+    const el = ev.target.closest?.('[data-age]:not(.age-ok):not([data-age-soft])');   // soft: a poster inside something else (a list card) — that still opens
+    if (!el) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const locked = el.classList.contains('age-locked');
+    showToast(locked ? MSG : 'Checking this title’s age rating…', locked ? 'err' : 'ok');
+  }, true);
+
+  // A restricted account's pages blur from the start (nav.js confirms the account)
+  try { const r = JSON.parse(localStorage.getItem(G_KEY) || 'null'); if (r && r.g in MAX && MAX[r.g] < 5) { group = r.g; document.documentElement.classList.add('mss-teen'); watch(); } } catch {}
+
+  // A whole page for a title (title.html, episodes.html): false → the age screen is shown instead
+  async function page(type, id) {
+    if (await allowed(type, id)) return true;
+    const b = badge(keyOf(type, id));
+    mssErrorPage('age', { plate: b ? b + ' ONLY' : 'AGE RESTRICTED' });
+    return false;
+  }
+
+  return { restricted, allowed, guard, filter, attr, setGroup, ready, page, keyOf, load, badge, MSG, group: () => group, max, scan };
 })();

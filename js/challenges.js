@@ -482,7 +482,7 @@ const MSSChallenges = (() => {
       const b2 = document.getElementById('chfHits'); if (!b2) return;
       b2.innerHTML = hits.length ? hits.map((h, k) => {
         const have = form?.titles.some(t => t.tmdb_id === h.tmdb_id && t.tmdb_type === h.tmdb_type);
-        return `<button type="button" class="pf-r" onclick="MSSChallenges._pick(${k})"${have ? ' disabled' : ''}>
+        return `<button type="button" class="pf-r" onclick="MSSChallenges._pick(${k})"${have ? ' disabled' : ''}${MSSAge.attr(h.tmdb_type, h.tmdb_id)}>
           <span class="poll-thumb">${h.poster_path ? `<img src="https://image.tmdb.org/t/p/w92${esc(h.poster_path)}" alt="" loading="lazy">` : icon('film', 16)}</span>
           <span class="poll-opt-text"><b translate="no">${esc(h.title)}</b><small>${[h.year, h.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}${have ? ' · added' : ''}</small></span></button>`; }).join('')
         : `<div class="pf-r-msg">Nothing found — try another spelling.</div>`;

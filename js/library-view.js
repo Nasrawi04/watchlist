@@ -403,19 +403,24 @@ function _libPick(){
    (hundreds of cards and posters at once were too much for phones — Safari ran out of memory
    and reloaded the page). A redraw keeps however many were already showing. ── */
 var LIB_CHUNK=40, _libMore={};
+// Someone else's library: a title above your age limit shows blurred with a lock (088)
+function _libAge(e,html){
+  if(!LIB_READONLY||!e||!e.tmdb_id) return html;
+  return html.replace(/^(\s*<[a-z]+)/i, '$1'+MSSAge.attr(e.tmdb_type||(e.cat==='movies'?'movie':'tv'), e.tmdb_id));
+}
 function _libCards(key,list,fn){
   var prev=_libMore[key], q=SF.query(LIB_SCOPE)+'|'+_libCatFilter;
   var n=Math.min(list.length, Math.max(LIB_CHUNK, prev&&prev.q===q ? prev.n : 0, _libBackN));
   _libMore[key]={list:list,fn:fn,n:n,q:q};
   var html='';
-  for(var i=0;i<n;i++) html+=fn(list[i],i);
+  for(var i=0;i<n;i++) html+=_libAge(list[i],fn(list[i],i));
   return html+(n<list.length?'<div class="lib-more" data-sec="'+key+'" aria-hidden="true"></div>':'');
 }
 function _libGrow(key){
   var m=_libMore[key], s=document.querySelector('.lib-more[data-sec="'+key+'"]');
   if(!m||!s) return false;
   var end=Math.min(m.list.length, m.n+LIB_CHUNK), html='';
-  for(var i=m.n;i<end;i++) html+=m.fn(m.list[i],i);
+  for(var i=m.n;i<end;i++) html+=_libAge(m.list[i],m.fn(m.list[i],i));
   m.n=end;
   var box=s.parentElement;
   s.insertAdjacentHTML('beforebegin',html);

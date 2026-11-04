@@ -85,6 +85,7 @@ async function saveEntry(payload, userId, existingId) {
     mssResortLists(userId, existingId);   // its scores / dates may have moved it in a sorted list
     return _mssWatched(data);
   } else {
+    await _mssAgeCheck(record);
     const { data, error } = await sb.from('entries')
       .insert({ ...record, user_id: userId })
       .select()
@@ -92,6 +93,15 @@ async function saveEntry(payload, userId, existingId) {
     if (error) throw error;
     return _mssWatched(data);
   }
+}
+
+// Age restrictions (088): before a title goes into a restricted account's library, its rating is
+// looked up (which also saves it for the database's own check) — above their limit → refused here.
+async function _mssAgeCheck(record) {
+  if (!record?.tmdb_id || !MSSAge.restricted()) return;
+  if (await MSSAge.guard(record.tmdb_type, record.tmdb_id)) return;
+  const err = new Error('AGE_RESTRICTED'); err.hint = MSSAge.MSG; err.ageBlocked = true;
+  throw err;
 }
 
 // A title just saved as Watched → 'mss:watched' (nav.js asks "Does this count?" for
@@ -252,6 +262,7 @@ async function mssFillHiddenListItems(ids, map) {
 
 /* ── Quick create (from modal) ── */
 async function quickCreate(payload, userId) {
+  await _mssAgeCheck(payload);                     // above this account's age limit → refused first (088)
   // Check for duplicates two ways: by tmdb_id+type when we have one (more
   // reliable — catches remakes/retitles), AND by title as a fallback.
   // The title fallback used to only run when there was no tmdb_id at all,
@@ -485,6 +496,14 @@ function followRelation(st) {
   if (st.follows_me === 'accepted') return 'follows_you';
   return 'none';
 }
+
+/* ── Reports (086): one per person per thing; admins read them in Admin → Safety ── */
+// → 'ok' | 'already'
+function reportContent(kind, id, reason, details) { return _rpcOr('report_content', { p_kind: kind, p_target: id, p_reason: reason, p_details: details || null }); }
+async function adminReports(status = 'open') { return (await _rpcOr('admin_reports', { p_status: status })) || []; }
+async function adminReportCount() { try { return Number(await _rpcOr('admin_report_count', {})) || 0; } catch { return 0; } }
+// action ('removed' | 'banned') → the reporters and the owner are told (087)
+function adminResolveReport(id, status, action) { return _rpcOr('admin_resolve_report', { p_id: id, p_status: status, p_action: action || null }); }
 
 // Follow requests waiting for you (a private account) — the nav's badge
 async function countPendingRequests(userId) {

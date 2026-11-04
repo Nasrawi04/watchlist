@@ -107,7 +107,9 @@ const MSSNote = (() => {
     const c = counts || { like: 0, dislike: 0 };
     const n = words(e.notes);
     const quote = `<blockquote class="nc-quote" translate="no">&ldquo;${esc(trim(MSSRich.plain(e.notes)))}&rdquo;</blockquote>`;
-    return `<article class="nc-card" onclick="${onclick}">
+    // someone else's note on a title above your age limit is left out (088)
+    const age = e.user_id && e.user_id !== window._navUser?.id ? MSSAge.attr(e.tmdb_type, e.tmdb_id, true) : '';
+    return `<article class="nc-card" onclick="${onclick}"${age}>
       ${poster(e.poster_url, e.title, 'nc-poster')}
       <div class="nc-main">
         <div class="nc-top"><div class="nc-title" translate="no">${esc(e.title)}</div>${scorePill(liveScore(e))}</div>
@@ -134,7 +136,7 @@ const MSSNote = (() => {
     const btn = (like, on) => `<button type="button" class="snote-react-btn ${on ? (like ? 'active-like' : 'active-dislike') : ''}"${like ? ' data-like' : ''} aria-label="${like ? 'Like' : 'Dislike'}" aria-pressed="${on}" onclick="event.stopPropagation();${react}(${id}, ${like})">
             ${icon(like ? (on ? 'thumbsUpFilled' : 'thumbsUp') : (on ? 'thumbsDownFilled' : 'thumbsDown'), 14)} <span>${(like ? n.like_count : n.dislike_count) || 0}</span>
           </button>`;
-    return `<article class="nc-card" onclick="${open}(${id})" data-dbl-like role="button" tabindex="0" aria-label="Open @${esc(n.username || 'user')}’s note" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();this.click()}">
+    return `<article class="nc-card" onclick="${open}(${id})"${n.user_id !== me ? MSSAge.attr(n.tmdb_type, n.tmdb_id, true) : ''} data-dbl-like role="button" tabindex="0" aria-label="Open @${esc(n.username || 'user')}’s note" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();this.click()}">
     ${poster(n.poster_url, n.title, 'nc-poster')}
     <div class="nc-main">
       <div class="nc-top">
@@ -227,7 +229,13 @@ const MSSNote = (() => {
     }
     // (no "See Ratings" — inside the Title · Their Entry · Note switcher it's a tab already)
     el.innerHTML = (opts.react ? mssReactButtonsHTML(reactState, 'MSSNote._react(true)', 'MSSNote._react(false)') : '')
-      + `<button type="button" class="popup-action-btn np-ghost np-grow" onclick="MSSViews.has('note') ? MSSViews.close() : MSSNote.close()">Close</button>`;
+      + `<button type="button" class="popup-action-btn np-ghost np-grow" onclick="MSSViews.has('note') ? MSSViews.close() : MSSNote.close()">Close</button>`
+      + (canReport() ? `<button type="button" class="popup-action-btn np-ghost np-flag" onclick="MSSNote._report()" aria-label="Report this note" title="Report this note">${icon('flag', 15)}</button>` : '');
+  }
+  // someone else's note (not yours, not when signed out) → Report (report.js)
+  function canReport() {
+    const me = window._navUser?.id, owner = current?.user_id || opts.profile?.id;
+    return !!(me && owner && owner !== me && current?.notes?.trim());
   }
   async function react(isLike) {
     const e = current;
@@ -360,6 +368,6 @@ const MSSNote = (() => {
   return {
     cardHTML, communityCardHTML, open, close, reactionCounts,
     words, date, watchedDate, trim, badges, scorePill, poster, loadHero, fitLong,
-    _edit: showEdit, _cancel: cancel, _save: save, _delete: remove, _count: updateCount, _react: react,
+    _edit: showEdit, _cancel: cancel, _save: save, _delete: remove, _count: updateCount, _react: react, _report: () => current && mssReport('note', current.id),
   };
 })();

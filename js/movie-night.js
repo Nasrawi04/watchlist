@@ -192,7 +192,7 @@ const MSSNight = (() => {
         ${open && (o.mine || host) ? `<button type="button" class="mn-b-rm" onclick="event.stopPropagation();MSSNight.removeOption(${attrJSON(o.id)})" onkeydown="event.stopPropagation()" aria-label="Remove ${esc(o.title)}" title="Remove">${icon('x', 13)}</button>` : ''}`;
       const below = `<div class="mn-b-bar" aria-hidden="true"><span style="width:${pct}%"></span></div><div class="mn-b-pct">${mine ? `${icon('check', 12)} Your vote${total ? ` · ${pct}%` : ''}` : total ? `${pct}%` : open ? 'Tap to vote' : 'No votes'}</div>`;
       const cls = `mn-b${mine ? ' mine' : ''}${lead ? ' lead' : ''}${isPick ? ' pick' : ''}${open ? '' : ' closed'}`;
-      return MSSCard.poster({ cls, title: o.title, year: o.year, poster: img(o.poster_path, 'w342'), type: typeOf(o), overPoster: over, below,
+      return MSSCard.poster({ cls, title: o.title, year: o.year, poster: img(o.poster_path, 'w342'), type: typeOf(o), overPoster: over, below, age: [typeOf(o), o.tmdb_id],
         attrs: open ? `onclick="MSSNight.vote(${id}, ${attrJSON(mine ? null : o.id)})" aria-pressed="${mine}" aria-label="${esc(o.title)}, ${o.votes || 0} ${o.votes === 1 ? 'vote' : 'votes'}${mine ? ' — your vote, tap to take it back' : ' — vote for this'}"`
           : `onclick="MSSNight._details(${attrJSON(o.id)})" aria-label="${esc(o.title)}, ${o.votes || 0} ${o.votes === 1 ? 'vote' : 'votes'} — details"` });
     };
@@ -201,7 +201,7 @@ const MSSNight = (() => {
     // Suggestion rails: posters with a + on them
     const rail = (ic, label, items) => items.length ? `<section class="mn-rail-sec"><div class="mn-rail-head">${icon(ic, 14)}<span>${label}</span><b>${items.length}</b></div>
         <div class="mn-rail">${items.join('')}</div></section>` : '';
-    const suggCard = (title, year, poster, type, why, onclick) => MSSCard.poster({ cls: 'mn-s', title, year, poster, type,
+    const suggCard = (title, year, poster, type, why, onclick, tid) => MSSCard.poster({ cls: 'mn-s', title, year, poster, type, age: [type, tid, true],
       overPoster: `<span class="mn-s-plus" aria-hidden="true">${icon('plus', 16)}</span>`, below: `<div class="mn-s-why">${why}</div>`,
       attrs: `onclick="${onclick}" aria-label="Add ${esc(title)} to the vote"` });
     const sugg = open ? suggestions(n) : [];
@@ -210,8 +210,8 @@ const MSSNight = (() => {
         ${adding[n.id] ? `<div class="mn-search"><input id="mnQ-${n.id}" type="search" placeholder="Search a movie or show…" aria-label="Search a movie or show" autocomplete="off" enterkeyhint="search" oninput="MSSNight._q(${id}, this.value)">
             <div class="mn-hits" id="mnH-${n.id}"></div></div>` : ''}
         ${rail('bookmark', 'On your watchlists', sugg.map(t => suggCard(t.e.title, t.e.year, t.e.poster_url, t.e.tmdb_type === 'movie' ? 'movie' : 'tv',
-          `On <b>${t.who.size}</b> watchlists`, `MSSNight._addSugg(${id}, ${attrJSON(`${t.e.tmdb_type}:${t.e.tmdb_id}`)})`)))}
-        ${rail('shuffle', 'From your Blend', bsugg.map((t, k) => suggCard(t.o.title, t.o.year, img(t.o.poster_path, 'w342'), typeOf(t.o), esc(t.why), `MSSNight._addBlend(${id}, ${k})`)))}
+          `On <b>${t.who.size}</b> watchlists`, `MSSNight._addSugg(${id}, ${attrJSON(`${t.e.tmdb_type}:${t.e.tmdb_id}`)})`, t.e.tmdb_id)))}
+        ${rail('shuffle', 'From your Blend', bsugg.map((t, k) => suggCard(t.o.title, t.o.year, img(t.o.poster_path, 'w342'), typeOf(t.o), esc(t.why), `MSSNight._addBlend(${id}, ${k})`, t.o.tmdb_id)))}
       </div>` : '';
     const decided = pick ? `<div class="mn-pick">
         ${pick.poster_path ? `<span class="mn-pick-bg" style="background-image:url('${img(pick.poster_path, 'w342')}')" aria-hidden="true"></span><img src="${img(pick.poster_path, 'w342')}" alt="" loading="lazy">` : `<span class="mn-pick-ph">${icon('film', 26)}</span>`}
@@ -298,7 +298,7 @@ const MSSNight = (() => {
       if (qLast[id] !== q) return;                     // typed on since
       hits[id] = res.map(r => ({ tmdb_id: r.id, tmdb_type: r.media_type, title: r.title || r.name, poster_path: r.poster_path, year: (r.release_date || r.first_air_date || '').slice(0, 4) }));
       const b2 = document.getElementById('mnH-' + id); if (!b2) return;
-      b2.innerHTML = hits[id].length ? hits[id].map((h, k) => `<button type="button" class="pf-r" onclick="MSSNight._pick(${attrJSON(id)}, ${k})">
+      b2.innerHTML = hits[id].length ? hits[id].map((h, k) => `<button type="button" class="pf-r" onclick="MSSNight._pick(${attrJSON(id)}, ${k})"${MSSAge.attr(h.tmdb_type, h.tmdb_id)}>
           <span class="poll-thumb">${h.poster_path ? `<img src="${img(h.poster_path, 'w92')}" alt="" loading="lazy">` : icon('film', 16)}</span>
           <span class="poll-opt-text"><b translate="no">${esc(h.title)}</b><small>${[h.year, h.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small></span></button>`).join('')
         : `<div class="pf-r-msg">Nothing found — try another spelling.</div>`;

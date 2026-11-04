@@ -35,7 +35,7 @@
 const RATING_POPUP_CONFIG = {
   // Your Entry tab: everything about YOUR entry — the title's own buttons are on the Title tab (MSSInfo)
   ownerActions:  ['start', 'upnext', 'pickup', 'rewatch', 'rateEps', 'edit', 'drop', 'card', 'delete'],
-  friendActions: ['comments', 'queue'],
+  friendActions: ['comments', 'queue', 'report'],
 };
 
 const MSSRate = (() => {
@@ -142,11 +142,15 @@ const MSSRate = (() => {
       // someone else's entry
       comments: () => typeof MSSComments !== 'undefined' ? btn('comments', 'comment', 'Comments') : '',
       queue:    () => window._navUser && e.user_id !== window._navUser.id && typeof MSSInfo !== 'undefined' ? btn('queue', 'plus', 'Add to Watchlist') : '',
+      // their poster / pictures → Report (report.js, kind 'entry')
+      report:   () => window._navUser && e.user_id && e.user_id !== window._navUser.id
+        ? `<button type="button" class="popup-action-btn rate-flag" data-act="report" onclick="${ns}._act('report', this)" aria-label="Report this entry’s pictures" title="Report">${icon('flag', 14)}</button>` : '',
     };
     return keys.map(k => B[k] ? B[k]() : '').join('');
   }
   const actionsHTML = e => entryButtonsHTML(e, opts.owner ? RATING_POPUP_CONFIG.ownerActions : RATING_POPUP_CONFIG.friendActions);
-  const act = (key, b) => key === 'comments' ? openComments() : key === 'queue' ? addToWatchlist(b) : entryAct(key, current, opts, close);
+  const act = (key, b) => key === 'comments' ? openComments() : key === 'queue' ? addToWatchlist(b)
+    : key === 'report' ? current && mssReport('entry', current.id, { what: 'this entry' }) : entryAct(key, current, opts, close);
   function openComments() { const e = current; if (!e) return; (opts.onComments || (x => MSSComments.open(x)))(e); }
   // Their title → your Watchlist in one tap (they're told, as from the Title tab)
   async function addToWatchlist(b) {

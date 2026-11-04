@@ -998,7 +998,7 @@ function _onCardLinkSearchInput(query) {
       const posterEl = r.poster_path
         ? `<img src="${escHTML(TMDB_FULL + r.poster_path)}" alt="" loading="lazy">`
         : escHTML((title[0] || '?').toUpperCase());
-      return `<button type="button" class="card-link-result" onclick="_pickCardLinkMatch(${i})">
+      return `<button type="button" class="card-link-result" onclick="_pickCardLinkMatch(${i})"${MSSAge.attr(r.media_type, r.id)}>
         <span class="card-link-result-poster">${posterEl}</span>
         <span>
           <span class="card-link-result-title" translate="no">${escHTML(title)}</span>

@@ -132,7 +132,7 @@ const MSSShowcase = (() => {
   }
   const hitsHTML = () => E.imgs.length
     ? `<div class="sf-section-label">Pick a background <span class="sf-section-hint">scenes and posters</span></div><div class="sc-bg-imgs">${E.imgs.map(p => `<button type="button" class="sc-bg-img" onclick="MSSShowcase._bg(${attrJSON(p)})" style="background-image:url('${IMG}w300${esc(p)}')" aria-label="Use this picture"></button>`).join('')}</div>`
-    : E.hits.map((h, i) => `<button type="button" class="pf-r" onclick="MSSShowcase._title(${i})">
+    : E.hits.map((h, i) => `<button type="button" class="pf-r" onclick="MSSShowcase._title(${i})"${MSSAge.attr(h.media_type, h.id)}>
         <span class="poll-thumb">${h.poster_path ? `<img src="${IMG}w92${esc(h.poster_path)}" alt="" loading="lazy">` : icon('film', 16)}</span>
         <span class="poll-opt-text"><b translate="no">${esc(h.title || h.name)}</b><small>${esc(((h.release_date || h.first_air_date || '').slice(0, 4)) + (h.media_type === 'movie' ? ' · Movie' : ' · TV Show'))}</small></span></button>`).join('');
   let qT = null, qLast = '';

@@ -168,8 +168,9 @@ const MSSPolls = (() => {
     const bar = show ? `<span class="poll-bar" style="width:${pct}%"></span>` : '';
     const badge = (top && !p.is_open ? `<span class="poll-win" title="Winner">${icon('trophy', 12)}</span>` : '') + (mine ? `<span class="poll-check" title="Your vote">${icon('check', 12)}</span>` : '');
     const cls = `poll-opt${mine ? ' mine' : ''}${top ? ' top' : ''}${show ? ' shown' : ''}`;
-    if (!p.is_open) return `<div class="${cls}">${bar}${label}${badge}${res}</div>`;
-    return `<button type="button" class="${cls}" aria-pressed="${mine}" onclick="MSSPolls.vote(${attrJSON(p.id)}, ${attrJSON(mine ? null : o.id)})"
+    const age = o.kind === 'title' ? MSSAge.attr(o.tmdb_type, o.tmdb_id) : '';   // a title above your age limit: locked (088)
+    if (!p.is_open) return `<div class="${cls}"${age}>${bar}${label}${badge}${res}</div>`;
+    return `<button type="button" class="${cls}"${age} aria-pressed="${mine}" onclick="MSSPolls.vote(${attrJSON(p.id)}, ${attrJSON(mine ? null : o.id)})"
         aria-label="${_socEsc(o.label)}${mine ? ' — your vote, tap to take it back' : ''}">${bar}${label}${badge}${res}</button>`;
   }
   function card(p) {
@@ -177,7 +178,8 @@ const MSSPolls = (() => {
     const own = p.is_mine ? `<div class="poll-own">
         <button type="button" class="rec-icon" onclick="MSSPolls.edit(${pid})" aria-label="Edit poll" title="Edit">${icon('edit', 14)}</button>
         ${p.is_open ? `<button type="button" class="rec-icon" onclick="MSSPolls.end(${pid})" aria-label="End poll now" title="End now">${icon('clock', 14)}</button>` : ''}
-        <button type="button" class="rec-icon rec-icon-x" onclick="MSSPolls.remove(${pid})" aria-label="Delete poll" title="Delete">${icon('trash', 14)}</button></div>` : '';
+        <button type="button" class="rec-icon rec-icon-x" onclick="MSSPolls.remove(${pid})" aria-label="Delete poll" title="Delete">${icon('trash', 14)}</button></div>`
+      : user ? `<div class="poll-own"><button type="button" class="rec-icon poll-flag" onclick="mssReport('poll', ${pid})" aria-label="Report this poll" title="Report">${icon('flag', 13)}</button></div>` : '';
     return `<article class="poll-card${p.is_open ? '' : ' ended'}" id="poll-${p.id}">
       <header class="poll-by">
         <a href="profile-view.html?id=${encodeURIComponent(a.id || '')}" class="poll-who">${_socAv(a, 36)}<span><b translate="no">${_socEsc(p.is_mine ? 'You' : _socName(a))}</b>
@@ -243,7 +245,7 @@ const MSSPolls = (() => {
           <div class="poll-c-body">
             <div class="poll-c-by"><b translate="no">${_socEsc(c.can_edit ? 'You' : _socName(c.author))}</b><small>${_notifTimeAgo(c.created_at)}${c.edited_at ? ' · edited' : ''}</small></div>
             <div class="poll-c-text" translate="no">${_socEsc(c.content)}</div>
-            ${c.can_edit || c.can_delete ? `<div class="poll-c-acts">${c.can_edit ? `<button type="button" class="poll-link" onclick="MSSPolls.editComment(${attrJSON(p.id)}, ${attrJSON(c.id)})">Edit</button>` : ''}${c.can_delete ? `<button type="button" class="poll-link poll-danger" onclick="MSSPolls.deleteComment(${attrJSON(p.id)}, ${attrJSON(c.id)})">Delete</button>` : ''}</div>` : ''}
+            ${c.can_edit || c.can_delete || user ? `<div class="poll-c-acts">${c.can_edit ? `<button type="button" class="poll-link" onclick="MSSPolls.editComment(${attrJSON(p.id)}, ${attrJSON(c.id)})">Edit</button>` : ''}${c.can_delete ? `<button type="button" class="poll-link poll-danger" onclick="MSSPolls.deleteComment(${attrJSON(p.id)}, ${attrJSON(c.id)})">Delete</button>` : ''}${!c.can_edit && user ? `<button type="button" class="poll-link poll-danger" onclick="mssReport('poll_comment', ${attrJSON(c.id)}, { what: 'this comment' })">Report</button>` : ''}</div>` : ''}
           </div>
         </div>`).join('') || `<div class="poll-c-none">No comments yet — start the conversation.</div>`}
       <form class="poll-c-new" onsubmit="event.preventDefault();MSSPolls.addComment(${attrJSON(p.id)})">
@@ -371,7 +373,7 @@ const MSSPolls = (() => {
         : { kind: 'title', label: r.title || r.name, tmdb_id: r.id, tmdb_type: r.media_type, image_path: r.poster_path,
             sub: [((r.release_date || r.first_air_date || '').slice(0, 4)), r.media_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ') });
       o.hits = hits;
-      box.innerHTML = hits.length ? hits.map((h, k) => `<button type="button" class="pf-r" onclick="MSSPolls._f('pick', ${i}, ${k})">${optionThumb(h)}<span class="poll-opt-text"><b translate="no">${_socEsc(h.label)}</b>${h.sub ? `<small>${_socEsc(h.sub)}</small>` : ''}</span></button>`).join('')
+      box.innerHTML = hits.length ? hits.map((h, k) => `<button type="button" class="pf-r" onclick="MSSPolls._f('pick', ${i}, ${k})"${h.kind === 'title' ? MSSAge.attr(h.tmdb_type, h.tmdb_id) : ''}>${optionThumb(h)}<span class="poll-opt-text"><b translate="no">${_socEsc(h.label)}</b>${h.sub ? `<small>${_socEsc(h.sub)}</small>` : ''}</span></button>`).join('')
         : `<div class="pf-r-msg">Nothing found — try another spelling, or use Text.</div>`;
     } catch { box.innerHTML = `<div class="pf-r-msg">Search failed — try again.</div>`; }
   }
@@ -667,7 +669,7 @@ const MSSShare = (() => {
       : '';
     const add = box === 'received' && !isList && r.tmdb_id && !r.in_library
       ? `<button type="button" class="${primary ? 'rec-btn' : 'btn-add-entry'}" onclick="MSSShare._add(${id}, this)">${icon('plus', 14)} Add to Watchlist</button>` : '';
-    return `<article class="rec-card k-${k}${r.unread ? ' is-new' : ''}" id="rec-${r.id}">
+    return `<article class="rec-card k-${k}${r.unread ? ' is-new' : ''}" id="rec-${r.id}"${isList ? '' : MSSAge.attr(r.tmdb_type, r.tmdb_id)}>
       <div class="rec-main">
         <button type="button" class="rec-poster" onclick="${open}" aria-label="Open ${_socEsc(r.title)}">
           ${posterUrl ? `<img src="${posterUrl}" alt="" loading="lazy">` : `<span class="rec-poster-ph">${icon(isList ? 'layers' : 'film', 28)}${isList ? `<b>${r.list_count || 0}</b>` : ''}</span>`}

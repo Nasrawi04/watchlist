@@ -209,13 +209,15 @@ function _discAttrJSON(value) {
 // instead of jumping straight to title.html. Items are kept in a small map
 // so the popup gets the full item without stuffing it into the markup.
 window._discItemMap = window._discItemMap || {};
-function _discClickAttr(it) {
+// lock: search results show mature titles locked for 13–17 accounts; everywhere
+// else (Discover, recommendations, related) they're left out (MSSAge, 088)
+function _discClickAttr(it, lock) {
   if (it.id != null && it.media_type) {
     const key = `${it.media_type}:${it.id}`;
     window._discItemMap[key] = it;
-    return typeof MSSInfo !== 'undefined'
+    return (typeof MSSInfo !== 'undefined'
       ? `onclick="MSSInfo.fromDiscover(window._discItemMap['${key}'])"`
-      : `onclick="goToTitle('${it.media_type}', ${it.id})"`;
+      : `onclick="goToTitle('${it.media_type}', ${it.id})"`) + MSSAge.attr(it.media_type, it.id, !lock);
   }
   return `onclick='_discOpenLinkPopup(${_discAttrJSON(it.title || '')}, ${_discAttrJSON(it.derived_type || 'tv')})'`;
 }
@@ -663,7 +665,7 @@ function initInlineSearch(inputId, opts = {}) {
       poster: r.profile_path ? TMDB_FULL + r.profile_path : null,
       typeHTML: `<span class="type-label type-label-overlay-bottom inline-search-person-tag">${esc(r.known_for_department || 'Person')}</span>` });
     const it = _discNormalize(r, r.media_type);
-    return MSSCard.poster({ attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url,
+    return MSSCard.poster({ attrs: _discClickAttr(it, true), title: it.title, year: it.year, poster: it.poster_url,
       type: it.media_type === 'movie' ? 'movie' : 'tv', score: _discFloorScore(it.score) });
   }
 

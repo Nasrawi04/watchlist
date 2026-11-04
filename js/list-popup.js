@@ -82,7 +82,7 @@ const MSSList = (() => {
   function postersHTML(items, resolve) {
     const posters = (items || []).slice(0, 5).map(resolve).filter(Boolean);
     if (!posters.length) return `<div class="lc-posters"><div class="lc-poster lc-poster-empty">No titles yet</div></div>`;
-    return `<div class="lc-posters">${posters.map(e => `<div class="lc-poster">${posterHTML(e, 'big')}</div>`).join('')}</div>`;
+    return `<div class="lc-posters">${posters.map(e => `<div class="lc-poster"${MSSAge.attr(e.tmdb_type || e.media_type, e.tmdb_id, 'soft')}>${posterHTML(e, 'big')}</div>`).join('')}</div>`;
   }
   function ownerHTML(p) {
     const u = safeURL(p?.avatar_url);
@@ -142,9 +142,10 @@ const MSSList = (() => {
       ${list.description ? `<div class="lp-desc" translate="no">${esc(list.description)}</div>` : ''}
       <div class="lp-meta">${countHTML(items.length)}</div>
       ${o.collabLine || ''}
-      ${posters.length ? `<div class="lp-posters">${posters.map(e => `<div class="lp-poster">${posterHTML(e, 'big')}</div>`).join('')}${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}</div>` : ''}
+      ${posters.length ? `<div class="lp-posters">${posters.map(e => `<div class="lp-poster"${MSSAge.attr(e.tmdb_type || e.media_type, e.tmdb_id, 'soft')}>${posterHTML(e, 'big')}</div>`).join('')}${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}</div>` : ''}
       ${o.social ? `<div id="lpPopupActions" class="lp-actions lp-actions-social">${socialHTML(null, null)}</div>` : ''}
-      <div id="lpNavPopupActions" class="lp-footer${o.manage ? ' lp-footer-manage' : ''}">${footerHTML(list, o)}</div>`;
+      <div id="lpNavPopupActions" class="lp-footer${o.manage ? ' lp-footer-manage' : ''}">${footerHTML(list, o)}</div>
+      ${o.social && window._navUser?.id && list.user_id && list.user_id !== window._navUser.id ? `<div class="lp-report-row"><button type="button" class="mss-report-link" onclick="mssReport('list', ${escHTML(JSON.stringify(list.id))})">${icon('flag', 12)} Report this list</button></div>` : ''}`;
     MSSDialog.open(ov);
     cur = { list, o, react: null, imported: null };
     if (o.social) {

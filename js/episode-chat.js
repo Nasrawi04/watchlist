@@ -103,7 +103,8 @@ const MSSEpChat = (() => {
         ${m.mine ? '' : av(m.author, 28)}
         <div class="epc-msg-main">
           <div class="rec-bub${m.mine ? ' mine' : ''}"><div translate="no">${esc(m.body)}</div></div>
-          <div class="epc-meta">${m.mine ? 'You' : `<b translate="no">${esc(name(m.author))}</b>`} · ${_notifTimeAgo(m.created_at)}${m.mine ? ` · <button type="button" class="poll-link poll-danger" onclick="MSSEpChat._del(${attrJSON(m.id)})">Delete</button>` : ''}</div>
+          <div class="epc-meta">${m.mine ? 'You' : `<b translate="no">${esc(name(m.author))}</b>`} · ${_notifTimeAgo(m.created_at)}${m.mine ? ` · <button type="button" class="poll-link poll-danger" onclick="MSSEpChat._del(${attrJSON(m.id)})">Delete</button>`
+            : window._navUser?.id ? ` · <button type="button" class="poll-link poll-danger" onclick="mssReport('episode_chat', ${attrJSON(m.id)}, { what: 'this message' })">Report</button>` : ''}</div>
         </div></li>`).join('')}</ul>`
       : `<div class="epc-empty">${icon('comment', 22)}<b>Start the conversation</b><span>${data.watchers_count ? 'Friends who’ve watched it will get a notification.' : 'Friends can join once they’ve reached this episode.'}</span></div>`;
     box.innerHTML = head + list + `<form class="rec-input epc-input" onsubmit="event.preventDefault();MSSEpChat._send()">

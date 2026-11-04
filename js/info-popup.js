@@ -310,6 +310,9 @@ const MSSInfo = (() => {
 
   /* ── Public ── */
   async function open(item, o = {}) {
+    // a 13–17 account can't open a mature title (088) — your own entries always open
+    const mine = o.owner || (item.entry && item.entry.user_id === window._navUser?.id);
+    if (!mine && !(await MSSAge.guard(item.media_type === 'movie' ? 'movie' : 'tv', item.tmdb_id))) return;
     inject();
     const it = { ...item, media_type: item.media_type === 'movie' ? 'movie' : 'tv' };
     current = it; opts = o;
@@ -394,6 +397,7 @@ const MSSInfo = (() => {
     const user = window._navUser || await getCurrentUser();
     if (!user) { mssJoin('add titles to your library'); return; }
     const it = { ...item, media_type: item.media_type === 'movie' ? 'movie' : 'tv' };
+    if (!(await MSSAge.guard(it.media_type, it.tmdb_id))) return;
     const d = o.details || it._details || null;
     addSt = { it, d, o, user, status: INFO_POPUP_CONFIG.addStatus, cat: it.cat || guessCat(it, d) };
     let ov = document.getElementById('mssAddOverlay');
@@ -488,6 +492,7 @@ const MSSInfo = (() => {
   async function quickAdd(item) {
     const user = window._navUser || await getCurrentUser();
     if (!user) { mssJoin('add titles to your Watchlist'); return null; }
+    if (!(await MSSAge.guard(item.media_type === 'movie' ? 'movie' : 'tv', item.tmdb_id))) return null;
     let d = null;
     try { d = item.tmdb_id ? await fetchDetails(item) : null; } catch {}
     return quickCreate(payloadFor(item, d), user.id);
@@ -533,7 +538,7 @@ const MSSInfo = (() => {
     list.innerHTML = results.length ? results.map(r => {
       const movie = r.media_type === 'movie';
       const year = ((movie ? r.release_date : r.first_air_date) || '').split('-')[0];
-      return `<button type="button" class="cat-disc-item" onclick="MSSInfo._closePicker();goToTitle(${attrJSON(movie ? 'movie' : 'tv')}, ${Number(r.id)})">
+      return `<button type="button" class="cat-disc-item" onclick="MSSInfo._closePicker();goToTitle(${attrJSON(movie ? 'movie' : 'tv')}, ${Number(r.id)})"${MSSAge.attr(movie ? 'movie' : 'tv', r.id)}>
         <span class="cat-disc-thumb">${r.poster_path ? `<img src="${TMDB_IMG + r.poster_path}" alt="" loading="lazy">` : ''}</span>
         <span class="cat-disc-info">
           <span class="cat-disc-name" translate="no">${esc((movie ? r.title : r.name) || '—')}</span>
@@ -719,6 +724,8 @@ const MSSViews = (() => {
 
   async function open(entry, o = {}) {
     if (!entry) return;
+    // someone else's entry of a mature title → not for a 13–17 account (088)
+    if (!o.own && entry.tmdb_id && !(await MSSAge.guard(entry.tmdb_type || entry.media_type, entry.tmdb_id))) return;
     const e = await full(entry);
     const views = available(e, o);
     st = { e, o, views, cur: null, refreshed: false, counts: o.counts };
