@@ -1550,6 +1550,7 @@ body.notif-sheet-open { overflow:hidden; }
 }
 .notif-av img { width:100%; height:100%; object-fit:cover; }
 .notif-av-ach { width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #F3CE63, #B8862A); color:#fff; }
+.notif-av-mod { background:var(--olive); }
 .notif-body { flex:1; min-width:0; padding-inline-end:14px; }
 .notif-text { font-size:13px; line-height:1.45; color:var(--text-2); overflow-wrap:anywhere; }
 .notif-text b { color:var(--text); font-weight:600; }
@@ -5642,6 +5643,8 @@ html.mss-scroll-locked [role="dialog"] { overscroll-behavior:contain; }
 .mss-rte blockquote, .mss-rte .mss-rq { margin:8px 0; padding:2px 0; padding-inline-start:14px; border-inline-start:3px solid var(--border-olive); font-style:italic; color:var(--text-2); }
 .mss-rte blockquote::before, .mss-rte blockquote::after { content:none; }
 .np-actions .np-del { flex:0 0 auto !important; min-width:46px; padding-inline:12px !important; }
+.np-actions .np-flag { flex:0 0 auto !important; min-width:46px; padding-inline:12px !important; color:var(--text-3); }
+.np-actions .np-flag:hover { color:#e57373; }
 :is(div, blockquote).mss-rich { font-style:normal; white-space:normal; }   /* beats the italic note styles, so *italic* shows */
 .mss-rich strong { font-weight:700; color:var(--text); }
 .mss-rich em { font-style:italic; }
@@ -7873,3 +7876,64 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 .fm-locked span { display:inline-flex; align-items:center; gap:6px; }
 .fm-locked svg { width:13px; height:13px; }
 .fm-user svg { width:11px; height:11px; vertical-align:-1px; }
+/* The upload rule (mssUploadRuleHTML) — profile photo, your own poster */
+.mss-upload-rule { display:flex; align-items:flex-start; gap:7px; margin:10px 0 0; font-size:11.5px; line-height:1.45; color:var(--text-3); text-align:start; }
+.mss-upload-rule svg { width:13px; height:13px; flex-shrink:0; margin-top:1px; color:var(--olive-light); }
+#avatarCropRule .mss-upload-rule { margin:0 0 1rem; }
+
+/* ═════════════════════════════════════════════════════════════
+   Report popup (js/report.js · 086_reports.sql) — the confirm card with
+   a reason list and an optional note. Sits above every other popup.
+   ═════════════════════════════════════════════════════════════ */
+.rpt-card { max-width:420px; position:relative; max-height:calc(100dvh - 40px); overflow-y:auto; padding:1.75rem 1.4rem 1.4rem; }
+.rpt-card .confirm-msg { max-width:none; }
+.rpt-x { position:absolute; top:12px; inset-inline-end:12px; }
+.rpt-form { width:100%; display:flex; flex-direction:column; gap:12px; margin-top:4px; text-align:start; }
+.rpt-reasons { display:flex; flex-direction:column; gap:6px; }
+.rpt-reason { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:0.5px solid var(--border-2); border-radius:var(--radius-sm); cursor:pointer; transition:border-color .15s, background .15s; }
+.rpt-reason:hover { border-color:var(--border-olive); }
+.rpt-reason:has(input:checked) { border-color:var(--olive-light); background:var(--olive-faint); }
+.rpt-reason input { margin:3px 0 0; accent-color:var(--olive-light); flex-shrink:0; width:16px; height:16px; }
+.rpt-reason span { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.rpt-reason b { font-size:13.5px; font-weight:600; color:var(--text); }
+.rpt-reason small { font-size:11.5px; color:var(--text-3); line-height:1.4; }
+.rpt-details { width:100%; box-sizing:border-box; resize:vertical; min-height:70px; font-size:13px; }
+.rpt-err { font-size:12px; color:#e57373; min-height:0; }
+.rpt-err:empty { display:none; }
+.rpt-send:disabled { opacity:.5; cursor:default; }
+/* the small "Report" links next to things */
+.mss-report-link { background:none; border:none; padding:4px 2px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font:inherit; font-size:12px; color:var(--text-3); }
+.mss-report-link:hover { color:#e57373; }
+.mss-report-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; border-radius:4px; }
+.lp-report-row { display:flex; justify-content:center; margin-top:10px; }
+.lv-import-row .mss-report-link { align-self:center; }
+#mssRatePopupActions .rate-flag { flex:0 0 auto; min-width:46px; padding-inline:12px; color:var(--text-3); }
+#mssRatePopupActions .rate-flag:hover { color:#e57373; }
+.poll-flag { color:var(--text-3); }
+.poll-flag:hover { color:#e57373; }
+.pv-rm-row + .pv-report-row { margin-top:0; }
+.pv-report:hover { color:#e57373; }
+
+/* ═════════════════════════════════════════════════════════════
+   Age restrictions (config.js MSSAge · 088) — only on accounts with a limit (html.mss-teen).
+   [data-age] titles stay blurred until they're known to be fine; restricted ones
+   keep the blur and get a 16+ / 18+ lock; [data-age-hide] ones are left out.
+   ═════════════════════════════════════════════════════════════ */
+.mss-teen [data-age]:not(.age-ok) { position:relative; cursor:not-allowed; }
+.mss-teen [data-age]:not(.age-ok) img,
+.mss-teen [data-age]:not(.age-ok) [style*="background-image"] { filter:blur(14px) saturate(.6); transform:scale(1.04); }
+.mss-teen [data-age]:not(.age-ok) :is(img, [style*="background-image"]) { transition:filter .2s; }
+.mss-teen [data-age].age-locked::after {
+  content:attr(data-age-badge); position:absolute; top:6px; inset-inline-start:6px; z-index:3; pointer-events:none;
+  display:inline-flex; align-items:center; gap:4px; padding:3px 7px 3px 22px; border-radius:6px;
+  background:rgba(20,20,18,.82) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E") no-repeat 7px 50% / 11px 11px;
+  color:#fff; font:700 10.5px/1.2 'Manrope', var(--sans); letter-spacing:.4px;
+}
+.mss-teen [data-age-hide].age-locked { display:none !important; }
+@media (prefers-reduced-motion: reduce) { .mss-teen [data-age] :is(img, [style*="background-image"]) { transition:none; transform:none; } }
+/* Birth month + year (nav.js _navBirthPopup, login.html sign-up) */
+.mss-birth-row { display:flex; gap:8px; width:100%; }
+.mss-birth-row select { flex:1; min-width:0; min-height:44px; }
+.mss-birth-row .mss-birth-m { flex:1.5; }
+.mss-birth-row .mss-birth-d { flex:.8; }
+.notif-mod-note { font-style:italic; color:var(--text-2); }
