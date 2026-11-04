@@ -138,11 +138,18 @@
 .fm-card { position:relative; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; cursor:pointer; display:flex; flex-direction:column; transition:transform .2s, box-shadow .2s, border-color .2s; }
 .fm-card:hover { transform:translateY(-3px);  border-color:var(--border-olive); }
 .fm-card.is-pinned { border-color:var(--border-olive); }
-.fm-cover { position:relative; height:96px; display:grid; grid-template-columns:repeat(4, 1fr); background:linear-gradient(135deg, var(--olive) 0%, var(--olive-2, #0f2d14) 100%); }
+.fm-cover { position:relative; height:96px; display:grid; grid-template-columns:repeat(5, 1fr); background:linear-gradient(135deg, var(--olive) 0%, var(--olive-2, #0f2d14) 100%); }
 .fm-cover-tile { position:relative; overflow:hidden; }
 .fm-cover-img { position:absolute; inset:0; }
 .fm-cover-img img { filter:saturate(1.1); }
 .fm-cover-empty { grid-column:1/-1; }
+/* Loading cards: a plain shape that gently fades, one card after another (no light sweeping across) */
+.has-skel:has(.fm-grid) :is(.skel, .skel-txt, .skel-ghost) { animation:none !important; background:var(--skel-bg) !important; }
+.has-skel .fm-card { animation:mssBreathe 2.4s ease-in-out infinite; }
+.has-skel .fm-card:nth-child(4n+2) { animation-delay:.3s; }
+.has-skel .fm-card:nth-child(4n+3) { animation-delay:.6s; }
+.has-skel .fm-card:nth-child(4n+4) { animation-delay:.9s; }
+@media (prefers-reduced-motion: reduce) { .has-skel .fm-card { animation:none; } }
 .fm-cover-shade { position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,.05), rgba(0,0,0,.45)); pointer-events:none; }
 .fm-body { padding:0 16px 16px; display:flex; flex-direction:column; align-items:center; text-align:center; flex:1; }
 .fm-av { display:flex; margin-top:-34px; margin-bottom:8px; border-radius:50%; border:3px solid var(--card);  position:relative; z-index:1; }
@@ -580,7 +587,7 @@ async function loadFriends() {
   } else { _frEntries = []; _frLists = []; _frEpRatings = []; }
   _frEntries.forEach(e => { window._frEntryMap[e.id] = e; });
   // Top Favorites older than the recent entries loaded above — fetch those too
-  const favIds = _frAccepted.flatMap(f => Array.isArray(f.friendProfile?.top_picks) ? f.friendProfile.top_picks.slice(0, 4) : []);
+  const favIds = _frAccepted.flatMap(f => Array.isArray(f.friendProfile?.top_picks) ? f.friendProfile.top_picks.slice(0, 5) : []);
   const missing = [...new Set(favIds)].filter(id => !window._frEntryMap[id]);
   const extraFavs = missing.length ? await sb.from('entries').select('*').in('id', missing).then(r => r.data || [], () => []) : [];
   const favMap = Object.fromEntries(extraFavs.map(e => [e.id, e]));
@@ -621,18 +628,32 @@ const _frToolbarHTML = (label, count, scope, noun = 'items') =>
 
 /* ── Loading skeleton (Friends / Activity): the section's toolbar and its own friend cards or
    activity updates with sample text, masked into placeholders — as many friends as last time ── */
+const _frSkelKeep = h => h.replace(/class="(fr-toolbar-title|sort-bar[^"]*|fm-btn[^"]*|pn-toggle-btn[^"]*|fr-people-title|ns-back)"/g, 'class="$1" data-skel-keep');
+// The same cards for Friends, Following and Followers — as many as there are, up to 8
+function _frSkelCards() {
+  const yours = _frPeople === 'friends' && !_frOf;
+  const known = yours ? mssSkeleton.shape('fr')?.n : _frOf ? null : _frFollowState?.[_frPeople];
+  const n = Math.min(Math.max(known ?? 4, 1), 8);
+  const card = _frMemberCard({ id: '', friendId: '', friendProfile: { username: 'username', display_name: 'Friend name' } });
+  return { n, yours, html: `<div class="fm-grid">${Array(n).fill(card).join('')}</div>` };
+}
+const _frSkelCount = n => `<div class="fr-people-count"><b>${n}</b> people</div>`;
+mssSkeleton.define('fr-cards', () => {
+  const s = _frSkelCards();
+  return _frSkelKeep(_frSkelCount(s.n) + s.html).replace(/ (id|onclick)="[^"]*"/g, '');
+});
 mssSkeleton.define('fr-page', () => {
-  const keep = h => h.replace(/class="(fr-toolbar-title|sort-bar[^"]*|fm-btn[^"]*)"/g, 'class="$1" data-skel-keep');
+  const keep = _frSkelKeep;
   if (_frTab === 'activity') {
     const x = { id: 's:finished', _ev: 'finished', user_id: '', title: 'Sample title', year: 2024, cat: 'tv', final_score: 8, _at: new Date() };
     return keep(`<div class="fr-toolbar">${_frToolbarHTML('Activity', 12, 'frActivity', 'updates')}</div>`)
       + `<div class="fa-feed"><div class="fa-day">Today</div>${Array.from({ length: 6 }, () => _frActItemHTML(x, _FR_ACT.finished, 8)).join('')}</div>`;
   }
   if (_frTab !== 'friends') return mssSkeleton('rows');
-  const n = Math.max(mssSkeleton.shape('fr')?.n ?? 4, 1);
-  const card = _frMemberCard({ id: '', friendId: '', friendProfile: { username: 'username', display_name: 'Friend name' } });
-  return keep(`<div class="fr-toolbar">${_frToolbarHTML('Your Friends', n, n > 1 ? 'frFriends' : null, 'friends')}</div><div class="fm-grid">${Array(n).fill(card).join('')}</div>`)
-    .replace(/ (id|onclick)="[^"]*"/g, '');
+  const s = _frSkelCards();
+  return keep(s.yours
+    ? `<div class="fr-toolbar">${_frToolbarHTML('Your Friends', s.n, s.n > 1 ? 'frFriends' : null, 'friends')}</div>${_frPeopleHead()}${s.html}`
+    : _frPeopleHead() + _frSkelCount(s.n) + s.html).replace(/ (id|onclick)="[^"]*"/g, '');
 });
 
 function _frRender() {
@@ -692,12 +713,12 @@ SF.register('frFriends', {
 });
 
 // Friend card cover: their Top Favorites (profile dashboard), then — if they
-// haven't picked 4 — their most recent titles to fill the rest
+// haven't picked 5 — their most recent titles to fill the rest
 function _frCoverPosters(p, mine, extra = {}) {
   const withPoster = e => e && safeURL(e.poster_url);
   const favs = (Array.isArray(p.top_picks) ? p.top_picks : []).map(id => mine.find(e => e.id === id) || extra[id]).filter(withPoster);
   const recent = mine.filter(e => withPoster(e) && !favs.includes(e));   // mine is newest-first
-  return favs.concat(recent).slice(0, 4);
+  return favs.concat(recent).slice(0, 5);
 }
 
 function _frMemberCard(f) {
@@ -828,7 +849,7 @@ function _frRenderPeople() {
   const tb = document.getElementById('frToolbar'); tb.style.display = 'none';
   const c = document.getElementById('frContent');
   if (!d || !d.loaded) {
-    c.innerHTML = _frPeopleHead() + `<div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>`;
+    c.innerHTML = _frPeopleHead() + `<div class="page-loading" data-skel="fr-cards"></div>`;
     if (!d || !d.busy) _frLoadPeople();
     return;
   }
