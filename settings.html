@@ -98,6 +98,23 @@
 .settings-desc b { color:var(--text); font-weight:600; }
 .settings-desc a { color:var(--olive-light); font-weight:600; text-decoration:none; }
 .settings-desc a:hover { text-decoration:underline; }
+.sess-list { list-style:none; margin:0 0 1.1rem; padding:0; border:0.5px solid var(--border); border-radius:var(--radius-sm); }
+.sess-list:empty { display:none; }
+.sess-row { display:flex; align-items:center; gap:12px; padding:12px; min-width:0; }
+.sess-row + .sess-row { border-top:0.5px solid var(--border); }
+.sess-ic { flex-shrink:0; width:20px; height:20px; color:var(--text-3); }
+.sess-ic svg { display:block; width:100%; height:100%; }
+.sess-info { flex:1; min-width:0; }
+.sess-name { display:block; font-size:13.5px; font-weight:600; color:var(--text); overflow-wrap:anywhere; }
+.sess-when { display:block; margin-top:2px; font-size:12px; line-height:1.4; color:var(--text-3); }
+.sess-here { flex-shrink:0; font-size:12px; font-weight:600; color:var(--olive-light); }
+.sess-out { flex-shrink:0; min-height:40px; padding:0 12px; border-radius:var(--radius-sm); background:none; border:0.5px solid var(--border-2); color:var(--text-2); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:border-color .15s, color .15s; }
+.sess-out:hover { border-color:#dc2626; color:#dc2626; }
+.sess-out:disabled { opacity:.6; cursor:progress; }
+.sess-out:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+[data-theme="dark"] .sess-out:hover { border-color:#f87171; color:#f87171; }
+.sess-note { padding:12px; font-size:13px; color:var(--text-3); }
+@media(max-width:640px) { .sess-out { min-height:44px; } }
 .set-btn {
   display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%;
   padding:11px 16px; border-radius:var(--radius-sm); cursor:pointer;
@@ -343,8 +360,9 @@
         </div>
 
         <div class="settings-section fade-up fade-up-2">
-          <div class="settings-title">Sessions</div>
-          <p class="settings-desc">Signed in on a shared or lost device? Sign out of MyScreenFolio everywhere, including this browser.</p>
+          <div class="settings-title">Active Sessions</div>
+          <p class="settings-desc">Everywhere this account is signed in. Don’t recognise one, or lost a device? Sign it out.</p>
+          <ul class="sess-list" id="sessList" aria-live="polite"></ul>
           <button type="button" class="set-btn" onclick="doSignOutEverywhere()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign Out of All Devices
@@ -406,6 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
     syncThemeButtons();
     ['avatarRule', 'avatarCropRule'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = mssUploadRuleHTML(); });
     document.getElementById('privSwitch')?.setAttribute('aria-checked', String(!!profile?.is_private));
+    _sessLoad();
   });
 });
 
@@ -692,6 +711,53 @@ async function _avatarCropConfirm() {
       console.error(e);
     }
   }, 'image/jpeg', MSS_AVATAR.q);
+}
+
+/* ── Active Sessions (091): every device this account is signed in on ── */
+const _SESS_ICONS = {
+  phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>',
+  computer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+};
+// The browser's own description → 'iPhone · Safari' (a best guess: browsers can say anything)
+function _sessDevice(ua) {
+  ua = ua || '';
+  const device = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet')
+    : /Macintosh|Mac OS X/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows PC' : /CrOS/.test(ua) ? 'Chromebook' : /Linux/.test(ua) ? 'Linux PC' : '';
+  const browser = /Edg(e|A|iOS)?\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Firefox\/|FxiOS/.test(ua) ? 'Firefox'
+    : /Chrome\/|CriOS/.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  return { name: [device, browser].filter(Boolean).join(' · ') || 'Unknown device', icon: /iPhone|Android/.test(ua) ? 'phone' : 'computer' };
+}
+function _sessDate(d) { return new Date(d).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' }); }
+async function _sessLoad() {
+  const box = document.getElementById('sessList');
+  if (!box) return;
+  const { data, error } = await sb.rpc('my_sessions');
+  if (error || !Array.isArray(data)) { box.innerHTML = '<li class="sess-note">Couldn’t load your devices — try again in a moment.</li>'; return; }
+  window._sessRows = data;
+  box.innerHTML = data.map(s => {
+    const d = _sessDevice(s.user_agent);
+    return `<li class="sess-row">
+      <span class="sess-ic">${_SESS_ICONS[d.icon]}</span>
+      <span class="sess-info"><span class="sess-name" translate="no">${escHTML(d.name)}</span>
+        <span class="sess-when">${s.is_current ? `Signed in ${escHTML(_sessDate(s.created_at))}` : `Last active ${escHTML(_notifTimeAgo(s.last_active))} · Signed in ${escHTML(_sessDate(s.created_at))}`}</span></span>
+      ${s.is_current ? '<span class="sess-here">This device</span>' : `<button type="button" class="sess-out" aria-label="Sign out ${escHTML(d.name)}" onclick="_sessRevoke(this, '${escHTML(s.id)}')">Sign out</button>`}
+    </li>`;
+  }).join('');
+}
+async function _sessRevoke(btn, id) {
+  const row = (window._sessRows || []).find(s => s.id === id);
+  const ok = await showConfirm({
+    title: 'Sign out this device?',
+    message: `${_sessDevice(row?.user_agent).name} will be signed out of MyScreenFolio. It’ll need the password to get back in.`,
+    confirmText: 'Sign Out',
+    iconName: 'logout',
+  });
+  if (!ok) return;
+  btn.disabled = true;
+  const { error } = await sb.rpc('revoke_my_session', { p_id: id });
+  if (error) { btn.disabled = false; showToast('Couldn’t sign it out — try again.', 'err'); return; }
+  showToast('Device signed out.');
+  _sessLoad();
 }
 
 async function doSignOutEverywhere() {
