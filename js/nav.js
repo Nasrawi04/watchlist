@@ -361,21 +361,21 @@ function _navBirthPopup(uid) {
   const el = document.createElement('div');
   el.className = 'confirm-overlay';
   el.id = 'mssBirthOverlay';
-  el.innerHTML = `<form class="confirm-card mss-rename" role="dialog" aria-modal="true" aria-labelledby="mssBirthT" aria-describedby="mssBirthMsg" novalidate>
+  el.innerHTML = `<div class="confirm-card mss-rename" role="dialog" aria-modal="true" aria-labelledby="mssBirthT" aria-describedby="mssBirthMsg"><form class="mss-birth-form" novalidate>
       <div class="confirm-icon" aria-hidden="true">${icon('user', 36)}</div>
       <div class="confirm-title" id="mssBirthT">What’s your date of birth?</div>
       <div class="confirm-msg" id="mssBirthMsg">Everyone on MyScreenFolio gives it once, so age-restricted titles stay away from younger members. It’s private — it never shows on your profile — and it can’t be changed later.</div>
-      <div class="mss-birth-row" role="group" aria-label="Date of birth">${mssBirthFieldsHTML('mssBirth')}</div>
+      <div class="mss-birth-row" role="group" aria-label="Date of birth" id="mssBirthRow"></div>
       <div class="mss-rename-hint bad" id="mssBirthHint" aria-live="polite"></div>
       <div class="confirm-actions">
         <button type="button" class="confirm-cancel" onclick="handleLogout()">Sign out</button>
         <button type="submit" class="confirm-ok is-safe" id="mssBirthSave" disabled>Save</button>
       </div>
-    </form>`;
+    </form></div>`;
   MSSDialog.bind(el, () => {});                        // can't be skipped — only saved, or signed out
   document.body.appendChild(el);
   const save = el.querySelector('#mssBirthSave'), hint = el.querySelector('#mssBirthHint');
-  el.querySelectorAll('select').forEach(x => x.addEventListener('change', () => { save.disabled = !mssBirthValue('mssBirth'); hint.textContent = ''; }));
+  mssBirthFields(el.querySelector('#mssBirthRow'), 'mssBirth', () => { save.disabled = !mssBirthValue('mssBirth'); hint.textContent = ''; });
   el.querySelector('form').addEventListener('submit', async ev => {
     ev.preventDefault();
     const v = mssBirthValue('mssBirth');
@@ -390,7 +390,7 @@ function _navBirthPopup(uid) {
     if (data === 'child') _navAgeLocked();
     else { showToast('Saved — thanks!'); if (data !== 'adult') setTimeout(() => location.reload(), 600); }
   });
-  MSSDialog.open(el, { focus: el.querySelector('select') });
+  MSSDialog.open(el);
 }
 
 function _navSuspended(until) {
