@@ -125,7 +125,7 @@ a.au-tile:hover::after { opacity:1; }
 .au-title { font-family:var(--serif); font-weight:600; font-size:26px; line-height:1.1; color:var(--text); margin:0 0 4px; }
 .au-sub { font-size:14px; color:var(--text-2); margin:0 0 20px; line-height:1.5; }
 .au-panel[hidden] { display:none; }
-.au-panel { animation:auIn .35s var(--ease) both; }
+.au-panel { animation:auIn .35s var(--ease) backwards; }
 @keyframes auIn { from { opacity:0; transform:translateY(6px); } }
 
 /* fields */
@@ -141,9 +141,7 @@ a.au-tile:hover::after { opacity:1; }
 .au-input::placeholder { color:var(--text-3); }
 .au-input:focus { border-color:var(--olive-light); background:var(--card-solid); }
 .au-input.has-eye { padding-right:50px; }
-.au-select { padding:0 34px 0 14px; appearance:none; -webkit-appearance:none; cursor:pointer;
-  background:var(--bg-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 14px; }
-.au-select:focus { background-color:var(--card-solid); }
+.au-birth .mss-pick-trigger { min-height:50px; border-radius:12px; background:var(--bg-2); border:1px solid var(--border-2); font:500 15px var(--sans); }
 .au-eye { position:absolute; right:4px; width:44px; height:44px; border:0; border-radius:10px; background:none; color:var(--text-3); cursor:pointer; display:grid; place-items:center; }
 .au-eye:hover { color:var(--text); }
 .au-eye svg { width:18px; height:18px; }
@@ -710,7 +708,7 @@ async function doSignIn(e) {
 /* ── Sign Up ── */
 const AU_UNDER_13 = 'Sorry — you need to be 13 or older to make a MyScreenFolio account.';
 const _auAgeBlocked = () => { try { return Date.now() - Number(localStorage.getItem('mss_age_block') || 0) < 86400000; } catch { return false; } };
-document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('suBirth'); if (b) b.innerHTML = mssBirthFieldsHTML('suBirth', 'au-input au-select'); });
+document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('suBirth'); if (b) mssBirthFields(b, 'suBirth'); });
 // Public (default) or Private account (083) — saved with the sign-up, made into the profile by the database
 let _auPrivate = false;
 function auPriv(on) {
