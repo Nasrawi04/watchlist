@@ -2371,7 +2371,10 @@ const MSSDialog = (() => {
        onChange(value),
      })
      MSSPicker.closeOpen() → true when one was open (Esc / outside tap)
-
+     typed: true → for small fields: you type right in the field and the list filters under it. The
+     list floats over everything and stays on screen (flips up, follows scrolling, rotation and the
+     phone keyboard). An item's `short` shows in the field; `inputmode` sets the keyboard. Leaving the
+     field keeps what was typed if it matches one item; the chevron opens the list without a keyboard.
    Typing matches the label and any extra keys (e.g. a language's English
    name and code), ignoring case and accents. ↑ ↓ Enter Esc work; the list is
    an ARIA listbox driven from the search box (combobox). Labels are names
@@ -2384,26 +2387,37 @@ const MSSPicker = (() => {
   function mount(el, o) {
     const id = o.id, listId = id + '-list';
     const all = o.groups.flatMap(g => g.items);
-    let value = o.value, active = -1, shown = [];
+    const typed = !!o.typed, coarse = () => matchMedia('(pointer:coarse)').matches;
+    let value = o.value, active = -1, shown = [], typing = false;
     const cur = () => all.find(i => i.value === value);
     el.classList.add('mss-pick');
-    el.innerHTML = `<button type="button" class="mss-pick-trigger" id="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="${escHTML(o.label)}"${o.describedBy ? ` aria-describedby="${o.describedBy}"` : ''}>
+    if (typed) el.classList.add('mss-pick-typed');
+    const chevron = `<svg class="mss-pick-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    el.innerHTML = typed ? `<div class="mss-pick-trigger">
+        <input type="text" id="${id}" role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-autocomplete="list" aria-controls="${listId}" aria-label="${escHTML(o.label)}" placeholder="${escHTML(o.placeholder || '')}"${o.inputmode ? ` inputmode="${o.inputmode}"` : ''} autocomplete="off" spellcheck="false" translate="no">
+        ${chevron}
+      </div>
+      <div class="mss-pick-menu"><ul class="mss-pick-list" id="${listId}" role="listbox" aria-label="${escHTML(o.label)}"></ul></div>` : `<button type="button" class="mss-pick-trigger" id="${id}" aria-haspopup="listbox" aria-expanded="false" aria-label="${escHTML(o.label)}"${o.describedBy ? ` aria-describedby="${o.describedBy}"` : ''}>
         <span class="mss-pick-value" translate="no"></span>
-        <svg class="mss-pick-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ${chevron}
       </button>
       <div class="mss-pick-menu">
         <div class="mss-pick-search">${icon('search', 14)}<input type="text" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="${listId}" aria-label="${escHTML(o.search || 'Type to search…')}" placeholder="${escHTML(o.search || 'Type to search…')}" autocomplete="off" spellcheck="false"></div>
         <ul class="mss-pick-list" id="${listId}" role="listbox" aria-label="${escHTML(o.label)}"></ul>
       </div>`;
-    const btn = el.querySelector('.mss-pick-trigger'), input = el.querySelector('input'), list = el.querySelector('.mss-pick-list');
+    const btn = el.querySelector('.mss-pick-trigger'), input = el.querySelector('input'), list = el.querySelector('.mss-pick-list'), menu = el.querySelector('.mss-pick-menu');
+    const ctl = typed ? input : btn;                                 // the one that says open / closed
     const paintValue = () => {                                       // nothing picked → the placeholder, if any
-      const v = el.querySelector('.mss-pick-value'), c = cur();
+      const c = cur();
+      if (typed) { input.value = c?.short || c?.label || ''; return; }
+      const v = el.querySelector('.mss-pick-value');
       v.textContent = c?.label || o.placeholder || '';
       v.classList.toggle('mss-pick-placeholder', !c && !!o.placeholder);
+      btn.setAttribute('aria-label', c ? `${mssT(o.label)}: ${c.label}` : o.label);   // says what's picked, as the field shows it
     };
 
     function render() {
-      const q = norm(input.value.trim());
+      const q = !typed || typing ? norm(input.value.trim()) : '';
       shown = [];
       let html = '';
       o.groups.forEach(g => {
@@ -2417,6 +2431,40 @@ const MSSPicker = (() => {
       });
       list.innerHTML = html || `<li class="mss-pick-none" role="presentation">No matches</li>`;
       setActive(shown.findIndex(i => i.value === value) >= 0 && !q ? shown.findIndex(i => i.value === value) : (shown.length ? 0 : -1), !q);
+      place();
+    }
+    // typed: keep the list on the visible screen, under the field or else over it
+    function place() {
+      if (!typed || !el.classList.contains('open')) return;
+      const vv = window.visualViewport, gap = 8;
+      const top = vv ? vv.offsetTop : 0, left = vv ? vv.offsetLeft : 0;
+      const bottom = top + (vv ? vv.height : innerHeight), right = left + (vv ? vv.width : innerWidth);
+      const r = btn.getBoundingClientRect();
+      const w = Math.min(Math.max(r.width, 160), right - left - gap * 2);
+      const below = bottom - r.bottom - gap - 4, above = r.top - top - gap - 4;
+      const under = below >= 200 || below >= above;
+      menu.style.width = w + 'px';
+      list.style.maxHeight = Math.max(88, Math.min(280, under ? below : above)) + 'px';
+      const h = menu.offsetHeight, rtl = getComputedStyle(el).direction === 'rtl';
+      menu.style.left = Math.max(left + gap, Math.min(rtl ? r.right - w : r.left, right - w - gap)) + 'px';
+      menu.style.top = Math.max(top + gap, Math.min(under ? r.bottom + 4 : r.top - h - 4, bottom - h - gap)) + 'px';
+    }
+    const onMove = ev => { if (ev.target !== list) place(); };
+    function follow(on) {
+      if (!typed) return;
+      const fn = on ? 'addEventListener' : 'removeEventListener';
+      window[fn]('scroll', onMove, { capture: true, passive: true });
+      window[fn]('resize', place);
+      window.visualViewport?.[fn]('resize', place);
+      window.visualViewport?.[fn]('scroll', place);
+    }
+    // typed: what's in the field when you leave it → the item it matches, or back to the last one
+    function commit() {
+      const q = norm(input.value.trim());
+      const hit = !q ? null : all.find(i => [i.label, i.short, ...(i.keys || [])].some(k => k && norm(k) === q)) || (shown.length === 1 ? shown[0] : undefined);
+      if (hit === undefined) return;
+      const v = hit ? hit.value : '';
+      if (v !== value) { value = v; o.onChange?.(value); }
     }
     function setActive(n, scroll = true) {
       active = n;
@@ -2426,36 +2474,56 @@ const MSSPicker = (() => {
       else input.removeAttribute('aria-activedescendant');
     }
     function open() {
-      if (openOne && openOne !== api) openOne.close();
-      el.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
+      if (openOne && openOne !== api) openOne.close(false, true);
+      el.classList.add('open'); ctl.setAttribute('aria-expanded', 'true');
       openOne = api;
-      input.value = '';
+      if (!typed) input.value = '';
+      follow(true);
       render();
-      input.focus({ preventScroll: true });
+      if (!typed) input.focus({ preventScroll: true });
     }
-    function close(refocus) {
+    function close(refocus, keepTyped) {
       if (!el.classList.contains('open')) return;
-      el.classList.remove('open'); btn.setAttribute('aria-expanded', 'false');
+      if (typed) { if (keepTyped && typing) commit(); typing = false; paintValue(); }
+      el.classList.remove('open'); ctl.setAttribute('aria-expanded', 'false');
+      follow(false);
       if (openOne === api) openOne = null;
-      if (refocus) btn.focus({ preventScroll: true });
+      if (refocus) ctl.focus({ preventScroll: true });
     }
     function pick(n) {
       const i = shown[n];
       if (!i) return;
-      close(true);
-      if (i.value === value) return;
-      value = i.value; paintValue();
+      const changed = i.value !== value;
+      value = i.value;
+      close(!typed || !coarse());
+      if (typed && coarse()) input.blur();                           // phone: the keyboard goes away with the list
+      if (!changed) return;
+      paintValue();
       o.onChange?.(value);
     }
-    btn.addEventListener('click', () => (el.classList.contains('open') ? close(true) : open()));
-    btn.addEventListener('keydown', ev => { if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); open(); } });
-    input.addEventListener('input', render);
+    if (typed) {
+      btn.addEventListener('click', ev => {
+        const onField = ev.target === input;
+        if (el.classList.contains('open')) { if (!onField) close(true, true); return; }
+        open();
+        if (onField) input.select();
+        else if (!coarse()) { input.focus({ preventScroll: true }); input.select(); }
+      });
+    } else {
+      btn.addEventListener('click', () => (el.classList.contains('open') ? close(true) : open()));
+      btn.addEventListener('keydown', ev => { if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); open(); } });
+    }
+    input.addEventListener('input', () => { typing = typed; if (typed && !el.classList.contains('open')) open(); else render(); });
     input.addEventListener('keydown', ev => {
+      if (typed && !el.classList.contains('open')) {                 // closed: arrows open it, Enter is the form's
+        if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); open(); }
+        return;
+      }
       if (ev.key === 'ArrowDown') { ev.preventDefault(); if (shown.length) setActive(Math.min(active + 1, shown.length - 1)); }
       else if (ev.key === 'ArrowUp') { ev.preventDefault(); if (shown.length) setActive(Math.max(active - 1, 0)); }
       else if (ev.key === 'Enter') { ev.preventDefault(); pick(active); }
       else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(true); }
-      else if (ev.key === 'Tab') close(false);
+      else if (ev.key === 'Tab') close(false, true);
     });
     list.addEventListener('mousedown', ev => ev.preventDefault());         // keep focus in the search box
     list.addEventListener('click', ev => { const li = ev.target.closest('.mss-pick-opt'); if (li) pick(+li.dataset.n); });
@@ -2465,7 +2533,7 @@ const MSSPicker = (() => {
     return api;
   }
 
-  document.addEventListener('pointerdown', ev => { if (openOne && !openOne.el.contains(ev.target)) openOne.close(false); }, true);
+  document.addEventListener('pointerdown', ev => { if (openOne && !openOne.el.contains(ev.target)) openOne.close(false, true); }, true);
   function closeOpen() { if (!openOne) return false; openOne.close(true); return true; }
   return { mount, closeOpen };
 })();
@@ -3318,19 +3386,28 @@ const mssIdle = (() => {
   return { arm: () => arm() };
 })();
 
-// Date of birth — day / month / year pickers (nav.js pop-up, login.html sign-up). mssBirthValue(prefix) → 'YYYY-MM-DD' or ''
-function mssBirthFieldsHTML(prefix, cls = 'field-input') {
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const y = new Date().getFullYear();
-  return `<select class="${cls} mss-birth-d" id="${prefix}D" aria-label="Day"><option value="">Day</option>${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select>
-    <select class="${cls} mss-birth-m" id="${prefix}M" aria-label="Month"><option value="">Month</option>${months.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select>
-    <select class="${cls} mss-birth-y" id="${prefix}Y" aria-label="Year"><option value="">Year</option>${Array.from({ length: 101 }, (_, i) => y - i).map(v => `<option value="${v}">${v}</option>`).join('')}</select>`;
+// Date of birth — day / month / year pickers (nav.js pop-up, login.html sign-up), all MSSPicker.
+// mssBirthFields(el, prefix, onChange) fills el; mssBirthValue(prefix) → 'YYYY-MM-DD', 'invalid' (31 February…) or ''
+function mssBirthFields(el, prefix, onChange) {
+  const month = (i, style, loc) => new Intl.DateTimeFormat(loc, { month: style, timeZone: 'UTC' }).format(Date.UTC(2000, i, 1));
+  const num = (v, pad) => ({ value: String(v), label: String(v), keys: pad ? [String(v).padStart(2, '0')] : [] });
+  const parts = {
+    D: { label: 'Day', inputmode: 'numeric', items: Array.from({ length: 31 }, (_, i) => num(i + 1, true)) },
+    M: { label: 'Month', items: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: month(i, 'long', MSSI18n.locale), short: month(i, 'short', MSSI18n.locale), keys: [String(i + 1), month(i, 'long', 'en-US')] })) },
+    Y: { label: 'Year', inputmode: 'numeric', items: Array.from({ length: 101 }, (_, i) => num(new Date().getFullYear() - i)) },
+  };
+  el.innerHTML = Object.keys(parts).map(k => `<div class="mss-birth-${k.toLowerCase()}"></div>`).join('');
+  Object.entries(parts).forEach(([k, p]) => {
+    const label = mssT(p.label);
+    MSSPicker.mount(el.querySelector(`.mss-birth-${k.toLowerCase()}`), { id: prefix + k, label, placeholder: label, value: '', inputmode: p.inputmode, typed: true, groups: [{ items: p.items }], onChange });
+  });
 }
 function mssBirthValue(prefix) {
-  const d = Number(document.getElementById(prefix + 'D')?.value), m = Number(document.getElementById(prefix + 'M')?.value), y = Number(document.getElementById(prefix + 'Y')?.value);
+  const part = k => Number(document.getElementById(prefix + k)?.closest('.mss-pick')._picker.value);
+  const d = part('D'), m = part('M'), y = part('Y');
   if (!d || !m || !y) return '';
   const dt = new Date(Date.UTC(y, m - 1, d));
-  if (dt.getUTCMonth() !== m - 1) return 'invalid';                     // 31 February…
+  if (dt.getUTCMonth() !== m - 1) return 'invalid';
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 // Whole years old on today's date, from 'YYYY-MM-DD'
