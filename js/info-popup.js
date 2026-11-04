@@ -335,6 +335,8 @@ const MSSInfo = (() => {
     it._details = d;
     render(it, d, own || null, user, false);
     loadCast(it, d, my);
+    const genres = await mssSyncEntryGenres(own, d);
+    if (genres && my === token && it.entry === own) { it.genres = genres; render(it, d, own, user, false); loadCast(it, d, my); }
   }
 
   function close() {

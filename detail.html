@@ -1257,6 +1257,16 @@ const TMDB_LOCK_SECTIONS = {
   runtime: { btnId: 'tmdbLockBtn-runtime', fieldIds: ['dRuntimeH', 'dRuntimeM'] },
 };
 
+// A saved title's missing TMDB genres, first time it's opened (mssSyncEntryGenres, nav.js)
+async function _detSyncGenres(e) {
+  if (!e?.tmdb_id || e.genres_synced === true) return;
+  try {
+    const res = await tmdbFetch(`${TMDB_BASE}/${e.tmdb_type === 'movie' ? 'movie' : 'tv'}/${e.tmdb_id}?language=en-US`);
+    const genres = res.ok ? await mssSyncEntryGenres(e, await res.json()) : null;
+    if (genres) document.querySelectorAll('.genre-opt').forEach(o => { if (genres.includes(o.dataset.genre)) o.classList.add('selected'); });
+  } catch {}
+}
+
 function _applyTmdbLock(isLinked) {
   _tmdbFieldsLinked = isLinked;
   Object.keys(_tmdbLockState).forEach(k => _tmdbLockState[k] = isLinked); // (re-)lock everything whenever freshly (re-)linked
@@ -2163,6 +2173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // must run after the season rows/genres above are populated, since
     // it re-renders the season list and toggles the genre picker.
     _applyTmdbLock(!!(e && e.tmdb_id));
+    _detSyncGenres(e);
     _pendingTmdbId = (e && e.tmdb_id) || null;
     _pendingTmdbType = (e && e.tmdb_type) || null;
     if (_pendingTmdbId && _pendingTmdbType) _favLoadData(_pendingTmdbId, _pendingTmdbType);
@@ -2278,7 +2289,7 @@ async function doSave() {
   const cat     = document.getElementById('dCat').value;
   const mediaType = getMediaType();
   const isMovie = mediaType === 'movie';
-  const genres  = [...document.querySelectorAll('.genre-opt.selected')].map(o => o.dataset.genre);
+  const genres  = [...new Set([...document.querySelectorAll('.genre-opt.selected')].map(o => o.dataset.genre))];   // (the hidden loading placeholder has a copy of the picker)
 
   // ── Musts validation ──
   if (!genres.length) {

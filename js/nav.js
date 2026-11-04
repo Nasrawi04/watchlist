@@ -2151,6 +2151,20 @@ async function tmdbFetch(url, opts = {}) {
 
 /* A title's TMDB genres → the site's names (MSS_GENRES, config.js) */
 const tmdbGenreNames = genres => [...new Set((genres || []).flatMap(g => _mssGenreById[g.id] || [g.name]).filter(Boolean))];
+// Your own saved title, opened for the first time since this existed (095): adds the genres TMDB has
+// that it's missing, once, so a genre you remove later stays removed. → the new list, or null if unchanged.
+async function mssSyncEntryGenres(entry, detail) {
+  if (!entry?.id || !entry.tmdb_id || entry.genres_synced === true || entry.user_id !== window._navUser?.id || !Array.isArray(detail?.genres)) return null;
+  entry.genres_synced = true;
+  const have = entry.genres || [], add = tmdbGenreNames(detail.genres).filter(g => MSS_GENRES[g] && !have.includes(g));
+  const genres = [...have, ...add];
+  try {
+    const { error } = await sb.from('entries').update({ genres, genres_synced: true }).eq('id', entry.id).eq('user_id', entry.user_id);
+    if (error) throw error;
+  } catch { entry.genres_synced = false; return null; }
+  entry.genres = genres;
+  return add.length ? genres : null;
+}
 
 /* Title logos — TMDB's name artwork (images.logos), shown instead of the written
    title where a title has one. Fetch details with append_to_response=…,images and

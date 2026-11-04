@@ -593,6 +593,7 @@ async function loadTitle() {
     _tdUser ? getOwnEntryByTmdb(_tdUser.id, Number(_tdId), _tdType, titleForMatch) : Promise.resolve(null),
   ]);
   _tdOwnEntry = ownEntry;
+  mssSyncEntryGenres(ownEntry, detail);
 
   // Fire-and-forget — for the Recently Viewed section on the home page.
   // Never awaited, never blocks rendering; failures are logged and ignored.
