@@ -21,7 +21,7 @@
   align-items:start;
 }
 /* Left column runs the full height of the page; the photo + Personal Info
-   scroll away normally and only the Acting / Directing box stays pinned, so
+   scroll away normally and only the Acting / Directing / Writing box stays pinned, so
    nothing floats over the credits. */
 .pp-sticky-col { align-self:stretch; }
 /* Jump-to box under Personal Info — same card style */
@@ -109,7 +109,7 @@
 
 @media(max-width:760px) {
   .pp-layout { grid-template-columns:1fr; gap:1.5rem; }
-  /* Phone: a bigger photo with the Acting / Directing box under it,
+  /* Phone: a bigger photo with the Acting / Directing / Writing box under it,
      Personal Info beside them */
   .pp-sticky-col { position:static; align-self:start; display:grid; grid-template-columns:clamp(128px, 40vw, 172px) minmax(0, 1fr);
                    grid-template-areas:"photo info" "nav info"; gap:1rem; align-items:start; }
@@ -160,9 +160,15 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replac
 
 const _ppParams = new URLSearchParams(location.search);
 const _ppId = _ppParams.get('id');
-let _ppMode = _ppParams.get('mode') === 'directing' ? 'directing' : 'acting';
+// The credit views. A view only shows when the person has credits in it (_ppModesOf).
+const _PP_MODES = {
+  acting:    { label: 'Acting',    movies: 'Movies',          tv: 'TV Shows' },
+  directing: { label: 'Directing', movies: 'Movies Directed', tv: 'Shows Created' },
+  writing:   { label: 'Writing',   movies: 'Movies Written',  tv: 'Shows Written' },
+};
+let _ppMode = _PP_MODES[_ppParams.get('mode')] ? _ppParams.get('mode') : 'acting';
 let _ppPerson = null;
-let _ppList = [];   // the credits on show (acting or directing), as Sort & Filter items
+let _ppList = [];   // the credits on show (acting, directing or writing), as Sort & Filter items
 const TMDB_GENDER = { 0: '', 1: 'Female', 2: 'Male', 3: 'Non-binary' };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -184,6 +190,10 @@ async function loadPerson() {
     return;
   }
   _ppPerson = p;
+  // Writers open on their writing; a link's mode or the first view they have otherwise
+  const modes = _ppModesOf(p);
+  if (!_ppParams.has('mode') && p.known_for_department === 'Writing' && modes.includes('writing')) _ppMode = 'writing';
+  if (modes.length && !modes.includes(_ppMode)) _ppMode = modes[0];
   renderPerson(p);
 }
 
@@ -207,6 +217,16 @@ function renderPerson(p) {
   });
 }
 
+// A person's raw credits for a view. Writing = TMDB's Writing department (Novel, Screenplay,
+// Story…), minus the jobs around the writing rather than the writing itself.
+function _ppCreditsFor(p, mode) {
+  const crew = p.combined_credits?.crew || [];
+  if (mode === 'directing') return crew.filter(cr => cr.job === 'Director' || cr.job === 'Creator');
+  if (mode === 'writing') return crew.filter(cr => cr.department === 'Writing' && !/assistant|coordinator|researcher/i.test(cr.job || ''));
+  return p.combined_credits?.cast || [];
+}
+const _ppModesOf = p => Object.keys(_PP_MODES).filter(m => _ppCreditsFor(p, m).some(cr => cr.poster_path));
+
 // The page for a person (without the credits, which _ppDrawCredits fills) + their credits as Sort & Filter items
 function _ppHTML(p) {
   const photo = p.profile_path ? `${TMDB_IMG.replace('w185','w342')}${p.profile_path}` : null;
@@ -216,24 +236,21 @@ function _ppHTML(p) {
   // De-dupe cast credits (a person can appear twice for different roles),
   // keep only ones with a poster; the site's Sort & Filter (scope 'pp') orders
   // them — newest first by default — then they split into Movies / TV Shows.
-  // In "directing" mode, source from crew instead (Director for movies,
-  // Creator for TV shows) rather than cast.
-  const seen = new Set();
-  const sourceCredits = _ppMode === 'directing'
-    ? (p.combined_credits?.crew || []).filter(cr => cr.job === 'Director' || cr.job === 'Creator')
-    : (p.combined_credits?.cast || []);
-  const allCredits = sourceCredits
-    .filter(cr => cr.poster_path)
-    .filter(cr => { const k = cr.media_type + cr.id; if (seen.has(k)) return false; seen.add(k); return true; });
+  // Directing and writing come from crew instead. Writing a title in
+  // several ways (Novel + Screenplay) is one card that lists them all.
+  const seen = new Map();
+  const allCredits = [];
+  _ppCreditsFor(p, _ppMode).filter(cr => cr.poster_path).forEach(cr => {
+    const k = cr.media_type + cr.id, had = seen.get(k);
+    if (!had) { const c = { ...cr }; seen.set(k, c); allCredits.push(c); }
+    else if (_ppMode === 'writing' && cr.job && !had.job?.split(', ').includes(cr.job)) had.job = had.job ? `${had.job}, ${cr.job}` : cr.job;
+  });
   const movieCount = allCredits.filter(cr => cr.media_type === 'movie').length;
   const tvCount     = allCredits.length - movieCount;
 
-  // Only worth a toggle when the person genuinely has both kinds of
-  // credits — most people are one or the other, and showing a toggle
-  // that just leads to an empty state isn't useful.
-  const hasActingCredits = (p.combined_credits?.cast || []).some(cr => cr.poster_path);
-  const hasDirectingCredits = (p.combined_credits?.crew || []).some(cr => (cr.job === 'Director' || cr.job === 'Creator') && cr.poster_path);
-  const showModeToggle = hasActingCredits && hasDirectingCredits;
+  // Only worth a toggle when the person genuinely has more than one kind of
+  // credit, and only the kinds they have — no toggle that leads to an empty state.
+  const modes = _ppModesOf(p), view = _PP_MODES[_ppMode];
 
   const knownCreditsCount = (p.combined_credits?.cast?.length || 0) + (p.combined_credits?.crew?.length || 0);
   const akaList = (p.also_known_as || []).filter(n => n && n !== p.name).slice(0, 4);
@@ -254,9 +271,9 @@ function _ppHTML(p) {
           ${akaList.length ? `<div class="pp-info-row"><div class="pp-info-label">Also Known As</div><div class="pp-info-value muted">${akaList.map(esc).join('<br>')}</div></div>` : ''}
         </div>
         ${allCredits.length ? `<div class="pp-info-card pp-nav-card" role="navigation" aria-label="Jump to">
-          <div class="pp-info-title">${_ppMode === 'directing' ? 'Directing' : 'Acting'}</div>
-          ${movieCount ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppMovies')"><span>${_ppMode === 'directing' ? 'Movies Directed' : 'Movies'}</span><b>${movieCount}</b></button>` : ''}
-          ${tvCount ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppTv')"><span>${_ppMode === 'directing' ? 'Shows Created' : 'TV Shows'}</span><b>${tvCount}</b></button>` : ''}
+          <div class="pp-info-title">${view.label}</div>
+          ${movieCount ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppMovies')"><span>${view.movies}</span><b>${movieCount}</b></button>` : ''}
+          ${tvCount ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppTv')"><span>${view.tv}</span><b>${tvCount}</b></button>` : ''}
         </div>` : ''}
       </div>
 
@@ -270,11 +287,10 @@ function _ppHTML(p) {
           <button class="pp-bio-toggle" id="ppBioToggle" onclick="_ppToggleBio()">Read more</button>
         ` : ''}
 
-        ${showModeToggle ? `
+        ${modes.length > 1 ? `
           <div class="pp-mode-toggle-row pp-mt">
             <div class="view-toggle">
-              <button class="vt-btn ${_ppMode==='acting'?'active':''}" onclick="_ppSetMode('acting')">Acting</button>
-              <button class="vt-btn ${_ppMode==='directing'?'active':''}" onclick="_ppSetMode('directing')">Directing</button>
+              ${modes.map(m => `<button class="vt-btn ${_ppMode === m ? 'active' : ''}" onclick="_ppSetMode('${m}')">${_PP_MODES[m].label}</button>`).join('')}
             </div>
           </div>
         ` : ''}
@@ -282,7 +298,7 @@ function _ppHTML(p) {
         ${allCredits.length ? `
           <div class="pp-sf-row"><div id="ppSfBar" class="pp-sf-bar"></div></div>
           <div id="ppCredits"></div>
-        ` : mssEmpty({ art: 'person', title: 'No credits yet', text: _ppMode === 'directing' ? 'TMDB doesn’t list anything they’ve directed or created.' : 'TMDB doesn’t know their work yet. Mysterious.' })}
+        ` : mssEmpty({ art: 'person', title: 'No credits yet', text: 'TMDB doesn’t know their work yet. Mysterious.' })}
       </div>
     </div>
   ` };
@@ -291,19 +307,19 @@ function _ppHTML(p) {
 /* ── Loading skeleton: this page's own layout with a sample person and credits, masked into
    placeholders (mssSkeleton, config.js) — the section names and buttons stay as they are ── */
 mssSkeleton.define('pp-page', () => {
-  const cr = t => ({ id: 0, media_type: t, title: 'Sample title', name: 'Sample title', character: 'Character name', job: 'Director',
+  const cr = t => ({ id: 0, media_type: t, title: 'Sample title', name: 'Sample title', character: 'Character name', job: 'Director', department: 'Writing',
     poster_path: '/x', release_date: '2020-01-01', first_air_date: '2020-01-01', vote_average: 7.5, vote_count: 100 });
   const credits = [...Array(6).fill('movie'), ...Array(4).fill('tv')].map(cr);
   const p = { name: 'Sample person name', known_for_department: 'Acting', place_of_birth: 'City, Country', gender: 2, birthday: '1980-01-01',
     biography: 'A sample biography, long enough to fill the few lines this section shows before Read more — the way a real one does while it loads.',
-    combined_credits: _ppMode === 'directing' ? { cast: [], crew: credits } : { cast: credits, crew: [] } };
+    combined_credits: _ppMode === 'acting' ? { cast: credits, crew: [] } : { cast: [], crew: credits } };
   const grid = list => `<div class="pp-grid">${list.map(c => MSSCard.poster({ cls: 'pp-card', title: 'Sample title', year: '2020', posterHTML: '', type: c.media_type, score: '7.5',
     below: '<div class="pp-credit-role">Character name</div>' })).join('')}</div>`;
-  const dir = _ppMode === 'directing';
+  const view = _PP_MODES[_ppMode];
   return _ppHTML(p).html
     .replace('<div id="ppSfBar" class="pp-sf-bar"></div>', `<div class="pp-sf-bar" data-skel-keep>${SF.bar('pp', 'all')}</div>`)
-    .replace('<div id="ppCredits"></div>', `<div class="pp-section-title pp-mt" data-skel-keep>${dir ? 'Movies Directed' : 'Movies'}</div>${grid(credits.slice(0, 6))}
-      <div class="pp-section-title pp-mt" data-skel-keep>${dir ? 'Shows Created' : 'TV Shows'}</div>${grid(credits.slice(6))}`)
+    .replace('<div id="ppCredits"></div>', `<div class="pp-section-title pp-mt" data-skel-keep>${view.movies}</div>${grid(credits.slice(0, 6))}
+      <div class="pp-section-title pp-mt" data-skel-keep>${view.tv}</div>${grid(credits.slice(6))}`)
     .replace(/class="(pp-info-title|pp-info-label|pp-section-title[^"]*|pp-bio-toggle|vt-btn[^"]*)"/g, 'class="$1" data-skel-keep')
     .replace(/ id="[^"]*"/g, '');
 });
@@ -317,7 +333,7 @@ function _ppCreditGrid(list, byScore) {
     const isMovie = cr.media_type === 'movie';
     const title = isMovie ? cr.title : cr.name;
     const year = ((isMovie ? cr.release_date : cr.first_air_date) || '').split('-')[0];
-    const roleLabel = _ppMode === 'directing' ? (cr.job || '') : (cr.character || '');
+    const roleLabel = _ppMode === 'acting' ? (cr.character || '') : (cr.job || '');
     const key = cr.media_type + ':' + cr.id;
     window._ppItems[key] = {
       id: cr.id, media_type: cr.media_type, title, year, overview: cr.overview,
@@ -368,7 +384,7 @@ function _ppDrawCredits() {
   const sec = (id, title, list) => list.length ? `<div class="pp-section-title pp-mt" id="${id}">${title}</div><div class="pp-grid">${_ppCreditGrid(list, byScore)}</div>` : '';
   mssKeepScroll(box, () => {
     box.innerHTML = shown.length
-      ? sec('ppMovies', _ppMode === 'directing' ? 'Movies Directed' : 'Movies', movies) + sec('ppTv', _ppMode === 'directing' ? 'Shows Created' : 'TV Shows', tv)
+      ? sec('ppMovies', _PP_MODES[_ppMode].movies, movies) + sec('ppTv', _PP_MODES[_ppMode].tv, tv)
       : mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
       actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('pp', 'all'); SF.refresh('pp', 'all')", primary: true }] });
   });
