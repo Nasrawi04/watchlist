@@ -531,13 +531,14 @@ function _libRender(){
     : mssEmpty({ art:'watchlist', title:'Your folio starts here', text:'Every great collection starts with one title. No pressure — but it does look a little lonely in here.',
         actions:[{ label:'Add a title', icon:'plus', onclick:'openAddModal()', primary:true }, { label:'Browse Discover', icon:'compass', href:'discover.html' }],
         starter: LIB_SCOPE==='lib' ? 'all' : '' });
-  if(loading){loading.style.display='none';loading.innerHTML='';}
-  el.style.display='block';
   _libCheckNewEps();
   // Remember this library's shape — which stats, how many cards per section — so the next loading skeleton matches it
   if(!q&&!_libCatFilter) mssSkeleton.shape('lib_'+LIB_KEY, { stats:(statsHTML.match(/page-stat-label">[^<]*/g)||[]).map(function(x){return x.slice(17);}),
     n:{watching:watching.length,queue:queue.length,completed:completed.length,dropped:dropped.length} });
   mssKeepScroll(el, function(){            // a redraw keeps your place (rows scrolled sideways too)
+    // The skeleton goes in here: hidden any sooner, the page collapses and your place is lost
+    if(loading){loading.style.display='none';loading.innerHTML='';}
+    el.style.display='block';
     el.querySelector('#libTop').innerHTML = statsHTML;
     el.querySelector('#libTypeSlot').innerHTML = _libCatFilterBar();      // the Type filter sits beside the search
     el.querySelector('#libSecs').innerHTML = secs;

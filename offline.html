@@ -12,6 +12,7 @@
   (function () {
     var t = 'light';
     try { t = localStorage.getItem('wl-theme') || 'light'; } catch (e) {}
+    if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', t);
     document.querySelector('meta[name=theme-color]').content = t === 'dark' ? '#0A0A0E' : '#E2DAD0';
   })();

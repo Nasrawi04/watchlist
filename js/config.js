@@ -4,10 +4,7 @@
 ══════════════════════════════════════════ */
 
 // Apply saved theme immediately to avoid flash of wrong mode
-(function() {
-  const t = localStorage.getItem('wl-theme') || 'light';
-  document.documentElement.setAttribute('data-theme', t);
-})();
+document.documentElement.setAttribute('data-theme', mssThemeOf(mssThemeChoice()));
 
 // ── CONFIGURE ──────────────────────────────
 const SUPABASE_URL      = 'https://yqbfjtkcsgyvnablmuzp.supabase.co';
@@ -3034,13 +3031,25 @@ function mssAfterLogin() {
 /* ══════════════════════════════════════════
    THEME SYSTEM
 ══════════════════════════════════════════ */
-function setTheme(theme) {
+// The choice is 'light', 'dark' or 'system'. The page itself is only ever light or dark.
+function mssThemeChoice() { try { return localStorage.getItem('wl-theme') || 'light'; } catch { return 'light'; } }
+function mssThemeOf(choice) {
+  if (choice !== 'system') return choice;
+  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function setTheme(choice) {
+  const theme = mssThemeOf(choice);
   document.documentElement.classList.add('theme-transitioning');
   document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('wl-theme', theme);
+  try { localStorage.setItem('wl-theme', choice); } catch {}
   updateThemeIcon(theme);
+  if (typeof syncThemeButtons === 'function') syncThemeButtons();   // Settings
   setTimeout(() => document.documentElement.classList.remove('theme-transitioning'), 320);
 }
+// On System, the site changes with the device, even while it's open
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (mssThemeChoice() === 'system') setTheme('system');
+});
 
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';

@@ -45,9 +45,8 @@
       <div class="fused-search-wrap" id="addFriendWrap">
         <input class="add-friend-input" id="addFriendInput" placeholder="Search by @username…" aria-label="Search by username"
                type="search" name="mss-people-search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" data-1p-ignore data-lpignore="true" data-form-type="other"
-               oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();_udSearch(this.value);_udSelectedId=null;_udSelectedUsername=null;"
+               oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();_udSearch(this.value);"
                onkeydown="_udKeydown(event)">
-        <button type="button" id="udViewProfileBtn" class="btn-send-req" onclick="_udViewProfile()" aria-label="View profile"><span>View Profile</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
       </div>
     </div>
 
@@ -450,11 +449,12 @@ async function _udSearch(val) {
         const reg = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
         const highlighted = p.username.replace(reg, '<em>$1</em>');
         const display = p.display_name && p.display_name !== p.username ? p.display_name : '';
-        return '<div class="ud-item" data-i="' + i + '" onmousedown="_udSelect(\'' + escHTML(p.username) + '\',\'' + p.id + '\')'  + '">'
+        const href = `profile-view.html?id=${encodeURIComponent(p.id)}&u=${encodeURIComponent(p.username)}`;
+        return '<a class="ud-item" href="' + href + '" data-i="' + i + '" onclick="_udClose(true)">'
           + avatarHTML
-          + '<div class="ud-info"><div class="ud-username">@' + highlighted + '</div>'
-          + (display ? '<div class="ud-display">' + display + '</div>' : '')
-          + '</div></div>';
+          + '<div class="ud-info"><div class="ud-username" translate="no">@' + highlighted + '</div>'
+          + (display ? '<div class="ud-display" translate="no">' + escHTML(display) + '</div>' : '')
+          + '</div></a>';
       }).join('');
     } catch(e) {
       drop.innerHTML = '<div class="ud-empty">Error searching</div>';
@@ -462,65 +462,39 @@ async function _udSearch(val) {
   }, 250);
 }
 
-let _udSelectedId = null, _udSelectedUsername = null;
-
-function _udSelect(username, userId) {
-  // Store selection first
-  _udSelectedId = userId;
-  _udSelectedUsername = username;
-  // Fill input (won't trigger oninput since we set vars above)
-  document.getElementById('addFriendInput').value = username;
-  // Close dropdown
+// Closes the results. clear: leaving for a profile, so Back returns to an empty box
+function _udClose(clear) {
+  clearTimeout(_udTimer);
   document.getElementById('udDropdown').classList.remove('open');
   document.getElementById('addFriendWrap')?.classList.remove('dd-connected-active');
   _udUnlock();
-
   _udResults = []; _udActive = -1;
+  if (clear) document.getElementById('addFriendInput').value = '';
 }
-
-async function _udViewProfile() {
-  const input = document.getElementById('addFriendInput').value.trim();
-  if (!input) { showToast('Enter or select a username first.', 'err'); return; }
-
-  if (_udSelectedId) {
-    // Selected from dropdown - go directly
-    sessionStorage.setItem('viewProfileId', _udSelectedId);
-    sessionStorage.setItem('viewProfileUsername', _udSelectedUsername);
-    window.location.href = 'profile-view.html';
-  } else {
-    // Typed manually - look up by username
-    try {
-      const { data } = await sb.from('profiles').select('id,username').ilike('username', input).limit(1);
-      if (!data || !data.length) { showToast('User not found.', 'err'); return; }
-      sessionStorage.setItem('viewProfileId', data[0].id);
-      sessionStorage.setItem('viewProfileUsername', data[0].username);
-      window.location.href = 'profile-view.html';
-    } catch(e) { showToast('Error finding user.', 'err'); }
-  }
+function _udOpen(p) { _udClose(true); viewFriend(p.id, p.username); }
+// Enter: the highlighted result, else an exact match, else the top result
+async function _udEnter() {
+  const q = document.getElementById('addFriendInput').value.trim().toLowerCase();
+  const hit = _udResults[_udActive] || _udResults.find(p => p.username.toLowerCase() === q) || _udResults[0];
+  if (hit) { _udOpen(hit); return; }
+  if (q.length < 2) return;
+  try {   // pressed before the results arrived
+    const { data } = await sb.from('profiles').select('id, username').ilike('username', q).neq('id', _fUser?.id || '').limit(1);
+    if (data?.length) _udOpen(data[0]); else showToast('User not found.', 'err');
+  } catch { showToast('Error finding user.', 'err'); }
 }
 
 function _udKeydown(e) {
+  if (e.key === 'Enter') { e.preventDefault(); _udEnter(); return; }
   const drop = document.getElementById('udDropdown');
+  if (!drop.classList.contains('open')) return;
+  if (e.key === 'Escape') { _udClose(); return; }
   const items = drop.querySelectorAll('.ud-item');
-  if (!drop.classList.contains('open') || !items.length) return;
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    _udActive = Math.min(_udActive + 1, items.length - 1);
-    items.forEach((el, i) => el.classList.toggle('ud-active', i === _udActive));
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    _udActive = Math.max(_udActive - 1, -1);
-    items.forEach((el, i) => el.classList.toggle('ud-active', i === _udActive));
-  } else if (e.key === 'Enter') {
-    e.preventDefault();
-    if (_udActive >= 0 && _udResults[_udActive]) {
-      _udSelect(_udResults[_udActive].username, _udResults[_udActive].id);
-    }
-  } else if (e.key === 'Escape') {
-    drop.classList.remove('open'); _udActive = -1;
-    document.getElementById('addFriendWrap')?.classList.remove('dd-connected-active');
-  _udUnlock();
-  }
+  if (!items.length || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
+  e.preventDefault();
+  _udActive = e.key === 'ArrowDown' ? Math.min(_udActive + 1, items.length - 1) : Math.max(_udActive - 1, -1);
+  items.forEach((el, i) => el.classList.toggle('ud-active', i === _udActive));
+  items[_udActive]?.scrollIntoView({ block: 'nearest' });
 }
 
 // Close the Find-people dropdown when clicking elsewhere. Only acts while
@@ -530,10 +504,7 @@ document.addEventListener('click', e => {
   const drop = document.getElementById('udDropdown');
   if (!drop || !drop.classList.contains('open')) return;
   if (e.target.closest('.fr-find') || e.target.closest('#udDropdown')) return;
-  drop.classList.remove('open');
-  document.getElementById('addFriendWrap')?.classList.remove('dd-connected-active');
-  _udUnlock();
-  _udActive = -1;
+  _udClose();
 });
 
 window.addEventListener('scroll', _udPosition, { passive: true });

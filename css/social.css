@@ -11,22 +11,12 @@
   padding:12px 18px;outline:none;box-sizing:border-box;
 }
 .add-friend-input::placeholder{color:var(--text-3)}
-.btn-send-req{
-  flex-shrink:0;
-  background:linear-gradient(135deg, var(--olive-light), var(--olive-2));border:none;
-  color:#fff;font-size:13px;font-weight:500;padding:10px 22px;cursor:pointer;
-  transition:opacity .15s;white-space:nowrap;
-}
-.btn-send-req:hover{opacity:.9}
-.btn-send-req:disabled{opacity:.5;cursor:not-allowed}
 
 @media(max-width:600px){
   .add-friend-input{font-size:16px;padding:10px 14px}
-  .btn-send-req{font-size:12px;padding:10px 16px}
 }
 @media(max-width:400px){
   .add-friend-input{font-size:16px;padding:9px 12px}
-  .btn-send-req{font-size:11px;padding:9px 13px}
 }
 
 /* ── Username search dropdown ── */
@@ -45,6 +35,8 @@
   transition:background .15s;
   border-bottom:0.5px solid var(--border);
 }
+a.ud-item { color:inherit; text-decoration:none; }
+.ud-item:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
 .ud-item:last-child { border-bottom:none; }
 .ud-item:hover, .ud-item.ud-active { background:var(--olive-faint); }
 .ud-avatar {
@@ -57,7 +49,7 @@
 .ud-info { flex:1; min-width:0; }
 .ud-username { font-size:14px; font-weight:500; color:var(--text); }
 .ud-username em { color:var(--olive-light); font-style:normal; font-weight:600; }
-.ud-display { font-size:11px; color:var(--text-3); margin-top:2px; }
+.ud-display { font-size:11px; color:var(--text-2); margin-top:2px; }
 .ud-loading, .ud-empty { padding:14px; font-size:13px; color:var(--text-3); text-align:center; }
 /* ══════════════════════════════════════════════════════════
    Friends — v620 redesign
@@ -72,10 +64,6 @@
 .fr-find .fused-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
 .fr-find .add-friend-input { flex:1; min-width:0; background:transparent; border:none; color:var(--text); font-size:16px; padding:14px 16px; outline:none; }
 .fr-find .add-friend-input::placeholder { font-size:14px; }
-.fr-find .btn-send-req { display:flex; align-items:center; gap:8px; border:none; border-radius:0; padding:0 18px; white-space:nowrap; background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff; font-weight:600; font-size:13px; cursor:pointer; }
-.fr-find .btn-send-req svg { width:16px; height:16px; flex-shrink:0; }
-.fr-find .btn-send-req:focus-visible { outline:2px solid #fff; outline-offset:-4px; }
-@media(max-width:520px) { .fr-find .btn-send-req span { display:none; } .fr-find .btn-send-req { padding:0 16px; } .fr-find .add-friend-input { padding:12px 14px; } }
 
 /* Red count dot (friend requests: their header and the side nav) */
 .fr-tab-dot { min-width:18px; height:18px; padding:0 5px; box-sizing:border-box; border-radius:999px; background:#c0392b; color:#fff; font-size:10px; font-weight:700; line-height:18px; text-align:center; }

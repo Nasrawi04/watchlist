@@ -72,6 +72,7 @@
   background:var(--bg-2); border:1.5px solid var(--border-2); color:var(--text-2);
   font-size:12.5px; font-family:var(--sans); transition:border-color .15s, color .15s;
 }
+.theme-pref-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .theme-pref-btn svg { width:20px; height:20px; }
 .theme-pref-btn.active { border-color:var(--olive-light); color:var(--olive-light); background:var(--olive-faint); }
 
@@ -224,15 +225,19 @@
           <div class="settings-title">Appearance</div>
           <div class="field-row" style="margin-bottom:0">
             <div class="field-label">Theme</div>
-            <div class="theme-pref-row">
-              <div class="theme-pref-btn" id="themeBtnLight" onclick="setSettingsTheme('light')">
+            <div class="theme-pref-row" role="group" aria-label="Theme">
+              <button type="button" class="theme-pref-btn" id="themeBtnLight" onclick="setTheme('light')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                 Light
-              </div>
-              <div class="theme-pref-btn" id="themeBtnDark" onclick="setSettingsTheme('dark')">
+              </button>
+              <button type="button" class="theme-pref-btn" id="themeBtnDark" onclick="setTheme('dark')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 Dark
-              </div>
+              </button>
+              <button type="button" class="theme-pref-btn" id="themeBtnSystem" onclick="setTheme('system')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
+                System
+              </button>
             </div>
           </div>
         </div>
@@ -528,16 +533,13 @@ function checkUsernameLive() {
   }, 400);
 }
 
-function setSettingsTheme(theme) {
-  localStorage.setItem('wl-theme', theme);
-  document.documentElement.setAttribute('data-theme', theme);
-  syncThemeButtons();
-}
-
 function syncThemeButtons() {
-  const current = document.documentElement.getAttribute('data-theme') || 'light';
-  document.getElementById('themeBtnLight')?.classList.toggle('active', current === 'light');
-  document.getElementById('themeBtnDark')?.classList.toggle('active', current === 'dark');
+  const choice = mssThemeChoice();
+  [['themeBtnLight', 'light'], ['themeBtnDark', 'dark'], ['themeBtnSystem', 'system']].forEach(([id, v]) => {
+    const b = document.getElementById(id); if (!b) return;
+    b.classList.toggle('active', choice === v);
+    b.setAttribute('aria-pressed', choice === v);
+  });
 }
 
 async function saveSettings() {
