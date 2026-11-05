@@ -3,20 +3,25 @@
    Can't decide? It picks one title from your watchlist, with a little shuffle, and
    tells you why it's a good one for tonight: how long it takes, what it's about,
    how much you like the genre, how long it's been waiting. Narrow it down first
-   (Quick ones · Movies / Shows · a genre), skip one ("Not tonight"), roll again,
+   (Quick ones · any mix of types · any mix of genres), skip one ("Not tonight"), roll again,
    or start watching it right there.
      MSSPick.open({ pool: () => [entries on the watchlist], all: () => [your whole library],
-                    user, onStarted(entry), cats: true → TV / Movies / Anime / Cartoons moods (the Library) })
+                    user, onStarted(entry) })
      MSSPick.buttonHTML(onclick, disabled) → the trigger (same height as the list / grid switch)
    Styles: "§28 Pick for me" in css/style.css.
    ════════════════════════════════════════════════════════════ */
 const MSSPick = (() => {
-  let o = null, cur = null, skip = new Set(), mood = { len: 'any', type: 'any', genre: '', cat: '' }, rolling = 0, detailsFor = null;
+  const blankMood = () => ({ len: 'any', types: new Set(), genres: new Set() });
+  // Each title's type. A title matches when it's any ticked type AND any ticked genre.
+  const TYPES = [['tv', 'TV Show'], ['movies', 'Movie'], ['cartoons:movie', 'Cartoon: Movie'], ['cartoons:show', 'Cartoon: TV Show'], ['anime:movie', 'Anime: Movie'], ['anime:show', 'Anime: Show']];
+  let o = null, cur = null, skip = new Set(), mood = blankMood(), rolling = 0, detailsFor = null;
   const DICE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4.5"/><circle cx="8.2" cy="8.2" r="1.25" fill="currentColor" stroke="none"/><circle cx="15.8" cy="8.2" r="1.25" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.25" fill="currentColor" stroke="none"/><circle cx="8.2" cy="15.8" r="1.25" fill="currentColor" stroke="none"/><circle cx="15.8" cy="15.8" r="1.25" fill="currentColor" stroke="none"/></svg>`;
   const esc = s => escHTML(String(s ?? ''));
   const isMovie = e => (e.tmdb_type || '') === 'movie' || e.cat === 'movies' || e.ratings?._media_type === 'movie';
   const mins = e => (Number(e.runtime_h) || 0) * 60 + (Number(e.runtime_m) || 0);
   const quick = e => isMovie(e) ? (mins(e) ? mins(e) <= 105 : false) : (Number(e.total_seasons) || 0) === 1 && (Number(e.total_eps) || 99) <= 13;
+  const typeOf = e => e.cat === 'anime' || e.cat === 'cartoons' ? `${e.cat}:${isMovie(e) ? 'movie' : 'show'}` : e.cat === 'movies' || (e.cat !== 'tv' && isMovie(e)) ? 'movies' : 'tv';
+  const genreLabel = () => mood.genres.size === 1 ? [...mood.genres][0] : mood.genres.size ? `${mood.genres.size} genres` : '';
   const dur = m => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}` : `${m}m`;
 
   function buttonHTML(onclick, disabled) {
@@ -28,9 +33,8 @@ const MSSPick = (() => {
   function candidates() {
     return o.pool().filter(e => !skip.has(e.id)
       && (mood.len !== 'quick' || quick(e))
-      && (mood.type === 'any' || (mood.type === 'movie') === isMovie(e))
-      && (!mood.genre || (e.genres || []).includes(mood.genre))
-      && (!mood.cat || e.cat === mood.cat));
+      && (!mood.types.size || mood.types.has(typeOf(e)))
+      && (!mood.genres.size || (e.genres || []).some(g => mood.genres.has(g))));
   }
   // The genres on this watchlist, most common first (for the chips)
   function genres() {
@@ -91,6 +95,7 @@ const MSSPick = (() => {
       </div>`;
     MSSDialog.bind(ov, close);
     ov.querySelector('.qp-card').addEventListener('scroll', gFollow, { passive: true });
+    ov.addEventListener('mss:dd-closed', () => { const inp = document.getElementById('qpGenreIn'); if (inp) inp.value = genreLabel(); gRollIfChanged(); });   // Esc (MSSDialog)
     document.body.appendChild(ov);
     new ResizeObserver(gFollow).observe(document.getElementById('qpBody'));
     window.visualViewport?.addEventListener('resize', gFollow);
@@ -100,7 +105,7 @@ const MSSPick = (() => {
   }
 
   function open(opts) {
-    o = opts; skip = new Set(); mood = { len: 'any', type: 'any', genre: '', cat: '' };
+    o = opts; skip = new Set(); mood = blankMood();
     if (!o.pool().length) { showToast('Your watchlist is empty — add something first.', 'err'); return; }
     const ov = shell();
     MSSDialog.open(ov, { focus: '.qp-card' });      // the popup itself (no button looks pressed); Tab still reaches everything
@@ -110,39 +115,42 @@ const MSSPick = (() => {
   function close() {
     const ov = document.getElementById('qpOverlay');
     if (ov) MSSDialog.close(ov);
+    gChanged = false;
     gClose();
     clearTimeout(rolling); rolling = 0;
   }
 
-  // In the mood for: Anything · Something quick · (Library) TV / Movies / Anime / Cartoons · (both kinds) A movie / A show · a genre
+  // In the mood for: Anything · Something quick · the types on this watchlist · genres
   function drawMoods() {
     const box = document.getElementById('qpMoods'); if (!box) return;
-    const pool = o.pool(), mixed = pool.some(isMovie) && pool.some(e => !isMovie(e));
-    const cats = o.cats ? ['tv', 'movies', 'anime', 'cartoons'].filter(c => pool.some(e => e.cat === c)) : [];
+    const inPool = new Set(o.pool().map(typeOf)), types = TYPES.filter(([k]) => inPool.has(k));
     const chip = (on, label, fn) => `<button type="button" class="qp-chip${on ? ' on' : ''}" aria-pressed="${on}" onclick="${fn}">${label}</button>`;
-    const gs = genres();
+    const gs = genres(), any = mood.genres.size > 0, label = genreLabel();
     box.innerHTML = `<span class="qp-moods-h">In the mood for</span><div class="qp-chips">
-      ${chip(mood.len === 'any' && mood.type === 'any' && !mood.genre && !mood.cat, 'Anything', "MSSPick.mood('reset')")}
+      ${chip(mood.len === 'any' && !mood.types.size && !any, 'Anything', "MSSPick.mood('reset')")}
       ${chip(mood.len === 'quick', `${icon('clock', 12)} Something quick`, "MSSPick.mood('len','quick')")}
-      ${cats.length > 1 ? cats.map(c => chip(mood.cat === c, esc(CAT_META[c]?.label || c), `MSSPick.mood('cat','${c}')`)).join('') : ''}
-      ${mixed && !(cats.length > 1) ? chip(mood.type === 'movie', 'A movie', "MSSPick.mood('type','movie')") + chip(mood.type === 'tv', 'A show', "MSSPick.mood('type','tv')") : ''}
+      ${types.length > 1 ? types.map(([k, l]) => chip(mood.types.has(k), l, `MSSPick.mood('type','${k}')`)).join('') : ''}
       ${gs.length ? `<div class="qp-genre"><div class="td-dd sf-dd sf-dd-wide" id="qpGenreDD">
-          <input type="text" class="sf-dd-trigger qp-genre-in${mood.genre ? ' active' : ''}" id="qpGenreIn" value="${esc(mood.genre)}" placeholder="Any genre"
-            role="combobox" aria-label="Genre — type to search" aria-autocomplete="list" aria-expanded="false" aria-controls="qpGenreMenu"
+          <input type="text" class="sf-dd-trigger qp-genre-in${any ? ' active' : ''}" id="qpGenreIn" value="${esc(label)}" placeholder="Any genre"
+            role="combobox" aria-label="Genres — type to search, pick any" aria-autocomplete="list" aria-expanded="false" aria-controls="qpGenreMenu"
             autocomplete="off" spellcheck="false" autocapitalize="none" data-1p-ignore data-lpignore="true"
             onfocus="MSSPick._g('open')" onclick="event.stopPropagation();MSSPick._g('open')" oninput="MSSPick._g('type')" onkeydown="MSSPick._gKey(event)">
-          <button type="button" class="qp-genre-btn" tabindex="-1" aria-label="${mood.genre ? 'Any genre' : 'Show genres'}"
-            onmousedown="event.preventDefault()" onclick="event.stopPropagation();MSSPick._g('${mood.genre ? 'clear' : 'toggle'}')">${mood.genre ? icon('x', 13)
+          <button type="button" class="qp-genre-btn" tabindex="-1" aria-label="${any ? 'Any genre' : 'Show genres'}"
+            onmousedown="event.preventDefault()" onclick="event.stopPropagation();MSSPick._g('${any ? 'clear' : 'toggle'}')">${any ? icon('x', 13)
               : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>'}</button>
-          <div class="td-dd-menu" id="qpGenreMenu" role="listbox" aria-label="Genres"></div></div></div>` : ''}
+          <div class="td-dd-menu" id="qpGenreMenu" role="listbox" aria-multiselectable="true" aria-label="Genres"></div></div></div>` : ''}
     </div>`;
   }
-  /* The genre box: pick from the list, or type to narrow it (Enter takes the first match) */
+  /* The genre box: tick any number from the list, or type to narrow it (Enter ticks the first match). Stays open until you leave it. */
   let gi = -1;
+  let gChanged = false;
+  function gRollIfChanged() { if (gChanged) { gChanged = false; roll(); } }
   function gClose() {
     const dd = document.getElementById('qpGenreDD'); if (!dd) return;
     dd.classList.remove('open'); dd.querySelector('.td-dd-menu').style.cssText = '';
-    document.getElementById('qpGenreIn')?.setAttribute('aria-expanded', 'false');
+    const inp = document.getElementById('qpGenreIn');
+    if (inp) { inp.setAttribute('aria-expanded', 'false'); inp.value = genreLabel(); }
+    gRollIfChanged();
   }
   // Placed on the screen so the popup can't clip it. Stays with the box whenever the popup's
   // layout shifts (its text loads late) or a phone keyboard takes up part of the screen.
@@ -162,8 +170,8 @@ const MSSPick = (() => {
     const q = typed ? inp.value.trim().toLowerCase() : '';
     const list = genres().filter(g => !q || g.toLowerCase().includes(q));
     gi = typed && q && list.length ? 0 : -1;
-    dd.querySelector('.td-dd-menu').innerHTML = (q ? '' : `<div class="td-dd-opt${!mood.genre ? ' active' : ''}" role="option" aria-selected="${!mood.genre}" onmousedown="event.preventDefault()" onclick="MSSPick._gPick('')">Any genre</div>`)
-      + (list.length ? list.map((g, i) => `<div class="td-dd-opt${g === mood.genre ? ' active' : ''}${i === gi ? ' hl' : ''}" role="option" aria-selected="${g === mood.genre}" onmousedown="event.preventDefault()" onclick="MSSPick._gPick(${attrJSON(g)})">${q ? esc(g).replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<b>$1</b>') : esc(g)}</div>`).join('')
+    dd.querySelector('.td-dd-menu').innerHTML = (q ? '' : `<div class="td-dd-opt${!mood.genres.size ? ' active' : ''}" role="option" aria-selected="${!mood.genres.size}" onmousedown="event.preventDefault()" onclick="MSSPick._gPick('')">Any genre</div>`)
+      + (list.length ? list.map((g, i) => `<div class="td-dd-opt${mood.genres.has(g) ? ' active' : ''}${i === gi ? ' hl' : ''}" role="option" aria-selected="${mood.genres.has(g)}" onmousedown="event.preventDefault()" onclick="event.stopPropagation();MSSPick._gPick(${attrJSON(g)})">${q ? esc(g).replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<b>$1</b>') : esc(g)}</div>`).join('')
         : `<div class="sf-empty" style="padding:10px 14px">No genre like “${esc(inp.value.trim())}” on your watchlist.</div>`);
     dd.classList.add('open'); inp.setAttribute('aria-expanded', 'true');
     inp.scrollIntoView({ block: 'nearest' });
@@ -175,7 +183,16 @@ const MSSPick = (() => {
     if (what === 'toggle') { const dd = document.getElementById('qpGenreDD'); if (dd?.classList.contains('open')) return gClose(); document.getElementById('qpGenreIn')?.focus(); return gOpen(false); }
     if (what === 'clear') return gPick('');
   }
-  function gPick(g) { gClose(); setMood('genre', g, true); }
+  function gPick(g) {
+    if (!g) { gChanged = false; gClose(); mood.genres.clear(); drawMoods(); return roll(); }
+    const top = document.getElementById('qpGenreMenu')?.scrollTop || 0;
+    if (!mood.genres.delete(g)) mood.genres.add(g);
+    gChanged = true;                     // rolled when the list closes, so nothing moves while you're ticking
+    drawMoods();
+    if (!matchMedia('(pointer:coarse)').matches) document.getElementById('qpGenreIn')?.focus({ preventScroll: true });   // keeps ↑ ↓ Enter working
+    gOpen(false);
+    document.getElementById('qpGenreMenu').scrollTop = top;
+  }
   function gKey(ev) {
     const menu = document.getElementById('qpGenreMenu'), opts = menu ? [...menu.querySelectorAll('.td-dd-opt')] : [];
     if (ev.key === 'Escape') { if (document.getElementById('qpGenreDD')?.classList.contains('open')) { ev.preventDefault(); ev.stopPropagation(); gClose(); } return; }
@@ -196,15 +213,13 @@ const MSSPick = (() => {
   // a click anywhere else closes the list (and a half-typed name goes back to the chosen genre)
   document.addEventListener('mousedown', ev => {
     const dd = document.getElementById('qpGenreDD');
-    if (dd?.classList.contains('open') && !dd.contains(ev.target)) { gClose(); const inp = document.getElementById('qpGenreIn'); if (inp) inp.value = mood.genre; }
+    if (dd?.classList.contains('open') && !dd.contains(ev.target)) gClose();
   }, true);
 
-  function setMood(k, v, set) {
-    if (k === 'reset') mood = { len: 'any', type: 'any', genre: '', cat: '' };
+  function setMood(k, v) {
+    if (k === 'reset') mood = blankMood();
     else if (k === 'len') mood.len = mood.len === v ? 'any' : v;
-    else if (k === 'type') mood.type = mood.type === v ? 'any' : v;
-    else if (k === 'cat') mood.cat = mood.cat === v ? '' : v;
-    else mood.genre = set ? v : mood.genre === v ? '' : v;      // the genre dropdown sets it as chosen
+    else if (k === 'type' && !mood.types.delete(v)) mood.types.add(v);
     drawMoods();
     roll();
   }

@@ -396,7 +396,7 @@ function _libEmpty(sec, mine, theirs){
   return mssEmpty(Object.assign({ compact:true }, mine));
 }
 function _libPick(){
-  MSSPick.open({ pool:function(){ return _libBaseEntries('queue'); }, all:function(){ return LIB_ENTRIES(); }, user:_pUser, cats:!_libCatFilter,
+  MSSPick.open({ pool:function(){ return _libBaseEntries('queue'); }, all:function(){ return LIB_ENTRIES(); }, user:_pUser,
     onStarted:function(){ document.dispatchEvent(new CustomEvent('mss:library-changed')); } });
 }
 /* ── Big libraries: each section draws its first cards, then more as you scroll near its end

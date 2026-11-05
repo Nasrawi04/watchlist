@@ -4126,6 +4126,8 @@ a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar, .rc-col.rc-sel .rc-bar {
 .sf-dd.open .qp-genre-btn svg { transform:rotate(180deg); }
 .qp-genre .sf-dd.open .qp-genre-in.active + .qp-genre-btn svg { transform:none; }
 #qpGenreMenu .td-dd-opt.hl { background:var(--olive-faint); color:var(--text); }
+#qpGenreMenu .td-dd-opt.active { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+#qpGenreMenu .td-dd-opt.active::after { content:'✓'; font-weight:800; }
 #qpGenreMenu .td-dd-opt b { color:var(--olive-light); }
 .qp-foot { position:sticky; bottom:0; display:grid; grid-template-columns:auto auto 1fr; gap:8px; padding:16px 20px 18px; margin-top:12px;
   background:var(--bg-2); border-top:1px solid var(--border); }
