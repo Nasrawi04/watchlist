@@ -551,6 +551,8 @@ const MSSImageCheck = (() => {
   // served from this site (js/vendor) — fixed versions, and no outside server sees the upload page
   const TF = 'js/vendor/tfjs-4.22.0.min.js';
   const NSFW = 'js/vendor/nsfwjs-4.4.0.min.js';
+  // the library's browser file doesn't include its model: these two give it the default one (window.model, window.group1_shard1of1)
+  const MODEL = ['js/vendor/nsfwjs-model/model-4.4.0.min.js', 'js/vendor/nsfwjs-model/group1-shard1of1-4.4.0.min.js'];
   let modelP = null;
   const script = src => new Promise((res, rej) => {
     const s = document.createElement('script');
@@ -560,6 +562,7 @@ const MSSImageCheck = (() => {
   const model = () => (modelP ||= (async () => {
     if (!window.tf) await script(TF);
     if (!window.nsfwjs) await script(NSFW);
+    if (!window.group1_shard1of1) await Promise.all(MODEL.map(script));
     return window.nsfwjs.load();
   })().catch(err => { modelP = null; throw err; }));
   async function image(blob) {
