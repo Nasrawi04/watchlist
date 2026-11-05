@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-no-anilist>
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/i18n.js"></script>
 <title>Messages — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/social.css">
+<link rel="stylesheet" href="css/messages.css">
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1E5C26">
@@ -25,11 +27,11 @@
     <div>
       <div class="fr-eyebrow">Your circle</div>
       <h1 class="cat-page-title">Messages</h1>
-      <div class="cat-page-sub" id="socPageSub">Titles your friends sent you, and the ones you sent.</div>
+      <div class="cat-page-sub" id="socPageSub">Private chats with your friends.</div>
     </div>
   </div>
 
-  <section id="socRecs" aria-label="Messages"></section>
+  <div id="chatRoot"><div class="page-loading" data-skel="rows"></div></div>
 
 </div>
 
@@ -37,18 +39,11 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
-<script src="js/info-popup.js"></script>
-<script src="js/rating-popup.js"></script>
-<script src="js/easter-egg.js"></script>
-<script src="js/note-popup.js"></script>
-<script src="js/episode-ratings.js"></script>
-<script src="js/list-popup.js"></script>
-<script src="js/sort-filter.js"></script>
-<script src="js/social.js"></script>
-<script src="js/follows.js"></script>
+<script src="js/msg-keys.js"></script>
 <script src="js/social-nav.js"></script>
+<script src="js/messages.js"></script>
 <script>
-MSSSocial.boot('messages', { start: (user, q) => MSSShare.inbox(document.getElementById('socRecs'), user, { rec: q.get('rec'), box: q.get('box') }) });
+MSSSocial.boot('messages', { start: (user, q) => MSSChat.start(user, q) });
 </script>
 <script>
 if ('serviceWorker' in navigator) {

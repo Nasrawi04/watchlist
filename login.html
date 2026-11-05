@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script src="js/i18n.js"></script>
 <title>Sign In — MyScreenFolio</title>
@@ -414,6 +415,7 @@ a.au-tile:hover::after { opacity:1; }
 
 <script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
+<script src="js/msg-keys.js"></script>
 <script>
 /* ── The poster wall: titles the admins chose (Admin → Sign-in posters, sql/078) — Anime on the
    left, Movies and TV Shows down the middle, Cartoons on the right (on a phone the middle gets a
@@ -702,8 +704,13 @@ async function doSignIn(e) {
     showErr('siError', /invalid login credentials/i.test(error.message || '') ? 'That email and password don’t match.' : (error.message || 'Couldn’t sign in.'));
     again();
   } else {
+    await _auSetupMessages(pass);
     window.location.href = mssAfterLogin();
   }
+}
+// Messages: open this account's key on this device while the password is at hand. Never holds up signing in.
+function _auSetupMessages(pass) {
+  return Promise.race([MSSKeys.afterLogin(pass), new Promise(r => setTimeout(r, 8000))]);
 }
 
 /* ── Sign Up ── */
@@ -751,6 +758,7 @@ async function doSignUp(e) {
   if (error) { showErr('suError', /UNDER_13/.test(error.message || '') ? AU_UNDER_13 : error.message || 'Couldn’t create your account.'); again(); return; }
 
   if (data?.session) {
+    await _auSetupMessages(pass);
     window.location.href = mssAfterLogin();
   } else if (data?.user) {
     $('suPanel').innerHTML = `<div class="au-done">
@@ -792,7 +800,7 @@ async function doResetPassword(e) {
   try {
     const { error } = await sb.auth.updateUser({ password: pass1 });
     if (error) { showErr('rpError', error.message || 'Couldn’t update your password.'); _auBtn('btnReset', 'Update password', false); }
-    else { showToast('Password updated — you’re all set!'); setTimeout(() => goBackToSignIn(), 1000); }
+    else { await MSSKeys.onPasswordChange(pass1).catch(() => {}); showToast('Password updated — you’re all set!'); setTimeout(() => goBackToSignIn(), 1000); }
   } catch {
     showErr('rpError', 'Couldn’t reach MyScreenFolio — check your connection and try again.'); _auBtn('btnReset', 'Update password', false);
   }

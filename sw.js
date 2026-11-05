@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v229';   // MyScreenFolio — restarted at v1 (was mss-v787)
+const CACHE_VERSION = 'msf-v236';   // MyScreenFolio — restarted at v1 (was mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -57,6 +57,7 @@ const STATIC_ASSETS = [
   'offline.html',
   'css/style.css',
   'css/social.css',
+  'css/messages.css',
   'js/i18n.js',
   'js/config.js',
   'js/emoji-data.js',
@@ -102,6 +103,9 @@ const STATIC_ASSETS = [
   'js/social.js',
   'js/social-core.js',
   'js/social-nav.js',
+  'js/msg-keys.js',
+  'js/messages.js',
+  'js/vendor/sodium-sumo-0.8.4.js',
   'js/episode-chat.js',
   'js/movie-night.js',
   'js/date-range.js',

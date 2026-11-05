@@ -114,6 +114,15 @@
 .sess-out:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 [data-theme="dark"] .sess-out:hover { border-color:#f87171; color:#f87171; }
 .sess-note { padding:12px; font-size:13px; color:var(--text-3); }
+.sess-list-btns { display:flex; flex-direction:column; gap:8px; }
+.msg-online-row { margin-top:1.1rem; }
+.msg-rec-desc { margin-top:1.1rem; }
+.msg-rec-code { display:block; padding:12px; border:1px solid var(--border); border-radius:10px; font-size:15px; font-weight:600; line-height:1.6; letter-spacing:.5px; text-align:center; overflow-wrap:anywhere; user-select:all; color:var(--text); }
+.msg-online-row[hidden] { display:none; }
+.lock-form { text-align:start; align-items:stretch; }
+.lock-field { display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-2); }
+.lock-pin { letter-spacing:6px; font-size:18px; text-align:center; }
+.lock-forgot { align-self:flex-start; background:none; border:none; padding:6px 0; cursor:pointer; font:inherit; font-size:12.5px; font-weight:600; color:var(--olive-light); }
 @media(max-width:640px) { .sess-out { min-height:44px; } }
 .set-btn {
   display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%;
@@ -359,6 +368,27 @@
           <p class="settings-desc" id="epModeHint" style="margin-top:.6rem;margin-bottom:0"></p>
         </div>
 
+        <div class="settings-section fade-up fade-up-2" id="msgCard" hidden>
+          <div class="settings-title">Messages</div>
+          <p class="settings-desc"><b>Passcode:</b> optional. Asks for 4 to 6 digits before Messages opens, on every device you use. Your messages stay encrypted either way.</p>
+          <div id="msgLockArea"></div>
+          <div id="msgRecArea" hidden>
+            <p class="settings-desc msg-rec-desc"><b>Recovery code:</b> optional. If you forget your password and aren’t signed in anywhere else, this brings your chats back. Only you have it, so keep it somewhere safe.</p>
+            <div class="sess-list-btns" id="msgRecBtns"></div>
+          </div>
+          <div class="push-row msg-online-row">
+            <div class="push-text"><div class="push-name" id="msgOnlineL">Show when I’m online</div><div class="push-sub" id="msgOnlineS">Friends see “online” while you have their chat open.</div></div>
+            <button type="button" class="push-switch" id="msgOnlineSw" role="switch" aria-checked="true" aria-labelledby="msgOnlineL" aria-describedby="msgOnlineS" onclick="_msgOnlineTap(this)"><span></span></button>
+          </div>
+        </div>
+
+        <div class="settings-section fade-up fade-up-2">
+          <div class="settings-title">Blocked People</div>
+          <p class="settings-desc">You don’t follow each other, and neither of you can follow or message the other. They aren’t told.</p>
+          <ul class="sess-list" id="blockList" aria-live="polite"></ul>
+          <p class="settings-desc" id="blockEmpty" hidden>You haven’t blocked anyone. To block someone, open their profile.</p>
+        </div>
+
         <div class="settings-section fade-up fade-up-2">
           <div class="settings-title">Active Sessions</div>
           <p class="settings-desc">Everywhere this account is signed in. Don’t recognise one, or lost a device? Sign it out.</p>
@@ -408,6 +438,7 @@
 
 <script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
+<script src="js/msg-keys.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/episode-ratings.js"></script>
@@ -425,6 +456,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ['avatarRule', 'avatarCropRule'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = mssUploadRuleHTML(); });
     document.getElementById('privSwitch')?.setAttribute('aria-checked', String(!!profile?.is_private));
     _sessLoad();
+    _blocksLoad();
+    _lockPaint();
   });
 });
 
@@ -547,6 +580,7 @@ async function changePassword() {
   try {
     const { error } = await sb.auth.updateUser({ password: pw });
     if (error) throw error;
+    await MSSKeys.onPasswordChange(pw).catch(() => {});
     document.getElementById('setNewPassword').value = '';
     _setPassGuide();
     showToast('Password updated!');
@@ -713,6 +747,150 @@ async function _avatarCropConfirm() {
   }, 'image/jpeg', MSS_AVATAR.q);
 }
 
+/* ── Messages passcode (100): a lock screen, optional ── */
+async function _lockPaint() {
+  const { data: age } = await sb.rpc('my_age').then(r => r, () => ({}));
+  const card = document.getElementById('msgCard');
+  card.hidden = !(age === 'adult' || age === 'teen16');
+  if (card.hidden) return;
+  let st;
+  try { st = await MSSLock.status(); }
+  catch { card.hidden = true; return; }
+  sb.rpc('msg_my_key').then(({ data }) => { _recPaint(data); const row = document.getElementById('msgOnlineSw').closest('.push-row'); row.hidden = !data; if (data) document.getElementById('msgOnlineSw').setAttribute('aria-checked', data.show_online !== false); }, () => {});
+  document.getElementById('msgLockArea').innerHTML = st.on
+    ? `<div class="sess-list-btns"><button type="button" class="set-btn" onclick="_lockDialog('change')">Change Passcode</button><button type="button" class="set-btn" onclick="_lockDialog('remove')">Remove Passcode</button></div>`
+    : `<button type="button" class="set-btn" onclick="_lockDialog('set')">Set a Passcode</button>`;
+}
+async function _msgOnlineTap(btn) {
+  const on = btn.getAttribute('aria-checked') !== 'true';
+  btn.setAttribute('aria-checked', on);
+  const { error } = await sb.rpc('msg_set_show_online', { p_on: on });
+  if (error) { btn.setAttribute('aria-checked', !on); showToast('Couldn’t save that — try again.', 'err'); }
+}
+// Set, change or remove, in the site's small form popup
+function _lockDialog(mode) {
+  const el = document.createElement('div');
+  el.className = 'confirm-overlay';
+  const pin = (id, label) => `<label class="lock-field"><span>${label}</span><input class="field-input lock-pin" id="${id}" type="password" inputmode="numeric" autocomplete="off" maxlength="6" pattern="[0-9]*" aria-label="${label}"></label>`;
+  const title = { set: 'Set a passcode', change: 'Change your passcode', remove: 'Remove your passcode' }[mode];
+  el.innerHTML = `<form class="confirm-card mss-rename lock-form" role="dialog" aria-modal="true" aria-labelledby="lockT" novalidate>
+      <div class="confirm-title" id="lockT">${title}</div>
+      ${mode !== 'set' ? pin('lockCur', 'Current passcode') : ''}
+      ${mode !== 'remove' ? pin('lockNew', 'New passcode (4–6 digits)') + pin('lockNew2', 'Type it again') : ''}
+      <div class="mss-rename-hint bad" id="lockHint" aria-live="polite"></div>
+      ${mode !== 'set' ? `<button type="button" class="adm-link lock-forgot" onclick="_lockForgot()">Forgot your passcode?</button>` : ''}
+      <div class="confirm-actions"><button type="button" class="confirm-cancel" data-close>Cancel</button><button type="submit" class="confirm-ok ${mode === 'remove' ? '' : 'is-safe'}">${mode === 'remove' ? 'Remove' : 'Save'}</button></div>
+    </form>`;
+  const done = () => { MSSDialog.close(el); setTimeout(() => el.remove(), 250); };
+  MSSDialog.bind(el, done);
+  document.body.appendChild(el);
+  el.querySelector('[data-close]').onclick = done;
+  const hint = el.querySelector('#lockHint'), val = id => el.querySelector('#' + id)?.value.trim() || '';
+  el.querySelector('form').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    if (mode !== 'remove') {
+      if (!/^[0-9]{4,6}$/.test(val('lockNew'))) { hint.textContent = 'Use 4 to 6 digits.'; return; }
+      if (val('lockNew') !== val('lockNew2')) { hint.textContent = 'Those don’t match.'; return; }
+    }
+    try {
+      if (mode === 'remove') await MSSLock.remove(val('lockCur')); else await MSSLock.set(val('lockNew'), val('lockCur'));
+      done();
+      showToast(mode === 'remove' ? 'Passcode removed' : 'Passcode saved');
+      _lockPaint();
+    } catch (err) { hint.textContent = err?.hint || 'Couldn’t save that — try again.'; }
+  });
+  MSSDialog.open(el, { focus: el.querySelector('input') || el.querySelector('button') });
+  window._lockClose = done;
+}
+// A small popup that asks for one secret. submit() → a message to show, or nothing when it's done.
+function _askSecret({ title, message, label, ok, autocomplete, safe, submit }) {
+  const el = document.createElement('div');
+  el.className = 'confirm-overlay';
+  el.innerHTML = `<form class="confirm-card mss-rename lock-form" role="dialog" aria-modal="true" aria-labelledby="secT" aria-describedby="secM" novalidate>
+      <div class="confirm-title" id="secT">${title}</div>
+      <div class="confirm-msg" id="secM">${message}</div>
+      <label class="lock-field"><span>${label}</span><input class="field-input" id="secIn" type="password" autocomplete="${autocomplete}" aria-label="${label}"></label>
+      <div class="mss-rename-hint bad" id="secH" aria-live="polite"></div>
+      <div class="confirm-actions"><button type="button" class="confirm-cancel" data-close>Cancel</button><button type="submit" class="confirm-ok ${safe ? 'is-safe' : ''}">${ok}</button></div>
+    </form>`;
+  const done = () => { MSSDialog.close(el); setTimeout(() => el.remove(), 250); };
+  MSSDialog.bind(el, done);
+  document.body.appendChild(el);
+  el.querySelector('[data-close]').onclick = done;
+  el.querySelector('form').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const btn = el.querySelector('.confirm-ok'), hint = el.querySelector('#secH');
+    btn.disabled = true; hint.textContent = '';
+    const bad = await submit(el.querySelector('#secIn').value);
+    btn.disabled = false;
+    if (bad) hint.textContent = bad; else done();
+  });
+  MSSDialog.open(el, { focus: el.querySelector('input') });
+}
+function _lockForgot() {
+  window._lockClose?.();
+  _askSecret({ title: 'Forgot your passcode?', message: 'Type your account password and we’ll remove the passcode. You can set a new one afterwards.', label: 'Account password', ok: 'Remove Passcode', autocomplete: 'current-password',
+    submit: async pw => {
+      if (!(await MSSLock.resetWithPassword(pw).catch(() => false))) return 'That password isn’t right.';
+      showToast('Passcode removed'); _lockPaint();
+    } });
+}
+
+/* ── Messages recovery code (102) ── */
+function _recPaint(key) {
+  document.getElementById('msgRecArea').hidden = !key;
+  if (!key) return;
+  document.getElementById('msgRecBtns').innerHTML = `<button type="button" class="set-btn" onclick="_recCreate(${!!key.recovery_wrapped})">${key.recovery_wrapped ? 'Replace Recovery Code' : 'Create a Recovery Code'}</button>`;
+}
+function _recCreate(replacing) {
+  _askSecret({ title: replacing ? 'Replace your recovery code' : 'Create a recovery code', message: `${replacing ? 'Your old code will stop working. ' : ''}Type your account password to continue.`, label: 'Account password', ok: 'Continue', autocomplete: 'current-password', safe: true,
+    submit: async pw => {
+      try {
+        const code = await MSSKeys.createRecovery(pw);
+        if (!code) return 'That password isn’t right.';
+        setTimeout(() => _recShow(code), 260);
+        _lockPaint();
+      } catch (err) {
+        console.error(err);
+        return err?.message === 'NO_KEY_HERE' ? 'Open Messages on this device first, then try again.' : 'Couldn’t create a code — try again.';
+      }
+    } });
+}
+function _recShow(code) {
+  const el = document.createElement('div');
+  el.className = 'confirm-overlay';
+  el.innerHTML = `<div class="confirm-card mss-rename lock-form" role="dialog" aria-modal="true" aria-labelledby="recT" aria-describedby="recM">
+      <div class="confirm-title" id="recT">Save your recovery code</div>
+      <div class="confirm-msg" id="recM">Keep it somewhere safe, like a password manager. You won’t see it again, and nobody at MyScreenFolio can get it back for you.</div>
+      <code class="msg-rec-code" translate="no">${escHTML(code)}</code>
+      <div class="confirm-actions"><button type="button" class="confirm-cancel" data-copy>Copy</button><button type="button" class="confirm-ok is-safe" data-close>I’ve Saved It</button></div>
+    </div>`;
+  const done = () => { MSSDialog.close(el); setTimeout(() => el.remove(), 250); };
+  MSSDialog.bind(el, done);
+  document.body.appendChild(el);
+  el.querySelector('[data-close]').onclick = done;
+  el.querySelector('[data-copy]').onclick = () => navigator.clipboard.writeText(code).then(() => showToast('Copied'), () => showToast('Couldn’t copy — select the code instead.', 'err'));
+  MSSDialog.open(el, { focus: el.querySelector('[data-close]') });
+}
+
+/* ── Blocked People (098) ── */
+async function _blocksLoad() {
+  const box = document.getElementById('blockList'), empty = document.getElementById('blockEmpty');
+  let rows = [];
+  try { rows = await getMyBlocks() || []; }
+  catch { box.innerHTML = '<li class="sess-note">Couldn’t load this list — try again in a moment.</li>'; return; }
+  empty.hidden = rows.length > 0;
+  box.innerHTML = rows.map(p => `<li class="sess-row">
+      <span class="sess-info"><span class="sess-name" translate="no">${escHTML(p.display_name || p.username || 'Someone')}</span><span class="sess-when" translate="no">@${escHTML(p.username || '')}</span></span>
+      <button type="button" class="sess-out" aria-label="Unblock @${escHTML(p.username || '')}" onclick="_blockUndo(this, ${attrJSON(p.id)})">Unblock</button>
+    </li>`).join('');
+}
+async function _blockUndo(btn, id) {
+  btn.disabled = true;
+  try { await unblockUser(id); showToast('Unblocked'); _blocksLoad(); }
+  catch (err) { btn.disabled = false; showToast(err?.hint || 'Couldn’t unblock them — try again.', 'err'); }
+}
+
 /* ── Active Sessions (091): every device this account is signed in on ── */
 const _SESS_ICONS = {
   phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>',
@@ -769,6 +947,7 @@ async function doSignOutEverywhere() {
     danger: false
   });
   if (!ok) return;
+  await mssForgetKeys(_sUser?.id);
   await sb.auth.signOut({ scope: 'global' });
   window.location.href = 'login.html';
 }
@@ -808,6 +987,7 @@ async function confirmDeleteAccount() {
     await mssAvatarTidy(_sUser.id, null).catch(() => {});   // every photo file, old names too
     const { error } = await sb.rpc('delete_my_account');
     if (error) throw error;
+    MSSAccounts.forget(_sUser.id);
     try { await sb.auth.signOut(); } catch {}
     window.location.replace('login.html');
   } catch (e) {

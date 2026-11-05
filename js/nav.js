@@ -1629,7 +1629,10 @@ function getReleaseDateValue(e) {
 }
 
 /* ── AniList GraphQL query ── */
+// Private pages (<html data-no-anilist>) never contact AniList
+const _mssAniListOff = () => 'noAnilist' in document.documentElement.dataset;
 async function _anilistSearch(query) {
+  if (_mssAniListOff()) return [];
   try {
     const res = await fetch('https://graphql.anilist.co', {
       method: 'POST',
@@ -2618,10 +2621,10 @@ function fitTitleYear(root) {
      activity  — friend_started, friend_episode, friend_finished, friend_note, friend_list,
                  friend_rated, friend_watchlist, friend_dropped (072 — each follows the actor's
                  "What my friends hear about" switches, enforced in the database),
-                 rec_reply (Inbox conversations, 048), episode_chat (049), movie_night (050),
+                 episode_chat (049), movie_night (050),
                  challenge (051)
                  ("notify me about @friend", 022 / 047), friend_queued, friend_poll,
-                 poll_comment, friend_rec (Social, 045)
+                 poll_comment (Social, 045)
      social    — comment (on your title / your comment / your note), like (your note, list or
                  reply on a note) — 066
      lists     — list_invite, list_invite_accepted
@@ -2645,7 +2648,7 @@ function _notifSection(n) {
 
 /* Messages: how many are waiting. Desktop shows it on the icon next to the bell; phones on
    Social's Messages toggle and the dot on the Social tab. Follows new notifications, and
-   MSSShare tells it when you've read some. */
+   Messages tells it when you've read some. */
 let _navMsgCount = 0;
 function _navMsgBadge(count) {
   _navMsgCount = count;
@@ -2657,7 +2660,11 @@ function _navMsgBadge(count) {
   });
 }
 async function _navMsgRefresh() {
-  try { const { data, error } = await sb.rpc('inbox_unread_count'); if (!error) _navMsgBadge(Number(data) || 0); } catch {}
+  try {
+    sb.rpc('msg_mark_delivered').then(() => {}, () => {});       // two ticks: it reached this device
+    const { data, error } = await sb.rpc('msg_unread_count');
+    if (!error) _navMsgBadge(Number(data) || 0);
+  } catch {}
 }
 
 function _notifInit(user) {
@@ -2864,13 +2871,6 @@ function _notifItemHTML(n, opts = {}) {
     icon2 = n.type === 'friend_poll' ? 'poll' : 'comment';
     if (n.type === 'poll_comment' && m.excerpt) extra = `<div class="notif-quote" translate="no">${escHTML(m.excerpt)}</div>`;
     href = m.poll_id ? `polls.html?poll=${encodeURIComponent(m.poll_id)}` : 'polls.html';
-  } else if (n.type === 'friend_rec') {
-    const m = n.meta || {};
-    const t = `<b translate="no">${escHTML(m.title || 'something')}</b>`;
-    text = m.kind === 'entry' ? `${who} shared that they watched ${t}` : m.kind === 'list' ? `${who} shared their list ${t}` : `${who} recommended ${t} to you`;
-    icon2 = m.kind === 'list' ? 'layers' : 'send';
-    extra = (m.message ? `<div class="notif-quote" translate="no">${escHTML(m.message)}</div>` : '') + (m.kind === 'list' ? '' : _notifTitleCard({ ...m, media_type: m.tmdb_type }));
-    href = m.rec_id ? `messages.html?box=received&rec=${encodeURIComponent(m.rec_id)}` : 'messages.html';
   } else if (n.type === 'challenge') {
     // Challenges (051): an invite, or someone reaching the goal
     const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'a challenge')}</b>`;
@@ -2896,13 +2896,9 @@ function _notifItemHTML(n, opts = {}) {
     text = `${who} commented on S${escHTML(m.season)} · E${escHTML(m.episode)} of <b translate="no">${escHTML(m.title || 'a show')}</b>`; icon2 = 'comment';
     if (m.body) extra = `<div class="notif-quote" translate="no">${escHTML(m.body)}</div>`;
     href = `episode-chat.html?ep=${encodeURIComponent(`${m.tmdb_id}:${m.season}:${m.episode}`)}`;
-  } else if (n.type === 'rec_reply') {
-    // Inbox conversation (048): their reply, or what they did with what you sent
-    const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'it')}</b>`;
-    text = _notifRecReplyText(m, who, t);
-    icon2 = m.code ? ({ added: 'plus', had_it: 'check', started: 'play', finished: 'check', saved_list: 'layers' }[m.code] || 'inbox') : 'comment';
-    if (!m.code && m.body) extra = `<div class="notif-quote" translate="no">${escHTML(m.body)}</div>`;
-    href = m.rec_id ? `messages.html?box=${m.box === 'sent' ? 'sent' : 'received'}&rec=${encodeURIComponent(m.rec_id)}` : 'messages.html';
+  } else if (n.type === 'message') {
+    text = `${who} sent you a message`; icon2 = 'inbox';         // never the message itself: it's encrypted
+    href = `messages.html?with=${encodeURIComponent(n.actor_id)}`;
   } else if (n.type === 'comment' || n.type === 'like') {
     // Comments, replies and likes on your things (066)
     const m = n.meta || {};
@@ -3180,14 +3176,13 @@ function _notifShortText(n) {
     case 'new_release':          return `${t} ${n.meta?.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`;
     case 'friend_poll':          return `${who} started a poll: “${escHTML(n.meta?.question || '')}”`;
     case 'poll_comment':         return `${who} commented on your poll`;
-    case 'rec_reply':            return _notifRecReplyText(n.meta || {}, who, t);
+    case 'message':              return `${who} sent you a message`;
     case 'movie_night':          return _notifNightText(n.meta || {}, who);
     case 'achievement':          return n.meta?.kind === 'welcome' ? 'Your Achievement Cabinet is open — take a look!' : `New medal: ${escHTML(n.meta?.name || 'Achievement')}`;
     case 'challenge':            return n.meta?.kind === 'finished' ? `${who} finished ${t}` : `${who} challenged you: ${t}`;
     case 'episode_chat':         return `${who} commented on S${escHTML(n.meta?.season)} · E${escHTML(n.meta?.episode)} of ${t}`;
     case 'comment': case 'like': return _notifSocialText(n, who);
     case 'report_actioned': case 'moderation_notice': return _notifModText(n);
-    case 'friend_rec':           return n.meta?.kind === 'entry' ? `${who} shared that they watched ${t}` : n.meta?.kind === 'list' ? `${who} shared a list` : `${who} recommended ${t} to you`;
   }
   return 'New notification';
 }
@@ -3217,20 +3212,6 @@ function _notifEpText(m, t) {
   if (c > 1 && +m.episode === 1 && +m.season_size === c) return `All ${c} episodes of Season ${s} of ${t} are out`;
   if (c > 1 && b) return `${c} new episodes of ${t} — S${s} · E${a}–E${b}`;
   return `New episode of ${t} — S${s} · E${a}`;
-}
-
-// Inbox (048): what they did with what you sent, or their reply.
-// m.box is the box it sits in for YOU ('sent' = you sent it, they responded)
-function _notifRecReplyText(m, who, t) {
-  const yours = m.box === 'sent', thing = m.kind === 'list' ? `your list ${t}` : t;
-  switch (m.code) {
-    case 'added':      return `${who} added ${t} to their watchlist`;
-    case 'had_it':     return `${who} already had ${t}`;
-    case 'started':    return `${who} started watching ${t}`;
-    case 'finished':   return `${who} watched ${t}`;
-    case 'saved_list': return `${who} saved ${thing}`;
-  }
-  return yours ? `${who} replied about ${thing}` : `${who} replied about ${t}`;
 }
 
 // Movie Night (050)
@@ -3381,6 +3362,7 @@ function _mssCastSave(key, cast) {
 const _mssNorm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
 async function _mssAniListCharacters(title, year) {
+  if (_mssAniListOff()) return null;
   try {
     const res = await fetch('https://graphql.anilist.co', {
       method: 'POST',

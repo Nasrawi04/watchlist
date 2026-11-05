@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   social.js — Social: Polls (MSSPolls) + Inbox / sharing (MSSShare)
+   social.js — Social: Polls (MSSPolls) + sharing into Messages (MSSShare)
    Database: 045_social_polls_recs.sql (everything goes through its RPCs).
 
    MSSPolls.mount(el, user, { poll })   the Polls page (polls.html)
@@ -12,15 +12,9 @@
      • the author edits it (options only until the first vote), ends it
        early or deletes it
 
-   MSSShare.open(item)                  share with friends (+ a message) — item.kind:
-       'title' (default)  a movie / show to watch   { tmdb_id, media_type, title, poster_url, year }
-       'entry'            "I watched this" — one of your titles; friends open it
-                          in Info · Ratings · Note        { entry_id, title, poster_url, year, media_type }
-       'list'             a custom list                    { list_id, title, count }
-   MSSShare.inbox(el, user)             the Messages page (messages.html): Received / Sent, filter chips
-                                        (All · To Watch · Watched · Lists), Add to
-                                        Watchlist / rating & note / Open list, Hide, Unsend
-   MSSShare.refreshCount(user)          how many are waiting (MSSShare.count)
+   MSSShare.open(item)                  send to friends as an encrypted message, plus an optional note
+       a title   { tmdb_id, media_type, title, poster_url, year }; your score and note can go with it
+       a list    { kind: 'list', list_id, title, count }; opens view-only for them, even if private
    mssRecommend(item) (config.js) loads this file on other pages.
 
    Requires config.js, db.js, nav.js (tmdbFetch, _notifTimeAgo, _selDDHTML).
@@ -424,29 +418,38 @@ const MSSPolls = (() => {
 
 /* ════════════════════════════ RECOMMENDATIONS ════════════════════════════ */
 const MSSShare = (() => {
-  let item = null, friends = null, picked = new Set(), box = 'received', el = null, user = null;
-  const api = { count: 0 };
+  const TMDB_PATH = /image\.tmdb\.org\/.*(\/[A-Za-z0-9_-]+\.(?:jpg|jpeg|png|webp))$/;
+  let item = null, friends = null, keys = {}, picked = new Set(), myEntry = null;
 
-  /* ── Send ── */
-  async function openSend(it) {
+  async function open(it) {
     const u = window._navUser || await getCurrentUser();
     if (!u) { location.href = 'login.html'; return; }
-    item = { kind: 'title', ...it }; picked = new Set();
-    const k = item.kind;
-    const ov = _socDialog('recForm', { title: 'Recommend to Friends', entry: 'Share What You Watched', list: 'Share List' }[k], closeSend);
+    await mssLoadScript('js/msg-keys.js');
+    let st;
+    try { st = await MSSKeys.status(); }
+    catch { showToast('Couldn’t open that right now — try again.', 'err'); return; }
+    if (st === 'not-allowed') { showToast('Messaging is for 16 and up.', 'err'); return; }
+    if (st === 'password') {
+      const go = await showConfirm({ title: 'Open Messages first', message: 'To share from this device, open Messages and type your account password once.', confirmText: 'Open Messages', cancelText: 'Not Now', iconName: 'inbox', danger: false });
+      if (go) location.href = 'messages.html';
+      return;
+    }
+    item = { kind: 'title', ...it }; picked = new Set(); myEntry = null;
+    const isList = item.kind === 'list';
+    const ov = _socDialog('recForm', isList ? 'Share List' : 'Recommend to Friends', closeSend);
     const poster = safeURL(it.poster_url);
-    const sub = k === 'list' ? [`List · ${it.count || 0} ${it.count === 1 ? 'title' : 'titles'}`]
+    const sub = isList ? [`List · ${it.count || 0} ${it.count === 1 ? 'title' : 'titles'}`]
       : [it.year, it.media_type === 'movie' ? 'Movie' : it.media_type === 'tv' ? 'TV Show' : ''].filter(Boolean);
-    if (k === 'entry') sub.push('your rating & note go with it');
     document.getElementById('recFormBody').innerHTML = `
-      <div class="rec-what">${poster ? `<img src="${poster}" alt="">` : `<span class="rec-what-ph">${icon(k === 'list' ? 'layers' : 'film', 18)}</span>`}
+      <div class="rec-what">${poster ? `<img src="${poster}" alt="">` : `<span class="rec-what-ph">${icon(isList ? 'layers' : 'film', 18)}</span>`}
         <span><b translate="no">${_socEsc(it.title)}</b><small>${sub.map(_socEsc).join(' · ')}</small></span></div>
       <div class="sf-section-label">Send to <span class="sf-section-hint">(up to 10)</span></div>
       <div class="soc-pick-search">${icon('search', 15)}<input type="text" id="recFind" placeholder="Search your friends…" autocomplete="off" aria-label="Search your friends" oninput="MSSShare._find(this.value)"></div>
       <div class="soc-picked" id="recPicked" aria-live="polite"></div>
       <div class="soc-pick-list" id="recFriends"><div class="page-loading" style="padding:1rem"><div class="spinner"></div></div></div>
+      <div id="recMine"></div>
       <label class="sf-section-label" for="recMsg">Message <span class="sf-section-hint">(optional)</span></label>
-      <textarea class="pf-q" id="recMsg" maxlength="280" rows="2" placeholder="${k === 'entry' ? 'What did you think?' : k === 'list' ? 'Why you made it…' : 'Why they’ll love it…'}" oninput="document.getElementById('recMsgN').textContent=this.value.length"></textarea>
+      <textarea class="pf-q" id="recMsg" maxlength="280" rows="2" placeholder="${isList ? 'Why you made it…' : 'Why they’ll love it…'}" oninput="document.getElementById('recMsgN').textContent=this.value.length"></textarea>
       <div class="pf-count"><span id="recMsgN">0</span>/280</div>`;
     document.getElementById('recFormFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="MSSShare._close()">Cancel</button>
       <button type="button" class="sf-apply-btn" id="recSend" onclick="MSSShare._send()" disabled>Send</button>`;
@@ -456,7 +459,24 @@ const MSSShare = (() => {
         .sort((a, b) => (a.display_name || a.username || '').localeCompare(b.display_name || b.username || '')); }
       catch { friends = []; }
     }
+    try { keys = friends.length ? await _socRpc('msg_public_keys', { p_users: friends.map(f => f.id) }) || {} : {}; }
+    catch { keys = {}; }
     drawFriends('');
+    if (!isList && it.tmdb_id) loadMine(u.id);
+  }
+  // Your score and note can go along with a title you've logged. Only when you tick it.
+  async function loadMine(uid) {
+    const { data: e } = await sb.from('entries').select('id, final_score, notes, note_visibility, ratings')
+      .eq('user_id', uid).eq('tmdb_id', item.tmdb_id).eq('tmdb_type', item.media_type).limit(1).maybeSingle().then(r => r, () => ({}));
+    if (!e) return;
+    await mssWithPrivateNotes([e]);
+    const score = e.final_score != null ? Number(e.final_score) : null;
+    const note = mssIsSpoiler(e) ? '' : MSSRich.plain(e.notes || '').slice(0, 500);
+    const box = document.getElementById('recMine');
+    if (!box || (score == null && !note)) return;
+    myEntry = { score, note };
+    const what = score != null && note ? 'score and note' : score != null ? 'score' : 'note';
+    box.innerHTML = `<label class="rec-mine"><input type="checkbox" id="recMineOn"> <span>Include my ${what}</span></label>`;
   }
   function drawFriends(q) {
     const list = document.getElementById('recFriends'); if (!list) return;
@@ -464,12 +484,12 @@ const MSSShare = (() => {
     const n = (q || '').trim().toLowerCase();
     const shown = friends.filter(f => !n || (f.username || '').toLowerCase().includes(n) || (f.display_name || '').toLowerCase().includes(n));
     list.innerHTML = shown.map(f => {
-      const on = picked.has(f.id);
-      return `<div class="soc-pick-row" onclick="MSSShare._pick(${attrJSON(f.id)})">
+      const on = picked.has(f.id), ready = !!keys[f.id];
+      return `<div class="soc-pick-row${ready ? '' : ' is-off'}"${ready ? ` onclick="MSSShare._pick(${attrJSON(f.id)})"` : ''}>
         ${_socAv(f, 40)}
-        <span class="soc-pick-who"><b translate="no">${_socEsc(f.display_name || f.username)}</b><small>@${_socEsc(f.username)}</small></span>
-        <button type="button" class="soc-pick-btn${on ? ' on' : ''}" aria-pressed="${on}" aria-label="${on ? 'Remove' : 'Add'} ${_socEsc(f.display_name || f.username)}"
-          onclick="event.stopPropagation();MSSShare._pick(${attrJSON(f.id)})">${on ? `${icon('check', 13)} Added` : 'Add'}</button>
+        <span class="soc-pick-who"><b translate="no">${_socEsc(f.display_name || f.username)}</b><small>${ready ? `@${_socEsc(f.username)}` : 'Hasn’t set up Messages yet'}</small></span>
+        ${ready ? `<button type="button" class="soc-pick-btn${on ? ' on' : ''}" aria-pressed="${on}" aria-label="${on ? 'Remove' : 'Add'} ${_socEsc(f.display_name || f.username)}"
+          onclick="event.stopPropagation();MSSShare._pick(${attrJSON(f.id)})">${on ? `${icon('check', 13)} Added` : 'Add'}</button>` : ''}
       </div>`; }).join('') || `<div class="soc-pick-empty">No friends match “${_socEsc(q.trim())}”.</div>`;
   }
   function drawPicked() {
@@ -486,259 +506,38 @@ const MSSShare = (() => {
     drawPicked();
   }
   function closeSend() { MSSDialog.close(document.getElementById('recForm')); }
+  // What's inside the encrypted message. A poster is only ever a TMDB path.
+  function payload() {
+    const text = document.getElementById('recMsg').value.trim(), base = { v: 1, t: 'share', kind: item.kind, title: item.title || '', text };
+    if (item.kind === 'list') return { ...base, list_id: item.list_id, count: item.count || 0 };
+    const mine = document.getElementById('recMineOn')?.checked ? myEntry : null;
+    return { ...base, media_type: item.media_type, tmdb_id: item.tmdb_id, year: String(item.year || '').slice(0, 4),
+      poster: String(item.poster_url || '').match(TMDB_PATH)?.[1] || null, score: mine?.score ?? null, note: mine?.note || '' };
+  }
   async function send() {
     if (!item || !picked.size) return;
     const b = document.getElementById('recSend'); b.disabled = true; b.textContent = 'Sending…';
-    const poster = String(item.poster_url || '').match(/\/[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp)$/)?.[0] || null;
-    try {
-      const ref = item.kind === 'entry' ? item.entry_id : item.kind === 'list' ? item.list_id : String(item.tmdb_id);
-      const n = await _socRpc('share_with_friends', { p_to: [...picked], p_kind: item.kind, p_ref_id: ref, p_type: item.media_type || null, p_title: item.title || null,
-        p_poster: poster, p_year: String(item.year || '').slice(0, 4) || null, p_message: document.getElementById('recMsg').value.trim() || null });
-      closeSend();
-      const one = friends.find(f => picked.has(f.id));
-      showToast(n === 1 ? `Sent to ${one?.display_name || '@' + (one?.username || 'your friend')}.` : `Sent to ${n} friends.`);
-      if (el && box === 'sent') inbox(el, user);
-    } catch (err) {
-      showToast(_socErr(err, 'Couldn’t send that — try again.'), 'err');
+    const body = payload(), to = friends.filter(f => picked.has(f.id)), missed = [];
+    let reason = '';
+    for (const f of to) {
+      try {
+        const k = await MSSKeys.publicKeyOf(f.id, true);
+        if (!k.pub) throw new Error('NO_KEY');
+        const e = MSSKeys.encrypt(body, k.pub);
+        const args = { p_to: f.id, p_ciphertext: e.ciphertext, p_nonce: e.nonce, p_sender_pub: e.sender_pub, p_recipient_pub: e.recipient_pub };
+        if (item.kind === 'list') await _socRpc('msg_send_list', { ...args, p_list: item.list_id });
+        else await _socRpc('msg_send', args);
+      } catch (err) { console.error(err); reason = err?.hint || reason; missed.push(f.display_name || f.username); }
+    }
+    if (missed.length === to.length) {
+      showToast(_socErr({ message: '' }, reason || 'Couldn’t send that — try again.'), 'err');
       b.disabled = false; b.textContent = `Send to ${picked.size}`;
-    }
-  }
-
-  /* ── Inbox (048): a conversation under every item ──
-     • new until you open it (the side-nav number); a reply makes it new again
-     • Sent items show a Sent / Seen badge; their responses are in the thread
-     • the app posts responses for the receiver (added it, already had it,
-       started / watched it, saved your list) and either of you can reply */
-  let recs = [];
-  const KINDS = [['all', 'All', 'inbox'], ['title', 'To Watch', 'send'], ['entry', 'Watched', 'ratingStar'], ['list', 'Lists', 'layers']];
-  const KIND = { title: ['Recommendation', 'send'], entry: ['Watched', 'ratingStar'], list: ['List', 'layers'] };
-  // Responses the app posts for the receiver — [your view, their view (sender), short label, icon]
-  const AUTO = {
-    added:      ['You added it to your watchlist', n => `${n} added it to their watchlist`, 'Added', 'plus'],
-    had_it:     ['It was already in your library', n => `${n} already had it`, 'Already had it', 'check'],
-    started:    ['You started watching it', n => `${n} started watching it`, 'Watching', 'play'],
-    finished:   ['You watched it', n => `${n} watched it`, 'Watched', 'check'],
-    saved_list: ['You saved this list', n => `${n} saved your list`, 'Saved', 'layers'],
-  };
-  const QUICK = {
-    title: ['Thanks!', 'Watching it soon', 'Seen it already', 'Not my thing'],
-    entry: ['Great pick!', 'Want to watch it', 'Agree!', 'Not for me'],
-    list:  ['Love this list', 'Thanks!'],
-    sent:  ['Enjoy!', 'Let me know what you think', 'You’ll love it'],
-  };
-  let kind = 'all', focusRec = null;
-  const full = {};     // rec id → whole thread shown
-  async function refreshCount(u) {
-    try { api.count = Number(await _socRpc('inbox_unread_count', {})) || 0; } catch { api.count = 0; }
-    if (typeof _navMsgBadge === 'function') _navMsgBadge(api.count);
-    return api.count;
-  }
-  async function inbox(target, u, o = {}) {
-    el = target; user = u;
-    if (o.box === 'sent' || o.box === 'received') box = o.box;
-    if (o.rec) { focusRec = o.rec; kind = 'all'; }
-    const head = user ? `<div class="soc-head soc-head-start"><div class="pn-toggle soc-toggle soc-toggle-sm" role="tablist" aria-label="Received or sent">${[['received', 'Received'], ['sent', 'Sent']].map(([k, l]) =>
-        `<button type="button" class="pn-toggle-btn${box === k ? ' active' : ''}" role="tab" aria-selected="${box === k}" onclick="MSSShare._box('${k}')">${l}<span class="rec-box-dot" id="recDot-${k}" hidden></span></button>`).join('')}</div></div>` : '';
-    if (!user) {
-      el.innerHTML = head + `<div class="mss-es">${mssArt('inbox')}<div class="mss-es-title">Titles from your friends</div>
-        <div class="mss-es-text">Sign in to send friends something to watch — and see what they send you.</div></div>`;
       return;
     }
-    el.innerHTML = head + `<div class="rec-chips" id="recChips" role="toolbar" aria-label="Show"></div>
-      <div id="recList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
-    try {
-      recs = await _socRpc('get_recs', { p_box: box }) || [];
-      // "I watched this": the sender's entry itself (score, rating, note) for the popups
-      const ids = recs.filter(r => r.kind === 'entry').map(r => r.entry_id);
-      const { data } = ids.length ? await sb.from('entries').select('*').in('id', ids) : { data: [] };
-      const byId = Object.fromEntries((await mssWithPrivateNotes(data || [])).map(e => [e.id, e]));
-      recs.forEach(r => { r.entry = byId[r.entry_id] || null; r.replies = r.replies || []; });
-    } catch { recs = []; showToast('Couldn’t load your inbox — try again.', 'err'); }
-    drawRecs();
-    // Sent: their responses are right there on the cards, so opening the tab reads them
-    // (they stay highlighted as New for this visit)
-    if (box === 'sent') markRead(recs.filter(r => r.unread), true);
-    refreshCount(user).then(drawBoxDots);
-    if (focusRec) {
-      const r = recs.find(x => x.id === focusRec);
-      if (r) { seen(r); requestAnimationFrame(() => { const n = document.getElementById('rec-' + r.id); n?.scrollIntoView({ block: 'center', behavior: 'smooth' }); n?.querySelector('textarea')?.focus({ preventScroll: true }); }); }
-      focusRec = null;
-    }
+    closeSend();
+    const sent = to.length - missed.length;
+    if (missed.length) showToast(`Sent to ${sent}. Couldn’t send to ${missed.join(', ')}.`, 'err');
+    else showToast(sent === 1 ? `Sent to ${to[0].display_name || '@' + to[0].username}.` : `Sent to ${sent} friends.`);
   }
-  // the little dot on Received / Sent when the other box has something new
-  async function drawBoxDots() {
-    const other = box === 'received' ? 'sent' : 'received';
-    const d = document.getElementById('recDot-' + other); if (!d) return;
-    const mine = recs.filter(r => r.unread && !r._readLocal).length;
-    d.hidden = !(api.count - mine > 0);
-  }
-  // Opened it → Seen; the side-nav number and the bell go down
-  function markRead(list, keepNew) {
-    list = list.filter(r => r.unread); if (!list.length) return;
-    list.forEach(r => { if (!keepNew) r.unread = false; if (box === 'received') r.seen_at = r.seen_at || new Date().toISOString(); });
-    if (keepNew) list.forEach(r => { r._readLocal = true; });
-    _socRpc('mark_rec_read', { p_ids: list.map(r => r.id) }).then(() => {
-      refreshCount(user).then(drawBoxDots);
-      if (typeof _notifLoad === 'function') _notifLoad();
-      // "already had it" is posted by the database — pick it up
-      if (box === 'received' && list.some(r => r.in_library && !r.replies.some(q => q.kind === 'auto'))) reload();
-    }).catch(() => {});
-  }
-  // (updates the card in place — so focusing the message bar keeps focus)
-  function seen(r) {
-    if (!r || !r.unread || r._readLocal) return;
-    markRead([r]);
-    const node = document.getElementById('rec-' + r.id);
-    node?.classList.remove('is-new'); node?.querySelector('.rec-new')?.remove();
-  }
-  async function reload() {
-    try {
-      const fresh = await _socRpc('get_recs', { p_box: box }) || [];
-      fresh.forEach(f => { const r = recs.find(x => x.id === f.id); if (r) { Object.assign(r, { replies: f.replies || [], seen_at: f.seen_at, in_library: f.in_library }); redraw(r); } });
-    } catch {}
-  }
-  const itemOf = r => ({ id: r.tmdb_id, tmdb_id: r.tmdb_id, media_type: r.tmdb_type, title: r.title, year: r.year,
-    poster_url: r.poster_path ? TMDB_FULL + r.poster_path : (r.entry?.poster_url || r.poster_url || null) });
-  function drawRecs() {
-    const list = document.getElementById('recList'); if (!list) return;
-    const n = k => k === 'all' ? recs.length : recs.filter(r => (r.kind || 'title') === k).length;
-    if (kind !== 'all' && !n(kind)) kind = 'all';
-    const chips = document.getElementById('recChips');
-    if (chips) chips.innerHTML = recs.length ? KINDS.map(([k, l, ic]) => `<button type="button" class="rec-chip${kind === k ? ' active' : ''}" aria-pressed="${kind === k}" ${n(k) ? '' : 'disabled'} onclick="MSSShare._kind('${k}')">${icon(ic, 13)} ${l}<b>${n(k)}</b></button>`).join('') : '';
-    if (!recs.length) {
-      list.innerHTML = `<div class="mss-es">${mssArt('inbox')}<div class="mss-es-title">${box === 'received' ? 'Your inbox is empty' : 'You haven’t shared anything yet'}</div>
-        <div class="mss-es-text">${box === 'received' ? 'Nobody’s sent you a title yet. Send one first; they’ll get the hint.' : 'Press Recommend on any movie or show, Share on one of your own titles, or Share on a list.'}</div></div>`;
-      return;
-    }
-    const shown = kind === 'all' ? recs : recs.filter(r => (r.kind || 'title') === kind);
-    list.innerHTML = `<div class="rec-grid">${shown.map(cardHTML).join('')}</div>`;
-  }
-  function redraw(r) { const node = document.getElementById('rec-' + r.id); if (node) node.outerHTML = cardHTML(r); }
-
-  // Sent: a small badge — Sent, or Seen (when they opened it); their responses are in the thread
-  function statusHTML(r) {
-    const seen = !!r.seen_at || r.replies.some(q => !q.mine);
-    return `<span class="rec-status${seen ? ' seen' : ''}" title="${seen && r.seen_at ? 'Seen ' + _notifTimeAgo(r.seen_at) : seen ? 'Seen' : 'Sent — not opened yet'}">${icon(seen ? 'eye' : 'check', 12)} ${seen ? 'Seen' : 'Sent'}${seen && r.seen_at ? ` <small>${_notifTimeAgo(r.seen_at)}</small>` : ''}</span>`;
-  }
-  // The conversation panel: their message first, then the app's responses
-  // (small event lines) and replies (bubbles — yours on the right), then the
-  // message bar with quick replies — always there, so answering is one tap
-  function convoHTML(r) {
-    const who = _socEsc(_socName(r.person)), first = _socEsc((r.person?.display_name || r.person?.username || 'them').split(' ')[0]);
-    const items = r.message ? [{ id: 'msg', mine: box === 'sent', kind: 'text', body: r.message, created_at: r.created_at }, ...r.replies] : r.replies;
-    const hidden = full[r.id] ? 0 : Math.max(0, items.length - 4);
-    const one = q => {
-      if (q.kind === 'auto') {
-        const a = AUTO[q.code]; if (!a) return '';
-        return `<li class="rec-ev"><span>${icon(a[3], 12)}</span><p>${box === 'received' ? a[0] : a[1](`<b translate="no">${who}</b>`)}</p><time>${_notifTimeAgo(q.created_at)}</time></li>`;
-      }
-      return `<li class="rec-bub${q.mine ? ' mine' : ''}"><div translate="no">${_socEsc(q.body)}</div><time>${q.mine ? 'You' : who} · ${_notifTimeAgo(q.created_at)}</time></li>`;
-    };
-    const quick = QUICK[box === 'sent' ? 'sent' : (r.kind || 'title')] || [];
-    const n = r.replies.filter(q => q.kind === 'text').length;
-    return `<section class="rec-convo" aria-label="Conversation with ${who}">
-      <header class="rec-convo-head">${icon('comment', 13)} Conversation${n ? `<b>${n}</b>` : ''}</header>
-      ${items.length ? `<ul class="rec-thread">${hidden ? `<li class="rec-more"><button type="button" class="poll-link" onclick="MSSShare._full(${attrJSON(r.id)})">Show ${hidden} earlier</button></li>` : ''}${items.slice(hidden).map(one).join('')}</ul>`
-        : `<p class="rec-convo-empty">${box === 'received' ? `Let ${first} know what you think.` : `No replies yet — ${first} will see anything you add here.`}</p>`}
-      <div class="rec-quick" role="group" aria-label="Quick replies">${quick.map(t => `<button type="button" class="rec-qr" onclick="MSSShare._say(${attrJSON(r.id)}, ${attrJSON(t)})">${_socEsc(t)}</button>`).join('')}</div>
-      <form class="rec-input" onsubmit="event.preventDefault();MSSShare._say(${attrJSON(r.id)}, null)">
-        <textarea id="rcIn-${r.id}" maxlength="500" rows="1" placeholder="Message ${first}…" aria-label="Message ${who}" onfocus="MSSShare._touch(${attrJSON(r.id)})"
-          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.requestSubmit()}"></textarea>
-        <button type="submit" class="rec-send" aria-label="Send">${icon('send', 15)}</button>
-      </form>
-    </section>`;
-  }
-  function cardHTML(r) {
-    const who = r.person || {}, id = attrJSON(r.id), e = r.entry, k = r.kind || 'title';
-    const posterUrl = r.poster_path ? _socImg(r.poster_path, 'w342') : safeURL(e?.poster_url || r.poster_url);
-    const isList = k === 'list', isEntry = k === 'entry';
-    const open = isList ? `MSSShare._openList(${id})` : isEntry && e ? `MSSShare._views(${id}, 'info')` : `MSSShare._view(${id})`;
-    const name = `<b translate="no">${_socEsc(_socName(who))}</b>`;
-    const line = box === 'received'
-      ? `${name} ${isEntry ? 'watched this' : isList ? 'shared a list' : 'recommends this'}`
-      : `${isEntry ? 'You told' : isList ? 'You shared it with' : 'You sent it to'} ${name}${isEntry ? ' you watched it' : ''}`;
-    const score = isEntry && e && liveScore(e) != null ? Number(liveScore(e)).toFixed(1) : null;
-    const type = !isList && r.tmdb_type ? `<span class="${r.tmdb_type === 'movie' ? 'type-label' : 'type-label type-label-tv'}">${r.tmdb_type === 'movie' ? 'Movie' : 'TV Show'}</span>` : '';
-    const inLib = box === 'received' && !isList && r.tmdb_id && r.in_library;
-    const tags = `${type}${isList ? `<span class="w-ep-badge">${r.list_count || 0} ${r.list_count === 1 ? 'title' : 'titles'}</span>` : ''}${isEntry && e?.notes?.trim() ? `<span class="rec-has-note">${icon('notebook', 12)} Has a note</span>` : ''}${inLib ? `<span class="rec-in">${icon('check', 12)} In your library</span>` : ''}${box === 'sent' ? statusHTML(r) : ''}`;
-    const primary = isList ? `<button type="button" class="btn-add-entry" onclick="${open}">${icon('layers', 14)} Open List</button>`
-      : isEntry && e ? `<button type="button" class="btn-add-entry" onclick="MSSShare._views(${id}, '${score ? 'rate' : 'info'}')">${icon('ratingStar', 14)} ${score ? 'Rating & note' : 'See it'}</button>`
-      : '';
-    const add = box === 'received' && !isList && r.tmdb_id && !r.in_library
-      ? `<button type="button" class="${primary ? 'rec-btn' : 'btn-add-entry'}" onclick="MSSShare._add(${id}, this)">${icon('plus', 14)} Add to Watchlist</button>` : '';
-    return `<article class="rec-card k-${k}${r.unread ? ' is-new' : ''}" id="rec-${r.id}"${isList ? '' : MSSAge.attr(r.tmdb_type, r.tmdb_id)}>
-      <div class="rec-main">
-        <button type="button" class="rec-poster" onclick="${open}" aria-label="Open ${_socEsc(r.title)}">
-          ${posterUrl ? `<img src="${posterUrl}" alt="" loading="lazy">` : `<span class="rec-poster-ph">${icon(isList ? 'layers' : 'film', 28)}${isList ? `<b>${r.list_count || 0}</b>` : ''}</span>`}
-          ${score ? `<span class="rec-score" title="${_socEsc(_socName(who))}’s score">★ ${score}</span>` : ''}
-        </button>
-        <div class="rec-body">
-          <div class="rec-top"><span class="rec-kind">${icon(KIND[k][1], 11)} ${KIND[k][0]}</span>${r.unread ? `<span class="rec-new">New</span>` : ''}<time datetime="${_socEsc(r.created_at)}">${_notifTimeAgo(r.created_at)}</time></div>
-          <button type="button" class="rec-title" onclick="${open}"><b translate="no">${_socEsc(r.title)}</b>${r.year ? `<span class="title-year-inline">${_socEsc(r.year)}</span>` : ''}</button>
-          ${tags ? `<div class="rec-tags">${tags}</div>` : ''}
-          <div class="rec-from">${_socAv(who, 26)}<span>${line}</span></div>
-          ${isEntry && !e ? `<div class="rec-gone">They’ve removed this title from their library.</div>` : ''}
-          <div class="rec-acts">
-            ${primary}${add}
-            ${!isList && !(isEntry && e) ? `<button type="button" class="rec-icon" onclick="MSSShare._view(${id})" aria-label="Details" title="Details">${icon('info', 15)}</button>` : ''}
-            <button type="button" class="rec-icon rec-icon-x" onclick="MSSShare._remove(${id})" aria-label="${box === 'received' ? 'Hide' : 'Unsend'}" title="${box === 'received' ? 'Hide' : 'Unsend'}">${icon(box === 'received' ? 'x' : 'trash', 15)}</button>
-          </div>
-        </div>
-      </div>
-      ${convoHTML(r)}
-    </article>`;
-  }
-  async function add(id, btn) {
-    const r = recs.find(x => x.id === id); if (!r) return;
-    btn.disabled = true; btn.textContent = 'Adding…';
-    try {
-      await MSSInfo.quickAdd(itemOf(r));                  // the database posts "added it to their watchlist"
-      r.in_library = true; r.unread = false;
-      showToast(`Added “${r.title}” to your Watchlist — ${_socName(r.person)} will see it`);
-      reload(); refreshCount(user);
-    } catch (err) {
-      if (String(err?.message).startsWith('DUPLICATE:')) { r.in_library = true; seen(r); redraw(r); showToast('Already in your library.'); return; }
-      showToast(isRateLimitError(err) ? RATE_LIMIT_MESSAGE : 'Could not add — try again.', 'err');
-      btn.disabled = false; btn.innerHTML = `${icon('plus', 14)} Add to Watchlist`;
-    }
-  }
-  async function say(id, text) {
-    const r = recs.find(x => x.id === id); if (!r) return;
-    const ta = document.getElementById('rcIn-' + id);
-    const body = (text ?? ta?.value ?? '').trim(); if (!body) return;
-    const btns = document.querySelectorAll(`#rec-${CSS.escape(id)} .rec-convo button`);
-    btns.forEach(b => { b.disabled = true; });
-    try {
-      await _socRpc('reply_rec', { p_id: id, p_body: body });
-      r.replies.push({ id: 'local-' + Date.now(), mine: true, kind: 'text', body, created_at: new Date().toISOString() });
-      r.unread = false; r.seen_at = r.seen_at || (box === 'received' ? new Date().toISOString() : r.seen_at);
-      redraw(r);
-      showToast(`Sent to ${_socName(r.person)}`);
-      refreshCount(user);
-    } catch (err) { btns.forEach(b => { b.disabled = false; }); showToast(_socErr(err, 'Couldn’t send — try again.'), 'err'); }
-  }
-  async function remove(id) {
-    if (box === 'sent') {
-      const ok = await showConfirm({ title: 'Unsend this?', message: 'It disappears from your friend’s Inbox, with its replies.', confirmText: 'Unsend', iconName: 'trash' });
-      if (!ok) return;
-    }
-    try {
-      await _socRpc('remove_rec', { p_id: id });
-      recs = recs.filter(r => r.id !== id);
-      drawRecs(); refreshCount(user);
-    } catch (err) { showToast(_socErr(err), 'err'); }
-  }
-  const touch = id => { const r = recs.find(x => x.id === id); seen(r); return r; };
-
-  return Object.assign(api, {
-    open: openSend, inbox, refreshCount,
-    _find: drawFriends, _pick: pick, _send: send, _close: closeSend,
-    _box: k => { box = k; kind = 'all'; inbox(el, user); }, _kind: k => { kind = k; drawRecs(); }, _add: (id, b) => { touch(id); add(id, b); }, _remove: remove,
-    _touch: id => { touch(id); },
-    _say: say, _full: id => { full[id] = true; const r = recs.find(x => x.id === id); if (r) redraw(r); },
-    _view: id => { const r = touch(id); if (!r) return; r.tmdb_id ? MSSInfo.fromDiscover(itemOf(r)) : r.entry && MSSInfo.fromEntry(r.entry); },
-    // "I watched this" → their entry in Info · Ratings · Note (read-only, "Sam's rating")
-    _views: (id, start) => { const r = touch(id); if (r?.entry) MSSViews.open(r.entry, { start, profile: r.person || {} }); },
-    _openList: id => { const r = touch(id); if (r?.list_id) location.href = `list-view.html?list=${encodeURIComponent(r.list_id)}`; },
-  });
+  return { open, _find: drawFriends, _pick: pick, _close: closeSend, _send: send };
 })();

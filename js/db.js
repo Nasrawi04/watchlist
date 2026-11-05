@@ -482,6 +482,10 @@ function followUser(userId)               { return _rpcOr('follow_user', { p_use
 function unfollowUser(userId)             { return _rpcOr('unfollow_user', { p_user: userId }); }
 function respondFollowRequest(userId, ok) { return _rpcOr('respond_follow_request', { p_user: userId, p_accept: !!ok }); }
 function removeFollower(userId)           { return _rpcOr('remove_follower', { p_user: userId }); }
+// Blocking (098): you stop following each other, and neither of you can follow or message the other
+function blockUser(userId)                { return _rpcOr('block_user', { p_user: userId }); }
+function unblockUser(userId)              { return _rpcOr('unblock_user', { p_user: userId }); }
+function getMyBlocks()                    { return _rpcOr('my_blocks', {}); }
 function setAccountPrivate(on)            { return _rpcOr('set_account_private', { p_on: !!on }); }
 // { i_follow, follows_me ('none'|'pending'|'accepted'), is_private, can_see, followers, following, friends, requests (yours) }
 function getFollowState(userId)           { return _rpcOr('get_follow_state', { p_user: userId }); }

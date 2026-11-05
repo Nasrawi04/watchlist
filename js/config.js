@@ -118,6 +118,17 @@ function mssSessionEnded() {
    A cookie with no expiry date marks this browser session; when the browser
    opens again without it, the saved sign-in is cleared before Supabase starts.
    (Age checks and everything else work the same either way.) */
+// Messages: this device's copy of an account's key (msg-keys.js) goes when the account leaves the device
+function mssForgetKeys(id) {
+  return new Promise(ok => {
+    try {
+      const r = indexedDB.open('msf-keys', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('keys');
+      r.onerror = () => ok();
+      r.onsuccess = () => { const d = r.result, t = d.transaction('keys', 'readwrite'); if (id) t.objectStore('keys').delete(id); else t.objectStore('keys').clear(); t.oncomplete = t.onerror = () => { d.close(); ok(); }; };
+    } catch { ok(); }
+  });
+}
 const MSSRemember = {
   set(on) {
     try { localStorage.setItem('mss_remember', on ? '1' : '0'); } catch {}
@@ -127,6 +138,7 @@ const MSSRemember = {
     try {
       if (localStorage.getItem('mss_remember') !== '0' || /(?:^|;\s*)mss_live=1/.test(document.cookie)) return;
       Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k));
+      mssForgetKeys();
       localStorage.removeItem('mss_remember');
     } catch {}
   },
@@ -192,6 +204,7 @@ const ICONS = {
   sparkles: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`,
   brush:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1 1 2.48 1.94 4 1.02a2.998 2.998 0 0 0 1-4.06"/></svg>`,
   arrowRight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`,
+  moreV:    `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>`,
   check:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
   users:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
   user:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
@@ -247,6 +260,7 @@ const ICONS = {
   eyeOff:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
   refresh:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>`,
   'refresh-cw': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>`,
+  star:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/></svg>`,
   reply:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>`,
   comment:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
   thumbsUp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/></svg>`,
@@ -487,7 +501,7 @@ const MSSAccounts = (() => {
   // every new token goes straight in, so the saved one is never stale
   if (sb) sb.auth.onAuthStateChange((ev, session) => { if (session) keep(session); });
   const pub = x => ({ id: x.id, username: x.username, display_name: x.display_name || '', avatar_url: x.avatar_url || '' });
-  function forget(id) { write(read().filter(x => x.id !== id)); }
+  function forget(id) { write(read().filter(x => x.id !== id)); mssForgetKeys(id); }
   async function switchTo(id) {
     const t = read().find(x => x.id === id); if (!t) return false;
     const { data, error } = await sb.auth.setSession({ access_token: t.at, refresh_token: t.rt });
@@ -2295,7 +2309,6 @@ const MSSRegion = (() => {
 
 /* ── Share with friends (lands in their Messages) ──
    item: a title { tmdb_id, media_type: 'movie'|'tv', title, poster_url, year },
-   one of your own titles { kind: 'entry', entry_id, … } ("I watched this"),
    or a list { kind: 'list', list_id, title, count }.
    js/social.js is loaded the first time it's needed. */
 // Loads a script once, even when two places ask at the same time (or it's already on the page)

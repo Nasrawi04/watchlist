@@ -25,7 +25,7 @@ const NS_RECEIVE = [
   ['comments',     'Comments & replies',    'On your titles, notes, lists and comments'],
   ['likes',        'Likes',                 'On your notes, lists and replies'],
   ['polls',        'Polls',                 'New polls from people you follow, and comments on yours'],
-  ['inbox',        'Messages',              'Titles and lists sent to you, and replies'],
+  ['messages',     'Messages',              'A friend sends you a message. Never shows what it says'],
   ['lists',        'List invites',          'Invites to collaborate on a list, and answers to yours'],
   ['movie_night',  'Movie Night',           'Invites, picks, changes and reminders'],
   ['challenges',   'Challenges',            'Invites and finishes'],

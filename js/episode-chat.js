@@ -14,7 +14,7 @@
    MSSEpChat.unread(user)            new messages across all your threads (the sub-nav strip)
 
    Requires config.js (icon, escHTML, safeURL, MSSDialog), nav.js (_notifTimeAgo,
-   mssEpName). Styles: §52 in style.css (message bar shared with Inbox: .rec-input).
+   mssEpName). Styles: §52 in style.css (message bar: .rec-input).
 ═══════════════════════════════════════════════════════════════ */
 const MSSEpChat = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));

@@ -17,7 +17,7 @@
    Uses social-core.js's _frAccepted for the invite lists, the shared Social
    popup (_socDialog, social.js), the filter dropdown (SF.dd, sort-filter.js),
    the date range picker (MSSDateRange, date-range.js), medals.js, spotlights.js
-   (tags, poster strip, preview) and the Polls / Inbox button styles.
+   (tags, poster strip, preview) and the Polls button styles.
 ═══════════════════════════════════════════════════════════════ */
 const MSSChallenges = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));

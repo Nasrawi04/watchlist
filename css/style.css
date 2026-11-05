@@ -166,7 +166,7 @@
      at a glance — same faint-fill/bordered-chip treatment as olive,
      just a different hue, so the two read as a matched pair. */
   --tv-accent:    #8AAFD1;
-  --gold-accent:  #E2B53E; /* "Watched" in Social → Inbox, poll winners */
+  --gold-accent:  #E2B53E; /* poll winners */
   --tv-faint:     rgba(74,110,145,0.14);
   --tv-border:    rgba(122,163,201,0.5);
   --tv-solid:     #3D6D96; /* darker, solid-fill-safe variant — ~5.8:1 contrast with white text */
@@ -2053,6 +2053,8 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 }
 .social-list-avatar img { width:100%; height:100%; object-fit:cover; }
 .social-list-username { font-size:12.5px; color:var(--text-3); }
+#mssListCard .social-list-username, #mssListCard .lp-meta { color:var(--text-2); }
+:root:not([data-theme="dark"]) #mssListCard .list-vis-badge { color:#174a1e; }
 
 .social-list-reactions { display:flex; gap:12px; }
 .social-list-react-btn {
@@ -3342,6 +3344,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 .confirm-ok:hover { background:#dc2626; border-color:#dc2626; }
 .confirm-ok.is-safe { background:var(--olive); border-color:var(--olive); }
 .confirm-ok.is-safe:hover { background:var(--olive-light); border-color:var(--olive-light); }
+[data-theme="dark"] .confirm-ok.is-safe:hover { color:#10210b; }
 .confirm-cancel:focus-visible,
 .confirm-ok:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 
@@ -5771,7 +5774,7 @@ button.disc-side-link:focus-visible { outline:2px solid var(--olive-light); outl
 }
 
 /* ═════════════════════════════════════════════════════════════
-   §51  Social — Polls + Inbox (social.js)
+   §51  Social — Polls + the share popup (social.js)
    ═════════════════════════════════════════════════════════════ */
 .soc-overlay {
   position:fixed; inset:0; z-index:1300; background:var(--popup-backdrop);
@@ -5794,7 +5797,7 @@ button.disc-side-link:focus-visible { outline:2px solid var(--olive-light); outl
 .poll-link { background:none; border:none; padding:4px 2px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-family:'Manrope',var(--sans); font-size:12.5px; font-weight:600; color:var(--text-2); }
 .poll-link:hover { color:var(--olive-light); }
 .poll-link.poll-danger:hover { color:#c0392b; }
-.poll-link:focus-visible, .poll-opt:focus-visible, .pf-mode:focus-visible, .pf-chip:focus-visible, .pf-r:focus-visible, .rec-title:focus-visible, .rec-poster:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.poll-link:focus-visible, .poll-opt:focus-visible, .pf-mode:focus-visible, .pf-chip:focus-visible, .pf-r:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 
 /* A poll — author · status (Live / Ended) · your own: edit / end / delete,
    the question, options (A B C for text, poster / photo for titles and people),
@@ -5894,6 +5897,12 @@ button.poll-opt:disabled { cursor:progress; opacity:.75; }
 .rec-what span { display:flex; flex-direction:column; min-width:0; }
 .rec-what b { font-family:var(--serif); font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .rec-what small { font-size:12px; color:var(--text-3); margin-top:2px; }
+#recForm :is(.sf-section-hint, .soc-pick-who small, .pf-count, .rec-what small) { color:var(--text-2); }
+.rec-mine { display:flex; align-items:center; gap:10px; min-height:44px; margin-top:8px; font-size:13.5px; font-weight:600; color:var(--text); cursor:pointer; }
+.rec-mine input { width:18px; height:18px; flex:none; accent-color:var(--olive); }
+.soc-pick-row.is-off { cursor:default; }
+.soc-pick-row.is-off .soc-pick-who small { color:var(--text-2); }
+.soc-pick-row.is-off .soc-pick-who b { color:var(--text-2); }
 /* Friend picker (same look as Lists → invite collaborators) */
 .soc-pick-search { position:relative; margin:4px 0 8px; }
 .soc-pick-search > svg { position:absolute; inset-inline-start:13px; top:50%; transform:translateY(-50%); color:var(--text-3); pointer-events:none; }
@@ -5925,13 +5934,9 @@ button.poll-opt:disabled { cursor:progress; opacity:.75; }
 .soc-pick-btn:focus-visible, .soc-chip:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .soc-pick-empty { padding:22px 10px; text-align:center; color:var(--text-3); font-size:13px; display:flex; flex-direction:column; align-items:center; gap:8px; }
 .soc-pick-empty a { color:var(--olive-light); font-weight:600; text-decoration:none; }
-/* Inbox — filter chips, then cards: poster (their score on it), kind label
-   (Recommendation / Watched / List, each its own colour stripe), title,
-   tags, who sent it, the message as a chat bubble, actions in a footer */
+
 .soc-toggle-sm { margin:0; }
 .soc-toggle-sm .pn-toggle-btn { padding:8px 20px; font-size:13px; }
-.rec-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem; }
-.rec-chips:empty { display:none; }
 .rec-chip { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:var(--radius-sm); border:0.5px solid var(--border-2); background:var(--card);
   color:var(--text-2); font:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:background-color .15s, border-color .15s, color .15s; }
 .rec-chip b { font-family:var(--bebas); font-weight:400; font-size:15px; letter-spacing:.3px; color:var(--text-3); }
@@ -5939,79 +5944,25 @@ button.poll-opt:disabled { cursor:progress; opacity:.75; }
 .rec-chip.active { background:var(--olive); border-color:var(--olive); color:#fff; }
 .rec-chip.active b { color:rgba(255,255,255,.8); }
 .rec-chip:disabled { opacity:.45; cursor:default; }
-.rec-chip:focus-visible, .rec-icon:focus-visible, .rec-poster:focus-visible, .rec-title:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.rec-grid { display:flex; flex-direction:column; gap:14px; }
-/* A wide row: the item on the left, the conversation panel on the right (stacked on narrow screens) */
-.rec-card { --k:var(--olive-light); position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0, 1fr) minmax(300px, 0.95fr);
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); transition:border-color .15s; }
-.rec-main { display:flex; gap:18px; padding:18px 18px 18px 21px; min-width:0; }
-.rec-card::before { content:''; position:absolute; inset-block:0; inset-inline-start:0; width:3px; background:var(--k); }
-.rec-card.k-entry { --k:var(--gold-accent); }
-.rec-card.k-list { --k:var(--tv-accent); }
-.rec-card:hover { border-color:var(--border-olive); }
-.rec-poster { position:relative; align-self:flex-start; width:124px; aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden; flex-shrink:0; border:none; padding:0; cursor:pointer;
-  background:var(--bg-3); color:var(--text-3); display:flex; align-items:center; justify-content:center; }
-.rec-poster img { width:100%; height:100%; object-fit:cover; }
-.rec-poster-ph { display:flex; flex-direction:column; align-items:center; gap:4px; }
-.rec-poster-ph b { font-family:var(--bebas); font-weight:400; font-size:26px; letter-spacing:.3px; color:var(--text-2); }
-.rec-card.k-list .rec-poster { background:var(--tv-faint); color:var(--tv-accent); }
-.rec-score { position:absolute; bottom:6px; inset-inline-start:6px; padding:2px 7px; border-radius:4px; background:rgba(0,0,0,.75); color:#F5C94B; font-family:var(--bebas); font-size:16px; letter-spacing:.3px; line-height:1.2; }
-.rec-body { flex:1; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:8px; align-self:stretch; }
-.rec-top { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px 8px; width:100%; }
-.rec-kind { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--k); }
-.rec-top time { font-size:11.5px; color:var(--text-3); white-space:nowrap; }
-.rec-title { background:none; border:none; padding:0; cursor:pointer; text-align:start; color:var(--text); font:inherit; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
-.rec-title b { font-family:var(--serif); font-size:21px; font-weight:600; line-height:1.25; }
-.rec-title:hover b { text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:1px; }
-.rec-tags { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
-.rec-has-note { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600; color:var(--text-3); }
-.rec-from { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-3); }
-.rec-from b { color:var(--text); }
-.rec-gone { font-size:12.5px; color:var(--text-3); font-style:italic; }
-.rec-acts { display:flex; align-items:center; gap:8px; flex-wrap:wrap; width:100%; margin-top:auto; padding-top:10px; border-top:0.5px solid var(--border); }
-.rec-acts .btn-add-entry, .rec-btn { padding:7px 14px; font-size:12.5px; }
+.rec-chip:focus-visible, .rec-icon:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+
+.rec-btn { padding:7px 14px; font-size:12.5px; }
 .rec-btn { display:inline-flex; align-items:center; gap:7px; border-radius:var(--radius-sm); border:0.5px solid var(--border-olive); background:transparent; color:var(--olive-light); font:inherit; font-size:12.5px; font-weight:500; cursor:pointer; }
 .rec-btn:hover { background:var(--olive-faint); }
-.rec-in { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; color:var(--olive-light); }
 .rec-icon { width:32px; height:32px; flex-shrink:0; border-radius:var(--radius-sm); border:0.5px solid var(--border-2); background:none; color:var(--text-3);
   display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:color .15s, border-color .15s; }
-.rec-acts .rec-icon:not(.rec-icon + .rec-icon) { margin-inline-start:auto; }
 .rec-icon:hover { color:var(--text); border-color:var(--border-olive); }
 .rec-icon-x:hover { color:#c0392b; border-color:#c0392b; }
-/* Inbox conversations (048): New, the Sent / Seen badge, the
-   thread (the app's responses as small event lines, replies as bubbles —
-   yours on the right) and the reply box with quick replies */
-.rec-card.is-new { border-color:var(--border-olive); box-shadow:0 0 0 1px var(--border-olive); }
+
 .rec-new { margin-inline-start:auto; padding:2px 7px; border-radius:4px; background:#c0392b; color:#fff; font-size:10px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; }
 .rec-new + time { margin-inline-start:0; }
-.rec-box-dot { width:7px; height:7px; border-radius:50%; background:#c0392b; margin-inline-start:6px; display:inline-block; vertical-align:middle; }
-.rec-box-dot[hidden] { display:none; }
-.rec-status { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:4px; font-size:11.5px; font-weight:600;
-  background:var(--bg-3); color:var(--text-3); border:0.5px solid var(--border-2); }
-.rec-status.seen { background:var(--olive-faint); color:var(--olive-light); border-color:var(--border-olive); }
-.rec-status small { font-size:10.5px; font-weight:500; opacity:.85; }
-.rec-convo { display:flex; flex-direction:column; gap:10px; min-width:0; padding:14px 16px 16px; background:var(--bg-2); border-inline-start:0.5px solid var(--border); }
-.rec-convo-head { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-3); }
-.rec-convo-head b { font-family:var(--bebas); font-weight:400; font-size:14px; letter-spacing:.3px; color:var(--text-2); }
-.rec-convo-empty { margin:0; font-size:13px; color:var(--text-3); }
-.rec-thread { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-.rec-more { align-self:center; }
-.rec-ev { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-2); }
-.rec-ev p { margin:0; flex:1; min-width:0; }
-.rec-ev > span { width:22px; height:22px; border-radius:50%; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; background:var(--olive-faint); color:var(--olive-light); }
-.rec-ev b { color:var(--text); }
-.rec-ev time, .rec-bub time { font-size:10.5px; color:var(--text-3); white-space:nowrap; }
+.rec-bub time { font-size:10.5px; color:var(--text-3); white-space:nowrap; }
 .rec-bub { max-width:85%; align-self:flex-start; display:flex; flex-direction:column; gap:3px; }
 .rec-bub > div { padding:8px 12px; background:var(--card); border:0.5px solid var(--border); border-radius:4px var(--radius-sm) var(--radius-sm) var(--radius-sm);
   font-size:13.5px; line-height:1.45; color:var(--text); white-space:pre-wrap; overflow-wrap:anywhere; }
 .rec-bub.mine { align-self:flex-end; align-items:flex-end; }
 .rec-bub.mine > div { background:var(--olive-faint); border-color:var(--border-olive); border-radius:var(--radius-sm) 4px var(--radius-sm) var(--radius-sm); }
-/* quick replies: one tidy row (scrolls sideways if it has to), then the message bar */
-.rec-quick { display:flex; gap:6px; margin-top:auto; padding-top:4px; overflow-x:auto; scrollbar-width:none; }
-.rec-quick::-webkit-scrollbar { display:none; }
-.rec-qr { flex-shrink:0; padding:6px 11px; border-radius:var(--radius-sm); border:0.5px solid var(--border-olive); background:var(--card); color:var(--olive-light);
-  font:inherit; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:background-color .15s; }
-.rec-qr:hover { background:var(--olive-faint); }
+
 .rec-input { display:flex; align-items:flex-end; gap:6px; padding:5px 5px 5px 12px; background:var(--card); border:1px solid var(--border-2); border-radius:var(--radius-sm); transition:border-color .15s; }
 .rec-input:focus-within { border-color:var(--olive-light); }
 .rec-input textarea { flex:1; min-width:0; min-height:34px; max-height:140px; padding:7px 0; box-sizing:border-box; resize:none; border:none; outline:none; background:transparent;
@@ -6019,12 +5970,7 @@ button.poll-opt:disabled { cursor:progress; opacity:.75; }
 .rec-input textarea::placeholder { color:var(--text-3); }
 .rec-send { width:34px; height:34px; flex-shrink:0; border-radius:var(--radius-xs); border:none; background:var(--olive); color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background-color .15s; }
 .rec-send:hover { background:var(--olive-light); }
-.rec-qr:focus-visible, .rec-send:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.rec-convo button:disabled { opacity:.6; cursor:progress; }
-@media(max-width:1000px) {
-  .rec-card { grid-template-columns:minmax(0, 1fr); }
-  .rec-convo { border-inline-start:none; border-top:0.5px solid var(--border); }
-}
+.rec-send:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 @media(max-width:640px) {
   .poll-card { padding:14px; }
   .poll-opt { padding-inline-end:10px; gap:10px; }
@@ -6032,13 +5978,8 @@ button.poll-opt:disabled { cursor:progress; opacity:.75; }
   .soc-toggle:not(.soc-toggle-sm) { width:100%; }
   .soc-toggle .pn-toggle-btn { flex:1; min-width:0; padding:10px 8px; white-space:nowrap; }
   .soc-toggle-sm .pn-toggle-btn { padding:8px 14px; }
-  .rec-poster { width:84px; }
-  .rec-main { gap:12px; padding:14px 14px 14px 17px; }
-  .rec-convo { padding:12px 14px 14px; }
-  .rec-title b { font-size:17px; }
   .soc-head .btn-add-entry { padding:8px 14px; }
 }
-@media(max-width:400px) { .rec-poster { width:72px; } .rec-main { gap:10px; } }
 /* ═════════════════════════════════════════════════════════════
    §52  Episode chat (episode-chat.js) — popup, Social list, row chips
    ═════════════════════════════════════════════════════════════ */
