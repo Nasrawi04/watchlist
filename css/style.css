@@ -7993,8 +7993,16 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 .rf-group-t { margin:1rem 0 .7rem; font-family:var(--serif); font-weight:500; font-size:11px; }
 .rf-group-avg { order:2; font-family:var(--bebas); font-size:16px; letter-spacing:.3px; color:var(--olive-light); }
 .rf-group-t::after { order:1; }
-.rf-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.rf-grid > .rf-row:last-child:nth-child(odd) { grid-column:1 / -1; }
+/* Groups two to a row (an odd one out spans the width, its ratings 2 across); inside a group, one rating per line.
+   One column below 900px. */
+.rf-groups { display:grid; grid-template-columns:1fr; column-gap:28px; align-items:start; }
+.rf-grid { display:grid; grid-template-columns:1fr; gap:8px; }
+@media (min-width:900px) {
+  .rf-groups { grid-template-columns:1fr 1fr; }
+  .rf-groups > .rf-group:last-child:nth-child(odd) { grid-column:1 / -1; }
+  .rf-groups > .rf-group:last-child:nth-child(odd) .rf-grid { grid-template-columns:1fr 1fr; column-gap:28px; }
+  .rf-groups > .rf-group:last-child:nth-child(odd) .rf-grid > .rf-row:last-child:nth-child(odd) { grid-column:1 / -1; }
+}
 .rf-row { position:relative; display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; column-gap:10px; padding:10px 14px; background:var(--bg-3); border:0.5px solid var(--border); border-radius:var(--radius-sm); min-width:0; overflow:hidden; }   /* overflow: the meter follows the rounded corners */
 .rf-text { min-width:0; }
 .rf-name { display:flex; align-items:center; gap:6px; min-height:28px; }
@@ -8013,25 +8021,13 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 .rf-hint svg { width:13px; height:13px; }
 .rf-tip { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; height:2.9em; margin:2px 0 2px; font-size:12px; line-height:1.45; color:var(--text-2); }
 .rf-tip[hidden] { display:-webkit-box; visibility:hidden; }
-@media (min-width:1024px) { .rf-tip { -webkit-line-clamp:1; height:1.45em; } }   /* every hint fits on one line here */
 @media (hover:hover) { .rf-row:has(.rf-hint:not(.is-shut):hover) .rf-tip[hidden] { visibility:visible; } }
 .rf-sugg { flex-shrink:0; padding:2px 7px; font-size:10px; font-weight:700; letter-spacing:.3px; background:var(--olive-faint); color:var(--text); border:0.5px solid var(--border-olive); }
 .rf-bonus-btn { margin:1.25rem 0 0; min-height:44px; }
 .rf-group .anim-toggle-btn { margin-top:8px; min-height:40px; }
 .rf-bonus[hidden] { display:none; }
-.rf-grid[hidden] { display:none; }
-.rf-group.is-fold .rf-group-t::after { display:none; }
-.rf-group-btn { flex:1; display:flex; align-items:center; gap:10px; min-height:40px; padding:0; background:none; border:none; font:inherit; letter-spacing:inherit; text-transform:inherit; color:inherit; cursor:pointer; text-align:start; }
-.rf-group-btn::after { content:''; order:1; flex:1; height:0.5px; background:var(--border); }
-.rf-group-name { order:0; }
-.rf-group-btn .rf-group-avg { order:2; }
-.rf-group-btn svg { order:3; width:14px; height:14px; flex-shrink:0; color:var(--text-2); transition:transform .2s; }
-.rf-group-btn[aria-expanded="false"] svg { transform:rotate(-90deg); }
-.rf-group-btn:hover svg, .rf-group-btn:focus-visible svg { color:var(--olive-light); }
-.rf-group-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; border-radius:6px; }
 .rf-bonus > .det-ratings-col-title { margin-top:1.25rem; }
 @media (max-width:640px) {
-  .rf-grid { grid-template-columns:1fr; }
   .rf-hint { width:36px; height:36px; }
 }
 

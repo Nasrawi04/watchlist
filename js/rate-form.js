@@ -3,8 +3,8 @@
    Reads the one category list (MSS_RATING_GROUPS, config.js) and draws:
      Core groups · "+ Enable Animation Quality" (live action) ·
      "+ Bonus ratings · optional" (open when any bonus is rated) · Bonus groups with Suggested badges.
-   Each Bonus group's header opens and closes it. A title with no bonus rated yet shows every group;
-   one that already has some shows just the groups with a rating in them.
+   The groups sit two to a row on wide screens (an odd one out spans the width), one under another on phones.
+   The whole Bonus section opens and closes; its groups don't fold on their own.
    Each rating is − / + (0.5 at a time) around a number you can type, 0 to 10, with a thin meter along
    the bottom. Unrated stays "—" until touched; emptying the number clears it. The ⓘ hint sits with − / +
    in the middle of the card's height, and its text shows under the rating's name, in space every card keeps
@@ -103,27 +103,18 @@ const MSSRateForm = (() => {
     const bonusKeys = groups.filter(g => g.kind === 'bonus').flatMap(g => g.items.map(x => x.key));
     if (el._rfOpen == null) el._rfOpen = bonusKeys.some(k => has(R[k]));
     const shown = g => g.items.filter(x => !x.toggle || R._animEnabled);
-    // Which Bonus groups are open: decided once per title, then kept while you open and close them
-    if (!el._rfGroups) {
-      const anyRated = bonusKeys.some(k => has(R[k]));
-      el._rfGroups = Object.fromEntries(groups.filter(g => g.kind === 'bonus').map(g => [g.id, !anyRated || g.items.some(x => has(R[x.key]))]));
-    }
     const avgOf = g => { const v = shown(g).map(x => R[x.key]).filter(has).map(Number); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-    const groupHTML = g => {
-      const fold = g.kind === 'bonus', open = !fold || el._rfGroups[g.id];
-      const avg = `<span class="rf-group-avg" data-avg="${g.id}"></span>`;
-      return `<section class="rf-group${fold ? ' is-fold' : ''}" data-group="${g.id}" aria-labelledby="rfG-${g.id}">
-        <h3 class="ratings-section-label rf-group-t" id="rfG-${g.id}">${fold ? `<button type="button" class="rf-group-btn" data-fold="${g.id}" aria-expanded="${open}" aria-controls="rfGrid-${g.id}"><span class="rf-group-name">${escHTML(g.name)}</span>${avg}${icon('chevdown', 14)}</button>` : escHTML(g.name) + avg}</h3>
-        <div class="rf-grid" id="rfGrid-${g.id}"${open ? '' : ' hidden'}>${shown(g).map(x => row(x.key, x.label, R[x.key], { hint: x.hint, suggested: g.kind === 'bonus' && suggested.has(x.key) && !has(R[x.key]) })).join('')}</div>
+    const groupHTML = g => `<section class="rf-group" data-group="${g.id}" aria-labelledby="rfG-${g.id}">
+        <h3 class="ratings-section-label rf-group-t" id="rfG-${g.id}">${escHTML(g.name)}<span class="rf-group-avg" data-avg="${g.id}"></span></h3>
+        <div class="rf-grid">${shown(g).map(x => row(x.key, x.label, R[x.key], { hint: x.hint, suggested: g.kind === 'bonus' && suggested.has(x.key) && !has(R[x.key]) })).join('')}</div>
         ${g.items.some(x => x.toggle) ? `<button type="button" class="anim-toggle-btn${R._animEnabled ? ' on' : ''}" data-anim aria-pressed="${!!R._animEnabled}">${R._animEnabled ? '− Disable' : '+ Enable'} Animation Quality</button>` : ''}
       </section>`;
-    };
     el.innerHTML = `<div class="det-ratings-col-title">Core Ratings</div>
-      ${groups.filter(g => g.kind === 'core').map(groupHTML).join('')}
+      <div class="rf-groups">${groups.filter(g => g.kind === 'core').map(groupHTML).join('')}</div>
       <button type="button" class="anim-toggle-btn rf-bonus-btn${el._rfOpen ? ' on' : ''}" data-bonus aria-expanded="${el._rfOpen}" aria-controls="rfBonus">${el._rfOpen ? '− Bonus ratings' : '+ Bonus ratings · optional'}</button>
       <div class="rf-bonus" id="rfBonus"${el._rfOpen ? '' : ' hidden'}>
         <div class="det-ratings-col-title">Bonus Ratings</div>
-        ${groups.filter(g => g.kind === 'bonus').map(groupHTML).join('')}
+        <div class="rf-groups">${groups.filter(g => g.kind === 'bonus').map(groupHTML).join('')}</div>
       </div>`;
 
     const paint = () => {
@@ -138,14 +129,6 @@ const MSSRateForm = (() => {
       o.onChange?.(R);
     });
     el.onclick = ev => {
-      const fold = ev.target.closest('[data-fold]');
-      if (fold) {
-        const id = fold.dataset.fold, open = !el._rfGroups[id];
-        el._rfGroups[id] = open;
-        fold.setAttribute('aria-expanded', String(open));
-        document.getElementById('rfGrid-' + id).hidden = !open;
-        return;
-      }
       if (ev.target.closest('[data-bonus]')) { el._rfOpen = !el._rfOpen; mount(el, o); el.querySelector('[data-bonus]').focus(); }
       if (ev.target.closest('[data-anim]')) {
         R._animEnabled = !R._animEnabled;
