@@ -1093,7 +1093,8 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .ep-btn-minus { border-radius:50% !important; width:clamp(28px, 7vw, 34px) !important; height:clamp(28px, 7vw, 34px) !important; font-size:clamp(13px, 3.4vw, 17px) !important; flex-shrink:0 !important; }
 
 /* ── Inline detail expansion panel ── */
-.fd-section-hd { font-family:'Oswald',var(--sans); font-weight:600; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:8px; padding-bottom:6px; border-bottom:0.5px solid var(--border); }
+.fd-section-hd { font-family:'Oswald',var(--sans); font-weight:600; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:10px; display:flex; align-items:center; gap:10px; }
+.fd-section-hd::after { content:''; flex:1; height:0.5px; background:var(--border); }   /* the line beside the title, like the page's section headings */
 .fd-notes       { font-family:'Manrope',var(--sans); font-weight:500; font-size:14px; color:var(--text); font-style:italic; line-height:1.6; margin-top:12px; padding-top:10px; border-top:0.5px solid var(--border); }
 .fd-description { font-family:'Manrope',var(--sans); font-weight:500; font-size:16.5px; color:var(--text); line-height:1.65; margin-bottom:14px; padding-bottom:12px; border-bottom:0.5px solid var(--border); }
 /* ── Popup ratings: mobile scaling ── */
@@ -7994,15 +7995,16 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 .rf-group-t::after { order:1; }
 .rf-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .rf-grid > .rf-row:last-child:nth-child(odd) { grid-column:1 / -1; }
-.rf-row { position:relative; padding:10px 14px; background:var(--bg-3); border:0.5px solid var(--border); border-radius:var(--radius-sm); min-width:0; }
-.rf-top { display:flex; align-items:center; gap:6px; min-height:36px; }
-.rf-label { flex:1; min-width:0; font-size:13px; color:var(--text-2); }
+.rf-row { position:relative; display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; column-gap:10px; padding:10px 14px; background:var(--bg-3); border:0.5px solid var(--border); border-radius:var(--radius-sm); min-width:0; overflow:hidden; }   /* overflow: the meter follows the rounded corners */
+.rf-text { min-width:0; }
+.rf-name { display:flex; align-items:center; gap:6px; min-height:28px; }
+.rf-label { min-width:0; font-size:13px; color:var(--text-2); }
 .rf-controls { display:flex; align-items:center; gap:10px; flex-shrink:0; }
 .rf-step { width:32px; height:32px; font-size:16px; }
 .rf-val { width:52px; padding:0; text-align:center; font-family:var(--bebas); font-size:23px; letter-spacing:.3px; color:var(--olive-light); background:transparent; border:none; border-bottom:1px solid var(--border-2); outline:none; }
 .rf-val:focus { border-color:var(--border-olive); color:var(--text); }
 .rf-row.is-empty .rf-val { color:var(--text-3); }
-.rf-meter { position:absolute; inset-inline:0; bottom:0; height:3px; overflow:hidden; border-end-start-radius:var(--radius-sm); border-end-end-radius:var(--radius-sm); pointer-events:none; }
+.rf-meter { position:absolute; inset-inline:0; bottom:0; height:3px; pointer-events:none; }
 .rf-meter i { display:block; height:100%; width:0; background:var(--olive-light); transition:width .25s ease; }
 /* The hint shows under the rating's name, in two lines every card keeps free, so cards never change size */
 .rf-hint { flex-shrink:0; display:grid; place-items:center; width:28px; height:28px; padding:0; border-radius:50%; background:none; border:none; color:var(--text-3); cursor:pointer; }

@@ -6,8 +6,9 @@
    Each Bonus group's header opens and closes it. A title with no bonus rated yet shows every group;
    one that already has some shows just the groups with a rating in them.
    Each rating is − / + (0.5 at a time) around a number you can type, 0 to 10, with a thin meter along
-   the bottom. Unrated stays "—" until touched; emptying the number clears it. The ⓘ hint shows under the
-   rating's name, in space every card keeps for it, so opening one never changes a card's size.
+   the bottom. Unrated stays "—" until touched; emptying the number clears it. The ⓘ hint sits with − / +
+   in the middle of the card's height, and its text shows under the rating's name, in space every card keeps
+   for it, so opening one never changes a card's size.
 
      MSSRateForm.mount(el, { cat, isMovie, genres, ratings, onChange })
        ratings is changed in place (the caller's object); onChange(ratings) after every change.
@@ -23,17 +24,19 @@ const MSSRateForm = (() => {
   function row(key, label, value, o = {}) {
     const id = `rf${++uid}-${key}`, on = has(value);
     return `<div class="rf-row${on ? '' : ' is-empty'}" data-key="${key}" data-v="${on ? Number(value) : ''}">
-      <div class="rf-top">
-        <span class="rf-label" id="${id}-l">${escHTML(label)}</span>
-        ${o.hint ? `<button type="button" class="rf-hint" aria-label="About ${escHTML(label)}" aria-expanded="false" aria-controls="${id}-h">${icon('info', 13)}</button>` : ''}
-        ${o.suggested ? `<span class="up-next-tag rf-sugg">Suggested<span class="sr-only"> for this title</span></span>` : ''}
-        <span class="rf-controls">
+      <div class="rf-text">
+        <div class="rf-name">
+          <span class="rf-label" id="${id}-l">${escHTML(label)}</span>
+          ${o.suggested ? `<span class="up-next-tag rf-sugg">Suggested<span class="sr-only"> for this title</span></span>` : ''}
+        </div>
+        ${o.hint ? `<p class="rf-tip" id="${id}-h" hidden>${escHTML(o.hint)}</p>` : ''}
+      </div>
+      <span class="rf-controls">
+          ${o.hint ? `<button type="button" class="rf-hint" aria-label="About ${escHTML(label)}" aria-expanded="false" aria-controls="${id}-h">${icon('info', 13)}</button>` : ''}
           <button type="button" class="ep-btn rf-step" data-delta="-0.5" aria-label="Lower ${escHTML(label)}">−</button>
           <input class="rf-val" type="text" inputmode="decimal" data-mask="rating" maxlength="4" value="${on ? fmt(value) : ''}" placeholder="—" aria-labelledby="${id}-l"${o.hint ? ` aria-describedby="${id}-h"` : ''}>
           <button type="button" class="ep-btn rf-step" data-delta="0.5" aria-label="Raise ${escHTML(label)}">+</button>
-        </span>
-      </div>
-      ${o.hint ? `<p class="rf-tip" id="${id}-h" hidden>${escHTML(o.hint)}</p>` : ''}
+      </span>
       <span class="rf-meter" aria-hidden="true"><i style="width:${on ? Number(value) * 10 : 0}%"></i></span>
     </div>`;
   }
