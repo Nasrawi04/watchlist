@@ -260,8 +260,8 @@ const MSSListStudio = (() => {
     const hintMode = ['watched_new', 'watched_old', 'release_new', 'release_old'].includes(S.mode) ? S.mode : '';
     // every order laid out, grouped like the site's Sort menus — all shown, nothing to scroll:
     // My Order / Shuffle by the heading, a card per group (buttons like the edit page's genre tags)
-    const chip = (k, l) => `<button type="button" class="genre-opt${S.mode === k ? ' selected' : ''}" aria-pressed="${S.mode === k}" ${locked ? 'disabled' : ''} onclick="MSSListStudio._mode('${k}')">${l}</button>`;
-    const card = ([h, opts]) => `<div class="ls-og${opts.length > 2 ? ' ls-og-wide' : ''}${opts.some(o => o[0] === S.mode) ? ' on' : ''}" role="group" aria-label="${h}"><span class="ls-og-h">${h}</span><div class="ls-og-btns">${opts.map(([k, l]) => chip(k, l)).join('')}</div></div>`;
+    const chip = (k, l, short) => `<button type="button" class="genre-opt${S.mode === k ? ' selected' : ''}" aria-pressed="${S.mode === k}" ${short ? `aria-label="${l}" title="${l}"` : ''} ${locked ? 'disabled' : ''} onclick="MSSListStudio._mode('${k}')">${short || l}</button>`;
+    const card = ([h, opts]) => `<div class="ls-og${opts.length > 2 ? ' ls-og-wide' : ''}${opts.some(o => o[0] === S.mode) ? ' on' : ''}" role="group" aria-label="${h}"><span class="ls-og-h">${h}</span><div class="ls-og-btns">${opts.map(([k, l, short]) => chip(k, l, short)).join('')}</div></div>`;
     const head = `<div class="ls-order-top">${chip('picked', 'My Order')}<button type="button" class="genre-opt" ${locked || n < 2 ? 'disabled' : ''} onclick="MSSListStudio._shuffle()">${icon('shuffle', 12)} Shuffle</button></div>`;
     const chips = MSSList.ORDER_GROUPS.map(card).join('');
     $('lsSide').innerHTML = `

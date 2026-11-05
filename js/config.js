@@ -2260,12 +2260,13 @@ const MSSOrder = (() => {
      order automatically: titles added later slot into place. Titles without the
      value (e.g. a Discover pick you haven't watched has no watch date) go last. */
   // Named like the site's Sort menus (sort-filter.js): "Ratings: Highest", "Release Date: Latest"…
+  // A third name is the short one for the List Studio's buttons, where four share a row.
   const ORDER_GROUPS = [
     ['Ratings',         [['highest', 'Highest'], ['lowest', 'Lowest']]],
     ['Date Watched',    [['watched_new', 'Latest'], ['watched_old', 'Earliest']]],
     ['Release Date',    [['release_new', 'Latest'], ['release_old', 'Earliest']]],
     ['Alphabetical',    [['az', 'A → Z'], ['za', 'Z → A']]],
-    ['Specific Rating', [['enjoyment', 'Overall Enjoyment'], ['story', 'Story & Plot'], ['acting', 'Acting / Voice Acting'], ['ending', 'Ending & Payoff']]],
+    ['Specific Rating', [['enjoyment', 'Overall Enjoyment', 'Enjoyment'], ['story', 'Story & Plot', 'Story'], ['acting', 'Acting / Voice Acting', 'Acting'], ['ending', 'Ending & Payoff', 'Ending']]],
   ];
   function orderLabel(mode) {
     for (const [h, opts] of ORDER_GROUPS) { const o = opts.find(x => x[0] === mode); if (o) return `${h}: ${o[1]}`; }
