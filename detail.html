@@ -1489,14 +1489,15 @@ async function _favOpenSeasonPicker(which) {
   const seasons = _favData?.seasons || [];
   const current = document.getElementById(`${which}Season`).value;
   document.getElementById('favSeasonOverlayBody').innerHTML = seasons.length
-    ? `<div class="fav-season-grid">${seasons.map(s => _favSeasonBlock(s, `_favPickSeason(${s.number})`, current === `Season ${s.number}`)).join('')}</div>`
+    ? `<div class="fav-season-grid">${seasons.map(s => _favSeasonBlock(s, `_favPickSeason(${s.number})`, current === mssSeasonLabel(s.number, s.name) || current === `Season ${s.number}`)).join('')}</div>`
     : `<div class="sf-empty">No season data available — link this title to TMDB first.</div>`;
   MSSDialog.open(document.getElementById('favSeasonOverlay'));
 }
 function _favCloseSeasonPicker() { MSSDialog.close(document.getElementById('favSeasonOverlay')); }
 function _favPickSeason(seasonNumber) {
   const which = _favPersonTarget;
-  const label = `Season ${seasonNumber}`;
+  const s = _favData.seasons.find(x => x.number === seasonNumber);
+  const label = mssSeasonLabel(seasonNumber, s?.name);   // "S3 - Alabasta" when the season has a name
   document.getElementById(`${which}Season`).value = label;
   _favSetLabel(which, 'Season', label);
   _favCloseSeasonPicker();

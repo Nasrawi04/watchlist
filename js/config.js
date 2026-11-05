@@ -1646,11 +1646,12 @@ function goToTitle(type, id) {
   window.location.href = `title.html?type=${type}&id=${id}`;
 }
 
-// "Season 3: Alabasta" — season pickers always lead with the number, plus
-// TMDB's name when it's more than "Season 3" (anime arcs, named seasons)
+// "S3 - Alabasta" — a season leads with its number, plus TMDB's name when it's more than
+// "Season 3" (anime arcs, named seasons); "Season 3" otherwise. Like an episode's "S1E2 - Name".
+// The title page's favourite / least favourite season saves this same text.
 function mssSeasonLabel(n, name) {
   const nm = (name || '').trim();
-  return !nm || /^season\s*\d+$/i.test(nm) ? `Season ${n}` : `Season ${n}: ${nm}`;
+  return !nm || /^season\s*\d+$/i.test(nm) ? `Season ${n}` : `S${n} - ${nm}`;
 }
 
 // A title in a popup header → its title page. Titles not linked to TMDB yet
