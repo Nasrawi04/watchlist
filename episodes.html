@@ -139,13 +139,14 @@ button.eg-cell:hover { transform:translateY(-1px); }
 .eg-avg-tile { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:var(--radius); margin-bottom:10px; }
 .eg-avg-tile b { font-family:var(--bebas); font-weight:400; font-size:44px; line-height:.9; letter-spacing:.3px; }
 .eg-avg-tile span { display:flex; flex-direction:column; gap:2px; font-size:12px; font-weight:600; opacity:.92; }
-.eg-avg-tile span small { font-size:10.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; opacity:.8; }
+.eg-avg-tile span small { font-size:10.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; opacity:.9; }
 .eg-avg-tile.eg-avg-plain { background:var(--bg-3); color:var(--text); }
 .eg-tiles { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .eg-tile { display:flex; flex-direction:column; gap:4px; padding:11px 12px; border-radius:var(--radius-sm); background:var(--bg-3); text-align:start; font:inherit; color:var(--text); border:none; min-width:0; }
-.eg-tile > span { font-size:11.5px; color:var(--text-3); line-height:1.25; }
+.eg-tile > span { font-size:11.5px; color:var(--text-2); line-height:1.25; }
 .eg-tile b { font-family:var(--bebas); font-weight:400; font-size:24px; line-height:1; color:var(--text); white-space:nowrap; letter-spacing:.3px; }
-.eg-tile small { font-size:11px; color:var(--text-3); }
+.eg-tile small { font-size:11px; color:var(--text-2); }
+.eg-tie { align-self:flex-start; width:fit-content; margin-bottom:10px; padding:4px 10px; border:1px solid var(--border-olive); border-radius:999px; font-size:12px; font-weight:700; color:var(--olive-light); background:var(--olive-faint); }
 button.eg-tile { cursor:pointer; transition:background-color .15s; }
 button.eg-tile:hover { background:var(--olive-faint); }
 button.eg-tile:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
@@ -484,17 +485,22 @@ async function renderShow() {
   }
   draw();
 }
+// Replaced in one go, and only by the newest request: quick saves can't bring back older scores
+let _egMineSeq = 0;
 async function loadMine() {
-  S.mine = {};
-  if (!S.entry) return;
+  const seq = ++_egMineSeq;
+  if (!S.entry) { S.mine = {}; return; }
   const { data } = await sb.from('episode_ratings').select('*').eq('entry_id', S.entry.id);
-  (data || []).forEach(r => { S.mine[key(r.season_number, r.episode_number)] = r; });
+  if (seq !== _egMineSeq) return;
+  const mine = {};
+  (data || []).forEach(r => { mine[key(r.season_number, r.episode_number)] = r; });
+  S.mine = mine;
 }
 
 // Whose-ratings options: in view mode (someone else's page) theirs first, no "vs TMDB"
 const sourceOpts = () => S.readOnly ? [['mine', esc(S.whoName) + '’s'], ['tmdb', 'TMDB'], ['community', 'Community']]
   : [['tmdb', 'TMDB'], ['mine', 'Mine'], ['community', 'Community'], ['diff', 'Mine vs TMDB']];
-function draw() { document.getElementById('egPage').innerHTML = _egShowHTML(); }
+function draw() { const page = document.getElementById('egPage'); mssKeepScroll(page, () => { page.innerHTML = _egShowHTML(); }); }
 function _egShowHTML() {
   const sh = S.show;
   // the poster picked for this show (yours, or theirs on someone else's chart), else TMDB's
@@ -590,14 +596,15 @@ function gridHTML() {
   const fit = vis().length >= 5, fill = fit ? '' : '<td class="eg-fill"></td>';
   const maxEp = Math.max(0, ...vis().map(sn => (S.eps[sn] || []).length));
   const scored = S.source === 'diff' ? [] : allScored();
-  const best = scored.length > 2 ? scored.reduce((a, b) => (b.v > a.v ? b : a)) : null;
-  const worst = scored.length > 2 ? scored.reduce((a, b) => (b.v < a.v ? b : a)) : null;
+  // Rings on every episode tied for highest and lowest (not when they're all the same)
+  const top = scored.length > 2 ? MSSEp.extremes(scored, x => x.v) : null, ringed = top && top.high > top.low;
+  const best = ringed ? new Set(top.hi.map(x => key(x.s, x.ep.n))) : null, worst = ringed ? new Set(top.lo.map(x => key(x.s, x.ep.n))) : null;
   let rows = '';
   for (let n = 1; n <= maxEp; n++) {
     rows += `<tr><th class="eg-ep" scope="row">E${n}</th>${vis().map(sn => {
       const ep = (S.eps[sn] || []).find(x => x.n === n);
       if (!ep) return '<td></td>';
-      const extra = best && best.s === sn && best.ep.n === n ? ' eg-best' : worst && worst.s === sn && worst.ep.n === n ? ' eg-worst' : '';
+      const extra = best?.has(key(sn, n)) ? ' eg-best' : worst?.has(key(sn, n)) ? ' eg-worst' : '';
       return `<td>${cellHTML(sn, ep, extra)}</td>`;
     }).join('')}${fill}</tr>`;
   }
@@ -683,19 +690,21 @@ function panelHTML() {
   const sc = allScored();
   if (!sc.length) return `${head(title)}<p class="eg-panel-empty">No scores for this source yet.</p></aside>`;
   const a = avg(sc.map(x => x.v)), b = MSSEp.band(a);
-  const best = sc.reduce((x, y) => (y.v > x.v ? y : x)), worst = sc.reduce((x, y) => (y.v < x.v ? y : x));
+  const top = MSSEp.extremes(sc, x => x.v);
+  S.ties = { hi: top.hi, lo: top.lo };
   const seasonAvgs = vis().map(sn => ({ sn, a: avg((S.eps[sn] || []).map(ep => scoreOf(sn, ep))) })).filter(x => x.a != null);
   const bestS = seasonAvgs.reduce((x, y) => (y.a > x.a ? y : x));
   const great = Math.round(100 * sc.filter(x => x.v >= 8.5).length / sc.length);
   const tens = sc.filter(x => x.v >= 10).length;
   const sd = Math.sqrt(avg(sc.map(x => (x.v - a) ** 2)));
-  const epTile = (label, x) => `<button type="button" class="eg-tile" onclick="egOpen(${x.s},${x.ep.n})" aria-label="${label}: ${x.v.toFixed(1)}, season ${x.s} episode ${x.ep.n}">
-      <span>${label}</span><b><i class="${bandCls(x.v)}"></i>${x.v.toFixed(1)}</b><small>S${x.s} · E${x.ep.n}</small></button>`;
+  const se = x => `S${x.s} · E${x.ep.n}`;
+  const epTile = (label, kind, l) => `<button type="button" class="eg-tile" onclick="egTie('${kind}')" aria-label="${label}: ${l[0].v.toFixed(1)}, ${l.map(x => `season ${x.s} episode ${x.ep.n}`).join(', ')}">
+      <span>${label}${l.length > 1 ? `s · ${l.length}` : ''}</span><b><i class="${bandCls(l[0].v)}"></i>${l[0].v.toFixed(1)}</b><small>${l.slice(0, 3).map(se).join(', ')}${l.length > 3 ? ` +${l.length - 3} more` : ''}</small></button>`;
   return `${head(title)}<div class="eg-panel-body">
     <div class="eg-avg-tile ${bandCls(a)}"><b>${a.toFixed(2)}</b><span><small>Series average</small>${esc(b.name)}</span></div>
     <div class="eg-tiles">
-      ${epTile('Best episode', best)}
-      ${epTile('Lowest episode', worst)}
+      ${epTile('Best episode', 'hi', top.hi)}
+      ${epTile('Lowest episode', 'lo', top.lo)}
       ${seasonAvgs.length > 1 ? tile('Best season', `S${bestS.sn} · ${bestS.a.toFixed(1)}`) : tile('Episodes scored', sc.length)}
       ${tile('Great or better', great + '%', tens ? `${tens} perfect 10${tens === 1 ? '' : 's'}` : '')}
       ${tile('Consistency', '± ' + sd.toFixed(2), sd < 0.6 ? 'Very steady' : sd < 1.1 ? 'Fairly steady' : 'Up and down')}
@@ -704,7 +713,14 @@ function panelHTML() {
 }
 
 /* ══ Episode popup ══ */
-function egOpen(sn, n) {
+// A Best / Lowest tile: its first episode. When several tie, Next and Prev go through them.
+function egTie(kind) {
+  const list = S.ties[kind];
+  S.tie = list.length > 1 ? { kind, list, i: 0 } : null;
+  egOpen(list[0].s, list[0].ep.n, true);
+}
+function egOpen(sn, n, inTie) {
+  if (!inTie) S.tie = null;
   const ep = (S.eps[sn] || []).find(x => x.n === n); if (!ep) return;
   const k = key(sn, n), mine = S.mine[k], comm = S.comm[k];
   let ov = document.getElementById('egEpOverlay');
@@ -735,6 +751,7 @@ function egOpen(sn, n) {
       <span class="ep-se">S${sn} · E${n}${ep.abs ? ` <small>#${ep.abs}</small>` : ''}</span>
       <button type="button" class="ep-close" onclick="egClose()" aria-label="Close">✕</button></div>
     <div class="ep-body">
+      ${S.tie ? `<div class="eg-tie" role="status">${S.tie.kind === 'hi' ? 'Highest' : 'Lowest'} rating ${S.tie.list[0].v.toFixed(1)} · ${S.tie.i + 1} of ${S.tie.list.length}</div>` : ''}
       <div class="ep-eyebrow" translate="no">${esc(S.show.name)}</div>
       <div class="ep-title" id="egEpTitle" translate="no">${esc(ep.name || 'Episode ' + n)}</div>
       <div class="ep-meta">${esc([ep.air ? new Date(ep.air + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '', ep.rt ? ep.rt + 'm' : ''].filter(Boolean).join(' · '))}</div>
@@ -756,7 +773,7 @@ function egOpen(sn, n) {
     </div>`;
   MSSDialog.open(ov);
 }
-function egClose() { MSSDialog.close(document.getElementById('egEpOverlay')); }
+function egClose() { S.tie = null; MSSDialog.close(document.getElementById('egEpOverlay')); }
 // Episode chat (episode-chat.js): friends-only, unlocks once you've watched the episode
 async function egChatCounts() { S.chat = await MSSEpChat.counts(_egShowId); }
 function egChat(sn, n) {
@@ -765,6 +782,10 @@ function egChat(sn, n) {
     { onChange: () => egChatCounts().then(() => { if (S.view === 'list') draw(); }) });
 }
 function egStep(d) {
+  if (S.tie) {
+    const t = S.tie, x = t.list[t.i = (t.i + d + t.list.length) % t.list.length];
+    return egOpen(x.s, x.ep.n, true);
+  }
   const ov = document.getElementById('egEpOverlay'); let sn = +ov.dataset.s, n = +ov.dataset.n + d;
   if (n < 1) { const i = vis().indexOf(sn); if (i > 0) { sn = vis()[i - 1]; n = (S.eps[sn] || []).length; } else return; }
   else if (n > (S.eps[sn] || []).length) { const i = vis().indexOf(sn); if (i < vis().length - 1) { sn = vis()[i + 1]; n = 1; } else return; }
@@ -780,10 +801,14 @@ function egRemoveAll() { MSSEp.removeAll(S.entry, { onSaved: egAfterRemove }); }
 function egRate(sn, n) {
   egClose();
   if (S.readOnly || !S.entry) return;
-  MSSEp.rate(S.entry, sn, n, { onSaved: async () => {
-    const first = !Object.keys(S.mine).length;
+  // A new score shows straight away, on your own ratings; then the saved list replaces it
+  MSSEp.rate(S.entry, sn, n, { onSaved: async row => {
+    if (row) {
+      S.mine[key(row.season_number, row.episode_number)] = row;
+      if (!S2 && (S.source === 'tmdb' || S.source === 'community')) S.source = 'mine';
+      draw();
+    }
     await loadMine();
-    if (first && Object.keys(S.mine).length && !S2) S.source = 'mine';     // first rating: switch to yours
     draw();
   } });
 }

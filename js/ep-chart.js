@@ -113,7 +113,8 @@ const MSSEpChart = (() => {
   function stats(st, src, seasons, scored) {
     if (!scored.length || src === 'diff') return null;
     const vs = scored.map(x => x.v), a = avg(vs);
-    const best = scored.reduce((b, x) => x.v > b.v ? x : b), worst = scored.reduce((b, x) => x.v < b.v ? x : b);
+    const top = MSSEp.extremes(scored, x => x.v), best = top.hi[0], worst = top.lo[0];
+    const more = l => l.length > 1 ? ` +${l.length - 1}` : '';
     const bySeason = seasons.map(sn => ({ sn, a: avg(scored.filter(x => x.s === sn).map(x => x.v)) })).filter(x => x.a != null);
     const bestS = bySeason.length > 1 ? bySeason.reduce((b, x) => x.a > b.a ? x : b) : null;
     const today = new Date().toISOString().slice(0, 10);
@@ -123,8 +124,8 @@ const MSSEpChart = (() => {
     const f = v => v >= 10 ? '10' : v.toFixed(1);
     return [
       ['ratingStar', 'Series average', a.toFixed(2), MSSEp.band(a).name, MSSEp.band(a).key],
-      ['trophy', 'Best episode', f(best.v), `S${best.s} · E${best.ep.n}`, MSSEp.band(best.v).key],
-      ['thumbsDown', 'Lowest episode', f(worst.v), `S${worst.s} · E${worst.ep.n}`, MSSEp.band(worst.v).key],
+      ['trophy', 'Best episode', f(best.v), `S${best.s} · E${best.ep.n}${more(top.hi)}`, MSSEp.band(best.v).key],
+      ['thumbsDown', 'Lowest episode', f(worst.v), `S${worst.s} · E${worst.ep.n}${more(top.lo)}`, MSSEp.band(worst.v).key],
       ...(bestS ? [['crown', 'Best season', `S${bestS.sn} · ${bestS.a.toFixed(1)}`, '', MSSEp.band(bestS.a).key]] : []),
       ['sparkles', 'Great or better', Math.round(100 * great / vs.length) + '%', `${great} / ${vs.length}`, null],
       ['activity', 'Consistency', vs.length > 1 ? sd.toFixed(2) : '—', '± spread', null],

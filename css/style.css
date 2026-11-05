@@ -3466,6 +3466,8 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
   max-width:min(92vw, 520px); white-space:normal;
 }
 .toast.toast-has-undo.visible { pointer-events:auto; }
+/* Rating episodes keeps its popup open: messages and Undo sit above it, clear of its buttons */
+body:has(#mssEpOverlay.open) .toast { z-index:3100; top:calc(8px + env(safe-area-inset-top)); bottom:auto; }
 .toast-msg { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .toast-undo {
   flex-shrink:0; min-height:34px; padding:6px 12px; border-radius:var(--radius-sm); cursor:pointer;
@@ -5218,13 +5220,13 @@ body { font-size:15px; }
 /* quick-rate */
 .ep-hero { position:relative; aspect-ratio:16/7; background:var(--bg-3); overflow:hidden; }
 .ep-hero img { width:100%; height:100%; object-fit:cover; display:block; }
-.ep-hero-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:22px; color:var(--text-3); padding:0 20px; text-align:center; }
+.ep-hero-empty { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:22px; color:var(--text-2); padding:0 20px; text-align:center; }
 .ep-se { position:absolute; inset-inline-start:14px; bottom:12px; padding:4px 10px; border-radius:4px; background:rgba(0,0,0,.65); color:#fff; font-family:var(--bebas); font-size:17px; letter-spacing:.8px; }
 .ep-se small { font-size:.72em; opacity:.8; margin-inline-start:4px; }   /* TMDB's series-wide number (e.g. One Piece #62) */
 .ep-close { position:absolute; top:12px; inset-inline-end:12px; width:34px; height:34px; border-radius:50%; background:rgba(0,0,0,.45); border:0.5px solid rgba(255,255,255,.2); color:#fff; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; }
 .ep-body { padding:16px 22px 6px; }
 .ep-title { font-family:var(--serif); font-size:22px; font-weight:600; line-height:1.2; margin:4px 0 4px; color:var(--text); }
-.ep-meta { font-size:12.5px; color:var(--text-3); }
+.ep-meta { font-size:12.5px; color:var(--text-2); }
 .ep-rate { margin:16px 0 10px; display:flex; flex-direction:column; align-items:center; gap:12px; }
 .ep-score { min-width:150px; padding:10px 22px 8px; border-radius:var(--radius); text-align:center; transition:background .2s, color .2s; }
 .ep-score b { display:block; font-family:var(--bebas); font-weight:400; font-size:58px; line-height:1; letter-spacing:1px; }

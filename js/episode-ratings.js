@@ -100,6 +100,13 @@ const MSSEp = (() => {
     e.ratings = ratings;
   }
 
+  // Every item tied for the highest and the lowest score (as shown: to one decimal)
+  function extremes(items, val) {
+    const v = x => Math.round(Number(val(x)) * 10) / 10, all = items.map(v);
+    const hi = Math.max(...all), lo = Math.min(...all);
+    return { hi: items.filter(x => v(x) === hi), lo: items.filter(x => v(x) === lo), high: hi, low: lo };
+  }
+
   /* ── Popup shell ── */
   let st = null;   // { e, s, n, prev, score, tags:Set, note, eps }
   function inject() {
@@ -161,12 +168,15 @@ const MSSEp = (() => {
   }
   function typed(v) {
     const n = parseFloat(String(v).replace(',', '.'));
-    if (!isNaN(n) && n >= 1 && n <= 10) { st.score = Math.round(n * 10) / 10; paintScore(); }
+    if (!isNaN(n) && n >= 1 && n <= 10) { st.score = Math.round(n * 10) / 10; st.changed = true; paintScore(); }
   }
   function typedDone(el) {
+    if (!st || !el.isConnected) return;     // a box being replaced must not write onto the next episode
     let n = parseFloat(String(el.value).replace(',', '.'));
     if (isNaN(n)) n = st.score;
+    const was = st.score;
     st.score = Math.min(10, Math.max(1, Math.round(n * 10) / 10));
+    if (st.score !== was) st.changed = true;
     el.value = st.score.toFixed(1);
     paintScore();
   }
@@ -202,21 +212,21 @@ const MSSEp = (() => {
       </div>
       <div class="ep-nav">
         ${st.queue?.length ? `<button type="button" class="ep-nav-btn" onclick="MSSEp.close()">Skip all</button>`
-          : `<button type="button" class="ep-nav-btn" onclick="MSSEp._go(-1)" aria-label="Previous">‹ Prev</button>`}
-        ${season ? '<span></span>' : `<button type="button" class="ep-stop" onclick="MSSEp._stop()">Stop asking for this show</button>`}
-        ${st.queue?.length ? '<span></span>' : `<button type="button" class="ep-nav-btn" onclick="MSSEp._go(1)" aria-label="Next">Next ›</button>`}
+          : `<button type="button" class="ep-nav-btn" onmousedown="event.preventDefault()" onclick="MSSEp._go(-1)" aria-label="Previous">‹ Prev</button>`}
+        ${season || !st.prompted ? '<span></span>' : `<button type="button" class="ep-stop" onclick="MSSEp._stop()">Stop asking for this show</button>`}
+        ${st.queue?.length ? '<span></span>' : `<button type="button" class="ep-nav-btn" onmousedown="event.preventDefault()" onclick="MSSEp._go(1)" aria-label="Next">Next ›</button>`}
       </div>
       <div class="ep-actions" id="mssEpPopupActions">
         ${st.prev ? `<button type="button" class="popup-action-btn popup-action-danger ep-del" onclick="MSSEp._remove()" aria-label="Remove this rating" title="Remove this rating">${icon('trash', 15)}</button>` : ''}
         <button type="button" class="popup-action-btn np-ghost" onclick="MSSEp._skip()">Skip</button>
-        <button type="button" class="popup-action-btn ep-save" onclick="MSSEp._save(this)">Save</button>
+        <button type="button" class="popup-action-btn ep-save" onmousedown="event.preventDefault()" onclick="MSSEp._save(this)">Save</button>
       </div>`);
   }
   async function open(e, s, n, opts = {}) {
     if (!e || !isShow(e) || !uid()) return;
     s = Math.max(1, s || 1); n = n === 0 ? 0 : Math.max(1, n || 1);   // n = 0 → rate the whole season
     const prev = await existing(e, s, n).catch(() => null);
-    st = { e, s, n, prev, score: prev ? Number(prev.score) : 8.0, tags: new Set(prev?.tags || []), note: prev?.note || '', rewatch: !!opts.rewatch, onSaved: opts.onSaved,
+    st = { e, s, n, prev, score: prev ? Number(prev.score) : 8.0, tags: new Set(prev?.tags || []), note: prev?.note || '', rewatch: !!opts.rewatch, onSaved: opts.onSaved, prompted: !!opts.prompted,
            queue: opts.queue || null, qi: opts.qi || 0, showTags: !!(prev?.tags?.length), showNote: !!prev?.note };
     render(null);
     const eps = await seasonEpisodes(e.tmdb_id, s);
@@ -230,11 +240,12 @@ const MSSEp = (() => {
       return render(null);
     }
     const meta = eps.find(x => x.n === n) || null;
-    if (!prev && meta?.vote) st.score = Math.min(10, Math.max(1, Math.round(meta.vote * 10) / 10));   // start from TMDB's score
+    if (!prev && meta?.vote && !st.changed) st.score = Math.min(10, Math.max(1, Math.round(meta.vote * 10) / 10));   // start from TMDB's score
     render(meta);
   }
 
   function setScore(v) {
+    st.changed = true;
     st.score = Math.min(10, Math.max(1, Math.round(Number(v) * 10) / 10));
     const inp = document.getElementById('mssEpScoreInput'); if (inp) inp.value = st.score.toFixed(1);
     paintScore();
@@ -243,57 +254,86 @@ const MSSEp = (() => {
     if (st.tags.has(t)) st.tags.delete(t);
     else if (st.tags.size < 3) st.tags.add(t);
     else { showToast('Up to 3 tags per episode.'); return; }
+    st.changed = true;
     render(st.eps?.find(x => x.n === st.n));
   }
   function onNote(el) {
     let w = el.value.trim().split(/\s+/).filter(Boolean);
     if (w.length > NOTE_WORDS) { el.value = clampWords(el.value, NOTE_WORDS); w = w.slice(0, NOTE_WORDS); }
     st.note = el.value;
+    st.changed = true;
     const c = document.getElementById('mssEpNoteCount'); if (c) c.textContent = `${Math.min(w.length, NOTE_WORDS)} / ${NOTE_WORDS} words`;
   }
+  // Prev / Next: anything you changed here saves first, and a failed save keeps you here.
+  // An episode you only looked at stays unrated (its score is just TMDB's starting point).
   async function go(dir) {
-    if (!st) return;
+    if (!st || st.moving) return;
+    st.moving = true;
+    const inp = document.getElementById('mssEpScoreInput'); if (inp) { inp.blur(); typedDone(inp); }
+    const at = st;
+    if (st.changed) {
+      try { offerUndo(await persist()); }
+      catch (err) { saveFailed(err); if (st === at) st.moving = false; return; }
+      at.onSaved?.(at.lastRow);
+    }
+    if (st !== at) return;     // closed while it was saving
     const e = st.e, sizes = seasonSizes(e);
     let { s, n } = st;
-    if (n === 0) { s = Math.max(1, s + dir); if (sizes.length) s = Math.min(s, sizes.length); return open(e, s, 0, { onSaved: st.onSaved }); }
+    if (n === 0) { s = Math.max(1, s + dir); if (sizes.length) s = Math.min(s, sizes.length); return open(e, s, 0, { onSaved: st.onSaved, prompted: st.prompted }); }
     const count = sizes[s - 1] || (st.eps?.length || 0);
     n += dir;
     if (n < 1) { if (s > 1) { s--; n = sizes[s - 1] || (await seasonEpisodes(e.tmdb_id, s)).length || 1; } else n = 1; }
     else if (count && n > count) { if (!sizes.length || s < sizes.length) { s++; n = 1; } else n = count; }
-    open(e, s, n, { rewatch: st.rewatch, onSaved: st.onSaved });
+    open(e, s, n, { rewatch: st.rewatch, onSaved: st.onSaved, prompted: st.prompted });
   }
-  async function save(btn) {
-    if (!st) return;
-    const inp = document.getElementById('mssEpScoreInput'); if (inp) typedDone(inp);
-    const { e, s, n, prev } = st;
-    btn.disabled = true; btn.textContent = 'Saving…';
+  // Writes this popup's rating → what offerUndo needs
+  async function persist() {
+    const { e, s, n, prev } = st, at = st;
     const row = {
       user_id: uid(), entry_id: e.id, tmdb_id: e.tmdb_id || null, season_number: s, episode_number: n,
       score: st.score, tags: [...st.tags], note: (st.note || '').trim() || null, is_rewatch: !!st.rewatch,
     };
+    const { error } = await sb.from('episode_ratings').upsert(row, { onConflict: 'user_id,entry_id,season_number,episode_number' });
+    if (error) throw error;
+    if (e.ratings?._ep_rate !== 'on') saveEntryPref(e, { _ep_rate: 'on' }).catch(() => {});   // rating one turns the show (back) on
+    at.lastRow = row;
+    return { e, s, n, prev, row, onSaved: at.onSaved };
+  }
+  function offerUndo({ e, s, n, prev, row, onSaved }) {
+    showUndoToast(`Rated ${lbl(s, n)} — ${row.score.toFixed(1)}`, async () => {
+      if (prev) {
+        const { id, created_at, updated_at, ...back } = prev;
+        const { error: er } = await sb.from('episode_ratings').upsert(back, { onConflict: 'user_id,entry_id,season_number,episode_number' });
+        if (er) throw er;
+      } else {
+        const { error: er } = await sb.from('episode_ratings').delete().eq('entry_id', e.id).eq('season_number', s).eq('episode_number', n);
+        if (er) throw er;
+      }
+      onSaved?.(null);
+    });
+  }
+  function saveFailed(err) {
+    console.error('Episode rating:', err);
+    showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save that rating — try again.', 'err');
+  }
+  async function save(btn) {
+    if (!st || st.moving) return;
+    const inp = document.getElementById('mssEpScoreInput'); if (inp) { inp.blur(); typedDone(inp); }
+    st.moving = true;
+    btn.disabled = true; btn.textContent = 'Saving…';
+    const at = st;
     try {
-      const { error } = await sb.from('episode_ratings').upsert(row, { onConflict: 'user_id,entry_id,season_number,episode_number' });
-      if (error) throw error;
-      if (e.ratings?._ep_rate !== 'on') saveEntryPref(e, { _ep_rate: 'on' }).catch(() => {});   // rating one turns the show (back) on
-      const onSaved = st.onSaved, queue = st.queue, qi = st.qi, eps = st.eps;
+      const saved = await persist(), { e, s, n, row, onSaved } = saved;
+      if (st !== at) { onSaved?.(row); offerUndo(saved); return; }
+      const queue = st.queue, qi = st.qi, eps = st.eps, prompted = st.prompted;
       close();
       onSaved?.(row);
-      if (queue && qi + 1 < queue.length) open(e, queue[qi + 1][0], queue[qi + 1][1], { queue, qi: qi + 1, rewatch: row.is_rewatch, onSaved });
+      if (queue && qi + 1 < queue.length) open(e, queue[qi + 1][0], queue[qi + 1][1], { queue, qi: qi + 1, rewatch: row.is_rewatch, onSaved, prompted });
       else if (n > 0) maybeSeasonDone(e, s, n, eps);
-      showUndoToast(`Rated S${s} · E${n} — ${row.score.toFixed(1)}`, async () => {
-        if (prev) {
-          const { id, created_at, updated_at, ...back } = prev;
-          const { error: er } = await sb.from('episode_ratings').upsert(back, { onConflict: 'user_id,entry_id,season_number,episode_number' });
-          if (er) throw er;
-        } else {
-          const { error: er } = await sb.from('episode_ratings').delete().eq('entry_id', e.id).eq('season_number', s).eq('episode_number', n);
-          if (er) throw er;
-        }
-        onSaved?.(null);
-      });
+      offerUndo(saved);
     } catch (err) {
-      console.error('Episode rating:', err);
-      showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save that rating — try again.', 'err');
+      saveFailed(err);
+      if (st === at) st.moving = false;
       btn.disabled = false; btn.textContent = 'Save';
     }
   }
@@ -337,9 +377,9 @@ const MSSEp = (() => {
   // Skip: the next queued episode, if any
   function skip() {
     if (!st) return;
-    const { e, queue, qi, onSaved, rewatch } = st;
+    const { e, queue, qi, onSaved, rewatch, prompted } = st;
     close();
-    if (queue && qi + 1 < queue.length) open(e, queue[qi + 1][0], queue[qi + 1][1], { queue, qi: qi + 1, rewatch, onSaved });
+    if (queue && qi + 1 < queue.length) open(e, queue[qi + 1][0], queue[qi + 1][1], { queue, qi: qi + 1, rewatch, onSaved, prompted });
   }
 
   /* ── 3) Season finished: summary card (after rating its last episode) ── */
@@ -350,14 +390,14 @@ const MSSEp = (() => {
     const rs = (data || []).sort((a, b) => a.episode_number - b.episode_number);
     if (rs.length < 2) return;
     const a = rs.reduce((x, r) => x + Number(r.score), 0) / rs.length;
-    const best = rs.reduce((x, y) => (Number(y.score) > Number(x.score) ? y : x)), worst = rs.reduce((x, y) => (Number(y.score) < Number(x.score) ? y : x));
+    const top = extremes(rs, r => r.score), eps2 = l => l.map(r => 'E' + r.episode_number).join(', ');
     const b = band(a);
     show(`<div class="ep-body ep-done">
         <div class="ep-eyebrow" translate="no">${esc(e.title)}</div>
         <div class="ep-title" id="mssEpTitle">Season ${s} complete</div>
         <div class="ep-score ep-band-${b.key}" style="margin:14px auto"><b>${a.toFixed(1)}</b><span>Your average · ${b.name}</span></div>
         <div class="ep-done-row" aria-label="Season ${s} episode scores">${rs.map(r => `<i class="ep-band-${band(r.score).key}" title="E${r.episode_number}: ${Number(r.score).toFixed(1)}">${Number(r.score).toFixed(1)}</i>`).join('')}</div>
-        <div class="ep-meta" style="text-align:center;margin-top:10px">Best: E${best.episode_number} (${Number(best.score).toFixed(1)}) · Lowest: E${worst.episode_number} (${Number(worst.score).toFixed(1)})</div>
+        <div class="ep-meta" style="text-align:center;margin-top:10px">Best: ${eps2(top.hi)} (${top.high.toFixed(1)}) · Lowest: ${eps2(top.lo)} (${top.low.toFixed(1)})</div>
       </div>
       <div class="ep-actions">
         <button type="button" class="popup-action-btn np-ghost" onclick="MSSEp.close()">Done</button>
@@ -383,7 +423,7 @@ const MSSEp = (() => {
   function showPopup(o) {
     const rows = (o.rows || []).filter(r => r.episode_number > 0).sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
     const avg = rows.length ? rows.reduce((x, r) => x + Number(r.score), 0) / rows.length : null;
-    const best = rows.length ? rows.reduce((x, y) => (Number(y.score) > Number(x.score) ? y : x)) : null;
+    const bests = rows.length ? extremes(rows, r => r.score).hi : [], best = bests[0] || null;
     const last = rows.length ? rows.reduce((x, y) => (new Date(y.updated_at) > new Date(x.updated_at) ? y : x)) : null;
     const b = avg != null ? band(avg) : null;
     const href = `episodes.html?show=${o.tmdbId}${o.userId ? '&user=' + encodeURIComponent(o.userId) : ''}`;
@@ -401,7 +441,7 @@ const MSSEp = (() => {
         <div class="ep-show-stats">
           <div class="ep-show-stat ${b ? 'ep-band-' + b.key : ''}"><b>${avg != null ? avg.toFixed(1) : '—'}</b><span>${b ? b.name : 'Average'}</span></div>
           <div class="ep-show-stat"><b>${rows.length}${o.total ? `<small>/${o.total}</small>` : ''}</b><span>Rated</span></div>
-          <div class="ep-show-stat"><b>${best ? Number(best.score).toFixed(1) : '—'}</b><span>${best ? `Best · S${best.season_number}·E${best.episode_number}` : 'Best'}</span></div>
+          <div class="ep-show-stat"><b>${best ? Number(best.score).toFixed(1) : '—'}</b><span>${best ? `Best · S${best.season_number}·E${best.episode_number}${bests.length > 1 ? ` +${bests.length - 1}` : ''}` : 'Best'}</span></div>
         </div>
         ${o.total ? `<div class="ep-show-progress" aria-label="${rows.length} of ${o.total} episodes rated"><span style="width:${Math.min(100, Math.round(100 * rows.length / o.total))}%"></span></div>` : ''}
         ${rows.length ? `<div class="eg-mini ep-show-mini" aria-hidden="true">${rows.slice(0, 120).map(r => `<i class="ep-band-${band(r.score).key}" title="S${r.season_number}·E${r.episode_number}: ${Number(r.score).toFixed(1)}"></i>`).join('')}</div>` : `<p class="ep-ask-sub">No episodes rated yet${o.userId ? '' : ' — open the show to start rating'}.</p>`}
@@ -475,14 +515,14 @@ const MSSEp = (() => {
           try { await saveEntryPref(e, { _ep_rewatch: choice }); } catch {}
         }
         if (choice === 'keep') return;
-        return open(e, s, n, { rewatch: true });
+        return open(e, s, n, { rewatch: true, prompted: true });
       }
     }
-    open(e, s, n);
+    open(e, s, n, { prompted: true });
   }
 
   return {
-    afterWatch, rate: (e, s, n, o = {}) => open(e, s, n, { ...o, rewatch: typeof isRewatching === 'function' && isRewatching(e) }),
+    extremes, afterWatch, rate: (e, s, n, o = {}) => open(e, s, n, { ...o, rewatch: typeof isRewatching === 'function' && isRewatching(e) }),
     close, band, BANDS, TAGS, mode, setMode, isShow, seasonEpisodes, showPopup, showCardHTML, _card: openCard,
     statusLabel: st => STATUS_LABEL[st] || st,
     _ask: answerAsk, _slide: setScore, _typed: typed, _typedDone: typedDone, _step: d => st && setScore(st.score + d), _tag: toggleTag, _note: onNote,
