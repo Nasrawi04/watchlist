@@ -89,8 +89,8 @@ const SF = (() => {
   const CHECK_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   const CHEV_SVG  = '<svg class="td-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  // The filter always offers every genre, not just the ones a section happens to contain.
-  const GENRES = Object.keys(MSS_GENRES);
+  // The filter always offers every genre, not just the ones a section happens to contain (with anime ones: config.js)
+  const GENRES = [...Object.keys(MSS_GENRES), ...MSS_EXTRA_GENRES].sort((a, b) => a.localeCompare(b));
 
   const SORT_PRESETS = {
     alpha:   { header: 'Alphabetical', opts: [['alpha', 'A → Z'], ['zalpha', 'Z → A']] },

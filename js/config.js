@@ -52,11 +52,14 @@ const MSS_GENRES = {
   Reality: [null, 10764], Romance: [10749, null], 'Science Fiction': [878, 10765], Soap: [null, 10766],
   Talk: [null, 10767], Thriller: [53, null], 'TV Movie': [10770, null], War: [10752, 10768], Western: [37, 37],
 };
+// Genres TMDB doesn't have, picked on the title page or from AniList for anime (mssAnimeGenres, nav.js).
+// Not in MSS_GENRES, since Browse asks TMDB by those ids; the library filters offer both.
+const MSS_EXTRA_GENRES = ['Psychological', 'Slice of Life', 'Sports', 'Supernatural', 'Mecha', 'Magical Girl', 'Isekai', 'Shounen', 'Seinen', 'Shoujo', 'Josei'];
 const _mssGenreById = {};
 Object.entries(MSS_GENRES).forEach(([name, ids]) => new Set(ids).forEach(id => { if (id) (_mssGenreById[id] = _mssGenreById[id] || []).push(name); }));
 // A saved or typed-in genre list → each genre once, in the site's own name (the database does the same: 096)
 const _MSS_GENRE_ALIAS = { 'sci-fi': ['Science Fiction'], 'sci-fi & fantasy': ['Science Fiction', 'Fantasy'], 'action & adventure': ['Action', 'Adventure'], 'war & politics': ['War'] };
-const _mssGenreCase = Object.fromEntries(Object.keys(MSS_GENRES).map(n => [n.toLowerCase(), n]));
+const _mssGenreCase = Object.fromEntries([...Object.keys(MSS_GENRES), ...MSS_EXTRA_GENRES].map(n => [n.toLowerCase(), n]));
 function mssGenreList(list) {
   const out = new Map();
   (Array.isArray(list) ? list : []).forEach(g => {

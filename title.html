@@ -594,7 +594,7 @@ async function loadTitle() {
     _tdUser ? getOwnEntryByTmdb(_tdUser.id, Number(_tdId), _tdType, titleForMatch) : Promise.resolve(null),
   ]);
   _tdOwnEntry = ownEntry;
-  mssSyncEntryGenres(ownEntry, detail);
+  const genreSync = mssSyncEntryGenres(ownEntry, detail, _tdUser?.id);
 
   // Fire-and-forget — for the Recently Viewed section on the home page.
   // Never awaited, never blocks rendering; failures are logged and ignored.
@@ -622,6 +622,19 @@ async function loadTitle() {
   _tdLoadRelated(detail);
   _tdLoadFans(detail);
   if (_tdType === 'tv') _tdLoadEpScores();
+  _tdAnimeGenres(detail, ownEntry, titleForMatch, yearForMatch, genreSync);
+}
+// Anime: AniList's genres beside TMDB's (TMDB has no anime genres). Your own saved anime also gets them added
+// once (mssSyncAnimeGenres, nav.js), after TMDB's own sync so the two never overwrite each other.
+async function _tdAnimeGenres(d, own, title, year, genreSync) {
+  if (!mssIsAnime(own, d)) return;
+  await genreSync;
+  if (own) await mssSyncAnimeGenres(own, _tdUser?.id);
+  const extra = await mssAnimeGenres(own?.title || title, own ? String(own.year || '').slice(0, 4) : year);
+  const box = document.querySelector('#tdContent .td-genres');
+  if (!box || !extra?.length) return;
+  const shown = new Set([...tmdbGenreNames(d.genres), ...[...box.querySelectorAll('.w-ep-badge')].map(b => b.textContent)]);
+  box.insertAdjacentHTML('beforeend', extra.filter(g => !shown.has(g)).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join(''));
 }
 
 /* ── Refresh info: details, seasons and episodes straight from TMDB (titles are kept on

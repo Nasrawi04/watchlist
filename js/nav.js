@@ -2160,8 +2160,9 @@ async function tmdbFetch(url, opts = {}) {
 const tmdbGenreNames = genres => [...new Set((genres || []).flatMap(g => _mssGenreById[g.id] || [g.name]).filter(Boolean))];
 // Your own saved title, opened for the first time since this existed (095): adds the genres TMDB has
 // that it's missing, once, so a genre you remove later stays removed. → the new list, or null if unchanged.
-async function mssSyncEntryGenres(entry, detail) {
-  if (!entry?.id || !entry.tmdb_id || entry.genres_synced === true || entry.user_id !== window._navUser?.id || !Array.isArray(detail?.genres)) return null;
+// userId: the page's signed-in user, when it knows before the nav does (default window._navUser)
+async function mssSyncEntryGenres(entry, detail, userId = window._navUser?.id) {
+  if (!entry?.id || !entry.tmdb_id || entry.genres_synced === true || !userId || entry.user_id !== userId || !Array.isArray(detail?.genres)) return null;
   entry.genres_synced = true;
   const have = mssGenreList(entry.genres), add = tmdbGenreNames(detail.genres).filter(g => MSS_GENRES[g] && !have.includes(g));
   const genres = [...have, ...add];
@@ -3361,8 +3362,10 @@ function _mssCastSave(key, cast) {
 }
 const _mssNorm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
-async function _mssAniListCharacters(title, year) {
-  if (_mssAniListOff()) return null;
+// One AniList anime whose title really is this show (± a year), with the fields asked for;
+// null if there's none, undefined if AniList couldn't be asked (a private page, or no connection)
+async function _mssAniListFind(title, year, fields) {
+  if (_mssAniListOff() || !title) return undefined;
   try {
     const res = await fetch('https://graphql.anilist.co', {
       method: 'POST',
@@ -3372,6 +3375,21 @@ async function _mssAniListCharacters(title, year) {
           Page(page: 1, perPage: 5) {
             media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
               title { english romaji } synonyms startDate { year }
+              ${fields}
+            }
+          }
+        }`, variables: { search: title } }),
+    });
+    const list = (await res.json())?.data?.Page?.media || [];
+    const want = _mssNorm(title);
+    return list.find(m => {
+      const names = [m.title?.english, m.title?.romaji, ...(m.synonyms || [])].map(_mssNorm).filter(Boolean);
+      const yearOk = !year || !m.startDate?.year || Math.abs(Number(m.startDate.year) - Number(year)) <= 1;
+      return yearOk && names.includes(want);
+    }) || null;
+  } catch { return undefined; }
+}
+const _mssAniListCharacters = (title, year) => _mssAniListFind(title, year, `
               characters(sort: [ROLE, RELEVANCE, ID], perPage: 10) {
                 edges {
                   role
@@ -3379,20 +3397,58 @@ async function _mssAniListCharacters(title, year) {
                   ja: voiceActors(language: JAPANESE) { name { full } }
                   en: voiceActors(language: ENGLISH) { name { full } }
                 }
-              }
-            }
-          }
-        }`, variables: { search: title } }),
-    });
-    const list = (await res.json())?.data?.Page?.media || [];
-    const want = _mssNorm(title);
-    // Only trust an AniList match whose title really is this show (± a year)
-    return list.find(m => {
-      const names = [m.title?.english, m.title?.romaji, ...(m.synonyms || [])].map(_mssNorm).filter(Boolean);
-      const yearOk = !year || !m.startDate?.year || Math.abs(Number(m.startDate.year) - Number(year)) <= 1;
-      return yearOk && names.includes(want);
-    }) || null;
+              }`);
+
+/* ── Anime genres from AniList (TMDB has no anime genres) ──
+   mssIsAnime(it, d)          → an anime: in Anime, or a Japanese animation on TMDB (d = its details)
+   mssAnimeGenres(title, year) → AniList's genres in the site's names, plus its main tags
+                                 (Isekai, Shounen, Seinen, Shoujo, Josei); never 18+ ones. [] if no match.
+                                 Kept on this device for a week; null when AniList couldn't be asked.
+   mssSyncAnimeGenres(entry, userId) → your own saved anime: adds the ones it's missing, once (ratings._anilist_genres),
+                                 so one you remove later stays removed. → the new list, or null if unchanged. */
+const _MSS_ANI_GENRE = { 'Sci-Fi': 'Science Fiction', 'Mahou Shoujo': 'Magical Girl' };
+const _MSS_ANI_SKIP = new Set(['Ecchi', 'Hentai']);
+const _MSS_ANI_TAGS = new Set(['Isekai', 'Shounen', 'Seinen', 'Shoujo', 'Josei']);
+const _MSS_ANI_STORE = 'mss_anilist_genres_v1', _MSS_ANI_TTL = 7 * 24 * 60 * 60 * 1000;
+function mssIsAnime(it, d) {
+  if (it?.cat) return it.cat === 'anime';
+  const animation = (d?.genres || []).some(g => g.id === 16) || (d?.genre_ids || it?.genre_ids || []).includes(16);
+  return animation && (d?.original_language === 'ja' || (d?.origin_country || []).includes('JP'));
+}
+async function mssAnimeGenres(title, year) {
+  const key = _mssNorm(title) + '|' + (year || '');
+  let all = {};
+  try { all = JSON.parse(localStorage.getItem(_MSS_ANI_STORE) || '{}'); } catch {}
+  if (all[key] && Date.now() - all[key].t < _MSS_ANI_TTL) return all[key].g;
+  const m = await _mssAniListFind(title, year, 'isAdult genres tags { name rank isAdult }');
+  if (m === undefined) return null;
+  const known = new Set([...Object.keys(MSS_GENRES), ...MSS_EXTRA_GENRES]);
+  const g = !m || m.isAdult ? [] : mssGenreList([
+    ...(m.genres || []).filter(x => !_MSS_ANI_SKIP.has(x)).map(x => _MSS_ANI_GENRE[x] || x),
+    ...(m.tags || []).filter(t => _MSS_ANI_TAGS.has(t.name) && !t.isAdult && t.rank >= 50).map(t => t.name),
+  ]).filter(x => known.has(x));
+  try {
+    all[key] = { t: Date.now(), g };
+    const keys = Object.keys(all);
+    if (keys.length > 300) keys.sort((a, b) => all[a].t - all[b].t).slice(0, keys.length - 300).forEach(k => delete all[k]);
+    localStorage.setItem(_MSS_ANI_STORE, JSON.stringify(all));
+  } catch {}
+  return g;
+}
+async function mssSyncAnimeGenres(entry, userId = window._navUser?.id) {
+  if (!entry?.id || entry.cat !== 'anime' || entry.ratings?._anilist_genres || !userId || entry.user_id !== userId) return null;
+  const extra = await mssAnimeGenres(entry.title, String(entry.year || '').slice(0, 4));
+  if (!extra) return null;                 // ask again next time
+  const have = mssGenreList(entry.genres), add = extra.filter(g => !have.includes(g));
+  const genres = [...have, ...add], ratings = { ...(entry.ratings || {}), _anilist_genres: true };
+  try {
+    const { error } = await sb.from('entries').update(add.length ? { genres, ratings } : { ratings }).eq('id', entry.id).eq('user_id', entry.user_id);
+    if (error) throw error;
   } catch { return null; }
+  entry.ratings = ratings;
+  if (!add.length) return null;
+  entry.genres = genres;
+  return genres;
 }
 
 async function mssFetchCast(it) {

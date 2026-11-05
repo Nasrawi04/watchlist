@@ -126,10 +126,12 @@ const MSSInfo = (() => {
     const cat = it.cat || guessCat(it, d);
     const movie = isMovieType(it.media_type);
     const label = (typeof CAT_META !== 'undefined' && CAT_META[cat]?.label) || (movie ? 'Movie' : 'TV Show');
-    const genres = (it.entry && it.genres?.length) ? mssGenreList(it.genres) : d ? tmdbGenreNames(d.genres) : mssGenreList(it.genres);
+    const genres = (it.entry && it.genres?.length) ? mssGenreList(it.genres)
+      : mssGenreList([...(d ? tmdbGenreNames(d.genres) : it.genres || []), ...(it._aniGenres || [])]);   // _aniGenres: AniList's, for anime
+    genres.sort((x, y) => MSS_EXTRA_GENRES.includes(y) - MSS_EXTRA_GENRES.includes(x));   // anime ones (Shounen…) before the 6-tag cut
     const score = INFO_POPUP_CONFIG.showTmdbScore ? (d?.vote_average || it.score) : null;
     return `<span class="${movie ? 'type-label' : 'type-label type-label-tv'}">${esc(label)}</span>`
-      + genres.slice(0, 4).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('')
+      + genres.slice(0, 6).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('')
       + (score ? `<span class="w-ep-badge" title="TMDB rating">★ ${Number(score).toFixed(1)}</span>` : '');
   }
 
@@ -336,8 +338,15 @@ const MSSInfo = (() => {
     it._details = d;
     render(it, d, own || null, user, false);
     loadCast(it, d, my);
-    const genres = await mssSyncEntryGenres(own, d);
-    if (genres && my === token && it.entry === own) { it.genres = genres; render(it, d, own, user, false); loadCast(it, d, my); }
+    let genres = await mssSyncEntryGenres(own, d);
+    // Anime: AniList's genres too (TMDB has none) — added once to your own saved one, after TMDB's sync
+    if (mssIsAnime(own || it.entry || (it.cat ? it : null), d)) {
+      if (own) genres = (await mssSyncAnimeGenres(own)) || genres;
+      if (!it.entry) it._aniGenres = await mssAnimeGenres(own?.title || it.title, String(own?.year || it.year || d?.first_air_date || d?.release_date || '').slice(0, 4)) || [];
+    }
+    const ownChanged = genres && it.entry === own;
+    if (ownChanged) it.genres = genres;
+    if ((ownChanged || it._aniGenres?.length) && my === token) { render(it, d, own, user, false); loadCast(it, d, my); }
   }
 
   function close() {

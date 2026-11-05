@@ -580,6 +580,7 @@
               <div class="genre-picker" style="justify-content:flex-start;">
                 <span class="genre-opt" data-genre="Isekai" onclick="toggleGenre(this)">Isekai</span>
                 <span class="genre-opt" data-genre="Josei" onclick="toggleGenre(this)">Josei</span>
+                <span class="genre-opt" data-genre="Magical Girl" onclick="toggleGenre(this)">Magical Girl</span>
                 <span class="genre-opt" data-genre="Mecha" onclick="toggleGenre(this)">Mecha</span>
                 <span class="genre-opt" data-genre="Seinen" onclick="toggleGenre(this)">Seinen</span>
                 <span class="genre-opt" data-genre="Shoujo" onclick="toggleGenre(this)">Shoujo</span>
@@ -953,14 +954,25 @@ const TMDB_LOCK_SECTIONS = {
   runtime: { btnId: 'tmdbLockBtn-runtime', fieldIds: ['dRuntimeH', 'dRuntimeM'] },
 };
 
-// A saved title's missing TMDB genres, first time it's opened (mssSyncEntryGenres, nav.js)
+// A saved title's missing genres, first time it's opened: TMDB's (mssSyncEntryGenres), then for anime
+// AniList's (mssSyncAnimeGenres) — both nav.js
+const _detTickGenres = genres => document.querySelectorAll('.genre-opt').forEach(o => { if (genres.includes(o.dataset.genre)) o.classList.add('selected'); });
 async function _detSyncGenres(e) {
-  if (!e?.tmdb_id || e.genres_synced === true) return;
-  try {
-    const res = await tmdbFetch(`${TMDB_BASE}/${e.tmdb_type === 'movie' ? 'movie' : 'tv'}/${e.tmdb_id}?language=en-US`);
-    const genres = res.ok ? await mssSyncEntryGenres(e, await res.json()) : null;
-    if (genres) document.querySelectorAll('.genre-opt').forEach(o => { if (genres.includes(o.dataset.genre)) o.classList.add('selected'); });
-  } catch {}
+  if (e?.tmdb_id && e.genres_synced !== true) {
+    try {
+      const res = await tmdbFetch(`${TMDB_BASE}/${e.tmdb_type === 'movie' ? 'movie' : 'tv'}/${e.tmdb_id}?language=en-US`);
+      const genres = res.ok ? await mssSyncEntryGenres(e, await res.json(), _detUser?.id) : null;
+      if (genres) _detTickGenres(genres);
+    } catch {}
+  }
+  const anime = await mssSyncAnimeGenres(e, _detUser?.id);
+  if (anime) _detTickGenres(anime);
+}
+// TMDB filled in an anime (new title, or Update Details) while its genres follow TMDB: add AniList's too
+async function _detAddAnimeGenres(title, year, cat) {
+  if ((cat || document.getElementById('dCat').value) !== 'anime' || (_tmdbFieldsLinked && !_tmdbLockState.genres)) return;
+  const extra = await mssAnimeGenres(title, String(year || '').slice(0, 4));
+  if (extra?.length) _detTickGenres(extra);
 }
 
 function _applyTmdbLock(isLinked) {
@@ -2140,6 +2152,7 @@ function _applyTMDBPrefill(p) {
       el.classList.toggle('selected', p.genres.includes(el.dataset.genre));
     });
   }
+  _detAddAnimeGenres(p.title || document.getElementById('dTitle').value, p.year || document.getElementById('dYear').value, p.cat);
   if (p.poster_url && !_posterUrl) {
     // Only fills the poster when one isn't already set — a fresh new
     // entry has none yet, so TMDB's default poster is a good fill-in.
