@@ -12,7 +12,7 @@ const MSSSettingsNav = (() => {
   const SECTIONS = [
     ['profile', 'My Profile', 'Photo, name, bio, share link', 'user'],
     ['account', 'Account', 'Username, email, delete account', 'idCard'],
-    ['data', 'Data', 'Import, export, backup', 'download'],
+    ['data', 'Data', 'Import, export, your uploads', 'download'],
     ['privacy', 'Privacy', 'Private account, blocked people', 'eye'],
     ['security', 'Security', 'Password, devices, message lock', 'lock'],
     ['notifications', 'Notifications', 'Alerts and what you share', 'bell'],
@@ -24,7 +24,7 @@ const MSSSettingsNav = (() => {
   const ITEMS = {
     profile: [['setPhoto', 'Profile Photo'], ['setDetails', 'Name and Bio'], ['setShare', 'Share Profile']],
     account: [['setUsernameCard', 'Username'], ['setEmailCard', 'Email'], ['setDelete', 'Delete Account', null, 'danger']],
-    data: [['setImport', 'Import'], ['setExport', 'Export and Backup']],
+    data: [['setImport', 'Import'], ['setExport', 'Export and Backup'], ['setUploads', 'My Uploads']],
     privacy: [['setPrivate', 'Private Account'], ['setOnline', 'Online Status'], ['setBlocked', 'Blocked People']],
     security: [['setPassword', 'Password'], ['setSessions', 'Active Sessions'], ['setMessages', 'Message Lock and Recovery']],
     notifications: [['nsAlertsT', 'Alerts', 'Receiving'], ['nsGetT', 'Notify Me About', 'Receiving'], ['nsWhoT', 'Who Gets Notified', 'Sending'], ['nsShareT', 'What They Hear About', 'Sending']],
@@ -49,6 +49,7 @@ const MSSSettingsNav = (() => {
     ['Import', 'data', 'setImport', 'letterboxd imdb trakt anilist myanimelist tv time word text file history'],
     ['Export', 'data', 'setExport', 'download pdf image spreadsheet csv letterboxd'],
     ['Full Backup', 'data', 'setExport', 'save copy download'],
+    ['My Uploads', 'data', 'setUploads', 'pictures images photos posters avatar copyright remove delete'],
     ['Private Account', 'privacy', 'setPrivate', 'public followers lock requests'],
     ['Online Status', 'privacy', 'setOnline', 'show when online last seen active'],
     ['Blocked People', 'privacy', 'setBlocked', 'block unblock users'],

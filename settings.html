@@ -92,6 +92,10 @@
   body.set-open .set-top { display:none; }
   .set-back { display:flex; }
 }
+.upl-thumb { flex-shrink:0; width:42px; height:63px; object-fit:cover; border-radius:6px; border:0.5px solid var(--border); background:var(--bg-3); }
+.upl-thumb.is-round { width:48px; height:48px; border-radius:50%; }
+.upl-link { color:var(--text); text-decoration:none; }
+.upl-link:hover { text-decoration:underline; }
 .set-save { width:100%; margin-top:1rem; }
 .set-note { margin-bottom:0; }
 .set-soon { display:inline-block; margin-inline-end:6px; padding:2px 8px; border:0.5px solid var(--border-olive); border-radius:999px; font-size:9.5px; letter-spacing:1px; color:var(--olive-light); }
@@ -392,6 +396,13 @@
           <p class="settings-desc">Save your library as a PDF, an image, a spreadsheet or a Letterboxd file, or download a full backup.</p>
           <a class="set-btn" href="export.html">Open Export</a>
         </div>
+
+        <div class="settings-section" id="setUploads">
+          <div class="settings-title">My Uploads</div>
+          <p class="settings-desc">Every picture you’ve uploaded yourself. <b>Only upload pictures that are yours, or that you have the right to use.</b> If one isn’t, remove it here. Using someone else’s picture without permission can break copyright law.</p>
+          <ul class="sess-list" id="uploadsList" aria-live="polite"></ul>
+          <p class="settings-desc set-note" id="uploadsEmpty" hidden>You haven’t uploaded any pictures. Titles use their normal posters until you do.</p>
+        </div>
       </section>
 
       <section class="set-pane" id="pane-privacy" aria-labelledby="paneT-privacy" hidden>
@@ -595,6 +606,7 @@
 <script src="js/nav.js"></script>
 <script src="js/episode-ratings.js"></script>
 <script src="js/notif-settings.js"></script>
+<script src="js/settings-uploads.js"></script>
 <script src="js/settings-nav.js"></script>
 <script>
 let _sUser = null, _sProfile = null;
@@ -613,6 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _blocksLoad();
     _lockPaint();
     _usernamePaint();
+    MSSUploads.load(user.id);
     MSSSettingsNav.refresh();
     MSSNotifSettings.render(document.getElementById('setNotif'));
   });
@@ -783,6 +796,7 @@ function settingsValue(item) {
     case 'setUsernameCard': return _sProfile?.username ? '@' + _sProfile.username : '';
     case 'setEmailCard': return _sUser?.email || '';
     case 'setImport': return 'Coming soon';
+    case 'setUploads': return MSSUploads.value();
     case 'setPrivate': return onOff('privSwitch');
     case 'setOnline': return onOff('msgOnlineSw');
     case 'setBlocked': return document.getElementById('blockEmpty').hidden ? count('blockList', '1 person', 'people') : 'None';
@@ -979,6 +993,7 @@ async function _avatarCropConfirm() {
       mssAvatarTidy(_sUser.id, bustedUrl).catch(() => {});   // old avatar.png / .jpeg files go
       MSSImageCheck.review(verdict, 'avatar', bustedUrl);
       if (_sProfile) _sProfile.avatar_url = bustedUrl;
+      MSSUploads.draw();
       ['navUserInitial','navUserInitialMobile'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
