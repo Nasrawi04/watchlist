@@ -2153,6 +2153,8 @@ const mssSkeleton = (() => {
   const still = matchMedia('(prefers-reduced-motion: reduce)');
   const arrive = el => {
     if (still.matches || el.nodeType !== 1 || el.matches(LOADER) || el.closest('.mss-arrive')) return;
+    // A block with its own entrance (.fade-up) already rises in; swapping animations would replay it
+    if (getComputedStyle(el).animationName !== 'none') return;
     el.classList.add('mss-arrive');
     setTimeout(() => el.classList.remove('mss-arrive'), 1100);
   };
@@ -2620,8 +2622,13 @@ const MSSPicker = (() => {
       menu.style.width = w + 'px';
       list.style.maxHeight = Math.max(88, Math.min(280, under ? below : above)) + 'px';
       const h = menu.offsetHeight, rtl = getComputedStyle(el).direction === 'rtl';
-      menu.style.left = Math.max(left + gap, Math.min(rtl ? r.right - w : r.left, right - w - gap)) + 'px';
-      menu.style.top = Math.max(top + gap, Math.min(under ? r.bottom + 4 : r.top - h - 4, bottom - h - gap)) + 'px';
+      const x = Math.max(left + gap, Math.min(rtl ? r.right - w : r.left, right - w - gap));
+      const y = Math.max(top + gap, Math.min(under ? r.bottom + 4 : r.top - h - 4, bottom - h - gap));
+      // A page block with a transform (like its fade-in) becomes what "fixed" is measured from,
+      // so check where the list really landed and take the difference off
+      menu.style.left = x + 'px'; menu.style.top = y + 'px';
+      const m = menu.getBoundingClientRect();
+      menu.style.left = (2 * x - m.left) + 'px'; menu.style.top = (2 * y - m.top) + 'px';
     }
     const onMove = ev => { if (ev.target !== list) place(); };
     function follow(on) {
