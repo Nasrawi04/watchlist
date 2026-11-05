@@ -298,8 +298,8 @@ function setCompView(v) {
 }
 
 /* ══ Sort & Filter — shared js/sort-filter.js module ══
-   One section ('all'). Type and Status are single-pick filters inside
-   the same Filter popup, alongside the standard ones. */
+   One section ('all'). Type and Status are pick-any filters inside
+   the same Filter popup, alongside the standard ones (_catFilter: 'tv,anime_movie', SF.typeChoice). */
 const _compSortState = { all: 'newest' };
 SF.register('comp', {
   base: () => _allCompleted,
@@ -316,14 +316,10 @@ SF.register('comp', {
   },
   sortState: _compSortState,
   onSearch: () => renderMain(),
-  sorts: () => ['alpha', 'added', 'release', 'ratings', _catFilter !== 'tv' && 'runtime', _catFilter !== 'movies' && 'seasons', _catFilter !== 'movies' && 'episodes'],
-  lengthKind: () => _catFilter === 'movies' ? 'movie' : _catFilter === 'tv' ? 'show' : 'mixed',
+  sorts: () => ['alpha', 'added', 'release', 'ratings', !SF.typeShows(_catFilter) && 'runtime', !SF.typeMovies(_catFilter) && 'seasons', !SF.typeMovies(_catFilter) && 'episodes'],
+  lengthKind: () => SF.typeMovies(_catFilter) ? 'movie' : SF.typeShows(_catFilter) ? 'show' : 'mixed',
   choiceFilters: () => [
-    { key: 'cat',    label: 'Type',   options: Object.entries(_compCatLabels) },
-    // Anime & Cartoons mix series and films — pick one under Type to get this
-    { key: 'format', label: 'Format', options: [['', 'All Formats'], ['show', 'Shows'], ['movie', 'Movies']],
-      when: ch => ch.cat === 'anime' || ch.cat === 'cartoons',
-      test: (e, v) => (v === 'movie') === SF.isMovie(e) },
+    SF.typeChoice(),
     { key: 'status', label: 'Status', options: Object.entries(_compStatusLabels) },
   ],
   ratingSort: {
@@ -373,7 +369,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-const _compCatLabels = { '':'All Types', tv:'TV Shows', movies:'Movies', anime:'Anime', cartoons:'Cartoons' };
 const _compStatusLabels = { '':'All Statuses', completed:'Watched', ongoing:'To Be Continued' };
 
 // Filtered + sorted list for this page (export, empty-state checks, etc.)
@@ -389,25 +384,20 @@ function renderStats() {
   const topCatLabel = topCat ? CAT_META[topCat[0]]?.label : '—';
 
   // Episodes: completed only, use total_eps with watched as fallback, exclude movies and movie-type anime/cartoons
-  const epsSource = (_catFilter && _catFilter !== 'movies')
-    ? _allCompleted.filter(e => e.cat === _catFilter && (e.ratings?._media_type || 'show') !== 'movie')
-    : _allCompleted.filter(e => e.cat !== 'movies' && (e.ratings?._media_type || 'show') !== 'movie');
-  const totalEps = _catFilter === 'movies' ? 0 : epsSource.reduce((sum, e) => sum + (Number(e.total_eps) || Number(e.watched) || 0), 0);
-  const epsLabel = _catFilter && _catFilter !== 'movies'
-    ? `${CAT_META[_catFilter]?.label} Eps`
-    : 'Episodes';
+  const picked = SF.picks(_catFilter), inCats = e => !picked.length || picked.some(v => SF.typeIs(v, e.cat, SF.isMovie(e)));
+  const epsSource = _allCompleted.filter(e => inCats(e) && e.cat !== 'movies' && (e.ratings?._media_type || 'show') !== 'movie');
+  const totalEps = epsSource.reduce((sum, e) => sum + (Number(e.total_eps) || Number(e.watched) || 0), 0);
+  const oneCat = SF.typeCat(_catFilter), epsLabel = oneCat && oneCat !== 'movies' ? `${CAT_META[oneCat]?.label} Eps` : 'Episodes';
 
   // Movie watch time
-  const movieSource = _catFilter
-    ? _allCompleted.filter(e => e.cat === _catFilter && (e.cat === 'movies' || (e.ratings?._media_type === 'movie')))
-    : _allCompleted.filter(e => e.cat === 'movies' || (e.ratings?._media_type === 'movie'));
+  const movieSource = _allCompleted.filter(e => inCats(e) && (e.cat === 'movies' || (e.ratings?._media_type === 'movie')));
   const totalMovieMins = movieSource.reduce((sum, e) => sum + (Number(e.runtime_h)||0)*60 + (Number(e.runtime_m)||0), 0);
   const wtH = Math.floor(totalMovieMins / 60);
   const wtM = totalMovieMins % 60;
   const watchTimeLabel = totalMovieMins ? (wtH ? `${wtH}h ${wtM}m` : `${wtM}m`) : null;
 
-  const ongoingCount = (_catFilter ? _allCompleted.filter(e => e.cat === _catFilter && e.status === 'ongoing') : _allCompleted.filter(e => e.status === 'ongoing')).length;
-  const completedCount = (_catFilter ? _allCompleted.filter(e => e.cat === _catFilter && e.status === 'completed') : _allCompleted.filter(e => e.status === 'completed')).length;
+  const ongoingCount = _allCompleted.filter(e => inCats(e) && e.status === 'ongoing').length;
+  const completedCount = _allCompleted.filter(e => inCats(e) && e.status === 'completed').length;
 
   document.getElementById('compStats').innerHTML = `
     <div class="page-stat"><div class="page-stat-num">${completedCount}</div><div class="page-stat-label">Watched</div></div>

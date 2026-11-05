@@ -23,10 +23,13 @@
      watched: section => true,              // adds "Year Watched" (From / To) for sections of
                                             // watched titles; reads watchedDate (default completed_date)
      watchedDate: e => e.completed_date,
-     choiceFilters: section => [       // single-pick filters, e.g. Status (multi: true → several at once)
+     choiceFilters: section => [       // e.g. Status. A list starting with an "All" option ('') takes several
+                                       // picks: an entry passes if any picked one passes test(entry, value),
+                                       // and the choice is stored comma-joined ('tv,anime'). single: true → one only.
+                                       // multi: true (no "All" row) → test(entry, 'a,b') gets them all at once.
        { key: 'status', label: 'Status', options: [['', 'All'], ['completed', 'Watched']],
-         test: (entry, value) => entry.status === value,     // test optional
-         when: choice => choice.cat === 'anime' },           // optional: only shown/applied when true
+         test: (entry, value) => entry.status === value },   // test optional
+       SF.typeChoice(),                // the shared Type section (below)
      ],
      defaultSort: 'newest',
      sortState: {},                         // pass the page's own object to share it
@@ -63,6 +66,18 @@
                                    redraws the page (default: each section).
    SF.query('cat')               → what's typed ('' when not searching)
    SF.rank(entry, i)             → its #place in the full sorted list (true while searching)
+   SF.picks('tv,anime_show')     → ['tv', 'anime_show']   (a stored choice; '' → [])
+   SF.only(v, 'movies')          → true when something is picked and every pick is one of those
+
+   ── Type: one list for every page ──
+   TV Shows · Movies · Anime Shows · Anime Movies · Cartoon Shows · Cartoon Movies
+   SF.TYPES                      → those as options, after "All Types"
+   SF.typeChoice({ cat, movie }) → the Filter section; cat(e) / movie(e) read a page's own items
+                                   (default e.cat and SF.isMovie). 'anime' / 'cartoons' (older saved picks) mean both
+   SF.typeIs(v, cat, movie)      → does one pick match
+   SF.typeMovies(v) / typeShows(v) → only movies / only shows picked
+   SF.typeCat(v)                 → the one category picked ('anime_show' → 'anime'), else ''
+   SF.typeLabel(v)               → "TV Shows" · "TV Shows + Anime Movies" · "3 Types"
 ═══════════════════════════════════════════════════════════════ */
 
 const SF = (() => {
@@ -114,6 +129,22 @@ const SF = (() => {
     if (typeof getReleaseDateValue === 'function') return getReleaseDateValue(e) || 0;
     return Number(e.year) || 0;
   }
+  const picks = v => (v || '').split(',').filter(Boolean);
+  const only = (v, ...keys) => picks(v).length > 0 && picks(v).every(k => keys.includes(k));
+  // several picks: a list whose first option is "All" (''), unless single; multi: the older all-at-once kind
+  const pickMany = c => !c.multi && !c.single && c.options[0]?.[0] === '';
+  const TYPES = [['tv', 'TV Shows'], ['movies', 'Movies'], ['anime_show', 'Anime Shows'], ['anime_movie', 'Anime Movies'], ['cartoons_show', 'Cartoon Shows'], ['cartoons_movie', 'Cartoon Movies']];
+  const TYPE_LABEL = Object.fromEntries([...TYPES, ['anime', 'Anime'], ['cartoons', 'Cartoons']]);
+  function typeIs(v, cat, movie) {
+    const [c, f] = v.split('_');
+    return c === cat && (!f || (f === 'movie') === !!movie);
+  }
+  const typeChoice = (o = {}) => ({ key: 'cat', label: 'Type', options: [['', 'All Types'], ...TYPES],
+    test: (e, v) => typeIs(v, o.cat ? o.cat(e) : e.cat, o.movie ? o.movie(e) : isMovie(e)) });
+  const typeMovies = v => picks(v).length > 0 && picks(v).every(k => k === 'movies' || k.endsWith('_movie'));
+  const typeShows = v => picks(v).length > 0 && picks(v).every(k => k === 'tv' || k.endsWith('_show'));
+  const typeCat = v => { const c = [...new Set(picks(v).map(k => k.split('_')[0]))]; return c.length === 1 ? c[0] : ''; };
+  const typeLabel = v => { const p = picks(v); return p.length > 2 ? `${p.length} Types` : p.map(k => TYPE_LABEL[k] || k).join(' + '); };
   function choicesFor(s, section) {
     return s.cfg.choiceFilters ? (s.cfg.choiceFilters(section) || []) : [];
   }
@@ -207,9 +238,10 @@ const SF = (() => {
   function applyFilter(s, section, base, f) {
     let out = base;
     choicesFor(s, section).forEach(c => {
-      if (c.when && !c.when(f.choice || {})) return;          // dependent choice not active
-      const v = f.choice?.[c.key];
-      if (v) out = out.filter(e => c.test ? c.test(e, v) : e[c.key] === v);
+      const v = f.choice?.[c.key], one = x => e => c.test ? c.test(e, x) : e[c.key] === x;
+      if (!v) return;
+      if (pickMany(c)) { const tests = picks(v).map(one); out = out.filter(e => tests.some(t => t(e))); }
+      else out = out.filter(one(v));
     });
     if (f.genres?.length) out = out.filter(e => (e.genres || []).some(g => f.genres.includes(g)));
     if (f.yearMin)   out = out.filter(e => e.year && Number(e.year) >= Number(f.yearMin));
@@ -321,7 +353,7 @@ const SF = (() => {
     </div>`;
   }
 
-  /* A single-pick list (Status, Type, Format…): check rows, one ticked */
+  /* A pick list (Status, Type, Format…): check rows; curV is the value, or the picked values (several-picks lists) */
   function choiceHTML(label, hint, options, curV, onchange) {
     return `<div class="sf-section-label">${escHTML(label)}${hint ? ` <span class="sf-section-hint">${escHTML(hint)}</span>` : ''}</div><div class="sf-check-list">` +
       options.map(([v, l]) => `
@@ -338,10 +370,9 @@ const SF = (() => {
       </button>`;
   }
 
-  /* ── Page-wide Type filter popup — Library (Type + Format) and the
+  /* ── Page-wide Type filter popup — Library (the shared Type list, several picks) and the
      Anime / Cartoons pages (Movies vs TV Shows). Same look as Filter.
-       SF.typeFilter({ groups: [{ key, label, options: [[value, label]],
-                                  hint: staged => '', when: staged => bool }],
+       SF.typeFilter({ groups: [{ key, label, options: [[value, label]] }],
                        value: { key: value }, onApply(value) })
        SF.typeFilterButton(onclick, label, active) → its trigger button ── */
   let tf = null;
@@ -354,12 +385,18 @@ const SF = (() => {
   function typeBody() {
     const st = tf.staged;
     document.getElementById('sfTypeFilterBody').innerHTML = tf.o.groups.map(g => {
-      if (g.when && !g.when(st)) { st[g.key] = g.options[0][0]; return ''; }   // e.g. Format only for Anime / Cartoons
-      return choiceHTML(g.label, g.hint ? g.hint(st) : '', g.options, st[g.key], v => `SF._typeStage(${attrJSON(g.key)}, ${attrJSON(v)})`);
+      return choiceHTML(g.label, '', g.options, pickMany(g) ? (st[g.key] || '').split(',') : st[g.key], v => `SF._typeStage(${attrJSON(g.key)}, ${attrJSON(v)})`);
     }).join('');
   }
   function closeTypeFilter() { MSSDialog.close(document.getElementById('sfTypeFilterOverlay')); }
-  const typeStage = (k, v) => { tf.staged[k] = v; typeBody(); };
+  const typeStage = (k, v) => { const g = tf.o.groups.find(x => x.key === k); tf.staged[k] = pickMany(g) ? toggled(tf.staged[k], v) : v; typeBody(); };
+  // a pick on a several-picks list: "All" clears, anything else is ticked or unticked
+  function toggled(cur, v) {
+    if (!v) return '';
+    const on = new Set(picks(cur));
+    if (!on.delete(v)) on.add(v);
+    return [...on].join(',');
+  }
   const typeClear = () => { tf.o.groups.forEach(g => { tf.staged[g.key] = g.options[0][0]; }); typeBody(); };
   function typeApply() { const v = { ...tf.staged }, o = tf.o; closeTypeFilter(); o.onApply(v); }
 
@@ -482,8 +519,7 @@ const SF = (() => {
     const on = new Set(filtersFor(s, section));
     let html = '';
     choicesFor(s, section).forEach(c => {
-      if (c.when && !c.when(f.choice)) { f.choice[c.key] = ''; return; }   // e.g. Format only for Anime/Cartoons
-      html += c.multi
+      html += c.multi || pickMany(c)
         ? choiceHTML(c.label, c.hint || '', c.options, (f.choice[c.key] || '').split(','), v => `SF._stageChoiceToggle(${attrJSON(c.key)}, ${attrJSON(v)})`)
         : choiceHTML(c.label, '', c.options, f.choice[c.key] || '', v => `SF._stageChoice(${attrJSON(c.key)}, ${attrJSON(v)})`);
     });
@@ -540,9 +576,7 @@ const SF = (() => {
   }
   // multi: true → several can be ticked; test(item, 'a,b') gets them comma-joined
   function _stageChoiceToggle(key, value) {
-    const on = new Set((stagedFilter.choice[key] || '').split(',').filter(Boolean));
-    if (!on.delete(value)) on.add(value);
-    stagedFilter.choice[key] = [...on].join(',');
+    stagedFilter.choice[key] = toggled(stagedFilter.choice[key], value);
     document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
   }
   function _stageRanges() {
@@ -741,6 +775,7 @@ const SF = (() => {
     query: scope => S(scope).query, _search: search,
     rank: (e, i) => e._sfRank || i + 1,           // a title's place in its ranked list (search or not)
     openSort, closeSort, openFilter, closeFilter, typeFilter, closeTypeFilter,
+    picks, only, TYPES, typeChoice, typeIs, typeMovies, typeShows, typeCat, typeLabel,
     typeFilterButton: (onclick, label, active) => buttonHTML('filter', label, active, onclick, 'Filter'),
     filterCount: (scope, section) => filterCount(getFilter(scope, section)),
     filterState: (scope, section) => getFilter(scope, section),

@@ -87,7 +87,7 @@ SF.register('frShared', {
     theirs: (a, b) => (b._theirs ?? -1) - (a._theirs ?? -1),
   },
   choiceFilters: () => [
-    { key: 'cat', label: 'Type', options: _FR_CAT_OPTS },
+    SF.typeChoice(),
     { key: 'rated', label: 'Scores', options: [['', 'All Shared'], ['both', 'Rated by both']], test: (g, v) => g._diff != null },
   ],
 });

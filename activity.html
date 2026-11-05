@@ -65,7 +65,7 @@ SF.register('frActivity', {
   choiceFilters: () => [
     { key: 'who',  label: 'Friend',   options: _frFriendOptions(), test: (x, v) => x.user_id === v },
     { key: 'ev',   label: 'Activity', options: [['', 'Everything'], ...Object.entries(_FR_ACT).map(([k, a]) => [k, a.label])], test: (x, v) => x._ev === v },
-    { key: 'cat',  label: 'Type',     options: _FR_CAT_OPTS },
+    SF.typeChoice(),
   ],
 });
 function _frDayLabel(dt) {

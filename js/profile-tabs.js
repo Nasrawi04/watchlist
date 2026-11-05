@@ -100,15 +100,7 @@ const MSSTabs = (() => {
       likes_most:  (a, b) => (N.counts[b.id]?.like || 0) - (N.counts[a.id]?.like || 0),
       likes_least: (a, b) => (N.counts[a.id]?.like || 0) - (N.counts[b.id]?.like || 0),
     },
-    choiceFilters: () => [{
-      key: 'cat', label: 'Type',
-      options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']],
-    }, {
-      key: 'format', label: 'Format',
-      options: [['', 'All Formats'], ['show', 'Shows'], ['movie', 'Movies']],
-      when: ch => ch.cat === 'anime' || ch.cat === 'cartoons',
-      test: (e, v) => (v === 'movie') === SF.isMovie(e),
-    }],
+    choiceFilters: () => [SF.typeChoice()],
   });
 
   function renderNotes() {

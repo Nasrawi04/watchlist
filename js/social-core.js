@@ -51,7 +51,6 @@ function _frOpenList(id) {
 // Loading skeletons: these stay readable while the rest is masked
 const _frSkelKeep = h => h.replace(/class="(fr-toolbar-title|sort-bar[^"]*|fm-btn[^"]*|pn-toggle-btn[^"]*|fr-people-title|ns-back)"/g, 'class="$1" data-skel-keep');
 function _frFriendOptions() { return [['', 'Everyone'], ..._frAccepted.map(f => [f.friendId, _frName(f.friendId)])]; }
-const _FR_CAT_OPTS = [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
 
 /* ── Loading ── */
 async function loadFriends() {

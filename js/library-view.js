@@ -120,29 +120,20 @@ function _libRatingBadge(e,key){
 
 function _libCatFilterBar() {
   return '<div class="sf-trigger-row" style="justify-content:flex-start;">'
-    + SF.typeFilterButton('openLibTypeFilterPopup()', _libCatFilter ? _libCatLabels[_libCatFilter] + (_libFormat ? ' · ' + _libFormatLabels[_libFormat] : '') : 'Filter', !!_libCatFilter)
+    + SF.typeFilterButton('openLibTypeFilterPopup()', _libCatFilter ? SF.typeLabel(_libCatFilter) : 'Filter', !!_libCatFilter)
     + '</div>';
 }
 
-var _libCatLabels = { '':'All Types', tv:'TV Shows', movies:'Movies', anime:'Anime', cartoons:'Cartoons' };
-// Anime & Cartoons mix series and films — a second "Format" choice
-// (Shows / Movies) appears under Type when one of them is picked.
-var _libFormat = '';
-var _libFormatLabels = { '':'All Formats', show:'Shows', movie:'Movies' };
-function _libHasFormats(cat) { return cat === 'anime' || cat === 'cartoons'; }
-// Type (+ Format for Anime / Cartoons) — the shared Type filter popup (SF.typeFilter)
+// Type takes several picks (SF.typeChoice's list: TV Shows, Movies, Anime Shows, Anime Movies…), stored comma-joined
+// The one category picked, or '' (none or several): what Add a title starts on
+function _libOneCat(){ return SF.typeCat(_libCatFilter); }
+// The shared Type filter popup (SF.typeFilter)
 function openLibTypeFilterPopup() {
-  var opts = function(o){ return Object.keys(o).map(function(k){ return [k, o[k]]; }); };
   SF.typeFilter({
-    groups: [
-      { key:'cat', label:'Type', options: opts(_libCatLabels) },
-      { key:'format', label:'Format', options: opts(_libFormatLabels), when: function(st){ return _libHasFormats(st.cat); },
-        hint: function(st){ return '(' + _libCatLabels[st.cat] + ' has both)'; } },
-    ],
-    value: { cat:_libCatFilter, format:_libFormat },
+    groups: [{ key:'cat', label:'Type', options: [['', 'All Types']].concat(SF.TYPES) }],
+    value: { cat:_libCatFilter },
     onApply: function(v) {
       _libCatFilter = v.cat;
-      _libFormat = _libHasFormats(v.cat) ? v.format : '';
       SF.invalidate(_sfScope()); // actor names depend on which types are shown
       renderLibrary();
     }
@@ -152,12 +143,9 @@ function openLibTypeFilterPopup() {
 /* ══ Sort & Filter — shared js/sort-filter.js module ══
    Only what's specific to this page lives here; the popups, sorting and
    filtering logic are the same code every page uses. */
+function _libInType(e){ return !_libCatFilter || SF.picks(_libCatFilter).some(function(v){ return SF.typeIs(v, e.cat, SF.isMovie(e)); }); }
 function _libBaseEntries(sec){
-  var inCat=function(e){
-    if(_libCatFilter && e.cat!==_libCatFilter) return false;
-    if(_libFormat && (_libFormat==='movie') !== SF.isMovie(e)) return false;   // Anime/Cartoons: Shows vs Movies
-    return true;
-  };
+  var inCat=_libInType;
   if(sec==='watching') return _libEntries.filter(function(e){return (e.status==='watching'||e.status==='up_next'||e.status==='paused')&&inCat(e);});
   if(sec==='queue') return _libEntries.filter(function(e){return e.status==='queue'&&inCat(e);});
   if(sec==='dropped') return _libEntries.filter(function(e){return e.status==='dropped'&&inCat(e);});
@@ -170,8 +158,8 @@ SF.register(LIB_SCOPE, {
   onSearch: function(){ renderLibrary(); },     // search narrows all three sections at once
   sortState: _libSort,
   // Runtime only once movies can be present, Episode Count only once shows can
-  sorts: function(){ return ['alpha','added','release','ratings', _libCatFilter!=='tv'&&_libFormat!=='show'&&'runtime', _libCatFilter!=='movies'&&_libFormat!=='movie'&&'seasons', _libCatFilter!=='movies'&&_libFormat!=='movie'&&'episodes']; },
-  lengthKind: function(){ return _libCatFilter==='movies'||_libFormat==='movie'?'movie':_libCatFilter==='tv'||_libFormat==='show'?'show':'mixed'; },
+  sorts: function(){ var mv=SF.typeMovies(_libCatFilter), sh=SF.typeShows(_libCatFilter); return ['alpha','added','release','ratings', !sh&&'runtime', !mv&&'seasons', !mv&&'episodes']; },
+  lengthKind: function(){ return SF.typeMovies(_libCatFilter)?'movie':SF.typeShows(_libCatFilter)?'show':'mixed'; },
   choiceFilters: function(sec){
     return sec==='completed' ? [{ key:'status', label:'Status', options:[['','All'],['completed','Watched'],['ongoing','To Be Continued']] }] : [];
   },
@@ -441,7 +429,7 @@ function _libRender(){
   var queue=SF.list(LIB_SCOPE,'queue');
 
   // Dynamic stats based on current filter
-  var _filteredAll = LIB_ENTRIES().filter(function(e){return !_libCatFilter||e.cat===_libCatFilter;});
+  var _filteredAll = LIB_ENTRIES().filter(_libInType);
   var _fSt = computeStats(_filteredAll);
   var _fHours = Math.round((_fSt.movieMins||0)/60);
   var completed=SF.list(LIB_SCOPE,'completed');
@@ -461,15 +449,15 @@ function _libRender(){
   // Watching
   var wc;
   if(!watching.length){wc=_libEmpty('watching',{ art:'watching', title:'Nothing on screen right now', text:'The couch is warm and the remote is ready.',
-    actions:[{ label:'Add a title', icon:'plus', onclick:"openAddModal("+(_libCatFilter?"'"+_libCatFilter+"'":'')+")", primary:true }] },'Not watching anything right now');}
+    actions:[{ label:'Add a title', icon:'plus', onclick:"openAddModal("+(_libOneCat()?"'"+_libOneCat()+"'":'')+")", primary:true }] },'Not watching anything right now');}
   else if(_libWatchView==='grid'){wc=_libGridWrap('libwg','<div class="watching-grid" id="libwg">'+_libCards('watching',watching,function(e){return _libWatchCard(e,true);})+'</div>');}
   else {wc='<div class="fv-watch-list">'+_libCards('watching',watching,function(e){return _libWatchCard(e,false);})+'</div>';}
 
   // Queue
   var qc;
   if(!queue.length){qc=_libEmpty('queue',{ art:'watchlist', title:'Your watchlist is empty', text:'Nothing queued up yet. Future you is going to be so bored.',
-    actions:[{ label:'Add a title', icon:'plus', onclick:"openAddModal("+(_libCatFilter?"'"+_libCatFilter+"'":'')+")", primary:true }, { label:'Browse Discover', icon:'compass', href:'discover.html' }],
-    starter:LIB_SCOPE==='lib' ? (_libCatFilter||'all') : '' },'Nothing on their watchlist');}
+    actions:[{ label:'Add a title', icon:'plus', onclick:"openAddModal("+(_libOneCat()?"'"+_libOneCat()+"'":'')+")", primary:true }, { label:'Browse Discover', icon:'compass', href:'discover.html' }],
+    starter:LIB_SCOPE==='lib' ? (_libOneCat()||'all') : '' },'Nothing on their watchlist');}
   else if(_libQueueView==='grid'){qc=_libGridWrap('libqg','<div class="watching-grid" id="libqg">'+_libCards('queue',queue,function(e){return _libQueueCard(e,true);})+'</div>');}
   else {qc='<div class="watch-list">'+_libCards('queue',queue,function(e){return _libQueueCard(e,false);})+'</div>';}
 
