@@ -12,43 +12,78 @@
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ── Settings layout: the section list, and the open section beside it (on phones, one at a time) ── */
-.set-shell { display:grid; grid-template-columns:300px minmax(0, 1fr); gap:1.75rem; align-items:start; }
+.set-shell { display:grid; grid-template-columns:230px minmax(0, 1fr); gap:1.75rem; align-items:start; }
 .set-rail { position:sticky; top:136px; min-width:0; max-height:calc(100dvh - 152px); overflow-y:auto; }
 .set-main { min-width:0; }
 .set-pane { display:flex; flex-direction:column; gap:1.25rem; }
 .set-pane[hidden] { display:none; }
 .set-pane-head { display:flex; align-items:center; gap:8px; }
+.set-pane-text { min-width:0; }
 .set-pane-title { margin:0; font-family:var(--serif); font-weight:500; font-size:26px; line-height:1.2; color:var(--text); outline:none; }
+.set-trail { display:flex; flex-wrap:wrap; gap:6px; font-size:12.5px; line-height:1.4; color:var(--text-2); }
+.set-trail:empty { display:none; }
+.set-trail a { color:var(--olive-light); font-weight:600; text-decoration:none; }
+.set-trail a:hover { text-decoration:underline; }
 .set-back { display:none; flex-shrink:0; width:44px; height:44px; margin-inline-start:-10px; align-items:center; justify-content:center; background:none; border:none; border-radius:12px; color:var(--text); cursor:pointer; }
+.set-pane.is-item .set-back { display:flex; }
 .set-back svg { width:22px; height:22px; }
 .set-back:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.set-search { margin-bottom:12px; }
+.set-search { margin-bottom:14px; }
 .set-search .field-input { width:100%; box-sizing:border-box; }
-.set-list, .set-hits { display:flex; flex-direction:column; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
+
+/* One setting at a time: its card shows only when it's open, and the list above already names it */
+.set-pane > .settings-section, .set-pane > #setNotif { display:none; }
+.set-pane > .settings-section.set-on:not([hidden]), .set-pane > #setNotif.set-on { display:block; }
+.set-pane > .settings-section > .settings-title { display:none; }
+#setNotif .ns-wrap { max-width:none; }
+#setNotif .ns-sec-head, #setNotif .ns-title, #setNotif .ns-card { display:none; }
+#setNotif[data-part="nsAlertsT"] .ns-card[aria-labelledby="nsAlertsT"], #setNotif[data-part="nsGetT"] .ns-card[aria-labelledby="nsGetT"],
+#setNotif[data-part="nsWhoT"] .ns-card[aria-labelledby="nsWhoT"], #setNotif[data-part="nsShareT"] .ns-card[aria-labelledby="nsShareT"] { display:block; }
+
+/* Sections */
+.set-list { display:flex; flex-direction:column; gap:14px; }
 .set-list[hidden] { display:none; }
-.set-row { display:flex; align-items:center; gap:12px; min-height:60px; padding:10px 14px; color:var(--text); text-decoration:none; transition:background .15s; }
-.set-row + .set-row { border-top:0.5px solid var(--border); }
-.set-row:hover { background:var(--bg-2); }
-.set-row:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
-@media (min-width:901px) {
-  .set-row[aria-current="page"] { box-shadow:inset 3px 0 0 var(--olive-light); }
-  .set-row[aria-current="page"] .set-row-sub { color:var(--text-2); }
-}
+.set-group-head, .set-rows-head { margin:0 0 6px; padding:0 4px; font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-2); }
+.set-row { display:flex; align-items:center; gap:12px; min-height:44px; padding:10px 14px; color:var(--text); text-decoration:none; transition:background .15s; }
+.set-row:focus-visible, .set-item:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
 .set-row-ic { flex-shrink:0; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:10px; background:var(--olive-faint); color:var(--olive-light); }
 .set-row-ic svg { width:17px; height:17px; }
 .set-row-text { flex:1; min-width:0; }
 .set-row-name { display:block; font-size:14px; font-weight:600; line-height:1.3; }
 .set-row-sub { display:block; margin-top:2px; font-size:12px; line-height:1.35; color:var(--text-2); overflow-wrap:anywhere; }
 .set-row-go { flex-shrink:0; width:16px; height:16px; color:var(--text-3); }
-#setNotif .ns-wrap { max-width:none; }
-.set-save { width:100%; margin-top:1rem; }
-.set-note { margin-bottom:0; }
-.set-soon { display:inline-block; margin-inline-start:8px; padding:2px 8px; border:0.5px solid var(--border-olive); border-radius:999px; font-size:9.5px; letter-spacing:1px; color:var(--olive-light); }
-.settings-section[hidden] { display:none; }
-.set-flash { animation:setFlash 1.8s ease; outline:none; }
-@keyframes setFlash { 0%, 55% { box-shadow:0 0 0 2px var(--olive-light); } 100% { box-shadow:0 0 0 2px transparent; } }
-@media (prefers-reduced-motion: reduce) { .set-flash { animation-duration:.01ms; border-color:var(--olive-light); } }
+.set-hits, .set-rows-list { display:flex; flex-direction:column; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
+.set-hits .set-row { min-height:60px; }
+.set-hits .set-row + .set-row, .set-group-list .set-row + .set-row { border-top:0.5px solid var(--border); }
+.set-hits .set-row:hover, .set-item:hover { background:var(--bg-2); }
+
+/* A section's settings */
+.set-rows { display:flex; flex-direction:column; }
+.set-rows-list + .set-rows-head { margin-top:1.25rem; }
+.set-rows[hidden] { display:none; }
+.set-item { display:flex; align-items:center; gap:12px; min-height:56px; padding:10px 16px; color:var(--text); text-decoration:none; transition:background .15s; }
+.set-item + .set-item { border-top:0.5px solid var(--border); }
+.set-item-name { flex:1; min-width:0; font-size:14.5px; font-weight:600; line-height:1.3; }
+.set-item-value { min-width:0; max-width:55%; font-size:13.5px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.set-item.is-danger .set-item-name { color:#b91c1c; }
+[data-theme="dark"] .set-item.is-danger .set-item-name { color:#f87171; }
+
+/* Computers: a plain list beside the page */
+@media (min-width:901px) {
+  .set-group-list { display:flex; flex-direction:column; gap:2px; }
+  .set-group-list .set-row { min-height:38px; padding:6px 10px; border-radius:10px; }
+  .set-group-list .set-row + .set-row { border-top:none; }
+  .set-list { gap:10px; }
+  .set-group-list .set-row:hover { background:var(--bg-2); }
+  .set-group-list .set-row-ic { width:20px; height:20px; background:none; color:var(--text-2); }
+  .set-group-list .set-row-sub, .set-group-list .set-row-go { display:none; }
+  .set-group-list .set-row[aria-current="page"] { background:var(--olive-faint); }
+  .set-group-list .set-row[aria-current="page"] .set-row-ic { color:var(--olive-light); }
+}
+/* Phones: a card per group, and one level at a time */
 @media (max-width:900px) {
+  .set-group-list { display:flex; flex-direction:column; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
+  .set-group-list .set-row { min-height:60px; }
   .set-shell { grid-template-columns:minmax(0, 1fr); }
   .set-rail { position:static; max-height:none; overflow:visible; }
   .set-main { display:none; }
@@ -57,6 +92,10 @@
   body.set-open .set-top { display:none; }
   .set-back { display:flex; }
 }
+.set-save { width:100%; margin-top:1rem; }
+.set-note { margin-bottom:0; }
+.set-soon { display:inline-block; margin-inline-end:6px; padding:2px 8px; border:0.5px solid var(--border-olive); border-radius:999px; font-size:9.5px; letter-spacing:1px; color:var(--olive-light); }
+.settings-section[hidden] { display:none; }
 
 .settings-section {
   background:var(--card);
@@ -223,20 +262,20 @@
   </div>
 
   <div class="set-shell" id="setShell">
-    <nav class="set-rail" aria-label="Settings sections">
+    <div class="set-rail" role="navigation" aria-label="Settings sections">
       <div class="set-search">
         <input class="field-input" id="setSearch" type="search" placeholder="Search settings…" aria-label="Search settings" autocomplete="off" spellcheck="false" enterkeyhint="search">
       </div>
       <div id="setSearchLive" class="sr-only" aria-live="polite"></div>
       <div id="setHits" hidden></div>
       <div class="set-list" id="setList"></div>
-    </nav>
+    </div>
 
     <main class="set-main">
       <section class="set-pane" id="pane-profile" aria-labelledby="paneT-profile" hidden>
         <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back to all settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <h2 class="set-pane-title" id="paneT-profile" tabindex="-1">My Profile</h2>
+          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-profile" tabindex="-1">My Profile</h2></div>
         </div>
         <div class="settings-section" id="setPhoto">
           <div class="settings-title">Profile Photo</div>
@@ -298,8 +337,8 @@
 
       <section class="set-pane" id="pane-account" aria-labelledby="paneT-account" hidden>
         <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back to all settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <h2 class="set-pane-title" id="paneT-account" tabindex="-1">Account</h2>
+          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-account" tabindex="-1">Account</h2></div>
         </div>
         <div class="settings-section" id="setUsernameCard">
           <div class="settings-title">Username</div>
@@ -340,12 +379,12 @@
 
       <section class="set-pane" id="pane-data" aria-labelledby="paneT-data" hidden>
         <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back to all settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <h2 class="set-pane-title" id="paneT-data" tabindex="-1">Data</h2>
+          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-data" tabindex="-1">Data</h2></div>
         </div>
         <div class="settings-section" id="setImport">
-          <div class="settings-title">Import <span class="set-soon">Coming soon</span></div>
-          <p class="settings-desc set-note">Bring your history over from Letterboxd, IMDb, a text file or a Word document. You’ll check everything before it’s saved.</p>
+          <div class="settings-title">Import</div>
+          <p class="settings-desc set-note"><span class="set-soon">Coming soon</span> Bring your history over from Letterboxd, IMDb, a text file or a Word document. You’ll check everything before it’s saved.</p>
         </div>
 
         <div class="settings-section" id="setExport">
@@ -357,8 +396,8 @@
 
       <section class="set-pane" id="pane-privacy" aria-labelledby="paneT-privacy" hidden>
         <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back to all settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <h2 class="set-pane-title" id="paneT-privacy" tabindex="-1">Privacy</h2>
+          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-privacy" tabindex="-1">Privacy</h2></div>
         </div>
         <div class="settings-section" id="setPrivate">
           <div class="settings-title">Account Privacy</div>
@@ -391,8 +430,8 @@
 
       <section class="set-pane" id="pane-security" aria-labelledby="paneT-security" hidden>
         <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back to all settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <h2 class="set-pane-title" id="paneT-security" tabindex="-1">Security</h2>
+          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-security" tabindex="-1">Security</h2></div>
         </div>
         <div class="settings-section" id="setPassword">
           <div class="settings-title">Change Password</div>
@@ -432,17 +471,16 @@
 
       <section class="set-pane" id="pane-notifications" aria-labelledby="paneT-notifications" hidden>
         <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back to all settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <h2 class="set-pane-title" id="paneT-notifications" tabindex="-1">Notifications</h2>
+          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-notifications" tabindex="-1">Notifications</h2></div>
         </div>
         <div id="setNotif"></div>
-        <a href="notifications.html" class="push-link">Open notifications →</a>
       </section>
 
       <section class="set-pane" id="pane-preferences" aria-labelledby="paneT-preferences" hidden>
         <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back to all settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <h2 class="set-pane-title" id="paneT-preferences" tabindex="-1">Preferences</h2>
+          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-preferences" tabindex="-1">Preferences</h2></div>
         </div>
         <div class="settings-section" id="setLang">
           <div class="settings-title">Language</div>
@@ -482,8 +520,8 @@
 
       <section class="set-pane" id="pane-appearance" aria-labelledby="paneT-appearance" hidden>
         <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back to all settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <h2 class="set-pane-title" id="paneT-appearance" tabindex="-1">Appearance</h2>
+          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-appearance" tabindex="-1">Appearance</h2></div>
         </div>
         <div class="settings-section" id="setTheme">
           <div class="settings-title">Theme</div>
@@ -575,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _blocksLoad();
     _lockPaint();
     _usernamePaint();
+    MSSSettingsNav.refresh();
     MSSNotifSettings.render(document.getElementById('setNotif'));
   });
 });
@@ -722,18 +761,38 @@ async function _usernamePaint() {
     : 'You can change your username once every 14 days.';
 }
 
-// Unsaved edits, section by section (settings-nav.js asks before leaving)
-function settingsDirty(section) {
+// Unsaved edits, screen by screen (settings-nav.js asks before leaving)
+function settingsDirty(item) {
   const v = id => document.getElementById(id).value, p = _sProfile || {};
-  if (section === 'profile') return v('setDisplayName').trim() !== (p.display_name || '') || v('setBio').trim() !== (p.bio || '') || v('setQuote').trim() !== (p.quote || '');
-  if (section === 'account') return !!_sProfile && v('setUsername').trim() !== (p.username || '');
-  if (section === 'security') return !!v('setNewPassword') || !!v('setCurrentPassword');
+  if (item === 'setDetails') return v('setDisplayName').trim() !== (p.display_name || '') || v('setBio').trim() !== (p.bio || '') || v('setQuote').trim() !== (p.quote || '');
+  if (item === 'setUsernameCard') return !!_sProfile && v('setUsername').trim() !== (p.username || '');
+  if (item === 'setPassword') return !!v('setNewPassword') || !!v('setCurrentPassword');
   return false;
 }
-function settingsReset(section) {
-  if (section === 'profile') _fillDetails();
-  if (section === 'account') { document.getElementById('setUsername').value = _sProfile?.username || ''; checkUsernameLive(); }
-  if (section === 'security') { _passClear(); }
+function settingsReset(item) {
+  if (item === 'setDetails') _fillDetails();
+  if (item === 'setUsernameCard') { document.getElementById('setUsername').value = _sProfile?.username || ''; checkUsernameLive(); }
+  if (item === 'setPassword') _passClear();
+}
+// What a setting is set to now, for the list of settings. '' shows nothing.
+function settingsValue(item) {
+  const onOff = id => document.getElementById(id)?.getAttribute('aria-checked') === 'true' ? 'On' : 'Off';
+  const count = (id, one, many) => { const n = document.querySelectorAll(`#${id} .sess-row`).length; return n === 1 ? one : n ? `${n} ${many}` : ''; };
+  switch (item) {
+    case 'setDetails': return _sProfile?.display_name || '';
+    case 'setUsernameCard': return _sProfile?.username ? '@' + _sProfile.username : '';
+    case 'setEmailCard': return _sUser?.email || '';
+    case 'setImport': return 'Coming soon';
+    case 'setPrivate': return onOff('privSwitch');
+    case 'setOnline': return onOff('msgOnlineSw');
+    case 'setBlocked': return document.getElementById('blockEmpty').hidden ? count('blockList', '1 person', 'people') : 'None';
+    case 'setSessions': return count('sessList', '1 device', 'devices');
+    case 'setLang': return MSSLang.list().find(l => l.code === MSSLang.code)?.name || '';
+    case 'setEpisodes': return document.querySelector('.ep-mode-toggle .active')?.textContent.trim() || '';
+    case 'setScreensaver': return onOff('ssSwitch');
+    case 'nsAlertsT': return mssNotifPopupsOn() ? 'On' : 'Off';
+    default: return '';
+  }
 }
 
 // The same 8–64 guide as the sign-up page (MSSPass); your username / email shouldn't be in it
@@ -940,11 +999,11 @@ async function _lockPaint() {
   const { data: age } = await sb.rpc('my_age').then(r => r, () => ({}));
   const card = document.getElementById('setMessages');
   card.hidden = !(age === 'adult' || age === 'teen16');
-  if (card.hidden) return;
+  if (card.hidden) { MSSSettingsNav.refresh(true); return; }
   let st;
   try { st = await MSSLock.status(); }
-  catch { card.hidden = true; return; }
-  sb.rpc('msg_my_key').then(({ data }) => { _recPaint(data); document.getElementById('setOnline').hidden = !data; if (data) document.getElementById('msgOnlineSw').setAttribute('aria-checked', data.show_online !== false); }, () => {});
+  catch { card.hidden = true; MSSSettingsNav.refresh(true); return; }
+  sb.rpc('msg_my_key').then(({ data }) => { _recPaint(data); document.getElementById('setOnline').hidden = !data; MSSSettingsNav.refresh(true); if (data) document.getElementById('msgOnlineSw').setAttribute('aria-checked', data.show_online !== false); }, () => {});
   document.getElementById('msgLockArea').innerHTML = st.on
     ? `<div class="sess-list-btns"><button type="button" class="set-btn" onclick="_lockDialog('change')">Change Passcode</button><button type="button" class="set-btn" onclick="_lockDialog('remove')">Remove Passcode</button></div>`
     : `<button type="button" class="set-btn" onclick="_lockDialog('set')">Set a Passcode</button>`;
@@ -1072,6 +1131,7 @@ async function _blocksLoad() {
       <span class="sess-info"><span class="sess-name" translate="no">${escHTML(p.display_name || p.username || 'Someone')}</span><span class="sess-when" translate="no">@${escHTML(p.username || '')}</span></span>
       <button type="button" class="sess-out" aria-label="Unblock @${escHTML(p.username || '')}" onclick="_blockUndo(this, ${attrJSON(p.id)})">Unblock</button>
     </li>`).join('');
+  MSSSettingsNav.refresh();
 }
 async function _blockUndo(btn, id) {
   btn.disabled = true;
@@ -1109,6 +1169,7 @@ async function _sessLoad() {
       ${s.is_current ? '<span class="sess-here">This device</span>' : `<button type="button" class="sess-out" aria-label="Sign out ${escHTML(d.name)}" onclick="_sessRevoke(this, '${escHTML(s.id)}')">Sign out</button>`}
     </li>`;
   }).join('');
+  MSSSettingsNav.refresh();
 }
 async function _sessRevoke(btn, id) {
   const row = (window._sessRows || []).find(s => s.id === id);
