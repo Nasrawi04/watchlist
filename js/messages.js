@@ -66,7 +66,27 @@ const MSSChat = (() => {
 
   /* ── The way in: sign-in, age, password once, passcode ── */
   function gate(html) { root.innerHTML = `<div class="chat-gate">${html}</div>`; }
+  /* Back: to the page you came from. Remembered, so opening a chat or reloading doesn't lose it. */
+  const SOCIAL_PAGES = ['friends', 'activity', 'compare', 'blend', 'movie-night', 'challenges', 'polls', 'episode-chat'];
+  function paintBack() {
+    const link = $('chatPageBack');
+    if (!link) return;
+    let from = null;
+    try {
+      const r = document.referrer ? new URL(document.referrer) : null;
+      const page = r?.origin === location.origin ? r.pathname.split('/').pop().replace('.html', '') : '';
+      if (page && page !== 'messages' && page !== 'login') sessionStorage.setItem('msf_msg_back', page + (r.search || ''));
+      from = sessionStorage.getItem('msf_msg_back');
+    } catch {}
+    const name = (from || '').split('?')[0];
+    if (!from || !/^[a-z0-9-]+(\?.*)?$/i.test(from)) return;
+    const [file, search = ''] = from.split('?');
+    link.href = `${file}.html${search ? '?' + search : ''}`;
+    if (!SOCIAL_PAGES.includes(name)) link.querySelector('span').textContent = 'Back';
+  }
+
   async function start(user, q) {
+    paintBack();
     root = $('chatRoot');
     if (!user) { gate(mssGuestEmpty('messages')); return; }
     me = user.id;
@@ -178,18 +198,27 @@ const MSSChat = (() => {
   async function openApp(q) {
     root.innerHTML = `<div class="chat-shell" id="chatShell">
         <aside class="chat-side" aria-label="Your chats">
-          <div class="chat-side-head">
-            <input class="field-input chat-search" id="chatSearch" type="search" placeholder="Search chats by name…" aria-label="Search chats by name" autocomplete="off">
+          <div class="chat-side-top">
+            <h2 class="chat-side-t">Chats</h2><span class="chat-unread" id="chatSideN" hidden></span>
             <button type="button" class="chat-icon-btn" onclick="MSSChat.starred()" aria-label="Starred messages">${icon('star', 18)}</button>
-            <button type="button" class="chat-icon-btn" onclick="MSSChat.newChat()" aria-label="New chat">${icon('plus', 18)}</button>
+            <button type="button" class="chat-icon-btn is-main" onclick="MSSChat.newChat()" aria-label="New chat">${icon('plus', 18)}</button>
           </div>
+          <div class="chat-side-head">
+            <span class="chat-search-wrap">${icon('search', 15)}<input class="field-input chat-search" id="chatSearch" type="search" placeholder="Search chats by name…" aria-label="Search chats by name" autocomplete="off"></span>
+          </div>
+          <div class="chat-filters" role="group" aria-label="Show">
+            <button type="button" class="chat-filter on" data-f="all" aria-pressed="true" onclick="MSSChat.filter('all')">All</button>
+            <button type="button" class="chat-filter" data-f="unread" aria-pressed="false" onclick="MSSChat.filter('unread')">Unread</button>
+          </div>
+          <div class="chat-friends" id="chatFriends" hidden></div>
           ${keyTip()}
           <div class="chat-list" id="chatList"><div class="page-loading" data-skel="rows"></div></div>
         </aside>
         <section class="chat-main" id="chatMain" aria-label="Chat"></section>
       </div>`;
-    $('chatSearch').addEventListener('input', ev => { query = ev.target.value.trim().toLowerCase(); drawList(); });
+    $('chatSearch').addEventListener('input', ev => { query = ev.target.value.trim().toLowerCase(); drawFriends(); drawList(); });
     drawEmptyMain();
+    loadFriends();
     try { rpc('msg_my_key').then(k => { showOnline = k?.show_online !== false; if (cur) joinRoom(); }, () => {}); } catch {}
     subscribe();
     await loadChats();
@@ -206,6 +235,7 @@ const MSSChat = (() => {
     window.visualViewport?.addEventListener('resize', fitViewport);
     window.visualViewport?.addEventListener('scroll', fitViewport);
     window.addEventListener('resize', fitViewport);
+    window.addEventListener('resize', paintFriendArrows);
     ['pointerdown', 'keydown'].forEach(e => document.addEventListener(e, () => MSSLock.touch(), { passive: true }));
     clearInterval(pollT);
     pollT = setInterval(() => { if (!document.hidden && !liveOK) refresh(); pruneExpired(); }, 20000);
@@ -223,8 +253,62 @@ const MSSChat = (() => {
   }
   function drawEmptyMain() {
     if (!$('chatMain')) return;
-    $('chatMain').innerHTML = `<div class="chat-blank"><span class="chat-card-ic" aria-hidden="true">${icon('lock', 26)}</span><h2 class="chat-card-t">Your chats are private</h2>
-      <p class="chat-card-s">Messages are encrypted on your device. They disappear 7 days after they’re read, unless one of you stars them.</p></div>`;
+    $('chatMain').innerHTML = `<div class="chat-blank">${mssArt('chat')}
+      <h2 class="chat-blank-t">Pick a chat, or start one</h2>
+      <p class="chat-card-s">Your friends have opinions about that finale. Go find out.</p>
+      <button type="button" class="btn-save chat-blank-go" onclick="MSSChat.newChat()">${icon('plus', 15)} Start a Chat</button>
+      <ul class="chat-trust">
+        <li>${icon('lock', 17)}<span><b>Only you two can read them</b>Encrypted on your devices.</span></li>
+        <li>${icon('clock', 17)}<span><b>They tidy up after themselves</b>Gone 7 days after they’re read, unless one of you stars them.</span></li>
+        <li>${icon('film', 17)}<span><b>Share what you’re watching</b>Send titles and lists right into the chat.</span></li>
+      </ul></div>`;
+  }
+  // Friends along the top of the list: one tap starts a chat
+  let friends = [], filterBy = 'all';
+  async function loadFriends() {
+    try { friends = (await getFriendships(me)).filter(f => f.status === 'accepted').map(f => f.friendProfile).filter(p => p?.id); } catch { friends = []; }
+    drawFriends();
+  }
+  function drawFriends() {
+    const box = $('chatFriends');
+    if (!box) return;
+    box.hidden = !friends.length || !!query || filterBy !== 'all';
+    if (box.hidden) return;
+    const arrow = (dir, label, d) => `<button type="button" class="chat-friends-go" data-dir="${dir}" onclick="MSSChat.friendsMove(${dir})" aria-label="${label}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="${d}"/></svg></button>`;
+    box.innerHTML = `<div class="chat-friends-top"><div class="chat-friends-t">Friends</div><div class="chat-friends-nav" id="chatFriendsNav" hidden>${arrow(-1, 'Earlier friends', '15 18 9 12 15 6')}${arrow(1, 'More friends', '9 18 15 12 9 6')}</div></div>
+      <div class="chat-friends-row" id="chatFriendsRow">${friends.slice(0, 20).map(p =>
+      `<button type="button" class="chat-friend" onclick="MSSChat.open(${attrJSON(p.id)})">${av(p, 52)}<span translate="no">${esc(name(p))}</span></button>`).join('')}</div>`;
+    const row = $('chatFriendsRow');
+    row.addEventListener('scroll', paintFriendArrows, { passive: true });
+    // A mouse wheel only goes up and down: over this row, it moves the row while there's more to see
+    row.addEventListener('wheel', ev => {
+      if (Math.abs(ev.deltaX) >= Math.abs(ev.deltaY)) return;
+      const before = row.scrollLeft;
+      row.scrollLeft += ev.deltaY;
+      if (row.scrollLeft !== before) ev.preventDefault();
+    }, { passive: false });
+    paintFriendArrows();
+  }
+  // The arrows, for a computer with only a mouse and keyboard: shown only when the row doesn't fit
+  function paintFriendArrows() {
+    const row = $('chatFriendsRow'), nav = $('chatFriendsNav');
+    if (!row || !nav) return;
+    const room = row.scrollWidth - row.clientWidth, at = Math.abs(row.scrollLeft);
+    nav.hidden = room <= 1;
+    nav.querySelector('[data-dir="-1"]').disabled = at <= 1;
+    nav.querySelector('[data-dir="1"]').disabled = at >= room - 1;
+  }
+  function friendsMove(dir) {
+    const row = $('chatFriendsRow');
+    if (!row) return;
+    const sign = getComputedStyle(row).direction === 'rtl' ? -1 : 1;
+    row.scrollBy({ left: dir * sign * Math.max(150, row.clientWidth * .75), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+  function setFilter(f) {
+    filterBy = f;
+    document.querySelectorAll('.chat-filter').forEach(b => { const on = b.dataset.f === f; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+    drawFriends();
+    drawList();
   }
   function fitViewport() {
     const vv = window.visualViewport;
@@ -247,9 +331,11 @@ const MSSChat = (() => {
   const preview = c => { const l = c._last; if (!c.last) return ''; if (!l) return '🔒 Can’t be read'; return textOf(l); };
   function drawList() {
     const box = $('chatList'); if (!box) return;
-    const rows = chats.filter(c => !query || name(c.other).toLowerCase().includes(query) || (c.other.username || '').toLowerCase().includes(query));
+    const unread = chats.reduce((t, c) => t + (c.unread ? 1 : 0), 0), badge = $('chatSideN');
+    if (badge) { badge.hidden = !unread; badge.textContent = unread; badge.setAttribute('aria-label', `${unread} unread`); }
+    const rows = chats.filter(c => (filterBy !== 'unread' || c.unread) && (!query || name(c.other).toLowerCase().includes(query) || (c.other.username || '').toLowerCase().includes(query)));
     if (!rows.length) {
-      box.innerHTML = query ? `<div class="chat-none">No chats match that.</div>` : `<div class="chat-none">${mssEmpty({ compact: true, art: 'chat', title: 'No chats yet', text: 'Say hi to a friend and tell them what to watch next.', actions: [{ label: 'New chat', icon: 'plus', onclick: 'MSSChat.newChat()', primary: true }] })}</div>`;
+      box.innerHTML = query ? `<div class="chat-none">No chats match that.</div>` : filterBy === 'unread' ? `<div class="chat-none">You’re all caught up.</div>` : `<div class="chat-none">${mssEmpty({ compact: true, art: 'chat', title: 'No chats yet', text: 'Say hi to a friend and tell them what to watch next.', actions: [{ label: 'New chat', icon: 'plus', onclick: 'MSSChat.newChat()', primary: true }] })}</div>`;
       return;
     }
     box.innerHTML = rows.map(c => {
@@ -859,5 +945,5 @@ const MSSChat = (() => {
     el.querySelector('#chatNewList').addEventListener('click', ev => { const b = ev.target.closest('[data-id]'); if (b) { done(); openChat(b.dataset.id); } });
   }
 
-  return { start, hideTip, open: id => openChat(id), back, older: () => { const f = cur?.msgs[0]; if (f) loadThread(f.created_at); }, retry, menu, deleteChat, block, newChat, actions, openShare, react, cancelReply, jump, starred: () => openStarred(), unstar, openStar };
+  return { start, hideTip, filter: setFilter, friendsMove, open: id => openChat(id), back, older: () => { const f = cur?.msgs[0]; if (f) loadThread(f.created_at); }, retry, menu, deleteChat, block, newChat, actions, openShare, react, cancelReply, jump, starred: () => openStarred(), unstar, openStar };
 })();

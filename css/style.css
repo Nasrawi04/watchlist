@@ -5803,7 +5803,7 @@ button.disc-side-link:focus-visible { outline:2px solid var(--olive-light); outl
 .soc-av img { width:100%; height:100%; object-fit:cover; }
 .soc-head { display:flex; align-items:flex-end; justify-content:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:1rem; }
 .soc-head-start { justify-content:flex-start; }
-.soc-toggle { margin:0 0 1.25rem; max-width:100%; }
+.soc-toggle { margin:0 auto 1.25rem; max-width:100%; }
 .soc-toggle .pn-toggle-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; }
 .poll-link { background:none; border:none; padding:4px 2px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-family:'Manrope',var(--sans); font-size:12.5px; font-weight:600; color:var(--text-2); }
 .poll-link:hover { color:var(--olive-light); }

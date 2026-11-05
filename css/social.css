@@ -58,7 +58,6 @@ a.ud-item { color:inherit; text-decoration:none; }
 /* Header */
 /* Title, then the search bar full width underneath — same layout on every screen size
    (like the Home / Discover search) instead of beside the title on laptops only */
-.fr-eyebrow { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:3px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
 .fr-find { width:100%; position:relative; }
 .fr-find .fused-search-wrap { display:flex; align-items:stretch; border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-3); transition:border-color .15s, box-shadow .15s; }
 .fr-find .fused-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
@@ -402,7 +401,7 @@ a.ud-item { color:inherit; text-decoration:none; }
 
 /* ── Sub-nav strip (social-nav.js): the pages in this page's group, as pill tabs. Wide screens only —
    phones and tablets have the top toggles for the same places. ── */
-.soc-strip { display:none; margin:0 0 1.5rem; }
+.soc-strip { display:none; margin:0 auto 1.5rem; }
 .soc-strip[hidden] { display:none; }
 @media(min-width:1200px) { .soc-strip:not([hidden]) { display:flex; } }
 .soc-strip .pn-toggle-btn { display:inline-flex; align-items:center; gap:7px; padding:9px 22px; font-size:13px; text-decoration:none; white-space:nowrap; }
