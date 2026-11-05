@@ -90,8 +90,12 @@ const MSSPick = (() => {
         </div>
       </div>`;
     MSSDialog.bind(ov, close);
-    ov.querySelector('.qp-card').addEventListener('scroll', () => { const dd = document.getElementById('qpGenreDD'); if (dd?.classList.contains('open')) gPlace(dd); }, { passive: true });
+    ov.querySelector('.qp-card').addEventListener('scroll', gFollow, { passive: true });
     document.body.appendChild(ov);
+    new ResizeObserver(gFollow).observe(document.getElementById('qpBody'));
+    window.visualViewport?.addEventListener('resize', gFollow);
+    window.visualViewport?.addEventListener('scroll', gFollow);
+    window.addEventListener('resize', gFollow);
     return ov;
   }
 
@@ -140,13 +144,19 @@ const MSSPick = (() => {
     dd.classList.remove('open'); dd.querySelector('.td-dd-menu').style.cssText = '';
     document.getElementById('qpGenreIn')?.setAttribute('aria-expanded', 'false');
   }
+  // Placed on the screen so the popup can't clip it. Stays with the box whenever the popup's
+  // layout shifts (its text loads late) or a phone keyboard takes up part of the screen.
   function gPlace(dd) {
     const r = dd.querySelector('.sf-dd-trigger').getBoundingClientRect(), menu = dd.querySelector('.td-dd-menu');
-    const below = innerHeight - r.bottom - 12, above = r.top - 12, up = below < 160 && above > below;
+    const card = document.querySelector('.qp-card').getBoundingClientRect();
+    if (r.bottom < card.top || r.top > card.bottom) return gClose();     // scrolled out of the popup
+    const vv = window.visualViewport, top = vv ? vv.offsetTop : 0, height = vv ? vv.height : innerHeight;
+    const below = top + height - r.bottom - 12, above = r.top - top - 12, up = below < 160 && above > below;
     const h = Math.max(120, Math.min(up ? above : below, 240));
-    menu.style.cssText = `position:fixed; left:${r.left}px; width:${Math.max(r.width, 200)}px; z-index:1400; display:block; max-height:${h}px; overflow-y:auto; `
+    menu.style.cssText = `position:fixed; left:${r.left}px; width:${r.width}px; z-index:1400; display:block; max-height:${h}px; overflow-y:auto; `
       + (up ? `bottom:${innerHeight - r.top}px; top:auto; border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-top:0.5px solid var(--olive-light); border-bottom:none;` : `top:${r.bottom}px; bottom:auto;`);
   }
+  const gFollow = () => { const dd = document.getElementById('qpGenreDD'); if (dd?.classList.contains('open')) gPlace(dd); };
   function gOpen(typed) {
     const dd = document.getElementById('qpGenreDD'), inp = document.getElementById('qpGenreIn'); if (!dd || !inp) return;
     const q = typed ? inp.value.trim().toLowerCase() : '';
@@ -156,6 +166,7 @@ const MSSPick = (() => {
       + (list.length ? list.map((g, i) => `<div class="td-dd-opt${g === mood.genre ? ' active' : ''}${i === gi ? ' hl' : ''}" role="option" aria-selected="${g === mood.genre}" onmousedown="event.preventDefault()" onclick="MSSPick._gPick(${attrJSON(g)})">${q ? esc(g).replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<b>$1</b>') : esc(g)}</div>`).join('')
         : `<div class="sf-empty" style="padding:10px 14px">No genre like “${esc(inp.value.trim())}” on your watchlist.</div>`);
     dd.classList.add('open'); inp.setAttribute('aria-expanded', 'true');
+    inp.scrollIntoView({ block: 'nearest' });
     gPlace(dd);
   }
   function gAct(what) {

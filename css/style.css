@@ -4088,7 +4088,7 @@ a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar, .rc-col.rc-sel .rc-bar {
 .qp-none { font-size:14px; color:var(--text-2); padding:6px 0 10px; }
 .qp-link { margin-inline-start:6px; background:none; border:0; padding:0; color:var(--olive-light); font:700 14px 'Manrope',var(--sans); cursor:pointer; text-decoration:underline; }
 .qp-moods { padding:14px 20px 4px; }
-.qp-moods-h { display:block; font-size:11px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; }
+.qp-moods-h { display:block; font-size:11px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:var(--text-2); margin-bottom:8px; }
 .qp-chips { display:flex; flex-wrap:wrap; gap:7px; }
 .qp-chip { display:inline-flex; align-items:center; gap:6px; height:40px; padding:0 14px; border-radius:var(--radius-sm); cursor:pointer;   /* same shape as the genre dropdown */
   font:600 12.5px 'Manrope',var(--sans); color:var(--text-2); background:var(--card-solid); border:1px solid var(--border-2); transition:all .15s; }
@@ -4097,8 +4097,9 @@ a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar, .rc-col.rc-sel .rc-bar {
 .qp-chip.on { background:var(--olive); border-color:var(--olive); color:#fff; }
 /* the genre picker: the site's own dropdown (SF.dd), as tall as the mood buttons */
 .qp-genre { width:180px; max-width:100%; }
+@media (min-width:768px) { .qp-genre { width:160px; } }
 .qp-genre .sf-dd-trigger { font-weight:600; font-size:12.5px; }
-.qp-genre .td-dd-menu { max-height:240px; overflow-y:auto; }
+.qp-genre .td-dd-menu { max-height:240px; overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y; -webkit-overflow-scrolling:touch; }
 .qp-genre .sf-dd { position:relative; }
 .qp-genre-in { width:100%; padding:0 36px 0 14px !important; cursor:text; font-weight:600; font-size:12.5px; }
 .qp-genre-in::placeholder { color:var(--text); opacity:1; }
