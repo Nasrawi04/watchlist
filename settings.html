@@ -88,6 +88,8 @@
 .field-hint { font-size:10.5px; color:var(--text-3); font-weight:400; letter-spacing:0; text-transform:none; }
 .field-hint.ok   { color:var(--olive-light); }
 .field-hint.bad  { color:#ff6b6b; }
+.field-row input:disabled { opacity:.65; cursor:not-allowed; }
+.btn-save[hidden] { display:none; }
 .field-static {
   width:100%; box-sizing:border-box; background:var(--bg-2); border:0.5px solid var(--border-2);
   border-radius:var(--radius-sm); color:var(--text-2); font-size:14px; padding:10px 14px;
@@ -310,7 +312,8 @@
                    autocomplete="off" spellcheck="false" autocapitalize="none" data-mask="username"
                    oninput="checkUsernameLive()">
           </div>
-          <button class="btn-save set-save" onclick="saveUsername()">Save Username</button>
+          <p class="settings-desc set-note" id="usernameRule" aria-live="polite">You can change your username once every 14 days.</p>
+          <button class="btn-save set-save" id="usernameSave" onclick="saveUsername()">Save Username</button>
         </div>
 
         <div class="settings-section" id="setEmailCard">
@@ -393,6 +396,10 @@
         </div>
         <div class="settings-section" id="setPassword">
           <div class="settings-title">Change Password</div>
+          <div class="field-row">
+            <label class="field-label" for="setCurrentPassword">Current Password</label>
+            <input class="field-input" id="setCurrentPassword" type="password" maxlength="64" autocomplete="current-password">
+          </div>
           <div class="field-row">
             <label class="field-label" for="setNewPassword">New Password</label>
             <input class="field-input" id="setNewPassword" type="password" maxlength="64" placeholder="8–64 characters" autocomplete="new-password">
@@ -567,6 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _sessLoad();
     _blocksLoad();
     _lockPaint();
+    _usernamePaint();
     MSSNotifSettings.render(document.getElementById('setNotif'));
   });
 });
@@ -670,7 +678,7 @@ async function saveProfileDetails() {
 
 async function saveUsername() {
   const username = document.getElementById('setUsername').value.trim();
-  if (username === _sProfile?.username) return;
+  if (username === _sProfile?.username) { showToast('That’s already your username.'); return; }
   if (!username || username.length < 3) {
     showToast('Username must be at least 3 characters.', 'err'); return;
   }
@@ -679,15 +687,39 @@ async function saveUsername() {
   const available = await checkUsernameAvailable(username, _sUser.id);
   if (!available) { showToast('That username is taken. Try another.', 'err'); return; }
   if (!(await isUsernameAllowed(username))) { showToast('That username isn’t allowed. Try another.', 'err'); return; }
+  const ok = await showConfirm({
+    title: `Change your username to @${username}?`,
+    message: `You won’t be able to change it again for 14 days, and you’ll log in with @${username} from now on. Your old username stays reserved for you for 14 days, and old links will find you.`,
+    confirmText: 'Change Username', cancelText: 'Cancel', iconName: 'user', danger: false,
+  });
+  if (!ok) return;
   try {
     _sProfile = await updateProfile(_sUser.id, { username });
+    window._navUserProfile = _sProfile;
+    document.querySelectorAll('#navUserName').forEach(n => { n.textContent = _sProfile.username; });
+    document.querySelectorAll('.nav-dd-head small').forEach(n => { n.textContent = '@' + _sProfile.username + ' · View profile'; });
     populateSettings();
-    document.getElementById('usernameHint').textContent = '';
-    showToast('Username saved!');
+    checkUsernameLive();
+    await _usernamePaint();
+    showToast(`You’re now @${_sProfile.username}.`);
   } catch(e) {
-    showToast(isUsernameBlockedError(e) ? 'That username isn’t allowed. Try another.' : 'Error saving your username.', 'err');
+    const m = e?.message || '';
+    if (/USERNAME_TOO_SOON/.test(m)) { await _usernamePaint(); showToast('You changed your username recently. Try again later.', 'err'); }
+    else if (/USERNAME_HELD|duplicate|unique/i.test(m)) showToast('That username is taken. Try another.', 'err');
+    else showToast(isUsernameBlockedError(e) ? 'That username isn’t allowed. Try another.' : 'Error saving your username.', 'err');
     console.error(e);
   }
+}
+
+// Once every 14 days (104): the database enforces it, this shows when
+async function _usernamePaint() {
+  const { data } = await sb.rpc('my_username_status').then(r => r, () => ({}));
+  const locked = data?.can_change === false, input = document.getElementById('setUsername');
+  input.disabled = locked;
+  document.getElementById('usernameSave').hidden = locked;
+  document.getElementById('usernameRule').textContent = locked
+    ? `You can change your username again on ${new Date(data.next_change_at).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'long', year: 'numeric' })}.`
+    : 'You can change your username once every 14 days.';
 }
 
 // Unsaved edits, section by section (settings-nav.js asks before leaving)
@@ -695,29 +727,53 @@ function settingsDirty(section) {
   const v = id => document.getElementById(id).value, p = _sProfile || {};
   if (section === 'profile') return v('setDisplayName').trim() !== (p.display_name || '') || v('setBio').trim() !== (p.bio || '') || v('setQuote').trim() !== (p.quote || '');
   if (section === 'account') return !!_sProfile && v('setUsername').trim() !== (p.username || '');
-  if (section === 'security') return !!v('setNewPassword');
+  if (section === 'security') return !!v('setNewPassword') || !!v('setCurrentPassword');
   return false;
 }
 function settingsReset(section) {
   if (section === 'profile') _fillDetails();
   if (section === 'account') { document.getElementById('setUsername').value = _sProfile?.username || ''; checkUsernameLive(); }
-  if (section === 'security') { document.getElementById('setNewPassword').value = ''; _setPassGuide(); }
+  if (section === 'security') { _passClear(); }
 }
 
 // The same 8–64 guide as the sign-up page (MSSPass); your username / email shouldn't be in it
 const _setPassGuide = MSSPass.mount('setPassGuide', 'setNewPassword', () => [window._navUser?.email?.split('@')[0], document.getElementById('setUsername')?.value]);
+function _passClear() {
+  document.getElementById('setCurrentPassword').value = '';
+  document.getElementById('setNewPassword').value = '';
+  _setPassGuide();
+}
 async function changePassword() {
+  const current = document.getElementById('setCurrentPassword').value;
   const pw = document.getElementById('setNewPassword').value;
+  if (!current) { showToast('Enter your current password.', 'err'); return; }
   if (MSSPass.error(pw)) { showToast(MSSPass.error(pw), 'err'); return; }
+  if (pw === current) { showToast('Your new password has to be different.', 'err'); return; }
   try {
+    if (!(await MSSKeys.withPassword(current))) { showToast('Your current password isn’t right.', 'err'); return; }
     const { error } = await sb.auth.updateUser({ password: pw });
     if (error) throw error;
     await MSSKeys.onPasswordChange(pw).catch(() => {});
-    document.getElementById('setNewPassword').value = '';
-    _setPassGuide();
+    _passClear();
     showToast('Password updated!');
   } catch(e) {
     showToast('Error updating password.', 'err');
+    console.error(e);
+    return;
+  }
+  const out = await showConfirm({
+    title: 'Sign out your other devices?',
+    message: 'Anywhere else this account is signed in will need the new password. This device stays signed in.',
+    confirmText: 'Sign Them Out', cancelText: 'Not Now', iconName: 'lock', danger: false,
+  });
+  if (!out) return;
+  try {
+    const { error } = await sb.auth.signOut({ scope: 'others' });
+    if (error) throw error;
+    _sessLoad();
+    showToast('Your other devices are signed out.');
+  } catch(e) {
+    showToast('Couldn’t sign out your other devices. Try again from Active Sessions.', 'err');
     console.error(e);
   }
 }

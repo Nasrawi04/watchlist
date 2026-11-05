@@ -438,7 +438,16 @@ async function checkUsernameAvailable(username, currentUserId) {
     .eq('username', username)
     .neq('id', currentUserId || '00000000-0000-0000-0000-000000000000')
     .maybeSingle();
-  return !data; // true = available
+  if (data) return false;
+  // Someone's old username stays reserved for 14 days (104). The database has the last word on saving.
+  const { data: held } = await sb.rpc('username_held', { p_name: username }).then(r => r, () => ({}));
+  return !held; // true = available
+}
+
+// Old profile links: who an old username belongs to now, for 14 days after the change (104)
+async function mssUsernameNow(oldName) {
+  const { data } = await sb.rpc('username_now', { p_name: oldName }).then(r => r, () => ({}));
+  return data || null;
 }
 
 async function isUsernameTaken(username) {

@@ -37,7 +37,7 @@ const MSSSettingsNav = (() => {
     ['Private Account', 'privacy', 'setPrivate', 'public followers lock requests'],
     ['Online Status', 'privacy', 'setOnline', 'show when online last seen active'],
     ['Blocked People', 'privacy', 'setBlocked', 'block unblock users'],
-    ['Password', 'security', 'setPassword', 'change new reset'],
+    ['Password', 'security', 'setPassword', 'change new reset current'],
     ['Active Sessions', 'security', 'setSessions', 'devices signed in logins'],
     ['Sign Out of All Devices', 'security', 'setSessions', 'log out logout everywhere'],
     ['Message Passcode', 'security', 'setMessages', 'lock pin chats messages'],

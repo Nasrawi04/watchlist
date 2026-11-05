@@ -140,8 +140,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let profile, entries;
   try {
-    const { data, error } = await sb.from('profiles').select('*').eq('username', username).maybeSingle();
+    let { data, error } = await sb.from('profiles').select('*').eq('username', username).maybeSingle();
     if (error) throw error;
+    if (!data) {       // an old link: they changed their username in the last 14 days
+      const now = await mssUsernameNow(username);
+      if (now) ({ data, error } = await sb.from('profiles').select('*').eq('username', now).maybeSingle());
+      if (error) throw error;
+      if (data) { const u = new URL(location.href); u.searchParams.set('u', data.username); history.replaceState(null, '', u); document.title = `@${data.username} — MyScreenFolio`; }
+    }
     if (!data) { mssErrorPage('user', { text: `There’s no one called @${username}. The username may have changed, or the account was deleted.` }); return; }
     profile = data;
     entries = await getPublicEntries(profile.id);

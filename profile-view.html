@@ -352,6 +352,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const { data: found, error: pErr } = await profileP;
   if (pErr && pErr.code !== '22P02') { mssErrorPage(mssErrorKind(pErr), { error: pErr }); return; }
   _pvProfile = found || null;
+  if (!_pvProfile && _pvUsername && !_pvUserId) {    // an old link: they changed their username in the last 14 days
+    const now = await mssUsernameNow(_pvUsername);
+    if (now) {
+      const { data: moved } = await sb.from('profiles').select('*').eq('username', now).maybeSingle();
+      _pvProfile = moved || null;
+      if (moved) { _pvUsername = now; const u = new URL(location.href); u.searchParams.set('u', now); history.replaceState(null, '', u); }
+    }
+  }
   if (!_pvProfile) { mssErrorPage(_pvUserId || _pvUsername ? 'user' : 'badlink'); return; }
   if (!_pvUserId) _pvUserId = _pvProfile.id;
 
