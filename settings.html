@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <!-- unsafe-eval: only for the photo safety check, whose library (tfjs) needs it. Messages and Login don't allow it. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co https://api.cloudinary.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co https://api.cloudinary.com https://graphql.anilist.co">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/splash.js"></script>
 <script src="js/i18n.js"></script>
@@ -109,6 +109,7 @@
 .imp-label { display:block; margin:14px 0 6px; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-2); }
 .imp-paste { width:100%; box-sizing:border-box; resize:vertical; }
 .imp-go { margin-top:10px; }
+.imp-hint { margin:6px 0 0; font-size:12px; line-height:1.4; color:var(--text-2); }
 .imp-sub { margin:1.4rem 0 8px; font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-2); }
 .imp-prog-t { margin:0 0 10px; font-size:14px; font-weight:600; color:var(--text); }
 .imp-track { height:8px; margin-bottom:12px; border-radius:8px; overflow:hidden; background:var(--bg-3); }

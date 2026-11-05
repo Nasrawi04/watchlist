@@ -2,7 +2,8 @@
    settings-import.js — Import your history (Settings → Data → Import)
    A file or a pasted list → matched to TMDB with a progress bar → a preview you check and edit
    → saved only when you confirm, through import_rows (105), which checks everything again.
-   Sources: Letterboxd (ZIP or CSV), IMDb (CSV), text, Word (.docx), pasted lists, any CSV with titles.
+   Sources: Letterboxd (ZIP or CSV), IMDb (CSV), MyAnimeList (XML, also gzipped), AniList (a username,
+   read from its public API), text, Word (.docx), pasted lists, any CSV with titles.
    The file stays on this device: only title searches reach TMDB.
 
    Ratings are never assigned silently. One rule for every source: stars out of 5 × 2, out of 10
@@ -12,7 +13,8 @@
 const MSSImport = (() => {
   const FFLATE = 'js/vendor/fflate-0.8.2.min.js';
   const MAX_ROWS = 5000, PAGE = 50, SAVE_SIZE = 100, MAX_BYTES = 30 * 1024 * 1024, WORKERS = 6;
-  const SOURCE = { letterboxd: 'Letterboxd', imdb: 'IMDb', text: 'Text file', word: 'Word document', paste: 'Pasted list', csv: 'Spreadsheet' };
+  const SOURCE = { letterboxd: 'Letterboxd', imdb: 'IMDb', text: 'Text file', word: 'Word document', paste: 'Pasted list', csv: 'Spreadsheet', myanimelist: 'MyAnimeList', anilist: 'AniList' };
+  const STATUS = { completed: 'Watched', queue: 'Watchlist', watching: 'Watching', paused: 'Paused', dropped: 'Dropped' };
   const CATS = [['movies', 'Movies'], ['tv', 'TV Shows'], ['anime', 'Anime'], ['cartoons', 'Cartoons']];
   const POSTER_PATH = /^\/[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp)$/;
   const $ = id => document.getElementById(id);
@@ -39,12 +41,12 @@ const MSSImport = (() => {
     return rows.slice(1).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] ?? '').trim()])));
   }
 
-  const newRow = o => ({ name: '', year: '', stars: null, scale: null, date: '', dates: [], rewatches: 1, review: '', status: 'completed', imdb: '', hint: '', movieOnly: false, ...o });
+  const newRow = o => ({ name: '', alts: [], kind: null, anime: false, episodes: 0, year: '', stars: null, scale: null, date: '', dates: [], rewatches: 1, review: '', status: 'completed', imdb: '', hint: '', ...o });
 
   /* Letterboxd: ratings, diary and reviews joined to each film by its name and year. Only the files needed are ever opened (not profile.csv). */
   function fromLetterboxd(f) {
     const map = new Map(), key = r => `${r.Name}|${r.Year}`;
-    const get = r => { if (!map.has(key(r))) map.set(key(r), newRow({ name: r.Name, year: r.Year, movieOnly: true })); return map.get(key(r)); };
+    const get = r => { if (!map.has(key(r))) map.set(key(r), newRow({ name: r.Name, year: r.Year, kind: 'movie' })); return map.get(key(r)); };
     (f.watched || []).forEach(get);
     (f.ratings || []).forEach(r => { const x = get(r); if (r.Rating) { x.stars = Number(r.Rating); x.scale = 5; } });
     const diaryByKey = {};
@@ -60,7 +62,7 @@ const MSSImport = (() => {
     });
     (f.reviews || []).forEach(r => { if (r.Review) { const x = get(r), t = r.Review.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim(); x.review = x.review ? `${x.review}\n\n${t}` : t; } });
     const rows = [...map.values()];
-    (f.watchlist || []).forEach(r => { if (!map.has(key(r))) rows.push(newRow({ name: r.Name, year: r.Year, movieOnly: true, status: 'queue' })); });
+    (f.watchlist || []).forEach(r => { if (!map.has(key(r))) rows.push(newRow({ name: r.Name, year: r.Year, kind: 'movie', status: 'queue' })); });
     return rows;
   }
 
@@ -72,6 +74,45 @@ const MSSImport = (() => {
       return newRow({ name: r.Title || r['Original Title'] || r.Const, year: r.Year, imdb: /^tt\d+$/.test(r.Const) ? r.Const : '', skip,
         stars: rated ? Number(rated) : null, scale: rated ? 10 : null, date: rated ? (r['Date Rated'] || '') : '', status: rated ? 'completed' : (r['Date Rated'] ? 'completed' : 'queue') });
     });
+  }
+
+  /* MyAnimeList's export. my_status can be text or the older number. Dates of 0000-00-00 mean none, a score of 0 means none. */
+  const MAL_STATUS = { 'completed': 'completed', 'plan to watch': 'queue', 'watching': 'watching', 'on-hold': 'paused', 'dropped': 'dropped', 1: 'watching', 2: 'completed', 3: 'paused', 4: 'dropped', 6: 'queue' };
+  const realDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || '') && !s.startsWith('0000') && !s.endsWith('-00') ? s : '';
+  function fromMAL(xml) {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.querySelector('parsererror') || doc.documentElement.nodeName !== 'myanimelist') throw new Error('That XML doesn’t look like a MyAnimeList export.');
+    const items = [...doc.querySelectorAll('myanimelist > anime')];
+    if (!items.length) throw new Error(doc.querySelector('myanimelist > manga') ? 'That’s a manga list. Only anime can be imported.' : 'That MyAnimeList file has no anime in it.');
+    return items.map(a => {
+      const v = t => a.querySelector(t)?.textContent.trim() || '', score = Number(v('my_score')) || 0, type = v('series_type').toLowerCase();
+      const status = MAL_STATUS[v('my_status').toLowerCase()] || 'completed', done = realDate(v('my_finish_date')) || realDate(v('my_start_date'));
+      return newRow({ name: v('series_title'), anime: true, kind: type === 'movie' ? 'movie' : type === 'tv' ? 'tv' : null, status,
+        stars: score || null, scale: score ? 10 : null, date: status === 'completed' ? done : '', dates: done ? [done] : [],
+        rewatches: 1 + (Number(v('my_times_watched')) || 0), review: v('my_comments'), episodes: Number(v('my_watched_episodes')) || 0 });
+    }).filter(r => r.name);
+  }
+
+  /* AniList has no export file: its public API gives a list by username. Only that request goes to AniList. */
+  const AL_STATUS = { COMPLETED: 'completed', REPEATING: 'completed', PLANNING: 'queue', CURRENT: 'watching', PAUSED: 'paused', DROPPED: 'dropped' };
+  const AL_QUERY = `query($name:String){MediaListCollection(userName:$name,type:ANIME,forceSingleCompletedList:true){lists{isCustomList entries{status score(format:POINT_10_DECIMAL) progress repeat notes completedAt{year month day} media{id format seasonYear startDate{year} title{romaji english}}}}}}`;
+  async function fromAniList(name) {
+    const res = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ query: AL_QUERY, variables: { name } }) });
+    const out = await res.json().catch(() => ({}));
+    if (res.status === 404) throw new Error(`AniList doesn’t have a user called “${name}”.`);
+    if (res.status === 429) throw new Error('AniList is busy. Try again in a minute.');
+    if (out.errors?.length || !res.ok) throw new Error(/private/i.test(out.errors?.[0]?.message || '') ? 'That AniList list is private. Make it public in AniList’s settings, import, then change it back.' : 'AniList didn’t answer. Check the username and try again.');
+    const seen = new Set(), rows = [];
+    (out.data?.MediaListCollection?.lists || []).filter(l => !l.isCustomList).flatMap(l => l.entries || []).forEach(e => {
+      if (seen.has(e.media.id)) return;
+      seen.add(e.media.id);
+      const t = e.media.title || {}, c = e.completedAt || {}, status = AL_STATUS[e.status] || 'completed', fmt = String(e.media.format || '').toUpperCase();
+      const date = status === 'completed' && c.year && c.month && c.day ? `${c.year}-${String(c.month).padStart(2, '0')}-${String(c.day).padStart(2, '0')}` : '';
+      rows.push(newRow({ name: t.english || t.romaji, alts: t.english && t.romaji ? [t.romaji] : [], year: String(e.media.seasonYear || e.media.startDate?.year || ''), anime: true,
+        kind: fmt === 'MOVIE' ? 'movie' : fmt === 'TV' || fmt === 'TV_SHORT' ? 'tv' : null, status, stars: e.score || null, scale: e.score ? 10 : null, date, dates: date ? [date] : [],
+        rewatches: 1 + (Number(e.repeat) || 0), review: e.notes || '', episodes: Number(e.progress) || 0 }));
+    });
+    return rows;
   }
 
   function fromAnyCSV(rows) {
@@ -143,8 +184,13 @@ const MSSImport = (() => {
       if (h.includes('Letterboxd URI')) return { source: 'letterboxd', rows: fromLetterboxd(/Rating/.test(h.join()) ? { ratings: rows, diary: h.includes('Watched Date') ? rows : [], reviews: h.includes('Review') ? rows : [] } : /watchlist/.test(n) ? { watchlist: rows } : { watched: rows }) };
       return { source: 'csv', rows: fromAnyCSV(rows) };
     }
+    if (n.endsWith('.xml.gz') || n.endsWith('.gz')) {
+      await mssLoadScript(FFLATE);
+      return { source: 'myanimelist', rows: fromMAL(window.fflate.strFromU8(window.fflate.gunzipSync(new Uint8Array(await file.arrayBuffer())))) };
+    }
+    if (n.endsWith('.xml')) return { source: 'myanimelist', rows: fromMAL(await file.text()) };
     if (n.endsWith('.txt') || n.endsWith('.md') || !n.includes('.')) return { source: 'text', rows: fromLines(await file.text()) };
-    throw new Error('That file type isn’t supported. Use .zip, .csv, .txt, .md or .docx.');
+    throw new Error('That file type isn’t supported. Use .zip, .csv, .xml, .gz, .txt, .md or .docx.');
   }
 
   /* ── Matching to TMDB ── */
@@ -159,21 +205,30 @@ const MSSImport = (() => {
     return res.json();
   }
 
-  async function search(name, year, movieOnly) {
+  async function search(name, year, kind) {
     const q = encodeURIComponent(name);
     const go = async y => {
-      const path = movieOnly ? `/search/movie?query=${q}&language=en-US${y ? `&year=${y}` : ''}` : `/search/multi?query=${q}&language=en-US`;
-      const d = await tmdbJSON(path);
-      return (d.results || []).filter(r => movieOnly || r.media_type === 'movie' || r.media_type === 'tv').map(r => toMatch(r, movieOnly ? 'movie' : r.media_type));
+      const yp = y ? (kind === 'tv' ? `&first_air_date_year=${y}` : `&year=${y}`) : '';
+      const d = await tmdbJSON(kind ? `/search/${kind}?query=${q}&language=en-US${yp}` : `/search/multi?query=${q}&language=en-US`);
+      return (d.results || []).filter(r => kind || r.media_type === 'movie' || r.media_type === 'tv').map(r => toMatch(r, kind || r.media_type));
     };
     let list = await go(year);
-    if (!list.length && year && movieOnly) list = await go('');
+    if (!list.length && year && kind) list = await go('');
     return list;
   }
 
-  function decide(row, list) {
+  // Anime lists give each season its own entry: "Show Season 2" is the show, on TMDB
+  const baseTitle = s => String(s || '').replace(/\s*[:\-–—]?\s*(?:(?:the\s+)?final\s+season|season\s*\d+|\d+(?:st|nd|rd|th)\s+season|part\s*\d+|cour\s*\d+|\b(?:II|III|IV|V|VI)\b)\s*.*$/i, '').trim();
+
+  function decide(row, list, name = row.name) {
     if (!list.length) return { state: 'none', why: 'TMDB doesn’t have anything with this name.' };
-    const want = norm(row.name), same = m => norm(m.title) === want || norm(m.orig) === want;
+    if (row.anime) {
+      const drawn = list.filter(m => m.genres.includes(16));
+      if (drawn.length) list = drawn;
+      const jp = list.filter(m => m.lang === 'ja');
+      if (jp.length) list = jp;
+    }
+    const want = norm(name), same = m => norm(m.title) === want || norm(m.orig) === want;
     const exact = list.filter(same);
     if (row.year) {
       const y = Number(row.year);
@@ -185,7 +240,7 @@ const MSSImport = (() => {
       const close = list.find(m => Number(m.year) === y) || list[0];
       return { state: 'check', match: close, why: 'The name isn’t an exact match. Please check it’s the right title.' };
     }
-    if (exact.length === 1) return { state: 'ok', match: exact[0] };
+    if (exact.length === 1 || (row.anime && list.length === 1)) return { state: 'ok', match: exact[0] || list[0] };
     if (exact.length > 1) return { state: 'check', match: exact[0], why: `${exact.length} titles have this name, and your list didn’t give a year.` };
     return { state: 'check', match: list[0], why: 'The name isn’t an exact match. Please check it’s the right title.' };
   }
@@ -198,7 +253,16 @@ const MSSImport = (() => {
         const f = await tmdbJSON(`/find/${row.imdb}?external_source=imdb_id&language=en-US`);
         const hit = f.movie_results?.[0] ? toMatch(f.movie_results[0], 'movie') : f.tv_results?.[0] ? toMatch(f.tv_results[0], 'tv') : null;
         d = hit ? { state: 'ok', match: hit } : { state: 'none', why: 'TMDB doesn’t know this IMDb title.' };
-      } else d = decide(row, await search(row.name, row.year, row.movieOnly));
+      } else {
+        // Each spelling in turn, stopping at a sure match: the name, its other title, then without its season
+        const names = [...new Set([row.name, ...row.alts, ...(row.anime ? [row.name, ...row.alts].map(baseTitle) : [])].filter(Boolean))];
+        for (const name of names) {
+          const seasonless = row.anime && name !== row.name && !row.alts.includes(name);
+          const next = decide(seasonless ? { ...row, year: '' } : row, await search(name, seasonless ? '' : row.year, row.kind), name);
+          if (!d || d.state === 'none' || next.state === 'ok') d = next;
+          if (next.state === 'ok') break;
+        }
+      }
       Object.assign(row, d);
     } catch (err) { console.warn('Import match:', err); row.state = 'none'; row.why = 'Couldn’t reach TMDB for this one. Change it to try again.'; }
     afterMatch(row);
@@ -241,6 +305,14 @@ const MSSImport = (() => {
     };
     await Promise.all(Array.from({ length: WORKERS }, worker));
     if (started !== S || started.cancel) return;
+    // Two records, one title (anime seasons, usually): the first goes in, the rest wait for a decision
+    const first = new Map();
+    rows.forEach(r => {
+      if (!r.match || r.state === 'dup') return;
+      const k = `${r.match.type}:${r.match.id}`;
+      if (first.has(k)) { r.state = 'check'; r.on = false; r.why = `“${first.get(k).name}” is also this title on TMDB, which keeps a show’s seasons together. Only one can be imported.`; }
+      else first.set(k, r);
+    });
     S.step = 'preview';
     S.filter = counts().check ? 'check' : 'all';
     draw();
@@ -275,12 +347,16 @@ const MSSImport = (() => {
   function startHTML() {
     return `${S.error ? `<p class="imp-error" role="alert">${escHTML(S.error)}</p>` : ''}
       <p class="settings-desc">Bring your watch history here. You’ll check everything before anything is saved, and nothing is sent to your friends. Your file stays on this device.</p>
-      <label class="imp-drop"><input type="file" id="importFile" class="sr-only" accept=".zip,.csv,.txt,.md,.docx">${icon('download', 22)}<b>Choose a file</b><span>Letterboxd ZIP, IMDb or other CSV, text or Word</span></label>
+      <label class="imp-drop"><input type="file" id="importFile" class="sr-only" accept=".zip,.csv,.xml,.gz,.txt,.md,.docx">${icon('download', 22)}<b>Choose a file</b><span>Letterboxd, IMDb, MyAnimeList, CSV, text or Word</span></label>
       <details class="imp-how"><summary>Where do I get my file?</summary>
         <p><b>Letterboxd:</b> Settings → Data → Export Your Data. Upload the ZIP as it is.</p>
         <p><b>IMDb:</b> Your Ratings or Watchlist → Export. Upload the CSV.</p>
+        <p><b>MyAnimeList:</b> use the Export page in your list settings, and upload the file it gives you.</p>
         <p><b>Text or Word:</b> one title per line. Add a year or rating if you like: “Inception (2010) 9/10”, “Dune 2021 4.5 stars”.</p>
       </details>
+      <label class="field-label imp-label" for="importAniList">Or import from AniList</label>
+      <div class="imp-q"><input class="field-input" id="importAniList" type="text" value="${escHTML(S.anilist || '')}" placeholder="Your AniList username" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="40"><button type="button" class="set-btn" data-act="anilist">Import</button></div>
+      <p class="imp-hint">Your list needs to be public on AniList. Only your username is sent to them.</p>
       <label class="field-label imp-label" for="importPaste">Or paste a list</label>
       <textarea class="field-input imp-paste" id="importPaste" rows="5" placeholder="Inception (2010) 9/10&#10;Dune 2021 4.5 stars&#10;Breaking Bad"></textarea>
       <button type="button" class="set-btn imp-go" data-act="paste">Use This List</button>
@@ -299,7 +375,8 @@ const MSSImport = (() => {
     const title = m ? m.title : r.name, year = m ? m.year : r.year;
     const bits = [];
     if (m) bits.push(CATS.find(c => c[0] === r.cat)?.[1] || '');
-    bits.push(r.status === 'queue' ? 'Watchlist' : r.date ? `Watched ${escHTML(r.date)}` : 'Watched');
+    bits.push(r.status === 'completed' && r.date ? `Watched ${escHTML(r.date)}` : STATUS[r.status]);
+    if (r.status !== 'completed' && r.status !== 'queue' && r.episodes) bits.push(`${r.episodes} ${r.episodes === 1 ? 'episode' : 'episodes'}`);
     if (r.rewatches > 1) bits.push(`${r.rewatches} times`);
     if (r.review && S.withReviews) bits.push('Review');
     const canOn = m && r.state !== 'dup';
@@ -408,8 +485,8 @@ const MSSImport = (() => {
       const animOn = !!D.ratings._animEnabled;
       $('impFields').innerHTML = `
         <div class="imp-two"><div><label class="field-label" for="impCat">Category</label><select class="field-input" id="impCat">${CATS.map(([k, l]) => `<option value="${k}"${D.cat === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
-        <div><label class="field-label" for="impStatus">In my library as</label><select class="field-input" id="impStatus"><option value="completed"${D.status === 'completed' ? ' selected' : ''}>Watched</option><option value="queue"${D.status === 'queue' ? ' selected' : ''}>Watchlist</option></select></div></div>
-        ${D.status === 'queue' ? '' : `<label class="field-label" for="impDate">Watched on</label><input class="field-input" id="impDate" type="date" max="${new Date().toISOString().slice(0, 10)}" value="${escHTML(D.date || '')}">
+        <div><label class="field-label" for="impStatus">In my library as</label><select class="field-input" id="impStatus">${Object.entries(STATUS).map(([k, l]) => `<option value="${k}"${D.status === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div></div>
+        ${D.status === 'queue' ? '' : `${D.status !== 'completed' ? '' : `<label class="field-label" for="impDate">Watched on</label><input class="field-input" id="impDate" type="date" max="${new Date().toISOString().slice(0, 10)}" value="${escHTML(D.date || '')}">`}
         <div class="ratings-section-label">Rate This</div>
         ${D.detail ? `<div class="det-ratings-cols">
             <div><div class="det-ratings-col-title">Core Ratings</div><div class="rating-stepper-grid">${core.map(x => stepper(x.key, x.label, D.ratings[x.key])).join('')}</div>
@@ -469,7 +546,7 @@ const MSSImport = (() => {
         const final = D.detail ? liveFinal() : null;
         const detailed = D.detail && final != null;
         const watched = D.status !== 'queue';
-        Object.assign(r, { match: D.match, cat: D.cat, status: D.status, date: watched ? D.date : '', score: !watched ? null : detailed ? final : D.overall ?? null, criteria: watched && detailed ? { ...D.ratings } : null });
+        Object.assign(r, { match: D.match, cat: D.cat, status: D.status, date: D.status === 'completed' ? D.date : '', score: !watched ? null : detailed ? final : D.overall ?? null, criteria: watched && detailed ? { ...D.ratings } : null });
         if (D.match) { r.state = 'ok'; r.why = ''; r.on = true; }
         MSSDialog.close(ov);
         draw();
@@ -503,7 +580,7 @@ const MSSImport = (() => {
       description: d?.overview || null, genres: d ? tmdbGenreNames(d.genres) : [], poster_url: m.poster ? TMDB_FULL + m.poster : null,
       tmdb_id: m.id, tmdb_type: m.type, final_score: r.status === 'queue' ? null : r.score,
       completed_date: r.status === 'completed' && r.date ? r.date : null,
-      notes: S.withReviews && r.review ? r.review : null,
+      notes: S.withReviews && r.review ? r.review.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim() : null,
     };
     if (m.type === 'movie') { rec.runtime_h = d?.runtime ? Math.floor(d.runtime / 60) : null; rec.runtime_m = d?.runtime ? d.runtime % 60 : null; }
     else if (d) {
@@ -511,6 +588,12 @@ const MSSImport = (() => {
       rec.total_seasons = aired.seasons; rec.total_eps = aired.eps;
       ratings._season_breakdown = aired.breakdown;
       if ((d.status === 'Ended' || d.status === 'Canceled') && d.last_air_date) ratings._completion_year = d.last_air_date.slice(0, 4);
+      // How far you got, for a show you're partway through: N episodes in, walking the seasons
+      if (r.episodes && r.status !== 'completed' && r.status !== 'queue') {
+        let left = r.episodes, season = 1;
+        for (const eps of aired.breakdown) { if (left <= eps) break; left -= eps; season++; }
+        rec.season = Math.min(season, Math.max(1, aired.seasons || 1)); rec.episode = left; rec.watched = r.episodes;
+      }
     }
     rec.ratings = ratings;
     return rec;
@@ -617,6 +700,14 @@ const MSSImport = (() => {
         return;
       }
       if (b.dataset.undo) { undo(b.dataset.undo); return; }
+      if (a === 'anilist') {
+        const name = $('importAniList').value.trim();
+        if (!/^[A-Za-z0-9_-]{2,40}$/.test(name)) { S.error = 'Enter your AniList username.'; draw(); return; }
+        S.error = ''; S.anilist = name; draw();
+        const go = box().querySelector('[data-act="anilist"]');
+        go.disabled = true; go.textContent = 'Reading…';
+        fromAniList(name).then(rows => run('anilist', rows)).catch(err => { console.warn(err); S.error = err?.message || 'AniList didn’t answer. Try again.'; S.step = 'start'; draw(); });
+      }
       if (a === 'paste') { const text = $('importPaste').value; run('paste', fromLines(text)); }
       if (a === 'cancel') { S.cancel = true; S = fresh(); draw(); }
       if (a === 'more') { S.shown += PAGE; draw(); }
@@ -633,8 +724,8 @@ const MSSImport = (() => {
     draw();
     loadHistory();
   }
-  const dirty = () => S.step === 'preview' || S.step === 'match' || S.step === 'save' || !!$('importPaste')?.value.trim();
+  const dirty = () => S.step === 'preview' || S.step === 'match' || S.step === 'save' || !!$('importPaste')?.value.trim() || !!$('importAniList')?.value.trim();
   const reset = () => { S.cancel = true; S = fresh(); draw(); };
 
-  return { init, dirty, reset, _parseCSV: parseCSV, _fromLetterboxd: fromLetterboxd, _fromLines: fromLines, _fromImdb: fromImdb, _decide: decide, _convert: convert };
+  return { init, dirty, reset, _parseCSV: parseCSV, _fromLetterboxd: fromLetterboxd, _fromLines: fromLines, _fromImdb: fromImdb, _fromMAL: fromMAL, _baseTitle: baseTitle, _decide: decide, _convert: convert };
 })();
