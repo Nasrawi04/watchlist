@@ -251,7 +251,7 @@ const MSSEpChart = (() => {
       g.strokeStyle = 'rgba(255,255,255,.14)'; g.lineWidth = 1.5; g.beginPath(); g.roundRect(bX + .75, bY + .75, bW - 1.5, bH - 1.5, px(16)); g.stroke();
       g.fillStyle = b.ink ? '#1d2619' : '#fff'; g.textAlign = 'center';
       g.font = `600 ${px(62)}px Oswald, sans-serif`; g.fillText(sa >= 10 ? '10' : sa.toFixed(1), bX + bW / 2, bY + bH * 0.6);
-      g.font = `600 ${px(17)}px Oswald, sans-serif`; g.fillText(spaced(b.name.toUpperCase()), bX + bW / 2, bY + bH * 0.85);
+      g.font = `600 ${px(b.key === 'masterpiece' ? 15 : 17)}px Oswald, sans-serif`; g.fillText(spaced(b.name.toUpperCase()), bX + bW / 2, bY + bH * 0.85);
     }
 
     // ── Body: the light panel, its rounded top over the header ──

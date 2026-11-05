@@ -102,7 +102,7 @@ const MSSDash = (() => {
         <div class="dp-head"><div><div class="dp-eyebrow" id="dpEyebrow"></div><div class="dp-title" id="dpTitle"></div></div>
           <button class="dp-close" onclick="MSSDash._closePick()" aria-label="Close">${icon('x', 18)}</button></div>
         <div class="dp-search fused-search-wrap">
-          <input id="dpSearch" type="text" class="add-friend-input" placeholder="Search your titles…" autocomplete="off" spellcheck="false" oninput="MSSDash._renderPick()">
+          <input id="dpSearch" type="text" class="add-friend-input" placeholder="Search your library…" autocomplete="off" spellcheck="false" oninput="MSSDash._renderPick()">
           <button type="button" class="fused-search-btn" tabindex="-1" onclick="document.getElementById('dpSearch').focus()">${icon('search', 16)}<span>Search</span></button>
         </div>
         <div class="dp-grid" id="dpGrid"></div>

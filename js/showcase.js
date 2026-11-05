@@ -127,7 +127,7 @@ const MSSShowcase = (() => {
   function bgPicker() {
     return `<button type="button" class="poll-link sc-back" onclick="MSSShowcase._bgBack()">${icon('back', 14)} Back to medals</button>
       <div class="search-wrap fav-picker-search"><span class="search-icon-wrap">${icon('search', 14)}</span>
-        <input type="search" id="scBgQ" placeholder="Search a movie or show…" aria-label="Search a movie or show" autocomplete="off" enterkeyhint="search" oninput="MSSShowcase._q(this.value)"></div>
+        <input type="search" id="scBgQ" placeholder="Search movies and shows…" aria-label="Search movies and shows" autocomplete="off" enterkeyhint="search" oninput="MSSShowcase._q(this.value)"></div>
       <div id="scBgHits" class="sc-bg-hits">${hitsHTML()}</div>`;
   }
   const hitsHTML = () => E.imgs.length

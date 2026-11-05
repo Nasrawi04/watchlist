@@ -1350,7 +1350,7 @@ function _injectUpdateDetailsOverlay() {
       <button class="rf-close" onclick="_closeUpdateDetailsPicker()">${icon('x', 18)}</button>
     </div>
     <div class="card-link-input-wrap">
-      <input class="card-link-input" id="updateDetailsSearchInput" placeholder="Search movies & TV shows…" oninput="_onUpdateDetailsSearchInput(this.value)">
+      <input class="card-link-input" id="updateDetailsSearchInput" placeholder="Search movies and shows…" oninput="_onUpdateDetailsSearchInput(this.value)">
     </div>
     <div class="rf-list" id="updateDetailsResultsList"></div>
   </div>`;
@@ -1836,7 +1836,7 @@ async function _favOpenEpisodePicker(which) {
       <div class="fav-ep-seasons" id="favEpSeasons"></div>
       <div class="search-wrap fav-picker-search">
         <span class="search-icon-wrap">${icon('search', 14)}</span>
-        <input type="text" id="favEpisodeSearch" placeholder="Search every episode…" autocomplete="off" aria-label="Search episodes" oninput="_favFilterEpisodes(this.value)">
+        <input type="text" id="favEpisodeSearch" placeholder="Search episodes…" autocomplete="off" aria-label="Search episodes" oninput="_favFilterEpisodes(this.value)">
       </div>`);
   document.getElementById('favEpisodeSearch').value = '';
   MSSDialog.open(document.getElementById('favEpisodeOverlay'), { focus: window.matchMedia('(max-width:640px)').matches ? null : '#favEpisodeSearch' });

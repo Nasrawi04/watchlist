@@ -510,7 +510,7 @@ const SF = (() => {
     if (on.has('person')) {
       html += `<div class="sf-section-label">Actor / Director</div>
       <div class="td-dd sf-dd sf-dd-wide" id="sfPersonDD">
-        <input type="text" class="sf-range-input sf-text-input sf-dd-trigger" id="sfPerson" placeholder="Search by name…" autocomplete="off"
+        <input type="text" class="sf-range-input sf-text-input sf-dd-trigger" id="sfPerson" placeholder="Search by name, e.g. Tom Hanks…" autocomplete="off"
           value="${escHTML(f.person || '')}" oninput="SF._personInput(event.target.value)" onfocus="event.stopPropagation();SF._openPersonDD()" onclick="event.stopPropagation();">
         <div class="td-dd-menu" id="sfPersonMenu"></div>
       </div>

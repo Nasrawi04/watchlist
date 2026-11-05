@@ -207,7 +207,7 @@ const MSSNight = (() => {
     const sugg = open ? suggestions(n) : [];
     const bsugg = open ? blendSuggestions(n, sugg.map(t => `${t.e.tmdb_type}:${t.e.tmdb_id}`)) : [];
     const addBox = open ? `<div class="mn-add">
-        ${adding[n.id] ? `<div class="mn-search"><input id="mnQ-${n.id}" type="search" placeholder="Search a movie or show…" aria-label="Search a movie or show" autocomplete="off" enterkeyhint="search" oninput="MSSNight._q(${id}, this.value)">
+        ${adding[n.id] ? `<div class="mn-search"><input id="mnQ-${n.id}" type="search" placeholder="Search movies and shows…" aria-label="Search movies and shows" autocomplete="off" enterkeyhint="search" oninput="MSSNight._q(${id}, this.value)">
             <div class="mn-hits" id="mnH-${n.id}"></div></div>` : ''}
         ${rail('bookmark', 'On your watchlists', sugg.map(t => suggCard(t.e.title, t.e.year, t.e.poster_url, t.e.tmdb_type === 'movie' ? 'movie' : 'tv',
           `On <b>${t.who.size}</b> watchlists`, `MSSNight._addSugg(${id}, ${attrJSON(`${t.e.tmdb_type}:${t.e.tmdb_id}`)})`, t.e.tmdb_id)))}
@@ -222,7 +222,7 @@ const MSSNight = (() => {
     // No vote: the host picks the title (search), and can change it later
     const chooseBox = !voting && host && n.status !== 'cancelled' && (choosing || adding[n.id]) ? `<div class="mn-choose">
         <div class="mn-rail-head">${icon('film', 14)}<span>${choosing ? 'Choose what you’re watching' : 'Change what you’re watching'}</span></div>
-        <div class="mn-search"><input id="mnQ-${n.id}" type="search" placeholder="Search a movie or show…" aria-label="Search a movie or show" autocomplete="off" enterkeyhint="search" oninput="MSSNight._q(${id}, this.value)">
+        <div class="mn-search"><input id="mnQ-${n.id}" type="search" placeholder="Search movies and shows…" aria-label="Search movies and shows" autocomplete="off" enterkeyhint="search" oninput="MSSNight._q(${id}, this.value)">
           <div class="mn-hits" id="mnH-${n.id}"></div></div></div>`
       : choosing && !host ? `<div class="mn-none">${icon('film', 14)} ${esc(nameOf(hostP))} is choosing what you’ll watch.</div>` : '';
     return `<article class="mn-card is-${status[1]}" id="mn-${n.id}">
@@ -359,7 +359,7 @@ const MSSNight = (() => {
     box.innerHTML = h ? `<div class="mn-chosen"><span class="poll-thumb">${h.poster_path ? `<img src="${img(h.poster_path, 'w92')}" alt="" loading="lazy">` : icon('film', 16)}</span>
           <span class="poll-opt-text"><b translate="no">${esc(h.title)}</b><small>${[h.year, h.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small></span>
           <button type="button" class="rec-btn" onclick="MSSNight._formPick(null)">Change</button></div>`
-      : `<div class="mn-search"><input id="mnQ-new" type="search" placeholder="Search a movie or show… (optional)" aria-label="Search a movie or show" autocomplete="off" enterkeyhint="search" oninput="MSSNight._q('new', this.value)">
+      : `<div class="mn-search"><input id="mnQ-new" type="search" placeholder="Search movies and shows (optional)…" aria-label="Search movies and shows" autocomplete="off" enterkeyhint="search" oninput="MSSNight._q('new', this.value)">
           <div class="mn-hits" id="mnH-new"></div></div>
         <div class="pf-note">${icon('film', 13)} No vote — you choose. You can pick it now or later.</div>`;
   }

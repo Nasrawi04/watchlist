@@ -64,7 +64,7 @@ const MSSBrowse = (() => {
 
   /* ── Panel ── each choice is the site's type-to-search dropdown (MSSPicker) */
   const P = {};          // the dropdowns, by key
-  const SEARCH = { type: 'Type to search…', year: 'Type a year…', genre: 'Type a genre…', country: 'Type a country…', region: 'Type a country…', service: 'Type a service…', sort: 'Type to search…' };
+  const SEARCH = { type: 'Search types…', year: 'Search years…', genre: 'Search genres…', country: 'Search countries…', region: 'Search countries…', service: 'Search services…', sort: 'Search sort options…' };
   function fieldHTML(key, label) {
     return `<div class="brw-field"><div class="field-label" id="brw-${key}-l" aria-hidden="true">${esc(label)}</div><div id="brw-${key}-w"></div></div>`;
   }

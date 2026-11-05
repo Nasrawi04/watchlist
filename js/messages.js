@@ -179,7 +179,7 @@ const MSSChat = (() => {
     root.innerHTML = `<div class="chat-shell" id="chatShell">
         <aside class="chat-side" aria-label="Your chats">
           <div class="chat-side-head">
-            <input class="field-input chat-search" id="chatSearch" type="search" placeholder="Search chats…" aria-label="Search chats" autocomplete="off">
+            <input class="field-input chat-search" id="chatSearch" type="search" placeholder="Search chats by name…" aria-label="Search chats by name" autocomplete="off">
             <button type="button" class="chat-icon-btn" onclick="MSSChat.starred()" aria-label="Starred messages">${icon('star', 18)}</button>
             <button type="button" class="chat-icon-btn" onclick="MSSChat.newChat()" aria-label="New chat">${icon('plus', 18)}</button>
           </div>

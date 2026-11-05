@@ -220,7 +220,7 @@ function _discInjectLinkOverlay() {
       </div>
       <div class="card-link-sub" id="discLinkSubtitle"></div>
       <div class="card-link-input-wrap">
-        <input class="card-link-input" id="discLinkSearchInput" placeholder="Search TMDB…" aria-label="Search TMDB" autocomplete="off">
+        <input class="card-link-input" id="discLinkSearchInput" placeholder="Search for the right title…" aria-label="Search for the right title" autocomplete="off">
       </div>
       <div class="rf-list" id="discLinkResults"></div>
     </div>`;

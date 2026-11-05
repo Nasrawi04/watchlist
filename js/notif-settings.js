@@ -195,7 +195,7 @@ const MSSNotifSettings = (() => {
           <p class="ns-pick-hint" id="nsPickHint"></p>
           <div class="fav-picker-search-wrap ls-search">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input type="search" id="nsPickQ" class="fav-picker-search-input" autocomplete="off" placeholder="Search people…" aria-label="Search your friends and followers" oninput="MSSNotifSettings._list()">
+            <input type="search" id="nsPickQ" class="fav-picker-search-input" autocomplete="off" placeholder="Search friends and followers…" aria-label="Search your friends and followers" oninput="MSSNotifSettings._list()">
           </div>
           <div class="ns-pick-list" id="nsPickList" role="group" aria-labelledby="nsPickTitle"></div>
         </div>

@@ -9,13 +9,13 @@
 
      Not in your library → Add to Library (a popup: where, type, who can see) ·
                            Episode Chart · Recommend · Discover
-     In your library     → In Your Library (opens Your Entry) · …the same
+     In your library     → In Your Library (opens My Entry) · …the same
      Your own entry      → Add to List · Episode Chart · Recommend · Discover ·
                            Discover Card
-       …on your Watchlist / Up Next (no Your Entry tab yet) → also Start Watching ·
+       …on your Watchlist / Up Next (no My Entry tab yet) → also Start Watching ·
                            Up Next · Drop · Edit · Delete + "Who can see this title"
    Everything about YOUR entry (status, Edit, Rewatch, cards, who can see it,
-   Delete) is on the "Your Entry" tab — MSSRate, rating-popup.js.
+   Delete) is on the "My Entry" tab — MSSRate, rating-popup.js.
 
    Also owns the shared "Discover" action: a linked title opens its
    title page; an unlinked one searches TMDB and shows the "Which one
@@ -38,7 +38,7 @@
 const INFO_POPUP_CONFIG = {
   // Buttons, left → right. Remove / reorder here.
   actions: ['queue', 'chart', 'recommend', 'discover'],                           // someone else's / TMDB title
-  ownerActions: ['lists', 'chart', 'recommend', 'discover', 'card'],                // your own entry (its own buttons: Your Entry tab)
+  ownerActions: ['lists', 'chart', 'recommend', 'discover', 'card'],                // your own entry (its own buttons: My Entry tab)
   addStatus: 'queue',      // where Add to Library starts (the popup lets you pick)
   showTmdbScore: true,     // TMDB community rating in the tags row
   showCrew: true,          // Director (movies) / Created By (TV)
@@ -47,7 +47,7 @@ const INFO_POPUP_CONFIG = {
   castCount: 5,
 };
 
-// Watchlist / Up Next and not rated: nothing to rate yet, so no Your Entry tab — its buttons and
+// Watchlist / Up Next and not rated: nothing to rate yet, so no My Entry tab — its buttons and
 // "Who can see this title" sit on the Title tab instead (MSSInfo + MSSViews)
 const mssNotStarted = e => !!e && (e.status === 'queue' || e.status === 'up_next') && liveScore(e) == null;
 
@@ -255,7 +255,7 @@ const MSSInfo = (() => {
     if (key === 'card') { close(); createShareCard(e.id, 3, true); return; }
   }
   const setActions = (it, own) => { document.getElementById('mssInfoPopupActions').innerHTML = actionsHTML(it, own, window._navUser || null); };
-  // "In Your Library" → your entry in the same popup (Your Entry tab), or its page
+  // "In Your Library" → your entry in the same popup (My Entry tab), or its page
   async function openMine(it) {
     const user = window._navUser;
     const own = user && await getOwnEntryByTmdb(user.id, it.tmdb_id ? Number(it.tmdb_id) : null, it.media_type, it.title).catch(() => null);
@@ -312,11 +312,12 @@ const MSSInfo = (() => {
   async function open(item, o = {}) {
     // a 13–17 account can't open a mature title (088) — your own entries always open
     const mine = o.owner || (item.entry && item.entry.user_id === window._navUser?.id);
-    if (!mine && !(await MSSAge.guard(item.media_type === 'movie' ? 'movie' : 'tv', item.tmdb_id))) return;
     inject();
+    // Cleared before the age check waits: MSSViews fills it right after this call returns
+    document.getElementById('mssInfoViews').innerHTML = '';
+    if (!mine && !(await MSSAge.guard(item.media_type === 'movie' ? 'movie' : 'tv', item.tmdb_id))) return;
     const it = { ...item, media_type: item.media_type === 'movie' ? 'movie' : 'tv' };
     current = it; opts = o;
-    document.getElementById('mssInfoViews').innerHTML = '';   // MSSViews fills it when switching views
     const my = ++token;
     const user = window._navUser || null;
     // Your own entry is already "yours" — no library lookup needed
@@ -585,12 +586,12 @@ function _mssInfoVisPick(v) { MSSInfo._vis(v); }
 
 
 /* ═══════════════════════════════════════════════════════════════
-   MSSViews — Title · Your Entry · Note in one popup (v646, renamed msf-v140)
+   MSSViews — Title · My Entry · Note in one popup (v646, renamed msf-v140)
 
    Opens a title in the shared popups (MSSInfo, MSSRate, MSSNote) with a
    switcher on top, so you can move between them without closing
    anything — tap a tab, swipe left / right on the popup, or use the ← →
-   keys. Title = about the title; Your Entry = about your entry (your own
+   keys. Title = about the title; My Entry = about your entry (your own
    titles once you've started them — Watchlist / Up Next ones keep their
    buttons on Title, there's nothing to rate yet); someone else's shows as
    "Their Entry" once they've rated / watched it; Note once there is one.
@@ -600,12 +601,12 @@ function _mssInfoVisPick(v) { MSSInfo._vis(v); }
      MSSViews.open(entry, {
        start: 'note',          // lists / friends → 'info' (default), notes → 'note',
                                // library / dashboard → 'rate' (falls back to the first tab it has)
-       own: true,              // your entry → Your Entry tab (status, Edit, Delete…), editable note
+       own: true,              // your entry → My Entry tab (status, Edit, Delete…), editable note
        writeNote: true,        // with own: show Note even when empty (opens the editor)
        profile,                // their profile, for "Sam's rating"
        counts,                 // note 👍/👎, if the page already has them
        onChange(entry), onDelete(entry), onNoteSaved(entry), from,
-       handlers: { start, upnext }, onComments(entry),   // passed on to Your Entry
+       handlers: { start, upnext }, onComments(entry),   // passed on to My Entry
        onReact(state, entry),  // someone else's note: after you like / dislike it
      })
      MSSViews.resume() → { id, view } when you've just come Back to the page you
@@ -618,7 +619,7 @@ function _mssInfoVisPick(v) { MSSInfo._vis(v); }
 const MSSViews = (() => {
   const VIEWS = {
     info: { label: 'Title',   slot: 'mssInfoViews', card: 'mssInfoCard' },
-    rate: { label: 'Entry',   slot: 'mssRateViews', card: 'mssRateCard' },   // shown as Your Entry / Their Entry
+    rate: { label: 'Entry',   slot: 'mssRateViews', card: 'mssRateCard' },   // shown as My Entry / Their Entry
     note: { label: 'Note',    slot: 'mssNoteViews', card: null },        // .note-popup2
   };
   let st = null;   // { e, views, cur, o, refreshed }
@@ -628,7 +629,8 @@ const MSSViews = (() => {
   // writeNote: your own entry gets the Note view even before it has one (to write it)
   const ORDER = ['info', 'rate', 'note'];
   const available = (e, o) => ORDER.filter(v => v === 'info' || (v === 'rate' && (isRated(e) || (o.own && !mssNotStarted(e)))) || (v === 'note' && (hasNote(e) || (o.own && o.writeNote))));
-  const label = v => v === 'rate' ? (st.o.own ? 'Your Entry' : 'Their Entry') : VIEWS[v].label;
+  const isMine = () => st.o.own || (!!window._navUser?.id && st.e.user_id === window._navUser.id);   // whichever page opened it
+  const label = v => v === 'rate' ? (isMine() ? 'My Entry' : 'Their Entry') : VIEWS[v].label;
   const cardOf = v => v === 'note' ? document.querySelector('#mssNoteOverlay .note-popup2') : document.getElementById(VIEWS[v].card);
 
   function closeAll() { MSSInfo.close(); MSSRate.close(); MSSNote.close(); }

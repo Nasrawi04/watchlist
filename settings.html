@@ -1055,7 +1055,7 @@ function _paintLanguage() {
   const item = l => ({ value: l.code, label: l.name, lang: l.code, keys: [l.code, name(l.code, 'en'), name(l.code, MSSI18n.locale.split('-u-')[0])] });
   const all = MSSLang.list();
   _langPicker = MSSPicker.mount(document.getElementById('setLanguagePick'), {
-    id: 'setLanguage', label: 'Language', describedBy: 'langHint', value: MSSLang.code, search: 'Type a language…',
+    id: 'setLanguage', label: 'Language', describedBy: 'langHint', value: MSSLang.code, search: 'Search languages…',
     groups: [{ label: 'Full site translation', items: all.filter(full).map(item) },
              { label: 'Titles & descriptions only', items: all.filter(l => !full(l)).map(item) }],
     onChange: setLanguage,

@@ -958,7 +958,7 @@ function _injectCardLinkPicker() {
       <button type="button" class="rf-close" onclick="_closeCardLinkPicker()" aria-label="Close">${icon('x', 18)}</button>
     </div>
     <div class="card-link-input-wrap">
-      <input class="card-link-input" id="cardLinkSearchInput" placeholder="Search movies & TV shows…" aria-label="Search TMDB" oninput="_onCardLinkSearchInput(this.value)">
+      <input class="card-link-input" id="cardLinkSearchInput" placeholder="Search movies and shows…" aria-label="Search movies and shows" oninput="_onCardLinkSearchInput(this.value)">
     </div>
     <div class="rf-list" id="cardLinkResultsList"></div>
   </div>`;

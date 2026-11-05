@@ -434,7 +434,7 @@ const MSSChallenges = (() => {
         <div class="sf-section-label">What counts</div>
         ${seg('cmode', [['list', 'Set list', 'list'], ['auto', 'Anything that fits', 'sparkles']], form.cmode)}
         <div id="chfListBox"${form.cmode === 'list' ? '' : ' hidden'}>
-          <div class="mn-search chf-search"><input id="chfQ" type="search" placeholder="Search a movie or show to add…" aria-label="Search a movie or show to add" autocomplete="off" enterkeyhint="search" oninput="MSSChallenges._q(this.value)">
+          <div class="mn-search chf-search"><input id="chfQ" type="search" placeholder="Search movies and shows to add…" aria-label="Search movies and shows to add" autocomplete="off" enterkeyhint="search" oninput="MSSChallenges._q(this.value)">
             <div class="mn-hits" id="chfHits"></div></div>
           <div id="chfChosen"></div>
         </div>

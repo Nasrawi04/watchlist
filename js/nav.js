@@ -613,7 +613,7 @@ function injectChrome() {
     <div class="mobile-search-bar" id="mobileSearchBar">
       <div class="mobile-search-inner fused-search-wrap">
         <span class="mobile-search-icon-circle">${icon('search', 13)}</span>
-        <input type="text" id="mobileSearchInput" placeholder="Search titles…" autocomplete="off">
+        <input type="text" id="mobileSearchInput" placeholder="Search titles or people…" autocomplete="off">
         <button type="button" class="mobile-search-close" id="mobileSearchX" onclick="_mobileSearchX()" aria-label="Close search">${icon('x', 16)}</button>
       </div>
     </div>
@@ -626,7 +626,7 @@ function injectChrome() {
       <div class="nav-right">
         <div class="search-wrap fused-search-wrap">
           <span class="search-icon-wrap">${icon('search')}</span>
-          <input type="text" id="globalSearch" placeholder="Search… (/)" autocomplete="off">
+          <input type="text" id="globalSearch" placeholder="Search… (/)" aria-label="Search titles or people" title="Search titles or people" autocomplete="off">
         </div>
         <button class="btn-add" onclick="openAddModal()">
           ${icon('plus', 14)} Add
@@ -669,7 +669,7 @@ function injectChrome() {
       <div class="modal-title" id="addModalTitle">Add New Entry</div>
       <div class="modal-row"><label class="modal-label" for="mTitle">Title</label>
         <div style="position:relative">
-          <input class="modal-input" id="mTitle" placeholder="Enter title…" autocomplete="off">
+          <input class="modal-input" id="mTitle" placeholder="Search or type a title…" autocomplete="off">
         </div></div>
       <div class="modal-row"><div class="modal-label">Category</div>
         ${_selDDHTML('mCat', [

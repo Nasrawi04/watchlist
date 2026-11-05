@@ -1409,7 +1409,7 @@ function _tdRenderWtw(region) {
   const items = [...new Set([...w.regions, w.region])].map(code => ({ value: code, label: `${_wtwFlag(code)}  ${_wtwCountry(code)}`, keys: [code, en(code), _wtwCountry(code)] }))
     .sort((a, b) => _wtwCountry(a.value).localeCompare(_wtwCountry(b.value)));
   MSSPicker.mount(document.getElementById('wtwCountryPick'), {
-    id: 'wtwCountry', label: 'Country', value: w.region, search: 'Type a country…', groups: [{ items }], onChange: _tdSetWtwRegion,
+    id: 'wtwCountry', label: 'Country', value: w.region, search: 'Search countries…', groups: [{ items }], onChange: _tdSetWtwRegion,
   });
 }
 function _tdSetWtwRegion(c) {

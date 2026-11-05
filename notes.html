@@ -1026,7 +1026,7 @@ function openNotesSearchPopup(mode) {
   document.getElementById('notesSearchCardTitle').textContent = mode === 'edit' ? 'Edit Note' : 'Add Note';
   const input = document.getElementById('notesSearchInput');
   input.value = '';
-  input.placeholder = mode === 'edit' ? 'Search notes you\'ve already written…' : 'Search your library…';
+  input.placeholder = mode === 'edit' ? 'Search your notes…' : 'Search your library…';
   document.getElementById('notesSearchResults').innerHTML = '';
   _notesActiveId = -1;
   _notesSearchResultsList = [];

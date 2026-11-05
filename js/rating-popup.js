@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    rating-popup.js — THE ratings popup, used on every page (v629)
 
-   The "Your Entry" tab (another person's: "Their Entry"): poster, title/years,
+   The "My Entry" tab (another person's: "Their Entry"): poster, title/years,
    type + genre tags, where it is in the library / Watched On / Left off,
    description, Overall Score box, TV Show Breakdown / Movie Runtime, Core +
    Bonus ratings, Highlights and Notes — or "Not rated yet" before there are any.
@@ -33,7 +33,7 @@
 ═══════════════════════════════════════════════════════════════ */
 
 const RATING_POPUP_CONFIG = {
-  // Your Entry tab: everything about YOUR entry — the title's own buttons are on the Title tab (MSSInfo)
+  // My Entry tab: everything about YOUR entry — the title's own buttons are on the Title tab (MSSInfo)
   ownerActions:  ['start', 'upnext', 'pickup', 'rewatch', 'rateEps', 'edit', 'drop', 'card', 'delete'],
   friendActions: ['comments', 'queue', 'report'],
 };
@@ -123,7 +123,7 @@ const MSSRate = (() => {
   }
 
   /* ── Buttons — your entry's own (also used by the Title tab for Watchlist / Up Next
-     titles, which have no Your Entry tab yet: MSSInfo passes ns 'MSSInfo') ── */
+     titles, which have no My Entry tab yet: MSSInfo passes ns 'MSSInfo') ── */
   function entryButtonsHTML(e, keys, ns = 'MSSRate') {
     const btn = (key, ico, label, extra = '') =>
       `<button type="button" class="popup-action-btn${extra}" data-act="${key}" onclick="${ns}._act('${key}', this)">${icon(ico, 14)} ${label}</button>`;

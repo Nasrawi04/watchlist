@@ -259,7 +259,7 @@ const MSSStudio = (() => {
     const fmts = sec('Export as', `<div class="xs-fmts" role="radiogroup" aria-label="Export as">${formats().map(([f, l, ic, sub]) =>
         `<button type="button" role="radio" class="xs-fmt${S.format === f ? ' on' : ''}" aria-checked="${S.format === f}" onclick="MSSStudio._set('format','${f}')">
           <span class="xs-what-ic">${icon(ic, 16)}</span><span class="xs-pk-text"><b>${l}</b><small>${sub}</small></span></button>`).join('')}</div>`);
-    if (fmt('card')) return fmts + sec('Which title', `<input class="xs-input" id="xsCardQ" type="search" placeholder="Search your titles…" value="${esc(S.cq)}" aria-label="Search your titles" oninput="MSSStudio._cardQ(this.value)" autocomplete="off">
+    if (fmt('card')) return fmts + sec('Which title', `<input class="xs-input" id="xsCardQ" type="search" placeholder="Search your library…" value="${esc(S.cq)}" aria-label="Search your titles" oninput="MSSStudio._cardQ(this.value)" autocomplete="off">
         <div id="xsCardBody">${cardRowsHTML()}</div>`, 'pick one');
     if (fmt('backup')) return fmts + sec('What’s in it', `<div class="xs-info">${icon('info', 16)}<span>Every title in your library with all its ratings, highlights and notes, your lists and your episode ratings — one file to keep somewhere safe.</span></div>`);
     if (fmt('letterboxd')) { const n = MSSFormats.lbMovies(lbSource()).length;
@@ -404,7 +404,7 @@ const MSSStudio = (() => {
       `<button type="button" role="radio" class="xs-ls-row${S.list?.id === l.id ? ' on' : ''}" aria-checked="${S.list?.id === l.id}" onclick="MSSStudio._list('${l.id}')">
         <span class="xs-what-ic">${icon('layers', 16)}</span><span class="xs-pk-text"><b translate="no">${esc(l.title)}</b><small translate="no">${l.items.length} ${l.items.length === 1 ? 'title' : 'titles'}${l.mine ? '' : ` · @${esc(l.owner || '')}`}${l.ranked ? ' · ranked' : ''}</small></span>
         <span class="xs-pk-box" aria-hidden="true">${S.list?.id === l.id ? icon('check', 13) : ''}</span></button>`).join('')}` : ''; };
-    return `${S.lists.length > 6 ? `<input class="xs-input xs-ls-q" type="search" placeholder="Search lists…" aria-label="Search lists" value="${esc(S.listQ || '')}" oninput="MSSStudio._lq(this.value)">` : ''}
+    return `${S.lists.length > 6 ? `<input class="xs-input xs-ls-q" type="search" placeholder="Search your lists…" aria-label="Search your lists" value="${esc(S.listQ || '')}" oninput="MSSStudio._lq(this.value)">` : ''}
       <div class="xs-ls-list" role="radiogroup" aria-label="Lists">${grp('page', 'This list') + grp('mine', 'Your lists') + grp('shared', 'Shared with you') || '<div class="xs-pk-none">No lists yet — make one on the Lists page.</div>'}</div>
       ${S.list && S.listItems && S.listItems.length < S.list.items.length ? `<div class="xs-ls-note">${S.list.items.length - S.listItems.length} of its titles can’t be read and are left out.</div>` : ''}`;
   }

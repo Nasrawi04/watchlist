@@ -1276,7 +1276,7 @@ const MSSEmoji = (() => {
     ov.className = 'mss-emo-ov';
     ov.innerHTML = `<div class="mss-emo" role="dialog" aria-modal="true" aria-labelledby="mssEmoT">
       <div class="mss-emo-head"><b id="mssEmoT">Emoji</b><button type="button" class="dp-close" onclick="MSSEmoji._close()" aria-label="Close">${icon('x', 18)}</button></div>
-      <div class="mss-emo-search">${icon('search', 15)}<input type="text" placeholder="Search emoji" aria-label="Search emoji" autocomplete="off" spellcheck="false" data-no-emoji></div>
+      <div class="mss-emo-search">${icon('search', 15)}<input type="text" placeholder="Search emoji…" aria-label="Search emoji" autocomplete="off" spellcheck="false" data-no-emoji></div>
       <div class="mss-emo-tabs" role="tablist">${[['recent', '🕘', 'Recently used'], ...GROUPS].map(([k, e, l]) => `<button type="button" class="mss-emo-tab" data-tab="${k}" title="${l}" aria-label="${l}">${e}</button>`).join('')}</div>
       <div class="mss-emo-grid"><div class="mss-emo-wait">Loading emoji…</div></div>
       <div class="mss-emo-foot"><span class="mss-emo-big" aria-hidden="true">😀</span><span class="mss-emo-name">Pick an emoji</span><span class="mss-emo-added" aria-live="polite"></span></div>
@@ -2451,7 +2451,7 @@ const MSSDialog = (() => {
        id, label, describedBy?,            // ids + aria-label (+ aria-describedby)
        value,                              // selected value
        groups: [{ label?, items: [{ value, label, keys?, lang? }] }],
-       search: 'Type to search…',          // placeholder in the search box
+       search: 'Search options…',          // placeholder in the search box
        placeholder?,                       // shown on the button while nothing is picked
        onChange(value),
      })

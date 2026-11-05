@@ -163,7 +163,7 @@ const MSSListStudio = (() => {
         <div class="fav-picker-search-wrap ls-search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="search" id="lsSearch" class="fav-picker-search-input" autocomplete="off" aria-label="Search titles" value="${esc(S.q)}"
-            placeholder="${S.src === 'discover' ? 'Search movies & shows on TMDB…' : 'Search your titles…'}" oninput="MSSListStudio._q(this.value)">
+            placeholder="${S.src === 'discover' ? 'Search movies and shows…' : 'Search your library…'}" oninput="MSSListStudio._q(this.value)">
         </div>
         <div id="lsTools"></div>
         <div class="ls-results" id="lsResults" aria-live="polite"></div>`);
