@@ -221,6 +221,7 @@ const ICONS = {
   heart:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
   globe:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
   zap:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>`,
   clock:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
   lock:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
   unlock:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-3.24"/></svg>`,
@@ -1602,6 +1603,7 @@ async function _mssSaveReact(kind, id, mine) {
     ? await sb.from(t).upsert({ [c]: id, user_id: me, is_like: mine === 'like' }, { onConflict: c + ',user_id' })
     : await sb.from(t).delete().eq(c, id).eq('user_id', me);
   if (error) throw error;
+  if (kind === 'list') document.dispatchEvent(new CustomEvent('mss:list-reacted'));
 }
 const _mssReactFail = err => { console.error(err); showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save that — try again.', 'err'); };
 async function mssReact(kind, id, isLike, state) {
@@ -3480,25 +3482,45 @@ const mssIdle = (() => {
   return { arm: () => arm() };
 })();
 
-// Date of birth — day / month / year pickers (nav.js pop-up, login.html sign-up), all MSSPicker.
-// mssBirthFields(el, prefix, onChange) fills el; mssBirthValue(prefix) → 'YYYY-MM-DD', 'invalid' (31 February…) or ''
-function mssBirthFields(el, prefix, onChange) {
+// A date as day / month / year dropdowns you can also type in, plus a calendar button (date-range.js).
+// mssDateFields(el, prefix, { onChange, label, oldest, max, view }): oldest = earliest year; max = latest date, default today
+// mssDateParts(prefix) → { d, m, y } (0 = empty) · mssDateSet(prefix, 'YYYY-MM-DD' | null, silent) fills all three
+// mssBirthValue(prefix) → 'YYYY-MM-DD', 'invalid' (31 February…) or ''
+const _mssTodayIso = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`; };
+function mssDateFields(el, prefix, o = {}) {
   const month = (i, style, loc) => new Intl.DateTimeFormat(loc, { month: style, timeZone: 'UTC' }).format(Date.UTC(2000, i, 1));
   const num = (v, pad) => ({ value: String(v), label: String(v), keys: pad ? [String(v).padStart(2, '0')] : [] });
+  const max = o.max || _mssTodayIso(), newest = +max.slice(0, 4), oldest = o.oldest || newest - 100;
   const parts = {
     D: { label: 'Day', inputmode: 'numeric', items: Array.from({ length: 31 }, (_, i) => num(i + 1, true)) },
-    M: { label: 'Month', items: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: month(i, 'long', MSSI18n.locale), short: month(i, 'short', MSSI18n.locale), keys: [String(i + 1), month(i, 'long', 'en-US')] })) },
-    Y: { label: 'Year', inputmode: 'numeric', items: Array.from({ length: 101 }, (_, i) => num(new Date().getFullYear() - i)) },
+    M: { label: 'Month', items: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: month(i, 'long', MSSI18n.locale), short: month(i, 'short', MSSI18n.locale), keys: [String(i + 1), String(i + 1).padStart(2, '0'), month(i, 'long', 'en'), month(i, 'short', 'en')] })) },
+    Y: { label: 'Year', inputmode: 'numeric', items: Array.from({ length: newest - oldest + 1 }, (_, i) => num(newest - i)) },
   };
-  el.innerHTML = Object.keys(parts).map(k => `<div class="mss-birth-${k.toLowerCase()}"></div>`).join('');
+  el.innerHTML = Object.keys(parts).map(k => `<div class="mss-birth-${k.toLowerCase()}"></div>`).join('')
+    + `<button type="button" class="mss-date-cal" aria-label="${escHTML(mssT('Pick from a calendar'))}" title="${escHTML(mssT('Pick from a calendar'))}">${icon('calendar', 18)}</button>`;
   Object.entries(parts).forEach(([k, p]) => {
     const label = mssT(p.label);
-    MSSPicker.mount(el.querySelector(`.mss-birth-${k.toLowerCase()}`), { id: prefix + k, label, placeholder: label, value: '', inputmode: p.inputmode, typed: true, groups: [{ items: p.items }], onChange });
+    MSSPicker.mount(el.querySelector(`.mss-birth-${k.toLowerCase()}`), { id: prefix + k, label, placeholder: label, value: '', inputmode: p.inputmode, typed: true, groups: [{ items: p.items }], onChange: () => o.onChange?.() });
   });
+  el.querySelector('.mss-date-cal').addEventListener('click', async () => {
+    await mssLoadScript('js/date-range.js');
+    const v = mssBirthValue(prefix), value = v && v !== 'invalid' && v <= max ? v : null;
+    MSSDateRange.pickDate({ value, min: `${oldest}-01-01`, max, label: o.label, view: o.view, onPick: iso => mssDateSet(prefix, iso) });
+  });
+  el._mssDateChange = o.onChange;
+}
+const _mssDatePick = (prefix, k) => document.getElementById(prefix + k)?.closest('.mss-pick')._picker;
+function mssDateParts(prefix) {
+  const part = k => Number(_mssDatePick(prefix, k)?.value) || 0;
+  return { d: part('D'), m: part('M'), y: part('Y') };
+}
+function mssDateSet(prefix, iso, silent) {
+  const [y, m, d] = iso ? iso.split('-').map(Number) : ['', '', ''];
+  _mssDatePick(prefix, 'D').value = String(d); _mssDatePick(prefix, 'M').value = String(m); _mssDatePick(prefix, 'Y').value = String(y);
+  if (!silent) _mssDatePick(prefix, 'D').el.closest('.mss-birth-row')._mssDateChange?.();
 }
 function mssBirthValue(prefix) {
-  const part = k => Number(document.getElementById(prefix + k)?.closest('.mss-pick')._picker.value);
-  const d = part('D'), m = part('M'), y = part('Y');
+  const { d, m, y } = mssDateParts(prefix);
   if (!d || !m || !y) return '';
   const dt = new Date(Date.UTC(y, m - 1, d));
   if (dt.getUTCMonth() !== m - 1) return 'invalid';

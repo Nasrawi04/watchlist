@@ -370,7 +370,7 @@ const MSSChallenges = (() => {
   const kindHTML = (cat, genre) => `<div class="sf-section-label">${form.mode === 'official' ? 'Type' : 'What counts'}</div>
         ${seg('cat', [['', 'Anything', 'sparkles'], ['movies', 'Movies', 'film'], ['tv', 'TV Shows', 'tv'], ['anime', 'Anime', 'animeFace'], ['cartoons', 'Cartoons', 'brush']], cat).replace('ch-seg"', 'ch-seg ch-cats"')}
         <div id="chGenreBox"${form.fmode === 'pick' ? ' hidden' : ''}><div class="sf-section-label">Genre <span class="sf-section-hint">optional</span></div>
-        ${SF.dd('chGenreDD', genre || 'Any genre', !!genre, ['', ...GENRES].map(g => `<button type="button" class="td-dd-opt${g === genre ? ' active' : ''}" data-genre="${esc(g)}" onclick="MSSChallenges._f('genre', ${attrJSON(g)})">${g || 'Any genre'}</button>`).join(''))}</div>`;
+        ${SF.dd('chGenreDD', genre || 'Any genre', !!genre, SF.ddSearch('Search genres…') + ['', ...GENRES].map(g => `<button type="button" class="td-dd-opt${g === genre ? ' active' : ''}" data-genre="${esc(g)}" onclick="MSSChallenges._f('genre', ${attrJSON(g)})">${g || 'Any genre'}</button>`).join(''))}</div>`;
   const datesHTML = (start, end) => `<div class="sf-section-label">Dates</div>
         ${MSSDateRange.html('chD', { start, end, min: iso(new Date()), onChange: () => f('dates') })}
         ${seg('span', [[7, '1 week'], [30, '1 month'], [91, '3 months'], ['year', 'This year']], daysBetween(start, end)).replace('ch-seg"', 'ch-seg ch-spans"')}`;

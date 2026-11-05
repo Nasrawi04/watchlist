@@ -14,6 +14,8 @@
    MSSDateRange.set(id, start, end)                        e.g. from a preset
    MSSDateRange.when(id, { value, min, onChange })         date + time (value: Date / ISO / null)
    MSSDateRange.get(id)                                    → { start, end } | { date, time, value }
+   MSSDateRange.pickDate({ value, min, max, label, view, onPick })   one date in a popup: tap the title to jump to a
+                                                           month or year ('YYYY-MM-DD'; view: 'years' to start on years)
    Hidden inputs: range → #<id>S / #<id>E; date + time → #<id> ('YYYY-MM-DDTHH:MM' or '').
 
    Requires config.js (icon). Styles: §55 in style.css.
@@ -202,7 +204,95 @@ const MSSDateRange = (() => {
   }
   function clear(id) { const st = S[id]; st.date = null; st.edit = null; draw(id); st.onChange?.(''); document.querySelector(`#${id}Cards .dr-card`)?.focus(); }
 
-  return { html, set, when,
+  /* ── One date in a popup (Date of birth, Watched On): the calendar above, plus month and year views ── */
+  let P = null;
+  const inRange = s => (!P.min || s >= P.min) && (!P.max || s <= P.max);
+  const monthOK = (y, m) => { const k = `${y}-${pad(m)}`; return (!P.min || k >= P.min.slice(0, 7)) && (!P.max || k <= P.max.slice(0, 7)); };
+  const yearOK = y => (!P.min || y >= +P.min.slice(0, 4)) && (!P.max || y <= +P.max.slice(0, 4));
+  function popHead(title, prev, next, canPrev, canNext, titleAction) {
+    return `<div class="dr-cal-head">
+        <button type="button" class="dr-nav" data-go="${prev}" aria-label="Previous"${canPrev ? '' : ' disabled'}>${icon('back', 16)}</button>
+        <button type="button" class="dr-cal-title dr-pop-title" ${titleAction ? `data-view="${titleAction}"` : 'disabled'} aria-live="polite">${title}</button>
+        <button type="button" class="dr-nav" data-go="${next}" aria-label="Next"${canNext ? '' : ' disabled'}>${icon('arrowRight', 16)}</button>
+      </div>`;
+  }
+  function popBody() {
+    const [y, m] = [P.y, P.m], today = iso(new Date());
+    if (P.view === 'years') {
+      const start = y - (y % 12);
+      return popHead(`${start} – ${start + 11}`, 'y-12', 'y+12', yearOK(start - 1), yearOK(start + 12), '')
+        + `<div class="dr-pop-grid" role="group" aria-label="Year">${[...Array(12)].map((_, i) => { const v = start + i, on = P.value?.startsWith(v + '-');
+          return `<button type="button" class="dr-pop-cell${on ? ' is-on' : ''}" data-year="${v}"${yearOK(v) ? '' : ' disabled'} aria-pressed="${!!on}">${v}</button>`; }).join('')}</div>`;
+    }
+    if (P.view === 'months') {
+      return popHead(String(y), 'y-1', 'y+1', yearOK(y - 1), yearOK(y + 1), 'years')
+        + `<div class="dr-pop-grid" role="group" aria-label="Month">${[...Array(12)].map((_, i) => { const on = P.value?.startsWith(`${y}-${pad(i + 1)}`);
+          return `<button type="button" class="dr-pop-cell${on ? ' is-on' : ''}" data-month="${i + 1}"${monthOK(y, i + 1) ? '' : ' disabled'} aria-pressed="${!!on}">${new Date(2024, i, 1, 12).toLocaleDateString(lang(), { month: 'short' })}</button>`; }).join('')}</div>`;
+    }
+    const first = new Date(y, m - 1, 1, 12), lead = (first.getDay() + 6) % 7, count = new Date(y, m, 0).getDate(), ym = `${y}-${pad(m)}`;
+    const wk = [...Array(7)].map((_, i) => new Date(2024, 0, 1 + i, 12).toLocaleDateString(lang(), { weekday: 'narrow' }));
+    const prev = new Date(y, m - 2, 1, 12), next = new Date(y, m, 1, 12);
+    const focusDay = P.value?.startsWith(ym) ? P.value : inRange(today) && today.startsWith(ym) ? today : `${ym}-01`;
+    const cells = [...Array(lead)].map(() => '<span></span>');
+    for (let d = 1; d <= count; d++) {
+      const v = `${ym}-${pad(d)}`, on = v === P.value;
+      cells.push(`<button type="button" class="dr-day${on ? ' is-start is-end' : ''}${v === today ? ' is-today' : ''}" data-d="${v}" tabindex="${v === focusDay ? 0 : -1}"${inRange(v) ? '' : ' disabled'} aria-pressed="${on}"
+        aria-label="${fmt(v, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}${v === today ? ' (today)' : ''}"><span>${d}</span></button>`);
+    }
+    return popHead(first.toLocaleDateString(lang(), { month: 'long', year: 'numeric' }), 'm-1', 'm+1', monthOK(prev.getFullYear(), prev.getMonth() + 1), monthOK(next.getFullYear(), next.getMonth() + 1), 'months')
+      + `<div class="dr-week dr-pop-week" aria-hidden="true">${wk.map(w => `<span>${w}</span>`).join('')}</div>
+        <div class="dr-grid" role="group" aria-label="Day">${cells.join('')}</div>`;
+  }
+  function popDraw(focus) {
+    const box = document.getElementById('drPopBody'); if (!box || !P) return;
+    box.innerHTML = popBody();
+    box.querySelector(focus || '.dr-day[tabindex="0"], .dr-pop-cell.is-on, .dr-pop-cell:not(:disabled)')?.focus({ preventScroll: true });
+  }
+  function popClose() {
+    const ov = document.getElementById('drPopOverlay'); if (!ov) return;
+    MSSDialog.close(ov); P = null;
+    setTimeout(() => ov.remove(), 220);
+  }
+  function pickDate(o) {
+    const base = o.value || (o.max && iso(new Date()) > o.max ? o.max : iso(new Date()));
+    P = { value: o.value || null, min: o.min || null, max: o.max || null, onPick: o.onPick, view: o.view && !o.value ? o.view : 'days', y: +base.slice(0, 4), m: +base.slice(5, 7) };
+    const ov = document.createElement('div');
+    ov.id = 'drPopOverlay'; ov.className = 'confirm-overlay';
+    ov.innerHTML = `<div class="confirm-card dr-pop" role="dialog" aria-modal="true" aria-labelledby="drPopT">
+        <div class="dr-pop-top"><div class="confirm-title" id="drPopT">${escHTML(o.label || 'Pick a date')}</div>
+          <button type="button" class="dr-nav" data-close aria-label="Close">${icon('x', 16)}</button></div>
+        <div id="drPopBody"></div>
+      </div>`;
+    MSSDialog.bind(ov, popClose);
+    document.body.appendChild(ov);
+    ov.addEventListener('click', e => {
+      if (e.target === ov) return popClose();
+      const b = e.target.closest('button'); if (!b || b.disabled) return;
+      if (b.dataset.close != null) return popClose();
+      if (b.dataset.d) { const on = P.onPick, v = b.dataset.d; popClose(); on?.(v); return; }
+      if (b.dataset.view) { P.view = b.dataset.view; return popDraw(); }
+      if (b.dataset.year) { P.y = +b.dataset.year; P.view = 'months'; return popDraw(); }
+      if (b.dataset.month) { P.m = +b.dataset.month; P.view = 'days'; return popDraw(); }
+      if (b.dataset.go) {
+        const [, k, n] = b.dataset.go.match(/^([ym])([+-]\d+)$/);
+        if (k === 'y') P.y += +n; else { const d = new Date(P.y, P.m - 1 + +n, 1, 12); P.y = d.getFullYear(); P.m = d.getMonth() + 1; }
+        popDraw(`[data-go="${b.dataset.go}"]:not(:disabled)`);
+      }
+    });
+    ov.addEventListener('keydown', e => {
+      const b = e.target.closest('.dr-day'); if (!b || !P) return;
+      const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key]; if (!step) return;
+      e.preventDefault();
+      const to = add(b.dataset.d, getComputedStyle(b).direction === 'rtl' && Math.abs(step) === 1 ? -step : step);
+      if (!inRange(to)) return;
+      P.y = +to.slice(0, 4); P.m = +to.slice(5, 7);
+      popDraw(`[data-d="${to}"]`);
+    });
+    MSSDialog.open(ov, { focus: '.dr-pop' });
+    popDraw();
+  }
+
+  return { pickDate, html, set, when,
     get: id => !S[id] ? null : S[id].mode === 'when' ? { date: S[id].date, time: S[id].time, value: value(S[id]) } : { start: S[id].start, end: S[id].end },
     _edit: edit, _pick: pick, _month: month, _key: key, _time: time, _clear: clear };
 })();

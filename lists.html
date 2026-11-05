@@ -433,6 +433,7 @@ async function loadListsPage() {
 
   _ensureListSortOrder().catch(() => {});                       // one-off backfill, no need to wait
   await _loadCollabData();
+  await _loadLikedLists();
   // Items that aren't in my library: shared lists' entries, older imports
   const foreignIds = [...new Set(_listsAll.flatMap(l => l.items || []))]
     .filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')) && !_listsEntryMap[id]);
@@ -579,6 +580,42 @@ let _lr = null;       // active drag state
    with _collab = true and _owner = their profile. */
 let _listsCollab = {};
 let _listsFriends = null;
+
+/* Liked Lists: lists you liked. Your own are already here; other people's only join the page
+   while that filter is on, and open in their usual view-only popup. */
+let _listsLikedIds = new Set(), _listsLikedOther = [];
+async function _loadLikedLists() {
+  try {
+    const { data } = await sb.from('list_reactions').select('list_id').eq('user_id', _listsUser.id).eq('is_like', true);
+    _listsLikedIds = new Set((data || []).map(r => r.list_id));
+    const known = new Set(_listsAll.map(l => l.id)), ids = [..._listsLikedIds].filter(id => !known.has(id));
+    const lists = ids.length ? ((await sb.from('favorite_lists').select('*').in('id', ids)).data || []).filter(l => l.cat === 'custom') : [];
+    const people = lists.length ? (await sb.from('profiles').select('id, username, display_name, avatar_url').in('id', [...new Set(lists.map(l => l.user_id))])).data || [] : [];
+    const P = Object.fromEntries(people.map(p => [p.id, p]));
+    _listsLikedOther = lists.map(l => ({ ...l, _likedOther: true, _owner: P[l.user_id] || null }));
+    const need = [...new Set(lists.flatMap(l => l.items || []))].filter(id => !MSSList.isTmdbId(id) && !_listsEntryMap[id]);
+    if (need.length) {
+      ((await sb.from('entries').select('*').in('id', need)).data || []).forEach(e => { _listsEntryMap[e.id] = e; });
+      await mssFillHiddenListItems(need, _listsEntryMap);
+    }
+    await MSSList.hydrate(_listsLikedOther);
+  } catch (e) { console.warn('Liked lists:', e); }
+}
+document.addEventListener('mss:list-reacted', async () => {
+  if (!_listsUser) return;
+  await _loadLikedLists();
+  if (_listsMode === 'mine') renderListsPage();
+});
+function _openLikedList(id) {
+  const l = _listsLikedOther.find(x => x.id === id);
+  if (l) MSSList.open(l, { resolve: _resolveListItem, owner: l._owner || {}, social: true });
+}
+const _listTypeTests = {
+  mine: l => !l._likedOther && !l._collab && !l.forked_from,
+  liked: l => _listsLikedIds.has(l.id),
+  collab: l => !!l._collab || (_listsCollab[l.id] || []).some(c => c.status === 'accepted'),
+  imported: l => !l._likedOther && !l._collab && !!l.forked_from,
+};
 
 async function _loadCollabData() {
   _listsCollab = {};
@@ -938,7 +975,7 @@ function myListCardHTML(list, idx, total) {
   const id = attrJSON(list.id);
   const reorder = _listsReorder;
   return `<div class="lc-card${reorder ? ' lc-reorder' : ''}" data-list-id="${escHTML(list.id)}"
-      ${reorder ? `onpointerdown="_lrPointerDown(event, this)"` : `onclick="openMyListPopup(${id})"`}>
+      ${reorder ? `onpointerdown="_lrPointerDown(event, this)"` : `onclick="${list._likedOther ? '_openLikedList' : 'openMyListPopup'}(${id})"`}>
     ${reorder ? `<div class="lr-bar">
       <span class="lr-grip" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
       <span class="lr-pos">${idx + 1}</span>
@@ -947,7 +984,8 @@ function myListCardHTML(list, idx, total) {
         <button type="button" class="lr-arrow" aria-label="Move later" ${idx === total - 1 ? 'disabled' : ''} onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();_lrMove(${id}, 1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
       </span>
     </div>` : ''}
-    ${MSSList.cardInnerHTML(list, { resolve: _resolveListItem, metaExtra: _listMetaExtra(list), collabLine: MSSList.collabLineHTML(list, _listsCollab[list.id]) })}
+    ${MSSList.cardInnerHTML(list, { resolve: _resolveListItem, metaExtra: _listMetaExtra(list), collabLine: MSSList.collabLineHTML(list, _listsCollab[list.id]),
+      ownerHTML: list._likedOther && list._owner ? MSSList.ownerHTML(list._owner) : '' })}
   </div>`;
 }
 
@@ -998,12 +1036,13 @@ function renderListsPage() {
         ${_listsReorder ? icon('check', 15) : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>'}
         <span class="sf-icon-btn-label">${_listsReorder ? 'Done' : 'Reorder'}</span></button>`
     : '';
-  _renderListsToolbar('Your Lists', totalLists ? SF.list('listsOrder', 'all').length : 0,
-    totalLists ? (_listsReorder ? `<div class="sort-bar sf-trigger-row">${reorderBtn}</div>` : SF.bar('listsOrder', 'all').replace('<div class="sort-bar sf-trigger-row">', '<div class="sort-bar sf-trigger-row">' + reorderBtn)) : '');
+  const anyLists = totalLists || _listsLikedOther.length;
+  _renderListsToolbar('Your Lists', anyLists ? SF.list('listsOrder', 'all').length : 0,
+    anyLists ? (_listsReorder ? `<div class="sort-bar sf-trigger-row">${reorderBtn}</div>` : SF.bar('listsOrder', 'all').replace('<div class="sort-bar sf-trigger-row">', '<div class="sort-bar sf-trigger-row">' + reorderBtn)) : '');
 
   let html = '';
 
-  if (!totalLists) {
+  if (!anyLists) {
     html = mssEmpty({ art: 'lists', title: 'Start your first list', text: 'Top 10s, comfort rewatches, guilty pleasures — mix movies, shows, anime and cartoons. Number one is up to you.',
       actions: [{ label: 'Create a list', icon: 'plus', onclick: "if(!mssGuestGate('make lists'))MSSListStudio.open()", primary: true }] });
   } else {
@@ -1051,7 +1090,10 @@ function _listsDefaultOrder() {
 }
 SF.register('listsOrder', {
   // copies tagged with their position in the default order
-  base: () => _listsDefaultOrder().map((l, i) => Object.assign({}, l, { _rank: i + 1 })),
+  base: () => {
+    const liked = (SF.filterState('listsOrder', 'all').choice?.type || '').split(',').includes('liked');
+    return _listsDefaultOrder().concat(liked ? _listsLikedOther : []).map((l, i) => Object.assign({}, l, { _rank: i + 1 }));
+  },
   render: () => renderListsPage(),
   defaultSort: 'rank',
   presets: {
@@ -1065,9 +1107,9 @@ SF.register('listsOrder', {
     { key: 'ranked', label: 'Ranking',
       options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked'], ['unset', 'Not Set']],
       test: (l, v) => v === 'yes' ? l.ranked === true : v === 'no' ? l.ranked === false : l.ranked == null },
-    { key: 'origin', label: 'Source',
-      options: [['', 'All Lists'], ['mine', 'Created by Me'], ['imported', 'Imported']],
-      test: (l, v) => v === 'imported' ? !!l.forked_from : !l.forked_from },
+    { key: 'type', label: 'List Type', hint: '(pick any)', multi: true,
+      options: [['mine', 'My Lists'], ['liked', 'Liked Lists'], ['collab', 'Collaborative Lists'], ['imported', 'Imported Lists']],
+      test: (l, v) => v.split(',').some(t => _listTypeTests[t]?.(l)) },
   ],
 });
 

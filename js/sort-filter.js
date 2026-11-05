@@ -23,7 +23,7 @@
      watched: section => true,              // adds "Year Watched" (From / To) for sections of
                                             // watched titles; reads watchedDate (default completed_date)
      watchedDate: e => e.completed_date,
-     choiceFilters: section => [       // single-pick filters, e.g. Status
+     choiceFilters: section => [       // single-pick filters, e.g. Status (multi: true → several at once)
        { key: 'status', label: 'Status', options: [['', 'All'], ['completed', 'Watched']],
          test: (entry, value) => entry.status === value,     // test optional
          when: choice => choice.cat === 'anime' },           // optional: only shown/applied when true
@@ -326,7 +326,7 @@ const SF = (() => {
     return `<div class="sf-section-label">${escHTML(label)}${hint ? ` <span class="sf-section-hint">${escHTML(hint)}</span>` : ''}</div><div class="sf-check-list">` +
       options.map(([v, l]) => `
         <label class="sf-check-row">
-          <input type="checkbox" ${curV === v ? 'checked' : ''} onchange="${onchange(v)}">
+          <input type="checkbox" ${(Array.isArray(curV) ? curV.includes(v) : curV === v) ? 'checked' : ''} onchange="${onchange(v)}">
           <span class="sf-check-mark">${CHECK_SVG}</span>
           <span>${escHTML(l)}</span>
         </label>`).join('') + `</div>`;
@@ -383,6 +383,12 @@ const SF = (() => {
     document.body.appendChild(el);
   }
 
+  // Type to narrow a dropdown: the first thing in its menu
+  const ddSearch = ph => `<div class="sf-dd-search"><input type="search" placeholder="${escHTML(ph)}" aria-label="${escHTML(ph)}" autocomplete="off" onclick="event.stopPropagation()" oninput="SF._ddFilter(this)"></div>`;
+  function _ddFilter(inp) {
+    const q = inp.value.trim().toLowerCase(), menu = inp.closest('.td-dd-menu');
+    menu.querySelectorAll('.sf-check-row, .td-dd-opt').forEach(o => { o.hidden = !!q && !o.textContent.toLowerCase().includes(q); });
+  }
   function ddHTML(id, label, active, menu, extraMenuCls = '') {
     return `<div class="td-dd sf-dd sf-dd-wide" id="${id}">
       <button type="button" class="td-dd-trigger sf-dd-trigger${active ? ' active' : ''}" onclick="event.stopPropagation();SF._toggleDD('${id}')">
@@ -477,7 +483,9 @@ const SF = (() => {
     let html = '';
     choicesFor(s, section).forEach(c => {
       if (c.when && !c.when(f.choice)) { f.choice[c.key] = ''; return; }   // e.g. Format only for Anime/Cartoons
-      html += choiceHTML(c.label, '', c.options, f.choice[c.key] || '', v => `SF._stageChoice(${attrJSON(c.key)}, ${attrJSON(v)})`);
+      html += c.multi
+        ? choiceHTML(c.label, c.hint || '', c.options, (f.choice[c.key] || '').split(','), v => `SF._stageChoiceToggle(${attrJSON(c.key)}, ${attrJSON(v)})`)
+        : choiceHTML(c.label, '', c.options, f.choice[c.key] || '', v => `SF._stageChoice(${attrJSON(c.key)}, ${attrJSON(v)})`);
     });
     if (on.has('genre')) {
       const menu = GENRES.map(g => `
@@ -487,13 +495,13 @@ const SF = (() => {
           <span>${escHTML(g)}</span>
         </label>`).join('');
       html += `<div class="sf-section-label">Genre</div>` +
-        ddHTML('sfGenreDD', f.genres.length ? escHTML(f.genres.join(', ')) : 'Any Genre', f.genres.length > 0, menu, ' sf-check-menu');
+        ddHTML('sfGenreDD', f.genres.length ? escHTML(f.genres.join(', ')) : 'Any Genre', f.genres.length > 0, ddSearch('Search genres…') + menu, ' sf-check-menu');
     }
     if (on.has('year')) {
-      html += `<div class="sf-section-label">Release Year</div>` + rangeRow('sfYearMin', 'sfYearMax', f.yearMin, f.yearMax, 'From', 'To');
+      html += `<div class="sf-section-label">Release Year</div>` + rangeRow('sfYearMin', 'sfYearMax', f.yearMin, f.yearMax, 'From', 'To', 'inputmode="numeric"');
     }
     if (on.has('watched')) {
-      html += `<div class="sf-section-label">Year Watched</div>` + rangeRow('sfWatchedMin', 'sfWatchedMax', f.watchedMin, f.watchedMax, 'From', 'To');
+      html += `<div class="sf-section-label">Year Watched</div>` + rangeRow('sfWatchedMin', 'sfWatchedMax', f.watchedMin, f.watchedMax, 'From', 'To', 'inputmode="numeric"');
     }
     if (on.has('score')) {
       html += `<div class="sf-section-label">${escHTML(s.cfg.scoreLabel || 'MyScreenFolio')} <span class="sf-section-hint">(rated items only)</span></div>` +
@@ -530,6 +538,13 @@ const SF = (() => {
     stagedFilter.choice[key] = value;
     document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
   }
+  // multi: true → several can be ticked; test(item, 'a,b') gets them comma-joined
+  function _stageChoiceToggle(key, value) {
+    const on = new Set((stagedFilter.choice[key] || '').split(',').filter(Boolean));
+    if (!on.delete(value)) on.add(value);
+    stagedFilter.choice[key] = [...on].join(',');
+    document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
+  }
   function _stageRanges() {
     const v = id => document.getElementById(id)?.value ?? '';
     Object.assign(stagedFilter, {
@@ -545,10 +560,26 @@ const SF = (() => {
     stagedFilter = EMPTY_FILTER();
     document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
   }
+  // Years typed into the filter: 4 digits that make sense, and From before To
+  function checkYears(f) {
+    const bad = v => v && !(/^\d{4}$/.test(v) && +v >= 1880 && +v <= new Date().getFullYear() + 10);
+    const pairs = [['yearMin', 'yearMax'], ['watchedMin', 'watchedMax']];
+    if (pairs.flat().some(k => bad(f[k]))) return false;
+    pairs.forEach(([a, b]) => { if (f[a] && f[b] && +f[a] > +f[b]) [f[a], f[b]] = [f[b], f[a]]; });
+    return true;
+  }
   async function _applyFilter() {
     if (!cur || !stagedFilter) { closeFilter(); return; }
     const { scope, section } = cur, s = S(scope);
     const staged = { ...stagedFilter };
+    if (!checkYears(staged)) {
+      const body = document.getElementById('sfFilterBody');
+      let hint = document.getElementById('sfYearHint');
+      if (!hint) { hint = document.createElement('div'); hint.id = 'sfYearHint'; hint.className = 'mss-rename-hint bad'; hint.setAttribute('role', 'alert'); (document.getElementById('sfYearMin') || document.getElementById('sfWatchedMin')).closest('.sf-range-row').after(hint); }
+      hint.textContent = 'Use a 4-digit year, like 2004.';
+      hint.scrollIntoView({ block: 'nearest' });
+      return;
+    }
     if (s.cfg.beforeFilter) {
       const btn = document.querySelector('#sfFilterCard .sf-apply-btn');
       if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
@@ -714,9 +745,9 @@ const SF = (() => {
     filterCount: (scope, section) => filterCount(getFilter(scope, section)),
     filterState: (scope, section) => getFilter(scope, section),
     isMovie, GENRES,
-    dd: ddHTML, closeDD: closeAllDD,              // the filter dropdown, for other popups (Challenges genre)
+    dd: ddHTML, ddSearch, _ddFilter, closeDD: closeAllDD,              // the filter dropdown, for other popups (Challenges genre)
     // internal — used by the popup markup's inline handlers
-    _stageSort, _resetSort, _applySort, _stageGenre, _stageChoice, _stageRanges, _clearFilter, _applyFilter,
+    _stageSort, _resetSort, _applySort, _stageGenre, _stageChoice, _stageChoiceToggle, _stageRanges, _clearFilter, _applyFilter,
     _openPersonDD, _personInput, _pickPerson, _toggleDD,
     _typeStage: typeStage, _typeClear: typeClear, _typeApply: typeApply,
   };

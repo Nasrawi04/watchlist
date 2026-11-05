@@ -212,7 +212,7 @@ function _initDiscSideNavScrollSpy() {
 // keeps the exact scroll position for free.)
 
 document.addEventListener('DOMContentLoaded', () => {
-  initInlineSearch('heroSearch', { hide: ['#discBrowse', '#discBrowseResults', '#discYourTV', '#discNavDD', '.disc-layout'] });
+  initInlineSearch('heroSearch', { filter: true, hide: ['#discBrowse', '#discBrowseResults', '#discYourTV', '#discNavDD', '.disc-layout'] });
   // Browse (browse.js): its results stand in for the rows below until you go back
   MSSBrowse.init(document.getElementById('discBrowse'), document.getElementById('discBrowseResults'));   // live results on the page (no dropdown)
   // Layout + any rows cached from this session are drawn right away (none

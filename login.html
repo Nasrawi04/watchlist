@@ -142,6 +142,7 @@ a.au-tile:hover::after { opacity:1; }
 .au-input::placeholder { color:var(--text-3); }
 .au-input:focus { border-color:var(--olive-light); background:var(--card-solid); }
 .au-input.has-eye { padding-right:50px; }
+.au-birth .mss-date-cal { width:50px; border-radius:12px; background:var(--bg-2); }
 .au-birth .mss-pick-trigger { min-height:50px; border-radius:12px; background:var(--bg-2); border:1px solid var(--border-2); font:500 15px var(--sans); }
 .au-eye { position:absolute; right:4px; width:44px; height:44px; border:0; border-radius:10px; background:none; color:var(--text-3); cursor:pointer; display:grid; place-items:center; }
 .au-eye:hover { color:var(--text); }
@@ -716,7 +717,7 @@ function _auSetupMessages(pass) {
 /* ── Sign Up ── */
 const AU_UNDER_13 = 'Sorry — you need to be 13 or older to make a MyScreenFolio account.';
 const _auAgeBlocked = () => { try { return Date.now() - Number(localStorage.getItem('mss_age_block') || 0) < 86400000; } catch { return false; } };
-document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('suBirth'); if (b) mssBirthFields(b, 'suBirth'); });
+document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('suBirth'); if (b) mssDateFields(b, 'suBirth', { label: 'Date of birth', view: 'years' }); });
 // Public (default) or Private account (083) — saved with the sign-up, made into the profile by the database
 let _auPrivate = false;
 function auPriv(on) {

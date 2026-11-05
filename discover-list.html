@@ -272,6 +272,7 @@ function _dlRestoreState() {
     if (!st || Date.now() - st.t > 30 * 60 * 1000 || !st.items?.length) return false;
     _dlAllItems = st.items; _dlPage = st.page; _dlDone = st.done;
     if (_dlHasSF && st.sf) SF.restoreState('dl', 'all', st.sf);
+    if (_dlHasSF && st.sf?.filter?.choice?.hide) MSSHide.load().then(_dlRenderAll, () => {});
     _dlRenderAll();
     if (_dlDone) document.getElementById('dlEndMsg').style.display = '';
     // Rows render instantly, so the position can be restored right away.
@@ -319,7 +320,7 @@ if (_dlHasSF) {
     defaultSort: 'rank',
     sorts: () => ['rank', 'alpha', 'release', 'ratings'],
     filters: () => ['genre', 'year', 'score'],
-    choiceFilters: () => _dlIsMss ? [{
+    choiceFilters: () => (_dlIsMss ? [{
       key: 'cat', label: 'Type',
       options: [['', 'All Types'], ['tv', 'TV Shows'], ['movies', 'Movies'], ['anime', 'Anime'], ['cartoons', 'Cartoons']],
     }, {
@@ -327,11 +328,11 @@ if (_dlHasSF) {
       options: [['', 'All Formats'], ['show', 'Shows'], ['movie', 'Movies']],
       when: ch => ch.cat === 'anime' || ch.cat === 'cartoons',
       test: (it, v) => (v === 'movie') === (it.media_type === 'movie'),
-    }] : [],
+    }] : []).concat(MSSHide.choice((it, v) => !MSSHide.hides(it.media_type, it.tmdb_id ?? it.id, v))),
     scoreOf: it => it.score,
     scoreLabel: _dlIsMss ? 'MyScreenFolio' : 'TMDB Score',
     beforeSort: () => _dlLoadAll(),
-    beforeFilter: () => _dlLoadAll(),
+    beforeFilter: () => Promise.all([_dlLoadAll(), MSSHide.load(true).catch(() => {})]),
   });
 }
 

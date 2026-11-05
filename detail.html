@@ -239,8 +239,6 @@
 #dRateCard.mss-rate-here { animation:mssRateHere 1.6s var(--ease) .35s 1 both; }
 @keyframes mssRateHere { 0%,100% { box-shadow:0 0 0 0 transparent; } 30% { box-shadow:0 0 0 3px var(--olive-light), 0 0 30px var(--olive-glow); } }
 @media (prefers-reduced-motion:reduce) { #dRateCard.mss-rate-here { animation:none; } }
-.date-3box { display:flex; gap:8px; align-items:center; }
-.date-3box-input { margin:0 !important; }
 
 /* ══════════════════════════════════════════
    DETAIL PAGE REDESIGN — hero + card layout
@@ -268,22 +266,9 @@
 [data-theme="dark"] .det-field-hint { color:#e08585; }
 
 /* Month: type or pick (same look as the site dropdowns) */
-.mcombo { position:relative; flex:1; min-width:7.5em; }
-.mcombo-input { width:100%; padding-inline-end:30px !important; }
-.mcombo-chev { position:absolute; inset-inline-end:10px; top:50%; transform:translateY(-50%); color:var(--text-3); pointer-events:none; transition:transform .15s; }
-.mcombo.open .mcombo-chev { transform:translateY(-50%) rotate(180deg); color:var(--olive-light); }
-.mcombo-menu {
-  display:none; position:absolute; top:calc(100% + 4px); inset-inline-start:0; inset-inline-end:0; z-index:60;
-  background:var(--bg-3); border:0.5px solid var(--olive-light); border-radius:var(--radius-sm);
-   max-height:230px; overflow-y:auto; overscroll-behavior-y:contain; text-align:start;
-}
-.mcombo.open .mcombo-menu { display:block; }
-.mcombo-menu .sel-dd-opt.hl { background:var(--bg-2); }
-.mcombo-empty { padding:10px 14px; font-size:13px; color:var(--text-3); }
 /* No number spinners on the date / year boxes (they also ate the width on phones) */
-.det-year-input, .date-3box-input { -moz-appearance:textfield; appearance:textfield; }
+.det-year-input { -moz-appearance:textfield; appearance:textfield; }
 .det-year-input::-webkit-inner-spin-button, .det-year-input::-webkit-outer-spin-button,
-.date-3box-input::-webkit-inner-spin-button, .date-3box-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
 
 /* Poster — reuses .detail-poster-wrap class (handlePosterUpload's querySelector depends on it) */
 .det-header .detail-poster-wrap {
@@ -603,27 +588,7 @@
 
         <div class="field-group" id="completedOnGroup" style="display:none;margin-top:1.25rem;margin-bottom:0;">
           <div class="field-label">Watched On</div>
-          <div class="date-3box" id="completedDateWrap">
-            <input class="field-input date-3box-input" id="dDay" type="text" inputmode="numeric" data-mask="int" maxlength="2" placeholder="DD" aria-label="Day" style="width:64px;text-align:center">
-            <select id="dMonth" style="display:none" aria-hidden="true" tabindex="-1">
-              <option value=""></option>
-              <option value="01">January</option><option value="02">February</option>
-              <option value="03">March</option><option value="04">April</option>
-              <option value="05">May</option><option value="06">June</option>
-              <option value="07">July</option><option value="08">August</option>
-              <option value="09">September</option><option value="10">October</option>
-              <option value="11">November</option><option value="12">December</option>
-            </select>
-            <!-- Month: type it ("mar", "3") or pick it from the list -->
-            <div class="mcombo" id="dMonthCombo">
-              <input class="field-input date-3box-input mcombo-input" id="dMonthInput" type="text" placeholder="Month" autocomplete="off" spellcheck="false"
-                     role="combobox" aria-expanded="false" aria-controls="dMonthList" aria-autocomplete="list" aria-label="Month"
-                     oninput="_mcFilter()" onfocus="_mcOpen()" onkeydown="_mcKey(event)" onblur="_mcBlur()">
-              <svg class="mcombo-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-              <div class="mcombo-menu" id="dMonthList" role="listbox"></div>
-            </div>
-            <input class="field-input date-3box-input" id="dCYear" type="text" inputmode="numeric" data-mask="int" maxlength="4" placeholder="YYYY" aria-label="Year" style="width:84px;text-align:center">
-          </div>
+          <div class="mss-birth-row" id="completedDateWrap" role="group" aria-label="Watched on"></div>
           <div class="det-field-hint" id="dateHint" role="status" aria-live="polite"></div>
         </div>
 
@@ -931,87 +896,12 @@ let _detId     = sessionStorage.getItem('detailId') || null;
 let _originalStatus = null; // track status at load time to detect new completions
 
 function _parseCompletedDate() {
-  const day   = document.getElementById('dDay')?.value?.trim();
-  const month = document.getElementById('dMonth')?.value;
-  const year  = document.getElementById('dCYear')?.value?.trim();
-  if (!year) return null;
-  const m = month || '01';
-  const d = day   ? String(parseInt(day)).padStart(2,'0') : '01';
-  return `${year}-${m}-${d}`;
+  const { d, m, y } = mssDateParts('dC');
+  if (!y) return null;
+  const pad = n => String(n || 1).padStart(2, '0');
+  return `${y}-${pad(m)}-${pad(d)}`;
 }
-function _setCompletedDate(iso) {
-  if (!iso) { 
-    document.getElementById('dDay').value = '';
-    document.getElementById('dMonth').value = '';
-    document.getElementById('dMonth')._ddSync?.();
-    document.getElementById('dCYear').value = '';
-    return;
-  }
-  const dt = new Date(iso + 'T12:00:00');
-  document.getElementById('dDay').value    = dt.getDate();
-  document.getElementById('dMonth').value  = String(dt.getMonth()+1).padStart(2,'0');
-  document.getElementById('dMonth')._ddSync?.();
-  document.getElementById('dCYear').value  = dt.getFullYear();
-}
-/* ── Watched On: month combobox + checks ── */
-const _MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-let _mcHl = -1;
-function _mcEls() { return { wrap: document.getElementById('dMonthCombo'), input: document.getElementById('dMonthInput'), list: document.getElementById('dMonthList'), sel: document.getElementById('dMonth') }; }
-// "mar", "March", "3", "03" → 3 (1-based); otherwise matching months for the list
-function _mcMatches(q) {
-  q = q.trim().toLowerCase();
-  if (!q) return _MONTHS.map((_, i) => i);
-  if (/^\d{1,2}$/.test(q)) { const n = +q; return n >= 1 && n <= 12 ? [n - 1] : []; }
-  const pre = _MONTHS.map((m, i) => i).filter(i => _MONTHS[i].toLowerCase().startsWith(q));
-  return pre.length ? pre : _MONTHS.map((m, i) => i).filter(i => _MONTHS[i].toLowerCase().includes(q));
-}
-function _mcRender(idxs) {
-  const { list, sel } = _mcEls();
-  list.innerHTML = idxs.length ? idxs.map((i, k) => {
-    const v = String(i + 1).padStart(2, '0');
-    return `<div class="sel-dd-opt${v === sel.value ? ' active' : ''}${k === _mcHl ? ' hl' : ''}" role="option" aria-selected="${v === sel.value}" data-i="${i}" onmousedown="event.preventDefault();_mcPick(${i})">${_MONTHS[i]}</div>`;
-  }).join('') : `<div class="mcombo-empty">No month matches</div>`;
-}
-function _mcOpen() {
-  const { wrap, input } = _mcEls();
-  _mcHl = -1; _mcRender(_MONTHS.map((_, i) => i));
-  wrap.classList.add('open'); input.setAttribute('aria-expanded', 'true');
-  input.select();
-}
-function _mcClose() { const { wrap, input } = _mcEls(); wrap.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); }
-function _mcFilter() { _mcHl = 0; _mcRender(_mcMatches(_mcEls().input.value)); _mcEls().wrap.classList.add('open'); }
-function _mcPick(i) {
-  const { input, sel } = _mcEls();
-  sel.value = i == null ? '' : String(i + 1).padStart(2, '0');
-  input.value = i == null ? '' : _MONTHS[i];
-  _mcClose();
-  _detCheckDay();
-}
-function _mcKey(ev) {
-  const idxs = _mcMatches(_mcEls().input.value);
-  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
-    ev.preventDefault();
-    _mcEls().wrap.classList.add('open');
-    _mcHl = Math.max(0, Math.min(idxs.length - 1, _mcHl + (ev.key === 'ArrowDown' ? 1 : -1)));
-    _mcRender(idxs);
-  } else if (ev.key === 'Enter') {
-    ev.preventDefault();
-    if (idxs.length) _mcPick(idxs[Math.max(0, _mcHl)]);
-  } else if (ev.key === 'Escape') { _mcClose(); }
-}
-// Leaving the box: keep a valid month, clear an empty one, revert nonsense
-function _mcBlur() {
-  const { input, sel } = _mcEls();
-  const q = input.value.trim();
-  if (!q) { _mcPick(null); return; }
-  const idxs = _mcMatches(q);
-  if (idxs.length === 1 || (idxs.length && _MONTHS[idxs[0]].toLowerCase() === q.toLowerCase())) { _mcPick(idxs[0]); return; }
-  input.value = sel.value ? _MONTHS[+sel.value - 1] : '';
-  _mcClose();
-  if (q) _detHint('dateHint', `“${q}” isn't a month — pick one from the list.`);
-}
-// Keeps the text box in step when code sets #dMonth (load, defaults)
-function _mcSync() { const { input, sel } = _mcEls(); input.value = sel.value ? _MONTHS[+sel.value - 1] : ''; }
+function _setCompletedDate(iso) { mssDateSet('dC', iso || null, true); }
 
 function _detHint(id, msg) {
   const el = document.getElementById(id);
@@ -1023,35 +913,30 @@ function _detHint(id, msg) {
 // Years must be all 4 digits — anything else is cleared, with a note
 function _detCheckYear(el, hintId) {
   const v = el.value.trim();
-  if (!v || /^\d{4}$/.test(v)) { _detHint(hintId, ''); if (hintId === 'dateHint') _detCheckDay(); return; }
+  if (!v || /^\d{4}$/.test(v)) { _detHint(hintId, ''); return; }
   el.value = '';
   _detHint(hintId, `“${v}” isn't a full year — use 4 digits, like 2004.`);
 }
 // Day must exist in that month (Feb: 29 only in leap years; 29 if no year yet)
 function _detCheckDay() {
-  const dEl = document.getElementById('dDay');
-  const raw = dEl.value.trim();
-  if (!raw) return;
   _detHint('dateHint', '');
-  const d = parseInt(raw, 10), m = parseInt(document.getElementById('dMonth').value || '0', 10);
-  const yRaw = document.getElementById('dCYear').value.trim(), y = /^\d{4}$/.test(yRaw) ? +yRaw : null;
-  const max = m ? new Date(y || 2024, m, 0).getDate() : 31;
-  if (!/^\d{1,2}$/.test(raw) || d < 1 || d > max) {
-    dEl.value = '';
-    _detHint('dateHint', !/^\d{1,2}$/.test(raw) || d < 1 ? 'Enter a day number, like 14.'
-      : `${_MONTHS[m - 1] || 'That month'}${y ? ' ' + y : ''} only has ${max} days.`);
+  const { d, m, y } = mssDateParts('dC');
+  if (!d || !m) return;
+  const max = new Date(y || 2024, m, 0).getDate();
+  if (d > max) {
+    _mssDatePick('dC', 'D').value = '';
+    const name = new Intl.DateTimeFormat(MSSI18n.locale, { month: 'long', timeZone: 'UTC' }).format(Date.UTC(2000, m - 1, 1));
+    _detHint('dateHint', `${name}${y ? ' ' + y : ''} only has ${max} days.`);
   }
 }
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('dDay').addEventListener('change', _detCheckDay);
-  document.getElementById('dCYear').addEventListener('change', e => _detCheckYear(e.target, 'dateHint'));
+  mssDateFields(document.getElementById('completedDateWrap'), 'dC', { label: 'Watched on', oldest: 1900, onChange: _detCheckDay });
   document.getElementById('dYear').addEventListener('change', e => _detCheckYear(e.target, 'yearHint'));
   document.getElementById('dCompletionYear').addEventListener('change', e => _detCheckYear(e.target, 'yearHint'));
   // digits only while typing
-  ['dDay', 'dCYear', 'dYear', 'dCompletionYear'].forEach(id => document.getElementById(id).addEventListener('input', e => {
+  ['dYear', 'dCompletionYear'].forEach(id => document.getElementById(id).addEventListener('input', e => {
     const c = e.target.value.replace(/\D/g, ''); if (c !== e.target.value) e.target.value = c;
   }));
-  document.getElementById('dMonth')._ddSync = _mcSync;
 });
 
 let _fromPage  = sessionStorage.getItem('detailFrom') || 'index.html';
@@ -1604,13 +1489,7 @@ function updateStatusUI() {
   const _rwSec = document.getElementById('dRewatchSection');
   if (_rwSec) _rwSec.style.display = (status === 'completed' || status === 'ongoing') ? '' : 'none';
   // Only auto-set date if there is no date already AND entry has no existing completed_date
-  if ((status === 'completed' || status === 'ongoing') && !document.getElementById('dCYear')?.value && !_detEntry?.completed_date) {
-    const now = new Date();
-    document.getElementById('dDay').value   = now.getDate();
-    document.getElementById('dMonth').value = String(now.getMonth()+1).padStart(2,'0');
-    document.getElementById('dMonth')._ddSync?.();
-    document.getElementById('dCYear').value  = now.getFullYear();
-  }
+  if ((status === 'completed' || status === 'ongoing') && !mssDateParts('dC').y && !_detEntry?.completed_date) mssDateSet('dC', _mssTodayIso(), true);
 }
 
 function updatePosterLetter() {

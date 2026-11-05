@@ -144,14 +144,14 @@ const MSSBrowse = (() => {
   /* ── Filters: the site's Filter popup (sort-filter.js, scope 'brw') ──
      TMDB Score and a movie's Runtime are asked of TMDB; a show's Seasons /
      Episodes aren't something TMDB can search by, so each show's details are
-     looked up (once) and checked here, like "Hide what's in my library".
+     looked up (once) and checked here, like Hide from Results (MSSHide).
      Set only movie or only show lengths and the other kind is left out.
      Apply re-runs the results when they're showing. */
   SF.register('brw', {
     base: () => [],
     render: () => { document.getElementById('brwFilterBtn').innerHTML = filterBtn(); if (S) go(); },
     filters: () => ['score', 'length'],
-    choiceFilters: () => [{ key: 'hide', label: 'Your Library', options: [['', 'Show everything'], ['watched', 'Hide what’s in my library']] }],
+    choiceFilters: () => MSSHide.choice(),
     scoreLabel: 'TMDB Score',
     lengthKind: () => ({ movie: 'movie', tv: 'show' })[P.type?.value] || 'mixed',
   });
@@ -169,14 +169,6 @@ const MSSBrowse = (() => {
   function filterBtn() {
     const n = SF.filterCount('brw', 'all');
     return SF.typeFilterButton("SF.openFilter('brw','all')", n ? `Filter (${n})` : 'Filter', n > 0);
-  }
-  // What's in your library (tmdb type:id), loaded once when "Hide" is on
-  let lib = null;
-  async function libraryKeys() {
-    if (lib) return lib;
-    const user = await getCurrentUser();
-    lib = new Set(user ? (await getEntries(user.id)).filter(e => e.tmdb_id).map(e => `${e.tmdb_type}:${e.tmdb_id}`) : []);
-    return lib;
   }
 
   /* ── Results ── */
@@ -231,7 +223,7 @@ const MSSBrowse = (() => {
     src.buf = (d.results || []).map(r => Object.assign(_discNormalize(r, src.t), {
       pop: r.popularity || 0, date: (src.t === 'movie' ? r.release_date : r.first_air_date) || '' }))
       .filter(it => src.kind !== 'cartoon' || !_discIsAnimeOrigin(it))
-      .filter(it => !S.hide || !lib?.has(`${it.media_type}:${it.id}`));
+      .filter(it => !MSSHide.hides(it.media_type, it.id, S.hide));
     const f = F();
     if (src.t === 'tv' && lengths(f).shows) {                        // seasons / episodes: checked one show at a time
       const inR = (v, lo, hi) => (!lo || v >= Number(lo)) && (!hi || v <= Number(hi));
@@ -270,7 +262,7 @@ const MSSBrowse = (() => {
     if (f.lengthMin || f.lengthMax) parts.push(rng(f.lengthMin, f.lengthMax, ' min'));
     if (f.seasonsMin || f.seasonsMax) parts.push(rng(f.seasonsMin, f.seasonsMax, ' seasons'));
     if (f.epsMin || f.epsMax) parts.push(rng(f.epsMin, f.epsMax, ' episodes'));
-    if (f.choice?.hide) parts.push('not in your library');
+    if (f.choice?.hide) parts.push(`hiding ${MSSHide.describe(f.choice.hide)}`);
     return parts.join(' · ');
   }
   function card(it) {
@@ -318,8 +310,8 @@ const MSSBrowse = (() => {
     out.innerHTML = headHTML(true) + `<div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>`;
     out.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     try {
-      S.hide = !!F().choice?.hide;
-      if (S.hide) await libraryKeys();
+      S.hide = F().choice?.hide || '';
+      if (S.hide) await MSSHide.load(true);
       await more();
     }
     catch (e) {
@@ -333,7 +325,7 @@ const MSSBrowse = (() => {
     drawResults(); save();
   }
   async function loadMore() {
-    if (S.hide) await libraryKeys().catch(() => {});
+    if (S.hide) await MSSHide.load().catch(() => {});
     const btn = document.getElementById('brwMore'), from = S.items.length, my = seq;
     if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
     try { await more(); } catch (e) { console.error('Browse:', e); if (isRateLimitError(e)) showToast('TMDB is busy right now — try again in a moment.', 'err'); }

@@ -382,7 +382,7 @@ function _navBirthPopup(uid) {
   MSSDialog.bind(el, () => {});                        // can't be skipped — only saved, or signed out
   document.body.appendChild(el);
   const save = el.querySelector('#mssBirthSave'), hint = el.querySelector('#mssBirthHint');
-  mssBirthFields(el.querySelector('#mssBirthRow'), 'mssBirth', () => { save.disabled = !mssBirthValue('mssBirth'); hint.textContent = ''; });
+  mssDateFields(el.querySelector('#mssBirthRow'), 'mssBirth', { label: 'Date of birth', view: 'years', onChange: () => { save.disabled = !mssBirthValue('mssBirth'); hint.textContent = ''; } });
   el.querySelector('form').addEventListener('submit', async ev => {
     ev.preventDefault();
     const v = mssBirthValue('mssBirth');

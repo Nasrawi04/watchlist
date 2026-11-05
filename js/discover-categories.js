@@ -613,6 +613,37 @@ function getDiscoverCategory(key) {
    step aside until the search is cleared. Titles open the info popup,
    people open their page.
      initInlineSearch('heroSearch', { hide: ['.xp', '#homeWatching'] }) */
+/* ── Hide from results: titles you already know about, in the site's Filter popup ──
+   Only ever a view: nothing is deleted, and clearing the filter brings it all back.
+     MSSHide.choice(test)            → the Filter section (signed in only)
+     await MSSHide.load(fresh)       your library, kept until fresh asks again
+     MSSHide.hides(type, id, value)  → is this title hidden by the ticked options? */
+const MSSHide = (() => {
+  const OPTIONS = [['watched', 'Watched'], ['library', 'In my library'], ['watchlist', 'On my watchlist'], ['rated', 'Already rated']];
+  const TESTS = {
+    watched: e => e.status === 'completed' || e.status === 'ongoing',
+    library: () => true,
+    watchlist: e => e.status === 'queue',
+    rated: e => liveScore(e) != null,
+  };
+  let lib = null, loading = null;
+  function load(fresh) {
+    if (lib && !fresh) return Promise.resolve();
+    return loading ||= (async () => {
+      const u = await getCurrentUser();
+      const rows = u ? await getEntries(u.id) : [];
+      lib = new Map(rows.filter(e => e.tmdb_id && e.tmdb_type).map(e => [`${e.tmdb_type}:${e.tmdb_id}`, e]));
+    })().finally(() => { loading = null; });
+  }
+  function hides(type, id, value) {
+    const e = value && lib?.get(`${type}:${id}`);
+    return !!e && String(value).split(',').some(k => TESTS[k]?.(e));
+  }
+  const choice = test => window._navUser ? [{ key: 'hide', label: 'Hide from Results', hint: '(pick any)', multi: true, options: OPTIONS, test }] : [];
+  const describe = value => String(value).split(',').map(k => OPTIONS.find(o => o[0] === k)?.[1].toLowerCase()).filter(Boolean).join(', ');
+  return { load, hides, choice, describe };
+})();
+
 function initInlineSearch(inputId, opts = {}) {
   const input = document.getElementById(inputId);
   if (!input) return;
@@ -635,7 +666,7 @@ function initInlineSearch(inputId, opts = {}) {
   clear.hidden = true;
   input.insertAdjacentElement('afterend', clear);
   const syncClear = () => { clear.hidden = !input.value; };
-  clear.addEventListener('click', () => { input.value = ''; syncClear(); run(); input.focus(); });
+  clear.addEventListener('click', () => { input.value = ''; syncClear(); run(); input.focus(); syncRecent(); });
 
   const setSearching = on => {
     box.hidden = !on;
@@ -654,28 +685,122 @@ function initInlineSearch(inputId, opts = {}) {
       type: it.media_type === 'movie' ? 'movie' : 'tv', score: _discFloorScore(it.score) });
   }
 
+  // opts.filter: the results get the Filter popup's Hide from Results (sort-filter.js)
+  let shown = null;
+  const hideValue = () => opts.filter ? SF.filterState('isr', 'all').choice?.hide || '' : '';
+  function filterBtn() {
+    if (!opts.filter || !window._navUser) return '';
+    const n = SF.filterCount('isr', 'all');
+    return `<div class="inline-search-filter">${SF.typeFilterButton("SF.openFilter('isr','all')", n ? `Filter (${n})` : 'Filter', n > 0)}</div>`;
+  }
+  function drawResults() {
+    const { q, results } = shown, hide = hideValue();
+    const list = results.filter(r => r.media_type === 'person' || !MSSHide.hides(r.media_type, r.id, hide));
+    const hidden = results.length - list.length;
+    box.innerHTML = `<div class="inline-search-head"><div class="section-eyebrow">Search</div>
+        <div class="section-title" style="margin-bottom:0">Results for “${esc(q)}”</div>
+        <div class="inline-search-count"><b>${list.length}</b> ${list.length === 1 ? 'result' : 'results'}${hidden ? ` · ${hidden} hidden` : ''}</div>${filterBtn()}</div>`
+      + (list.length ? `<div class="inline-search-grid">${list.map(cardHTML).join('')}</div>`
+        : hidden ? mssEmpty({ art: 'filter', title: 'All of these are hidden', text: `Your filter hides ${hidden === 1 ? 'the only result' : `all ${hidden} results`}. They’re still there whenever you want them.`,
+            actions: [{ label: 'Show them', icon: 'x', onclick: "SF.clearFilters('isr', 'all');SF.refresh('isr')", primary: true }] })
+        : mssEmpty({ art: 'search', title: `No luck with “${q}”`, text: 'Check the spelling, or try the original title. TMDB knows a lot, but not everything.' }));
+  }
+  if (opts.filter) SF.register('isr', {
+    base: () => [],
+    render: async () => { await MSSHide.load(true).catch(() => {}); if (shown) drawResults(); },
+    filters: () => [],
+    choiceFilters: () => MSSHide.choice(),
+  });
+
+  /* ── Recent searches: on this device, separately for each account. A search counts once you
+     settle on it (Enter, opening a result, or leaving the box), so half-typed words stay out. ── */
+  const RECENT_MAX = 10;
+  const recentKey = () => `mss_recent_search:${window._navUser?.id || 'guest'}`;
+  const readRecent = () => { try { const a = JSON.parse(localStorage.getItem(recentKey()) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
+  const writeRecent = a => { try { localStorage.setItem(recentKey(), JSON.stringify(a)); } catch {} };
+  function remember(q) {
+    const low = q.toLowerCase();
+    writeRecent([q, ...readRecent().filter(x => x.toLowerCase() !== low)].slice(0, RECENT_MAX));
+  }
+  const recent = document.createElement('div');
+  recent.className = 'hero-recent';
+  recent.id = inputId + 'Recent';
+  recent.hidden = true;
+  anchor.insertAdjacentElement('afterend', recent);
+  recent.addEventListener('mousedown', e => e.preventDefault());       // a click keeps the box focused
+  function drawRecent() {
+    const list = readRecent();
+    if (!list.length) { recent.hidden = true; return; }
+    recent.innerHTML = `<div class="hero-recent-h"><span id="${inputId}RecentH">Recent searches</span><button type="button" class="hero-recent-clear" data-all>Clear all</button></div>
+      <ul aria-labelledby="${inputId}RecentH">${list.map(q => `<li><button type="button" class="hero-recent-pick" data-q="${esc(q)}">${icon('clock', 14)}<span translate="no">${esc(q)}</span></button>
+        <button type="button" class="hero-recent-x" data-x="${esc(q)}" aria-label="Remove ${esc(q)} from recent searches">${icon('x', 14)}</button></li>`).join('')}</ul>`;
+    recent.style.left = anchor.offsetLeft + 'px';
+    recent.style.top = anchor.offsetTop + anchor.offsetHeight + 4 + 'px';
+    recent.style.width = anchor.offsetWidth + 'px';
+    recent.hidden = false;
+    // Fits what's visible: above the phone's bottom bar and keyboard, scrolling inside if it must
+    const vv = window.visualViewport, bar = document.querySelector('.bnav');
+    const limit = Math.min(vv ? vv.offsetTop + vv.height : innerHeight, bar?.getClientRects().length ? bar.getBoundingClientRect().top : Infinity);
+    recent.style.maxHeight = Math.max(160, limit - recent.getBoundingClientRect().top - 10) + 'px';
+  }
+  const syncRecent = () => { if (!input.value && document.activeElement === input) drawRecent(); else recent.hidden = true; };
+  const movePick = (from, dir) => {
+    const picks = [...recent.querySelectorAll('.hero-recent-pick')], i = picks.indexOf(from) + dir;
+    (i < 0 ? input : picks[Math.min(i, picks.length - 1)]).focus();
+  };
+  recent.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.all != null) { writeRecent([]); recent.hidden = true; input.focus(); return; }
+    if (b.dataset.x != null) { writeRecent(readRecent().filter(x => x !== b.dataset.x)); drawRecent(); input.focus(); return; }
+    input.value = b.dataset.q; syncClear(); recent.hidden = true;
+    remember(b.dataset.q); clearTimeout(timer); lastQ = ''; run();
+    if (matchMedia('(pointer:coarse)').matches) input.blur();       // the phone keyboard goes, so the results show
+  });
+  recent.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.stopPropagation(); recent.hidden = true; input.focus(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); movePick(e.target.closest('li')?.querySelector('.hero-recent-pick'), e.key === 'ArrowDown' ? 1 : -1); }
+  });
+  input.addEventListener('focus', syncRecent);
+  input.addEventListener('click', syncRecent);
+  input.addEventListener('blur', e => {
+    if (recent.contains(e.relatedTarget)) return;
+    recent.hidden = true;
+    if (e.relatedTarget !== clear && shown?.results.length && shown.q === input.value.trim()) remember(shown.q);
+  });
+  recent.addEventListener('focusout', e => { if (e.relatedTarget !== input && !recent.contains(e.relatedTarget)) recent.hidden = true; });
+  const redrawRecent = () => { if (!recent.hidden) drawRecent(); };
+  window.addEventListener('resize', redrawRecent, { passive: true });
+  window.addEventListener('scroll', redrawRecent, { passive: true });
+  window.visualViewport?.addEventListener('resize', redrawRecent);
+  box.addEventListener('click', e => { if (shown?.results.length && e.target.closest('.inline-search-grid')) remember(shown.q); }, true);
+
+  let rememberNext = false;   // Enter was pressed before the results arrived
   async function run() {
     const q = input.value.trim();
-    if (q.length < 2) { lastQ = ''; setSearching(false); box.innerHTML = ''; return; }
+    if (q.length < 2) { lastQ = ''; shown = null; setSearching(false); box.innerHTML = ''; return; }
     if (q === lastQ) return;
     lastQ = q;
     const my = ++seq;
     setSearching(true);
     box.innerHTML = `<div class="inline-search-head"><div class="section-eyebrow">Search</div><div class="section-title" style="margin-bottom:0">Results for “${esc(q)}”</div></div>
       <div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>`;
-    const results = await _tmdbSearch(q, 20, opts.includePersons !== false);
+    const [results] = await Promise.all([_tmdbSearch(q, 20, opts.includePersons !== false), hideValue() ? MSSHide.load().catch(() => {}) : null]);
     if (my !== seq) return;               // a newer search is already on the way
-    box.innerHTML = `<div class="inline-search-head"><div class="section-eyebrow">Search</div>
-        <div class="section-title" style="margin-bottom:0">Results for “${esc(q)}”</div>
-        <div class="inline-search-count"><b>${results.length}</b> ${results.length === 1 ? 'result' : 'results'}</div></div>`
-      + (results.length ? `<div class="inline-search-grid">${results.map(cardHTML).join('')}</div>`
-        : mssEmpty({ art: 'search', title: `No luck with “${q}”`, text: 'Check the spelling, or try the original title. TMDB knows a lot, but not everything.' }));
+    shown = { q, results };
+    drawResults();
+    if (rememberNext && results.length) remember(q);
+    rememberNext = false;
   }
 
-  input.addEventListener('input', () => { syncClear(); clearTimeout(timer); timer = setTimeout(run, input.value.trim().length < 2 ? 0 : MSS_SEARCH_MS); });
+  input.addEventListener('input', () => { syncClear(); syncRecent(); clearTimeout(timer); timer = setTimeout(run, input.value.trim().length < 2 ? 0 : MSS_SEARCH_MS); });
   input.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { input.value = ''; syncClear(); run(); }
-    if (e.key === 'Enter') { clearTimeout(timer); run(); }
+    if (e.key === 'ArrowDown' && !recent.hidden) { e.preventDefault(); recent.querySelector('.hero-recent-pick')?.focus(); return; }
+    if (e.key === 'Escape') { if (!recent.hidden) { recent.hidden = true; return; } input.value = ''; syncClear(); run(); }
+    if (e.key === 'Enter') {
+      clearTimeout(timer);
+      if (shown?.q === input.value.trim() && shown.results.length) remember(shown.q); else rememberNext = true;
+      run();
+    }
   });
   // Enter / Space on a result card (they're divs with onclick)
   box.addEventListener('keydown', e => {
