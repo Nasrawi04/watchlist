@@ -48,7 +48,8 @@ async function searchEntries(userId, query) {
 
 /* ── Upsert entry ── */
 async function saveEntry(payload, userId, existingId) {
-  const score = calcFinal(payload.ratings, payload.cat);
+  // An imported rating has no criteria behind it yet (105): it stays until the title is scored properly
+  const score = calcFinal(payload.ratings, payload.cat) ?? payload.ratings?._imported?.score ?? null;
   const record = {
     title:          payload.title,
     cat:            payload.cat,

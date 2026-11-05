@@ -402,6 +402,25 @@ function calcObjective(ratings, cat) {
 }
 
 /* ── Live score — always recalculate from ratings when available ── */
+// The Score Breakdown rows: Core 70%, Enjoyment 20%, Bonus 10% (the title page and Import)
+function mssScoreBreakdownHTML(ratings, cat, isMovie) {
+  const has = v => v !== undefined && v !== null && v !== '';
+  const { core, bonus } = getRatings(cat, isMovie);
+  const coreKeys = core.filter(r => r.key !== 'enjoyment').map(r => r.key);
+  if (cat !== 'anime' && cat !== 'cartoons' && has(ratings.animation)) coreKeys.push('animation');
+  const avg = l => l.length ? l.reduce((a, b) => a + Number(b), 0) / l.length : null;
+  const coreAvg = avg(coreKeys.map(k => ratings[k]).filter(has)), bonusAvg = avg(bonus.map(r => ratings[r.key]).filter(has));
+  return [
+    { label: 'Core (70%)', val: coreAvg },
+    { label: 'Enjoyment (20%)', val: has(ratings.enjoyment) ? Number(ratings.enjoyment) : null },
+    { label: 'Bonus (10%)', val: bonusAvg },
+  ].map(r => `<div class="score-breakdown-row">
+    <label>${r.label}</label>
+    <div class="score-mini-bar"><div class="score-mini-fill" style="width:${r.val != null ? r.val * 10 : 0}%"></div></div>
+    <span class="score-mini-val">${r.val != null ? Number(r.val).toFixed(2) : '—'}</span>
+  </div>`).join('');
+}
+
 function liveScore(e) {
   if (!e) return null;
   const calc = e.ratings ? calcFinal(e.ratings, e.cat) : null;

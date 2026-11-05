@@ -96,9 +96,90 @@
 .upl-thumb.is-round { width:48px; height:48px; border-radius:50%; }
 .upl-link { color:var(--text); text-decoration:none; }
 .upl-link:hover { text-decoration:underline; }
+.imp-error { margin:0 0 12px; padding:10px 12px; border:1px solid #b91c1c; border-radius:10px; font-size:13.5px; color:#b91c1c; }
+[data-theme="dark"] .imp-error { border-color:#f87171; color:#f87171; }
+.imp-drop { display:flex; flex-direction:column; align-items:center; gap:4px; padding:24px 16px; border:1.5px dashed var(--border-2); border-radius:14px; text-align:center; color:var(--text-2); cursor:pointer; transition:border-color .15s; }
+.imp-drop:hover, .imp-drop:focus-within { border-color:var(--olive-light); }
+.imp-drop b { font-size:14.5px; color:var(--text); }
+.imp-drop span { font-size:12.5px; }
+.imp-drop svg { color:var(--olive-light); }
+.imp-how { margin:14px 0; font-size:13px; color:var(--text-2); line-height:1.5; }
+.imp-how summary { min-height:32px; font-weight:600; color:var(--olive-light); cursor:pointer; }
+.imp-how p { margin:8px 0 0; }
+.imp-label { display:block; margin:14px 0 6px; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-2); }
+.imp-paste { width:100%; box-sizing:border-box; resize:vertical; }
+.imp-go { margin-top:10px; }
+.imp-sub { margin:1.4rem 0 8px; font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-2); }
+.imp-prog-t { margin:0 0 10px; font-size:14px; font-weight:600; color:var(--text); }
+.imp-track { height:8px; margin-bottom:12px; border-radius:8px; overflow:hidden; background:var(--bg-3); }
+.imp-track i { display:block; height:100%; background:var(--olive-light); transition:width .25s ease; }
+.imp-rule { display:flex; gap:8px; margin:0 0 12px; padding:10px 12px; border:0.5px solid var(--border); border-radius:10px; font-size:13px; line-height:1.45; color:var(--text-2); }
+.imp-rule svg { flex-shrink:0; margin-top:2px; color:var(--olive-light); }
+.imp-opt { display:flex; align-items:center; gap:8px; min-height:36px; font-size:13.5px; color:var(--text); cursor:pointer; }
+.imp-opt input, .imp-check { width:18px; height:18px; flex-shrink:0; accent-color:var(--olive-light); }
+.imp-filters { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 8px; }
+.imp-filter { min-height:38px; padding:0 12px; border:0.5px solid var(--border-2); border-radius:999px; background:none; font:600 12.5px var(--sans); color:var(--text-2); cursor:pointer; }
+.imp-filter b { margin-inline-start:3px; }
+.imp-filter.on { background:var(--olive); border-color:var(--olive); color:#fff; }
+.imp-bulk { display:flex; gap:14px; margin-bottom:8px; }
+.imp-link { min-height:32px; padding:0; background:none; border:none; font:600 12.5px var(--sans); color:var(--olive-light); cursor:pointer; }
+.imp-list { margin:0; padding:0; list-style:none; border:0.5px solid var(--border); border-radius:12px; overflow:hidden; }
+.imp-row { display:flex; align-items:center; gap:10px; padding:10px 12px; min-width:0; }
+.imp-row + .imp-row { border-top:0.5px solid var(--border); }
+.imp-noimg { display:flex; align-items:center; justify-content:center; font:600 16px var(--serif); color:var(--text-2); }
+.imp-main { flex:1; min-width:0; }
+.imp-name { font-size:14px; font-weight:600; line-height:1.3; color:var(--text); overflow-wrap:anywhere; }
+.imp-name span { font-weight:400; color:var(--text-2); }
+.imp-was, .imp-meta { margin-top:2px; font-size:12px; line-height:1.4; color:var(--text-2); overflow-wrap:anywhere; }
+.imp-why { margin-top:3px; font-size:12px; line-height:1.4; font-weight:600; color:#854d0e; }
+[data-theme="dark"] .imp-why { color:#fbbf24; }
+.imp-row.is-none .imp-why { color:#b91c1c; }
+[data-theme="dark"] .imp-row.is-none .imp-why { color:#f87171; }
+.imp-row.is-dup .imp-why { color:var(--text-2); font-weight:400; }
+.imp-rate { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.imp-orig { font-size:12.5px; color:var(--text-2); white-space:nowrap; }
+.imp-stepper { gap:6px; }
+.imp-stepper .ep-btn { width:32px; height:32px; font-size:16px; }
+.imp-stepper .imp-score { width:48px; font-size:20px; }
+.imp-stepper .imp-score:disabled { opacity:1; }
+.imp-more { margin-top:10px; }
+.imp-foot { position:sticky; bottom:72px; z-index:5; display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:14px; padding:12px; background:var(--bg-2); border:0.5px solid var(--border-2); border-radius:12px; font-size:13px; color:var(--text-2); }
+.imp-foot > span { flex:1 1 180px; }
+.imp-foot b { color:var(--text); }
+.imp-foot .set-btn, .imp-foot .btn-save { width:auto; min-height:44px; }
+.imp-foot .btn-save:disabled { opacity:.5; cursor:default; }
+.imp-done { display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:15px; color:var(--text); }
+.imp-done svg { color:var(--olive-light); }
+.imp-actions { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+.imp-open { text-align:center; text-decoration:none; }
+.imp-edit { max-width:480px; text-align:start; align-items:stretch; max-height:90dvh; overflow-y:auto; }
+.imp-edit .confirm-title { text-align:start; max-width:none; }
+.imp-edit .field-label { display:block; margin:10px 0 5px; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-2); }
+.imp-edit .field-input { width:100%; box-sizing:border-box; }
+.imp-q { display:flex; gap:8px; }
+.imp-q .set-btn { width:auto; flex-shrink:0; }
+.imp-hits { margin:8px 0 0; padding:0; list-style:none; }
+.imp-hits:empty { display:none; }
+.imp-hits button { display:block; width:100%; min-height:44px; padding:6px 10px; background:none; border:none; border-bottom:0.5px solid var(--border); text-align:start; font:13.5px var(--sans); color:var(--text); cursor:pointer; }
+.imp-hits button:hover { background:var(--bg-3); }
+.imp-hits span { color:var(--text-2); font-size:12.5px; }
+.imp-cur { margin-top:10px; font-size:13.5px; color:var(--text-2); }
+.imp-cur b { color:var(--text); }
+.imp-two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.imp-edit .det-ratings-cols { grid-template-columns:1fr; gap:1rem; }
+.imp-edit .anim-toggle-btn { width:100%; margin-top:8px; }
+.imp-edit .rating-stepper-item { padding:8px 12px; }
+.imp-edit .rating-stepper-val { width:48px; box-sizing:border-box; }
+.imp-final { margin-top:1rem; padding:1rem; text-align:center; }
+.imp-edit .ratings-section-label { margin:1.1rem 0 .7rem; }
+@media (max-width:640px) {
+  .imp-row { flex-wrap:wrap; }
+  .imp-rate { width:100%; justify-content:flex-end; }
+  .imp-foot { position:static; }
+  .imp-foot .set-btn, .imp-foot .btn-save { flex:1; }
+}
 .set-save { width:100%; margin-top:1rem; }
 .set-note { margin-bottom:0; }
-.set-soon { display:inline-block; margin-inline-end:6px; padding:2px 8px; border:0.5px solid var(--border-olive); border-radius:999px; font-size:9.5px; letter-spacing:1px; color:var(--olive-light); }
 .settings-section[hidden] { display:none; }
 
 .settings-section {
@@ -388,9 +469,9 @@
         </div>
         <div class="settings-section" id="setImport">
           <div class="settings-title">Import</div>
-          <p class="settings-desc set-note"><span class="set-soon">Coming soon</span> Bring your history over from Letterboxd, IMDb, a text file or a Word document. You’ll check everything before it’s saved.</p>
+          <div id="importBox"></div>
         </div>
-
+        
         <div class="settings-section" id="setExport">
           <div class="settings-title">Export and Backup</div>
           <p class="settings-desc">Save your library as a PDF, an image, a spreadsheet or a Letterboxd file, or download a full backup.</p>
@@ -607,6 +688,7 @@
 <script src="js/episode-ratings.js"></script>
 <script src="js/notif-settings.js"></script>
 <script src="js/settings-uploads.js"></script>
+<script src="js/settings-import.js"></script>
 <script src="js/settings-nav.js"></script>
 <script>
 let _sUser = null, _sProfile = null;
@@ -626,6 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _lockPaint();
     _usernamePaint();
     MSSUploads.load(user.id);
+    MSSImport.init(user.id);
     MSSSettingsNav.refresh();
     MSSNotifSettings.render(document.getElementById('setNotif'));
   });
@@ -780,12 +863,14 @@ function settingsDirty(item) {
   if (item === 'setDetails') return v('setDisplayName').trim() !== (p.display_name || '') || v('setBio').trim() !== (p.bio || '') || v('setQuote').trim() !== (p.quote || '');
   if (item === 'setUsernameCard') return !!_sProfile && v('setUsername').trim() !== (p.username || '');
   if (item === 'setPassword') return !!v('setNewPassword') || !!v('setCurrentPassword');
+  if (item === 'setImport') return MSSImport.dirty();
   return false;
 }
 function settingsReset(item) {
   if (item === 'setDetails') _fillDetails();
   if (item === 'setUsernameCard') { document.getElementById('setUsername').value = _sProfile?.username || ''; checkUsernameLive(); }
   if (item === 'setPassword') _passClear();
+  if (item === 'setImport') MSSImport.reset();
 }
 // What a setting is set to now, for the list of settings. '' shows nothing.
 function settingsValue(item) {
@@ -795,7 +880,6 @@ function settingsValue(item) {
     case 'setDetails': return _sProfile?.display_name || '';
     case 'setUsernameCard': return _sProfile?.username ? '@' + _sProfile.username : '';
     case 'setEmailCard': return _sUser?.email || '';
-    case 'setImport': return 'Coming soon';
     case 'setUploads': return MSSUploads.value();
     case 'setPrivate': return onOff('privSwitch');
     case 'setOnline': return onOff('msgOnlineSw');

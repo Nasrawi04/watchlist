@@ -169,7 +169,9 @@ function _frEpOf(e) {
 function _frEvents() {
   const ev = [];
   _frEntries.forEach(e => {
-    const push = (type, at) => { const d = _frDate(at); if (d && !isNaN(d)) ev.push({ ...e, _ev: type, _at: d, id: e.id + ':' + type }); };
+    // An import isn't news (105): only what they do with those titles afterwards shows here
+    const imported = e.ratings?._imported ? _frDate(e.created_at) : null;
+    const push = (type, at) => { const d = _frDate(at); if (imported && d - imported < 300000) return; if (d && !isNaN(d)) ev.push({ ...e, _ev: type, _at: d, id: e.id + ':' + type }); };
     // Watched recently → "watched"; added with a finish date a month+ before
     // they logged it → "logged" (catching up their history)
     if (e.status === 'completed' && e.completed_date) {

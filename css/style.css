@@ -7951,3 +7951,64 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 .sf-dd-search input { width:100%; min-height:36px; padding:0 10px; box-sizing:border-box; font:inherit; font-size:16px; color:var(--text); background:var(--bg-3); border:0.5px solid var(--border-2); border-radius:var(--radius-xs); outline:none; }
 .sf-dd-search input:focus { border-color:var(--olive-light); }
 .td-dd-menu [hidden] { display:none; }
+
+/* ── Rating steppers, score breakdown and final score: the title page and Import ── */
+.ratings-section-label { font-family:var(--serif); font-weight:500; font-size:11px; }
+.score-breakdown{display:flex;flex-direction:column;gap:6px}
+.score-breakdown-row{display:flex;align-items:center;gap:8px;font-size:11px}
+.score-breakdown-row label{color:var(--text-3);width:80px;flex-shrink:0}
+.score-mini-bar{flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.score-mini-fill{height:100%;background:var(--olive-light);border-radius:2px;transition:width .5s ease}
+.score-mini-val{color:var(--olive-light);font-family:var(--bebas);font-weight:400;font-size:16px;letter-spacing:.3px;min-width:28px;text-align:end}
+.ratings-section-label{
+  font-size:10px;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--olive-light);margin-bottom:1rem;margin-top:1.5rem;
+  display:flex;align-items:center;gap:10px;
+}
+.ratings-section-label::after{content:'';flex:1;height:0.5px;background:var(--border)}
+.rating-stepper-grid{display:flex;flex-direction:column;gap:8px}
+.rating-stepper-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 14px;position:relative;overflow:hidden;
+  background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius-sm);
+}
+.rating-stepper-label{
+  font-size:13px;color:var(--text-2);flex:1;min-width:0;
+  display:flex;align-items:center;
+}
+.rating-stepper-controls{
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.rating-stepper-val{
+  font-family:var(--bebas);font-size:23px;font-weight:400;letter-spacing:.3px;
+  color:var(--text-3);width:56px;text-align:center;
+  background:transparent;border:none;border-bottom:1px solid var(--border-2);
+  outline:none;-moz-appearance:textfield;appearance:textfield;
+  transition:color .15s,border-color .15s;
+}
+.rating-stepper-val::-webkit-inner-spin-button,.rating-stepper-val::-webkit-outer-spin-button{-webkit-appearance:none}
+.rating-stepper-val::placeholder{color:var(--text-3);}
+.rating-stepper-val:focus{border-color:var(--border-olive);color:var(--text);}
+.rating-stepper-val.has-val{color:var(--olive-light);}
+.rating-meter{position:absolute;inset-inline-start:0;inset-inline-end:0;bottom:0;height:3px;background:transparent;pointer-events:none}
+.rating-meter i{display:block;height:100%;width:0;background:var(--olive-light);border-start-start-radius:0;border-start-end-radius:3px;border-end-end-radius:3px;border-end-start-radius:0;transition:width .3s cubic-bezier(.4,0,.2,1)}
+.anim-toggle-btn{
+  width:100%;padding:8px 12px;margin-top:6px;
+  font-size:11px;letter-spacing:0.5px;text-transform:uppercase;
+  border:0.5px dashed var(--border-2);border-radius:var(--radius-xs);
+  background:transparent;color:var(--text-3);cursor:pointer;
+  transition:all .2s;text-align:center;
+}
+.anim-toggle-btn:hover,.anim-toggle-btn.on{border-style:solid;border-color:var(--border-olive);color:var(--olive-light);}
+.det-final-score-card {
+  text-align:center; padding:clamp(1.5rem, 4vw, 2.25rem) 1.5rem;
+  background:var(--olive-faint); border:1.5px solid var(--border-olive);
+}
+.det-final-score-label { font-size:11px; color:var(--olive-light); letter-spacing:2.5px; text-transform:uppercase; margin-bottom:.6rem; }
+.det-final-score-num { font-family:var(--bebas); font-weight:400; letter-spacing:.5px; font-size:clamp(52px, 11vw, 84px); color:var(--olive-light); line-height:1; }
+.det-final-score-outof { font-size:10px; color:var(--text-3); letter-spacing:1.5px; text-transform:uppercase; margin-top:.5rem; }
+.det-ratings-cols { display:grid; grid-template-columns:1fr 1fr; gap:clamp(1rem, 3vw, 2rem); align-items:start; }
+.det-ratings-col-title {
+  font-family:var(--serif); font-weight:500; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light);
+  margin-bottom:.85rem; display:flex; align-items:center; gap:8px;
+}
