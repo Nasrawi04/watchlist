@@ -73,7 +73,6 @@ const MSSNight = (() => {
   }
 
   /* ── After the movie (052) ── */
-  const LABELS = Object.fromEntries([...CORE_RATINGS, ...BONUS_RATINGS, ...ANIME_CORE_RATINGS, ...ANIME_BONUS_RATINGS, ANIMATION_RATING].map(r => [r.key, r.label]));
   const scoreOf = e => e && liveScore(e) != null ? Number(liveScore(e)) : null;
   async function loadReviews(id) {
     reviews[id] = 'loading';
@@ -109,11 +108,13 @@ const MSSNight = (() => {
     };
     // the ratings side by side (only categories someone used)
     const ratedCols = rated;
-    const keys = [...new Set(ratedCols.flatMap(p => Object.keys(p.entry.ratings || {}).filter(k => !k.startsWith('_') && LABELS[k] && p.entry.ratings[k] != null && p.entry.ratings[k] !== '')))];
+    // in the shared groups' order (config.js), with a row for each group someone used
+    const used = k => ratedCols.some(p => p.entry.ratings?.[k] != null && p.entry.ratings[k] !== '');
+    const groups = MSS_RATING_GROUPS.map(g => ({ name: g.name, keys: [...new Set(g.items.map(x => x.key))].filter(used) })).filter(g => g.keys.length);
     const table = cmpOpen[id] && ratedCols.length ? `<div class="mn-cmp" role="region" aria-label="Ratings side by side" tabindex="0"><table>
         <thead><tr><th></th>${ratedCols.map(p => `<th>${av(p, 22)}<span translate="no">${who(p)}</span></th>`).join('')}</tr></thead>
-        <tbody>${keys.map(k => { const vals = ratedCols.map(p => Number(p.entry.ratings[k])).filter(v => !isNaN(v)); const mx = Math.max(...vals);
-          return `<tr><td>${esc(LABELS[k])}</td>${ratedCols.map(p => { const v = p.entry.ratings[k]; return `<td class="${Number(v) === mx && vals.length > 1 ? 'best' : ''}">${v != null && v !== '' ? Number(v).toFixed(1) : '—'}</td>`; }).join('')}</tr>`; }).join('')}
+        <tbody>${groups.map(g => `<tr class="mn-cmp-grp"><th scope="rowgroup" colspan="${ratedCols.length + 1}">${esc(g.name)}</th></tr>` + g.keys.map(k => { const vals = ratedCols.map(p => Number(p.entry.ratings[k])).filter(v => !isNaN(v)); const mx = Math.max(...vals);
+          return `<tr><td>${esc(MSS_RATING_LABEL[k])}</td>${ratedCols.map(p => { const v = p.entry.ratings[k]; return `<td class="${Number(v) === mx && vals.length > 1 ? 'best' : ''}">${v != null && v !== '' ? Number(v).toFixed(1) : '—'}</td>`; }).join('')}</tr>`; }).join('')).join('')}
         <tr class="mn-cmp-total"><td>Score</td>${ratedCols.map(p => `<td>${p.score.toFixed(1)}</td>`).join('')}</tr></tbody></table></div>` : '';
     return wrap(`
       <div class="mn-after-head">${icon('film', 14)} After the movie

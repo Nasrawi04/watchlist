@@ -390,7 +390,7 @@ const MSSImport = (() => {
         ${r.why ? `<div class="imp-why">${escHTML(r.why)}</div>` : ''}
       </div>
       <div class="imp-rate">
-        ${r.status === 'queue' || !m ? '' : `<span class="imp-orig">${r.stars != null ? `${escHTML(original(r))} →` : 'No rating'}</span><div class="rating-stepper-controls imp-stepper">${r.criteria ? '' : `<button type="button" class="ep-btn" data-rstep="${i}" data-delta="-0.5" aria-label="Lower rating for ${escHTML(title)}">−</button>`}<input class="rating-stepper-val imp-score${r.score != null ? ' has-val' : ''}" type="text" inputmode="decimal" data-mask="rating" maxlength="4" data-score="${i}" value="${r.score != null ? Number(r.score).toFixed(1) : ''}" placeholder="—" aria-label="MyScreenFolio rating for ${escHTML(title)}"${r.criteria ? ' disabled' : ''}>${r.criteria ? '' : `<button type="button" class="ep-btn" data-rstep="${i}" data-delta="0.5" aria-label="Raise rating for ${escHTML(title)}">+</button>`}</div>`}
+        ${r.status === 'queue' || !m ? '' : `<span class="imp-orig">${r.stars != null ? `${escHTML(original(r))} →` : 'No rating'}</span><div class="imp-rate-in"><input type="range" class="ep-slider imp-slide${r.score != null ? '' : ' is-empty'}" min="0" max="10" step="0.5" data-slide="${i}" value="${r.score ?? 0}" aria-label="Rating for ${escHTML(title)}" aria-valuetext="${r.score != null ? Number(r.score).toFixed(1) : 'Not rated'}"${r.criteria ? ' disabled' : ''}><input class="rf-val imp-score" type="text" inputmode="decimal" data-mask="rating" maxlength="4" data-score="${i}" value="${r.score != null ? Number(r.score).toFixed(1) : ''}" placeholder="—" aria-label="MyScreenFolio rating for ${escHTML(title)}"${r.criteria ? ' disabled' : ''}></div>`}
         <button type="button" class="sess-out" data-edit="${i}">${m ? 'Edit' : 'Find'}</button>
       </div>
     </li>`;
@@ -450,55 +450,23 @@ const MSSImport = (() => {
     if (D.ratings.animation != null) D.ratings._animEnabled = true;
     const isMovie = () => D.match?.type === 'movie';
     const liveFinal = () => calcFinal({ ...D.ratings, _media_type: isMovie() ? 'movie' : undefined }, D.cat);
-    // The same stepper as the title page
-    const stepper = (key, label, val) => {
-      const on = val !== undefined && val !== null && val !== '';
-      return `<div class="rating-stepper-item">
-        <div class="rating-stepper-label">${escHTML(label)}</div>
-        <div class="rating-stepper-controls">
-          <button type="button" class="ep-btn" data-key="${key}" data-delta="-0.5" aria-label="Lower ${escHTML(label)}" style="width:32px;height:32px;font-size:16px;">−</button>
-          <input class="rating-stepper-val${on ? ' has-val' : ''}" id="impVal-${key}" data-rkey="${key}" type="text" inputmode="decimal" data-mask="rating" maxlength="4" value="${on ? Number(val).toFixed(1) : ''}" placeholder="—" aria-label="${escHTML(label)}">
-          <button type="button" class="ep-btn" data-key="${key}" data-delta="0.5" aria-label="Raise ${escHTML(label)}" style="width:32px;height:32px;font-size:16px;">+</button>
-        </div>
-        <div class="rating-meter" aria-hidden="true"><i id="impMeter-${key}" style="width:${on ? Number(val) * 10 : 0}%"></i></div>
-      </div>`;
-    };
-    const drawScore = () => {
-      const b = $('impBreak'), f = $('impFinal');
-      if (b) b.innerHTML = mssScoreBreakdownHTML(D.ratings, D.cat, isMovie());
-      if (f) { const s = liveFinal(); f.textContent = s != null ? Number(s).toFixed(2) : '—'; }
-    };
-    const setVal = (key, v) => {
-      const box = key === 'overall' ? D : D.ratings, name = key;
-      if (v == null) delete box[name]; else box[name] = v;
-      const el = $('impVal-' + key);
-      if (el) { el.value = v != null ? Number(v).toFixed(1) : ''; el.classList.toggle('has-val', v != null); }
-      const m = $('impMeter-' + key);
-      if (m) m.style.width = (v == null ? 0 : v * 10) + '%';
-      drawScore();
-    };
     const paint = () => {
       $('impCur').innerHTML = D.match ? `<b translate="no">${escHTML(D.match.title)}</b>${D.match.year ? ` (${escHTML(D.match.year)})` : ''} · ${D.match.type === 'movie' ? 'Movie' : 'Show'}` : 'Pick the right title above. Without one, this can’t be imported.';
       if (!D.match) { $('impFields').innerHTML = ''; return; }
-      const animated = D.cat === 'anime' || D.cat === 'cartoons';
-      const { core, bonus } = getRatings(D.cat || 'movies', isMovie());
-      const animOn = !!D.ratings._animEnabled;
       $('impFields').innerHTML = `
         <div class="imp-two"><div><label class="field-label" for="impCat">Category</label><select class="field-input" id="impCat">${CATS.map(([k, l]) => `<option value="${k}"${D.cat === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
         <div><label class="field-label" for="impStatus">In my library as</label><select class="field-input" id="impStatus">${Object.entries(STATUS).map(([k, l]) => `<option value="${k}"${D.status === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div></div>
         ${D.status === 'queue' ? '' : `${D.status !== 'completed' ? '' : `<label class="field-label" for="impDate">Watched on</label><input class="field-input" id="impDate" type="date" max="${new Date().toISOString().slice(0, 10)}" value="${escHTML(D.date || '')}">`}
         <div class="ratings-section-label">Rate This</div>
-        ${D.detail ? `<div class="det-ratings-cols">
-            <div><div class="det-ratings-col-title">Core Ratings</div><div class="rating-stepper-grid">${core.map(x => stepper(x.key, x.label, D.ratings[x.key])).join('')}</div>
-              ${animated ? '' : `<button type="button" class="anim-toggle-btn${animOn ? ' on' : ''}" id="impAnim">${animOn ? '− Disable' : '+ Enable'} Animation Quality</button>${animOn ? `<div class="rating-stepper-grid" style="margin-top:6px;">${stepper('animation', 'Animation Quality', D.ratings.animation)}</div>` : ''}`}</div>
-            <div><div class="det-ratings-col-title">Bonus Ratings</div><div class="rating-stepper-grid">${bonus.map(x => stepper(x.key, x.label, D.ratings[x.key])).join('')}</div></div>
-          </div>
-          <div class="ratings-section-label">Score Breakdown</div><div class="score-breakdown" id="impBreak"></div>
-          <div class="det-final-score-card imp-final"><div class="det-final-score-label">Final Score</div><div class="det-final-score-num" id="impFinal">—</div><div class="det-final-score-outof">Out of 10</div></div>
-          <button type="button" class="anim-toggle-btn" id="impDetail">Use one overall rating instead</button>`
-        : `<div class="rating-stepper-grid">${stepper('overall', 'Overall Rating', D.overall)}</div>
-          <button type="button" class="anim-toggle-btn" id="impDetail">+ Score it in detail with Core Ratings</button>`}`}`;
-      drawScore();
+        <div id="impRate"></div>
+        <button type="button" class="anim-toggle-btn" id="impDetail">${D.detail ? 'Use one overall rating instead' : '+ Score it in detail with the full ratings'}</button>`}`;
+      const box = $('impRate');
+      if (!box) return;
+      // The same rating form as the title page (rate-form.js)
+      if (D.detail) { MSSRateForm.mount(box, { cat: D.cat || 'movies', isMovie: isMovie(), genres: [], ratings: D.ratings }); return; }
+      box.onclick = null;
+      box.innerHTML = `<div class="rf-grid">${MSSRateForm.row('overall', 'Overall Rating', D.overall, { hint: 'One score out of 10 for the whole thing.' })}</div>`;
+      MSSRateForm.wire(box, (k, v) => { D.overall = v; });
     };
     paint();
     const hits = async () => {
@@ -517,24 +485,11 @@ const MSSImport = (() => {
       if ($('impDate')) D.date = $('impDate').value;
     };
     ov.onclick = ev => {
-      const t = ev.target, hit = t.closest('[data-hit]'), step = t.closest('[data-key]');
+      const t = ev.target, hit = t.closest('[data-hit]');
       if (hit) { gather(); D.match = $('impHits')._list[Number(hit.dataset.hit)]; D.cat = guessCat(D.match); $('impHits').innerHTML = ''; paint(); return; }
-      if (step) {
-        const key = step.dataset.key, now = key === 'overall' ? D.overall : D.ratings[key], delta = Number(step.dataset.delta);
-        if (now == null && delta < 0) return;
-        setVal(key, Math.max(0, Math.min(10, (now == null ? -0.5 : Number(now)) + delta)));
-        return;
-      }
       if (t.id === 'impDetail') {
         gather();
         D.detail = !D.detail;
-        paint();
-        return;
-      }
-      if (t.id === 'impAnim') {
-        gather();
-        D.ratings._animEnabled = !D.ratings._animEnabled;
-        if (!D.ratings._animEnabled) delete D.ratings.animation;
         paint();
         return;
       }
@@ -554,13 +509,8 @@ const MSSImport = (() => {
     };
     ov.onchange = ev => {
       const t = ev.target;
-      if (t.id === 'impStatus' || t.id === 'impCat') { gather(); paint(); return; }
-      if (t.dataset?.rkey) {
-        const raw = parseFloat(t.value), key = t.dataset.rkey;
-        setVal(key, isNaN(raw) ? null : Math.max(0, Math.min(10, Math.round(raw * 2) / 2)));
-      }
+      if (t.id === 'impStatus' || t.id === 'impCat') { gather(); paint(); }
     };
-    ov.oninput = null;
     $('impQ').onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); hits(); } };
     MSSDialog.open(ov, { focus: '#impQ' });
   }
@@ -665,7 +615,12 @@ const MSSImport = (() => {
     if (S.step === 'start') draw();
   }
 
-  const paintScore = (el, v) => { el.value = v != null ? Number(v).toFixed(1) : ''; el.classList.toggle('has-val', v != null); };
+  // A preview row's rating: the typed number and its slider kept together
+  const paintScore = (el, v) => {
+    const wrap = el.closest('.imp-rate-in'), txt = wrap.querySelector('.imp-score'), sl = wrap.querySelector('.imp-slide');
+    if (txt !== document.activeElement) txt.value = v != null ? Number(v).toFixed(1) : '';
+    sl.value = v ?? 0; sl.classList.toggle('is-empty', v == null); sl.setAttribute('aria-valuetext', v != null ? Number(v).toFixed(1) : 'Not rated');
+  };
 
   /* ── Tapping things ── */
   function wire() {
@@ -684,7 +639,14 @@ const MSSImport = (() => {
         const v = parseFloat(t.value), r = S.rows[Number(t.dataset.score)];
         r.score = isNaN(v) ? null : Math.max(0, Math.min(10, Math.round(v * 2) / 2));
         paintScore(t, r.score);
+        t.value = r.score != null ? r.score.toFixed(1) : '';
       }
+    });
+    el.addEventListener('input', ev => {
+      if (ev.target.dataset.slide == null) return;
+      const r = S.rows[Number(ev.target.dataset.slide)];
+      r.score = Math.max(0, Math.min(10, Math.round(Number(ev.target.value) * 2) / 2));
+      paintScore(ev.target, r.score);
     });
     el.addEventListener('click', ev => {
       const b = ev.target.closest('button');
@@ -692,13 +654,6 @@ const MSSImport = (() => {
       const a = b.dataset.act;
       if (b.dataset.filter) { S.filter = b.dataset.filter; S.shown = PAGE; draw(); return; }
       if (b.dataset.edit != null) { edit(Number(b.dataset.edit)); return; }
-      if (b.dataset.rstep != null) {
-        const r = S.rows[Number(b.dataset.rstep)], delta = Number(b.dataset.delta);
-        if (r.score == null && delta < 0) return;
-        r.score = Math.max(0, Math.min(10, (r.score == null ? -0.5 : Number(r.score)) + delta));
-        paintScore(b.parentElement.querySelector('.imp-score'), r.score);
-        return;
-      }
       if (b.dataset.undo) { undo(b.dataset.undo); return; }
       if (a === 'anilist') {
         const name = $('importAniList').value.trim();

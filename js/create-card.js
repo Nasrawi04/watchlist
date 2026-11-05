@@ -350,36 +350,6 @@ async function _drawCardPage1(myToken) {
       ctx.restore();
       return rows * pillH + (rows - 1) * 8;
     };
-    const ratingRow = (label, value, xx, yy, colW) => {
-      const nameW = 150, numW = 34, gap = 12;
-      const barX = xx + nameW + gap, barW = colW - nameW - numW - gap * 2;
-      if (draw) {
-        ctx.save();
-        let nameFS = 12.5;
-        ctx.font = `400 ${nameFS}px "Manrope", Arial, sans-serif`;
-        while (ctx.measureText(label).width > nameW && nameFS > 9) {
-          nameFS -= 0.5;
-          ctx.font = `400 ${nameFS}px "Manrope", Arial, sans-serif`;
-        }
-        ctx.fillStyle = TEXT;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.fillText(label, xx, yy + 7);
-        ctx.restore();
-        ctx.fillStyle = TRACK_BG;
-        _rrect(ctx, barX, yy + 4, Math.max(barW, 10), 5, 3); ctx.fill();
-        const pct = Math.max(0, Math.min(1, Number(value) / 10));
-        ctx.fillStyle = ACCENT;
-        _rrect(ctx, barX, yy + 4, Math.max(barW * pct, 4), 5, 3); ctx.fill();
-        ctx.save();
-        ctx.font = '400 18px "Bebas Neue", Arial, sans-serif';
-        ctx.fillStyle = ACCENT;
-        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-        ctx.fillText(Number(value).toFixed(1), xx + colW, yy + 7);
-        ctx.restore();
-      }
-      return 14 + 14;
-    };
-
     if (draw) { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, workCanvas.height); }
 
     // ── Info column content, measured first so the header row's overall
@@ -577,73 +547,71 @@ async function _drawCardPage1(myToken) {
 
     let y = PAD + headerH + 30;
 
-    // ── Breakdown bar removed — the ratings grid below already lists
-    // the individual category scores; the CORE/ENJOYMENT/BONUS % math
-    // display was redundant and used non-website colors. ──
-    const ratings = e.ratings || {};
-    const cat = e.cat;
-    const isAnimated = cat === 'anime' || cat === 'cartoons';
-    const { core: coreArr, bonus: bonusArr } = (typeof getRatings === 'function') ? getRatings(cat, cat === 'movies' || ratings._media_type === 'movie') : { core: [], bonus: [] };
-    const hasVal = v => v !== undefined && v !== null && v !== '';
-    const coreItems = coreArr.filter(r => r.key !== 'enjoyment')
-      .map(r => ({ label: r.label, value: ratings[r.key] }))
-      .filter(r => hasVal(r.value));
-    if (!isAnimated && hasVal(ratings.animation)) coreItems.push({ label: 'Animation Quality', value: ratings.animation });
-    const enjoyVal = hasVal(ratings.enjoyment) ? ratings.enjoyment : null;
-    const bonusItems = bonusArr.map(r => ({ label: r.label, value: ratings[r.key] })).filter(r => hasVal(r.value));
-
-    // ── Ratings — three columns (Core | Enjoyment | Bonus), its own box ──
-    if (coreItems.length || enjoyVal != null || bonusItems.length) {
-      const ratPadX = 30, colGap = 28;
-      const boxW = W - PAD * 2;
-      const cols = [];
-      if (coreItems.length) cols.push({ title: 'CORE RATINGS', pct: 70, items: coreItems });
-      if (enjoyVal != null) cols.push({ title: 'ENJOYMENT', pct: 20, items: [{ label: 'Enjoyment', value: enjoyVal }] });
-      if (bonusItems.length) cols.push({ title: 'BONUS', pct: 10, items: bonusItems });
-      const colW = (boxW - ratPadX * 2 - colGap * (cols.length - 1)) / cols.length;
-
-      let maxColH = 0;
-      cols.forEach(col => {
-        let ch = 20;
-        ch += col.items.length * 28;
-        maxColH = Math.max(maxColH, ch);
-      });
-      const secH = maxColH + 24;
-      if (draw) {
+    // ── Ratings: one tile per core group (name, average, bar), 2 to a row with an odd one out spanning
+    // the width, then up to 3 of the highest bonus ratings as small highlights ──
+    const groups = mssRatedGroups(e.ratings, e.cat, e.cat === 'movies' || e.ratings?._media_type === 'movie');
+    const tiles = groups.filter(g => g.kind === 'core');
+    const tops = groups.filter(g => g.kind === 'bonus').flatMap(g => g.items).sort((p, q) => q.v - p.v).slice(0, 3);
+    const avgTxt = v => v.toFixed(2).replace(/0$/, '');
+    if (tiles.length) {
+      const gap = 14, tileH = 76, boxW = W - PAD * 2, half = (boxW - gap) / 2;
+      tiles.forEach((g, i) => {
+        const wide = i === tiles.length - 1 && i % 2 === 0;
+        const tx = PAD + (i % 2) * (half + gap), ty = y + Math.floor(i / 2) * (tileH + gap), tw = wide ? boxW : half;
+        if (!draw) return;
         ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-        _rrect(ctx, PAD, y, boxW, secH, 14); ctx.stroke();
-      }
-
-      cols.forEach((col, ci) => {
-        const cx = PAD + ratPadX + ci * (colW + colGap);
-        let cy = y + 20;
-        if (draw) {
-          ctx.save();
-          ctx.font = '700 14px "Oswald", Arial, sans-serif';
-          ctx.fillStyle = TEXT;
-          ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-          ctx.fillText(col.title, cx, cy);
-          ctx.restore();
-        }
-        cy += 30;
-        col.items.forEach(it => { cy += ratingRow(it.label, it.value, cx, cy, colW); });
-      });
-      y += secH + 24;
-
-      // Small caption line under the ratings box
-      const capParts = [];
-      if (coreItems.length) capParts.push('70% CORE');
-      if (enjoyVal != null) capParts.push('20% ENJOYMENT');
-      if (bonusItems.length) capParts.push('10% BONUS');
-      if (draw) {
+        _rrect(ctx, tx, ty, tw, tileH, 12); ctx.stroke();
         ctx.save();
-        ctx.font = '600 11px "Manrope", Arial, sans-serif';
-        ctx.fillStyle = MUTED;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-        ctx.fillText('SCORE BREAKDOWN: ' + capParts.join(' + '), W / 2, y);
+        ctx.textBaseline = 'alphabetic';
+        ctx.font = '400 34px "Bebas Neue", Arial, sans-serif';
+        ctx.fillStyle = ACCENT; ctx.textAlign = 'right';
+        const num = avgTxt(g.avg);
+        ctx.fillText(num, tx + tw - 20, ty + 44);
+        const nameW = tw - 60 - ctx.measureText(num).width;
+        let fs = 14;
+        ctx.font = `700 ${fs}px "Oswald", Arial, sans-serif`;
+        const name = g.name.toUpperCase();
+        while (ctx.measureText(name).width > nameW && fs > 10) { fs -= 0.5; ctx.font = `700 ${fs}px "Oswald", Arial, sans-serif`; }
+        ctx.fillStyle = TEXT; ctx.textAlign = 'left';
+        ctx.fillText(name, tx + 20, ty + 40);
         ctx.restore();
+        const barW = tw - 40;
+        ctx.fillStyle = TRACK_BG; _rrect(ctx, tx + 20, ty + 55, barW, 6, 3); ctx.fill();
+        ctx.fillStyle = ACCENT; _rrect(ctx, tx + 20, ty + 55, Math.max(barW * Math.min(1, g.avg / 10), 6), 6, 3); ctx.fill();
+      });
+      y += Math.ceil(tiles.length / 2) * (tileH + gap) - gap + 22;
+    }
+    if (tops.length) {
+      // "TOP BONUS" then pills, shrunk together until the line fits the card
+      let fs = 13;
+      const parts = () => tops.map(t => ({ t, label: t.label, num: t.v.toFixed(1) }));
+      const pillW = it => { ctx.font = `600 ${fs}px "Manrope", Arial, sans-serif`; const a = ctx.measureText(it.label).width; ctx.font = `400 ${fs + 5}px "Bebas Neue", Arial, sans-serif`; return a + ctx.measureText(it.num).width + 40; };
+      const lead = () => { ctx.font = `700 ${fs}px "Oswald", Arial, sans-serif`; return ctx.measureText('TOP BONUS').width + 16; };
+      const items = parts();
+      ctx.save();
+      const total = () => lead() + items.reduce((w, it) => w + pillW(it) + 10, -10);
+      while (total() > W - PAD * 2 && fs > 9) fs -= 0.5;
+      const pillH = fs + 20;
+      if (draw) {
+        let x = (W - total()) / 2;
+        const mid = y + pillH / 2;
+        ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+        ctx.font = `700 ${fs}px "Oswald", Arial, sans-serif`; ctx.fillStyle = MUTED;
+        ctx.fillText('TOP BONUS', x, mid + 1.5); x += lead();
+        items.forEach(it => {
+          const w = pillW(it);
+          ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
+          _rrect(ctx, x, y, w, pillH, pillH / 2); ctx.stroke();
+          ctx.font = `600 ${fs}px "Manrope", Arial, sans-serif`; ctx.fillStyle = TEXT;
+          ctx.fillText(it.label, x + 16, mid);
+          const lw = ctx.measureText(it.label).width;
+          ctx.font = `400 ${fs + 5}px "Bebas Neue", Arial, sans-serif`; ctx.fillStyle = ACCENT;
+          ctx.fillText(it.num, x + 16 + lw + 8, mid + 1);
+          x += w + 10;
+        });
       }
-      y += 11 + 20;
+      ctx.restore();
+      y += pillH + 24;
     }
 
     // ── Personal note ──

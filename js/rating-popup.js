@@ -3,7 +3,7 @@
 
    The "My Entry" tab (another person's: "Their Entry"): poster, title/years,
    type + genre tags, where it is in the library / Watched On / Left off,
-   description, Overall Score box, TV Show Breakdown / Movie Runtime, Core +
+   description, Overall Score box, TV Show Breakdown / Movie Runtime, the rating group cards +
    Bonus ratings, Highlights and Notes — or "Not rated yet" before there are any.
    Buttons — everything about YOUR entry (the title's own are on the Title tab):
 
@@ -98,20 +98,12 @@ const MSSRate = (() => {
 
   // hideNotes: the Info · Ratings · Note switcher already has a Note tab
   function bodyHTML(e, blurSpoilers, hideNotes) {
-    const { core = [], bonus = [] } = getRatings(e.cat, isMovie(e)) || {};
-    const row = (label, v) => v == null || v === '' ? '' : `<div class="fd-rating-row"><span class="fd-rating-label">${esc(label)}</span><span class="fd-rating-val">${Number(v).toFixed(2)}</span></div>`;
-    const animated = e.cat === 'anime' || e.cat === 'cartoons';
-    const coreRows = core.map(r => row(r.label, e.ratings?.[r.key])).join('') + (animated ? '' : row('Animation Quality', e.ratings?.animation));
-    const bonusRows = bonus.map(r => row(r.label, e.ratings?.[r.key])).join('');
     const movies = e.cat === 'movies';
     const favs = e.ratings?._favorites || {}, lows = e.ratings?._lowlights || favs._lowlights || {};
     const chip = (lbl, val, low) => val ? `<span class="fav-chip${low ? ' low-chip' : ''}"><span class="fav-chip-label">${lbl}</span><span class="fav-chip-val">${esc(val)}</span></span>` : '';
     const favChips = chip('Fav Character', favs.character) + (movies ? '' : chip('Fav Episode', favs.episode) + chip('Fav Season', favs.season));
     const lowChips = chip('Least Fav Character', lows.character, 1) + (movies ? '' : chip('Least Fav Episode', lows.episode, 1) + chip('Least Fav Season', lows.season, 1));
-    let html = breakdownHTML(e) + '<div class="fd-cols">';
-    if (coreRows) html += `<div class="fd-col"><div class="fd-section-hd">Core Ratings</div>${coreRows}</div>`;
-    if (bonusRows) html += `<div class="fd-col"><div class="fd-section-hd">Bonus Ratings</div>${bonusRows}</div>`;
-    html += '</div>';
+    let html = breakdownHTML(e) + mssRatingCardsHTML(e.ratings, e.cat, isMovie(e));
     if (favChips || lowChips) html += '<div class="fd-section-hd mr-gap">Highlights</div>';
     if (favChips) html += `<div class="fav-chips mr-chips">${favChips}</div>`;
     if (lowChips) html += `<div class="fav-chips mr-chips">${lowChips}</div>`;

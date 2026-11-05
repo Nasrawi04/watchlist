@@ -139,10 +139,10 @@
 .imp-row.is-dup .imp-why { color:var(--text-2); font-weight:400; }
 .imp-rate { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .imp-orig { font-size:12.5px; color:var(--text-2); white-space:nowrap; }
-.imp-stepper { gap:6px; }
-.imp-stepper .ep-btn { width:32px; height:32px; font-size:16px; }
-.imp-stepper .imp-score { width:48px; font-size:20px; }
-.imp-stepper .imp-score:disabled { opacity:1; }
+.imp-rate-in { display:flex; align-items:center; gap:8px; }
+.imp-slide { width:120px; height:24px; }
+.imp-slide.is-empty { opacity:.35; }
+.imp-rate-in .imp-score:disabled { opacity:1; }
 .imp-more { margin-top:10px; }
 .imp-foot { position:sticky; bottom:72px; z-index:5; display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:14px; padding:12px; background:var(--bg-2); border:0.5px solid var(--border-2); border-radius:12px; font-size:13px; color:var(--text-2); }
 .imp-foot > span { flex:1 1 180px; }
@@ -167,11 +167,8 @@
 .imp-cur { margin-top:10px; font-size:13.5px; color:var(--text-2); }
 .imp-cur b { color:var(--text); }
 .imp-two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.imp-edit .det-ratings-cols { grid-template-columns:1fr; gap:1rem; }
 .imp-edit .anim-toggle-btn { width:100%; margin-top:8px; }
-.imp-edit .rating-stepper-item { padding:8px 12px; }
-.imp-edit .rating-stepper-val { width:48px; box-sizing:border-box; }
-.imp-final { margin-top:1rem; padding:1rem; text-align:center; }
+.imp-edit .rf-grid { grid-template-columns:1fr; }
 .imp-edit .ratings-section-label { margin:1.1rem 0 .7rem; }
 @media (max-width:640px) {
   .imp-row { flex-wrap:wrap; }
@@ -689,6 +686,7 @@
 <script src="js/episode-ratings.js"></script>
 <script src="js/notif-settings.js"></script>
 <script src="js/settings-uploads.js"></script>
+<script src="js/rate-form.js"></script>
 <script src="js/settings-import.js"></script>
 <script src="js/settings-nav.js"></script>
 <script>

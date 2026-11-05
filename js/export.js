@@ -115,11 +115,10 @@ const MSSPdf = (() => {
     const raw = e.notes && e.notes.trim() ? MSSRich.plain(e.notes) : '';
     return { note: raw.replace(/\n{3,}/g, '\n\n').trim(), spoiler: mssIsSpoiler(e) };
   }
-  function bars(e, coreOnly = false) {   // coreOnly: leave out the bonus ratings (and live-action Animation Quality)
-    const r = e.ratings || {}, { core, bonus } = getRatings(e.cat, isMovie(e));
-    const extra = !coreOnly && !['anime', 'cartoons'].includes(e.cat) && r.animation != null && r.animation !== '' ? [{ key: 'animation', label: 'Animation Quality' }] : [];
-    return [...core, ...extra, ...(coreOnly ? [] : bonus)].filter(x => r[x.key] != null && r[x.key] !== '').map(x => ({ label: x.label, v: Number(r[x.key]) }));
-  }
+  // a title's rated groups (config.js mssRatedGroups), and the same ratings as one flat list
+  const groups = e => mssRatedGroups(e.ratings, e.cat, isMovie(e));
+  const bars = e => groups(e).flatMap(g => g.items.map(x => ({ key: x.key, label: x.label, v: x.v })));
+  const avgTxt = v => v.toFixed(2).replace(/0$/, '');
   function chips(e) {
     const f = e.ratings?._favorites || {}, l = e.ratings?._lowlights || f._lowlights || {}, mv = isMovie(e), out = [];
     const add = (lbl, v, low) => { if (v && String(v).trim()) out.push({ lbl, v: String(v).trim(), low }); };
@@ -293,20 +292,32 @@ const MSSPdf = (() => {
       // rating bars, highlights and the note: in the text column, under the score box
       const bx0 = tx, bw = x0 + CW - PAD - bx0, n0 = inc.notes ? text(e) : { note: '' };
       if (BOX && ((inc.breakdown && bars(e).length) || (inc.highlights && chips(e).length) || n0.note)) cy = Math.max(cy, y + PAD + BOXH + 1.5);
+      // each rated group: its name and average, then its ratings as bars, 3 to a row
       if (inc.breakdown && ek === 'watched') {
-        const b = bars(e);
-        if (b.length) {
+        const gs = groups(e);
+        if (gs.length) cy += 1;
+        gs.forEach((g, gi) => {
           const cols = 3, gap = 5, colW = (bw - gap * (cols - 1)) / cols, rowH = 5.8;
-          cy += 1;
-          if (draw) b.forEach((r, k) => {
+          if (gi && g.kind === 'bonus' && gs[gi - 1].kind === 'core') {
+            if (draw) { font('Oswald', 5.6, 'bold'); ink(P.text3); spaced('BONUS', bx0, cy + 3, 0.4); }
+            cy += 4.4;
+          }
+          if (draw) {
+            const gn = safe(g.name).toUpperCase();
+            font('Oswald', 6.2, 'bold'); ink(P.text); spaced(gn, bx0, cy + 3, 0.3);
+            const gw = pdf.getTextWidth(gn) + 0.3 * gn.length;
+            font('Bebas', 10); ink(P.accent); pdf.text(avgTxt(g.avg), bx0 + gw + 2.2, cy + 3.3);
+          }
+          cy += 4.4;
+          if (draw) g.items.forEach((r, k) => {
             const cx = bx0 + (k % cols) * (colW + gap), ry = cy + Math.floor(k / cols) * rowH;
             font('Manrope', 6.4); ink(P.text2); pdf.text(clip(r.label, colW - 8), cx, ry + 2.3);
             font('Bebas', 9); ink(P.text); pdf.text(num(r.v), cx + colW, ry + 2.5, { align: 'right' });
             fill(P.track); pdf.roundedRect(cx, ry + 3.5, colW, 1.2, 0.6, 0.6, 'F');
             fill(P.accent); pdf.roundedRect(cx, ry + 3.5, Math.max(1.2, colW * Math.min(1, r.v / 10)), 1.2, 0.6, 0.6, 'F');
           });
-          cy += Math.ceil(b.length / cols) * rowH + 1;
-        }
+          cy += Math.ceil(g.items.length / cols) * rowH + 1.2;
+        });
       }
       // highlights: outlined, with a coloured bar at the start (Create Card's favourites box)
       if (inc.highlights && ek === 'watched') {
@@ -375,10 +386,14 @@ const MSSPdf = (() => {
       y += 12;
     };
     // one bar per row: label · bar (avg out of 10, or n out of the most) · value · how many titles · an optional tag
-    const barRows = (rows, tag, counts, unit = 'title') => { const mx = Math.max(1, ...rows.map(x => x.n)); rows.forEach((r2, k) => {
+    const barRows = (rows, tag, counts, unit = 'title') => {
+      const mx = Math.max(1, ...rows.map(x => x.n));
+      font('Manrope', 8.4, 'bold');   // the label column fits the longest label (rating group names run long), up to 80mm
+      const lw = Math.min(80, Math.max(46, ...rows.map(x => pdf.getTextWidth(safe(x.label || x.name)) + 4)));
+      rows.forEach((r2, k) => {
       pageBreak(8);
-      const lx = M, bx = M + 46, bw = CW - 46 - 58, f = counts ? r2.n / mx : r2.avg / 10;
-      font('Manrope', 8.4, 'bold'); ink(P.text); pdf.text(clip(r2.label || r2.name, 44), lx, y + 4.2);
+      const lx = M, bx = M + lw, bw = CW - lw - 58, f = counts ? r2.n / mx : r2.avg / 10;
+      font('Manrope', 8.4, 'bold'); ink(P.text); pdf.text(clip(r2.label || r2.name, lw - 2), lx, y + 4.2);
       fill(P.track); pdf.roundedRect(bx, y + 1.6, bw, 3.2, 1.6, 1.6, 'F');
       fill(P.accent); pdf.roundedRect(bx, y + 1.6, Math.max(3.2, bw * Math.min(1, f)), 3.2, 1.6, 1.6, 'F');
       font('Bebas', 12); ink(P.accent); pdf.text(counts ? String(r2.n) : r2.avg.toFixed(2), bx + bw + 3, y + 4.6);
@@ -414,10 +429,11 @@ const MSSPdf = (() => {
       const t = job.taste;
       if (t.genres.length) { head('GENRES', 'your average score in each (2+ titles)', 28); barRows(t.genres.slice(0, 10)); y += 4; }
       if (t.categories.length) {
-        head('HOW YOU RATE', 'your average in each rating category', 28);
+        head('HOW YOU RATE', 'your average in each rating group', 28);
         barRows(t.categories, (c, k) => k === 0 ? 'KINDEST' : k === t.categories.length - 1 && t.categories.length > 1 ? 'TOUGHEST' : '');
         y += 4;
       }
+      if (t.values.length) { head('WHAT YOU VALUE MOST', 'bonus ratings, from the titles where you rated them', 28); barRows(t.values); y += 4; }
       // the score spread: one column per score, 1 → 10
       head('SCORE SPREAD', `${t.rated} titles · you’re a ${t.generous} scorer`, 58);
       columns(t.spread, t.spread.map((_, k) => String(k + 1)));
@@ -551,5 +567,5 @@ const MSSPdf = (() => {
     return pdf.output('blob');
   }
 
-  return { build, stats, detailStats, tasteStats, yearStats, epStats, posters, text, bars, chips, meta, progress, score, kindOf, POSTER_MAX };
+  return { build, stats, detailStats, tasteStats, yearStats, epStats, posters, text, groups, chips, meta, progress, score, kindOf, POSTER_MAX };
 })();

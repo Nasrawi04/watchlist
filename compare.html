@@ -188,10 +188,11 @@ function _cmpShowTitle(picker) {
   // breakdown shows up empty / half-filled
   const rv = (e, key) => { const v = e?.ratings?.[key]; if (v === '' || v == null) return null; const n = Number(v); return isNaN(n) ? null : n; };
   const anyEntry = Object.values(g.byUser)[0] || {};
-  const { core = [], bonus = [] } = getRatings(g.cat, g.cat === 'movies' || anyEntry.ratings?._media_type === 'movie' || anyEntry.tmdb_type === 'movie') || {};
-  const animated = g.cat === 'anime' || g.cat === 'cartoons';
-  const allRows = [...core, ...(animated ? [] : [{ key: 'animation', label: 'Animation Quality' }]), ...bonus];
-  const rows = allRows.filter(r => people.some(u => rv(g.byUser[u], r.key) != null));
+  // The shared groups (config.js), each with only the ratings someone here gave
+  const groups = mssRatingGroups(g.cat, g.cat === 'movies' || anyEntry.ratings?._media_type === 'movie' || anyEntry.tmdb_type === 'movie')
+    .map(gr => ({ ...gr, items: gr.items.filter(r => people.some(u => rv(g.byUser[u], r.key) != null)) })).filter(gr => gr.items.length);
+  const rows = groups.flatMap(gr => gr.items);
+  const groupAvg = (gr, u) => { const v = gr.items.map(r => rv(g.byUser[u], r.key)).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   // Headline stats
   const pairs = people.filter(u => u !== me).map(u => _frScore(g.byUser[u])).filter(v => v != null);
   const spread = scored.length > 1 ? Math.max(...scored) - Math.min(...scored) : null;
@@ -236,8 +237,10 @@ function _cmpShowTitle(picker) {
     <div class="cp-pcards">${people.map(card).join('')}</div>
     ${rows.length ? `<div class="fr-toolbar-title cp-sec">Ratings breakdown</div>
     <div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Category</th>${people.map(u => `<th translate="no">${escHTML(name(u))}</th>`).join('')}</tr></thead>
-      <tbody>${rows.map(r => { const vals = people.map(u => rv(g.byUser[u], r.key)); const nums = vals.filter(v => v != null); const top = nums.length > 1 ? Math.max(...nums) : null;
-        return `<tr><td>${escHTML(r.label)}</td>${vals.map(v => `<td class="${v != null && v === top ? 'best' : ''}">${v != null ? v.toFixed(1) : '—'}</td>`).join('')}</tr>`; }).join('')}
+      <tbody>${groups.map((gr, gi) => `${gr.kind === 'bonus' && groups[gi - 1]?.kind !== 'bonus' ? `<tr class="cp-kind"><th scope="rowgroup" colspan="${people.length + 1}">Bonus</th></tr>` : ''}
+        <tr class="cp-grp"><th scope="row">${escHTML(gr.name)}</th>${people.map(u => { const a = groupAvg(gr, u); return `<td>${a != null ? a.toFixed(2).replace(/0$/, '') : '—'}</td>`; }).join('')}</tr>
+        ${gr.items.map(r => { const vals = people.map(u => rv(g.byUser[u], r.key)); const nums = vals.filter(v => v != null); const top = nums.length > 1 ? Math.max(...nums) : null;
+        return `<tr><td>${escHTML(r.label)}</td>${vals.map(v => `<td class="${v != null && v === top ? 'best' : ''}">${v != null ? v.toFixed(1) : '—'}</td>`).join('')}</tr>`; }).join('')}`).join('')}
         <tr class="cp-total"><td>Final score</td>${people.map(u => { const v = _frScore(g.byUser[u]); return `<td>${v != null ? '★ ' + v.toFixed(2) : '—'}</td>`; }).join('')}</tr></tbody></table></div>` : ''}
     ${people.some(u => g.byUser[u].notes && g.byUser[u].notes.trim()) ? `<div class="fr-toolbar-title cp-sec">Notes</div>
     <div class="fn-grid">${people.filter(u => g.byUser[u].notes && g.byUser[u].notes.trim()).map(u => { const e = g.byUser[u];

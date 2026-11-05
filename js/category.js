@@ -96,34 +96,6 @@ function _enjoymentVal(e) {
   return (v !== undefined && v !== null && v !== '') ? Number(v) : null;
 }
 
-/* Generic version — works for any rating key (core or bonus), not just
-   enjoyment. Enjoyment itself is just one of the CORE_RATINGS entries now,
-   so it's reached through this same path as everything else. */
-function _ratingVal(e, key) {
-  const v = e.ratings?.[key];
-  return (v !== undefined && v !== null && v !== '') ? Number(v) : null;
-}
-
-/* Every rating a category supports — core ratings (incl. Enjoyment, which
-   lives in CORE_RATINGS/ANIME_CORE_RATINGS already) first, then bonus
-   ratings. Animation Quality is a toggleable bonus for non-animated
-   categories (TV/Movies) but a built-in core rating for Anime/Cartoons —
-   getRatings() already returns the right set per category, so this just
-   adds the conditional Animation option for the non-animated case. */
-function _ratingFilterOptions(cat) {
-  const { core, bonus } = getRatings(cat);
-  const isAnimated = cat === 'anime' || cat === 'cartoons';
-  const opts = core.map(r => ({ key: r.key, label: r.label, group: 'Core' }));
-  if (!isAnimated) opts.push({ key: 'animation', label: 'Animation Quality', group: 'Core' });
-  bonus.forEach(r => opts.push({ key: r.key, label: r.label, group: 'Bonus' }));
-  return opts;
-}
-
-function _ratingFilterLabel(cat, key) {
-  const opt = _ratingFilterOptions(cat).find(o => o.key === key);
-  return opt ? opt.label : key;
-}
-
 // Sorting now lives in js/sort-filter.js (SF.list / SF.setSort).
 
 /* ══════════════════════════════════════════════════════════════════
@@ -163,9 +135,9 @@ SF.register('cat', {
   lengthKind: () => IS_MOVIE_CAT() ? 'movie' : window.PAGE_CAT === 'tv' ? 'show' : 'mixed',
   ratingSort: {
     show: section => section === 'completed' || section === 'ongoing',
-    options: () => _ratingFilterOptions(window.PAGE_CAT),
-    label: key => _ratingFilterLabel(window.PAGE_CAT, key),
-    value: _ratingVal,
+    options: () => mssRatingSortOptions(window.PAGE_CAT),
+    label: mssRatingSortLabel,
+    value: mssRatingValue,
   },
   // Currently Watching order: watching → Up Next → Taking a Break
   postSort: (section, list) => section === 'watching'
@@ -893,7 +865,7 @@ function _cgEnjoymentBadge(e) {
   return _cgScoreBadge(val);
 }
 function _cgRatingBadge(e, key) {
-  const val = _ratingVal(e, key);
+  const val = mssRatingValue(e, key);
   if (val == null) return `<div class="cg-score-badge cg-score-none">-</div>`;
   return _cgScoreBadge(val);
 }

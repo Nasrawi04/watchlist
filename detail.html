@@ -181,7 +181,6 @@
 @media(max-width:520px){
   .fav-field{flex:1 1 100%;}
 }
-@media(max-width:600px){.rating-stepper-grid{gap:6px}}
 
 @media(max-width:600px){
   .final-score-section{flex-direction:column;align-items:flex-start;gap:1rem}
@@ -385,10 +384,6 @@
 .det-fields-grid { display:flex; flex-direction:column; gap:1rem; }
 .det-two-col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
 
-/* Core / Bonus ratings side by side */
-@media(max-width:760px) {
-  .det-ratings-cols { grid-template-columns:1fr; gap:1.5rem; }
-}
 
 /* ── Bottom action bar ── */
 .det-actions-bar {
@@ -758,20 +753,7 @@
       <!-- Ratings card — core and bonus side by side -->
       <div class="det-card" id="dRateCard">
         <div class="det-card-title">Rate This</div>
-        <div class="det-ratings-cols">
-          <div>
-            <div class="det-ratings-col-title">Core Ratings</div>
-            <div class="rating-stepper-grid" id="coreRatingGrid"></div>
-            <div id="animToggleSection" style="display:none;">
-              <button class="anim-toggle-btn" id="animToggleBtn" onclick="toggleAnimation()">+ Enable Animation Quality</button>
-              <div class="rating-stepper-grid" id="animRatingRow" style="display:none;margin-top:6px;"></div>
-            </div>
-          </div>
-          <div>
-            <div class="det-ratings-col-title">Bonus Ratings <span style="color:var(--text-3);font-size:9px;letter-spacing:1px;text-transform:none;font-family:var(--sans);margin-left:4px">optional</span></div>
-            <div class="rating-stepper-grid" id="bonusRatingGrid"></div>
-          </div>
-        </div>
+        <div id="rateForm"></div>
         <div class="ratings-section-label" style="margin-top:1.5rem;">Score Breakdown</div>
         <div class="score-breakdown" id="scoreBreakdown"></div>
       </div>
@@ -821,6 +803,7 @@
 <script src="js/create-card.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/episode-ratings.js"></script>
+<script src="js/rate-form.js"></script>
 <script src="js/info-popup.js"></script>
 
 <script>
@@ -888,111 +871,16 @@ let _posterUrl = null;
 
 document.getElementById('backBtn').href = _fromPage;
 
-let _animEnabled = false;
 
-/* ── Rating steppers ── */
-function buildRatingStepper(key, label) {
-  const val    = draftRatings[key];
-  const hasVal = val !== undefined && val !== null && val !== '';
-  const display = hasVal ? Number(val).toFixed(1) : '';
-  return `<div class="rating-stepper-item">
-    <div class="rating-stepper-label">${label}</div>
-    <div class="rating-stepper-controls">
-      <button class="ep-btn" onclick="stepRating('${key}',-0.5)" style="width:32px;height:32px;font-size:16px;">−</button>
-      <input class="rating-stepper-val${hasVal?' has-val':''}" id="sval-${key}"
-             type="text" inputmode="decimal" data-mask="rating" maxlength="4" value="${display}" placeholder="—"
-             onchange="typeRating('${key}',this.value)"
-             onblur="typeRating('${key}',this.value)">
-      <button class="ep-btn" onclick="stepRating('${key}',+0.5)" style="width:32px;height:32px;font-size:16px;">+</button>
-    </div>
-    <div class="rating-meter" aria-hidden="true"><i id="smeter-${key}" style="width:${hasVal ? Number(val) * 10 : 0}%"></i></div>
-  </div>`;
-}
-
+/* ── Rate This (rate-form.js): the groups, sliders and bonus; it changes draftRatings itself ── */
 function renderRatingGrids() {
   const cat = document.getElementById('dCat').value;
-  const isAnimated = cat === 'anime' || cat === 'cartoons';
   const isMovie = getMediaType() === 'movie';
-  const { core: coreArr, bonus: bonusArr } = getRatings(cat, isMovie);
-  if (isMovie) delete draftRatings.bingeable;      // movies don't have a Bingeable rating
-
-  // Core: use category-specific array (animation already in ANIME_CORE_RATINGS)
-  document.getElementById('coreRatingGrid').innerHTML = coreArr.map(r => buildRatingStepper(r.key, r.label)).join('');
-
-  // Bonus: use category-specific array
-  document.getElementById('bonusRatingGrid').innerHTML = bonusArr.map(r => buildRatingStepper(r.key, r.label)).join('');
-
-  // Animation toggle row: only for TV/movies (anime/cartoons always show it in core)
-  const animSection = document.getElementById('animToggleSection');
-  if (animSection) animSection.style.display = isAnimated ? 'none' : 'block';
-  if (!isAnimated && _animEnabled) {
-    document.getElementById('animRatingRow').innerHTML = buildRatingStepper('animation', 'Animation Quality');
-    document.getElementById('animRatingRow').style.display = 'block';
-  }
-}
-
-function stepRating(key, delta) {
-  const val    = draftRatings[key];
-  const hasVal = val !== undefined && val !== null && val !== '';
-  if (!hasVal && delta < 0) return;
-  const current = hasVal ? Number(val) : -0.5;
-  let next = Math.round((current + delta) * 10) / 10;
-  next = Math.max(0, Math.min(10, next));
-  draftRatings[key] = next;
-  const el = document.getElementById('sval-' + key);
-  if (el) { el.value = next.toFixed(1); el.classList.add('has-val'); }
-  _setMeter(key, next);
+  if (isMovie) delete draftRatings.bingeable;      // movies don't have Binge Appeal
+  const genres = [...document.querySelectorAll('#detailLayout .genre-opt.selected')].map(o => o.dataset.genre);
+  MSSRateForm.mount(document.getElementById('rateForm'), { cat, isMovie, genres, ratings: draftRatings, onChange: recalcFinal });
   recalcFinal();
 }
-function _setMeter(key, v) {
-  const m = document.getElementById('smeter-' + key);
-  if (m) m.style.width = (v == null ? 0 : Number(v) * 10) + '%';
-}
-
-function typeRating(key, rawVal) {
-  const s = String(rawVal).trim();
-  if (s === '' || s === '—') {
-    delete draftRatings[key];
-    const el = document.getElementById('sval-' + key);
-    if (el) { el.value = ''; el.classList.remove('has-val'); }
-    _setMeter(key, null);
-    recalcFinal(); return;
-  }
-  const raw = parseFloat(s);
-  if (isNaN(raw)) {
-    const el = document.getElementById('sval-' + key);
-    if (el) el.value = draftRatings[key] != null ? Number(draftRatings[key]).toFixed(1) : '';
-    return;
-  }
-  let snapped = Math.round(raw * 2) / 2;
-  snapped = Math.max(0, Math.min(10, snapped));
-  draftRatings[key] = snapped;
-  const el = document.getElementById('sval-' + key);
-  if (el) { el.value = snapped.toFixed(1); el.classList.add('has-val'); }
-  _setMeter(key, snapped);
-  recalcFinal();
-}
-
-function toggleAnimation() {
-  _animEnabled = !_animEnabled;
-  draftRatings._animEnabled = _animEnabled;
-  const row = document.getElementById('animRatingRow');
-  const btn = document.getElementById('animToggleBtn');
-  if (_animEnabled) {
-    row.innerHTML = buildRatingStepper('animation', 'Animation Quality');
-    row.style.display = 'block';
-    btn.textContent = '− Disable Animation Quality';
-    btn.classList.add('on');
-  } else {
-    row.style.display = 'none';
-    row.innerHTML = '';
-    delete draftRatings['animation'];
-    btn.textContent = '+ Enable Animation Quality';
-    btn.classList.remove('on');
-  }
-  recalcFinal();
-}
-
 
 function recalcFinal() {
   const cat = document.getElementById('dCat').value;
@@ -1996,14 +1884,6 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('dMediaType')._ddSync?.();
     }
 
-    // Restore animation quality toggle
-    _animEnabled = !!(e?.ratings?._animEnabled);
-    draftRatings._animEnabled = _animEnabled;
-    const animBtn = document.getElementById('animToggleBtn');
-    if (_animEnabled && animBtn) {
-      animBtn.textContent = '− Disable Animation Quality';
-      animBtn.classList.add('on');
-    }
 
     // Restore favorites
     const favs = e?.ratings?._favorites || {};
@@ -2118,8 +1998,8 @@ async function doSave() {
     ratingsWithType._media_type = document.getElementById('dMediaType').value;
   }
 
-  // Store animation enabled state
-  ratingsWithType._animEnabled = _animEnabled;
+  // Animation Quality switched on (live action)
+  ratingsWithType._animEnabled = !!draftRatings._animEnabled;
 
   // A dropped movie: where you stopped (optional)
   const dropMins = (Math.min(9, Math.max(0, parseInt(document.getElementById('dDroppedH').value) || 0)) * 60)

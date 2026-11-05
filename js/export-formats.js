@@ -54,7 +54,9 @@ const MSSFormats = (() => {
     if (k === 'watched') out.push(`My score: ${s != null ? `${s.toFixed(2)}/10` : 'not rated'}${rewatches(e) > 1 ? ` · watched ${rewatches(e)} times` : ''}`);
     if (k === 'watching') { const p = MSSPdf.progress(e); out.push(`Status: watching${p?.label ? ` — ${p.label}` : ''}`); }
     if (k === 'watchlist') out.push('Status: on my watchlist');
-    if (o.include?.breakdown && k === 'watched') { const b = MSSPdf.bars(e); if (b.length) out.push('Ratings: ' + b.map(r => `${r.label} ${r.v}`).join(' · ')); }
+    if (o.include?.breakdown && k === 'watched') { const gs = MSSPdf.groups(e), line = g => `${g.name} ${g.avg.toFixed(2)} (${g.items.map(r => `${r.label} ${r.v}`).join(', ')})`;
+      if (gs.some(g => g.kind === 'core')) out.push('Ratings: ' + gs.filter(g => g.kind === 'core').map(line).join(' · '));
+      if (gs.some(g => g.kind === 'bonus')) out.push('Bonus ratings: ' + gs.filter(g => g.kind === 'bonus').map(line).join(' · ')); }
     if (o.include?.highlights && k === 'watched') { const c = MSSPdf.chips(e); if (c.length) out.push(c.map(x => `${x.lbl}: ${x.v}`).join(' · ')); }
     const n = note(e, o);
     if (n) out.push(`My note: “${n.replace(/\n{2,}/g, '\n').trim()}”`);
@@ -76,7 +78,8 @@ const MSSFormats = (() => {
       parts.push('## My taste', '', ...MSSTaste.lines(t).map(l => `- ${l}`), '');
       if (!list.length) {
         if (t.genres.length) parts.push('### Genres — my average score', '', ...t.genres.map(g => `- ${g.name}: ${g.avg.toFixed(2)} (${g.n} titles)`), '');
-        if (t.categories.length) parts.push('### How I rate — my average in each category', '', ...t.categories.map(c => `- ${c.label}: ${c.avg.toFixed(2)}`), '');
+        if (t.categories.length) parts.push('### How I rate — my average in each rating group', '', ...t.categories.flatMap(c => [`- ${c.label}: ${c.avg.toFixed(2)}`, ...c.subs.map(s => `  - ${s.label}: ${s.avg.toFixed(2)}`)]), '');
+        if (t.values.length) parts.push('### What I value most — bonus ratings, from the titles where I rated them', '', ...t.values.map(v => `- ${v.label}: ${v.avg.toFixed(2)} (${v.n} titles)`), '');
         if (t.decades.length) parts.push('### Decades — my average score', '', ...t.decades.map(d => `- ${d.name}: ${d.avg.toFixed(2)} (${d.n} titles)`), '');
         if (t.top.length) parts.push('### My top 5', '', ...t.top.map((x, i) => `${i + 1}. ${x.e.title}${yr(x.e) ? ` (${yr(x.e)})` : ''} — ${x.s.toFixed(2)}/10`), '');
       }
@@ -105,14 +108,14 @@ const MSSFormats = (() => {
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   function csv(list, o) {
-    const cats = [];
-    list.forEach(e => MSSPdf.bars(e).forEach(r => { if (!cats.includes(r.label)) cats.push(r.label); }));
-    const H = ['Title', 'Year', 'Type', 'Status', 'Score', ...cats, 'Fav character', 'Fav episode', 'Fav season', 'Least fav character', 'Least fav episode', 'Least fav season',
+    // one column per rating, in the rating order; Acting / Voice Acting and Action & Spectacle are one column each
+    const cats = mssRatingSortOptions();
+    const H = ['Title', 'Year', 'Type', 'Status', 'Score', ...cats.map(c => c.label), 'Fav character', 'Fav episode', 'Fav season', 'Least fav character', 'Least fav episode', 'Least fav season',
       'Genres', 'Watched on', 'Added on', 'Times watched', 'Season', 'Episode', 'Episodes watched', 'Total episodes', 'Note', 'TMDB ID', 'TMDB type'];
     const rows = list.map(e => {
-      const s = sc(e), b = Object.fromEntries(MSSPdf.bars(e).map(r => [r.label, r.v]));
+      const s = sc(e);
       const f = e.ratings?._favorites || {}, l = e.ratings?._lowlights || f._lowlights || {};
-      return [e.title, yr(e), CAT_META?.[e.cat]?.singular || '', STATUS[e.status] || '', s != null ? s.toFixed(2) : '', ...cats.map(c => b[c] ?? ''),
+      return [e.title, yr(e), CAT_META?.[e.cat]?.singular || '', STATUS[e.status] || '', s != null ? s.toFixed(2) : '', ...cats.map(c => mssRatingValue(e, c.key) ?? ''),
         f.character, f.episode, f.season, l.character, l.episode, l.season, (e.genres || []).join(', '), day(e.completed_date), day(e.created_at),
         e.status ? rewatches(e) : '', e.season || '', e.episode || '', e.watched ?? '', e.total_eps ?? '', note(e, o), e.tmdb_id || '', e.tmdb_type || ''];
     });

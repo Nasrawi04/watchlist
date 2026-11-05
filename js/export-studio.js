@@ -439,7 +439,7 @@ const MSSStudio = (() => {
     const rk = (e, i) => S.group ? list.slice(0, i + 1).filter(x => x.cat === e.cat).length : i + 1;   // grouped: ranks per category
     const card = (e, i) => {
       const ek = k === 'mixed' ? MSSPdf.kindOf(e) : k;
-      const s = MSSPdf.score(e), b = S.include.breakdown && ek === 'watched' ? MSSPdf.bars(e).slice(0, single() ? 30 : 6) : [];
+      const s = MSSPdf.score(e), gs = S.include.breakdown && ek === 'watched' ? MSSPdf.groups(e) : [];
       const c = S.include.highlights && ek === 'watched' ? MSSPdf.chips(e).slice(0, single() ? 6 : 3) : [];
       const n = S.include.notes ? MSSPdf.text(e) : { note: '' }, pr = ek === 'watching' ? MSSPdf.progress(e) : null;
       const poster = e.poster_url && /^https?:/.test(e.poster_url) ? `<img src="${esc(e.poster_url)}" alt="" loading="lazy">` : esc((e.title || '?')[0]);
@@ -450,7 +450,7 @@ const MSSStudio = (() => {
           <div class="xs-pv-title" translate="no">${esc(e.title || 'Untitled')}</div>
           <div class="xs-pv-meta">${esc(MSSPdf.meta(ek, e, S.include))}</div>
           ${pr ? `<div class="xs-pv-prog"><b>${esc(pr.label)}</b><i><u style="width:${Math.round(pr.pct * 100)}%"></u></i></div>` : ''}
-          ${b.length ? `<div class="xs-pv-bars">${b.map(r => `<span><em>${esc(r.label)}</em><b>${r.v % 1 ? r.v.toFixed(1) : r.v}</b><i><u style="width:${r.v * 10}%"></u></i></span>`).join('')}</div>` : ''}
+          ${gs.length ? `<div class="xs-pv-rgs${single() ? ' full' : ''}">${(single() ? gs : gs.filter(g => g.kind === 'core')).map(g => `<div class="xs-pv-rg"><b>${esc(g.name)}</b><em>${g.avg.toFixed(2).replace(/0$/, '')}</em></div>${single() ? `<div class="xs-pv-bars">${g.items.map(r => `<span><em>${esc(r.label)}</em><b>${r.v % 1 ? r.v.toFixed(1) : r.v}</b><i><u style="width:${r.v * 10}%"></u></i></span>`).join('')}</div>` : ''}`).join('')}</div>` : ''}
           ${c.length ? `<div class="xs-pv-chips">${c.map(x => `<span class="${x.low ? 'low' : ''}"><em>${esc(x.lbl)}</em> ${esc(x.v)}</span>`).join('')}</div>` : ''}
           ${n.note ? `<div class="xs-pv-note${single() ? ' full' : ''}">${n.spoiler && S.privacy.hideSpoilers ? '<i>Note hidden — it has spoilers.</i>' : esc(n.note.slice(0, single() ? 900 : 160))}</div>` : ''}
         </div>
@@ -507,7 +507,8 @@ const MSSStudio = (() => {
       ${S.privacy.anon || !(who.name || who.username) ? '' : `<div class="xs-pv-by">by ${esc(who.name || who.username)}</div>`}
       <div class="xs-pv-stats">${MSSPdf.tasteStats(t).map(x => `<span><b${x.word ? ' class="word"' : ''}>${esc(x.value)}</b><small>${esc(x.label)}</small></span>`).join('')}</div>
       ${t.genres.length ? `<div class="xs-pv-group">Genres</div>${t.genres.slice(0, 6).map(g => bar(g.name, g.avg, g.n)).join('')}` : ''}
-      ${t.categories.length ? `<div class="xs-pv-group xs-tp-gap">How you rate</div>${t.categories.slice(0, 6).map((c, k) => bar(c.label, c.avg, c.n, k === 0 ? 'Kindest' : '')).join('')}` : ''}
+      ${t.categories.length ? `<div class="xs-pv-group xs-tp-gap">How you rate</div>${t.categories.map((c, k) => bar(c.label, c.avg, c.n, k === 0 ? 'Kindest' : k === t.categories.length - 1 ? 'Toughest' : '')).join('')}` : ''}
+      ${t.values.length ? `<div class="xs-pv-group xs-tp-gap">What you value most</div>${t.values.slice(0, 5).map(v => bar(v.label, v.avg, v.n)).join('')}` : ''}
     </div></div>`;
   }
   // Rough page count: the cover block, then each card's height (as the PDF measures it, give or take)
@@ -517,7 +518,7 @@ const MSSStudio = (() => {
     list.forEach(e => {
       const ek = k === 'mixed' ? MSSPdf.kindOf(e) : k;
       let h = 22;
-      if (S.include.breakdown && ek === 'watched') h += Math.ceil(MSSPdf.bars(e).length / 3) * 5.8 + 3;
+      if (S.include.breakdown && ek === 'watched') { const gs = MSSPdf.groups(e); h += gs.reduce((t, g) => t + 5.6 + Math.ceil(g.items.length / 3) * 5.8, gs.length ? 1 : 0) + (gs.some(g => g.kind === 'bonus') ? 4.4 : 0); }
       if (S.include.highlights && ek === 'watched' && MSSPdf.chips(e).length) h += 9;
       if (S.include.notes && MSSPdf.text(e).note) h += Math.min(single() ? 40 : 6, Math.ceil(MSSPdf.text(e).note.length / 110)) * 3.6 + 4;
       if (posters) h = Math.max(h, 36);

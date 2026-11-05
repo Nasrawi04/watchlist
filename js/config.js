@@ -292,67 +292,126 @@ const CAT_META = {
 };
 
 /* ── Anime / Cartoon specific ratings ── */
-const ANIME_CORE_RATINGS = [
-  { key: 'story',        label: 'Story & Plot'          },
-  { key: 'voice_acting', label: 'Voice Acting'          },
-  { key: 'characters',   label: 'Character Development' },
-  { key: 'writing',      label: 'Writing & Dialogue'    },
-  { key: 'worldbuilding',label: 'World Building'        },
-  { key: 'pacing',       label: 'Pacing & Consistency'  },
-  { key: 'char_designs', label: 'Character Designs'     },
-  { key: 'animation',    label: 'Animation Quality'     },
-  { key: 'ending',       label: 'Ending & Payoff'       },
-  { key: 'enjoyment',    label: 'Enjoyment'             },
+/* ── Rating categories: the one list every page reads ──
+   Groups in order, each with its ratings. A rating is { key, label, hint, show }:
+     show 'all' · 'live' (TV and movies) · 'animated' (anime and cartoons) · 'shows' (never for a movie)
+   Animation Quality is part of the core for anime and cartoons, and an extra a live-action title can
+   switch on (toggle). Keys are what's saved in entries.ratings: a renamed rating keeps its old key, so
+   every saved score, export and comparison keeps working. Two ratings have a separate key for anime and cartoons,
+   as they always have: Acting (voice_acting) and Action (action; spectacle for live action, so an old anime score
+   on a title moved to TV never starts counting). */
+const MSS_RATING_GROUPS = [
+  { id: 'narrative', kind: 'core', name: 'Narrative & Storytelling', items: [
+    { key: 'story', label: 'Story & Plot', hint: 'Was the story strong and well told?' },
+    { key: 'worldbuilding', label: 'World Building', hint: 'Does the world feel real, with rules that hold?' },
+    { key: 'writing', label: 'Writing & Dialogue', hint: 'Sharp writing, and lines that sound like real people.' },
+    { key: 'pacing', label: 'Pacing & Consistency', hint: 'Did it drag or rush, and did quality hold up?' },
+    { key: 'ending', label: 'Ending & Payoff', hint: 'Did it land, and was it worth the wait?' },
+  ] },
+  { id: 'characters', kind: 'core', name: 'Characters & Performances', items: [
+    { key: 'characters', label: 'Character Development', hint: 'Do the characters grow and feel real?' },
+    { key: 'acting', label: 'Acting / Voice Acting', hint: 'Performances you believe, on screen or in the booth.', show: 'live' },
+    { key: 'voice_acting', label: 'Acting / Voice Acting', hint: 'Performances you believe, on screen or in the booth.', show: 'animated' },
+  ] },
+  { id: 'visual', kind: 'core', name: 'Visual & Technical Craft', items: [
+    { key: 'cinematography', label: 'Cinematography & Visuals', hint: 'How it looks: shots, colour, lighting, effects.', show: 'live' },
+    { key: 'animation', label: 'Animation Quality', hint: 'The animation itself: movement, detail and style.', toggle: true },
+    { key: 'char_designs', label: 'Character Designs', hint: 'Memorable, well-made character designs.', show: 'animated' },
+  ] },
+  { id: 'overall', kind: 'core', name: 'Overall Experience', items: [
+    { key: 'enjoyment', label: 'Overall Enjoyment', hint: 'Forget the parts: how much did you enjoy it?' },
+  ] },
+  { id: 'intrigue', kind: 'bonus', name: 'Narrative Intrigue', items: [
+    { key: 'plottwist', label: 'Plot Twist Execution', hint: 'Twists that surprise but still make sense.' },
+    { key: 'intellect', label: 'Intellectual Engagement', hint: 'Makes you think and stays with you.' },
+  ] },
+  { id: 'emotion', kind: 'bonus', name: 'Emotional Resonance & Relationships', items: [
+    { key: 'emotional', label: 'Emotional Impact', hint: 'Did it make you feel something?' },
+    { key: 'comfort', label: 'Comfort & Feel-Good Appeal', hint: 'A warm, easy watch you’d happily come back to.' },
+    { key: 'romance', label: 'Romantic Chemistry', hint: 'Do the couples actually work on screen?' },
+    { key: 'villains', label: 'Protagonist–Antagonist Dynamic', hint: 'Is the hero and villain clash worth watching?' },
+  ] },
+  { id: 'atmosphere', kind: 'bonus', name: 'Atmosphere & Genre Appeal', items: [
+    { key: 'suspense', label: 'Suspense & Tension', hint: 'Did it keep you on edge?' },
+    { key: 'horror', label: 'Horror Effectiveness', hint: 'Did it actually scare or unsettle you?' },
+    { key: 'funny', label: 'Humour & Comedy', hint: 'How often did it make you laugh?' },
+  ] },
+  { id: 'creative', kind: 'bonus', name: 'Creative Identity & Sound', items: [
+    { key: 'originality', label: 'Originality & Uniqueness', hint: 'Fresh ideas you haven’t seen before.' },
+    { key: 'music', label: 'Music & Soundtrack', hint: 'Score and songs that lift it.' },
+  ] },
+  { id: 'spectacle', kind: 'bonus', name: 'Entertainment & Spectacle', items: [
+    { key: 'spectacle', label: 'Action & Spectacle', hint: 'Fights, set pieces and big moments.', show: 'live' },
+    { key: 'action', label: 'Action & Spectacle', hint: 'Fights, set pieces and big moments.', show: 'animated' },
+    { key: 'quotes', label: 'Memorable Dialogue & Quotes', hint: 'Lines you’ll still be quoting.' },
+    { key: 'rewatch', label: 'Rewatchability', hint: 'Would you happily watch it again?' },
+    { key: 'bingeable', label: 'Binge Appeal', hint: 'Hard to stop at one episode.', show: 'shows' },
+  ] },
 ];
+const MSS_RATING_LABEL = Object.fromEntries(MSS_RATING_GROUPS.flatMap(g => g.items.map(r => [r.key, r.label])));
 
-const ANIME_BONUS_RATINGS = [
-  { key: 'action',    label: 'Action Choreography' },
-  { key: 'emotional', label: 'Emotional Impact' },
-  { key: 'music',     label: 'Soundtrack' },
-  { key: 'villains',  label: 'Main Character vs Villain Dynamics' },
-  { key: 'plottwist', label: 'Plot Twist Quality' },
-  { key: 'rewatch',   label: 'Rewatchability' },
-  { key: 'funny',     label: 'Funny' },
-  { key: 'bingeable', label: 'Bingeable' },
-  { key: 'horror',    label: 'Horror' },
-];
-
-// isMovie (default: the Movies category) — movies have no "Bingeable" rating;
-// pass it for anime / cartoon movies too.
-function getRatings(cat, isMovie = cat === 'movies') {
-  const isAnimated = cat === 'anime' || cat === 'cartoons';
-  const bonus = isAnimated ? ANIME_BONUS_RATINGS : BONUS_RATINGS;
-  return { core: isAnimated ? ANIME_CORE_RATINGS : CORE_RATINGS,
-           bonus: isMovie ? bonus.filter(r => r.key !== 'bingeable') : bonus };
+// Which ratings a title has: animated → anime / cartoons, movie → no Binge Appeal
+function mssRatingFits(r, animated, movie) {
+  return !r.show || r.show === 'all' || (r.show === 'live' && !animated) || (r.show === 'animated' && animated) || (r.show === 'shows' && !movie);
 }
-
-const CORE_RATINGS = [
-  { key: 'story',          label: 'Story & Plot'              },
-  { key: 'acting',         label: 'Acting / Voice Acting'     },
-  { key: 'characters',     label: 'Character Development'     },
-  { key: 'writing',        label: 'Writing & Dialogue'        },
-  { key: 'worldbuilding',  label: 'World Building'            },
-  { key: 'pacing',         label: 'Pacing & Consistency'      },
-  { key: 'cinematography', label: 'Cinematography & Visuals'  },
-  { key: 'ending',         label: 'Ending & Payoff'           },
-  { key: 'enjoyment',      label: 'Enjoyment'                 },
+// The groups for a title, each with only the ratings it has. Live action's Animation Quality is in its group, marked toggle.
+function mssRatingGroups(cat, isMovie = cat === 'movies') {
+  const animated = cat === 'anime' || cat === 'cartoons';
+  return MSS_RATING_GROUPS.map(g => ({ ...g, items: g.items.filter(r => mssRatingFits(r, animated, isMovie)).map(r => ({ ...r, toggle: r.toggle && !animated })) }));
+}
+// One rating's value on a title, for sorting. Acting and Action have a separate key for anime and cartoons,
+// so either key reads the one that fits this title.
+function mssRatingValue(e, key) {
+  const animated = e?.cat === 'anime' || e?.cat === 'cartoons';
+  const k = { acting: 'voice_acting', voice_acting: 'voice_acting', spectacle: 'action', action: 'action' }[key];
+  const real = !k ? key : animated ? k : { voice_acting: 'acting', action: 'spectacle' }[k];
+  const v = e?.ratings?.[real];
+  return v !== undefined && v !== null && v !== '' && !isNaN(Number(v)) ? Number(v) : null;
+}
+// The "Specific Rating" sort list, under each group's name. With no category (a page mixing them all),
+// every rating once: Acting / Voice Acting and Action & Spectacle are one choice each.
+function mssRatingSortOptions(cat) {
+  const seen = new Set();
+  return (cat ? mssRatingGroups(cat) : MSS_RATING_GROUPS).flatMap(g => g.items
+    .filter(r => !seen.has(r.label) && seen.add(r.label))
+    .map(r => ({ key: r.key, label: r.label, group: g.name })));
+}
+const mssRatingSortLabel = key => MSS_RATING_LABEL[key] || key;
+// For the score formula and the older pages: the flat lists, with live action's optional Animation Quality left out (it's added only when rated)
+function getRatings(cat, isMovie = cat === 'movies') {
+  const groups = mssRatingGroups(cat, isMovie);
+  const flat = kind => groups.filter(g => g.kind === kind).flatMap(g => g.items).filter(r => !r.toggle).map(({ key, label }) => ({ key, label }));
+  return { core: flat('core'), bonus: flat('bonus') };
+}
+// A title's saved ratings, grouped: [{ id, name, kind, avg, items: [{ key, label, v }] }]. Only rated ones, empty groups left out.
+function mssRatedGroups(ratings, cat, isMovie) {
+  const r = ratings || {}, has = k => r[k] !== undefined && r[k] !== null && r[k] !== '' && !isNaN(Number(r[k]));
+  return mssRatingGroups(cat, isMovie).map(g => {
+    const items = g.items.filter(x => has(x.key)).map(x => ({ key: x.key, label: x.label, v: Number(r[x.key]) }));
+    return items.length ? { id: g.id, name: g.name, kind: g.kind, items, avg: items.reduce((a, x) => a + x.v, 0) / items.length } : null;
+  }).filter(Boolean);
+}
+// Up to 4 bonus ratings that fit a title, from its genres and type. Rated ones aren't suggested.
+const MSS_RATING_SUGGEST = [
+  [['Horror'], ['horror', 'suspense']],
+  [['Thriller', 'Mystery', 'Crime'], ['suspense', 'plottwist']],
+  [['Comedy'], ['funny', 'comfort']],
+  [['Romance'], ['romance', 'emotional']],
+  [['Action', 'Adventure'], ['spectacle', 'action']],
+  [['Science Fiction', 'Fantasy'], ['originality', 'intellect']],
+  [['Drama'], ['emotional']],
+  [['Animation'], ['music']],
 ];
-
-/* Animation — conditional bonus; shown via toggle for animated content */
-const ANIMATION_RATING = { key: 'animation', label: 'Animation Quality' };
-
-const BONUS_RATINGS = [
-  { key: 'music',      label: 'Music & Soundtrack' },
-  { key: 'emotional',  label: 'Emotional Impact' },
-  { key: 'villains',   label: 'Main Character vs Villain Dynamics' },
-  { key: 'rewatch',    label: 'Rewatchability' },
-  { key: 'plottwist',  label: 'Plot Twist Quality' },
-  { key: 'funny',      label: 'Funny' },
-  { key: 'bingeable',  label: 'Bingeable' },
-  { key: 'horror',     label: 'Horror' },
-];
-
-const RATING_VALS = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10];
+function mssRatingSuggest(cat, isMovie, genres, ratings) {
+  const have = new Set(mssGenreList(genres || [])), out = [];
+  const add = k => { if (!out.includes(k)) out.push(k); };
+  MSS_RATING_SUGGEST.forEach(([gs, keys]) => { if (gs.some(g => have.has(g))) keys.forEach(add); });
+  if (cat === 'anime' || cat === 'cartoons') add('music');
+  if (!isMovie) add('bingeable');
+  const r = ratings || {};
+  const fits = new Set(mssRatingGroups(cat, isMovie).flatMap(g => g.items.map(x => x.key)));
+  return out.filter(k => fits.has(k) && (r[k] === undefined || r[k] === null || r[k] === '')).slice(0, 4);
+}
 
 /* ── Score calculation ── */
 // Final = 70% Core avg (excl. enjoyment) + 20% Enjoyment + 10% Bonus avg
@@ -402,6 +461,21 @@ function calcObjective(ratings, cat) {
 }
 
 /* ── Live score — always recalculate from ratings when available ── */
+// A title's saved ratings as group cards: each group's average, and its ratings as small bars.
+// Core first, then Bonus under its own header. Only rated ratings, empty groups left out. '' when nothing's rated.
+function mssRatingCardsHTML(ratings, cat, isMovie) {
+  const groups = mssRatedGroups(ratings, cat, isMovie);
+  if (!groups.length) return '';
+  const n = v => Number(v).toFixed(2).replace(/0$/, '');
+  const card = g => `<section class="rg-card" aria-label="${escHTML(g.name)}, ${n(g.avg)}">
+      <div class="rg-head"><h4 class="rg-name">${escHTML(g.name)}</h4><b class="rg-avg">${n(g.avg)}</b></div>
+      <ul class="rg-items">${g.items.map(x => `<li><span class="rg-label">${escHTML(x.label)}</span><span class="rg-bar" aria-hidden="true"><i style="width:${x.v * 10}%"></i></span><b>${x.v.toFixed(1)}</b></li>`).join('')}</ul>
+    </section>`;
+  const core = groups.filter(g => g.kind === 'core'), bonus = groups.filter(g => g.kind === 'bonus');
+  return `<div class="rg-wrap">${core.length ? `<div class="rg-grid">${core.map(card).join('')}</div>` : ''}
+    ${bonus.length ? `<div class="fd-section-hd rg-bonus-hd">Bonus</div><div class="rg-grid">${bonus.map(card).join('')}</div>` : ''}</div>`;
+}
+
 // The Score Breakdown rows: Core 70%, Enjoyment 20%, Bonus 10% (the title page and Import)
 function mssScoreBreakdownHTML(ratings, cat, isMovie) {
   const has = v => v !== undefined && v !== null && v !== '';
@@ -2189,19 +2263,13 @@ const MSSOrder = (() => {
     ['Date Watched',    [['watched_new', 'Latest'], ['watched_old', 'Earliest']]],
     ['Release Date',    [['release_new', 'Latest'], ['release_old', 'Earliest']]],
     ['Alphabetical',    [['az', 'A → Z'], ['za', 'Z → A']]],
-    ['Specific Rating', [['enjoyment', 'Enjoyment'], ['story', 'Story & Plot'], ['acting', 'Acting'], ['ending', 'Ending & Payoff']]],
+    ['Specific Rating', [['enjoyment', 'Overall Enjoyment'], ['story', 'Story & Plot'], ['acting', 'Acting / Voice Acting'], ['ending', 'Ending & Payoff']]],
   ];
   function orderLabel(mode) {
     for (const [h, opts] of ORDER_GROUPS) { const o = opts.find(x => x[0] === mode); if (o) return `${h}: ${o[1]}`; }
     return 'My Order';
   }
-  function subRating(e, concept) {
-    if (!e || !e.ratings) return null;
-    const animated = e.cat === 'anime' || e.cat === 'cartoons';
-    const key = { story: 'story', enjoyment: 'enjoyment', acting: animated ? 'voice_acting' : 'acting', ending: 'ending' }[concept];
-    const v = key ? e.ratings[key] : null;
-    return typeof v === 'number' ? v : null;
-  }
+  const subRating = (e, concept) => mssRatingValue(e, concept);
   const watchedOn = e => String(e?.completed_date || e?.completed_at || '').slice(0, 10) || null;
   const releasedOn = e => String(e?.released || e?.release_date || e?.first_air_date || e?.year || '').slice(0, 10) || null;
   // The value a mode sorts by (null = unknown → last); desc = bigger first

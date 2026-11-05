@@ -200,15 +200,8 @@ function _cgBadgeHTML(rank) {
   return `<div class="cg-rank-badge ${cls}">${rank}</div>`;
 }
 
-/* Generic version — this page mixes every category together, so ratings
-   are looked up directly by key on whatever the entry actually has. */
-function _ratingVal(e, key) {
-  const v = e.ratings?.[key];
-  return (v !== undefined && v !== null && v !== '') ? Number(v) : null;
-}
-
 function _cgRatingBadgeHTML(e, key) {
-  const val = _ratingVal(e, key);
+  const val = mssRatingValue(e, key);
   if (val == null) return `<div class="cg-score-badge cg-score-none">-</div>`;
   let cls;
   if (val >= 10) cls = 'cg-score-10';
@@ -221,32 +214,6 @@ function _cgRatingBadgeHTML(e, key) {
   return `<div class="cg-score-badge ${cls}">${val.toFixed(2)}</div>`;
 }
 
-/* This page mixes every category, so the rating list is the full union
-   across TV/Movies and Anime/Cartoons — e.g. "Acting" and "Voice Acting"
-   both show up as separate options, since they're different keys on
-   different entries. Deduplicated by key where a key is genuinely shared
-   (e.g. "story", "music", "emotional"). */
-function _ratingFilterOptionsAll() {
-  const seen = new Set();
-  const opts = [];
-  [...CORE_RATINGS, ...ANIME_CORE_RATINGS].forEach(r => {
-    if (seen.has(r.key)) return;
-    seen.add(r.key);
-    opts.push({ key: r.key, label: r.label, group: 'Core' });
-  });
-  if (!seen.has('animation')) { seen.add('animation'); opts.push({ key: 'animation', label: 'Animation Quality', group: 'Core' }); }
-  const seenB = new Set();
-  [...BONUS_RATINGS, ...ANIME_BONUS_RATINGS].forEach(r => {
-    if (seenB.has(r.key)) return;
-    seenB.add(r.key);
-    opts.push({ key: r.key, label: r.label, group: 'Bonus' });
-  });
-  return opts;
-}
-function _ratingFilterLabelAll(key) {
-  const opt = _ratingFilterOptionsAll().find(o => o.key === key);
-  return opt ? opt.label : key;
-}
 const _CLEFT  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const _CRIGHT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
 
@@ -360,9 +327,9 @@ SF.register('comp', {
     { key: 'status', label: 'Status', options: Object.entries(_compStatusLabels) },
   ],
   ratingSort: {
-    options: _ratingFilterOptionsAll,
-    label: _ratingFilterLabelAll,
-    value: _ratingVal,
+    options: () => mssRatingSortOptions(),
+    label: mssRatingSortLabel,
+    value: mssRatingValue,
   },
   // Release sort needs each show's first-air date (fetched once, cached)
   beforeSort: async (section, value) => {

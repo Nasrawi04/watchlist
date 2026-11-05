@@ -111,38 +111,11 @@ function _libQueueScope(e) {
   if (e.total_eps) return e.total_eps+' eps';
   return '';
 }
-function _ratingVal(e,key){
-  var v=e.ratings&&e.ratings[key];
-  return (v!==undefined&&v!==null&&v!=='')?Number(v):null;
-}
 function _libRatingBadge(e,key){
-  var val=_ratingVal(e,key);
+  var val=mssRatingValue(e,key);
   if(val==null)return '<div class="cg-score-badge cg-score-none">-</div>';
   var cls=val>=10?'cg-score-10':val>=9?'cg-score-9':val>=8?'cg-score-8':val>=7?'cg-score-7':val>=6?'cg-score-6':val>=3?'cg-score-3-5':'cg-score-0-2';
   return '<div class="cg-score-badge '+cls+'">★ '+val.toFixed(2)+'</div>';
-}
-
-/* This page mixes every category, so the rating list is the full union
-   across TV/Movies and Anime/Cartoons (e.g. "Acting" and "Voice Acting"
-   both appear as separate options, since they're different keys on
-   different entries), deduplicated where a key is genuinely shared. */
-function _ratingFilterOptionsAll(){
-  var seen={}; var opts=[];
-  CORE_RATINGS.concat(ANIME_CORE_RATINGS).forEach(function(r){
-    if(seen[r.key])return; seen[r.key]=1;
-    opts.push({key:r.key,label:r.label,group:'Core'});
-  });
-  if(!seen.animation){seen.animation=1;opts.push({key:'animation',label:'Animation Quality',group:'Core'});}
-  var seenB={};
-  BONUS_RATINGS.concat(ANIME_BONUS_RATINGS).forEach(function(r){
-    if(seenB[r.key])return; seenB[r.key]=1;
-    opts.push({key:r.key,label:r.label,group:'Bonus'});
-  });
-  return opts;
-}
-function _ratingFilterLabelAll(key){
-  var opt=_ratingFilterOptionsAll().filter(function(o){return o.key===key;})[0];
-  return opt?opt.label:key;
 }
 
 function _libCatFilterBar() {
@@ -204,9 +177,9 @@ SF.register(LIB_SCOPE, {
   },
   ratingSort: {
     show: function(sec){ return sec==='completed'; },
-    options: _ratingFilterOptionsAll,
-    label: _ratingFilterLabelAll,
-    value: _ratingVal,
+    options: function(){return mssRatingSortOptions();},
+    label: mssRatingSortLabel,
+    value: mssRatingValue,
   },
   // Paused entries always sink to the bottom of Currently Watching
   postSort: function(sec,list){

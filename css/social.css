@@ -345,6 +345,10 @@ a.ud-item { color:inherit; text-decoration:none; }
 .cp-table th { font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-3); font-weight:700; }
 .cp-table th:first-child, .cp-table td:first-child { text-align:start; position:sticky; inset-inline-start:0; background:var(--card); color:var(--text-2); font-family:var(--sans); font-size:13px; }
 .cp-table td { font-family:var(--bebas); font-size:18px; color:var(--text-2); }
+.cp-table .cp-grp th, .cp-table .cp-grp td { background:var(--olive-faint); border-bottom:0.5px solid var(--border-olive); }
+.cp-table .cp-grp th { color:var(--olive-light); font-family:var(--serif); font-weight:500; letter-spacing:2px; }
+.cp-table .cp-grp td { color:var(--olive-light); }
+.cp-table .cp-kind th { padding-top:16px; text-align:start; color:var(--text-2); }
 .cp-table td.best { color:var(--olive-light); }
 .cp-table tr:last-child td { border-bottom:none; }
 
