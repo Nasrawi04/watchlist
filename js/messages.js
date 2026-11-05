@@ -68,7 +68,7 @@ const MSSChat = (() => {
   function gate(html) { root.innerHTML = `<div class="chat-gate">${html}</div>`; }
   async function start(user, q) {
     root = $('chatRoot');
-    if (!user) { gate(mssEmpty({ art: 'chat', title: 'Chat with your friends', text: 'Sign in to message your friends about what you’re watching.', actions: [{ label: 'Sign In', href: 'login.html', primary: true }] })); return; }
+    if (!user) { gate(mssGuestEmpty('messages')); return; }
     me = user.id;
     let st;
     try { st = await MSSKeys.status(); }

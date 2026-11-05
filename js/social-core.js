@@ -136,12 +136,7 @@ function _frEmptyHTML(ic, title, text) {
   return mssEmpty({ art: ART[ic] || 'friends', title, text });
 }
 function _frGuestHTML() {
-  return `<div class="guest-page-state" style="padding:3rem 1rem;">
-    <div class="guest-page-icon">${icon('users', 32)}</div>
-    <h2 class="guest-page-title" style="font-size:19px;">See what your friends are watching</h2>
-    <p class="guest-page-sub">Sign in to follow people, see what your friends watch, and compare your taste.</p>
-    <div class="guest-cta"><a href="login.html" class="guest-btn-primary">Sign In</a><a href="login.html#signup" class="guest-btn-secondary">Create Account</a></div>
-  </div>`;
+  return mssGuestEmpty(location.pathname.split('/').pop().replace('.html', '') || 'friends');
 }
 
 // Friend card cover: their Top Favorites (profile dashboard), then — if they

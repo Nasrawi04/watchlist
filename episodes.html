@@ -1044,6 +1044,7 @@ function egCSV() {
 document.addEventListener('DOMContentLoaded', () => {
   initPage(async user => {
     _egUser = user;
+    if (!user) { document.getElementById('egPage').innerHTML = mssGuestEmpty('episodes'); return; }
     try { if (_egShowId) await renderShow(); else await renderHome(); }
     catch (err) {
       console.error('Episodes:', err);

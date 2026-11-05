@@ -73,8 +73,7 @@ const MSSPolls = (() => {
   async function mount(target, u, o = {}) {
     el = target; user = u;
     if (!user) {
-      el.innerHTML = head(false) + `<div class="mss-es">${mssArt('poll')}<div class="mss-es-title">Polls with your followers</div>
-        <div class="mss-es-text">Sign in to ask your followers — or everyone — what to watch next.</div></div>`;
+      el.innerHTML = mssGuestEmpty('polls');
       return;
     }
     if (o.poll) { focusId = o.poll; open[o.poll] = true; }

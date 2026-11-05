@@ -385,17 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const q = new URLSearchParams(location.search);
     // Guests can look through Community lists; their own lists need an account
     if (!user && _listsMode !== 'community') {
-      document.querySelector('.page-wrap').innerHTML = `
-        <div class="guest-page-state fade-up">
-          <div class="guest-page-icon">${icon('layers', 36)}</div>
-          <h2 class="guest-page-title">Your Lists</h2>
-          <p class="guest-page-sub">Sign in to create and manage your custom lists.</p>
-          <div class="guest-cta">
-            <a href="login.html" class="guest-btn-primary">Sign In</a>
-            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
-          </div>
-          <a class="guest-browse" href="lists.html?view=community">Browse Community lists →</a>
-        </div>`;
+      document.querySelector('.page-wrap').innerHTML = mssGuestEmpty('lists');
       return;
     }
     if (!user) { setListsMode('community'); return; }

@@ -139,7 +139,13 @@ async function npClearAll() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initPage(async () => {
+  initPage(async user => {
+    if (!user) {
+      document.querySelector('.np-page-actions')?.remove();
+      document.getElementById('npTabs')?.remove();
+      document.getElementById('npList').innerHTML = mssGuestEmpty('notifications');
+      return;
+    }
     document.getElementById('npSetBtn').innerHTML = `${icon('settings', 15)}<span>Settings</span>`;
     await _notifLoad(200);
     _npLoaded = true;

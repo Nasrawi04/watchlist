@@ -42,7 +42,7 @@ const MSSNight = (() => {
     if (o.night) focus = o.night;
     const head = user ? `<div class="soc-head"><button type="button" class="btn-add-entry" onclick="MSSNight.create()">${icon('plus', 15)} New Movie Night</button></div>` : '';
     if (!user) {
-      el.innerHTML = head + `<div class="mss-es">${mssArt('popcorn')}<div class="mss-es-title">Movie nights with friends</div><div class="mss-es-text">Sign in to pick something to watch together.</div></div>`;
+      el.innerHTML = mssGuestEmpty('movie-night');
       return;
     }
     el.innerHTML = head + `<div id="mnList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;

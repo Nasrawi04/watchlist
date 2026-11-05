@@ -219,18 +219,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initPage(async (user) => {
     _catUser = user;
     if (!user) {
-      const cat = CAT_META[window.PAGE_CAT];
-      document.querySelector('.btn-add-entry')?.style && (document.querySelector('.btn-add-entry').style.display = 'none');
-      document.getElementById('sectionsWrap').innerHTML = `
-        <div class="guest-page-state fade-up">
-          <div class="guest-page-icon">${icon(cat?.icon || 'tv', 36)}</div>
-          <h2 class="guest-page-title">Your ${cat?.label || 'Library'}</h2>
-          <p class="guest-page-sub">Sign in to start tracking what you watch.</p>
-          <div class="guest-cta">
-            <a href="login.html" class="guest-btn-primary">Sign In</a>
-            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
-          </div>
-        </div>`;
+      document.querySelector('.btn-add-entry')?.remove();
+      document.getElementById('catSubtitle').textContent = '';
+      document.getElementById('pageStats')?.remove();
+      document.getElementById('catTypeFilterWrap')?.remove();
+      document.getElementById('sectionsWrap').innerHTML = mssGuestEmpty({ movies: 'movies', tv: 'tv', anime: 'anime', cartoons: 'cartoons' }[window.PAGE_CAT]);
       return;
     }
     _catSearchBox();

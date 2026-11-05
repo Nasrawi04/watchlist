@@ -178,9 +178,7 @@ function exDraw() {
 document.addEventListener('DOMContentLoaded', () => {
   initPage(async user => {
     if (!user) {
-      document.getElementById('exPage').innerHTML = `<div class="guest-page-state fade-up"><div class="guest-page-icon">${icon('download', 36)}</div>
-        <h2 class="guest-page-title">Export</h2><p class="guest-page-sub">Sign in to export your library as a PDF, an image, a spreadsheet or a backup.</p>
-        <div class="guest-cta"><a href="login.html" class="guest-btn-primary">Sign In</a><a href="login.html#signup" class="guest-btn-secondary">Create Account</a></div></div>`;
+      document.getElementById('exPage').innerHTML = mssGuestEmpty('export');
       return;
     }
     _exReady = getEntries(user.id).then(r => (_exAll = r || []), () => (_exAll = []));

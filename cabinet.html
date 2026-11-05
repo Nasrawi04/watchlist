@@ -288,6 +288,7 @@ function cabBadge(id) {
 document.addEventListener('DOMContentLoaded', () => {
   initPage(async user => {
     CAB.user = user;
+    if (!user) { document.getElementById('cabPage').innerHTML = mssGuestEmpty('cabinet'); return; }
     try { await cabLoad(); }
     catch (err) {
       console.error('Cabinet:', err);

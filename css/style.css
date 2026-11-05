@@ -790,8 +790,6 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .guest-btn-primary { background:var(--olive); color:#fff; border:none; border-radius:var(--radius-xs); padding:11px 28px; font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; transition:background var(--trans) var(--ease); }
 .guest-btn-primary:hover { background:var(--olive-2); }
 .guest-btn-secondary { background:transparent; color:var(--text-2); border:1px solid var(--border); border-radius:var(--radius-xs); padding:11px 28px; font-size:14px; cursor:pointer; text-decoration:none; transition:border-color var(--trans) var(--ease),color var(--trans) var(--ease); }
-.guest-browse { display:inline-block; margin-top:1.5rem; font-size:13.5px; font-weight:600; color:var(--olive-light); text-decoration:none; }
-.guest-browse:hover { text-decoration:underline; text-underline-offset:3px; }
 .guest-btn-secondary:hover { border-color:var(--border-olive); color:var(--olive-light); }
 .sort-bar {
   display:flex; gap:6px; flex-wrap:wrap;
@@ -808,10 +806,6 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 
 #catTypeFilterWrap .sort-bar::before { content:none; }
 
-.guest-page-state { text-align:center; padding:5rem 2rem; }
-.guest-page-icon { display:flex; justify-content:center; color:var(--olive-light); margin-bottom:1.25rem; opacity:.5; }
-.guest-page-title { font-family:var(--serif); font-size:28px; font-weight:500; margin-bottom:10px; }
-.guest-page-sub { font-size:14px; color:var(--text-3); max-width:380px; margin:0 auto; }
 
 /* Category grid */
 
@@ -7646,6 +7640,16 @@ body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-ins
 .mss-es-btn.primary:hover { background:var(--olive-2); }
 .mss-es-btn svg { width:15px; height:15px; flex-shrink:0; }
 .mss-es.compact { padding:1.4rem 1rem 1.6rem; }
+.mss-es-guest { max-width:520px; padding-top:2.8rem; }
+.mss-es-guest .mss-es-title { font-size:26px; }
+.mss-es-guest .mss-es-text { max-width:44ch; }
+.mss-es-perks { display:grid; gap:9px; width:100%; max-width:400px; margin:18px 0 0; padding:14px 16px; list-style:none; text-align:left; font-size:13.5px; line-height:1.4; color:var(--text-2); border:1px solid var(--border); border-radius:14px; }
+.mss-es-perks li { display:flex; gap:9px; align-items:flex-start; }
+.mss-es-perks svg { flex-shrink:0; width:15px; height:15px; margin-top:2px; color:var(--olive-light); }
+.mss-es-guest .mss-es-acts { width:100%; max-width:400px; }
+.mss-es-guest .mss-es-btn { flex:1 1 140px; justify-content:center; min-height:46px; }
+.mss-es-link { margin-top:14px; padding:6px; font-size:13.5px; font-weight:600; color:var(--olive-light); text-decoration:none; }
+.mss-es-link:hover { text-decoration:underline; text-underline-offset:3px; }
 .mss-es.compact .mss-es-art { width:136px; height:102px; margin-bottom:10px; }
 .mss-es.compact .mss-es-title { font-size:17.5px; }
 .mss-es.compact .mss-es-text { font-size:13px; }

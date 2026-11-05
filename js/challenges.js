@@ -50,7 +50,7 @@ const MSSChallenges = (() => {
     if (o.ch) focus = o.ch;
     const head = user ? `<div class="soc-head"><span id="chHeadBtn">${newBtn()}</span></div>` : '';
     if (!user) {
-      el.innerHTML = head + `<div class="mss-es">${mssArt('watched')}<div class="mss-es-title">Challenges with friends</div><div class="mss-es-text">Sign in to race your friends to a watching goal.</div></div>`;
+      el.innerHTML = mssGuestEmpty('challenges');
       return;
     }
     el.innerHTML = head + `<div id="chList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;

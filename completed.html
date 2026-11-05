@@ -387,16 +387,7 @@ window.addEventListener('pageshow', (event) => {
 document.addEventListener('DOMContentLoaded', () => {
   initPage(async (user) => {
     if (!user) {
-      document.querySelector('.page-wrap').innerHTML = `
-        <div class="guest-page-state fade-up">
-          <div class="guest-page-icon">${icon('check', 36)}</div>
-          <h2 class="guest-page-title">Your Watched Titles</h2>
-          <p class="guest-page-sub">Sign in to see your ranked and completed collection.</p>
-          <div class="guest-cta">
-            <a href="login.html" class="guest-btn-primary">Sign In</a>
-            <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
-          </div>
-        </div>`;
+      document.querySelector('.page-wrap').innerHTML = mssGuestEmpty('completed');
       return;
     }
     _compUser = user;
@@ -538,6 +529,7 @@ mssSkeleton.define('completed', () => {
     total_seasons: 2, total_eps: 16, completed_date: '2026-01-01', ratings: { story: 8 }, final_score: 8 })));
 });
 document.addEventListener('DOMContentLoaded', () => {
+  if (!document.getElementById('compSearch')) return;     // a guest: the page is already their sign-up screen
   mssSkeleton.stats(document.getElementById('compStats'), mssSkeleton.shape('comp')?.stats || ['Watched', 'To Be Continued', 'Avg Score', 'Rated', 'Top Category', 'Episodes']);
   document.getElementById('compSearch').innerHTML = SF.searchHTML('comp', 'Search your watched titles…');
   _compSfBar();

@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (_rtOwner && user && _rtOwner === user.id) _rtOwner = null;          // your own id → your page
     var wrap = document.querySelector('.page-wrap');
     if (!user && !_rtOwner) {
-      wrap.innerHTML = '<div class="guest-page-state fade-up"><div class="guest-page-icon">' + icon('ratingStar', 36) + '</div><h2 class="guest-page-title">Your ratings</h2><p class="guest-page-sub">Sign in to see your ratings.</p><div class="guest-cta"><a href="login.html" class="guest-btn-primary">Sign In</a><a href="login.html#signup" class="guest-btn-secondary">Create Account</a></div></div>';
+      wrap.innerHTML = mssGuestEmpty('ratings');
       return;
     }
     if (_rtOwner) {

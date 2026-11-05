@@ -2676,7 +2676,7 @@ function mssGuestGate(what) {
   return true;
 }
 /* ── Empty states: one design for every "nothing here yet" (see the "Empty states" styles) ──
-   mssEmpty({ art, title, text, actions:[{ label, icon, href | onclick, primary }], compact, starter })
+   mssEmpty({ art, title, text, perks:[…], actions:[{ label, icon, href | onclick, primary }], link:{ label, href }, compact, starter })
    art = a little line illustration in the theme's colours (MSS_ART); starter = 'movies' | 'tv' | 'anime' |
    'cartoons' | 'all' adds a row of popular titles to add in one tap (only where an empty page would leave
    you stuck — an empty Watchlist). mssArt(name) is just the picture, for older layouts (.fr-empty etc.). */
@@ -2790,9 +2790,70 @@ function mssEmpty(o = {}) {
     ${mssArt(o.art)}
     ${o.title ? `<div class="mss-es-title">${o.titleHTML || escHTML(o.title)}</div>` : ''}
     ${o.text || o.textHTML ? `<div class="mss-es-text">${o.textHTML || escHTML(o.text)}</div>` : ''}
+    ${o.perks ? `<ul class="mss-es-perks">${o.perks.map(p => `<li>${icon('check', 15)}<span>${escHTML(p)}</span></li>`).join('')}</ul>` : ''}
     ${acts.length ? `<div class="mss-es-acts">${acts.map(act).join('')}</div>` : ''}
+    ${o.link ? `<a class="mss-es-link" href="${escHTML(o.link.href)}">${escHTML(o.link.label)}</a>` : ''}
     ${o.starter ? MSSStarter.slot(o.starter) : ''}
   </div>`;
+}
+
+/* What a signed-out visitor sees instead of a page that needs an account: what the page is for, with a
+   little humour, so someone new can decide it's worth joining. One entry per page, one design. */
+const MSS_GUEST = {
+  movies: { art: 'popcorn', title: '“I’ll remember that movie.” You won’t.', text: 'Save everything you mean to watch, and answer “what should we watch tonight?” in under an hour.', starter: 'movies',
+    perks: ['A watchlist that never forgets a recommendation', 'Rate what you finish and rank your favourites', 'Pick for Me decides when nobody else can'] },
+  tv: { art: 'watching', title: 'Wait, which episode were we on?', text: 'Track every show down to the episode, so that question never starts another argument on the sofa.', starter: 'tv',
+    perks: ['Tick off episodes as you go', 'Rate episodes and see each season’s best and worst', 'Get a heads-up on new releases'] },
+  anime: { art: 'episodes', title: '1,000 episodes won’t track themselves', text: 'Long runners, seasonal hits and that one series you swear you’ll finish. All in one place.', starter: 'anime',
+    perks: ['Anime movies and shows, side by side', 'Pick up exactly where you left off', 'Rank your favourites, then defend them'] },
+  cartoons: { art: 'watchlist', title: 'Cartoons are serious business', text: 'No judgment here. Saturday mornings deserve a proper record too.', starter: 'cartoons',
+    perks: ['Cartoon movies and shows, side by side', 'Rewatches count. Obviously.', 'Rate them like the classics they are'] },
+  library: { art: 'watchlist', title: 'Your whole watching life, on one page', text: 'Movies, shows, anime and cartoons in one folio. Way better than that note on your phone from 2019.', starter: 'all',
+    perks: ['See what you’re watching, finished, paused or dropped', 'Search and filter everything you’ve ever added', 'Your stats build up as you go'] },
+  completed: { art: 'watched', title: 'Finished it? It deserves a trophy shelf', text: 'Everything you’ve watched, rated and ranked, instead of forgotten by next Tuesday.',
+    perks: ['One shelf for everything you’ve finished', 'Rank your best from first to last', 'Add the date you watched it'] },
+  ratings: { art: 'medal', title: 'You already have opinions. Give them numbers.', text: 'Rate everything you finish and see exactly how harsh you really are.',
+    perks: ['Your ratings, sorted and filtered your way', 'See TMDB’s score beside yours', 'Discover how often you hand out a Masterpiece'] },
+  lists: { art: 'lists', title: 'Top 10s now. Arguments later.', text: 'Rank your comfort rewatches, guilty pleasures and all-time greats, then watch your friends disagree.',
+    link: { label: 'Browse Community lists →', href: 'lists.html?view=community' },
+    perks: ['Mix movies, shows, anime and cartoons', 'Build lists together with friends', 'Like and save lists from anyone'] },
+  notes: { art: 'notes', title: 'Hot takes need somewhere to live', text: 'Write what you really thought of that finale. Keep it to yourself, or start something.',
+    link: { label: 'Browse Community notes →', href: 'notes.html?view=community' },
+    perks: ['Notes on anything in your library', 'Keep them private or share them', 'Read what everyone else thought'] },
+  episodes: { art: 'episodes', title: 'Was that finale really that bad?', text: 'Rate every episode and see the whole show on one chart. Now you’ll have proof.',
+    perks: ['Score episodes one by one, or all in a run', 'Spot a season’s best and worst at a glance', 'Compare your scores with TMDB’s'] },
+  profile: { art: 'person', title: 'This could be your folio', text: 'Your stats, favourites and top picks on one page. Like a CV, but for everything you watched instead of working.',
+    perks: ['Show off your favourites', 'Watch your stats grow', 'Share it with friends'] },
+  cabinet: { art: 'medal', title: 'Finally, medals for watching TV', text: 'Hit milestones, win challenges and fill your cabinet. All that sofa time was training.',
+    perks: ['Earn medals as you watch', 'Win gold in challenges with friends', 'Display them on your profile'] },
+  export: { art: 'inbox', title: 'Your taste, ready to take anywhere', text: 'All that watching deserves more than a screenshot.',
+    perks: ['Export as a PDF, image or spreadsheet', 'Keep a backup of your library', 'It’s your data, take it with you'] },
+  friends: { art: 'friends', title: 'Watching alone is overrated', text: 'Follow your friends and finally see who’s been recommending you rubbish.',
+    perks: ['See what your friends are watching', 'Compare your taste side by side', 'Send each other recommendations'] },
+  activity: { art: 'friends', title: 'See what your friends are really watching', text: 'Their ratings, their finishes and their questionable choices, all in one feed.',
+    perks: ['A live feed of what friends watch and rate', 'React and join the conversation', 'Find your next show from people you trust'] },
+  compare: { art: 'compare', title: 'Find out who has the bad taste', text: 'Line your taste up against a friend’s, side by side. No more guessing who’s wrong.',
+    perks: ['See what you both loved', 'Find where you completely disagree', 'Settle it with actual numbers'] },
+  blend: { art: 'blend', title: 'Pick something you’ll both actually like', text: 'Blend mixes two folios into picks for you both. Fewer “anything but that” moments.',
+    perks: ['Picks based on both your tastes', 'Works with any friend', 'Saves about 45 minutes of scrolling'] },
+  'movie-night': { art: 'popcorn', title: 'Stop scrolling, start watching', text: 'Invite friends, suggest titles and settle on one before the snacks run out.',
+    perks: ['Pick a date and invite your friends', 'Everyone suggests and votes', 'No more “I don’t mind, you choose”'] },
+  challenges: { art: 'podium', title: 'Competitive watching is a sport now', text: 'Race your friends to a watching goal. 1st gets gold, 2nd gets silver, and everyone else gets to try again.',
+    perks: ['Set a goal and a finish line', 'Follow the race as it happens', 'Win medals for your cabinet'] },
+  polls: { art: 'poll', title: 'Let democracy pick tonight’s movie', text: 'Ask your followers, or everyone, what to watch next. Then blame them if it’s bad.',
+    perks: ['Ask your followers or the whole site', 'Vote on what others should watch', 'Never be responsible for a bad pick again'] },
+  'episode-chat': { art: 'chat', title: 'Talk about it, spoiler-free', text: 'A chat only unlocks once you’ve reached that episode, so the friend three seasons ahead stays harmless.',
+    perks: ['One chat for every episode', 'Unlocks with your progress, no rating needed', 'Finally, somewhere to say “WHAT was that ending?”'] },
+  messages: { art: 'inbox', title: 'Your friends need to hear about this show', text: 'Private chats about what you’re watching, with every recommendation one tap from your watchlist.',
+    perks: ['Chat with friends one to one', 'Send titles and lists right in the chat', 'Open a recommendation in one tap'] },
+  notifications: { art: 'bell', title: 'Nothing to report, because you’re not here yet', text: 'Join, and this fills up with new releases, likes, replies and friends who want your opinion.',
+    perks: ['New releases from your watchlist', 'Likes and replies on your notes', 'Friends, followers and list invites'] },
+};
+function mssGuestEmpty(page) {
+  return mssEmpty({ ...MSS_GUEST[page], cls: 'mss-es-guest fade-up', actions: [
+    { label: 'Get Started', href: 'login.html#signup', primary: true },
+    { label: 'Log In', href: 'login.html' },
+  ] });
 }
 
 /* Starter titles under an empty Watchlist: what's popular right now in this category (Movies → popular

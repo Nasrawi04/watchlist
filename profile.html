@@ -405,7 +405,7 @@ window.addEventListener('pageshow', (event) => {
 document.addEventListener('DOMContentLoaded', function() {
   initPage(async function(user, profile) {
     if (!user) {
-      document.querySelector('.page-wrap').innerHTML = '<div class="guest-page-state fade-up"><div class="guest-page-icon">'+icon('user',36)+'</div><h2 class="guest-page-title">Profile</h2><p class="guest-page-sub">Sign in to view your profile, track your favorites, and more.</p><div class="guest-cta"><a href="login.html" class="guest-btn-primary">Sign In</a><a href="login.html#signup" class="guest-btn-secondary">Create Account</a></div></div>';
+      document.querySelector('.page-wrap').innerHTML = mssGuestEmpty('profile');
       return;
     }
     _pUser = user;

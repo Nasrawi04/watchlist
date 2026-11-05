@@ -153,7 +153,7 @@ const MSSEpChat = (() => {
     const head = `<div class="soc-tip"><span class="soc-tip-ic">${icon('lock', 16)}</span>
         <div><b>Spoiler-safe chats</b><span>Talk about an episode with friends who’ve seen it. A chat unlocks once your progress reaches that episode — no rating needed.</span></div></div>`;
     if (!user) {
-      el.innerHTML = head + `<div class="mss-es">${mssArt('chat')}<div class="mss-es-title">Episode chat with friends</div><div class="mss-es-text">Sign in to talk about episodes with your friends.</div></div>`;
+      el.innerHTML = mssGuestEmpty('episode-chat');
       return;
     }
     el.innerHTML = head + `<div id="epcList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
