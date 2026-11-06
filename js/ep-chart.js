@@ -48,7 +48,7 @@ const MSSEpChart = (() => {
     X.readOnly = userId !== meId;
     if (X.entry) {
       const { data } = await sb.from('episode_ratings').select('*').eq('entry_id', X.entry.id);
-      (data || []).forEach(r => { X.mine[key(r.season_number, r.episode_number)] = r; });
+      (await mssWithEpNotes(data || [])).forEach(r => { X.mine[key(r.season_number, r.episode_number)] = r; });   // Friends / Only me notes too (108)
     }
     try {
       const { data: comm } = await sb.rpc('get_episode_community', { p_tmdb_id: tmdbId });

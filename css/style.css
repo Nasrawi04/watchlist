@@ -1689,7 +1689,7 @@ body.notif-sheet-open { overflow:hidden; }
 .spoiler-reveal:hover { transform:scale(1.03); border-color:var(--olive-light); }
 .spoiler-ic { width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--olive); color:#fff; }
 .spoiler-reveal b { display:block; font-size:13px; font-weight:700; line-height:1.2; }
-.spoiler-reveal small { display:block; font-size:11px; color:var(--text-3); line-height:1.2; }
+.spoiler-reveal small { display:block; font-size:11px; color:var(--text-2); line-height:1.2; }
 .spoiler-compact .spoiler-reveal { padding-block:6px; padding-inline:6px 12px; gap:8px; }
 .spoiler-compact .spoiler-ic { width:24px; height:24px; }
 .spoiler-compact .spoiler-ic svg { width:12px; height:12px; }
@@ -1861,7 +1861,7 @@ a.mss-cast-item.is-link:focus-visible { outline:2px solid var(--olive-light); ou
 }
 .snote-react-btn {
   display:inline-flex; align-items:center; gap:5px; background:none; border:none; cursor:pointer;
-  color:var(--text-3); font-size:12.5px; font-weight:600; transition:color .15s;
+  color:var(--text-2); font-size:12.5px; font-weight:600; transition:color .15s;
 }
 .snote-react-btn:hover { color:var(--text); }
 .snote-react-btn.active-like { color:var(--olive-light); }
@@ -5254,7 +5254,7 @@ body { font-size:15px; }
 .ep-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
 .ep-note { margin-top:10px; }
 .ep-note textarea { width:100%; box-sizing:border-box; resize:vertical; min-height:72px; }
-.ep-hint { flex-basis:100%; font-size:11px; color:var(--text-3); margin-top:4px; text-align:end; }
+.ep-hint { flex-basis:100%; font-size:11px; color:var(--text-2); margin-top:4px; text-align:end; }
 .ep-nav { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 22px 0; }
 .ep-nav-btn { background:none; border:none; cursor:pointer; color:var(--text-2); font-family:'Manrope',var(--sans); font-size:13px; font-weight:600; padding:6px 4px; }
 .ep-nav-btn:hover { color:var(--olive-light); }
@@ -6987,13 +6987,13 @@ button.acc-sw-row:hover { border-color:var(--olive-light); background:var(--bg-3
 .mss-vis-head { margin-bottom:8px; }
 .mss-vis-l { font:600 11px/1 'Oswald',var(--sans); letter-spacing:1.4px; text-transform:uppercase; color:var(--olive-light); }
 .mss-vis-seg { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); padding:3px; gap:3px; border-radius:var(--radius-sm); background:var(--bg-2); border:0.5px solid var(--border-2); }
-.mss-vis-opt { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; min-width:0; padding:6px 8px; border:none; border-radius:calc(var(--radius-sm) - 2px); background:none; color:var(--text-3); font:600 13px 'Manrope',var(--sans); cursor:pointer; transition:background .15s, color .15s; }
+.mss-vis-opt { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; min-width:0; padding:6px 8px; border:none; border-radius:calc(var(--radius-sm) - 2px); background:none; color:var(--text-2); font:600 13px 'Manrope',var(--sans); cursor:pointer; transition:background .15s, color .15s; }
 .mss-vis-opt span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mss-vis-opt svg { flex:none; }
 .mss-vis-opt:hover:not(.on) { color:var(--text); background:var(--olive-faint); }
 .mss-vis-opt.on { background:var(--olive); color:#fff; }
 .mss-vis-opt:focus-visible { outline:2px solid var(--olive-light); outline-offset:1px; }
-.mss-vis-hint { margin:8px 2px 0; font-size:12px; line-height:1.45; color:var(--text-3); }
+.mss-vis-hint { margin:8px 2px 0; font-size:12px; line-height:1.45; color:var(--text-2); }
 .mss-vis-links { display:flex; gap:6px; margin-top:10px; }
 .mss-vis-links[hidden] { display:none; }
 .mss-vis-link { display:inline-flex; align-items:center; justify-content:center; gap:6px; flex:1; min-height:34px; padding:6px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-olive); background:var(--olive-faint); color:var(--olive-light); font:600 12.5px 'Manrope',var(--sans); cursor:pointer; transition:border-color .15s; }
@@ -8186,3 +8186,32 @@ button.eg-hero-score:hover { filter:brightness(1.08); }
   .sp-hero .eg-hero-inner { padding-top:1.2rem; }
   .eg-hero-poster.sp-wide { width:min(100%, 360px); }
 }
+/* Notes on an episode, reviews of a season (show-pages.js — 108): the note cards without a poster */
+.sp-notes { margin-top:.5rem; }
+.sp-notes-count { color:var(--text-2); }
+.sp-notes-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin:-.4rem 0 1rem; }
+.sp-notes-head .pn-toggle { margin:0; }
+.sp-note-write { text-decoration:none; }
+.sp-note { cursor:default; }
+.sp-note:hover { transform:none; }
+.sp-note.is-mine { border-color:var(--border-olive); }
+.nc-author { text-decoration:none; }
+a.nc-author:hover span:last-child { color:var(--text); text-decoration:underline; text-underline-offset:2px; }
+.sp-note-score { font-family:var(--bebas); font-size:16px; line-height:1; padding:4px 8px 2px; border-radius:6px; flex-shrink:0; }
+.sp-note-text { font-size:14px; line-height:1.65; color:var(--text-2); overflow-wrap:anywhere; margin-bottom:6px; }
+.sp-note-text p { margin:0 0 .6em; }
+.sp-note-text.is-long:not(.is-open) { display:-webkit-box; -webkit-line-clamp:5; line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
+.sp-note-more { align-self:flex-start; background:none; border:0; padding:2px 0; margin-bottom:8px; font:600 12.5px 'Manrope',var(--sans); color:var(--olive-light); cursor:pointer; }
+.sp-note-more:hover { text-decoration:underline; text-underline-offset:2px; }
+.sp-note .spoiler { margin-bottom:8px; }
+/* Replies popup */
+.sp-rp .confirm-card { max-width:480px; }
+.sp-rp-list { display:flex; flex-direction:column; gap:10px; max-height:min(50vh, 420px); overflow-y:auto; overscroll-behavior:contain; }
+.sp-rp-item { padding:10px 12px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-sm); }
+.sp-rp-who { display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:12.5px; }
+.sp-rp-who b { color:var(--text); font-weight:600; }
+.sp-rp-who span { color:var(--text-2); font-size:11.5px; }
+.sp-rp-body { margin:4px 0 6px; font-size:13.5px; line-height:1.55; color:var(--text-2); white-space:pre-line; overflow-wrap:anywhere; }
+.sp-rp-foot { display:flex; gap:14px; }
+.sp-rp-text { width:100%; resize:vertical; min-height:64px; }
+.sp-rp-join { display:block; text-align:center; text-decoration:none; }

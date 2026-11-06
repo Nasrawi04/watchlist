@@ -1939,7 +1939,12 @@ const MSS_TITLE_VIS = [
   ['anyone', 'globe', 'Anyone', 'Anyone can see you have it — your profile, friends’ feeds, the title’s page.'],
   ['friends', 'users', 'Friends', 'Only your friends see it. Nobody else knows you have it.'],
   ['private', 'lock', 'Only me', 'Nobody sees it. Your rating still counts in the community score — anonymously.']];
-const _MSS_VIS_SETS = { note: MSS_NOTE_VIS, title: MSS_TITLE_VIS };
+// Who can read an episode or season note (108)
+const MSS_EP_NOTE_VIS = [
+  ['anyone', 'globe', 'Anyone', 'Anyone who can see this show in your library — on its Episode and Season pages.'],
+  ['friends', 'users', 'Friends', 'Only your friends can read it.'],
+  ['private', 'lock', 'Only me', 'Just you. It stays with your rating.']];
+const _MSS_VIS_SETS = { note: MSS_NOTE_VIS, title: MSS_TITLE_VIS, epnote: MSS_EP_NOTE_VIS };
 
 // A "who can see" control: a row of three buttons; the value lives in a hidden input #id
 // (read it with .value). kind 'note' (069) adds the private-link buttons; o.onPick names a
@@ -1960,6 +1965,7 @@ function _mssVisHTML(kind, id, value, o = {}) {
 }
 function mssNoteVisHTML(id, value, entryId) { return _mssVisHTML('note', id, value, { entryId: entryId || '' }); }
 function mssTitleVisHTML(id, value, onPick) { return _mssVisHTML('title', id, value, { label: 'Who can see this title', onPick }); }
+function mssEpNoteVisHTML(id, value, onPick) { return _mssVisHTML('epnote', id, value, { onPick }); }
 function mssVisSet(id, v, focus) {
   const box = document.getElementById(id + 'Box'), set = _MSS_VIS_SETS[box.dataset.kind];
   if (document.getElementById(id).value === v && !focus) return;

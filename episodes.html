@@ -449,9 +449,10 @@ async function loadMine() {
   const seq = ++_egMineSeq;
   if (!S.entry) { S.mine = {}; return; }
   const { data } = await sb.from('episode_ratings').select('*').eq('entry_id', S.entry.id);
+  const rows = await mssWithEpNotes(data || []);   // Friends / Only me notes too (108)
   if (seq !== _egMineSeq) return;
   const mine = {};
-  (data || []).forEach(r => { mine[key(r.season_number, r.episode_number)] = r; });
+  rows.forEach(r => { mine[key(r.season_number, r.episode_number)] = r; });
   S.mine = mine;
 }
 

@@ -3191,11 +3191,22 @@ function _notifShortText(n) {
 // Comments, replies and likes (066) — what happened, and where tapping it goes
 function _notifSocialText(n, who) {
   const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || (m.kind === 'list' ? 'a list' : 'a title'))}</b>`;
+  // episode and season notes (108): "your note on One Piece · S1 E3" / "your review of One Piece · Season 1"
+  if (m.kind === 'ep_note' || m.kind === 'ep_note_reply') {
+    const at = `${t} · ${+m.episode ? `S${escHTML(m.season)} E${escHTML(m.episode)}` : `Season ${escHTML(m.season)}`}`, w = +m.episode ? 'note on' : 'review of';
+    if (n.type === 'like') return m.kind === 'ep_note' ? `${who} liked your ${w} ${at}` : `${who} liked your reply about ${at}`;
+    return `${who} replied to your ${w} ${at}`;
+  }
   if (n.type === 'like') return m.kind === 'list' ? `${who} liked your list “${t}”` : m.kind === 'note_reply' ? `${who} liked your reply on a note about ${t}` : `${who} liked your note on ${t}`;
   return m.kind === 'reply' ? `${who} replied to your comment on ${t}` : m.kind === 'note_reply' ? `${who} replied to your note on ${t}` : `${who} commented on your ${t}`;
 }
 function _notifSocialHref(m) {
   if (m.kind === 'list') return m.list_id ? `list-view.html?list=${encodeURIComponent(m.list_id)}` : '';
+  if (m.kind === 'ep_note' || m.kind === 'ep_note_reply') {   // → the Episode / Season page, that note (or its replies)
+    if (!m.tmdb_id || !m.rating_id) return '';
+    const page = +m.episode ? `episode.html?show=${encodeURIComponent(m.tmdb_id)}&s=${encodeURIComponent(m.season)}&e=${encodeURIComponent(m.episode)}` : `season.html?show=${encodeURIComponent(m.tmdb_id)}&s=${encodeURIComponent(m.season)}`;
+    return `${page}&${m.kind === 'ep_note' ? 'note' : 'replies'}=${encodeURIComponent(m.rating_id)}`;
+  }
   if (m.kind === 'entry' || m.kind === 'reply') {   // comments on a library entry → the comments popup on its owner's page
     if (!m.entry_id) return '';
     return m.owner_id && m.owner_id !== _notifUser?.id ? `profile-view.html?id=${encodeURIComponent(m.owner_id)}&comments=${encodeURIComponent(m.entry_id)}`

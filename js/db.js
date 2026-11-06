@@ -18,6 +18,20 @@ async function mssWithPrivateNotes(rows) {
   return rows;
 }
 
+/* The same for episode and season notes (108): a Friends / Only me note's text lives in
+   episode_private_notes. Rows need user_id, entry_id, season_number, episode_number, note_visibility. */
+async function mssWithEpNotes(rows) {
+  const need = (rows || []).filter(r => r && r.note == null && r.note_visibility && r.note_visibility !== 'anyone');
+  if (!need.length) return rows || [];
+  try {
+    const { data } = await sb.from('episode_private_notes').select('user_id, entry_id, season_number, episode_number, note')
+      .in('entry_id', [...new Set(need.map(r => r.entry_id))].slice(0, 1000));
+    const k = r => `${r.user_id}:${r.entry_id}:${r.season_number}:${r.episode_number}`, by = Object.fromEntries((data || []).map(x => [k(x), x.note]));
+    need.forEach(r => { if (by[k(r)] != null) r.note = by[k(r)]; });
+  } catch (err) { console.warn('Episode notes:', err); }
+  return rows;
+}
+
 async function getEntries(userId, filters = {}) {
   let q = sb.from('entries').select('*').eq('user_id', userId);
   if (filters.cat)    q = q.eq('cat', filters.cat);

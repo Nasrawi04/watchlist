@@ -8,6 +8,8 @@
    episode ratings and Friends' chat. Some shows (One Piece) number episodes across the
    whole series on TMDB (season 2 starts at 62); that number shows as "#62".
 
+   Notes on an episode, reviews of a season: the note written with each rating (108) — Popular / Newest /
+   Oldest, likes, dislikes, replies; blurred until you've watched it, or when marked as a spoiler.
    Each shows its whole cast (the season's, or the episode's regulars then guest stars), 10 then See More.
    One hero for both (the Episodes page's: backdrop, poster dipping into the sheet below),
    your score and the MSF average, the existing rating popup (MSSEp.rate) and Friends' chat
@@ -21,7 +23,7 @@
    Requires config.js (icon, escHTML, safeURL, mssErrorPage, mssTmdbErrorKind, MSSAge,
    mssSeasonLabel), db.js, nav.js (tmdbFetch, tmdbTitleHTML, TMDB_IMG), episode-ratings.js (MSSEp),
    episode-chat.js (MSSEpChat), info-popup.js (MSSInfo.addToLibrary), discover-categories.js (_discFloorScore),
-   rating-curve.js (MSSCurve.open: the MSF score's breakdown).
+   rating-curve.js (MSSCurve.open: the MSF score's breakdown), note-popup.js (MSSNote.words).
    Styles: style.css "Show pages".
 ═══════════════════════════════════════════════════════════════ */
 const MSSShowPage = (() => {
@@ -212,8 +214,10 @@ const MSSShowPage = (() => {
     <div class="eg-sheet sp-sheet">
       ${sectionHTML('Overview', sn.overview ? `<p class="td-overview" translate="no">${esc(sn.overview)}</p>` : '')}
       ${sectionHTML('Episodes', eps.length ? `<div class="td-episode-row">${eps.map(ep => epCardHTML(ep, s)).join('')}</div>` : `<p class="sp-empty">TMDB has no episodes for this season yet.</p>`)}
+      ${notesHTML()}
       ${sectionHTML('Cast', castHTML(cast))}
     </div>`, `${label} · ${show.name}`);
+    loadNotes();
   }
 
   /* ── Episode page ── */
@@ -249,16 +253,223 @@ const MSSShowPage = (() => {
     })}
     <div class="eg-sheet sp-sheet">
       ${sectionHTML('Overview', `<p class="td-overview" translate="no">${esc(ep.overview) || mssT('No description available.')}</p>${credit('Directed by', directors)}${credit('Written by', writers)}`)}
+      ${notesHTML()}
       ${sectionHTML('Cast', castHTML(cast))}
       <div class="td-section-head"><div class="td-section-title">${esc(mssSeasonLabel(s, sn.name))}</div><a class="td-ep-graph-link" href="${seasonURL(show.id, s)}">Season page</a></div>
       <div class="td-episode-row" id="spSeasonRow">${eps.map(x => epCardHTML(x, s, x.n === e)).join('')}</div>
     </div>`, `S${s} E${e} · ${ep.name || ''} · ${show.name}`);
     document.querySelector('#spSeasonRow .picked')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    loadNotes();
+  }
+
+  /* ── Notes on an episode, or reviews of a season (108) ──
+     The note you write when rating it. Popular · Newest · Oldest; likes, dislikes and replies.
+     A note on something you haven't watched yet is blurred (tap to reveal), and so is one marked
+     as a spoiler — never your own. */
+  const NOTE_SORTS = [['popular', 'Popular'], ['newest', 'Newest'], ['oldest', 'Oldest']];
+  const what = () => P.e == null ? 'review' : 'note';
+  async function loadNotes() {
+    try {
+      const { data, error } = await sb.rpc('get_episode_notes', { p_tmdb_id: P.show.id, p_season: P.s, p_episode: P.e ?? 0, p_upto: P.e == null ? P.season.episodes.length || 1 : null });
+      if (error) throw error;
+      P.notes = data || [];
+    } catch (err) { console.error('Episode notes:', err); P.notes = null; }
+    paintNotes();
+    noteLink();
+  }
+  function sortedNotes() {
+    const t = n => new Date(n.updated_at || n.created_at).getTime(), pop = n => Number(n.like_count) - Number(n.dislike_count);
+    const by = { popular: (a, b) => pop(b) - pop(a) || t(b) - t(a), newest: (a, b) => t(b) - t(a), oldest: (a, b) => t(a) - t(b) }[P.noteSort || 'popular'];
+    return [...P.notes].sort(by);
+  }
+  function noteCardHTML(n) {
+    const mine = P.user && n.user_id === P.user.id, id = esc(n.rating_id), who = n.display_name || n.username || 'user';
+    const av = safeURL(n.avatar_url) ? `<img src="${safeURL(n.avatar_url)}" alt="" loading="lazy">` : esc((n.username || '?')[0].toUpperCase());
+    const long = MSSNote.words(MSSRich.plain(n.note)) > 70;
+    const text = `<div class="sp-note-text${long ? ' is-long' : ''}" id="spNoteText-${id}" translate="no">${MSSRich.html(n.note)}</div>`
+      + (long ? `<button type="button" class="sp-note-more" aria-expanded="false" aria-controls="spNoteText-${id}" onclick="MSSShowPage._more(this)">Read more</button>` : '');
+    const blur = !mine && (n.spoiler || !n.you_watched);
+    const btn = like => { const on = n.my_reaction === (like ? 'like' : 'dislike'), c = like ? n.like_count : n.dislike_count;
+      return `<button type="button" class="snote-react-btn ${on ? (like ? 'active-like' : 'active-dislike') : ''}" aria-pressed="${on}" aria-label="${like ? 'Like' : 'Dislike'}: ${Number(c) || 0}" onclick="MSSShowPage._react(${attrJSON(n.rating_id)}, ${like})">
+        ${icon(like ? (on ? 'thumbsUpFilled' : 'thumbsUp') : (on ? 'thumbsDownFilled' : 'thumbsDown'), 14)} <span>${Number(c) || 0}</span></button>`; };
+    const vis = mine && n.visibility !== 'anyone' ? `<span class="w-ep-badge">${icon(n.visibility === 'friends' ? 'users' : 'lock', 11)} ${n.visibility === 'friends' ? 'Friends' : 'Only me'}</span>` : '';
+    return `<article class="nc-card sp-note${mine ? ' is-mine' : ''}" id="spNote-${id}">
+      <div class="nc-main">
+        <div class="nc-top">
+          <a class="nc-author" href="${mine ? 'profile.html' : `profile-view.html?id=${encodeURIComponent(n.user_id)}`}"><span class="snote-avatar">${av}</span><span translate="no">${esc(mine ? 'You' : who)}</span></a>
+          <span class="sp-note-score ${band(Number(n.score))}" title="${mine ? 'Your' : 'Their'} rating">${Number(n.score).toFixed(1)}</span>
+        </div>
+        <div class="nc-tags"><span class="w-ep-badge">${esc(date(String(n.updated_at || n.created_at).slice(0, 10)))}</span>${vis}${n.spoiler ? mssSpoilerTag() : ''}</div>
+        ${blur ? mssSpoilerHTML(text, { compact: true, id: 'ep:' + n.rating_id }) : text}
+        <div class="nc-foot">
+          <div class="nc-reacts">${btn(true)}${btn(false)}
+            <button type="button" class="snote-react-btn" onclick="MSSShowPage._replies(${attrJSON(n.rating_id)})">${icon('reply', 14)} Replies${Number(n.reply_count) ? ` · ${Number(n.reply_count)}` : ''}</button>
+          </div>
+          ${mine ? `<button type="button" class="snote-react-btn" onclick="MSSShowPage._rate(${P.s}, ${P.e ?? 0}, true)">${icon('edit', 13)} Edit</button>` : ''}
+        </div>
+      </div>
+    </article>`;
+  }
+  function notesHTML() {
+    const title = P.e == null ? 'Reviews' : 'Notes';
+    return `<section class="sp-notes" id="spNotes" aria-labelledby="spNotesT">
+      <div class="td-section-title" id="spNotesT">${title}<span class="sp-notes-count" id="spNotesCount"></span></div>
+      <div class="sp-notes-head">
+        <div class="pn-toggle" role="group" aria-label="Sort ${title.toLowerCase()}">${NOTE_SORTS.map(([k, l]) =>
+          `<button type="button" class="pn-toggle-btn${(P.noteSort || 'popular') === k ? ' active' : ''}" aria-pressed="${(P.noteSort || 'popular') === k}" onclick="MSSShowPage._sort('${k}')">${l}</button>`).join('')}</div>
+        ${writeBtnHTML()}
+      </div>
+      <div id="spNotesList"><div class="td-season-loading">Loading ${title.toLowerCase()}…</div></div>
+    </section>`;
+  }
+  function writeBtnHTML() {
+    const mine = P.notes?.some(n => P.user && n.user_id === P.user.id), w = what();
+    if (!P.user) return `<a class="btn-add-entry sp-note-write" href="login.html">${icon('edit', 14)} Sign in to write a ${w}</a>`;
+    if (!P.entry) return `<button type="button" class="btn-add-entry sp-note-write" onclick="MSSShowPage._add()">${icon('plus', 14)} Add to library to write a ${w}</button>`;
+    return `<button type="button" class="btn-add-entry sp-note-write" onclick="MSSShowPage._rate(${P.s}, ${P.e ?? 0}, true)">${icon('edit', 14)} ${mine ? `Edit your ${w}` : `Write a ${w}`}</button>`;
+  }
+  function paintNotes() {
+    const list = document.getElementById('spNotesList'); if (!list) return;
+    const head = document.querySelector('#spNotes .sp-note-write'); if (head) head.outerHTML = writeBtnHTML();
+    document.querySelectorAll('#spNotes .pn-toggle-btn').forEach(b => { const on = b.getAttribute('onclick').includes(`'${P.noteSort || 'popular'}'`); b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
+    if (P.notes == null) { list.innerHTML = `<div class="td-notes-empty">Couldn’t load them right now.</div>`; return; }
+    document.getElementById('spNotesCount').textContent = P.notes.length ? ` · ${P.notes.length}` : '';
+    list.innerHTML = P.notes.length ? `<div class="nc-grid">${sortedNotes().map(noteCardHTML).join('')}</div>`
+      : mssEmpty({ compact: true, art: 'notes', title: P.e == null ? 'No reviews yet' : 'No notes yet', text: `Rate it and leave the first ${what()}.` });
+  }
+  function sortNotes(k) { P.noteSort = k; paintNotes(); }
+  function moreText(btn) {
+    const box = document.getElementById(btn.getAttribute('aria-controls')), open = btn.getAttribute('aria-expanded') !== 'true';
+    box.classList.toggle('is-open', open); btn.setAttribute('aria-expanded', String(open)); btn.textContent = open ? 'Show less' : 'Read more';
+  }
+  // Like / dislike: tap again to take it back
+  async function react(id, like) {
+    if (!P.user) { mssJoin('react to notes'); return; }
+    const n = P.notes.find(x => x.rating_id === id); if (!n) return;
+    const want = like ? 'like' : 'dislike', had = n.my_reaction;
+    try {
+      const q = sb.from('ep_note_reactions');
+      const { error } = had === want ? await q.delete().eq('rating_id', id).eq('user_id', P.user.id)
+        : await q.upsert({ rating_id: id, user_id: P.user.id, is_like: like }, { onConflict: 'rating_id,user_id' });
+      if (error) throw error;
+      if (had) n[had + '_count'] = Number(n[had + '_count']) - 1;
+      n.my_reaction = had === want ? null : want;
+      if (n.my_reaction) n[want + '_count'] = Number(n[want + '_count']) + 1;
+      paintNotes();
+    } catch (err) { console.error('Note reaction:', err); showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save that — try again.', 'err'); }
+  }
+
+  /* ── Replies: a popup with the note's replies (likes / dislikes on each, remove your own) and a reply box ── */
+  let RP = null;   // { id, list }
+  function injectReplies() {
+    if (document.getElementById('spRpOverlay')) return;
+    const ov = document.createElement('div');
+    ov.className = 'confirm-overlay mss-msf sp-rp';
+    ov.id = 'spRpOverlay';
+    ov.innerHTML = `<div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="spRpT">
+      <button type="button" class="dp-close mss-join-x" aria-label="Close" onclick="MSSShowPage._closeReplies()">${icon('x', 18)}</button>
+      <div class="mss-msf-eyebrow" id="spRpWhat"></div>
+      <div class="confirm-title" id="spRpT">Replies</div>
+      <div class="sp-rp-list" id="spRpList"></div>
+      <div id="spRpBox"></div>
+    </div>`;
+    MSSDialog.bind(ov, closeReplies);
+    document.body.appendChild(ov);
+  }
+  function closeReplies() { MSSDialog.close(document.getElementById('spRpOverlay')); RP = null; }
+  async function openReplies(id) {
+    const n = P.notes.find(x => x.rating_id === id); if (!n) return;
+    injectReplies();
+    RP = { id, list: null };
+    document.getElementById('spRpWhat').textContent = `${n.user_id === P.user?.id ? 'Your' : '@' + (n.username || 'user') + '’s'} ${what()}`;
+    document.getElementById('spRpBox').innerHTML = P.user
+      ? `<label class="sr-only" for="spRpText">Write a reply</label><textarea class="field-input sp-rp-text" id="spRpText" rows="2" maxlength="500" placeholder="Write a reply…"></textarea>
+         <div class="confirm-actions"><button type="button" class="confirm-ok is-safe" id="spRpSend" onclick="MSSShowPage._send()">Reply</button></div>`
+      : `<a class="confirm-ok is-safe sp-rp-join" href="login.html">Sign in to reply</a>`;
+    MSSDialog.open(document.getElementById('spRpOverlay'), { focus: P.user ? '#spRpText' : '.mss-join-x' });
+    await loadReplies();
+  }
+  async function loadReplies() {
+    const box = document.getElementById('spRpList'), at = RP;
+    box.innerHTML = `<div class="td-season-loading">Loading replies…</div>`;
+    try {
+      const { data, error } = await sb.rpc('get_ep_note_replies', { p_rating: at.id });
+      if (error) throw error;
+      if (RP !== at) return;
+      at.list = data || [];
+    } catch (err) { console.error('Replies:', err); box.innerHTML = `<div class="td-notes-empty">Couldn’t load the replies.</div>`; return; }
+    paintReplies();
+  }
+  function paintReplies() {
+    const box = document.getElementById('spRpList');
+    if (!RP.list.length) { box.innerHTML = `<p class="sp-empty">No replies yet.</p>`; return; }
+    box.innerHTML = RP.list.map(r => {
+      const mine = P.user && r.user_id === P.user.id;
+      const btn = like => { const on = r.my_reaction === (like ? 'like' : 'dislike'), c = like ? r.like_count : r.dislike_count;
+        return `<button type="button" class="snote-react-btn ${on ? (like ? 'active-like' : 'active-dislike') : ''}" aria-pressed="${on}" aria-label="${like ? 'Like' : 'Dislike'}: ${Number(c) || 0}" onclick="MSSShowPage._reactReply(${attrJSON(r.id)}, ${like})">${icon(like ? (on ? 'thumbsUpFilled' : 'thumbsUp') : (on ? 'thumbsDownFilled' : 'thumbsDown'), 13)} <span>${Number(c) || 0}</span></button>`; };
+      return `<div class="sp-rp-item">
+        <div class="sp-rp-who"><b translate="no">${esc(mine ? 'You' : r.display_name || r.username || 'user')}</b><span>${esc(date(String(r.created_at).slice(0, 10)))}</span></div>
+        <p class="sp-rp-body" translate="no">${esc(r.content)}</p>
+        <div class="sp-rp-foot">${btn(true)}${btn(false)}${mine ? `<button type="button" class="snote-react-btn" onclick="MSSShowPage._delReply(${attrJSON(r.id)})">${icon('trash', 13)} Remove</button>` : ''}</div>
+      </div>`;
+    }).join('');
+  }
+  async function sendReply() {
+    const ta = document.getElementById('spRpText'), text = ta.value.trim(), btn = document.getElementById('spRpSend');
+    if (!text || !RP) return;
+    btn.disabled = true;
+    try {
+      const { error } = await sb.from('ep_note_replies').insert({ rating_id: RP.id, user_id: P.user.id, content: text });
+      if (error) throw error;
+      ta.value = '';
+      const n = P.notes.find(x => x.rating_id === RP.id); if (n) n.reply_count = Number(n.reply_count) + 1;
+      paintNotes();
+      await loadReplies();
+    } catch (err) {
+      console.error('Reply:', err);
+      showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : /SUSPENDED/.test(err?.message || '') ? 'Your account can’t post right now.' : 'Couldn’t send that reply — try again.', 'err');
+    } finally { btn.disabled = false; }
+  }
+  async function reactReply(id, like) {
+    if (!P.user) { mssJoin('react to replies'); return; }
+    const r = RP?.list?.find(x => x.id === id); if (!r) return;
+    const want = like ? 'like' : 'dislike', had = r.my_reaction;
+    try {
+      const q = sb.from('ep_note_reply_reactions');
+      const { error } = had === want ? await q.delete().eq('reply_id', id).eq('user_id', P.user.id)
+        : await q.upsert({ reply_id: id, user_id: P.user.id, is_like: like }, { onConflict: 'reply_id,user_id' });
+      if (error) throw error;
+      if (had) r[had + '_count'] = Number(r[had + '_count']) - 1;
+      r.my_reaction = had === want ? null : want;
+      if (r.my_reaction) r[want + '_count'] = Number(r[want + '_count']) + 1;
+      paintReplies();
+    } catch (err) { console.error('Reply reaction:', err); showToast('Couldn’t save that — try again.', 'err'); }
+  }
+  async function deleteReply(id) {
+    if (!(await showConfirm({ title: 'Remove your reply?', message: 'It’s gone for good.', confirmText: 'Remove', iconName: 'trash' }))) return;
+    const { error } = await sb.from('ep_note_replies').delete().eq('id', id).eq('user_id', P.user.id);
+    if (error) { showToast('Couldn’t remove it — try again.', 'err'); return; }
+    const n = P.notes.find(x => x.rating_id === RP?.id); if (n) n.reply_count = Math.max(0, Number(n.reply_count) - 1);
+    paintNotes();
+    await loadReplies();
+  }
+  // A notification links here with &note=<id> (a like → that note) or &replies=<id> (a reply → its replies). Once.
+  function noteLink() {
+    const url = new URL(location.href), note = url.searchParams.get('note'), replies = url.searchParams.get('replies');
+    if (!note && !replies) return;
+    url.searchParams.delete('note'); url.searchParams.delete('replies');
+    history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    const n = P.notes?.find(x => x.rating_id === (replies || note));
+    if (!n) { showToast(`That ${what()} isn’t here anymore.`, 'err'); return; }
+    const el = document.getElementById('spNote-' + n.rating_id);
+    el?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    el?.classList.add('mss-spotlight');
+    if (replies) openReplies(n.rating_id);
   }
 
   /* ── Actions ── */
-  function rate(s, n) {
-    MSSEp.rate(P.entry, s, n, { onSaved: async () => { Object.assign(P, await loadScores(P.show.id)); (P.e == null ? drawSeason : drawEpisode)(); } });
+  function rate(s, n, note) {
+    MSSEp.rate(P.entry, s, n, { note: !!note, onSaved: async () => { Object.assign(P, await loadScores(P.show.id)); await (P.e == null ? drawSeason : drawEpisode)(); } });
   }
   // The site's Add to Library popup; once it's added, the rating button works straight away
   function add() {
@@ -281,5 +492,6 @@ const MSSShowPage = (() => {
     season: () => start(drawSeason), episode: () => start(drawEpisode),
     seasonURL, episodeURL,
     _rate: rate, _add: add, _chat: chat, _moreCast: moreCast, _msf: msf,
+    _sort: sortNotes, _more: moreText, _react: react, _replies: openReplies, _closeReplies: closeReplies, _send: sendReply, _reactReply: reactReply, _delReply: deleteReply,
   };
 })();

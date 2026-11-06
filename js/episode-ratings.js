@@ -6,7 +6,7 @@
        setting (Settings → Episode Ratings: ask per show / always / never)
        and the per-show choice, asks the rewatch question once per rewatch,
        then opens the quick-rate popup.
-   • MSSEp.rate(entry, season, episode, { onSaved })
+   • MSSEp.rate(entry, season, episode, { onSaved, note })   note: open with the note box showing
        Opens the quick-rate popup directly (info popup "Rate Episodes",
        Episodes page), with ‹ › to move between episodes.
    • MSSEp.seasonEpisodes(tmdbId, season) — TMDB episode details (cached).
@@ -17,12 +17,16 @@
        A show's rating summary with "View & Rate Episodes".
    • MSSEp.band(score) → { key, name } — the shared colour bands.
 
-   Scores 1.0–10.0 (0.1 steps) · up to 3 tags · optional note ≤ 100 words.
+   Scores 1.0–10.0 (0.1 steps) · up to 3 tags · optional note (a season's: its review), up to 500 words,
+   with bold / italic / quotes, a spoiler mark and who can read it (Anyone · Friends · Only me — 108).
+   A Friends / Only me note's text lives in episode_private_notes: mssWithEpNotes(rows) (db.js) puts it back.
    Stored in episode_ratings (031). Per-show choice: entries.ratings._ep_rate
    ('on' | 'off'); rewatch choice: entries.ratings._ep_rewatch ('update' | 'keep').
    Requires config.js, db.js, nav.js (tmdbFetch).
 ═══════════════════════════════════════════════════════════════ */
 
+// Who can read the note in the rating popup (the shared picker calls a page-level function by name)
+function _mssEpNoteVis(v) { MSSEp._noteVis(v); }
 const MSSEp = (() => {
   // ink: dark text on that colour
   const BANDS = [
@@ -35,7 +39,7 @@ const MSSEp = (() => {
     { min: 0,   key: 'bad',         name: 'Bad' },
   ];
   const TAGS = ['Plot Twist', 'Emotional', 'Funny', 'Action-Packed', 'Cliffhanger', 'Scary', 'Iconic', 'Character Focus', 'Slow', 'Filler'];
-  const NOTE_WORDS = 100;
+  const NOTE_WORDS = NOTE_WORD_LIMIT;   // 500, like title notes (config.js)
   const band = v => BANDS.find(b => Number(v) >= b.min) || BANDS[BANDS.length - 1];
   const esc = s => escHTML(s == null ? '' : String(s));
   const isShow = e => e && !(e.cat === 'movies' || e.ratings?._media_type === 'movie');
@@ -92,7 +96,7 @@ const MSSEp = (() => {
 
   async function existing(e, s, n) {
     const { data } = await sb.from('episode_ratings').select('*').eq('entry_id', e.id).eq('season_number', s).eq('episode_number', n).maybeSingle();
-    return data || null;
+    return data ? (await mssWithEpNotes([data]))[0] : null;
   }
   async function saveEntryPref(e, patch) {
     const ratings = { ...(e.ratings || {}), ...patch };
@@ -205,10 +209,15 @@ const MSSEp = (() => {
         </div>
         <div class="ep-extras">
           <button type="button" class="ep-extra-btn" onclick="MSSEp._toggle('tags')" aria-expanded="${!!st.showTags}">+ Tags${st.tags.size ? ` (${st.tags.size})` : ''}</button>
-          <button type="button" class="ep-extra-btn" onclick="MSSEp._toggle('note')" aria-expanded="${!!st.showNote}">+ Note${st.note ? ' ✓' : ''}</button>
+          <button type="button" class="ep-extra-btn" onclick="MSSEp._toggle('note')" aria-expanded="${!!st.showNote}">+ ${season ? 'Review' : 'Note'}${(st.note || '').trim() ? ' ✓' : ''}</button>
         </div>
         ${st.showTags ? `<div class="ep-tags">${TAGS.map(t => `<button type="button" class="genre-opt${st.tags.has(t) ? ' selected' : ''}" onclick="MSSEp._tag(${attrJSON(t)})">${esc(t)}</button>`).join('')}<div class="ep-hint">Up to 3</div></div>` : ''}
-        ${st.showNote ? `<div class="ep-note"><textarea class="field-input" id="mssEpNote" rows="3" placeholder="A thought on this episode…" aria-label="Episode note" oninput="MSSEp._note(this)">${esc(st.note || '')}</textarea><div class="ep-hint" id="mssEpNoteCount">${words} / ${NOTE_WORDS} words</div></div>` : ''}
+        ${st.showNote ? `<div class="ep-note">
+          <div id="mssEpNoteTools"></div>
+          <textarea class="field-input" id="mssEpNote" rows="5" placeholder="${season ? 'Your review of this season…' : 'A thought on this episode…'}" aria-label="${season ? 'Season review' : 'Episode note'}" oninput="MSSEp._note(this)">${esc(st.note || '')}</textarea>
+          <div class="ep-hint" id="mssEpNoteCount">${words} / ${NOTE_WORDS} words</div>
+          ${mssEpNoteVisHTML('mssEpNoteVis', st.noteVis, '_mssEpNoteVis')}
+        </div>` : ''}
       </div>
       <div class="ep-nav">
         ${st.queue?.length ? `<button type="button" class="ep-nav-btn" onclick="MSSEp.close()">Skip all</button>`
@@ -221,13 +230,28 @@ const MSSEp = (() => {
         <button type="button" class="popup-action-btn np-ghost" onclick="MSSEp._skip()">Skip</button>
         <button type="button" class="popup-action-btn ep-save" onmousedown="event.preventDefault()" onclick="MSSEp._save(this)">Save</button>
       </div>`);
+    if (st.showNote) noteTools(e);
+  }
+  // The note's editor, like a title note's: B · I · U · S · Quote, the spoiler mark at the end of the row,
+  // styles as you type, typing stops at the word limit
+  function noteTools(e) {
+    const ta = document.getElementById('mssEpNote');
+    document.getElementById('mssEpNoteTools').innerHTML = MSSRich.toolbarHTML('mssEpNote', `<div class="mss-rt-end">${mssSpoilerToggleHTML('mssEpSpoiler', typeof MSSEgg !== 'undefined' ? e : null)}</div>`);   // a title's own spoiler wording where easter-egg.js is loaded
+    MSSRich.attach(ta, { maxWords: NOTE_WORDS, onLimit: () => {
+      const c = document.getElementById('mssEpNoteCount');
+      if (c) { c.textContent = `Reached max word limit (${NOTE_WORDS}/${NOTE_WORDS} words)`; c.classList.add('over'); }
+    } });
+    const sp = document.getElementById('mssEpSpoiler');
+    sp.checked = !!st.noteSpoiler;
+    sp.addEventListener('change', () => { st.noteSpoiler = sp.checked; st.changed = true; });
   }
   async function open(e, s, n, opts = {}) {
     if (!e || !isShow(e) || !uid()) return;
     s = Math.max(1, s || 1); n = n === 0 ? 0 : Math.max(1, n || 1);   // n = 0 → rate the whole season
     const prev = await existing(e, s, n).catch(() => null);
     st = { e, s, n, prev, score: prev ? Number(prev.score) : 8.0, tags: new Set(prev?.tags || []), note: prev?.note || '', rewatch: !!opts.rewatch, onSaved: opts.onSaved, prompted: !!opts.prompted,
-           queue: opts.queue || null, qi: opts.qi || 0, showTags: !!(prev?.tags?.length), showNote: !!prev?.note };
+           noteVis: prev?.note_visibility || 'anyone', noteSpoiler: !!prev?.note_spoiler,
+           queue: opts.queue || null, qi: opts.qi || 0, showTags: !!(prev?.tags?.length), showNote: !!opts.note || !!prev?.note };
     render(null);
     const eps = await seasonEpisodes(e.tmdb_id, s);
     if (!st || st.e !== e || st.s !== s || st.n !== n) return;
@@ -291,7 +315,8 @@ const MSSEp = (() => {
     const { e, s, n, prev } = st, at = st;
     const row = {
       user_id: uid(), entry_id: e.id, tmdb_id: e.tmdb_id || null, season_number: s, episode_number: n,
-      score: st.score, tags: [...st.tags], note: (st.note || '').trim() || null, is_rewatch: !!st.rewatch,
+      score: st.score, tags: [...st.tags], note: (st.note || '').trim(), is_rewatch: !!st.rewatch,   // '' removes a note (108)
+      note_visibility: st.noteVis || 'anyone', note_spoiler: !!st.noteSpoiler,
     };
     const { error } = await sb.from('episode_ratings').upsert(row, { onConflict: 'user_id,entry_id,season_number,episode_number' });
     if (error) throw error;
@@ -362,7 +387,7 @@ const MSSEp = (() => {
   async function removeAll(e, o = {}) {
     const { data, error } = await sb.from('episode_ratings').select('*').eq('entry_id', e.id).eq('user_id', uid());
     if (error) { showToast('Couldn’t load your ratings — try again.', 'err'); return; }
-    const rows = data || [];
+    const rows = await mssWithEpNotes(data || []);   // so Undo puts private notes back too
     if (!rows.length) return;
     const eps = rows.filter(r => r.episode_number > 0).length, seasons = rows.length - eps;
     const what = [eps ? `${eps} episode rating${eps === 1 ? '' : 's'}` : '', seasons ? `${seasons} season rating${seasons === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ');
@@ -525,6 +550,7 @@ const MSSEp = (() => {
     extremes, afterWatch, rate: (e, s, n, o = {}) => open(e, s, n, { ...o, rewatch: typeof isRewatching === 'function' && isRewatching(e) }),
     close, band, BANDS, TAGS, mode, setMode, isShow, seasonEpisodes, showPopup, showCardHTML, _card: openCard,
     statusLabel: st => STATUS_LABEL[st] || st,
+    _noteVis: v => { if (st) { st.noteVis = v; st.changed = true; } },
     _ask: answerAsk, _slide: setScore, _typed: typed, _typedDone: typedDone, _step: d => st && setScore(st.score + d), _tag: toggleTag, _note: onNote,
     _toggle: k => { if (!st) return; st[k === 'tags' ? 'showTags' : 'showNote'] = !st[k === 'tags' ? 'showTags' : 'showNote']; render(st.eps?.find(x => x.n === st.n)); },
     remove, removeAll,

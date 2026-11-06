@@ -84,7 +84,8 @@ const MSSStudio = (() => {
   async function loadEpisodes() {
     const me = window._navUser?.id;
     if (!me || S.epAll) return;
-    const rows = await sb.from('episode_ratings').select('entry_id, season_number, episode_number, score, tags, note, updated_at').eq('user_id', me).then(r => r.data || [], () => []);
+    const rows = await sb.from('episode_ratings').select('user_id, entry_id, season_number, episode_number, score, tags, note, note_visibility, note_spoiler, updated_at').eq('user_id', me)
+      .then(r => mssWithEpNotes(r.data || []), () => []);   // your Friends / Only me notes too (108)
     if (!S) return;
     S.epAll = rows.filter(r => Number(r.episode_number) > 0 && r.score != null);
     const n = {};
@@ -777,7 +778,7 @@ const MSSStudio = (() => {
     progress(0.3, 'Getting your lists…');
     const lists = me ? ((await sb.from('favorite_lists').select('*').eq('user_id', me)).data || []) : [];
     progress(0.6, 'Getting your episode ratings…');
-    const episodes = me ? ((await sb.from('episode_ratings').select('*').eq('user_id', me)).data || []) : [];
+    const episodes = me ? await mssWithEpNotes((await sb.from('episode_ratings').select('*').eq('user_id', me)).data || []) : [];
     const pr = window._navUserProfile || {};
     progress(0.9, 'Saving…');
     MSSFormats.save(`myscreenfolio-backup-${today()}.json`, MSSFormats.backup({ profile: { username: pr.username, display_name: pr.display_name }, entries: S.all, lists, episodes }), 'application/json');
