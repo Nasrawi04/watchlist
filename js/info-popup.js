@@ -396,7 +396,8 @@ const MSSInfo = (() => {
     return payload;
   }
 
-  /* ── Add to Library: a popup — where it goes in your library, what it is, who can see it ── */
+  /* ── Add to Library: a popup — where it goes in your library, what it is, who can see it ──
+     o: { status (where it starts), extra: { completed_date, season, episode } (the Diary), details, onAdded } */
   const ADD_WHERE = [
     ['queue', 'bookmark', 'Watchlist', 'Want to watch it'],
     ['up_next', 'skipForward', 'Up Next', 'Watching it soon'],
@@ -411,7 +412,7 @@ const MSSInfo = (() => {
     const it = { ...item, media_type: item.media_type === 'movie' ? 'movie' : 'tv' };
     if (!(await MSSAge.guard(it.media_type, it.tmdb_id))) return;
     const d = o.details || it._details || null;
-    addSt = { it, d, o, user, status: INFO_POPUP_CONFIG.addStatus, cat: it.cat || guessCat(it, d) };
+    addSt = { it, d, o, user, status: o.status || INFO_POPUP_CONFIG.addStatus, cat: it.cat || guessCat(it, d) };
     let ov = document.getElementById('mssAddOverlay');
     if (!ov) {
       ov = document.createElement('div');
@@ -472,6 +473,10 @@ const MSSInfo = (() => {
     if (!c || b.disabled) return;
     const where = ADD_WHERE.find(w => w[0] === c.status)?.[2] || 'your library';
     const payload = payloadFor(c.it, c.d, { status: c.status, cat: c.cat, visibility: document.getElementById('mssAddVis')?.value });
+    // From the Diary ("Add something for this day"): the day it was watched, and how far
+    const x = c.o.extra || {};
+    if (x.completed_date && (c.status === 'completed' || c.status === 'ongoing')) payload.completed_date = x.completed_date;
+    if (x.episode && ['watching', 'paused', 'ongoing'].includes(c.status)) Object.assign(payload, { season: x.season, episode: x.episode });
     // Added from a friend's entry → let them know (notify_friend_queued)
     const src = c.it.entry;
     if (src?.user_id && src.user_id !== c.user.id) {

@@ -527,6 +527,7 @@
           <div class="field-label">Watched On</div>
           <div class="mss-birth-row" id="completedDateWrap" role="group" aria-label="Watched on"></div>
           <div class="det-field-hint" id="dateHint" role="status" aria-live="polite"></div>
+          <a class="det-diary-link" id="dDiaryLink" href="diary.html" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg><span>Every time you watched it, in your Diary</span></a>
         </div>
 
       </div>
@@ -1855,6 +1856,9 @@ document.addEventListener('DOMContentLoaded', () => {
       _rewatchSec.style.display = (_st === 'completed' || _st === 'ongoing') ? '' : 'none';
     }
     _setCompletedDate(e?.completed_date || null);
+    // Changing Watched On moves your latest watch in the Diary (112); its whole history is one tap away
+    const _diaryLink = document.getElementById('dDiaryLink');
+    if (_diaryLink && e?.id && e.title) { _diaryLink.href = `diary.html?q=${encodeURIComponent(e.title)}`; _diaryLink.hidden = false; }
 
     // Restore season breakdown
     _seasonBreakdown = Array.isArray(e?.ratings?._season_breakdown) ? [...e.ratings._season_breakdown] : [];
@@ -2120,14 +2124,10 @@ function _detRateHere() {
 async function doDelete() {
   if (!_detId) return;
   const title = document.getElementById('dTitle').value.trim() || 'this entry';
-  const ok = await showConfirm({
-    title: 'Delete entry?',
-    message: `"${title}" will be permanently removed.`,
-    confirmText: 'Delete',
-    iconName: 'x'
-  });
-  if (!ok) return;
+  const diary = await mssConfirmDelete({ id: _detId, title });   // and its Diary watches? (110)
+  if (!diary) return;
   try {
+    if (diary === 'delete') await mssDeleteWatches(_detId);
     await deleteEntry(_detId, _detUser.id);
     showToast('Deleted.');
     setTimeout(() => window.location.href = _fromPage, 600);

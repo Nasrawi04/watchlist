@@ -593,6 +593,18 @@
           <p class="settings-desc" id="epModeHint" style="margin-top:.6rem;margin-bottom:0"></p>
         </div>
 
+        <div class="settings-section" id="setWeekStart">
+          <div class="settings-title">Week Starts On</div>
+          <p class="settings-desc">For your Diary's week and month views.</p>
+          <div class="pn-toggle wk-start-toggle" role="radiogroup" aria-label="Week starts on">
+            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="true" data-ws="" onclick="setWeekStart('')">Region</button>
+            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-ws="1" onclick="setWeekStart(1)">Monday</button>
+            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-ws="7" onclick="setWeekStart(7)">Sunday</button>
+            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-ws="6" onclick="setWeekStart(6)">Saturday</button>
+          </div>
+          <p class="settings-desc" id="wkStartHint" style="margin-top:.6rem;margin-bottom:0"></p>
+        </div>
+
         <div class="settings-section" id="setScreensaver">
           <div class="settings-title">Screensaver</div>
           <div class="field-row" style="margin-bottom:0">
@@ -699,6 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _sUser = user;
     _sProfile = profile;
     populateSettings();
+    _paintWeekStart(profile?.week_start || '');
     syncThemeButtons();
     ['avatarRule', 'avatarCropRule'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = mssUploadRuleHTML(); });
     document.getElementById('privSwitch')?.setAttribute('aria-checked', String(!!profile?.is_private));
@@ -886,6 +899,7 @@ function settingsValue(item) {
     case 'setSessions': return count('sessList', '1 device', 'devices');
     case 'setLang': return MSSLang.list().find(l => l.code === MSSLang.code)?.name || '';
     case 'setEpisodes': return document.querySelector('.ep-mode-toggle .active')?.textContent.trim() || '';
+    case 'setWeekStart': return document.querySelector('.wk-start-toggle .active')?.textContent.trim() || '';
     case 'setScreensaver': return onOff('ssSwitch');
     case 'nsAlertsT': return mssNotifPopupsOn() ? 'On' : 'Off';
     default: return '';
@@ -1481,6 +1495,30 @@ async function setEpisodeMode(m) {
   catch (err) { console.error(err); showToast('Couldn’t save that — try again.', 'err'); }
 }
 document.addEventListener('DOMContentLoaded', () => { MSSEp.mode().then(_paintEpisodeMode); });
+
+/* ── Week starts on (113): Region, or the day you pick — profiles.week_start ── */
+const _WS_NAME = { 1: 'Monday', 6: 'Saturday', 7: 'Sunday' };
+function _regionWeekStart() {
+  try { const l = new Intl.Locale(navigator.language || 'en'), w = (l.getWeekInfo && l.getWeekInfo()) || l.weekInfo; if (w?.firstDay) return w.firstDay; } catch {}
+  return 1;
+}
+function _paintWeekStart(v) {
+  document.querySelectorAll('.wk-start-toggle .pn-toggle-btn').forEach(b => {
+    const on = b.dataset.ws === String(v || '');
+    b.classList.toggle('active', on); b.setAttribute('aria-checked', on);
+  });
+  const region = new Date(2024, 0, 7 + (_regionWeekStart() % 7), 12).toLocaleDateString(document.documentElement.lang || undefined, { weekday: 'long' });
+  document.getElementById('wkStartHint').textContent = v ? `Weeks start on ${_WS_NAME[v]}.` : `From your region: ${region}.`;
+}
+async function setWeekStart(v) {
+  const was = _sProfile?.week_start || '';
+  _paintWeekStart(v);
+  const { error } = await sb.from('profiles').update({ week_start: v || null }).eq('id', _sUser.id);
+  if (error) { _paintWeekStart(was); showToast('Couldn’t save that — try again.', 'err'); return; }
+  if (_sProfile) _sProfile.week_start = v || null;
+  MSSSettingsNav.refresh(true);
+  showToast('Saved.');
+}
 
 </script>
 <script>

@@ -98,6 +98,7 @@ async function saveEntry(payload, userId, existingId) {
       .single();
     if (error) throw error;
     mssResortLists(userId, existingId);   // its scores / dates may have moved it in a sorted list
+    mssDiaryNoticed(existingId, record.status === 'completed');
     return _mssWatched(data);
   } else {
     await _mssAgeCheck(record);
@@ -106,8 +107,16 @@ async function saveEntry(payload, userId, existingId) {
       .select()
       .single();
     if (error) throw error;
+    mssDiaryNoticed(data.id, record.status === 'completed');
     return _mssWatched(data);
   }
+}
+
+// The Diary logs watches by itself (112): after a save that can log one, diary.js says what it logged
+// ("Logged · Today 9:42 PM · Change") or asks which day for several at once. Loaded the first time.
+const _MSS_DIARY_KEYS = ['season', 'episode', 'watched', 'status', 'completed_date'];
+function mssDiaryNoticed(id, finished) {
+  mssLoadScript('js/diary.js').then(() => { if (typeof MSSDiary !== 'undefined') MSSDiary.noticed(id, finished).catch(() => {}); });
 }
 
 // Age restrictions (088): before a title goes into a restricted account's library, its rating is
@@ -142,6 +151,7 @@ async function updateProgress(id, userId, updates) {
     .single();
   if (error) throw error;
   if (_MSS_ORDER_KEYS.some(k => k in updates)) mssResortLists(userId, id);
+  if (_MSS_DIARY_KEYS.some(k => k in updates)) mssDiaryNoticed(id, updates.status === 'completed');
   return _mssWatched(data);
 }
 
@@ -339,10 +349,15 @@ async function quickCreate(payload, userId) {
     // page afterward.
     ratings:       payload.ratings || {},
     watched:       0,
+    // From the Diary: the day it was watched, or how far into a show (the Diary logs from these, 112)
+    completed_date: payload.completed_date || null,
+    season:        payload.season        || null,
+    episode:       payload.episode       || null,
   };
   const { data, error } = await sb.from('entries').insert(record).select().single();
   if (error) throw error;
   _notifyQueuedFrom(data);
+  mssDiaryNoticed(data.id, record.status === 'completed');
   return _mssWatched(data);
 }
 

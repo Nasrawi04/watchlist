@@ -219,6 +219,8 @@ const ICONS = {
   download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
   chevup:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`,
   chevdown: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`,
+  chevleft: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+  chevright:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
   back:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>`,
   music:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
   heart:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
@@ -713,7 +715,8 @@ function showToast(msg, type = 'ok') {
 /* ── Toast with Undo ──
    showUndoToast(message, undoFn, ms = 6000): the usual toast plus an "Undo"
    button and a bar that runs down for the time left. undoFn may be async;
-   when it finishes the toast says "Undone." (or explains if it couldn't). */
+   when it finishes the toast says "Undone." (or explains if it couldn't).
+   showActionToast(message, label, onClick, ms) is the same toast with any button. */
 // Save a finished canvas as a PNG — the same way everywhere (Create Card, Episodes export):
 // phones / tablets get the share sheet (Save Image, Save to Files, Copy, AirDrop…);
 // without one, phones show the picture in `previewEl` to long-press; computers download it.
@@ -739,10 +742,11 @@ async function mssSaveImage(canvas, filename, previewEl) {
   setTimeout(() => { link.remove(); URL.revokeObjectURL(url); }, 200);
 }
 
-function showUndoToast(msg, undo, ms = 6000) {
+// A toast with one button (Undo, Change, Set date…) and a bar showing the time left. Announced (role=status).
+function showActionToast(msg, label, onClick, ms = 6000) {
   let t = document.getElementById('toast');
   if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
-  t.innerHTML = `<span class="toast-msg"></span><button type="button" class="toast-undo">Undo</button><span class="toast-bar" aria-hidden="true"></span>`;
+  t.innerHTML = `<span class="toast-msg"></span><button type="button" class="toast-undo"></button><span class="toast-bar" aria-hidden="true"></span>`;
   t.querySelector('.toast-msg').textContent = msg;
   t.className = 'toast visible toast-has-undo';
   t.setAttribute('role', 'status');
@@ -750,20 +754,50 @@ function showUndoToast(msg, undo, ms = 6000) {
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.remove('visible'), ms);
   const btn = t.querySelector('.toast-undo');
-  btn.onclick = async () => {
-    clearTimeout(t._timer);
+  btn.textContent = label;
+  btn.onclick = () => { clearTimeout(t._timer); onClick(btn, t); };
+  return t;
+}
+function showUndoToast(msg, undo, ms = 6000) {
+  showActionToast(msg, 'Undo', async btn => {
     btn.disabled = true; btn.textContent = 'Undoing…';
     try { await undo(); showToast('Undone.'); }
     catch (err) { console.error('Undo failed:', err); showToast('Couldn’t undo that — please try again.', 'err'); }
-  };
+  }, ms);
+}
+
+// "Delete entry?" — and, when the title has watches in your Diary (110), whether they go too.
+// → false (cancelled) · 'keep' · 'delete'
+async function mssConfirmDelete(e) {
+  let n = 0;
+  try { const { count } = await sb.from('diary_watches').select('id', { count: 'exact', head: true }).eq('entry_id', e.id); n = count || 0; } catch {}
+  const watches = n === 1 ? 'Its 1 watch stays' : `Its ${n} watches stay`;
+  const v = await showConfirm({ title: 'Delete entry?', message: `"${e.title || 'This entry'}" will be permanently removed from your library.`, confirmText: 'Delete', iconName: 'trash',
+    choices: n ? [['keep', 'Keep it in my Diary', `${watches} on your calendar, with its poster and title.`],
+                  ['delete', 'Also delete it from your Diary', n === 1 ? 'Removes its watch too.' : `Removes its ${n} watches too.`]] : null });
+  return v === true ? 'keep' : v;
+}
+// Its Diary watches go (diary = 'delete'); kept ones stay, unlinked (110). Returns what was removed.
+async function mssDeleteWatches(entryId) {
+  const { data } = await sb.from('diary_watches').select('*').eq('entry_id', entryId);
+  const { error } = await sb.from('diary_watches').delete().eq('entry_id', entryId);
+  if (error) throw error;
+  return data || [];
 }
 
 // Delete one of your entries with Undo: a full copy is kept first, so Undo
-// puts it back exactly (ratings, notes, dates). Returns the deleted copy.
-async function mssDeleteWithUndo(e, uid, { onUndone } = {}) {
+// puts it back exactly (ratings, notes, dates, and its Diary watches if they went too).
+// Returns the deleted copy.
+async function mssDeleteWithUndo(e, uid, { onUndone, diary = 'keep' } = {}) {
   const { data: copy } = await sb.from('entries').select('*').eq('id', e.id).single();
+  const watches = diary === 'delete' ? await mssDeleteWatches(e.id) : [];
   await deleteEntry(e.id, uid);
   showUndoToast(`Deleted “${e.title || 'entry'}”`, async () => {
+    // the watches first, unlinked: putting the title back links them again (112), so none is logged twice
+    for (let i = 0; i < watches.length; i += 500) {
+      const { error } = await sb.from('diary_watches').insert(watches.slice(i, i + 500).map(({ has_time, ...w }) => ({ ...w, entry_id: null })));
+      if (error) throw error;
+    }
     const { error } = await sb.from('entries').insert(copy || e);
     if (error) throw error;
     if (onUndone) onUndone(copy || e); else location.reload();   // reload keeps your scroll position
@@ -2738,7 +2772,9 @@ const MSSPicker = (() => {
 // danger (default true) → solid red confirm button; danger:false → solid olive
 // (for non-destructive actions like signing out or starting a rewatch).
 // cancelText:null → a single-button notice (resolves true when dismissed).
-function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', cancelText = 'Cancel', iconName = 'x', iconHTML = '', tone = '', danger = true } = {}) {
+// choices: [[value, label, hint]] → a pick-one list in the popup (the first picked); then it resolves to
+// the picked value instead of true (false when cancelled)
+function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', cancelText = 'Cancel', iconName = 'x', iconHTML = '', tone = '', danger = true, choices = null } = {}) {
   return new Promise((resolve) => {
     const overlay  = document.getElementById('confirmOverlay');
     if (!overlay) { resolve(window.confirm(message || title)); return; }
@@ -2754,6 +2790,26 @@ function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Con
     btnOk.classList.toggle('is-safe', !danger);
     btnCancel.textContent = notice ? '' : cancelText;
     btnCancel.hidden = notice;
+    const box = document.getElementById('confirmChoices');
+    let picked = choices?.[0]?.[0];
+    if (box) {
+      box.hidden = !choices?.length;
+      box.innerHTML = (choices || []).map(([v, label, hint], i) => `<button type="button" class="confirm-choice${i ? '' : ' on'}" role="radio" aria-checked="${!i}" data-v="${escHTML(v)}">
+          <span class="confirm-choice-dot" aria-hidden="true"></span><span class="confirm-choice-l"><b>${escHTML(label)}</b>${hint ? `<small>${escHTML(hint)}</small>` : ''}</span></button>`).join('');
+      box.onclick = ev => {
+        const c = ev.target.closest('.confirm-choice'); if (!c) return;
+        picked = c.dataset.v;
+        box.querySelectorAll('.confirm-choice').forEach(x => { const on = x === c; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); });
+      };
+      // arrow keys move the pick, like any radio group
+      box.onkeydown = ev => {
+        const all = [...box.querySelectorAll('.confirm-choice')], i = all.indexOf(document.activeElement);
+        if (i < 0 || !['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(ev.key)) return;
+        ev.preventDefault();
+        const next = all[(i + (ev.key === 'ArrowDown' || ev.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
+        next.focus(); next.click();
+      };
+    }
 
     function done(val) {
       MSSDialog.close(overlay);
@@ -2762,7 +2818,7 @@ function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Con
       btnCancel.removeEventListener('click', onCancel);
       resolve(val);
     }
-    const onOk     = () => done(true);
+    const onOk     = () => done(choices?.length ? picked : true);
     const onCancel = () => done(notice);
     btnOk.addEventListener('click', onOk);
     btnCancel.addEventListener('click', onCancel);
@@ -2910,6 +2966,8 @@ function mssEmpty(o = {}) {
 /* What a signed-out visitor sees instead of a page that needs an account: what the page is for, with a
    little humour, so someone new can decide it's worth joining. One entry per page, one design. */
 const MSS_GUEST = {
+  diary: { art: 'episodes', title: 'When did you watch that, again?', text: 'Your Diary keeps every movie and episode on the day you watched it, rewatches included. Only you can see it.',
+    perks: ['Every watch on a calendar, by day, week, month or year', 'Rewatches and how your rating changed', 'Find the day you watched anything'] },
   movies: { art: 'popcorn', title: '“I’ll remember that movie.” You won’t.', text: 'Save everything you mean to watch, and answer “what should we watch tonight?” in under an hour.', starter: 'movies',
     perks: ['A watchlist that never forgets a recommendation', 'Rate what you finish and rank your favourites', 'Pick for Me decides when nobody else can'] },
   tv: { art: 'watching', title: 'Wait, which episode were we on?', text: 'Track every show down to the episode, so that question never starts another argument on the sofa.', starter: 'tv',

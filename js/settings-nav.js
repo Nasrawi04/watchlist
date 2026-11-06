@@ -28,7 +28,7 @@ const MSSSettingsNav = (() => {
     privacy: [['setPrivate', 'Private Account'], ['setOnline', 'Online Status'], ['setBlocked', 'Blocked People']],
     security: [['setPassword', 'Password'], ['setSessions', 'Active Sessions'], ['setMessages', 'Message Lock and Recovery']],
     notifications: [['nsAlertsT', 'Alerts', 'Receiving'], ['nsGetT', 'Notify Me About', 'Receiving'], ['nsWhoT', 'Who Gets Notified', 'Sending'], ['nsShareT', 'What They Hear About', 'Sending']],
-    preferences: [['setLang', 'Language'], ['setEpisodes', 'Episode Ratings'], ['setScreensaver', 'Screensaver']],
+    preferences: [['setLang', 'Language'], ['setEpisodes', 'Episode Ratings'], ['setWeekStart', 'Week Starts On'], ['setScreensaver', 'Screensaver']],
     appearance: [['setTheme', 'Theme']],
   };
   const sectionName = id => SECTIONS.find(s => s[0] === id)[1];
@@ -64,6 +64,7 @@ const MSSSettingsNav = (() => {
     ['What They Hear About', 'notifications', 'nsShareT', 'activity sending share hide'],
     ['Language', 'preferences', 'setLang', 'translate english'],
     ['Episode Ratings', 'preferences', 'setEpisodes', 'rate prompt ask always never'],
+    ['Week Starts On', 'preferences', 'setWeekStart', 'diary calendar monday sunday saturday first day'],
     ['Screensaver', 'preferences', 'setScreensaver', 'bouncing logo idle'],
     ['Theme', 'appearance', 'setTheme', 'dark mode light mode system colour color night'],
   ];

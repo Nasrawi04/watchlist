@@ -169,9 +169,25 @@ const MSSStudio = (() => {
 
   const yearData = () => {   // worked out per year (again once the medals / episode ratings have loaded)
     const key = `${S.year}:${!!S.yExtra}`;
-    if (S.yKey !== key) { S.yKey = key; S.yData = S.year ? MSSYear.compute(S.all, S.year, S.yExtra || {}) : null; }
+    if (S.yKey !== key) { S.yKey = key; S.yData = S.year ? MSSYear.compute(S.all, S.year, { ...(S.yExtra || {}), diary: S.diary }) : null; }
     return S.yData;
   };
+  // Your Diary (110): every watch, paged (a long one has thousands). Without it (not signed in, or it
+  // couldn't load), everything uses each title's "Watched on" as before.
+  async function loadDiary() {
+    const me = window._navUser?.id;
+    if (!me) return null;
+    const rows = [];
+    try {
+      for (let off = 0; off < 50000; off += 1000) {
+        const { data, error } = await sb.from('diary_watches').select('*').eq('user_id', me).order('watched_date', { nullsFirst: true }).order('created_at').range(off, off + 999);
+        if (error) throw error;
+        rows.push(...data);
+        if (data.length < 1000) break;
+      }
+      return rows;
+    } catch (err) { console.warn('Export Studio diary:', err); return null; }
+  }
   async function loadYearExtra() {
     if (S.yExtra || S.yLoading) return;
     S.yLoading = true;
@@ -262,9 +278,9 @@ const MSSStudio = (() => {
           <span class="xs-what-ic">${icon(ic, 16)}</span><span class="xs-pk-text"><b>${l}</b><small>${sub}</small></span></button>`).join('')}</div>`);
     if (fmt('card')) return fmts + sec('Which title', `<input class="xs-input" id="xsCardQ" type="search" placeholder="Search your library…" value="${esc(S.cq)}" aria-label="Search your titles" oninput="MSSStudio._cardQ(this.value)" autocomplete="off">
         <div id="xsCardBody">${cardRowsHTML()}</div>`, 'pick one');
-    if (fmt('backup')) return fmts + sec('What’s in it', `<div class="xs-info">${icon('info', 16)}<span>Every title in your library with all its ratings, highlights and notes, your lists and your episode ratings — one file to keep somewhere safe.</span></div>`);
+    if (fmt('backup')) return fmts + sec('What’s in it', `<div class="xs-info">${icon('info', 16)}<span>Every title in your library with all its ratings, highlights and notes, your lists, your episode ratings and your Diary (every watch and its day) — one file to keep somewhere safe.</span></div>`);
     if (fmt('letterboxd')) { const n = MSSFormats.lbMovies(lbSource()).length;
-      return fmts + sec('What’s in it', `<div class="xs-info">${icon('film', 16)}<span><b>${n} watched ${n === 1 ? 'movie' : 'movies'}</b> with your score as a rating (rounded to a whole number out of 10), the date you watched it and whether it was a rewatch. Shows aren’t on Letterboxd, so they’re left out. Import it at letterboxd.com → Settings → Import &amp; Export.</span></div>`)
+      return fmts + sec('What’s in it', `<div class="xs-info">${icon('film', 16)}<span><b>${n} watched ${n === 1 ? 'movie' : 'movies'}</b> with your score as a rating (rounded to a whole number out of 10), each day you watched it from your Diary and whether it was a rewatch. Shows aren’t on Letterboxd, so they’re left out. Import it at letterboxd.com → Settings → Import &amp; Export.</span></div>`)
         + sec('Include', `<div class="xs-switches">${sw(S.include.notes, "MSSStudio._tog('include','notes')", 'Notes as reviews', 'Each note becomes that movie’s review')}${sw(S.privacy.hideSpoilers, "MSSStudio._tog('privacy','hideSpoilers')", 'Leave out spoiler notes', 'Notes you marked as spoilers aren’t sent')}</div>`); }
     return fmts + sec('What to export', `<div class="xs-whats" role="radiogroup" aria-label="What to export">${whats.map(([w, l, ic, sub]) =>
         `<button type="button" role="radio" class="xs-what${S.what === w ? ' on' : ''}" aria-checked="${S.what === w}" onclick="MSSStudio._set('what','${w}')">
@@ -533,9 +549,9 @@ const MSSStudio = (() => {
   // text formats: the actual text (first part), so you see exactly what you get
   function textPreview(list) {
     if (fmt('backup')) return `<div class="xs-bk">${[['Titles', S.all.length], ['Watched', S.all.filter(WHAT.watched.test).length], ['Watchlist', S.all.filter(WHAT.watchlist.test).length],
-      ['With notes', S.all.filter(e => e.notes && e.notes.trim()).length]].map(([l, v]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div><div class="xs-hint xs-center">Lists and episode ratings are added when you download.</div>`;
-    const txt = fmt('ai') ? aiText(list) : fmt('csv') && isEps() ? epCSV().replace(/^\uFEFF/, '') : fmt('csv') ? MSSFormats.csv(list.slice(0, 12), { include: S.include, privacy: S.privacy }).replace(/^\uFEFF/, '')
-      : MSSFormats.letterboxd(lbSource().slice(0, 12), { include: S.include, privacy: S.privacy });
+      ['With notes', S.all.filter(e => e.notes && e.notes.trim()).length], ...(S.diary ? [['Diary watches', S.diary.length]] : [])].map(([l, v]) => `<span><b>${v}</b><small>${l}</small></span>`).join('')}</div><div class="xs-hint xs-center">Lists and episode ratings are added when you download.</div>`;
+    const txt = fmt('ai') ? aiText(list) : fmt('csv') && isEps() ? epCSV().replace(/^\uFEFF/, '') : fmt('csv') ? MSSFormats.csv(list.slice(0, 12), { include: S.include, privacy: S.privacy, diary: S.diary }).replace(/^\uFEFF/, '')
+      : MSSFormats.letterboxd(lbSource().slice(0, 12), { include: S.include, privacy: S.privacy, diary: S.diary });
     const lines = txt.split('\n'), cut = lines.slice(0, fmt('ai') ? 60 : 14).join('\n');
     return `<pre class="xs-text" tabindex="0" aria-label="Preview">${esc(cut)}${lines.length > (fmt('ai') ? 60 : 14) ? '\n…' : ''}</pre>`;
   }
@@ -671,7 +687,9 @@ const MSSStudio = (() => {
       const all = o.load ? await Promise.race([o.load(), new Promise((_, no) => setTimeout(() => no(new Error('Your library took too long to load')), 30000))]) : [];
       if (S !== me) return;                 // closed (or reopened) while it loaded
       S.all = Array.isArray(all) ? all : [];
-      S.years = MSSYear.years(S.all); S.year = S.years[0] || null;
+      S.diary = await loadDiary();          // every watch, for Year in Review and the exports (110)
+      if (S !== me) return;
+      S.years = MSSYear.years(S.all, S.diary); S.year = S.years[0] || null;
       if (isYear()) loadYearExtra();
       loadEpisodes().catch(err => console.warn('Export Studio episodes:', err));   // the "Episode ratings" card needs the count
       draw();
@@ -768,9 +786,9 @@ const MSSStudio = (() => {
       return finish('Couldn’t copy here, so it was downloaded instead.');
     }
     if (fmt('csv') && isEps()) { MSSFormats.save(`myscreenfolio-${slug()}-episodes.csv`, epCSV(), 'text/csv;charset=utf-8'); return finish('Your spreadsheet is ready.'); }
-    if (fmt('csv')) { MSSFormats.save(`myscreenfolio-${slug()}.csv`, MSSFormats.csv(list, { include: S.include, privacy: S.privacy }), 'text/csv;charset=utf-8'); return finish('Your spreadsheet is ready.'); }
+    if (fmt('csv')) { MSSFormats.save(`myscreenfolio-${slug()}.csv`, MSSFormats.csv(list, { include: S.include, privacy: S.privacy, diary: S.diary }), 'text/csv;charset=utf-8'); return finish('Your spreadsheet is ready.'); }
     if (fmt('letterboxd')) {
-      const txt = MSSFormats.letterboxd(lbSource(), { include: S.include, privacy: S.privacy });
+      const txt = MSSFormats.letterboxd(lbSource(), { include: S.include, privacy: S.privacy, diary: S.diary });
       MSSFormats.save(`myscreenfolio-letterboxd-${today()}.csv`, txt, 'text/csv;charset=utf-8');
       return finish(txt.length > 1e6 ? 'Saved — but it’s over Letterboxd’s 1 MB limit; turn off notes and try again.' : 'Saved — import it on Letterboxd: Settings → Import & Export.');
     }
@@ -781,7 +799,7 @@ const MSSStudio = (() => {
     const episodes = me ? await mssWithEpNotes((await sb.from('episode_ratings').select('*').eq('user_id', me)).data || []) : [];
     const pr = window._navUserProfile || {};
     progress(0.9, 'Saving…');
-    MSSFormats.save(`myscreenfolio-backup-${today()}.json`, MSSFormats.backup({ profile: { username: pr.username, display_name: pr.display_name }, entries: S.all, lists, episodes }), 'application/json');
+    MSSFormats.save(`myscreenfolio-backup-${today()}.json`, MSSFormats.backup({ profile: { username: pr.username, display_name: pr.display_name }, entries: S.all, lists, episodes, diary: S.diary || [] }), 'application/json');
     return finish('Your backup is saved — keep it somewhere safe.');
   }
   async function go(mode) {

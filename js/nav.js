@@ -224,6 +224,27 @@ function _navSpotlight() {
   }, 900);
 }
 
+// On This Day (115): the day's grouped notification (once a day per device, once per account in the
+// database), and on the home page only the 9+ pop-up. on-this-day.js loads only when there's something to do.
+function _navOnThisDay(user, profile) {
+  const home = (location.pathname.split('/').pop() || 'index.html') === 'index.html' && !location.search;
+  let asked = false;
+  try { const d = new Date(); asked = localStorage.getItem('msf_otd_n:' + user.id) === `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; } catch {}
+  if (asked && !home) return;
+  mssLoadScript('js/on-this-day.js').then(() => {
+    if (typeof MSSOtd === 'undefined') return;
+    MSSOtd.daily(user);
+    if (home) MSSOtd.home(user, profile);
+  });
+}
+
+// Your device's time zone on your profile, so the Diary logs a watch on YOUR day (112)
+function _navTimeZone(uid, profile) {
+  let tz; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return; }
+  if (!tz || !profile || profile.time_zone === tz || !('time_zone' in profile)) return;
+  sb.from('profiles').update({ time_zone: tz }).eq('id', uid).then(() => {}, () => {});
+}
+
 async function _fillNavUser(user) {
   // Profile + friend-request badge fetched in parallel (was one after the other)
   const [profile, pending] = await Promise.all([
@@ -246,6 +267,8 @@ async function _fillNavUser(user) {
   _navAvatarShrink(user.id, profile);
   _navAchSync();
   _navFinishCheck(2500);
+  _navTimeZone(user.id, profile);
+  _navOnThisDay(user, profile);
   const username = profile?.username || user.email?.split('@')[0] || 'You';
   const initial  = username[0].toUpperCase();
 
@@ -706,6 +729,7 @@ function injectChrome() {
       <div class="confirm-icon"  id="confirmIcon" aria-hidden="true"></div>
       <div class="confirm-title" id="confirmTitle">Are you sure?</div>
       <div class="confirm-msg"   id="confirmMsg"></div>
+      <div class="confirm-choices" id="confirmChoices" role="radiogroup" aria-labelledby="confirmTitle" hidden></div>
       <div class="confirm-actions">
         <button type="button" class="confirm-cancel" id="confirmCancel">Cancel</button>
         <button type="button" class="confirm-ok"     id="confirmOk">Confirm</button>
@@ -769,6 +793,7 @@ const LIBRARY_PAGES = [
   { href: 'anime.html',    iconName: 'animeFace', label: 'Anime'    },
   { href: 'cartoons.html', iconName: 'crown',    label: 'Cartoons' },
   { href: 'completed.html',iconName: 'check',    label: 'Watched'},
+  { href: 'diary.html',    iconName: 'calendar', label: 'Diary'},
 ];
 function _isLibraryPage(page) {
   return LIBRARY_PAGES.some(p => p.href === page);
@@ -909,6 +934,7 @@ const DNAV_INFO = {
   'anime.html':                 'Your anime — series and films.',
   'cartoons.html':              'Your animated shows and films.',
   'completed.html':             'Everything you’ve finished, ranked by your scores.',
+  'diary.html':                 'Every movie and episode you’ve watched, on the day you watched it. Only you can see it.',
   'friends.html':               'Your friends, requests and people you might know.',
   'activity.html':    'What your friends have been watching and rating.',
   'compare.html':     'Line your taste up with a friend’s, side by side.',
@@ -2644,6 +2670,7 @@ function _notifSection(n) {
   if (n.type === 'new_episode' || n.type === 'new_release') return 'episodes';
   if (n.type === 'comment' || n.type === 'like') return 'social';
   if (n.type === 'list_invite' || n.type === 'list_invite_accepted' || n.type === 'list_invite_declined') return 'lists';
+  if (n.type === 'on_this_day') return 'yours';   // yours alone: under All only, never "Friend Activity"
   return 'activity';
 }
 
@@ -2791,7 +2818,8 @@ function _notifItemHTML(n, opts = {}) {
   const name = n.actor ? escHTML(n.actor.display_name || n.actor.username) : 'Someone';
   const who = `<b>${name}</b>`;
   const title = n.list ? `<b>&ldquo;${escHTML(n.list.title)}&rdquo;</b>` : 'a list';
-  const av = n.type === 'achievement' ? `<span class="notif-av-ach">${icon('trophy', 18)}</span>`
+  const av = n.type === 'on_this_day' ? `<span class="notif-av-otd">${(n.meta?.posters || []).slice(0, 3).map(u => safeURL(u) ? `<img src="${safeURL(u)}" alt="">` : '').join('') || icon('calendar', 18)}</span>`
+    : n.type === 'achievement' ? `<span class="notif-av-ach">${icon('trophy', 18)}</span>`
     : n.type === 'report_actioned' || n.type === 'moderation_notice' ? `<span class="notif-av-ach notif-av-mod">${icon('flag', 17)}</span>`
     : (n.type === 'new_episode' || n.type === 'new_release') && safeURL(n.meta?.poster_url)
     ? `<img src="${safeURL(n.meta.poster_url)}" alt="">`
@@ -2878,6 +2906,12 @@ function _notifItemHTML(n, opts = {}) {
     text = m.kind === 'finished' ? `${who} finished ${t} — ${escHTML(m.goal)} watched!` : `${who} challenged you: ${t}${m.goal ? ` · watch ${escHTML(m.goal)}` : ''}`;
     icon2 = 'trophy';
     href = m.challenge_id ? `challenges.html?ch=${encodeURIComponent(m.challenge_id)}` : 'challenges.html';
+  } else if (n.type === 'on_this_day') {
+    // On This Day (115): what you finished on this date in earlier years — yours alone
+    const m = n.meta || {}, t = m.titles || [], more = (Number(m.count) || t.length) - Math.min(t.length, 2);
+    text = `<b>On This Day</b> · ${escHTML(Number(m.count) === 1 ? '1 title' : `${m.count} titles`)} — <span translate="no">${t.slice(0, 2).map(escHTML).join(', ')}</span>${more > 0 ? ` and ${more} more` : ''}`;
+    icon2 = 'calendar';
+    href = `diary.html?otd=${encodeURIComponent(m.date || '')}`;
   } else if (n.type === 'achievement') {
     // Achievements (060): the first time, one "check your cabinet" for everything already earned
     const m = n.meta || {}, more = (Number(m.count) || 1) - 1;
@@ -3179,6 +3213,7 @@ function _notifShortText(n) {
     case 'poll_comment':         return `${who} commented on your poll`;
     case 'message':              return `${who} sent you a message`;
     case 'movie_night':          return _notifNightText(n.meta || {}, who);
+    case 'on_this_day':          return `On This Day · ${escHTML(Number(n.meta?.count) === 1 ? '1 title' : `${n.meta?.count || ''} titles`)}`;
     case 'achievement':          return n.meta?.kind === 'welcome' ? 'Your Achievement Cabinet is open — take a look!' : `New medal: ${escHTML(n.meta?.name || 'Achievement')}`;
     case 'challenge':            return n.meta?.kind === 'finished' ? `${who} finished ${t}` : `${who} challenged you: ${t}`;
     case 'episode_chat':         return `${who} commented on S${escHTML(n.meta?.season)} · E${escHTML(n.meta?.episode)} of ${t}`;

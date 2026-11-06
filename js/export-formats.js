@@ -7,7 +7,8 @@
      csv(list, o)         → a spreadsheet: one row per title, a column for
                             every rating category used (Excel-friendly UTF-8)
      letterboxd(list, o)  → Letterboxd's import CSV: your watched movies with
-                            tmdbID, Title, Year, Rating10, WatchedDate, Rewatch, Review
+                            tmdbID, Title, Year, Rating10, WatchedDate, Rewatch, Review —
+                            one row per watch in your Diary (o.diary), rewatches marked
                             (letterboxd.com/about/importing-data)
      backup(data)         → everything as JSON: entries, lists, episode ratings
      save(name, text, type) / copy(text)
@@ -29,6 +30,10 @@ const MSSFormats = (() => {
     return !n.note || (n.spoiler && o.privacy?.hideSpoilers) ? '' : n.note;
   };
   const rewatches = e => typeof getRewatchCount === 'function' ? getRewatchCount(e) : 1;
+  // A title's finishes in your Diary (110), oldest first — o.diary when the exporter loaded it
+  const finishesOf = (e, o) => (o?.diary || []).filter(w => w.entry_id === e.id && w.completes_title)
+    .sort((a, b) => String(a.watched_date || '').localeCompare(String(b.watched_date || '')) || String(a.watched_at || '').localeCompare(String(b.watched_at || '')));
+  const timesWatched = (e, o) => { const n = finishesOf(e, o).length; return n || rewatches(e); };
 
   /* ── For an AI ── */
   const DEFAULT_PROMPT = {
@@ -117,7 +122,7 @@ const MSSFormats = (() => {
       const f = e.ratings?._favorites || {}, l = e.ratings?._lowlights || f._lowlights || {};
       return [e.title, yr(e), CAT_META?.[e.cat]?.singular || '', STATUS[e.status] || '', s != null ? s.toFixed(2) : '', ...cats.map(c => mssRatingValue(e, c.key) ?? ''),
         f.character, f.episode, f.season, l.character, l.episode, l.season, (e.genres || []).join(', '), day(e.completed_date), day(e.created_at),
-        e.status ? rewatches(e) : '', e.season || '', e.episode || '', e.watched ?? '', e.total_eps ?? '', note(e, o), e.tmdb_id || '', e.tmdb_type || ''];
+        e.status ? timesWatched(e, o) : '', e.season || '', e.episode || '', e.watched ?? '', e.total_eps ?? '', note(e, o), e.tmdb_id || '', e.tmdb_type || ''];
     });
     return '﻿' + [H, ...rows].map(r => r.map(cell).join(',')).join('\r\n') + '\r\n';
   }
@@ -127,11 +132,21 @@ const MSSFormats = (() => {
   const lbMovies = list => list.filter(e => isMovie(e) && MSSPdf.kindOf(e) === 'watched');
   function letterboxd(list, o) {
     const H = ['tmdbID', 'Title', 'Year', 'Rating10', 'WatchedDate', 'Rewatch', 'Review'];
-    const rows = lbMovies(list).map(e => {
-      const s = sc(e), r10 = s == null ? '' : Math.min(10, Math.max(1, Math.round(s)));
-      const date = day(e.completed_date);
-      const n = note(e, o);
-      return [e.tmdb_type === 'movie' ? e.tmdb_id : '', e.title, yr(e), r10, date, date && rewatches(e) > 1 ? 'true' : '', n ? n.replace(/\r?\n/g, '<br>') : ''];
+    const r10 = s => s == null ? '' : Math.min(10, Math.max(1, Math.round(s)));
+    // one row per watch from your Diary (its day, Rewatch, the score you gave that time; your note on the
+    // latest); a movie with no Diary watch is one row from its "Watched on", as before
+    const rows = lbMovies(list).flatMap(e => {
+      const n = note(e, o), review = n ? n.replace(/\r?\n/g, '<br>') : '', id = e.tmdb_type === 'movie' ? e.tmdb_id : '';
+      const ws = finishesOf(e, o);
+      if (!ws.length) {
+        const date = day(e.completed_date);
+        return [[id, e.title, yr(e), r10(sc(e)), date, date && rewatches(e) > 1 ? 'true' : '', review]];
+      }
+      return ws.map((w, i) => {
+        const last = i === ws.length - 1;
+        return [id, e.title, yr(e), r10(w.rating_at_watch != null ? Number(w.rating_at_watch) : last ? sc(e) : null), day(w.watched_date),
+          w.is_rewatch || i > 0 ? 'true' : '', last ? review : ''];
+      });
     });
     return [H, ...rows].map(r => r.map(lbCell).join(',')).join('\n') + '\n';
   }
@@ -139,7 +154,7 @@ const MSSFormats = (() => {
   /* ── Full backup ── */
   function backup(d) {
     return JSON.stringify({ app: 'MyScreenFolio', kind: 'backup', version: 1, exported_at: new Date().toISOString(),
-      profile: d.profile, entries: d.entries, lists: d.lists, episode_ratings: d.episodes }, null, 2);
+      profile: d.profile, entries: d.entries, lists: d.lists, episode_ratings: d.episodes, diary: d.diary || [] }, null, 2);
   }
 
   function save(name, text, type) {

@@ -31,6 +31,8 @@ const NS_RECEIVE = [
   ['challenges',   'Challenges',            'Invites and finishes'],
   ['episode_chat', 'Episode chat',          'Replies in episode chats you’re in'],
   ['achievements', 'Medals',                'When you earn a medal'],
+  ['on_this_day',  'On This Day notifications', 'Once a day, what you finished on this date in earlier years'],
+  ['on_this_day_popup', 'On This Day pop-ups', 'Titles you rated 9+ on this date in earlier years, on the home page, once a day'],
 ];
 const NS_AUDIENCE = [
   ['followers', 'Friends & followers', 'users'],

@@ -206,11 +206,11 @@ const MSSRate = (() => {
       return;
     }
     if (key === 'delete') {
-      const ok = await showConfirm({ title: 'Delete entry?', message: `"${e.title || 'This entry'}" will be permanently removed.`, confirmText: 'Delete', iconName: 'trash' });
-      if (!ok) return;
+      const diary = await mssConfirmDelete(e);
+      if (!diary) return;
       try {
         close();
-        await mssDeleteWithUndo(e, await uid());
+        await mssDeleteWithUndo(e, await uid(), { diary });
         opts.onDelete?.(e);
       } catch (err) { console.error(err); showToast('Error deleting entry.', 'err'); }
     }
