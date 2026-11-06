@@ -308,17 +308,20 @@ async function _discSelectLinkResult(tmdbId, tmdbType) {
 }
 
 /* ── Highest-rated seasons and episodes (TMDB scores only) ──
-   TMDB has no list of top episodes or seasons across shows, so this works one out on the device
-   from TMDB's 200 best-scored shows with more than 900 votes on the show itself (their seasons,
-   up to 20 each, ~210 requests, 6 at a time),
-   then keeps it for a week. The first time, the row shows a progress bar.
+   TMDB has no list of top episodes or seasons across shows, so one is worked out from TMDB's 200
+   best-scored shows with more than 900 votes on the show itself (their seasons, up to 20 each).
+   It's worked out once a week for everyone: the tmdb Edge Function (/top-eps) saves it in
+   public.tmdb_cache ("msf:top_eps", 076), and every visitor reads that row. Only the very first
+   visitor of the week with no list at all waits, with a progress bar everyone shares; when last
+   week's list is there it shows straight away while the new one is worked out. If the function
+   can't do it, the device works it out itself (~210 requests, 6 at a time), as before.
    Minimum votes keep tiny samples out: an episode needs 20, a season 50 across its episodes.
      await MSSTopEps.get()  → { seasons: [...], episodes: [...] }, best first (cached)
      MSSTopEps.onProgress(fn) → fn(0…1) while it's being worked out */
 const MSSTopEps = (() => {
   const STORE = 'mss_top_eps_v2', TTL = 7 * 864e5, SHOWS = 200, PER = 6, MIN_EP = 20, MIN_SEASON = 50, KEEP = 250, MIN_SHOW = 900;
   const listeners = new Set();
-  let running = null;
+  let running = null, renewing = null;
   const tell = f => listeners.forEach(fn => { try { fn(f); } catch {} });
   const today = new Date().toISOString().slice(0, 10);
   function cached() {
@@ -365,10 +368,44 @@ const MSSTopEps = (() => {
     tell(1);
     return out;
   }
+  // The shared list (one row in public.tmdb_cache, readable by everyone)
+  const row = async key => {
+    try { const { data } = await sb.from('tmdb_cache').select('body,saved_at').eq('key', key).maybeSingle(); return data || null; } catch { return null; }
+  };
+  const keep = r => {
+    const out = { t: Date.parse(r.saved_at), seasons: r.body.seasons || [], episodes: r.body.episodes || [] };
+    try { localStorage.setItem(STORE, JSON.stringify(out)); } catch {}
+    tell(1);
+    return out;
+  };
+  const askFunction = () => fetch(`${TMDB_BASE}/top-eps`);
+  async function shared() {
+    const saved = await row('msf:top_eps');
+    if (saved?.body) {
+      if (Date.now() - Date.parse(saved.saved_at) >= TTL && !renewing) renewing = askFunction().catch(() => {});   // a week old: renewed for everyone (asked once a visit), this visit shows last week's
+      return keep(saved);
+    }
+    const res = await askFunction();
+    if (res.status === 200) { const b = await res.json(); if (Array.isArray(b.seasons) && b.saved_at) return keep({ body: b, saved_at: b.saved_at }); throw new Error('top-eps answer'); }
+    if (res.status !== 202) throw new Error('top-eps ' + res.status);
+    // Being worked out on the server: follow its progress until the list is saved (up to 4 minutes)
+    tell(0.02);
+    for (let i = 0; i < 80; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      const done = await row('msf:top_eps');
+      if (done?.body) return keep(done);
+      const b = await row('msf:top_eps:build');
+      if (b?.body?.total) tell(0.05 + 0.9 * b.body.done / b.body.total);
+      else if (i >= 3) throw new Error('top-eps stopped');   // gone without a list: the device does it instead
+    }
+    throw new Error('top-eps took too long');
+  }
   async function get() {
     const c = cached();
     if (c) return c;
-    running = running || build().finally(() => { running = null; });
+    running = running || (typeof sb !== 'undefined' ? shared() : Promise.reject(new Error('no database')))
+      .catch(err => { console.warn('Shared top seasons and episodes not available, working them out here:', err); return build(); })
+      .finally(() => { running = null; });
     return running;
   }
   return { get, onProgress: fn => { listeners.add(fn); return () => listeners.delete(fn); } };
@@ -393,7 +430,7 @@ function _discTopProgress(key) {
     if (!box) return;
     let bar = box.querySelector('.disc-top-progress');
     if (f >= 1) { bar?.remove(); return; }
-    if (!bar) { box.querySelector('.page-loading')?.remove(); box.insertAdjacentHTML('afterbegin', `<div class="disc-top-progress" role="status"><span>Working out the top ${key === 'top_episodes' ? 'episodes' : 'seasons'} — only the first time this week…</span><i><u></u></i></div>`); bar = box.querySelector('.disc-top-progress'); }
+    if (!bar) { box.querySelector('.page-loading')?.remove(); box.insertAdjacentHTML('afterbegin', `<div class="disc-top-progress" role="status"><span>Working out the top ${key === 'top_episodes' ? 'episodes' : 'seasons'} for everyone — only once a week…</span><i><u></u></i></div>`); bar = box.querySelector('.disc-top-progress'); }
     bar.querySelector('u').style.width = Math.round(f * 100) + '%';
   });
 }
