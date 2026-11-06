@@ -196,7 +196,10 @@ function _discAttrJSON(value) {
 window._discItemMap = window._discItemMap || {};
 // lock: search results show mature titles locked for 13–17 accounts; everywhere
 // else (Discover, recommendations, related) they're left out (MSSAge, 088)
+// A season / episode card's second line: "One Piece · S1 E3" (MSSCard's `below`)
+const _discSubHTML = it => it.sub ? `<div class="disc-card-sub" translate="no">${escHTML(it.sub)}</div>` : '';
 function _discClickAttr(it, lock) {
+  if (it.href) return `onclick="location.href=${escHTML(JSON.stringify(it.href))}"` + MSSAge.attr('tv', it.show_id, !lock);   // a season / episode → its page
   if (it.id != null && it.media_type) {
     const key = `${it.media_type}:${it.id}`;
     window._discItemMap[key] = it;
@@ -302,6 +305,104 @@ async function _discSelectLinkResult(tmdbId, tmdbType) {
         : 'Failed to link — try again.', 'err');
     }
   }
+}
+
+/* ── Highest-rated seasons and episodes (TMDB scores only) ──
+   TMDB has no list of top episodes or seasons across shows, so this works one out on the device
+   from TMDB's 200 best-scored shows with more than 900 votes on the show itself (their seasons,
+   up to 20 each, ~210 requests, 6 at a time),
+   then keeps it for a week. The first time, the row shows a progress bar.
+   Minimum votes keep tiny samples out: an episode needs 20, a season 50 across its episodes.
+     await MSSTopEps.get()  → { seasons: [...], episodes: [...] }, best first (cached)
+     MSSTopEps.onProgress(fn) → fn(0…1) while it's being worked out */
+const MSSTopEps = (() => {
+  const STORE = 'mss_top_eps_v2', TTL = 7 * 864e5, SHOWS = 200, PER = 6, MIN_EP = 20, MIN_SEASON = 50, KEEP = 250, MIN_SHOW = 900;
+  const listeners = new Set();
+  let running = null;
+  const tell = f => listeners.forEach(fn => { try { fn(f); } catch {} });
+  const today = new Date().toISOString().slice(0, 10);
+  function cached() {
+    try { localStorage.removeItem('mss_top_eps_v1'); } catch {}   // the list from before the 900-vote rule: rebuilt, not reused
+    try { const c = JSON.parse(localStorage.getItem(STORE) || 'null'); return c && Date.now() - c.t < TTL ? c : null; } catch { return null; }
+  }
+  async function build() {
+    tell(0);
+    // the shows: best score first, only ones with more than 900 votes (like Top 250 Shows, which asks for 1,000)
+    const pages = await Promise.all(Array.from({ length: SHOWS / 20 }, (_, i) =>
+      _discFetchJSON(`${TMDB_BASE}/discover/tv?language=en-US&sort_by=vote_average.desc&vote_count.gte=${MIN_SHOW + 1}&page=${i + 1}`).catch(() => ({ results: [] }))));
+    const shows = pages.flatMap(d => d.results || []).filter(sh => (sh.vote_count || 0) > MIN_SHOW).slice(0, SHOWS);
+    const seasons = [], episodes = [];
+    let done = 0;
+    for (let i = 0; i < shows.length; i += PER) {
+      await Promise.all(shows.slice(i, i + PER).map(async sh => {
+        try {
+          const nums = Array.from({ length: 20 }, (_, k) => k + 1);   // TMDB's most per request
+          // straight through TMDB's queue (nav.js), not the device's TMDB cache: these answers are big, and only the
+          // short ranking below is kept. TMDB leaves out seasons a show doesn't have.
+          const res = await _tmdbQueued(`${TMDB_BASE}/tv/${sh.id}?language=en-US&append_to_response=${nums.map(n => 'season/' + n).join(',')}`);
+          if (!res.ok) throw new Error('TMDB ' + res.status);
+          const d = await res.json();
+          const base = { show_id: d.id, show: d.name, show_poster: d.poster_path, genre_ids: (d.genres || []).map(g => g.id), origin_country: d.origin_country };
+          (d.seasons || []).filter(x => x.season_number > 0).forEach(x => {
+            const full = d['season/' + x.season_number];
+            const eps = (full?.episodes || []).slice().sort((a, b) => a.episode_number - b.episode_number);
+            const votes = eps.reduce((t, e) => t + (e.vote_count || 0), 0);
+            if (x.vote_average && votes >= MIN_SEASON && x.air_date && x.air_date <= today)
+              seasons.push({ ...base, s: x.season_number, name: x.name, poster: x.poster_path, air: x.air_date, score: x.vote_average, votes, eps: x.episode_count });
+            eps.forEach((e, idx) => {
+              if ((e.vote_count || 0) >= MIN_EP && e.vote_average && e.air_date && e.air_date <= today)
+                episodes.push({ ...base, s: x.season_number, n: idx + 1, abs: e.episode_number !== idx + 1 ? e.episode_number : null, name: e.name,
+                  poster: x.poster_path, still: e.still_path, air: e.air_date, score: e.vote_average, votes: e.vote_count, overview: e.overview });
+            });
+          });
+        } catch {}
+        tell(0.05 + 0.95 * (++done / shows.length));
+      }));
+    }
+    const best = (a, b) => b.score - a.score || b.votes - a.votes;
+    const out = { t: Date.now(), seasons: seasons.sort(best).slice(0, KEEP), episodes: episodes.sort(best).slice(0, KEEP) };
+    if (out.seasons.length || out.episodes.length) { try { localStorage.setItem(STORE, JSON.stringify(out)); } catch {} }
+    tell(1);
+    return out;
+  }
+  async function get() {
+    const c = cached();
+    if (c) return c;
+    running = running || build().finally(() => { running = null; });
+    return running;
+  }
+  return { get, onProgress: fn => { listeners.add(fn); return () => listeners.delete(fn); } };
+})();
+
+// Their cards open the Season / Episode page (href); the show is what Hide from Results and age checks look at
+function _discTopItem(x, kind) {
+  const ep = kind === 'episode';
+  return {
+    id: `${x.show_id}:${x.s}${ep ? ':' + x.n : ''}`, media_type: 'tv', tmdb_id: x.show_id, show_id: x.show_id,
+    title: ep ? x.name || `Episode ${x.n}` : x.show, year: (x.air || '').slice(0, 4), score: x.score,
+    poster_url: (x.poster || x.show_poster) ? TMDB_FULL + (x.poster || x.show_poster) : null,
+    sub: ep ? `${x.show} · S${x.s} E${x.n}` : `${mssSeasonLabel(x.s, x.name)} · ${x.eps} episodes`,
+    overview: x.overview || '', genre_ids: x.genre_ids, origin_country: x.origin_country,
+    href: ep ? `episode.html?show=${x.show_id}&s=${x.s}&e=${x.n}` : `season.html?show=${x.show_id}&s=${x.s}`,
+  };
+}
+// While it's being worked out the first time: a progress bar in the row (Discover) or the page's grid (See All)
+function _discTopProgress(key) {
+  return MSSTopEps.onProgress(f => {
+    const box = document.getElementById('discGrid-' + key) || (new URLSearchParams(location.search).get('list') === key ? document.getElementById('dlGrid') : null);
+    if (!box) return;
+    let bar = box.querySelector('.disc-top-progress');
+    if (f >= 1) { bar?.remove(); return; }
+    if (!bar) { box.querySelector('.page-loading')?.remove(); box.insertAdjacentHTML('afterbegin', `<div class="disc-top-progress" role="status"><span>Working out the top ${key === 'top_episodes' ? 'episodes' : 'seasons'} — only the first time this week…</span><i><u></u></i></div>`); bar = box.querySelector('.disc-top-progress'); }
+    bar.querySelector('u').style.width = Math.round(f * 100) + '%';
+  });
+}
+async function _discTopPage(key, kind, page) {
+  const off = _discTopProgress(key);
+  try {
+    const d = await MSSTopEps.get();
+    return (kind === 'episode' ? d.episodes : d.seasons).slice((page - 1) * 20, page * 20).map(x => _discTopItem(x, kind));
+  } finally { off(); document.querySelectorAll('.disc-top-progress').forEach(el => el.remove()); }
 }
 
 const DISCOVER_CATEGORIES = [
@@ -440,6 +541,21 @@ const DISCOVER_CATEGORIES = [
         .filter(r => !_discIsAnimeOrigin(r) && !r.is_mature_animation);
       return _discMergeByScore(movies, shows);
     }
+  },
+  {
+    key: 'top_seasons',
+    cap: 250, lazy: true, v: 2,   // v: bumped when the ranking's rules change (2: shows over 900 votes)
+    navLabel: 'Highest-Rated Seasons',
+    title: 'Highest-Rated Seasons',
+    // TMDB scores only, worked out from TMDB's top-rated shows (MSSTopEps)
+    fetch: page => _discTopPage('top_seasons', 'season', page),
+  },
+  {
+    key: 'top_episodes',
+    cap: 250, lazy: true, v: 2,
+    navLabel: 'Highest-Rated Episodes',
+    title: 'Highest-Rated Episodes',
+    fetch: page => _discTopPage('top_episodes', 'episode', page),
   },
   {
     key: 'niche_movies',

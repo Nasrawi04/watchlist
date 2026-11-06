@@ -142,7 +142,7 @@ let _dlPage = 1;
 let _dlLoading = false;
 let _dlDone = false;
 let _dlView = localStorage.getItem('disc_listView') || 'grid';
-const _dlIsRanked = _dlCategory.key.startsWith('top250') || _dlCategory.key === 'recommended' || _dlCategory.key === 'top_rated_mss';   // ranked lists: #1, #2… badges
+const _dlIsRanked = _dlCategory.key.startsWith('top250') || ['recommended', 'top_rated_mss', 'top_seasons', 'top_episodes'].includes(_dlCategory.key);   // ranked lists: #1, #2… badges
 
 // Type badge is only shown on the Anime/Cartoons categories, where a
 // single list genuinely mixes movies and shows (a viewer can't tell
@@ -175,7 +175,7 @@ function _dlRankCls(rank) {
 
 function _dlCardHTML(it, rank) {
   return MSSCard.poster({ cls: 'dl-card', attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url,
-    rank: _dlIsRanked ? rank : 0, type: _dlTypeLabel(it) ? it.media_type : null, score: _discFloorScore(it.score) });
+    rank: _dlIsRanked ? rank : 0, type: _dlTypeLabel(it) && !it.href ? it.media_type : null, score: _discFloorScore(it.score), below: _discSubHTML(it) });
 }
 
 function _dlListRowHTML(it, rank) {
@@ -199,7 +199,8 @@ function _dlListRowHTML(it, rank) {
         <div class="dl-list-title" translate="no">${_dlEsc(it.title)}</div>
         ${it.year ? `<span class="title-year-inline">${_dlEsc(it.year)}</span>` : ''}
       </div>
-      ${typeLabel ? `<div class="dl-list-badges-row"><span class="${typeCls}">${typeLabel}</span></div>` : ''}
+      ${_discSubHTML(it)}
+      ${typeLabel && !it.href ? `<div class="dl-list-badges-row"><span class="${typeCls}">${typeLabel}</span></div>` : ''}
       ${it.overview ? `<div class="dl-list-desc" translate="no">${_dlEsc(it.overview)}</div>` : ''}
     </div>
     <div class="dl-list-right">
@@ -251,7 +252,7 @@ function _dlSfActive() {
    and the scroll position are saved when leaving; coming BACK restores
    them instantly instead of starting over at page 1 — which is why the
    page used to jump higher (the rows you'd scrolled past weren't there). */
-const _DL_STATE_KEY = 'dl_state_' + _dlCategory.key;
+const _DL_STATE_KEY = 'dl_state_' + _dlCategory.key + (_dlCategory.v ? '_v' + _dlCategory.v : '');   // v: the ranking's rules changed
 const _dlIsBack = (performance.getEntriesByType('navigation')[0] || {}).type === 'back_forward';
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 window.MSS_OWN_SCROLL = true; // this page restores its own position (faster, cached rows)

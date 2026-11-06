@@ -8238,3 +8238,8 @@ h2.td-section-title { font-weight:inherit; font-family:inherit; }
   .sp-jump-btn { padding:8px 14px; min-height:38px; }
 }
 .sp-jump + .sp-all-sec .td-section-title { margin-top:1.4rem; }
+/* Highest-Rated Seasons / Episodes (discover-categories.js: MSSTopEps) */
+.disc-card-sub { font-size:12px; color:var(--text-2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.disc-top-progress { flex:0 0 100%; width:100%; grid-column:1 / -1; padding:14px 4px; font-size:13px; color:var(--text-2); }
+.disc-top-progress i { display:block; height:6px; margin-top:8px; border-radius:999px; background:var(--bg-3); overflow:hidden; }
+.disc-top-progress u { display:block; height:100%; width:0; background:var(--olive-light); border-radius:inherit; transition:width .3s; }

@@ -79,7 +79,7 @@ const _NAV_LEFT_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const _NAV_RIGHT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
 
 function _discCardHTML(it) {
-  return MSSCard.poster({ attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url, score: _discFloorScore(it.score) });
+  return MSSCard.poster({ attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url, score: _discFloorScore(it.score), below: _discSubHTML(it) });
 }
 
 // Builds the side nav + one section shell per category, all up front,
@@ -125,6 +125,8 @@ let _discUserScrolled = false;
 ['wheel', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, () => { _discUserScrolled = true; }, { passive: true, once: true }));
 window.addEventListener('pagehide', () => { try { sessionStorage.setItem('disc_scrollY', String(window.scrollY)); } catch {} });
 
+// A row's remembered cards: a category whose rules changed (cat.v) never shows ones saved before the change
+const _discCacheKey = cat => cat.key + (cat.v ? '_v' + cat.v : '');
 function _discCacheGet(key) {
   try {
     const c = JSON.parse(sessionStorage.getItem('disc_cache_' + key) || 'null');
@@ -155,7 +157,7 @@ function _discRenderCategory(cat, items) {
 async function _discLoadCategory(cat) {
   try {
     const items = await cat.fetch(1);
-    _discCacheSet(cat.key, items.slice(0, 12));
+    _discCacheSet(_discCacheKey(cat), items.slice(0, 12));
     const grid = document.getElementById(`discGrid-${cat.key}`);
     if (!grid) return;
     if (!items.length) {
@@ -222,9 +224,19 @@ document.addEventListener('DOMContentLoaded', () => {
   _discBuildLayout();
   const toFetch = [];
   DISCOVER_CATEGORIES.forEach(cat => {
-    const cached = _discCacheGet(cat.key);
-    if (cached) _discRenderCategory(cat, cached); else toFetch.push(cat);
+    const cached = _discCacheGet(_discCacheKey(cat));
+    if (cached) _discRenderCategory(cat, cached); else if (!cat.lazy) toFetch.push(cat);
   });
+  // lazy rows (Highest-Rated Seasons / Episodes: worked out on the device) load once you're near them
+  const lazy = DISCOVER_CATEGORIES.filter(c => c.lazy && !_discCacheGet(_discCacheKey(c)));
+  if (lazy.length) {
+    const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(x => {
+      if (!x.isIntersecting) return;
+      io.unobserve(x.target);
+      const cat = lazy.find(c => 'disc-' + c.key === x.target.id); if (cat) _discLoadCategory(cat);
+    }), { rootMargin: '400px 0px' }) : null;
+    lazy.forEach(c => { const el = document.getElementById('disc-' + c.key); if (io && el) io.observe(el); else _discLoadCategory(c); });
+  }
   _discRestoreScroll();
   _initDiscSideNavScrollSpy();
 
