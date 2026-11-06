@@ -287,7 +287,6 @@
 .msg-rec-code { display:block; padding:12px; border:1px solid var(--border); border-radius:10px; font-size:15px; font-weight:600; line-height:1.6; letter-spacing:.5px; text-align:center; overflow-wrap:anywhere; user-select:all; color:var(--text); }
 .lock-form { text-align:start; align-items:stretch; }
 .lock-field { display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-2); }
-.lock-pin { letter-spacing:6px; font-size:18px; text-align:center; }
 .lock-forgot { align-self:flex-start; background:none; border:none; padding:6px 0; cursor:pointer; font:inherit; font-size:12.5px; font-weight:600; color:var(--olive-light); }
 @media(max-width:640px) { .sess-out { min-height:44px; } }
 .set-btn {
@@ -681,6 +680,7 @@
 <script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/msg-keys.js"></script>
+<script src="js/pin-pad.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/episode-ratings.js"></script>
@@ -1112,39 +1112,49 @@ async function _msgOnlineTap(btn) {
   const { error } = await sb.rpc('msg_set_show_online', { p_on: on });
   if (error) { btn.setAttribute('aria-checked', !on); showToast('Couldn’t save that — try again.', 'err'); }
 }
-// Set, change or remove, in the site's small form popup
+// Set, change or remove, in the site's small popup: one keypad that asks one thing at a time
 function _lockDialog(mode) {
   const el = document.createElement('div');
   el.className = 'confirm-overlay';
-  const pin = (id, label) => `<label class="lock-field"><span>${label}</span><input class="field-input lock-pin" id="${id}" type="password" inputmode="numeric" autocomplete="off" maxlength="6" pattern="[0-9]*" aria-label="${label}"></label>`;
   const title = { set: 'Set a passcode', change: 'Change your passcode', remove: 'Remove your passcode' }[mode];
-  el.innerHTML = `<form class="confirm-card mss-rename lock-form" role="dialog" aria-modal="true" aria-labelledby="lockT" novalidate>
+  el.innerHTML = `<div class="confirm-card mss-rename lock-form" role="dialog" aria-modal="true" aria-labelledby="lockT">
       <div class="confirm-title" id="lockT">${title}</div>
-      ${mode !== 'set' ? pin('lockCur', 'Current passcode') : ''}
-      ${mode !== 'remove' ? pin('lockNew', 'New passcode (4–6 digits)') + pin('lockNew2', 'Type it again') : ''}
-      <div class="mss-rename-hint bad" id="lockHint" aria-live="polite"></div>
+      <div id="lockPad"></div>
       ${mode !== 'set' ? `<button type="button" class="adm-link lock-forgot" onclick="_lockForgot()">Forgot your passcode?</button>` : ''}
-      <div class="confirm-actions"><button type="button" class="confirm-cancel" data-close>Cancel</button><button type="submit" class="confirm-ok ${mode === 'remove' ? '' : 'is-safe'}">${mode === 'remove' ? 'Remove' : 'Save'}</button></div>
-    </form>`;
+      <div class="confirm-actions"><button type="button" class="confirm-cancel" data-close>Cancel</button></div>
+    </div>`;
   const done = () => { MSSDialog.close(el); setTimeout(() => el.remove(), 250); };
   MSSDialog.bind(el, done);
   document.body.appendChild(el);
   el.querySelector('[data-close]').onclick = done;
-  const hint = el.querySelector('#lockHint'), val = id => el.querySelector('#' + id)?.value.trim() || '';
-  el.querySelector('form').addEventListener('submit', async ev => {
-    ev.preventDefault();
-    if (mode !== 'remove') {
-      if (!/^[0-9]{4,6}$/.test(val('lockNew'))) { hint.textContent = 'Use 4 to 6 digits.'; return; }
-      if (val('lockNew') !== val('lockNew2')) { hint.textContent = 'Those don’t match.'; return; }
-    }
-    try {
-      if (mode === 'remove') await MSSLock.remove(val('lockCur')); else await MSSLock.set(val('lockNew'), val('lockCur'));
-      done();
-      showToast(mode === 'remove' ? 'Passcode removed' : 'Passcode saved');
-      _lockPaint();
-    } catch (err) { hint.textContent = err?.hint || 'Couldn’t save that — try again.'; }
-  });
-  MSSDialog.open(el, { focus: el.querySelector('input') || el.querySelector('button') });
+  const steps = { set: ['new', 'again'], change: ['cur', 'new', 'again'], remove: ['cur'] }[mode];
+  const ASK = { cur: 'Enter your current passcode', new: 'Enter a new passcode (4–6 digits)', again: 'Type the new passcode again' };
+  const KEY = { cur: mode === 'remove' ? 'Remove' : 'Next', new: 'Next', again: 'Save' };
+  const got = {};
+  let i = 0;
+  const goTo = s => { i = steps.indexOf(s); pad.step(ASK[s], KEY[s]); };
+  const pad = MSSPinPad.mount(el.querySelector('#lockPad'), { label: ASK[steps[0]], submit: KEY[steps[0]],
+    onSubmit: async pin => {
+      const s = steps[i];
+      got[s] = pin;
+      try {
+        // The current passcode is checked first, so a wrong one (and the wait after too many) shows straight away
+        if (s === 'cur') {
+          const r = await MSSLock.verify(pin);
+          if (!r.ok) return pad.wrong(r.wait ? `Too many tries. Try again in ${Math.ceil(r.wait / 60)} min.` : 'That isn’t your current passcode.');
+        }
+        if (s === 'again' && pin !== got.new) { goTo('new'); return pad.wrong('Those don’t match. Try again.'); }
+        if (i < steps.length - 1) return goTo(steps[i + 1]);
+        if (mode === 'remove') await MSSLock.remove(got.cur); else await MSSLock.set(got.new, got.cur);
+        done();
+        showToast(mode === 'remove' ? 'Passcode removed' : 'Passcode saved');
+        _lockPaint();
+      } catch (err) {
+        goTo(steps[0]);
+        pad.wrong(err?.hint || 'Couldn’t save that — try again.');
+      }
+    } });
+  MSSDialog.open(el, { focus: pad.focusTarget() });
   window._lockClose = done;
 }
 // A small popup that asks for one secret. submit() → a message to show, or nothing when it's done.

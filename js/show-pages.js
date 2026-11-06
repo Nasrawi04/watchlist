@@ -265,8 +265,16 @@ const MSSShowPage = (() => {
       <div class="td-section-head"><div class="td-section-title">${esc(mssSeasonLabel(s, sn.name))}</div>${allLinksHTML(`<a class="td-ep-graph-link" href="${seasonURL(show.id, s)}">Season page</a>`)}</div>
       <div class="td-episode-row" id="spSeasonRow">${eps.map(x => epCardHTML(x, s, x.n === e)).join('')}</div>
     </div>`, `S${s} E${e} · ${ep.name || ''} · ${show.name}`);
-    document.querySelector('#spSeasonRow .picked')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    centerInRow(document.querySelector('#spSeasonRow .picked'));
     loadNotes();
+  }
+
+  // Slides a sideways row so this card is in the middle. Only the row moves: the page stays where it
+  // is (scrollIntoView would also scroll the page down to the row, so a page opened halfway down)
+  function centerInRow(el) {
+    const row = el?.parentElement;
+    if (!row) return;
+    row.scrollLeft += el.getBoundingClientRect().left - row.getBoundingClientRect().left - (row.clientWidth - el.offsetWidth) / 2;
   }
 
   /* ── Notes on an episode, or reviews of a season (108) ──
@@ -526,7 +534,7 @@ const MSSShowPage = (() => {
     const mark = s => document.querySelectorAll('.sp-jump-btn').forEach(a => {
       const on = a.dataset.s === s;
       a.classList.toggle('on', on);
-      if (on) { a.setAttribute('aria-current', 'location'); a.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } else a.removeAttribute('aria-current');
+      if (on) { a.setAttribute('aria-current', 'location'); centerInRow(a); } else a.removeAttribute('aria-current');
     });
     const io = new IntersectionObserver(es => { if (Date.now() < hold) return; const x = es.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]; if (x) mark(x.target.dataset.s); },
       { rootMargin: '-35% 0px -55% 0px' });

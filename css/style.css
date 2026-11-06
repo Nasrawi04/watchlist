@@ -8243,3 +8243,32 @@ h2.td-section-title { font-weight:inherit; font-family:inherit; }
 .disc-top-progress { flex:0 0 100%; width:100%; grid-column:1 / -1; padding:14px 4px; font-size:13px; color:var(--text-2); }
 .disc-top-progress i { display:block; height:6px; margin-top:8px; border-radius:999px; background:var(--bg-3); overflow:hidden; }
 .disc-top-progress u { display:block; height:100%; width:0; background:var(--olive-light); border-radius:inherit; transition:width .3s; }
+/* Passcode keypad (js/pin-pad.js — Messages lock screen + Settings passcode popups):
+   dots that fill as you type, square number keys (a border on hover and press), a shake for a wrong code */
+.pin-pad { display:flex; flex-direction:column; align-items:center; gap:10px; width:100%; }
+.pin-label { font-size:14px; font-weight:600; color:var(--text); }
+.pin-field { position:relative; display:flex; justify-content:center; padding:10px 14px; border-radius:999px; }
+.pin-field:focus-within { outline:2px solid var(--olive-light); outline-offset:0; }
+.pin-input { position:absolute; inset:0; width:100%; height:100%; opacity:0; border:0; padding:0; caret-color:transparent; pointer-events:none; }
+.pin-dots { display:flex; gap:16px; }
+.pin-dots i { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--text-2); transition:background-color .12s; }
+.pin-dots i.opt { border-style:dashed; border-color:var(--text-3); }
+.pin-dots i.on { background:var(--text); border-color:var(--text); border-style:solid; }
+.pin-field.is-wrong { animation:pinShake .42s var(--ease); }
+@keyframes pinShake { 0%,100% { transform:none; } 15%,55% { transform:translateX(-10px); } 35%,75% { transform:translateX(10px); } 90% { transform:translateX(-4px); } }
+.pin-msg { min-height:1.3em; font-size:12.5px; font-weight:600; color:#991b1b; text-align:center; }
+[data-theme="dark"] .pin-msg { color:#f87171; }
+.pin-keys { display:grid; grid-template-columns:repeat(3, var(--pin-w)); gap:8px; --pin-w:clamp(68px, 23vw, 88px); --pin-h:clamp(44px, 6.4vh, 54px); margin-top:2px; }
+.pin-key { width:var(--pin-w); height:var(--pin-h); border-radius:12px; display:flex; align-items:center; justify-content:center;
+  background:var(--card-2); border:1.5px solid transparent; color:var(--text); cursor:pointer; font:400 24px/1 'Manrope',var(--sans);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation; user-select:none; transition:background-color .12s, border-color .12s; }
+.pin-key:hover:not(:disabled) { border-color:var(--border-olive); }
+.pin-key:active:not(:disabled) { border-color:var(--olive-light); background:var(--card-3); }
+.pin-key:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.pin-key:disabled { cursor:default; }
+.pin-go, .pin-del { background:none; font-size:14px; font-weight:700; }
+.pin-go { color:var(--olive-light); }
+[data-theme="light"] .pin-go { color:var(--olive); }
+.pin-go:disabled, .pin-del:disabled { color:var(--text-3); opacity:.6; }
+.pin-del { color:var(--text-2); }
+@media (prefers-reduced-motion: reduce) { .pin-field.is-wrong { animation:none; } .pin-dots i { transition:none; } }

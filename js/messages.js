@@ -156,25 +156,23 @@ const MSSChat = (() => {
     let st = { on: false };
     try { st = await MSSLock.status(); } catch {}
     if (!st.on || MSSLock.isOpen()) return openApp(q);
-    gate(`<form class="chat-card" id="chatPin" novalidate>
+    const tooMany = w => `Too many tries. Try again in ${Math.ceil(w / 60)} min.`;
+    gate(`<div class="chat-card" id="chatPin">
         <span class="chat-card-ic" aria-hidden="true">${icon('lock', 26)}</span>
-        <h2 class="chat-card-t">Enter your passcode</h2>
-        <input class="field-input chat-pin" id="chatPinIn" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" aria-label="Passcode">
-        <div class="chat-hint" id="chatPinHint" aria-live="polite">${st.wait ? `Too many tries. Try again in ${Math.ceil(st.wait / 60)} min.` : ''}</div>
-        <button class="btn-save" type="submit">Unlock</button>
+        <h2 class="chat-card-t" id="chatPinT">Enter your passcode</h2>
+        <div id="chatPinPad"></div>
         <button type="button" class="chat-link" id="chatPinForgot">Forgot your passcode?</button>
-      </form>`);
-    $('chatPinIn').focus();
-    $('chatPin').addEventListener('submit', async ev => {
-      ev.preventDefault();
-      const hint = $('chatPinHint');
-      try {
-        const r = await MSSLock.verify($('chatPinIn').value);
-        if (r.ok) return openApp(q);
-        hint.textContent = r.wait ? `Too many tries. Try again in ${Math.ceil(r.wait / 60)} min.` : 'That isn’t your passcode.';
-        $('chatPinIn').value = '';
-      } catch { hint.textContent = 'Couldn’t check that — try again.'; }
-    });
+      </div>`);
+    const pad = MSSPinPad.mount($('chatPinPad'), { labelledby: 'chatPinT', submit: 'Unlock',
+      onSubmit: async pin => {
+        try {
+          const r = await MSSLock.verify(pin);
+          if (r.ok) return openApp(q);
+          pad.wrong(r.wait ? tooMany(r.wait) : 'That isn’t your passcode.');
+        } catch { pad.clear(); pad.say('Couldn’t check that — try again.'); }
+      } });
+    if (st.wait) pad.say(tooMany(st.wait));
+    pad.focus();
     $('chatPinForgot').addEventListener('click', () => {
       gate(`<form class="chat-card" id="chatPinPw" novalidate>
           <h2 class="chat-card-t">Forgot your passcode?</h2>
