@@ -8551,15 +8551,6 @@ h2.td-section-title { font-weight:inherit; font-family:inherit; }
 .confirm-choice-l { display:flex; flex-direction:column; gap:3px; min-width:0; }
 .confirm-choice-l b { font:600 14px 'Manrope',var(--sans); }
 .confirm-choice-l small { font-size:12.5px; line-height:1.45; color:var(--text-2); }
-/* Your profile's Diary tab (private): this month + your latest watches */
-.dy-tab { padding-top:1.25rem; }
-.dy-tab-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:1rem; }
-.dy-tab-who .lp-eyebrow svg { flex-shrink:0; }
-.dy-tab-t { margin:6px 0 2px; font:400 clamp(30px, 5vw, 44px)/1 var(--bebas); letter-spacing:.5px; text-transform:uppercase; color:var(--text); }
-.dy-tab-head .dy-btn { min-height:44px; text-decoration:none; }
-.dy-tab-body { display:grid; gap:clamp(16px, 2.4vw, 28px); align-items:start; }
-@media (min-width:1024px) { .dy-tab-body { grid-template-columns:minmax(0, 1.4fr) minmax(300px, 1fr); } }
-.dy-tab-latest .dy-day-t { margin-bottom:10px; }
 /* ═════════════════════════════════════════════════════════════
    On This Day (js/on-this-day.js): the anniversary cards, the Diary strip, the bell item
    The card's picture sits behind a dark gradient in both themes, so its text always reads

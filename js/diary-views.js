@@ -1,6 +1,5 @@
 /* ══════════════════════════════════════════
    diary-views.js — the Diary page (diary.html): every watch, on the day you watched it
-   (also the private Diary tab on your own profile: MSSDiaryPage.tab(el))
    Private: only your own watches (diary_watches, 110). Logged by the database (112).
 
    Header: "Library", the month / week / day / year in big type (tap it to jump anywhere),
@@ -227,7 +226,7 @@ const MSSDiaryPage = (() => {
     const label = `${r.title}${ep ? ` S${r.season} E${r.episode}` : ''}`;
     return `<article class="dy-entry${o.linked ? ' is-linked' : ''}"${ep && r.tmdb_id ? ` data-ep="${r.tmdb_id}:${r.season}:${r.episode}"` : ''}>
         ${href ? `<a class="dy-entry-link" href="${esc(href)}">${inner}</a>` : `<div class="dy-entry-link">${inner}</div>`}
-        ${o.noMore ? '' : `<button type="button" class="dy-more" data-act="more" data-ids="${esc(r.id)}" aria-label="Options for ${esc(label)}">${icon('moreV', 18)}</button>`}
+        <button type="button" class="dy-more" data-act="more" data-ids="${esc(r.id)}" aria-label="Options for ${esc(label)}">${icon('moreV', 18)}</button>
       </article>`;
   }
   // "S1 E1–E8" · "S1–S5" for a bulk log
@@ -251,8 +250,8 @@ const MSSDiaryPage = (() => {
           </span>
           <span class="dy-group-chev" aria-hidden="true">${icon('chevdown', 16)}</span>
         </button>
-        ${o.noMore ? '' : `<button type="button" class="dy-more" data-act="more" data-ids="${esc(rows.map(x => x.id).join(','))}" aria-label="Options for ${esc(r.title)} ${esc(rangeText(rows))}">${icon('moreV', 18)}</button>`}
-        <div class="dy-group-body" id="${id}"${open ? '' : ' hidden'}>${open ? rows.map(x => entryHTML(x, { noMore: o.noMore })).join('') : ''}</div>
+        <button type="button" class="dy-more" data-act="more" data-ids="${esc(rows.map(x => x.id).join(','))}" aria-label="Options for ${esc(r.title)} ${esc(rangeText(rows))}">${icon('moreV', 18)}</button>
+        <div class="dy-group-body" id="${id}"${open ? '' : ' hidden'}>${open ? rows.map(x => entryHTML(x)).join('') : ''}</div>
       </div>`;
   }
   // A day's watches: bulk logs grouped, back-to-back episodes of one show linked
@@ -796,7 +795,7 @@ const MSSDiaryPage = (() => {
     st.weekStart = profile?.week_start || regionWeekStart();
     const all = await getEntries(user.id).catch(() => []);
     all.forEach(e => st.entries.set(e.id, e));
-    // from your profile's Diary tab (diary.html?d=2026-11-25): that day
+    // a day from elsewhere (diary.html?d=2026-11-25 — On This Day's View in Diary): that day
     const d = new URLSearchParams(location.search).get('d');
     if (/^\d{4}-\d{2}-\d{2}$/.test(d || '') && !isNaN(day(d))) st.day = d;
     shell();
@@ -825,68 +824,12 @@ const MSSDiaryPage = (() => {
       <div class="dy-body dy-v-month"><div class="dy-cal">${monthHTML(today(), false)}</div><div class="dy-panel"><div class="dy-day-head"><h2 class="dy-day-t">Tuesday 25 November 2026</h2></div><div class="dy-list">${entryHTML(sample)}${entryHTML(sample)}</div></div></div>`;
   });
 
-  /* ── The Diary tab on YOUR profile (profile.html only — never profile-view.html; the database
-     only ever returns your own watches anyway): this month, your latest 10, Open Diary ── */
-  async function tab(el) {
-    if (!el || el.dataset.dyTab) return;
-    el.dataset.dyTab = '1';
-    const t = today();
-    try {
-      const [, recent] = await Promise.all([
-        ensure(weekOf(monthStart(t)), addDays(weekOf(monthEnd(t)), 6)),
-        sb.from('diary_watches').select(COLS).not('watched_date', 'is', null).order('watched_date', { ascending: false }).order('watched_at', { ascending: false, nullsFirst: false }).limit(300).then(r => r.data || []),
-      ]);
-      // your latest 10: a bulk log counts as one, and stays whole
-      const latest = items(recent).slice(0, 10).flat();
-      latest.forEach(enrich);
-      await prevRatingsFor(latest);
-      st.day = t;
-      let n = 0; for (let d = monthStart(t); d <= monthEnd(t); d = addDays(d, 1)) n += rowsOn(d).length;
-      el.innerHTML = `<div class="dy-tab">
-          <div class="dy-tab-head">
-            <div class="dy-tab-who"><div class="lp-eyebrow">${icon('lock', 12)} Only you can see this</div>
-              <h2 class="dy-tab-t">${esc(fmt(t, { month: 'long', year: 'numeric' }))}</h2><div class="dy-count">${plural(n, 'watch', 'watches')} this month</div></div>
-            <a class="dy-btn is-primary" href="diary.html">${icon('calendar', 15)}<span>Open Diary</span></a>
-          </div>
-          <div class="dy-tab-body">
-            <div class="dy-tab-cal">${monthHTML(t, false)}</div>
-            <section class="dy-tab-latest" aria-labelledby="dyTabLatest"><h3 class="dy-day-t" id="dyTabLatest">Latest watches</h3>
-              ${latest.length ? `<div class="dy-list">${listHTML(latest, { withDate: true, noMore: true })}</div>`
-                : mssEmpty({ compact: true, art: 'episodes', title: 'Nothing in your Diary yet', text: 'Watch something and it lands here, on the day you watched it.' })}
-            </section>
-          </div>
-        </div>`;
-      // a day on the calendar opens it in the Diary; a bulk log opens here
-      el.addEventListener('click', ev => {
-        const d = ev.target.closest('.dy-m-day[data-d]');
-        if (d) { location.href = `diary.html?d=${d.dataset.d}`; return; }
-        const g = ev.target.closest('[data-act="group"]');
-        if (!g) return;
-        const k = g.dataset.key, box = g.closest('.dy-group'), body = box.querySelector('.dy-group-body'), open = !st.open.has(k);
-        if (open) st.open.add(k); else st.open.delete(k);
-        const rows = latest.concat([...st.byDay.values()].flat()).filter(r => (r.batch_id || r.id) === k).filter((r, i, a) => a.findIndex(x => x.id === r.id) === i).sort((a, b) => a.season - b.season || a.episode - b.episode);
-        body.innerHTML = open ? rows.map(r => entryHTML(r, { noMore: true })).join('') : '';
-        body.hidden = !open; box.classList.toggle('is-open', open); g.setAttribute('aria-expanded', String(open));
-        if (open) fillEpisodes(body);
-      });
-      fillEpisodes(el);
-    } catch (err) {
-      console.error(err);
-      delete el.dataset.dyTab;
-      el.innerHTML = mssEmpty({ compact: true, art: 'episodes', title: 'Couldn’t load your Diary', text: 'Check your connection and try again.' });
-    }
-  }
-  // its loading skeleton, from the same markup
-  mssSkeleton.define('diarytab', () => `<div class="dy-tab"><div class="dy-tab-head"><div class="dy-tab-who"><div class="lp-eyebrow" data-skel-keep>Only you can see this</div><h2 class="dy-tab-t">November 2026</h2><div class="dy-count">12 watches this month</div></div></div>
-      <div class="dy-tab-body"><div class="dy-tab-cal">${monthHTML(today(), false)}</div><section class="dy-tab-latest"><h3 class="dy-day-t" data-skel-keep>Latest watches</h3><div class="dy-list">${[1, 2, 3].map(() => entryHTML({ id: 's', title: 'Sample title', cat: 'tv', season: 1, episode: 1, watched_date: today() }, { noMore: true })).join('')}</div></section></div></div>`);
-
   document.addEventListener('DOMContentLoaded', () => {
-    if (!$('dyRoot')) return;            // another page using the tab (profile.html)
     initPage(user => {
       if (!user) { $('dyRoot').innerHTML = mssGuestEmpty('diary'); return; }
       start(user).catch(err => { console.error(err); $('dyRoot').innerHTML = mssEmpty({ art: 'episodes', title: 'Couldn’t open your Diary', text: 'Check your connection and try again.', actions: [{ label: 'Try again', icon: 'refresh', onclick: 'location.reload()' }] }); });
     });
   });
 
-  return { add, reload, openNoDate, tab };
+  return { add, reload, openNoDate };
 })();
