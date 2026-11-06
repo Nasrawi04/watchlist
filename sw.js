@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v277';   // MyScreenFolio — restarted at v1 (was mss-v787)
+const CACHE_VERSION = 'msf-v279';   // MyScreenFolio — restarted at v1 (was mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -42,6 +42,8 @@ const STATIC_ASSETS = [
   'lists.html',
   'list-view.html',
   'episodes.html',
+  'season.html',
+  'episode.html',
   'notes.html',
   'notifications.html',
   'cabinet.html',
@@ -111,6 +113,7 @@ const STATIC_ASSETS = [
   'js/messages.js',
   'js/vendor/sodium-sumo-0.8.4.js',
   'js/episode-chat.js',
+  'js/show-pages.js',
   'js/movie-night.js',
   'js/date-range.js',
   'js/splash.js',

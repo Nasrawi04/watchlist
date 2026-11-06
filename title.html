@@ -245,12 +245,6 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 }
 
 /* ── Sections ── */
-.td-section-title {
-  font-size:clamp(10px, 1.6vw, 13px); letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light);
-  margin:3rem 0 1.25rem; display:flex; align-items:center; gap:12px;
-}
-.td-section-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
-.td-overview { font-size:clamp(13.5px, 2vw, 17px); line-height:1.75; color:var(--text-2); }
 
 /* ── Community Notes ── */
 .td-notes-controls { display:flex; gap:8px; margin-bottom:1.25rem; margin-top:-0.5rem; }
@@ -284,26 +278,6 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 .td-note-react-btn svg { transition:transform .3s, fill .3s; }
 .td-note-react-btn:hover svg { transform:scale(1.15) rotate(-8deg); }
 
-/* ── Cast ── */
-.td-cast-scroll { display:flex; flex-wrap:wrap; gap:20px 18px; }
-.td-cast-card { flex-shrink:0; width:clamp(90px, 12vw, 140px); text-align:center; display:block; text-decoration:none; color:inherit; transition:opacity .15s; }
-.td-cast-card:hover { opacity:.8; }
-.td-cast-photo {
-  width:clamp(90px, 12vw, 140px); height:clamp(90px, 12vw, 140px); border-radius:50%; overflow:hidden; background:var(--bg-3);
-  margin-bottom:10px; display:flex; align-items:center; justify-content:center;
-  border:0.5px solid var(--border); font-family:var(--serif); font-size:clamp(22px, 3vw, 34px); color:var(--olive-light);
-}
-.td-cast-photo img { width:100%; height:100%; object-fit:cover; }
-.td-cast-name { font-size:clamp(12px, 1.8vw, 15px); font-weight:500; color:var(--text); line-height:1.3; }
-.td-cast-char { font-size:clamp(10.5px, 1.5vw, 13px); color:var(--text-3); margin-top:3px; line-height:1.3; }
-.td-cast-more-btn {
-  display:block; margin:14px auto 0; padding:9px 20px;
-  background:var(--olive); color:#fff; border:0.5px solid var(--olive);
-  border-radius:var(--radius-sm); font-family:'Manrope',var(--sans); font-weight:500;
-  font-size:13px; cursor:pointer; transition:background .15s;
-}
-.td-cast-more-btn:hover { background:var(--olive-light); border-color:var(--olive-light); }
-a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center; }
 #tdNotesList > a.td-cast-more-btn { margin-top:2px; }
 
 /* ── Episode detail popup ── */
@@ -337,7 +311,9 @@ a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center;
 .ep-popup-meta-row { display:flex; flex-wrap:wrap; gap:8px 16px; font-size:13px; color:var(--text-3); margin-bottom:1.25rem; }
 .ep-popup-meta-row span { display:inline-flex; align-items:center; gap:5px; }
 .ep-popup-rating { font-family:var(--bebas); color:var(--olive-light); font-weight:400; font-size:18px; letter-spacing:.3px; }
-.td-ep-chat { margin-top:1.25rem; }
+.td-ep-popup-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:1.25rem; }
+.td-ep-popup-actions .btn-add-entry { text-decoration:none; }
+.td-season-page-link { margin:0 0 .75rem; }
 .ep-popup-overview { font-size:14.5px; color:var(--text-2); line-height:1.75; white-space:pre-line; }
 .td-season-loading { padding:16px; font-size:12.5px; color:var(--text-3); text-align:center; }
 #tdEpisodesList { margin-top:1rem; }
@@ -345,9 +321,6 @@ a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center;
 @media(max-width:640px) {
   .td-add-row { flex-direction:column; align-items:stretch; width:100%; }
   .td-add-row button { width:100%; flex:0 0 auto; justify-content:center; }
-  .td-cast-scroll { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px 10px; }
-  .td-cast-card { width:100%; }
-  .td-cast-photo { width:100%; height:auto; aspect-ratio:1/1; }
 
   /* ── Hero redesign: stack poster on top, center everything, decluttered spacing ── */
   .td-hero { min-height:0; }
@@ -376,11 +349,6 @@ a.td-cast-more-btn { width:fit-content; text-decoration:none; text-align:center;
 /* Related rows (collection + recommendations) */
 .td-related { margin-top:2.5rem; }
 .td-related .grid-nav-wrap { margin-top:1rem; }
-.td-section-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-.td-ep-graph-link { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--olive-light); text-decoration:none; }
-.td-ep-graph-link:hover { text-decoration:underline; text-underline-offset:3px; }
-.td-ep-scores { position:absolute; top:8px; inset-inline-end:8px; display:flex; gap:4px; }
-.td-ep-scores span { padding:2px 7px; border-radius:4px; font-family:var(--bebas); font-size:14px; letter-spacing:.4px; }
 /* ── Fan Favorites — same tabs + row as Friends & This Title, with the page's
    own episode cards, season blocks and cast photos ── */
 .td-fans-row { align-items:flex-start; }
@@ -959,19 +927,15 @@ function _tdFanCard(kind, g, rank) {
     : `<a class="td-season-block td-fan-char" href="person.html?id=${Number(g.actorId)}" aria-label="${esc(g.name)}, played by ${esc(g.actor)} — ${g.picks} picks">${inner}</a>`;
 }
 // Tap a season → the Episodes section opens on it
-function _tdFanOpenSeason(n) {
-  const el = document.querySelector(`.td-season-block[data-season="${n}"]`);
-  if (!el) return;
-  _selectSeason(el);
-  el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center', inline: 'center' });
-}
-// Tap an episode → its details popup
+// Tap a season → its Season page
+function _tdFanOpenSeason(n) { location.href = `season.html?show=${_tdId}&s=${n}`; }
+// Tap an episode → its details popup (with its Episode page button)
 function _tdFanOpenEpisode(sn, n) {
   const g = _tdFanGroups.find(t => t.key === 'episode')?.items.find(x => x.season === sn && x.episode === n);
   if (!g?.ep) return;
   const keep = _tdCurrentEpisodes;
   _tdCurrentEpisodes = [g.ep];
-  _openEpisodePopup(0);
+  _openEpisodePopup(0, n);
   _tdCurrentEpisodes = keep;
 }
 
@@ -1274,13 +1238,14 @@ async function _selectSeason(el) {
   }
 
   await _tdEpScoresReady;
-  epsWrap.innerHTML = `<div class="td-episode-row">${eps.map((ep, i) => {
+  const sInfo = (_tdDetail?.seasons || []).find(x => String(x.season_number) === String(seasonNum));
+  epsWrap.innerHTML = `<a class="td-ep-graph-link td-season-page-link" href="season.html?show=${tvId}&s=${seasonNum}" translate="no">${esc(mssSeasonLabel(seasonNum, sInfo?.name))} · Season page →</a><div class="td-episode-row">${eps.map((ep, i) => {
     const runtime = ep.runtime ? `${ep.runtime}m` : '';
     const k = `${seasonNum}:${ep.episode_number}`, mineS = _tdMyEp[k], commS = _tdCommEp[k];
     const rating = ep.vote_average ? _discFloorScore(ep.vote_average) : null;
     const date = _tdEpDate(ep.air_date, 'short');
     return `
-    <div class="td-episode-card" onclick="_openEpisodePopup(${i})">
+    <div class="td-episode-card" onclick="_openEpisodePopup(${i})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" aria-label="Episode ${i + 1}: ${esc(ep.name)}">
       <div class="td-ep-still">
         ${ep.still_path ? `<img src="${TMDB_IMG.replace('w185', 'w500')}${ep.still_path}" loading="lazy">` : ''}
         <span class="td-ep-num-badge">Episode ${ep.episode_number}</span>
@@ -1299,6 +1264,7 @@ async function _selectSeason(el) {
   }).join('')}</div>`;
 
   _tdCurrentEpisodes = eps;
+  _tdCurrentSeason = Number(seasonNum);
 }
 
 /* ── Where to watch (TMDB watch/providers — data by JustWatch) ──
@@ -1441,7 +1407,7 @@ function _tdOpenWtw() {
 function _tdCloseWtw() { MSSDialog.close(document.getElementById('wtwOverlay')); }
 
 /* ── Episode detail popup ── */
-let _tdCurrentEpisodes = [];
+let _tdCurrentEpisodes = [], _tdCurrentSeason = null;
 
 function _injectEpPopupOverlay() {
   if (document.getElementById('epPopupOverlay')) return;
@@ -1452,9 +1418,13 @@ function _injectEpPopupOverlay() {
   document.body.appendChild(el);
 }
 
-function _openEpisodePopup(index) {
+// pos: the episode's place in its season (1, 2, 3…) — some shows number episodes across the series
+// on TMDB. The popup remembers which episode it shows, for its Chat and Episode page buttons.
+let _tdPopupEp = null;
+function _openEpisodePopup(index, pos = index + 1) {
   const ep = _tdCurrentEpisodes[index];
   if (!ep) return;
+  _tdPopupEp = { ep, pos, s: ep.season_number ?? _tdCurrentSeason };
   _injectEpPopupOverlay();
 
   const runtime = ep.runtime ? `${ep.runtime} min` : '';
@@ -1475,7 +1445,10 @@ function _openEpisodePopup(index) {
         ${date ? `<span>${date}</span>` : ''}
       </div>
       <div class="ep-popup-overview" translate="no">${esc(ep.overview) || mssT('No description available.')}</div>
-      ${_tdUser ? `<button type="button" class="btn-add-entry td-ep-chat" onclick="_tdEpChat(${index})">${icon('comment', 14)} Friends’ Chat</button>` : ''}
+      <div class="td-ep-popup-actions">
+        <a class="btn-add-entry" href="episode.html?show=${_tdId}&s=${_tdPopupEp.s}&e=${pos}">${icon('episodes', 14)} Episode page</a>
+        ${_tdUser ? `<button type="button" class="btn-add-entry" onclick="_tdEpChat()">${icon('comment', 14)} Friends’ Chat</button>` : ''}
+      </div>
     </div>`;
 
   MSSDialog.open(document.getElementById('epPopupOverlay'));
@@ -1486,11 +1459,10 @@ function _tdEpDate(d, month) {
   return d ? new Date(d + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { year: 'numeric', month, day: 'numeric' }) : '';
 }
 // Episode chat (episode-chat.js) — friends-only, unlocks once you've watched it
-function _tdEpChat(index) {
-  const ep = _tdCurrentEpisodes[index]; if (!ep) return;
-  // the episode's place in its season (1, 2, 3…) — same as your progress and the Episodes page
-  // (some shows number episodes across the whole series on TMDB)
-  MSSEpChat.open({ tmdb_id: Number(_tdId), season: ep.season_number, episode: index + 1, show: _tdDetail?.name, name: ep.name, poster_path: _tdDetail?.poster_path });
+function _tdEpChat() {
+  if (!_tdPopupEp) return;
+  const { ep, pos, s } = _tdPopupEp;   // its place in the season — same as your progress and the Episodes page
+  MSSEpChat.open({ tmdb_id: Number(_tdId), season: s, episode: pos, show: _tdDetail?.name, name: ep.name, poster_path: _tdDetail?.poster_path });
 }
 function _closeEpisodePopup() { MSSDialog.close(document.getElementById('epPopupOverlay')); }
 

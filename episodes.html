@@ -16,41 +16,6 @@
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ── Episodes page ── */
-/* ── One show: tall hero like the title page (sharp backdrop, big poster dipping into the sheet below) ── */
-.eg-hero {
-  --eg-dip:44px;
-  position:relative; min-height:clamp(320px, 34vw, 460px); display:flex; flex-direction:column; justify-content:flex-end;
-  margin:calc(-1 * var(--page-pt)) calc(-1 * var(--page-px)) 0; padding-top:var(--page-pt); background:#0d1210; color:#EDEDED;
-}
-.eg-hero-img { position:absolute; inset:0; background-size:cover; background-position:center 22%; }
-.eg-hero-img::after { content:''; position:absolute; inset:0;
-  background:linear-gradient(90deg, rgba(8,12,10,.94) 0%, rgba(8,12,10,.72) 38%, rgba(8,12,10,.18) 75%, rgba(8,12,10,.05) 100%),
-             linear-gradient(0deg, rgba(8,12,10,.55) 0%, transparent 40%); }
-.eg-back { position:absolute; top:calc(var(--page-pt) + 6px); inset-inline-start:calc(var(--page-px) + 1rem); z-index:3; display:inline-flex; align-items:center; gap:6px;
-  font-size:13.5px; font-weight:600; color:#EDEDED; text-decoration:none; opacity:.85; transition:opacity .15s; }
-.eg-back:hover, .eg-back:focus-visible { opacity:1; }
-.eg-hero-inner { position:relative; z-index:2; display:flex; align-items:flex-end; gap:clamp(1rem, 3vw, 2.5rem); padding:3.5rem calc(var(--page-px) + 1rem) 0; }
-.eg-hero-poster { width:clamp(130px, 15vw, 205px); aspect-ratio:2/3; flex-shrink:0; border-radius:var(--radius); overflow:hidden; background:var(--bg-3);
-   margin-bottom:calc(-1 * var(--eg-dip)); }
-.eg-hero-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.eg-hero-info { flex:1; min-width:0; padding-bottom:clamp(2.6rem, 5vw, 3.6rem); }
-.eg-hero-eyebrow { font-size:clamp(10.5px, 1.2vw, 12px); font-weight:600; letter-spacing:2.6px; text-transform:uppercase; color:#8FD177; margin-bottom:.6rem; }
-.eg-hero-title { font-family:var(--bebas); font-weight:400; font-size:clamp(36px, 5.4vw, 64px); line-height:.95; letter-spacing:.5px; margin:0 0 .7rem; color:#fff; overflow-wrap:anywhere; }
-.eg-hero-title.mss-logo-title:not(.mss-logo-failed) { margin-bottom:1rem; }
-.eg-hero-sub { font-size:clamp(13px, 1.3vw, 14.5px); color:rgba(237,237,237,.82); display:flex; flex-wrap:wrap; gap:4px 10px; }
-.eg-hero-sub span + span::before { content:'·'; margin-inline-end:10px; opacity:.6; }
-.eg-hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:1.1rem; }
-/* the series average, in its band colour (gold for a perfect 10) */
-.eg-hero-score { display:inline-flex; align-items:center; gap:8px; padding:6px 14px 6px 8px; border-radius:var(--radius-sm); font:600 12.5px 'Manrope',var(--sans); }
-.eg-hero-score b { font-family:var(--bebas); font-weight:400; font-size:24px; line-height:1; padding:3px 7px 1px; border-radius:6px; background:rgba(0,0,0,.16); }
-.eg-hero-btn { display:inline-flex; align-items:center; gap:8px; padding:9px 16px; border-radius:var(--radius-sm); font:600 13.5px 'Manrope',var(--sans); text-decoration:none;
-  color:#fff; background:rgba(255,255,255,.1); border:0.5px solid rgba(255,255,255,.28); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); transition:background-color .15s, border-color .15s; }
-.eg-hero-btn:hover { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.45); }
-.eg-hero-btn:focus-visible, .eg-back:focus-visible { outline:2px solid #8FD177; outline-offset:3px; }
-.eg-hero-tag { display:inline-flex; align-items:center; gap:7px; padding:10px 16px; border-radius:var(--radius-sm); font:600 13px 'Manrope',var(--sans); color:#B8E0A8; background:rgba(126,184,108,.14); border:0.5px solid rgba(126,184,108,.4); }
-[dir=rtl] .eg-hero-img::after { background:linear-gradient(270deg, rgba(8,12,10,.94) 0%, rgba(8,12,10,.72) 38%, rgba(8,12,10,.18) 75%, rgba(8,12,10,.05) 100%), linear-gradient(0deg, rgba(8,12,10,.55) 0%, transparent 40%); }
-/* the page "sheet" rises over the hero with rounded top corners */
-.eg-sheet { position:relative; z-index:1; margin:-26px calc(-1 * var(--page-px)) 0; padding:calc(44px + 26px + 1.25rem) var(--page-px) 0; background:var(--bg); border-radius:28px 28px 0 0; }
 
 /* Controls: one card — Ratings · View · Seasons, then Compare / Export */
 .eg-controls { display:flex; flex-wrap:wrap; gap:14px 22px; align-items:flex-end; margin:0 0 16px; padding:14px 18px; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg, 16px); }
@@ -232,14 +197,6 @@ button.eg-tile:focus-visible { outline:2px solid var(--olive-light); outline-off
   .eg-panel-body .eg-tiles { grid-template-columns:repeat(3, 1fr); }
   .eg-panel-body .eg-tiles > .eg-tile:last-child:nth-child(odd) { grid-column:auto; } }
 @media(max-width:640px) {
-  .eg-hero { min-height:0; }
-  .eg-hero-inner { flex-direction:column; align-items:center; text-align:center; padding:3.2rem calc(var(--page-px) + .5rem) 0; gap:1.1rem; }
-  .eg-hero-poster { width:clamp(110px, 34vw, 150px); margin-bottom:0; }
-  .eg-hero-info { width:100%; padding-bottom:2.4rem; }
-  .eg-hero-title { font-size:clamp(32px, 10vw, 44px); }
-  .eg-hero-sub, .eg-hero-actions { justify-content:center; }
-  .eg-hero-title .mss-logo { margin-inline:auto; }
-  .eg-sheet { padding-top:1.4rem; margin-top:-20px; border-radius:22px 22px 0 0; }
   .eg-controls { padding:12px; gap:12px 10px; }
   .eg-ctl { width:100%; }
   .eg-ctl.eg-ctl-half { width:auto; flex:1 1 0; min-width:0; }
@@ -766,9 +723,10 @@ function egOpen(sn, n, inTie) {
       <span></span>
       <button type="button" class="ep-nav-btn" onclick="egStep(1)" aria-label="Next episode">Next ›</button>
     </div>
-    <div class="ep-actions">
+    <div class="ep-actions ep-actions-3">
       ${mine && S.entry && !S.readOnly ? `<button type="button" class="popup-action-btn popup-action-danger ep-del" onclick="egRemove(${sn},${n})" aria-label="Remove this rating" title="Remove this rating">${icon('trash', 15)}</button>` : ''}
       <button type="button" class="popup-action-btn np-ghost" onclick="egClose()">Close</button>
+      <a class="popup-action-btn np-ghost eg-page-btn" href="episode.html?show=${_egShowId}&s=${sn}&e=${n}">${icon('episodes', 14)} Episode page</a>
       <button type="button" class="popup-action-btn eg-chat-btn" onclick="egChat(${sn},${n})">${icon(S.chat?.[k] && !S.chat[k].unlocked ? 'lock' : 'comment', 14)} Friends’ Chat${S.chat?.[k]?.count ? ` · ${S.chat[k].count}` : ''}</button>
       ${S.entry && !S.readOnly ? `<button type="button" class="popup-action-btn ep-save" onclick="egRate(${sn},${n})">${mine ? 'Edit Rating' : 'Rate'}</button>` : ''}
     </div>`;
