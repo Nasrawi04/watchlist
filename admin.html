@@ -483,16 +483,24 @@ async function admSafety() {
    profile photo) · Ban the person · View member. The reported person never sees who reported them. */
 let _admReports = [], _admRepShow = 'open';
 const ADM_REP_KIND = { user: 'Profile', comment: 'Comment', note_reply: 'Note reply', list_reply: 'List reply', note: 'Note', entry: 'Title pictures',
-  list: 'List', poll: 'Poll', poll_comment: 'Poll comment', episode_chat: 'Episode chat' };
+  list: 'List', poll: 'Poll', poll_comment: 'Poll comment', episode_chat: 'Episode chat', ep_note: 'Episode note', ep_note_reply: 'Episode note reply' };
 const ADM_REP_REASON = { spam: 'Spam', harassment: 'Harassment', offensive: 'Hateful / offensive', sexual: 'Sexual', copyright: 'Stolen picture / work', other: 'Other' };
 // what "Remove" takes away for each kind (admin_delete_content)
 const ADM_REP_REMOVE = { comment: ['comment', 'Remove comment'], note_reply: ['note_reply', 'Remove reply'], list_reply: ['list_reply', 'Remove reply'],
   note: ['note', 'Remove note text'], entry: ['poster', 'Remove poster'], list: ['list', 'Delete list'], poll: ['poll', 'Delete poll'],
-  poll_comment: ['poll_comment', 'Remove comment'], episode_chat: ['episode_chat', 'Remove message'], user: ['avatar', 'Remove photo'] };
+  poll_comment: ['poll_comment', 'Remove comment'], episode_chat: ['episode_chat', 'Remove message'], user: ['avatar', 'Remove photo'],
+  ep_note: ['ep_note', 'Remove note text'], ep_note_reply: ['ep_note_reply', 'Remove reply'] };
 function _admRepGroups(list) {
   const m = new Map();
   list.forEach(r => { const k = r.kind + ':' + r.target_id; if (!m.has(k)) m.set(k, []); m.get(k).push(r); });
   return [...m.values()];
+}
+// An episode / season note (109) → its page, that note (or its replies) — like the notification link
+function _admEpNoteLink(kind, cx) {
+  const show = encodeURIComponent(cx.tmdb_id), s = encodeURIComponent(cx.season), ep = Number(cx.episode);
+  const href = (ep ? `episode.html?show=${show}&s=${s}&e=${encodeURIComponent(ep)}` : `season.html?show=${show}&s=${s}`)
+    + `&${kind === 'ep_note' ? 'note' : 'replies'}=${encodeURIComponent(cx.rating_id || '')}`;
+  return `<a class="adm-rep-link" href="${href}" target="_blank" rel="noopener" translate="no">${esc(cx.show || 'Show')} · ${ep ? `S${Number(cx.season)} E${ep}` : `Season ${Number(cx.season)}`}</a>`;
 }
 function _admReportsHTML() {
   const groups = _admRepGroups(_admReports), open = _admRepShow === 'open';
@@ -510,6 +518,7 @@ function _admRepHTML(g) {
   const canRemove = open && rm && !(r.kind === 'user' && !cx.avatar_url) && !(r.kind === 'entry' && !cx.poster_url);
   const where = r.kind === 'list' ? `<a class="adm-rep-link" href="list-view.html?list=${encodeURIComponent(r.target_id)}" target="_blank" rel="noopener">Open list</a>`
     : r.kind === 'episode_chat' && cx.show ? `<span translate="no">${esc(cx.show)} · S${Number(cx.season)} E${Number(cx.episode)}</span>`
+    : (r.kind === 'ep_note' || r.kind === 'ep_note_reply') && cx.tmdb_id ? _admEpNoteLink(r.kind, cx)
     : (r.kind === 'note' || r.kind === 'entry') && cx.title ? `<span translate="no">on ${esc(cx.title)}</span>` : '';
   return `<div class="adm-rep${open ? '' : ' done'}">
     <div class="adm-rep-top">${_admAv(o)}
@@ -543,7 +552,7 @@ async function admReportDone(id, status, quiet, action) {
 async function admReportRemove(id) {
   const r = _admReports.find(x => x.id === id); if (!r) return;
   const [kind, label] = ADM_REP_REMOVE[r.kind];
-  const msg = { note: 'Their note’s text is cleared — the title stays in their library.', poster: 'Their uploaded poster is taken off — the title goes back to its normal poster.',
+  const msg = { note: 'Their note’s text is cleared — the title stays in their library.', ep_note: 'Their note’s text is cleared — their episode rating stays.', poster: 'Their uploaded poster is taken off — the title goes back to its normal poster.',
     avatar: 'Their profile photo is taken off.', list: 'The whole list is deleted.', poll: 'The poll, its votes and comments are deleted.' }[kind] || 'It’s deleted for everyone.';
   if (!(await showConfirm({ title: label + '?', message: msg + ' This can’t be undone.', confirmText: label.split(' ')[0], iconName: 'trash' }))) return;
   const { error } = await sb.rpc('admin_delete_content', { p_kind: kind, p_id: r.target_id });

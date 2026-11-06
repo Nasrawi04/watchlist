@@ -3131,11 +3131,11 @@ function _notifDroppedAt(m) {
 
 // Reports (087) — to the people who reported it, and to the person it belonged to
 const _NOTIF_MOD_WHAT = { comment: 'comment', note_reply: 'reply', list_reply: 'reply', note: 'note', entry: 'poster', list: 'list',
-  poll: 'poll', poll_comment: 'poll comment', episode_chat: 'episode chat message', user: 'profile' };
+  poll: 'poll', poll_comment: 'poll comment', episode_chat: 'episode chat message', user: 'profile', ep_note: 'note', ep_note_reply: 'reply' };
 const _NOTIF_MOD_WHY = { spam: 'spam', harassment: 'harassment', offensive: 'hateful or offensive content', sexual: 'sexual content', copyright: 'using someone else’s picture or work', other: 'breaking the community rules' };
 function _notifModText(n) {
   const m = n.meta || {}, what = _NOTIF_MOD_WHAT[m.kind] || 'post';
-  const on = m.title && (m.kind === 'note' || m.kind === 'entry') ? ` on <b translate="no">${escHTML(m.title)}</b>` : '';
+  const on = m.title && (m.kind === 'note' || m.kind === 'entry' || m.kind === 'ep_note') ? ` on <b translate="no">${escHTML(m.title)}</b>` : '';
   if (n.type === 'report_actioned') {
     return `<b>Thanks for your report.</b> ` + (m.action === 'banned' || m.action === 'suspended' || m.action === 'warned' ? `We took action on the account behind the ${what} you reported.`
       : m.action === 'removed' ? (m.kind === 'user' ? 'We removed the profile photo you reported.' : `We removed the ${what}${on} you reported.`)
@@ -3147,7 +3147,7 @@ function _notifModText(n) {
   if (m.action === 'suspended') return `<b>Your account was suspended${m.until ? ` until ${escHTML(new Date(m.until).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' }))}` : ''}</b> for breaking the community rules (${escHTML(why)}). Repeat breaks can get it banned.`;
   if (m.action === 'warned') return `<b>Warning:</b> ${m.kind === 'user' ? 'your account' : `your ${what}${on}`} broke the community rules (${escHTML(why)}).${note} Please keep to the rules — repeat breaks can get an account suspended.`;
   const gone = m.kind === 'user' ? 'Your profile photo was removed' : m.kind === 'entry' ? `The poster you uploaded${on} was removed`
-    : m.kind === 'note' ? `The text of your note${on} was removed` : `Your ${what} was removed`;
+    : m.kind === 'note' || m.kind === 'ep_note' ? `The text of your ${what}${on} was removed` : `Your ${what} was removed`;
   return `<b>${m.action === 'removed' ? gone : `We took action on your ${what}${on}`}</b> for ${escHTML(why)}. Please keep to the community rules — repeat breaks can get an account suspended.`;
 }
 

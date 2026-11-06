@@ -4,7 +4,7 @@
 
    MSSReport.open(kind, id, { what, name })
      kind:  user · comment · note_reply · list_reply · note · entry · list ·
-            poll · poll_comment · episode_chat
+            poll · poll_comment · episode_chat · ep_note · ep_note_reply (109)
      what:  how to call it in the title ("comment", "list", "@sam") — optional
    Pick a reason, add a note if you like, Send → the popup closes with a toast.
    The admins see it in Admin → Safety → Reports. The person reported is
@@ -20,12 +20,14 @@ const MSSReport = (() => {
     ['other', 'Something else', 'Tell us below'],
   ];
   const WHAT = { user: 'this person', comment: 'this comment', note_reply: 'this reply', list_reply: 'this reply',
-    note: 'this note', entry: 'these pictures', list: 'this list', poll: 'this poll', poll_comment: 'this comment', episode_chat: 'this message' };
+    note: 'this note', entry: 'these pictures', list: 'this list', poll: 'this poll', poll_comment: 'this comment', episode_chat: 'this message',
+    ep_note: 'this note', ep_note_reply: 'this reply' };
   let cur = null;   // { kind, id }
 
   function shell() {
     let ov = document.getElementById('mssReport');
-    if (ov) return ov;
+    // already made: move it last, so it opens above a popup opened since (same z-index → page order decides)
+    if (ov) { if (ov !== document.body.lastElementChild) document.body.appendChild(ov); return ov; }
     ov = document.createElement('div');
     ov.id = 'mssReport'; ov.className = 'confirm-overlay rpt-overlay';
     ov.innerHTML = `<div class="confirm-card rpt-card" role="dialog" aria-modal="true" aria-labelledby="rpTitle">

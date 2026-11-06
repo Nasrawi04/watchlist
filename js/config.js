@@ -1654,6 +1654,7 @@ function goToTitle(type, id) {
 // The title page's favourite / least favourite season saves this same text.
 function mssSeasonLabel(n, name) {
   const nm = (name || '').trim();
+  if (Number(n) === 0) return nm || 'Specials';   // season 0: "Specials", not "S0 - Specials"
   return !nm || /^season\s*\d+$/i.test(nm) ? `Season ${n}` : `S${n} - ${nm}`;
 }
 
@@ -2426,7 +2427,8 @@ function mssLoadScript(src) {
   }));
 }
 /* Report something — js/report.js loads the first time (MSSReport, 086_reports.sql).
-   kind: user · comment · note_reply · list_reply · note · entry · list · poll · poll_comment · episode_chat */
+   kind: user · comment · note_reply · list_reply · note · entry · list · poll · poll_comment · episode_chat ·
+         ep_note · ep_note_reply (episode / season notes and their replies, 109) */
 function mssReport(kind, id, opts) {
   if (!window._navUser?.id) return typeof mssJoin === 'function' ? mssJoin('report things') : null;
   mssLoadScript('js/report.js').then(() => typeof MSSReport !== 'undefined'

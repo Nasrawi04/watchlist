@@ -10,13 +10,14 @@
 
    Notes on an episode, reviews of a season: the note written with each rating (108) — Popular / Newest /
    Oldest, likes, dislikes, replies; blurred until you've watched it, or when marked as a spoiler.
+   Someone else's note or reply has a Report link (mssReport 'ep_note' / 'ep_note_reply', 109).
    Each shows its whole cast (the season's, or the episode's regulars then guest stars), 10 then See More.
    One hero for both (the Episodes page's: backdrop, poster dipping into the sheet below),
    your score and the MSF average, the existing rating popup (MSSEp.rate) and Friends' chat
    (MSSEpChat). Previous / Next sit top right: the episode after the last one of a season is
    the next season's first; one that hasn't aired yet shows its date and can't be opened.
 
-     MSSShowPage.season()      draw season.html
+     MSSShowPage.season()      draw season.html (…&all=seasons | episodes: every season / every episode)
      MSSShowPage.episode()     draw episode.html
      MSSShowPage.seasonURL(show, s) · episodeURL(show, s, e)   links from other pages
 
@@ -129,6 +130,10 @@ const MSSShowPage = (() => {
     </div>`;
   }
   const sectionHTML = (title, body) => body ? `<div class="td-section-title">${esc(title)}</div>${body}` : '';
+  // All seasons · All episodes (and, on an Episode page, its Season page), beside a section's heading
+  const allLinksHTML = extra => `<div class="td-ep-links">${extra || ''}
+      <a class="td-ep-graph-link" href="season.html?show=${P.show.id}&all=seasons">${icon('layers', 14)} All seasons</a>
+      <a class="td-ep-graph-link" href="season.html?show=${P.show.id}&all=episodes">${icon('list', 14)} All episodes</a></div>`;
   // The title page's episode card, as a link to its Episode page
   function epCardHTML(ep, s, current) {
     const k = `${s}:${ep.n}`, mine = P.mine[k], comm = P.comm[k];
@@ -172,13 +177,14 @@ const MSSShowPage = (() => {
   /* ── Start: the show, the age check, then the page ── */
   async function start(draw) {
     initPageGuest(async user => {
-      const showId = num('show');
-      if (showId == null || num('s') == null) { mssErrorPage('badlink'); return; }
+      const showId = num('show'), all = ALL_VIEWS[q.get('all')] ? q.get('all') : null;
+      if (showId == null || (num('s') == null && !all)) { mssErrorPage('badlink'); return; }
       if (!(await MSSAge.page('tv', showId))) return;
-      P = { user, s: num('s'), e: num('e'), mine: {}, comm: {} };
+      P = { user, s: num('s'), e: num('e'), mine: {}, comm: {}, all };
       try {
-        [P.show, P.season] = await Promise.all([fetchShow(showId), fetchSeason(showId, P.s)]);
+        [P.show, P.season] = await Promise.all([fetchShow(showId), all ? null : fetchSeason(showId, P.s)]);
       } catch (err) { mssErrorPage(mssTmdbErrorKind(err, 'title'), { error: err }); return; }
+      if (all) draw = drawAll;
       Object.assign(P, await loadScores(showId));
       draw();
     });
@@ -213,7 +219,8 @@ const MSSShowPage = (() => {
     })}
     <div class="eg-sheet sp-sheet">
       ${sectionHTML('Overview', sn.overview ? `<p class="td-overview" translate="no">${esc(sn.overview)}</p>` : '')}
-      ${sectionHTML('Episodes', eps.length ? `<div class="td-episode-row">${eps.map(ep => epCardHTML(ep, s)).join('')}</div>` : `<p class="sp-empty">TMDB has no episodes for this season yet.</p>`)}
+      <div class="td-section-head"><div class="td-section-title">Episodes</div>${allLinksHTML()}</div>
+      ${eps.length ? `<div class="td-episode-row">${eps.map(ep => epCardHTML(ep, s)).join('')}</div>` : `<p class="sp-empty">TMDB has no episodes for this season yet.</p>`}
       ${notesHTML()}
       ${sectionHTML('Cast', castHTML(cast))}
     </div>`, `${label} · ${show.name}`);
@@ -255,7 +262,7 @@ const MSSShowPage = (() => {
       ${sectionHTML('Overview', `<p class="td-overview" translate="no">${esc(ep.overview) || mssT('No description available.')}</p>${credit('Directed by', directors)}${credit('Written by', writers)}`)}
       ${notesHTML()}
       ${sectionHTML('Cast', castHTML(cast))}
-      <div class="td-section-head"><div class="td-section-title">${esc(mssSeasonLabel(s, sn.name))}</div><a class="td-ep-graph-link" href="${seasonURL(show.id, s)}">Season page</a></div>
+      <div class="td-section-head"><div class="td-section-title">${esc(mssSeasonLabel(s, sn.name))}</div>${allLinksHTML(`<a class="td-ep-graph-link" href="${seasonURL(show.id, s)}">Season page</a>`)}</div>
       <div class="td-episode-row" id="spSeasonRow">${eps.map(x => epCardHTML(x, s, x.n === e)).join('')}</div>
     </div>`, `S${s} E${e} · ${ep.name || ''} · ${show.name}`);
     document.querySelector('#spSeasonRow .picked')?.scrollIntoView({ block: 'nearest', inline: 'center' });
@@ -305,7 +312,8 @@ const MSSShowPage = (() => {
           <div class="nc-reacts">${btn(true)}${btn(false)}
             <button type="button" class="snote-react-btn" onclick="MSSShowPage._replies(${attrJSON(n.rating_id)})">${icon('reply', 14)} Replies${Number(n.reply_count) ? ` · ${Number(n.reply_count)}` : ''}</button>
           </div>
-          ${mine ? `<button type="button" class="snote-react-btn" onclick="MSSShowPage._rate(${P.s}, ${P.e ?? 0}, true)">${icon('edit', 13)} Edit</button>` : ''}
+          ${mine ? `<button type="button" class="snote-react-btn" onclick="MSSShowPage._rate(${P.s}, ${P.e ?? 0}, true)">${icon('edit', 13)} Edit</button>`
+            : P.user ? `<button type="button" class="mss-report-link" onclick="mssReport('ep_note', ${attrJSON(n.rating_id)}, { what: 'this ${what()}' })" aria-label="Report this ${what()}">${icon('flag', 12)} Report</button>` : ''}
         </div>
       </div>
     </article>`;
@@ -410,7 +418,8 @@ const MSSShowPage = (() => {
       return `<div class="sp-rp-item">
         <div class="sp-rp-who"><b translate="no">${esc(mine ? 'You' : r.display_name || r.username || 'user')}</b><span>${esc(date(String(r.created_at).slice(0, 10)))}</span></div>
         <p class="sp-rp-body" translate="no">${esc(r.content)}</p>
-        <div class="sp-rp-foot">${btn(true)}${btn(false)}${mine ? `<button type="button" class="snote-react-btn" onclick="MSSShowPage._delReply(${attrJSON(r.id)})">${icon('trash', 13)} Remove</button>` : ''}</div>
+        <div class="sp-rp-foot">${btn(true)}${btn(false)}${mine ? `<button type="button" class="snote-react-btn" onclick="MSSShowPage._delReply(${attrJSON(r.id)})">${icon('trash', 13)} Remove</button>`
+          : P.user ? `<button type="button" class="mss-report-link" onclick="mssReport('ep_note_reply', ${attrJSON(r.id)}, { what: 'this reply' })" aria-label="Report this reply">${icon('flag', 12)} Report</button>` : ''}</div>
       </div>`;
     }).join('');
   }
@@ -465,6 +474,81 @@ const MSSShowPage = (() => {
     el?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     el?.classList.add('mss-spotlight');
     if (replies) openReplies(n.rating_id);
+  }
+
+  /* ── View all: every season (poster cards), or every episode by season (season.html?show=…&all=…) ──
+     Episodes: each season a left-to-right row like the title page's, loaded as you scroll to it;
+     the strip on top jumps to a season. */
+  const ALL_VIEWS = { seasons: 'All seasons', episodes: 'All episodes' };
+  function drawAll() {
+    const { show } = P, list = (show.seasons || []).filter(x => x.episode_count > 0).sort((a, b) => (a.season_number || 99999) - (b.season_number || 99999));
+    const eps = list.reduce((t, x) => t + (x.episode_count || 0), 0), seasons = list.filter(x => x.season_number > 0).length;
+    const other = P.all === 'seasons' ? 'episodes' : 'seasons';
+    const hero = heroHTML({
+      bg: show.backdrop_path, poster: show.poster_path, title: ALL_VIEWS[P.all], eyebrow: '', nav: '',
+      sub: [`${seasons} season${seasons === 1 ? '' : 's'}`, `${eps.toLocaleString()} episode${eps === 1 ? '' : 's'}`],
+      actions: `<a class="eg-hero-btn" href="season.html?show=${show.id}&all=${other}">${icon(other === 'seasons' ? 'layers' : 'episodes', 15)} ${ALL_VIEWS[other]}</a>`,
+    });
+    // the list page's poster card (MSSCard, config.js) in its grid (.lv-grid), so sizes and spacing match
+    const block = x => MSSCard.poster({ cls: 'sp-all-season', href: seasonURL(show.id, x.season_number), title: mssSeasonLabel(x.season_number, x.name),
+      year: x.air_date, poster: x.poster_path ? IMG('w342') + x.poster_path : null, score: x.vote_average ? _discFloorScore(x.vote_average) : '',
+      typeHTML: '', below: `<div class="sp-season-eps">${x.episode_count} episode${x.episode_count === 1 ? '' : 's'}</div>` });
+    const body = P.all === 'seasons'
+      ? `<div class="td-section-title">Seasons</div><div class="lv-grid sp-all-seasons">${list.map(block).join('')}</div>`
+      : `<div class="sp-jump" role="navigation" aria-label="Jump to a season"><div class="sp-jump-in">${list.map(x => `<a class="sp-jump-btn" href="#spS${x.season_number}" data-s="${x.season_number}">
+           <b translate="no">${x.season_number ? 'S' + x.season_number : 'Specials'}</b><small>${x.episode_count} ep${x.episode_count === 1 ? '' : 's'}</small></a>`).join('')}</div></div>
+         ${list.map(x => `<section class="sp-all-sec" id="spS${x.season_number}" data-s="${x.season_number}" aria-labelledby="spST${x.season_number}">
+           <div class="td-section-head"><h2 class="td-section-title" id="spST${x.season_number}" translate="no">${esc(mssSeasonLabel(x.season_number, x.name))}</h2>
+             <a class="td-ep-graph-link" href="${seasonURL(show.id, x.season_number)}">Season page</a></div>
+           <div class="td-episode-row sp-all-eps" data-s="${x.season_number}"><div class="td-season-loading">Loading episodes…</div></div>
+         </section>`).join('')}`;
+    // the show's overview first and its whole cast last, as on its Season and Episode pages
+    paint(`${hero}<div class="eg-sheet sp-sheet">
+      ${sectionHTML('Overview', show.overview ? `<p class="td-overview" translate="no">${esc(show.overview)}</p>` : '')}
+      ${list.length ? body : `<p class="sp-empty">TMDB has no seasons for this show yet.</p>`}
+      <div id="spAllCast"></div>
+    </div>`, `${ALL_VIEWS[P.all]} · ${show.name}`);
+    if (P.all === 'episodes') { watchSeasons(); spySeasons(); }
+    showCast();
+  }
+  // The show's whole cast (TMDB's series credits: everyone across every season)
+  async function showCast() {
+    try {
+      const d = await getJSON(`${TMDB_BASE}/tv/${P.show.id}/aggregate_credits?language=en-US`);
+      const box = document.getElementById('spAllCast');
+      if (box) box.innerHTML = sectionHTML('Cast', castHTML((d.cast || []).filter(c => c.name)));
+    } catch {}
+  }
+  // The jump bar marks the season you're looking at (and keeps it in view in the bar)
+  function spySeasons() {
+    if (!('IntersectionObserver' in window)) return;
+    let hold = 0;   // a tapped season stays marked while the page scrolls to it
+    const mark = s => document.querySelectorAll('.sp-jump-btn').forEach(a => {
+      const on = a.dataset.s === s;
+      a.classList.toggle('on', on);
+      if (on) { a.setAttribute('aria-current', 'location'); a.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } else a.removeAttribute('aria-current');
+    });
+    const io = new IntersectionObserver(es => { if (Date.now() < hold) return; const x = es.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]; if (x) mark(x.target.dataset.s); },
+      { rootMargin: '-35% 0px -55% 0px' });
+    document.querySelectorAll('.sp-all-sec').forEach(sec => io.observe(sec));
+    document.querySelectorAll('.sp-jump-btn').forEach(a => a.addEventListener('click', () => { hold = Date.now() + 1200; mark(a.dataset.s); }));   // tapped: marked straight away
+    mark(document.querySelector('.sp-all-sec')?.dataset.s);
+  }
+  // Each season's episodes, once it's near the screen (or right away without IntersectionObserver)
+  function watchSeasons() {
+    const fill = async box => {
+      if (box.dataset.done) return;
+      box.dataset.done = '1';
+      const s = Number(box.dataset.s);
+      try {
+        const sn = await fetchSeason(P.show.id, s);
+        box.innerHTML = sn.episodes.length ? sn.episodes.map(ep => epCardHTML(ep, s)).join('') : `<p class="sp-empty">No episodes yet.</p>`;
+      } catch { box.dataset.done = ''; box.innerHTML = `<p class="sp-empty">Couldn’t load this season.</p>`; }
+    };
+    const boxes = [...document.querySelectorAll('.sp-all-eps')];
+    if (!('IntersectionObserver' in window)) { boxes.forEach(fill); return; }
+    const io = new IntersectionObserver(es => es.forEach(x => { if (x.isIntersecting) { io.unobserve(x.target); fill(x.target); } }), { rootMargin: '600px 0px' });
+    boxes.forEach(b => io.observe(b));
   }
 
   /* ── Actions ── */
