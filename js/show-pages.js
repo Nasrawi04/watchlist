@@ -20,7 +20,8 @@
 
    Requires config.js (icon, escHTML, safeURL, mssErrorPage, mssTmdbErrorKind, MSSAge,
    mssSeasonLabel), db.js, nav.js (tmdbFetch, tmdbTitleHTML, TMDB_IMG), episode-ratings.js (MSSEp),
-   episode-chat.js (MSSEpChat), info-popup.js (MSSInfo.addToLibrary), discover-categories.js (_discFloorScore).
+   episode-chat.js (MSSEpChat), info-popup.js (MSSInfo.addToLibrary), discover-categories.js (_discFloorScore),
+   rating-curve.js (MSSCurve.open: the MSF score's breakdown).
    Styles: style.css "Show pages".
 ═══════════════════════════════════════════════════════════════ */
 const MSSShowPage = (() => {
@@ -100,7 +101,7 @@ const MSSShowPage = (() => {
   function scoresHTML(k) {
     const mine = P.mine[k], comm = P.comm[k];
     return (mine != null ? `<span class="eg-hero-score ${band(mine)}" title="Your rating"><b>${mine.toFixed(1)}</b>You</span>` : '')
-      + (comm ? `<span class="eg-hero-score ${band(comm.avg_score)}" title="MyScreenFolio average · ${comm.rating_count} ratings"><b>${Number(comm.avg_score).toFixed(1)}</b>MSF · ${comm.rating_count}</span>` : '');
+      + (comm ? `<button type="button" class="eg-hero-score msf-open ${band(comm.avg_score)}" onclick="MSSShowPage._msf()" aria-haspopup="dialog" title="MyScreenFolio average · ${comm.rating_count} ratings — see the breakdown"><b>${Number(comm.avg_score).toFixed(1)}</b>MSF · ${comm.rating_count}</button>` : '');
   }
   // Rate (your library) · Add to library · Sign in
   function rateHTML(s, n, what) {
@@ -265,6 +266,12 @@ const MSSShowPage = (() => {
     MSSInfo.addToLibrary({ tmdb_id: sh.id, media_type: 'tv', title: sh.name, poster_path: sh.poster_path, year: (sh.first_air_date || '').slice(0, 4), genre_ids: (sh.genres || []).map(g => g.id), origin_country: sh.origin_country, original_language: sh.original_language },
       { details: sh, onAdded: async entry => { if (!entry) return; Object.assign(P, await loadScores(sh.id)); (P.e == null ? drawSeason : drawEpisode)(); } });
   }
+  // The MSF score → its breakdown (rating-curve.js, get_rating_breakdown 107)
+  function msf() {
+    const ep = P.e != null && P.season.episodes.find(x => x.n === P.e);
+    MSSCurve.open(ep ? { kind: 'episode', tmdbId: P.show.id, season: P.s, episode: P.e, heading: ep.name || `Episode ${P.e}`, sub: `${P.show.name} · S${P.s} · E${P.e}` }
+      : { kind: 'season', tmdbId: P.show.id, season: P.s, heading: mssSeasonLabel(P.s, P.season.name), sub: P.show.name });
+  }
   function chat() {
     const ep = P.season.episodes.find(x => x.n === P.e);
     MSSEpChat.open({ tmdb_id: P.show.id, season: P.s, episode: P.e, show: P.show.name, name: ep?.name, poster_path: P.show.poster_path });
@@ -273,6 +280,6 @@ const MSSShowPage = (() => {
   return {
     season: () => start(drawSeason), episode: () => start(drawEpisode),
     seasonURL, episodeURL,
-    _rate: rate, _add: add, _chat: chat, _moreCast: moreCast,
+    _rate: rate, _add: add, _chat: chat, _moreCast: moreCast, _msf: msf,
   };
 })();

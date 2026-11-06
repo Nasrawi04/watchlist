@@ -19,8 +19,14 @@
      MSSCurve.of(entry)         its range key ('8.5-9') or null
      MSSCurve.html(entries, o)  the curve — o = { user: id (someone else's) | null (yours),
                                 current: '8.5-9' (ratings.html: that bar marked + read out) }
+     MSSCurve.fromCounts(b, o)  the same bars for the MSF breakdown (title, season and episode pages):
+                                b = get_rating_breakdown's row (or null: "Not enough ratings yet"),
+                                o = { title }. Counts only: the bars read out their count, no lists.
+     MSSCurve.open(q)           the breakdown popup (get_rating_breakdown): q = { kind, tmdbId, type,
+                                season, episode, title, heading, sub }
 
-   Requires config.js (liveScore, escHTML). Styles: style.css "Ratings curve".
+   Requires config.js (liveScore, escHTML, icon, MSSDialog) and, for the popup, db.js (sb).
+   Styles: style.css "Ratings curve" and "MSF breakdown".
 ═══════════════════════════════════════════════════════════════ */
 const MSSCurve = (() => {
   const FILL = 12;   // a range needs this many titles before its bar reaches the top
@@ -35,32 +41,49 @@ const MSSCurve = (() => {
     return RANGES[Math.max(0, Math.min(19, Math.floor(s * 2 + 1e-9)))].key;   // 9.5–10 → the last bar
   }
   const href = (key, user) => `ratings.html?range=${key}${user ? `&user=${encodeURIComponent(user)}` : ''}`;
-  const plural = n => `${n.toLocaleString()} ${n === 1 ? 'title' : 'titles'}`;
+  const plural = (n, unit = 'title') => `${n.toLocaleString()} ${n === 1 ? unit : unit + 's'}`;
+  const events = `onmouseenter="MSSCurve._show(this)" onfocus="MSSCurve._show(this)" onmouseleave="MSSCurve._leave(this)" onblur="MSSCurve._leave(this)"`;
+
+  // The 20 bars from counts n = { '8.5-9': 12, … }. o.href(key) → each bar opens its list (the profile);
+  // without it a bar is a button that just reads out its count (the MSF breakdown).
+  function plotHTML(n, o) {
+    // The tallest bar fills its column only once there's enough to fill it: with fewer than
+    // FILL in any range the bars stay short, just taller than each other (like Letterboxd).
+    const top = Math.max(FILL, ...RANGES.map(r => n[r.key] || 0));
+    return RANGES.map(r => {
+      // --k = the bar's share of the column; the CSS turns it into pixels (no % heights — Safari drew them below the line)
+      const c = n[r.key] || 0, k = c ? Math.max(0.05, c / top) : 0, on = r.key === o.current;
+      const label = `${r.label}: ${plural(c, o.unit)}`, cls = `rc-col${on ? ' rc-on' : ''}${c ? '' : ' rc-empty'}`;
+      const say = `data-say="${r.label} · ★ ${c.toLocaleString()}"`, style = `style="--k:${k.toFixed(3)}"`;
+      const inner = `<span class="rc-bar"></span>`;
+      if (!o.href) return `<button type="button" class="${cls}" ${style} ${say} aria-label="${label}" ${events} onclick="MSSCurve._show(this)">${inner}</button>`;
+      return c && !on
+        ? `<a class="${cls}" ${style} href="${o.href(r.key)}" ${say} aria-label="${label} — see them" ${events} onclick="return MSSCurve._tap(event, this)">${inner}</a>`
+        : `<span class="${cls}" ${style} ${say} role="img" aria-label="${label}${on ? ' (showing)' : ''}">${inner}</span>`;
+    }).join('');
+  }
+  const boxHTML = (cls, title, rest, body) => `<div class="rc-box${cls}">
+      <div class="rc-head"><span class="rc-title">${escHTML(title)}</span><span class="rc-total" data-rest="${escHTML(rest)}" aria-live="polite">${escHTML(rest)}</span></div>
+      ${body}
+    </div>`;
+  const AXIS = `<div class="rc-axis" aria-hidden="true"><span>0</span><span>5</span><span>10</span></div>`;
 
   function html(entries, o = {}) {
     const list = rated(entries), n = {};
     list.forEach(e => { const k = of(e); if (k) n[k] = (n[k] || 0) + 1; });
-    // The tallest bar fills its column only once there's enough to fill it: with fewer than
-    // FILL titles in any range the bars stay short, just taller than each other (like Letterboxd).
-    const top = Math.max(FILL, ...RANGES.map(r => n[r.key] || 0));
     const cur = RANGES.find(r => r.key === o.current);
-    const bars = RANGES.map(r => {
-      // --k = the bar's share of the column; the CSS turns it into pixels (no % heights — Safari drew them below the line)
-      const c = n[r.key] || 0, k = c ? Math.max(0.05, c / top) : 0, on = r === cur;
-      const label = `${r.label}: ${plural(c)}`, cls = `rc-col${on ? ' rc-on' : ''}${c ? '' : ' rc-empty'}`;
-      const say = `data-say="${r.label} · ★ ${c.toLocaleString()}"`;
-      const inner = `<span class="rc-bar"></span>`;
-      return c && !on
-        ? `<a class="${cls}" style="--k:${k.toFixed(3)}" href="${href(r.key, o.user)}" ${say} aria-label="${label} — see them"
-             onmouseenter="MSSCurve._show(this)" onfocus="MSSCurve._show(this)" onmouseleave="MSSCurve._leave(this)" onblur="MSSCurve._leave(this)" onclick="return MSSCurve._tap(event, this)">${inner}</a>`
-        : `<span class="${cls}" style="--k:${k.toFixed(3)}" ${say} role="img" aria-label="${label}${on ? ' (showing)' : ''}">${inner}</span>`;
-    }).join('');
     const rest = cur ? `${cur.label} · ★ ${(n[cur.key] || 0).toLocaleString()}` : plural(list.length);   // what the header says when nothing's hovered
-    return `<div class="rc-box${cur ? ' rc-here' : ''}">
-      <div class="rc-head"><span class="rc-title">Ratings</span><span class="rc-total" data-rest="${escHTML(rest)}" aria-live="polite">${escHTML(rest)}</span></div>
-      ${list.length ? `<div class="rc-plot">${bars}</div><div class="rc-axis" aria-hidden="true"><span>0</span><span>5</span><span>10</span></div>`
-        : `<div class="rc-none">${o.user ? 'No scores yet.' : 'No scores yet — rate a watched title and it shows up here.'}</div>`}
-    </div>`;
+    return boxHTML(cur ? ' rc-here' : '', 'Ratings', rest, list.length
+      ? `<div class="rc-plot">${plotHTML(n, { current: o.current, href: key => href(key, o.user) })}</div>${AXIS}`
+      : `<div class="rc-none">${o.user ? 'No scores yet.' : 'No scores yet — rate a watched title and it shows up here.'}</div>`);
+  }
+  // The MSF breakdown (get_rating_breakdown, 107): b = { total, avg_score, buckets: [20 counts] } or null (under 2 ratings)
+  function fromCounts(b, o = {}) {
+    const title = o.title || 'MSF ratings';
+    if (!b) return boxHTML(' rc-msf', title, '', `<div class="rc-none">Not enough ratings yet. It shows once 2 people have rated.</div>`);
+    const n = Object.fromEntries(RANGES.map((r, i) => [r.key, Number(b.buckets?.[i]) || 0]));
+    const rest = `★ ${Number(b.avg_score).toFixed(2)} · ${plural(Number(b.total), 'rating')}`;
+    return boxHTML(' rc-msf', title, rest, `<div class="rc-plot">${plotHTML(n, { unit: 'rating' })}</div>${AXIS}`);
   }
 
   // The header reads out the bar you're on (it lights up); back to the total when you leave it
@@ -84,5 +107,42 @@ const MSSCurve = (() => {
     el.classList.add('rc-shown');
     return false;
   }
-  return { RANGES, rated, of, html, _show: show, _leave: leave, _tap: tap };
+  /* The breakdown popup: tapping the MSF score on a title, season or episode page.
+       q = { kind: 'title' | 'season' | 'episode', tmdbId, type ('movie' | 'tv'), season, episode,
+             title (for older entries not linked to TMDB), heading, sub } */
+  async function open(q) {
+    let ov = document.getElementById('mssMsfOverlay');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.className = 'confirm-overlay mss-msf';
+      ov.id = 'mssMsfOverlay';
+      ov.innerHTML = `<div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="mssMsfT">
+        <button type="button" class="dp-close mss-join-x" aria-label="Close">${icon('x', 18)}</button>
+        <div class="mss-msf-eyebrow">MyScreenFolio rating</div>
+        <div class="confirm-title" id="mssMsfT" translate="no"></div>
+        <div class="mss-msf-sub" id="mssMsfSub" translate="no"></div>
+        <div class="mss-msf-body" id="mssMsfBody"></div>
+        <div class="mss-msf-note">${icon('lock', 12)} Counts only: who rated and their scores stay private. TMDB’s score isn’t part of it.</div>
+      </div>`;
+      MSSDialog.bind(ov, () => MSSDialog.close(ov));
+      ov.querySelector('.mss-join-x').addEventListener('click', () => MSSDialog.close(ov));
+      document.body.appendChild(ov);
+    }
+    ov.querySelector('#mssMsfT').textContent = q.heading || '';
+    ov.querySelector('#mssMsfSub').textContent = q.sub || '';
+    const body = ov.querySelector('#mssMsfBody');
+    body.innerHTML = `<div class="rc-box rc-msf skel" style="height:150px" aria-hidden="true"></div>`;
+    MSSDialog.open(ov, { focus: '.mss-join-x' });
+    try {
+      const { data, error } = await sb.rpc('get_rating_breakdown', { p_kind: q.kind, p_tmdb_id: Number(q.tmdbId), p_tmdb_type: q.type || 'tv',
+        p_season: q.season ?? null, p_episode: q.episode ?? null, p_title: q.title || null });
+      if (error) throw error;
+      body.innerHTML = fromCounts(data?.[0] || null);
+    } catch (err) {
+      console.error('MSF breakdown:', err);
+      body.innerHTML = `<div class="rc-box rc-msf"><div class="rc-none">Couldn’t load the breakdown. Try again in a moment.</div></div>`;
+    }
+  }
+
+  return { RANGES, rated, of, html, fromCounts, open, _show: show, _leave: leave, _tap: tap };
 })();

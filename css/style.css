@@ -3922,12 +3922,26 @@ a.rc-col { cursor:pointer; }
 .rc-col + .rc-col .rc-bar { box-shadow:inset 1px 0 0 var(--card); }
 a.rc-col:hover .rc-bar, a.rc-col:focus-visible .rc-bar, .rc-col.rc-sel .rc-bar { background:var(--olive-light); }
 .rc-axis { display:flex; justify-content:space-between; margin-top:7px; }
-.rc-axis span { font-family:var(--bebas); font-size:14px; letter-spacing:.4px; color:var(--text-3); }
+.rc-axis span { font-family:var(--bebas); font-size:14px; letter-spacing:.4px; color:var(--text-2); }
 /* ratings.html: the range you're on stands out */
 .rc-here .rc-col:not(.rc-on):not(.rc-sel) .rc-bar { background:var(--border-olive); }
 .rc-here a.rc-col:hover .rc-bar, .rc-here a.rc-col:focus-visible .rc-bar { background:var(--olive); }
 .rc-here .rc-col.rc-on .rc-bar { background:var(--olive-light); }
-.rc-none { font-size:12.5px; color:var(--text-3); padding:6px 0 2px; }
+.rc-none { font-size:12.5px; color:var(--text-2); padding:6px 0 2px; }
+/* ── MSF breakdown (MSSCurve.fromCounts / open): the curve's bars in the confirm card ── */
+.mss-msf .confirm-card { position:relative; max-width:440px; text-align:start; align-items:stretch; }
+.mss-msf .confirm-title { font-size:22px; line-height:1.25; padding-inline-end:36px; }
+.mss-msf-eyebrow { font:600 11px/1 'Oswald',var(--sans); letter-spacing:1.6px; text-transform:uppercase; color:var(--olive-light); }
+.mss-msf-sub { font-size:13px; color:var(--text-2); margin-top:-6px; }
+.mss-msf .rc-box { --rc-h:120px; margin-top:4px; }
+.mss-msf-note { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-2); line-height:1.5; }
+.mss-msf-note svg { flex-shrink:0; }
+/* the MSF score that opens it (title, season and episode pages) */
+.msf-open { cursor:pointer; font:inherit; color:inherit; text-align:inherit; }
+.msf-open:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
+/* The MSF breakdown's bars: buttons that read out their count */
+button.rc-col { border:0; background:none; font:inherit; color:inherit; cursor:default; -webkit-appearance:none; appearance:none; }
+button.rc-col:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
 @media (prefers-reduced-motion:reduce) { .rc-bar { transition:none; } }
 /* Laptops: the side stats scroll inside themselves so the curve under them is always in view */
 @media(min-width:901px) {
@@ -8155,6 +8169,8 @@ a.sp-nav-btn:focus-visible { outline:2px solid #8FD177; outline-offset:3px; }
 .sp-nav-btn.is-off b { color:rgba(237,237,237,.8); }
 .sp-nav-btn.is-off svg { color:rgba(237,237,237,.5); }
 button.eg-hero-btn { cursor:pointer; }
+button.eg-hero-score { border:0; cursor:pointer; transition:filter .15s; }   /* the MSF score opens its breakdown */
+button.eg-hero-score:hover { filter:brightness(1.08); }
 /* The episode cards are links to their Episode page (the title page's cards and scrolling row) */
 .sp-ep-card { text-decoration:none; color:inherit; }
 .sp-ep-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }

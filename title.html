@@ -112,6 +112,8 @@
 .td-rating-num { font-family:var(--bebas); font-weight:400; font-size:clamp(19px, 3.2vw, 29px); color:#F5C94B; }
 .td-rating-num.td-rating-mss { color:#8FD177; }
 .td-rating-label { font-size:clamp(9px, 1.3vw, 12px); opacity:.65; letter-spacing:.5px; text-transform:uppercase; }
+button.td-rating-badge { color:#EDEDED; transition:border-color .15s, background-color .15s; }
+button.td-rating-badge:hover { border-color:#8FD177; background:rgba(0,0,0,.5); }
 /* Hero buttons — Trailer · Where to watch · Recommend: the site's button
    shape (radius-sm) on a dark glass fill so they read on any backdrop */
 .td-trailer-link {
@@ -468,6 +470,7 @@ button.td-trailer-link { font-family:inherit; cursor:pointer; }
 <script src="js/episode-ratings.js"></script>
 <script src="js/episode-chat.js"></script>
 <script src="js/discover-categories.js"></script>
+<script src="js/rating-curve.js"></script>
 <script>
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -591,6 +594,11 @@ async function loadTitle() {
   _tdLoadFans(detail);
   if (_tdType === 'tv') _tdLoadEpScores();
   _tdAnimeGenres(detail, ownEntry, titleForMatch, yearForMatch, genreSync);
+}
+// The MSF score → its breakdown (rating-curve.js, get_rating_breakdown 107)
+function _tdOpenMsf() {
+  const d = _tdDetail, name = _tdType === 'movie' ? d.title : d.name;
+  MSSCurve.open({ kind: 'title', tmdbId: _tdId, type: _tdType, title: name, heading: name, sub: _tdType === 'movie' ? 'Movie' : 'Show' });
 }
 // Anime: AniList's genres beside TMDB's (TMDB has no anime genres). Your own saved anime also gets them added
 // once (mssSyncAnimeGenres, nav.js), after TMDB's own sync so the two never overwrite each other.
@@ -1087,7 +1095,7 @@ function _tdBuildHTML(d, mssScore, ownEntry) {
           <div class="td-meta-row">
             <div class="td-ratings-row">
               ${rating ? `<span class="td-rating-badge"><span class="td-rating-num">★ ${rating}</span><span class="td-rating-label">${voteCount ? voteCount + ' votes' : 'TMDB'}</span></span>` : ''}
-              <span class="td-rating-badge"><span class="td-rating-num td-rating-mss">★ ${mssScore.avg != null ? _discFloorScore(mssScore.avg) : '—'}</span><span class="td-rating-label">MyScreenFolio${mssScore.count ? ' · ' + mssScore.count + (mssScore.count===1?' rating':' ratings') : ' · No ratings yet'}</span></span>
+              <button type="button" class="td-rating-badge msf-open" onclick="_tdOpenMsf()" aria-haspopup="dialog" aria-label="MyScreenFolio rating ${mssScore.avg != null ? _discFloorScore(mssScore.avg) : 'none yet'}, see the breakdown"><span class="td-rating-num td-rating-mss">★ ${mssScore.avg != null ? _discFloorScore(mssScore.avg) : '—'}</span><span class="td-rating-label">MyScreenFolio${mssScore.count ? ' · ' + mssScore.count + (mssScore.count===1?' rating':' ratings') : ' · No ratings yet'}</span></button>
             </div>
             ${metaBits.map(b => `<span>${esc(b)}</span>`).join('')}
             ${trailer ? `<a class="td-trailer-link td-trailer-desktop" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener">${icon('play', 13)} Trailer</a>` : ''}
