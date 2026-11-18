@@ -318,15 +318,11 @@ const MSSDiscoverHome = (() => {
       if (s && Date.now() - s.t < XP_FRESH && s.posters?.length >= 3) return;
       const cat = getDiscoverCategory(key);
       const c = cached(cat);
-      const use = items => {
-        const posters = items.map(it => it.poster_url).filter(u => safeURL(u)).slice(0, 3);
-        if (!posters.length) return;
-        fillTile(key, posters);
-        try { const all = xpAll(); all[key] = { t: Date.now(), posters }; localStorage.setItem(XP_STORE, JSON.stringify(all)); } catch {}
-      };
+      const use = items => { const posters = _discSaveTilePosters(key, items); if (posters) fillTile(key, posters); };
+      // seasons / episodes: the saved top three stay until the list is opened (discover-list.html saves them again);
+      // with none saved yet, once from the weekly shared list (never worked out just for a tile)
+      if (cat.lazy) { if (!s?.posters?.length) cat.peek().then(items => items && use(items)).catch(() => {}); return; }
       if (c) return use(c);
-      // seasons / episodes come from the weekly shared list — only once it's there (never worked out just for a tile)
-      if (cat.lazy) { cat.peek().then(items => items && use(items)).catch(() => {}); return; }
       setTimeout(() => firstPage(key).then(use).catch(() => {}), (delay += 260));
     });
   }

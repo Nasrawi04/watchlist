@@ -321,6 +321,7 @@ async function _dlLoadMore() {
       return;
     }
     const startRank = _dlAllItems.length + 1;
+    if (startRank === 1 && _dlCategory.lazy) _discSaveTilePosters(_dlCategory.key, items);   // its Discover tile shows this top three until the list is opened again
     items.forEach((it, i) => { it._rank = startRank + i; });
     _dlAllItems = _dlAllItems.concat(items);                 // drawn by whoever asked (_dlFill → _dlRenderAll)
     _dlPage++;

@@ -9376,7 +9376,8 @@ html:not(.mh-on) .mh { display:none; }
 .mh-sum { margin-top:6px; font-size:14px; line-height:1.5; color:var(--text-2); min-height:21px; }
 .mh-sum b { font-weight:700; color:var(--text); }
 .mh-tools { display:flex; align-items:center; gap:10px; flex:0 1 auto; }
-.mh-search-host { position:relative; z-index:396; display:flex; flex:0 1 auto; min-width:0; }   /* holds the header-style results dropdown (shell-search.js) */
+.mh-search-host { position:relative; z-index:60; display:flex; flex:0 1 auto; min-width:0; }   /* holds the header-style results dropdown (shell-search.js); under the side panels (Notifications 390–395) */
+.mh-search-host:focus-within { z-index:396; }   /* while it's being used: its results over the + button and phone bars (390–395) */
 .sf-search.mh-search { width:clamp(220px, 18vw + 80px, 380px); height:40px; border-width:1px; border-radius:10px; background:var(--lib-card); }   /* the Library header's search box */
 .mh-search .sf-search-input { font-size:13.5px; }
 .mh-search .sf-search-go { padding:0 12px; }

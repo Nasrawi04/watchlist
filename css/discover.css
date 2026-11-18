@@ -265,7 +265,8 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .dz-kicker { margin-bottom:6px; font:800 10.5px/1.2 'Manrope',var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--olive-light); }
 .dz-title { margin:0; font:600 44px/1 var(--serif); color:var(--text-heading); }
 .dz-search { position:relative; display:flex; align-items:stretch; gap:10px; justify-self:end; width:min(100%, 640px); }
-.dz-sbar-host { position:relative; z-index:396; display:flex; flex:1; min-width:0; }   /* holds the header-style results dropdown (shell-search.js) */
+.dz-sbar-host { position:relative; z-index:60; display:flex; flex:1; min-width:0; }   /* holds the header-style results dropdown (shell-search.js); under the side panels (Notifications 390–395) */
+.dz-sbar-host:focus-within { z-index:396; }   /* while it's being used: its results over the + button and phone bars (390–395) */
 .dz-sbar-host .shs-panel { inset-inline:0; width:auto; }
 @media (max-width:700px) { .dz-sbar-host .shs-keys { display:none; } }
 .dz-sbar { flex:1; min-width:0; margin:0; }

@@ -429,6 +429,13 @@ function _discTopProgress(key) {
     bar.querySelector('u').style.width = Math.round(f * 100) + '%';
   });
 }
+// A list's top three posters, kept for its Browse by list tile (Discover) and Home's Explore cards
+function _discSaveTilePosters(key, items) {
+  const posters = (items || []).map(it => it.poster_url).filter(u => safeURL(u)).slice(0, 3);
+  if (!posters.length) return null;
+  try { const all = JSON.parse(localStorage.getItem('mss_explore_posters_v1') || '{}'); all[key] = { t: Date.now(), posters }; localStorage.setItem('mss_explore_posters_v1', JSON.stringify(all)); } catch {}
+  return posters;
+}
 // The first page of a list from what's already there (Discover's tile posters), or null
 async function _discTopPeek(kind) {
   const d = await MSSTopEps.peek();
