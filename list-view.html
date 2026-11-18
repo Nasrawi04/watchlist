@@ -125,24 +125,9 @@ function _lvCardHTML(e, rank) {
     rank: rank == null ? 0 : rank + 1, type: _lvTypeLabel(e) ? { label: _lvTypeLabel(e), tv: !_lvIsMovie(e) } : null,
     score: sc != null ? sc : undefined, meta: real ? mssMetaOf(e) : null, rewatch: real ? mssRewatchCount(e) : 0 });
 }
-/* ── List view: the Library's card (backdrop on the right, poster, kicker, title, score), 2 a row, no buttons ── */
+/* ── List view: the Library's card (mssListCard, config.js) — the same on Ratings and in the Library ── */
 function _lvRowHTML(e, rank) {
-  const real = !_lvIsTmdbOnly(e), sc = real ? liveScore(e) : null, m = real ? mssMetaOf(e) : {};
-  const bd = e.tmdb_id || e.ratings?._backdrop ? MSSBackdrop.key(e) : '', art = safeURL(e.poster_url) ? safeURL(e.poster_url).replace(/\/(w\d+|original)\//, '/w342/') : '';
-  const frame = real ? MSSBackdrop.style(e, false, 'card') : '';
-  const kicker = [_lvTypeLabel(e), e.year ? String(e.year).slice(0, 4) : ''].filter(Boolean).join(' · ');
-  // a ranked list: the Library's rank badge on the poster (gold, silver, bronze, then green), as on the grid's cards
-  const r = rank != null ? rank + 1 : 0, badge = r ? `<span class="cg-rank-badge ${r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other'}" aria-hidden="true">${r}</span>` : '';
-  return `<article class="lp-card lv-lp" role="button" tabindex="0" onclick="_lvOpenInfo(${attrJSON(e.id)})" onkeydown="if(event.key==='Enter'){event.preventDefault();this.click()}" aria-label="${r ? '#' + r + ' ' : ''}${escHTML(e.title)}"${MSSAge.attr(e.tmdb_type || e.media_type, e.tmdb_id, 'soft')}>
-    ${bd || art ? `<span class="msf-row__art lp-art${bd ? ' is-bd' : ''}"${bd ? ` data-bd="${escHTML(bd)}"` : ''}${art ? ` data-poster="${escHTML(art)}"` : ''}${!bd && art ? ` style="background-image:url('${art}')"` : frame ? ` style="${escHTML(frame)}"` : ''} aria-hidden="true"></span>` : ''}
-    <span class="lp-shade" aria-hidden="true"></span>
-    <span class="lp-poster" aria-hidden="true">${posterHTML(e, '', '(max-width:640px) 110px, 150px')}${badge}</span>
-    <div class="lp-body">
-      <div class="lp-kicker"><span>${escHTML(kicker)}</span>${real && mssRewatchCount(e) > 1 ? mssRewatchBadgeHTML(mssRewatchCount(e)) : ''}</div>
-      <h3 class="lp-title" translate="no">${escHTML(e.title)}</h3>
-      <div class="lp-scoreline">${sc != null ? mssScoreHTML(sc, { cls: 'lp-score' }) : ''}${m.long ? `<span class="lp-meta">${escHTML(m.long)}</span>` : ''}</div>
-    </div>
-  </article>`;
+  return mssListCard(e, { rank: rank != null ? rank + 1 : 0, onclick: `_lvOpenInfo(${attrJSON(e.id)})`, real: !_lvIsTmdbOnly(e), type: _lvTypeLabel(e) });
 }
 
 function _lvRenderViewToggle() { $('lvViewToggle').innerHTML = _lvViewToggleHTML(); }

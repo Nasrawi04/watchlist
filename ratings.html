@@ -93,8 +93,9 @@ SF.register('rt', {
 });
 
 function _rtRow(e, n) {
-  return MSSCard.row(mssEntryCard(e, { cls: 'lv-list-row lv-in-view', onclick: '_rtOpen(' + attrJSON(e.id) + ')',
-    age: _rtOwner ? [e.tmdb_type || (e.cat === 'movies' ? 'movie' : 'tv'), e.tmdb_id] : null, rank: n || 0 }));
+  // the Library's list card (mssListCard): the score ring on the right, as in the Library and on list pages
+  var type = { movies: 'Movie', tv: 'TV Show', anime: 'Anime', cartoons: 'Cartoon' }[e.cat] || '';
+  return mssListCard(e, { onclick: '_rtOpen(' + attrJSON(e.id) + ')', rank: n || 0, type: type });
 }
 function _rtCard(e, n) {
   return MSSCard.poster(mssEntryCard(e, { cls: 'lv-card lv-in-view', onclick: '_rtOpen(' + attrJSON(e.id) + ')',
@@ -139,7 +140,7 @@ mssSkeleton.define('rt-page', function() {
   $('rtSfBar').innerHTML = SF.bar('rt', 'all'); keep($('rtSfBar'));
   $('rtViewToggle').innerHTML = _rtViewToggleHTML(); keep($('rtViewToggle'));
   var e = { id: '', title: 'Sample title', year: '2024', cat: 'tv', status: 'completed', final_score: 8.75 };
-  $('rtGrid').className = _rtView === 'list' ? 'lv-list msf-rows' : 'lv-grid msf-grid';
+  $('rtGrid').className = _rtView === 'list' ? 'lp-grid lv-rows' : 'lv-grid msf-grid';
   $('rtGrid').innerHTML = Array.from({ length: n }, function(){ return _rtView === 'list' ? _rtRow(e, null) : _rtCard(e, null); }).join('');
   box.style.display = '';
   return box.outerHTML.replace(/ (id|onclick)="[^"]*"/g, '');
@@ -164,7 +165,7 @@ function _rtRender() {
   }
   // numbered when sorted by score (Highest / Lowest)
   var sort = SF.getSort('rt', 'all'), ranked = sort === 'highest' || sort === 'lowest';
-  grid.className = _rtView === 'list' ? 'lv-list msf-rows' : 'lv-grid msf-grid';
+  grid.className = _rtView === 'list' ? 'lp-grid lv-rows' : 'lv-grid msf-grid';
   mssKeepScroll(grid, function(){
     grid.innerHTML = shown.map(function(e, i){ var n = ranked ? i + 1 : null; return _rtView === 'list' ? _rtRow(e, n) : _rtCard(e, n); }).join('');
   });

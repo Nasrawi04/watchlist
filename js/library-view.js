@@ -354,12 +354,6 @@ async function _libMore(btn, id, skip){
 }
 
 /* The list cards' score: the site's score ring (as on the Edit page, MSSViews.ring), in its tier's colour; no score → "—" */
-function _libScoreRing(v, cls){
-  var has = v != null && !isNaN(v), r = 44, c = 2 * Math.PI * r, f = has ? Math.max(0, Math.min(1, Number(v) / 10)) : 0, s = has ? Number(v).toFixed(2) : '';
-  return '<div class="tv-ring '+(cls || 'lp-ring')+(has ? mssTierCls(v)+(mssIsGold(v) ? ' is-gold' : '') : ' is-empty')+'" role="img" aria-label="'+(has ? 'Your score '+s+' out of 10' : 'Not rated')+'">'
-    + '<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="tv-ring-track" cx="50" cy="50" r="'+r+'"/><circle class="tv-ring-fill" cx="50" cy="50" r="'+r+'" stroke-dasharray="'+(c * f).toFixed(2)+' '+c.toFixed(2)+'"/></svg>'
-    + '<b aria-hidden="true">'+(has ? s : '—')+'</b></div>';
-}
 // Movie / TV Show / Anime / Cartoon, the coloured badge of Discover's list rows (.dx-type); left off where the whole page is one type
 function _libTypeBadge(e, t){
   if (LIB_CAT === 'movies' || LIB_CAT === 'tv') return '';
@@ -395,7 +389,7 @@ function _libProg(e, main, opts){
     var o = opts || {}, sv = o.value !== undefined ? o.value : liveScore(e), nx = st === 'ongoing' && _libSched[id] && _libSched[id].next;
     var note = e.notes && !mssIsSpoiler(e) ? '<p class="lp-note">&ldquo;'+_libEsc(_trimNotes(MSSRich.plain(e.notes)))+'&rdquo;</p>' : '';
     // the score: a ring on the right of the card (ring, below), so the details here are runtime / seasons only
-    ring = '<div class="lp-ringbox">'+_libScoreRing(sv)+'</div>';
+    ring = '<div class="lp-ringbox">'+mssScoreRing(sv)+'</div>';
     metaT = m.long;   // runtime / seasons: in the badge row, as Discover's genres
     lines = (st === 'ongoing' ? '<div class="lp-count">'+(nx && nx.air ? 'Next: S'+nx.s+' E'+nx.n+' · '+_libEsc(_libDate(nx.air)) : 'Waiting for new episodes')+'</div>' : '')
       // your review, favourites and Comments sit at the bottom, so the title and score stay in the same place on every card
@@ -744,7 +738,7 @@ function _libPodiumHTML(top){
       +mssPhotoTagsHTML(e, { genres: i ? 0 : 2, cls: 'lib-pod-tags' })
       // favourites and your review: under the title, beside the poster (owner, 17 Nov 2026)
       +_libFavChips(e, 'lp-favs lib-pod-favs')+(note?'<p class="lib-pod-note">'+escHTML(note)+'</p>':'')+'</div>'
-      +'<div class="lib-pod-score" aria-hidden="true">'+_libScoreRing(s, 'lib-pod-ring')+'</div></div>'
+      +'<div class="lib-pod-score" aria-hidden="true">'+mssScoreRing(s, 'lib-pod-ring')+'</div></div>'
       +'</div></div></div>';
   }).join('')+'</div>';
 }

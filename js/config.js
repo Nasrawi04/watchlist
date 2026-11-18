@@ -2212,6 +2212,37 @@ function mssSetTier(el, v, o) {
 // The top tier (Masterpiece, 9.90+) is gold — judged on the number as shown (2 decimals)
 function mssIsGold(v) { return v != null && v !== '' && !isNaN(v) && Number(Number(v).toFixed(2)) >= 9.9; }
 // MSF's rating number: "★ 9.65" (yours, 2 decimals) · TMDB: already formatted (1 decimal). Coloured by its tier
+/* A title as the Library's list card (.lp-card): its backdrop on the right, poster (with the rank badge in a ranked list),
+   type · year, title, runtime / seasons, and your score as the ring on the right — every list view (a list page, Ratings)
+   uses it, so they look like the Library on every screen size.
+     o.rank (1, 2, 3…; 0 = none) · o.onclick · o.real (false: a TMDB-only title, no score) · o.type ('Movie', 'TV Show'…) · o.cls */
+function mssListCard(e, o = {}) {
+  const real = o.real !== false, sc = real ? liveScore(e) : null, m = real ? mssMetaOf(e) : {};
+  const bd = e.tmdb_id || e.ratings?._backdrop ? MSSBackdrop.key(e) : '', art = safeURL(e.poster_url) ? safeURL(e.poster_url).replace(/\/(w\d+|original)\//, '/w342/') : '';
+  const frame = real ? MSSBackdrop.style(e, false, 'card') : '';
+  const kicker = [o.type, e.year ? String(e.year).slice(0, 4) : ''].filter(Boolean).join(' · ');
+  const r = o.rank || 0, badge = r ? `<span class="cg-rank-badge ${r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other'}" aria-hidden="true">${r}</span>` : '';
+  const label = [r ? '#' + r : '', e.title, sc != null ? `your score ${Number(sc).toFixed(2)}` : ''].filter(Boolean).join(', ');
+  return `<article class="lp-card lv-lp${o.cls ? ' ' + o.cls : ''}" role="button" tabindex="0" onclick="${o.onclick || ''}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.click()}" aria-label="${escHTML(label)}"${MSSAge.attr(e.tmdb_type || e.media_type, e.tmdb_id, 'soft')}>
+    ${bd || art ? `<span class="msf-row__art lp-art${bd ? ' is-bd' : ''}"${bd ? ` data-bd="${escHTML(bd)}"` : ''}${art ? ` data-poster="${escHTML(art)}"` : ''}${!bd && art ? ` style="background-image:url('${art}')"` : frame ? ` style="${escHTML(frame)}"` : ''} aria-hidden="true"></span>` : ''}
+    <span class="lp-shade" aria-hidden="true"></span>
+    <span class="lp-poster" aria-hidden="true">${posterHTML(e, '', '(max-width:640px) 110px, 150px')}${badge}</span>
+    <div class="lp-body">
+      <div class="lp-kicker"><span>${escHTML(kicker)}</span>${real && mssRewatchCount(e) > 1 ? mssRewatchBadgeHTML(mssRewatchCount(e)) : ''}</div>
+      <h3 class="lp-title" translate="no">${escHTML(e.title)}</h3>
+      ${m.long ? `<div class="lp-scoreline"><span class="lp-meta">${escHTML(m.long)}</span></div>` : ''}
+    </div>
+    ${real ? `<div class="lp-ringbox">${mssScoreRing(sc)}</div>` : ''}
+  </article>`;
+}
+// Your score as the site's ring (.tv-ring) — the Library's list cards (.lp-ring), its podium, and every list view
+// that uses those cards (a list page, Ratings), so they all look the same
+function mssScoreRing(v, cls){
+  var has = v != null && !isNaN(v), r = 44, c = 2 * Math.PI * r, f = has ? Math.max(0, Math.min(1, Number(v) / 10)) : 0, s = has ? Number(v).toFixed(2) : '';
+  return '<div class="tv-ring '+(cls || 'lp-ring')+(has ? mssTierCls(v)+(mssIsGold(v) ? ' is-gold' : '') : ' is-empty')+'" role="img" aria-label="'+(has ? 'Your score '+s+' out of 10' : 'Not rated')+'">'
+    + '<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="tv-ring-track" cx="50" cy="50" r="'+r+'"/><circle class="tv-ring-fill" cx="50" cy="50" r="'+r+'" stroke-dasharray="'+(c * f).toFixed(2)+' '+c.toFixed(2)+'"/></svg>'
+    + '<b aria-hidden="true">'+(has ? s : '—')+'</b></div>';
+}
 function mssScoreHTML(v, o = {}) {
   if (v == null || v === '' || isNaN(v)) return '';
   if (o.tmdb) return `<span class="msf-score is-tmdb${mssTierCls(v)}${mssIsGold(v) ? ' is-gold' : ''}${o.cls ? ' ' + o.cls : ''}" aria-label="TMDB score ${escHTML(String(v))}">★ ${escHTML(String(v))}</span>`;
