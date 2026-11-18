@@ -8892,6 +8892,7 @@ body:has(.tv-page.is-phone:not(.de-page)) #mainNav, body:has(.tv-page.is-phone:n
 .lib-bar-search .sf-search { height:36px; border-width:1px; border-radius:10px; background:var(--lib-card); }
 .lib-bar-search .sf-search-input { font-size:13px; }
 .lib-bar-search .sf-search-go { padding:0 11px; }
+.lib-tool.lib-search-tog { display:none; }   /* phones only (below) */
 .lib-tool { position:relative; display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--lib-line); background:var(--lib-card);
   color:var(--text); font:700 13px var(--sans); cursor:pointer; white-space:nowrap; }
 .lib-tool svg { width:15px; height:15px; color:var(--text-2); }
@@ -9121,6 +9122,11 @@ body:has(.tv-page.is-phone:not(.de-page)) #mainNav, body:has(.tv-page.is-phone:n
   .lib-bar-t { font-size:16px; }
   .lib-tool { height:38px; width:38px; padding:0; justify-content:center; }
   .lib-tool-l { display:none; }
+  /* profile tabs: the search is an icon among the tools; it opens as a full-width row under them (owner, 18 Nov 2026) */
+  .lib-tool.lib-search-tog { display:inline-flex; }
+  .lib-bar-r { flex-wrap:wrap; }
+  .lib-bar-r > .lib-bar-search { display:none; order:99; flex:1 1 100%; width:auto; min-width:0; }
+  .lib-bar.is-search .lib-bar-r > .lib-bar-search { display:block; }
   .lib-tool-n { display:grid; place-items:center; position:absolute; top:-5px; inset-inline-end:-5px; min-width:17px; height:17px; padding:0 4px; border-radius:9px; background:var(--olive); color:var(--text-on-brand); font:800 10px/1 var(--sans); }
   .lib-vt-b { height:32px; }
   .lib-head .cat-page-title { font-size:30px; }

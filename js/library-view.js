@@ -600,10 +600,22 @@ document.addEventListener('keydown', function(ev){
 });
 
 /* ── Toolbar: "Watching · 5 titles · sorted by Latest added", Sort, Filter, Grid / List ── */
+var _libSearchOpen = false;
+// phones (profile tabs): the search icon opens / closes the search row; closing it with words in it clears them
+function _libToggleSearch(btn){
+  var bar = btn.closest('.lib-bar'), open = !bar.classList.contains('is-search'), inp = bar.querySelector('.lib-bar-search input');
+  _libSearchOpen = open;
+  bar.classList.toggle('is-search', open); btn.classList.toggle('is-on', open); btn.setAttribute('aria-expanded', open);
+  if (open) { if (inp) inp.focus(); return; }
+  if (SF.query(LIB_SCOPE)) SF._search(LIB_SCOPE, '');
+}
 function _libToolbarHTML(key, n){
   var t = _libTabOf(key), sort = SF.getSort(LIB_SCOPE, key), sortName = SF.sortName(LIB_SCOPE, key, sort), fc = SF.filterCount(LIB_SCOPE, key), v = _libView(key);
-  return '<div class="lib-bar"><div class="lib-bar-l"><h2 class="lib-bar-t">'+t.name+'</h2><span class="lib-bar-sub">'+n+' title'+(n===1?'':'s')+' · sorted by '+_libEsc(sortName)+'</span></div>'
+  // profile tabs on phones: the search is an icon here, and opens as its own row under the tools (owner, 18 Nov 2026)
+  var sOpen = !LIB_OWN_PAGE && (_libSearchOpen || !!SF.query(LIB_SCOPE));
+  return '<div class="lib-bar'+(sOpen ? ' is-search' : '')+'"><div class="lib-bar-l"><h2 class="lib-bar-t">'+t.name+'</h2><span class="lib-bar-sub">'+n+' title'+(n===1?'':'s')+' · sorted by '+_libEsc(sortName)+'</span></div>'
     + '<div class="lib-bar-r">' + _libTypeBtnHTML('is-mini')
+    + (LIB_OWN_PAGE ? '' : '<button type="button" class="lib-tool lib-search-tog'+(sOpen ? ' is-on' : '')+'" onclick="_libToggleSearch(this)" aria-label="Search this library" aria-expanded="'+sOpen+'">'+icon('search',15)+'</button>')
     + (key === 'completed' && LIB_SCOPE === 'lib' && n ? '<button type="button" class="lib-tool" onclick="_libExport()" aria-label="Export Watched">'+icon('download',15)+'<span class="lib-tool-l">Export</span></button>' : '')
     + '<button type="button" class="lib-tool'+(sort !== 'newest' ? ' is-on' : '')+'" onclick="SF.openSort(\''+LIB_SCOPE+'\',\''+key+'\')" aria-label="Sort, now '+_libEsc(sortName)+'">'+icon('sort',15)+'<span class="lib-tool-l">Sort: '+_libEsc(sortName)+'</span></button>'
     + '<button type="button" class="lib-tool'+(fc ? ' is-on' : '')+'" onclick="SF.openFilter(\''+LIB_SCOPE+'\',\''+key+'\')" aria-label="Filter'+(fc ? ', '+fc+' on' : '')+'">'+icon('filter',15)+'<span class="lib-tool-l">Filter'+(fc ? ' ('+fc+')' : '')+'</span>'+(fc ? '<span class="lib-tool-n" aria-hidden="true">'+fc+'</span>' : '')+'</button>'

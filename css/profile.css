@@ -111,9 +111,12 @@ a.pf-poster:focus-visible { outline:2px solid var(--tv-green); outline-offset:3p
 .pf-tp.is-phone .pf-ph .tp-tile { min-height:58px; }
 .pf-tp.is-phone .pf-hero::after { width:96px; top:14px; }
 
-/* phones: the tab bar scrolls sideways — each tab keeps its full label and count */
-.pf-tp.is-phone .pf-tabs { overflow-x:auto; scrollbar-width:none; }
-.pf-tp.is-phone .pf-tabs .tv-tab { flex:none; padding:0 10px; gap:5px; }
+/* phones: every tab fits on one line, spread evenly — no sideways scrolling, so the counts are left out here
+   (computers keep them) (owner, 18 Nov 2026) */
+.pf-tp.is-phone .pf-tabs { overflow:visible; justify-content:space-between; gap:0; }
+.pf-tp.is-phone .pf-tabs .tv-tab { flex:0 1 auto; min-width:0; padding:0 4px; }
+.pf-tp.is-phone .pf-tabs .tv-tab-n, .pf-tp.is-phone .pf-tabs .tv-tabs-vis { display:none; }
+@media (max-width:359px) { .pf-tp.is-phone .pf-tabs .tv-tab { padding:0 2px; font-size:12px; } }
 
 /* the slim bar: no photo → your initial */
 .pf-mini .pf-mini-circle { width:36px; height:36px; border-radius:50%; }
