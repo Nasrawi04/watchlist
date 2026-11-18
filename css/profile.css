@@ -90,7 +90,13 @@ a.pf-poster:focus-visible { outline:2px solid var(--tv-green); outline-offset:3p
 /* phones: the poster beside the name, then the quote, people, bio and buttons the full width, then the match and the stats */
 .pf-tp.is-phone .pf-hero { min-height:0; padding:14px 14px 16px; gap:12px; }
 .pf-tp.is-phone .pf-hero .tv-hero-main { display:grid; grid-template-columns:96px minmax(0, 1fr); grid-template-rows:minmax(0, 1fr) auto; column-gap:14px; row-gap:8px;
-  align-items:end; margin-top:96px; }
+  align-items:end; margin-top:132px; }
+/* phones: the backdrop is a clear band across the top (as on a computer, where it has the room), fading into the dark under
+   the photo and name — not one picture stretched over the whole tall card and darkened everywhere (owner, 18 Nov 2026) */
+.pf-tp.is-phone .pf-hero .tv-hero-bg { bottom:auto; height:300px; -webkit-mask-image:linear-gradient(180deg, black 55%, transparent 100%); mask-image:linear-gradient(180deg, black 55%, transparent 100%); }
+.pf-tp.is-phone .pf-hero .tv-hero-shade { background:linear-gradient(180deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,.04) 16%, rgba(0,0,0,.42) 32%, rgba(0,0,0,.66) 46%, rgba(0,0,0,.74) 100%); }   /* the name and facts ≥ 4.5:1 */
+.pf-tp.is-phone .pf-ph .tp-tile { min-height:52px; gap:4px; }
+.pf-tp.is-phone .pf-ph .tp-tile b { font-size:22px; }
 .pf-tp.is-phone .pf-hero .tv-hero-txt { display:contents; }
 .pf-tp.is-phone .pf-hero .pf-poster { grid-column:1; grid-row:1 / span 2; width:96px; }
 .pf-tp.is-phone .pf-hero .pf-name { grid-column:2; grid-row:1; align-self:end; font-size:28px; }
@@ -108,7 +114,6 @@ a.pf-poster:focus-visible { outline:2px solid var(--tv-green); outline-offset:3p
 .pf-tp.is-phone .pf-scores { display:none; }
 .pf-tp.is-phone .pf-ph { display:flex; flex-direction:column; gap:8px; }
 .pf-tp.is-phone .pf-ph .tp-tiles { grid-template-columns:repeat(3, minmax(0, 1fr)); }
-.pf-tp.is-phone .pf-ph .tp-tile { min-height:58px; }
 .pf-tp.is-phone .pf-hero::after { width:96px; top:14px; }
 
 /* phones: every tab fits on one line, spread evenly — no sideways scrolling, so the counts are left out here
@@ -454,7 +459,6 @@ a.pf-t5-a:focus-visible { outline:2px solid var(--olive-light); outline-offset:1
 }
 @media (max-width:380px) {
   .pf-tp.is-phone .pf-hero .pf-name { font-size:25px; }
-  .pf-tp.is-phone .pf-ph .tp-tile b { font-size:22px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pf-fav-bg, .pf-fav-poster { transition:opacity .2s; }
