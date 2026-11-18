@@ -27,9 +27,9 @@
 .set-search { position:relative; display:flex; align-items:center; }
 .set-search-ic { position:absolute; inset-inline-start:11px; color:var(--text-3); pointer-events:none; }
 .set-search-ic svg { width:14px; height:14px; }
-.set-search input { width:100%; min-height:38px; padding:0 34px 0 32px; border-radius:var(--radius-sm); border:1px solid var(--border-input); background:var(--card); color:var(--text); font:500 13px 'Manrope',var(--sans); outline:none; -webkit-appearance:none; appearance:none; transition:border-color .15s; }
+.set-search input { width:100%; min-height:40px; padding:0 34px 0 32px; border-radius:var(--radius-sm); border:1px solid var(--border-input); background:var(--card); color:var(--text); font:400 13.5px 'Manrope',var(--sans); outline:none; -webkit-appearance:none; appearance:none; transition:border-color .15s; }
 .set-search input::placeholder { color:var(--text-3); }
-.set-search input:focus { border-color:var(--olive-light); }
+.set-search input:focus { border-color:var(--text-link); box-shadow:0 0 0 3px var(--selected-bg); }   /* the search box's focus (.sf-search) */
 .set-search input::-webkit-search-cancel-button { display:none; }
 .set-kbd { position:absolute; inset-inline-end:9px; display:grid; place-items:center; min-width:18px; height:18px; padding:0 4px; border-radius:5px; border:1px solid var(--border-2); font:600 10.5px 'Manrope',var(--sans); color:var(--text-3); pointer-events:none; }
 .set-search input:not(:placeholder-shown) ~ .set-kbd { display:none; }
@@ -380,7 +380,7 @@ button.set-nav { width:100%; border:0; background:none; text-align:start; cursor
   .set-acct { min-height:64px; }
   .set-acct-view, .set-shell .set-acct-go { display:inline-flex; color:var(--text-3); }
   .set-acct-go svg { width:16px; height:16px; }
-  .set-search input { min-height:44px; font-size:14px; }
+  .set-search input { min-height:44px; font-size:16px; }   /* 16px: iOS doesn't zoom in */
   .set-kbd { display:none; }
   .set-group-head { padding:0 4px; }
   .set-group-list { gap:0; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }

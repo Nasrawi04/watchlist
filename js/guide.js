@@ -35,7 +35,7 @@ const MSSGuide = (() => {
       <div class="gd-top">${back ? `<button type="button" class="gd-back" data-g="back">${icon('chevleft', 16)} ${esc(back)}</button>`
         : `<div class="gd-home-t">${page() ? `<button type="button" class="lyr-back gd-back gd-close" aria-label="Close Help & Guides">${icon('chevleft', 18)}</button>` : ''}<div><span class="gd-eyebrow">Discover MSF</span><h2 class="gd-title">Help &amp; Guides</h2></div></div>`}
         <button type="button" class="lyr-x gd-x" aria-label="Close Help & Guides">${icon('x', 16)}</button></div>
-      <div class="sf-search gd-search" role="search"><span class="sf-search-ic" aria-hidden="true">${icon('search', 16)}</span>
+      <div class="sf-search" role="search"><span class="sf-search-ic" aria-hidden="true">${icon('search', 16)}</span>
         <input type="search" class="sf-search-input" id="gdQ" placeholder="Search any feature…" aria-label="Search Help & Guides" autocomplete="off" spellcheck="false" enterkeyhint="search">
         <button type="button" class="sf-search-clear" data-g="clear" aria-label="Clear search">${icon('x', 14)}</button>
         <button type="button" class="sf-search-go" tabindex="-1" aria-hidden="true">${icon('search', 16)}<span>Search</span></button></div></div>`;

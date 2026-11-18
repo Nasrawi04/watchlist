@@ -867,7 +867,7 @@ const MSSHide = (() => {
 function initInlineSearch(inputId, opts = {}) {
   const input = document.getElementById(inputId);
   if (!input) return;
-  const anchor = input.closest('.hero-search-wrap, .sf-search') || input;
+  const anchor = input.closest('.sf-search') || input;
   const box = document.createElement('section');
   box.className = 'inline-search';
   box.id = inputId + 'Results';
@@ -880,12 +880,11 @@ function initInlineSearch(inputId, opts = {}) {
   // ✕ inside the bar (shows once there's text) — clears it in one tap
   const clear = document.createElement('button');
   clear.type = 'button';
-  clear.className = 'hero-search-clear';
+  clear.className = 'sf-search-clear';   // the search box's own ✕ (shown while the box has .has-q)
   clear.setAttribute('aria-label', 'Clear search');
-  clear.innerHTML = icon('x', 16);
-  clear.hidden = true;
+  clear.innerHTML = icon('x', 14);
   input.insertAdjacentElement('afterend', clear);
-  const syncClear = () => { clear.hidden = !input.value; };
+  const syncClear = () => { anchor.classList.toggle('has-q', !!input.value); };
   clear.addEventListener('click', () => { input.value = ''; syncClear(); run(); input.focus(); syncRecent(); });
 
   const setSearching = on => {

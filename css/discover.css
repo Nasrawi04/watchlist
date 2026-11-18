@@ -270,8 +270,6 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .dz-sbar-host .shs-panel { inset-inline:0; width:auto; }
 @media (max-width:700px) { .dz-sbar-host .shs-keys { display:none; } }
 .dz-sbar { flex:1; min-width:0; margin:0; }
-.dz-sbar #heroSearch { padding:13px 16px; font-size:15px; }
-.dz-sbar .hero-search-btn { padding-inline:16px; }
 .dz-browse { flex:none; display:inline-flex; align-items:center; gap:8px; padding:0 18px; border-radius:var(--radius-sm); cursor:pointer; border:1.5px solid var(--olive); background:var(--olive); color:var(--text-on-brand);
   font:700 14px 'Manrope',var(--sans); transition:background-color var(--trans) var(--ease); }
 .dz-browse svg { width:16px; height:16px; }
@@ -416,7 +414,7 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
   .dz-head { grid-template-columns:1fr; gap:12px; }
   .dz-title { font-size:34px; }
   .dz-search { justify-self:stretch; width:100%; }
-  .dz-sbar .hero-search-btn { display:none; }
+  .dz-sbar .sf-search-go { display:none; }   /* phones: room for Browse beside it (the field is the target) */
   .dz-browse { padding:0 14px; }
   .df { min-height:520px; border-radius:18px; }
   .df-shade { background:linear-gradient(180deg, rgba(0,0,0,.25) 0%, rgba(0,0,0,.2) 30%, rgba(0,0,0,.78) 64%, rgba(0,0,0,.9) 100%); }

@@ -333,7 +333,7 @@ const MSSNight = (() => {
 
   // The Library's search box (icon · field · × · green Search), with the results under it
   function searchBox(key, arg, placeholder) {
-    return `<div class="mn-search"><div class="sf-search mn-sbox" role="search">
+    return `<div class="mn-search"><div class="sf-search" role="search">
         <span class="sf-search-ic" aria-hidden="true">${icon('search', 16)}</span>
         <input type="search" class="sf-search-input" id="mnQ-${esc(key)}" placeholder="${esc(placeholder)}" aria-label="Search movies and shows" autocomplete="off" spellcheck="false" enterkeyhint="search"
           oninput="this.closest('.sf-search').classList.toggle('has-q', !!this.value);MSSNight._q(${arg}, this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();MSSNight._q(${arg}, this.value, true)}">

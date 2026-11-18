@@ -8,7 +8,6 @@
    Followers / Requests · Sort — one row on wide screens, stacked on phones */
 .frs-bar { display:flex; align-items:center; gap:12px; margin:0 0 22px; }
 .fr-find { flex:1 1 360px; min-width:0; position:relative; }
-.fr-search.sf-search { max-width:none; height:46px; }
 .frs-tools { display:flex; align-items:center; gap:10px; flex:none; }
 .frs-tools .fr-toolbar { margin:0; }
 .frs-tools .fr-toolbar:empty { display:none; }
@@ -349,7 +348,7 @@
 .cp-pair-meta .type-label { font-size:10.5px; padding:2px 7px; }
 .cp-shared-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .cp-shared-head .fr-sec-head { margin:0; }
-.cp-search2.sf-search { max-width:none; margin:12px 0 14px; }
+.cp-search2.sf-search { margin:12px 0 14px; }
 @media(max-width:1000px) {
   .cp-hero2 { grid-template-columns:1fr; justify-items:center; text-align:center; gap:18px; padding:20px 16px; }
   .cp-hero2-body { width:100%; }
@@ -437,7 +436,7 @@
   #frPeopleTabs .fr-tabs { width:max-content; }
 }
 @media(max-width:1000px) and (min-width:761px) { .fm-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
-@media(max-width:640px) { .fr-search.sf-search { height:44px; } .fr-tab { height:34px; padding:0 12px; } }
+@media(max-width:640px) { .fr-tab { height:34px; padding:0 12px; } }
 
 /* ══ Small screens — one sizing pass for the whole Friends page ══ */
 @media(max-width:760px) {
@@ -696,6 +695,4 @@
   .ch-head-btns { display:flex; gap:8px; width:100%; }
   .ch-head-btns > * { flex:1; justify-content:center; padding-inline:10px; font-size:12.5px; }
 }
-.mn-sbox.sf-search { max-width:none; }
 .mn-lineup + .mn-search { margin-top:2px; }
-.mn-sbox.sf-search { height:48px; }

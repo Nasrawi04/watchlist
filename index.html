@@ -185,9 +185,9 @@ if (window.mssSignedInHint) document.documentElement.classList.add('mh-on');</sc
   </div>
 
   <!-- HERO SEARCH -->
-  <div class="hero-search-wrap fade-up" style="margin:1rem 0 2.5rem;">
-    <input type="text" id="heroSearch" placeholder="Search movies, shows or people…" autocomplete="off">
-    <button type="button" class="hero-search-btn" tabindex="-1" aria-label="Search" onclick="document.getElementById('heroSearch').focus()">
+  <div class="sf-search fade-up" role="search" style="margin:1rem 0 2.5rem;">
+    <input type="search" id="heroSearch" class="sf-search-input" placeholder="Search movies, shows or people…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Search movies, shows or people">
+    <button type="button" class="sf-search-go" tabindex="-1" aria-hidden="true" onclick="document.getElementById('heroSearch').focus()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <span>Search</span>
     </button>

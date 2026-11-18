@@ -641,8 +641,8 @@ html.mss-guest .nav-auth-only { display:none !important; }
 
 /* ── Search (shell-search.js): the field, the results ── */
 .shs-wrap { position:relative; display:flex; align-items:center; gap:8px; width:clamp(190px, 18vw, 280px); height:40px; padding:0 8px 0 12px; box-sizing:border-box;
-  border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--card); color:var(--text-3); transition:border-color .15s; }
-.shs-wrap:focus-within { border-color:var(--olive-light); }
+  border:1px solid var(--border-input); border-radius:var(--radius-sm); background:var(--surface-card); color:var(--text-muted); transition:border-color .15s, box-shadow .15s; }   /* the compact search box (.sf-search) */
+.shs-wrap:focus-within { border-color:var(--text-link); box-shadow:0 0 0 3px var(--selected-bg); }
 .shs-ic { display:flex; flex:none; }
 #globalSearch { flex:1; min-width:0; height:100%; background:none; border:0; outline:none; color:var(--text); font:500 13.5px var(--sans); }
 #globalSearch::placeholder { color:var(--text-3); }
@@ -682,8 +682,8 @@ html.mss-guest .nav-auth-only { display:none !important; }
 .shs-keys { font-size:11.5px; color:var(--text-2); }
 .shs-keys kbd { font:700 10.5px var(--sans); padding:1px 5px; border-radius:4px; border:1px solid var(--border-2); }
 /* phones: the full-page search screen */
-.shs-page-field { flex:1; min-width:0; display:flex; align-items:center; gap:8px; height:44px; padding:0 12px; box-sizing:border-box; border-radius:var(--radius-sm); border:1px solid var(--border-2); background:var(--bg-3); color:var(--text-3); }
-.shs-page-field:focus-within { border-color:var(--olive-light); }
+.shs-page-field { flex:1; min-width:0; display:flex; align-items:center; gap:8px; height:44px; padding:0 12px; box-sizing:border-box; border-radius:var(--radius-sm); border:1px solid var(--border-input); background:var(--surface-card); color:var(--text-muted); }   /* the search box on phones (.sf-search) */
+.shs-page-field:focus-within { border-color:var(--text-link); box-shadow:0 0 0 3px var(--selected-bg); }
 .shs-page-field input { flex:1; min-width:0; height:100%; background:none; border:0; outline:none; color:var(--text); font:500 16px var(--sans); }
 .shs-panel.is-page { position:static; width:auto; max-height:none; border:0; border-radius:0; background:none; overflow-y:auto; padding:6px 16px calc(24px + env(safe-area-inset-bottom)); }
 .shs-panel.is-page .shs-filters { padding:12px 0; border:0; }
@@ -757,60 +757,7 @@ a.acct-row:focus-visible, button.acct-row:focus-visible { outline:2px solid var(
 
 .shell-sheet-ov .shell-sheet { max-width:480px; }
 
-/* ── The search field look shared by the pickers (Favourites, Showcase backgrounds, Episodes) ── */
-.search-wrap {
-  position:relative; display:flex; align-items:stretch;
-  border:0.5px solid var(--border-input); border-radius:var(--radius-sm); overflow:hidden;
-  background:var(--bg-3); width:clamp(130px, 10vw, 196px);
-  transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease), width var(--trans) var(--ease);
-}
-.search-wrap:focus-within {
-  border-color:var(--border-olive); width:clamp(160px, 12vw, 234px);
-  box-shadow:0 0 0 3px var(--olive-faint);
-}
-.search-icon-wrap {
-  position:absolute; inset-inline-start:10px; top:50%; transform:translateY(-50%);
-  color:var(--text-3); pointer-events:none; display:flex; align-items:center;
-  transition:color var(--trans) var(--ease);
-}
-.search-icon-wrap svg { width:14px; height:14px; }
-/* Nav search bar: circular gradient search button on the right */
-.search-wrap .search-icon-wrap {
-  inset-inline-start:auto; inset-inline-end:4px; width:26px; height:26px; border-radius:50%;
-  background:linear-gradient(135deg, var(--olive-light), var(--olive-2));
-  color:#fff; justify-content:center; transition:transform var(--trans) var(--ease);
-}
-.search-wrap .search-icon-wrap svg { width:13px; height:13px; }
-.search-wrap:focus-within .search-icon-wrap { transform:translateY(-50%) scale(1.06); }
-.hero-search-wrap {
-  position:relative; width:100%; margin:0 auto;
-  display:flex; align-items:stretch;
-  border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden;
-  background:var(--bg-3); transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
-}
-.hero-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
-#heroSearch, .hero-search-wrap > input {
-  background:transparent; border:none; color:var(--text);
-  font-size:16px; padding:18px 20px; outline:none;
-  flex:1; min-width:0; transition:none; box-sizing:border-box;
-}
-#heroSearch::placeholder, .hero-search-wrap > input::placeholder { color:var(--text-3); font-size:14px; }
-.hero-search-clear {
-  flex-shrink:0; align-self:center; width:34px; height:34px; margin-inline-end:8px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center; cursor:pointer;
-  background:transparent; border:none; color:var(--text-3); transition:color .15s, background .15s;
-}
-.hero-search-clear[hidden], .btn-add-entry[hidden] { display:none; }
-.hero-search-clear:hover { color:var(--text); background:var(--olive-faint); }
-.hero-search-clear:focus-visible { outline:2px solid var(--olive-light); outline-offset:1px; }
-.hero-search-btn {
-  flex-shrink:0; display:flex; align-items:center; gap:8px;
-  padding:0 26px; border:none; cursor:pointer;
-  background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff;
-  font-size:14px; font-weight:500; font-family:var(--sans);
-  transition:opacity .15s;
-}
-.hero-search-btn:hover { opacity:.9; }
+.btn-add-entry[hidden] { display:none; }
 .hero-recent { position:absolute; z-index:300; box-sizing:border-box; overflow-y:auto; touch-action:pan-y; overscroll-behavior:contain; padding:6px; background:var(--bg-2); border:1px solid var(--border-olive); border-radius:var(--radius-sm); }
 .hero-recent[hidden] { display:none; }
 .hero-recent ul { list-style:none; margin:0; padding:0; }
@@ -823,8 +770,6 @@ a.acct-row:focus-visible, button.acct-row:focus-visible { outline:2px solid var(
 .hero-recent-x { flex:none; display:grid; place-items:center; width:44px; height:44px; color:var(--text-2); background:none; border:none; border-radius:6px; cursor:pointer; }
 .hero-recent-pick:hover, .hero-recent-x:hover, .hero-recent-clear:hover { background:var(--olive-faint); }
 .hero-recent button:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
-.hero-search-btn svg { width:16px; height:16px; flex-shrink:0; }
-.hero-search-btn span { white-space:nowrap; }
 
 /* ═════════════════════════════════════════════════════════════
    §02  Phones / tablets (<1200px): the bottom bar, its section sheets, the Create button
@@ -1908,9 +1853,6 @@ body.notif-sheet-open { overflow:hidden; }
 .nt-write svg { width:15px; height:15px; }
 .nt-tools { display:flex; align-items:center; gap:10px; margin:4px 0 18px; }
 .nt-search { flex:1 1 auto; min-width:0; }
-.nt-tools .sf-search { height:40px; border-width:1px; border-radius:var(--radius-sm); background:var(--card); }
-.nt-tools .sf-search-input { font-size:13.5px; }
-.nt-tools .sf-search-go { padding:0 12px; }
 .nt-bar { flex:none; display:flex; }
 .nt-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
 .nt-bar .sort-bar::before { content:none; }
@@ -3402,9 +3344,6 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 [data-theme="light"] .section-block-header:hover { background:var(--fill-subtle); }
 [data-theme="light"] .field-input { background:var(--surface-card); border-color:var(--border-input); color:var(--text-body); }
 [data-theme="light"] .field-input:focus { border-color:color-mix(in srgb, var(--p-forest-800) 55%, transparent); box-shadow:0 0 0 3px color-mix(in srgb, var(--p-forest-800) 10%, transparent); }
-[data-theme="light"] .hero-search-wrap { background:var(--surface-card); border-color:var(--border-input); }
-[data-theme="light"] .hero-search-wrap:focus-within { border-color:color-mix(in srgb, var(--p-forest-800) 50%, transparent); box-shadow:0 0 0 3px color-mix(in srgb, var(--p-forest-800) 10%, transparent); }
-[data-theme="light"] #heroSearch, [data-theme="light"] .hero-search-wrap > input { color:var(--text-body); }
 [data-theme="light"] .w-prog-fill { background:var(--olive-light); }
 
 [data-theme="light"] .view-toggle { background:var(--bg-2); }
@@ -3852,11 +3791,6 @@ body { font-size:15px; }
   .detail-poster-wrap { max-height:260px; }
   .ep-grid { grid-template-columns:1fr 1fr !important; }
 
-
-  /* ── Hero search ── */
-  #heroSearch, .hero-search-wrap > input { padding:14px 14px; }
-  .hero-search-btn { padding:0 16px; }
-  .hero-search-btn span { display:none; }
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -3942,7 +3876,6 @@ body { font-size:15px; }
 .cc-input {
     padding:12px 14px; font-size:16px;
   }
-  #heroSearch, .hero-search-wrap > input { font-size:16px; }
 }
 /* Cancel touch inflation on phones */
 /* ═════════════════════════════════════════════════════════════
@@ -4800,26 +4733,46 @@ html.mss-scroll-locked [role="dialog"] { overscroll-behavior:contain; }
 .mss-rq:first-child { margin-top:2px; } .mss-rq:last-child { margin-bottom:2px; }
 .mss-rq em { font-style:normal; }
 
-/* ── Search inside a page's sections (SF.searchHTML, sort-filter.js) ── */
+/* ── The site's search box — one look on every page (SF.searchHTML in sort-filter.js, and the same markup on Home,
+   Discover, Episodes, Notes, Lists, Friends, Compare, Movie Night, Help and Setup): a card-coloured field with a thin
+   input border, --radius-sm corners, no shadow, and the green Search button at the end. Two sizes, set by the
+   variables below, never by per-page heights:
+   · standard — a page's own search: 44px tall, 14px text
+   · compact  — a search sitting in a toolbar beside 36–44px buttons (Library / category header, profile Library tab,
+     Home, Notes / Lists toolbar, Diary): 40px tall, 13.5px text, a slimmer Search button
+   Phones (≤640px): both are 44px (tap size), the typed text is 16px (iOS doesn't zoom in) and Search is an icon. ── */
 .sf-search-row { margin:0 0 1.25rem; }
-.sf-search { position:relative; display:flex; align-items:center; gap:10px; width:100%; max-width:480px; height:46px; box-sizing:border-box; padding:0 8px 0 14px;
-  background:var(--card); border:0.5px solid var(--border-input); border-radius:var(--radius); transition:border-color .15s, box-shadow .15s; }
-.sf-search:hover { border-color:var(--border-olive); }
-.sf-search:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
-.sf-search-ic { display:flex; color:var(--text-3); flex-shrink:0; }
-.sf-search:focus-within .sf-search-ic, .sf-search.has-q .sf-search-ic { color:var(--olive-light); }
-.sf-search-input { flex:1; min-width:0; height:100%; border:none; outline:none; background:transparent; color:var(--text); font:500 14.5px 'Manrope',var(--sans); padding:0; }
-.sf-search-input::placeholder { color:var(--text-3); }
+.sf-search { --sfs-h:44px; --sfs-fs:14px; --sfs-go:16px;
+  position:relative; display:flex; align-items:stretch; width:100%; height:var(--sfs-h); box-sizing:border-box; overflow:hidden;
+  background:var(--surface-card); border:1px solid var(--border-input); border-radius:var(--radius-sm); transition:border-color .15s, box-shadow .15s; }
+.lib-head .sf-search, .lib-bar-search .sf-search, .sf-search.mh-search, .nt-tools .sf-search, .dy-searchrow .sf-search { --sfs-h:40px; --sfs-fs:13.5px; --sfs-go:12px; }
+.sf-search:hover { border-color:var(--border-brand); }
+.sf-search:focus-within { border-color:var(--text-link); box-shadow:0 0 0 3px var(--selected-bg); }   /* the focus ring is part of the field, not a shadow */
+.sf-search-ic { display:none; }   /* older markup still carries it; the Search button is the icon */
+.sf-search-input { flex:1; min-width:0; height:100%; padding:0 14px; border:none; outline:none; background:transparent; color:var(--text-body); font:400 var(--sfs-fs) 'Manrope',var(--sans); }
+.sf-search-input::placeholder { color:var(--text-muted); font-size:var(--sfs-fs); opacity:1; }
 /* search fields: no native styling or clear "x" (pages add their own clear button) */
 input[type=search] { -webkit-appearance:none; appearance:none; }
 input[type=search]::-webkit-search-cancel-button, input[type=search]::-webkit-search-decoration { -webkit-appearance:none; appearance:none; }
-.sf-search-count { font-size:12px; font-weight:600; color:var(--text-3); white-space:nowrap; }
-.sf-search-count b { font-family:var(--bebas); font-size:16px; font-weight:400; letter-spacing:.3px; color:var(--olive-light); vertical-align:-1px; }
-.sf-search-clear { display:none; width:30px; height:30px; flex-shrink:0; align-items:center; justify-content:center; border:none; border-radius:50%; background:var(--bg-3); color:var(--text-2); cursor:pointer; }
+.sf-search-count { align-self:center; margin-inline-end:8px; font-size:12px; font-weight:600; color:var(--text-muted); white-space:nowrap; }
+.sf-search-count b { font-family:var(--bebas); font-size:16px; font-weight:400; letter-spacing:.3px; color:var(--text-link); vertical-align:-1px; }
+.sf-search-clear { display:none; align-self:center; width:30px; height:30px; margin-inline-end:6px; flex-shrink:0; align-items:center; justify-content:center; border:none; border-radius:50%;
+  background:var(--bg-3); color:var(--text-muted); cursor:pointer; }
 .sf-search.has-q .sf-search-clear { display:inline-flex; }
-.sf-search-clear:hover { background:var(--olive-faint); color:var(--text); }
-.sf-search-clear:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-@media(max-width:640px) { .sf-search { max-width:none; height:44px; } .sf-search-input { font-size:16px; } }   /* 16px: phones don't zoom in */
+.sf-search-clear:hover { background:var(--selected-bg); color:var(--text-body); }
+.sf-search-clear:focus-visible { outline:2px solid var(--focus-ring); outline-offset:-2px; }
+.sf-search-go { flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 var(--sfs-go); border:none; cursor:pointer;
+  background:var(--brand); color:var(--text-on-brand); font:600 var(--sfs-fs) 'Manrope',var(--sans); transition:background-color .15s; }
+.sf-search-go:hover { background:var(--brand-hover); }
+.sf-search-go svg { width:16px; height:16px; flex-shrink:0; }
+.sf-search-go span { white-space:nowrap; }
+@media (max-width:640px) {
+  .sf-search, .lib-head .sf-search, .lib-bar-search .sf-search, .sf-search.mh-search, .nt-tools .sf-search, .dy-searchrow .sf-search { --sfs-h:44px; --sfs-fs:14px; --sfs-go:0; }
+  .sf-search-input { font-size:16px; }
+  .sf-search-go { width:44px; justify-content:center; }
+  .sf-search-go span { display:none; }
+  .sf-search-clear { width:40px; height:40px; margin-inline-end:0; background:none; }
+}
 
 /* Row header with "See All" on the right — Discover rows + home Recommended for You */
 .disc-section-head { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; margin-bottom:.25rem; flex-wrap:wrap; }
@@ -6642,32 +6595,6 @@ body.mss-ss-running .toast { z-index:3100; bottom:calc(112px + env(safe-area-ins
 }
 /* Library: the marker where more cards get drawn as you scroll (library-view.js _libCards) */
 .lib-more { flex:0 0 1px; width:1px; height:1px; min-height:1px; pointer-events:none; }
-/* ── Page search boxes (SF.searchHTML — Library, TV / Movies / Anime / Cartoons, Watched, Ratings):
-   the same look and size as the home page's search — tinted field, olive border, green Search button ── */
-.sf-search { height:58px; max-width:none; padding:0; gap:0; align-items:stretch; overflow:hidden;
-  background:var(--bg-3); border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); }
-.sf-search:hover { border-color:var(--border-olive); }
-.sf-search:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
-.sf-search-ic { display:none; }
-.sf-search-input { padding:0 20px; font:400 16px var(--sans); }
-.sf-search-input::placeholder { font-size:14px; }
-.sf-search-input::-webkit-search-cancel-button { display:none; }
-.sf-search-count { align-self:center; margin-inline-end:8px; }
-.sf-search-clear { align-self:center; margin-inline-end:8px; }
-.sf-search-go { flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 26px; border:none; cursor:pointer;
-  background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff; font:500 14px var(--sans); transition:opacity .15s; }
-.sf-search-go:hover { opacity:.9; }
-.sf-search-go svg { width:16px; height:16px; flex-shrink:0; }
-.sf-search-go span { white-space:nowrap; }
-[data-theme="light"] .sf-search { background:var(--surface-card); border-color:var(--border-input); }
-[data-theme="light"] .sf-search:focus-within { border-color:color-mix(in srgb, var(--p-forest-800) 50%, transparent); box-shadow:0 0 0 3px color-mix(in srgb, var(--p-forest-800) 10%, transparent); }
-[data-theme="light"] .sf-search-input { color:var(--text-body); }
-@media (max-width:640px) {
-  .sf-search { height:50px; }
-  .sf-search-input { padding:0 14px; font-size:16px; }
-  .sf-search-go { padding:0 16px; }
-  .sf-search-go span { display:none; }
-}
 /* ── Challenges: "You finished" the same size as Details; Delete red and as tall as Edit ── */
 .chf-foot .chf-done, .chf-foot .chf-info { box-sizing:border-box; min-height:38px; padding:7px 14px; font-size:13px; line-height:1.2; }
 .chf-foot .chf-done { font-weight:600; }
@@ -6842,8 +6769,8 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 
 /* Type to narrow a dropdown (SF.ddSearch) */
 .sf-dd-search { position:sticky; top:0; z-index:1; padding:6px; background:var(--bg-2); border-bottom:0.5px solid var(--border); }
-.sf-dd-search input { width:100%; min-height:36px; padding:0 10px; box-sizing:border-box; font:inherit; font-size:16px; color:var(--text); background:var(--bg-3); border:0.5px solid var(--border-input); border-radius:var(--radius-xs); outline:none; }
-.sf-dd-search input:focus { border-color:var(--olive-light); }
+.sf-dd-search input { width:100%; min-height:40px; padding:0 12px; box-sizing:border-box; font:inherit; font-size:16px; color:var(--text-body); background:var(--surface-card); border:1px solid var(--border-input); border-radius:var(--radius-sm); outline:none; }
+.sf-dd-search input:focus { border-color:var(--text-link); box-shadow:0 0 0 3px var(--selected-bg); }   /* the search box's focus (see .sf-search) */
 .td-dd-menu [hidden] { display:none; }
 
 /* ── Rating steppers, score breakdown and final score: the title page and Import ── */
@@ -7107,7 +7034,6 @@ a.nc-author:hover span:last-child { color:var(--text); text-decoration:underline
 #dyRoot.is-dates .dy-title { cursor:default; pointer-events:none; }
 .dy-searchrow { margin:-4px 0 16px; }
 .dy-searchrow[hidden] { display:none; }
-.dy-searchrow .sf-search { height:40px; border-width:1px; border-radius:var(--radius-sm); background:var(--dy-card); }
 @media (max-width:719px) {
   .dy-head { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:12px 8px; margin-bottom:12px; }
   .dy-head-l { grid-column:1; }
@@ -8726,9 +8652,6 @@ body:has(.tv-page.is-phone:not(.de-page)) #mainNav, body:has(.tv-page.is-phone:n
 .lib-head .cat-page-title { padding-top:8px; }
 .lib-head-r { display:flex; align-items:center; gap:10px; flex:0 1 auto; min-width:0; }
 .lib-search { flex:1 1 340px; min-width:0; width:clamp(240px, 28vw, 380px); }
-.lib-head .sf-search { height:40px; border-width:1px; border-radius:10px; background:var(--lib-card); }
-.lib-head .sf-search-input { font-size:13.5px; }
-.lib-head .sf-search-go { padding:0 12px; }
 .lib-pick { display:flex; }
 .lib-add-l { margin-inline-start:-2px; }
 .lib-head .qp-trigger { min-height:40px; padding:0 14px; border-radius:10px; background:var(--olive); border-color:var(--olive); color:var(--text-on-brand); font-size:13px; }
@@ -8889,9 +8812,6 @@ body:has(.tv-page.is-phone:not(.de-page)) #mainNav, body:has(.tv-page.is-phone:n
 .lib-bar-r { display:flex; align-items:center; gap:8px; margin-inline-start:auto; }
 /* a profile's Library: the search in the toolbar, before Sort — the Library header's search, at the toolbar's height */
 .lib-bar-search { flex:0 1 300px; width:auto; min-width:150px; }
-.lib-bar-search .sf-search { height:36px; border-width:1px; border-radius:10px; background:var(--lib-card); }
-.lib-bar-search .sf-search-input { font-size:13px; }
-.lib-bar-search .sf-search-go { padding:0 11px; }
 .lib-tool.lib-search-tog { display:none; }   /* phones only (below) */
 .lib-tool { position:relative; display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--lib-line); background:var(--lib-card);
   color:var(--text); font:700 13px var(--sans); cursor:pointer; white-space:nowrap; }
@@ -9384,9 +9304,7 @@ html:not(.mh-on) .mh { display:none; }
 .mh-tools { display:flex; align-items:center; gap:10px; flex:0 1 auto; }
 .mh-search-host { position:relative; z-index:60; display:flex; flex:0 1 auto; min-width:0; }   /* holds the header-style results dropdown (shell-search.js); under the side panels (Notifications 390–395) */
 .mh-search-host:focus-within { z-index:396; }   /* while it's being used: its results over the + button and phone bars (390–395) */
-.sf-search.mh-search { width:clamp(220px, 18vw + 80px, 380px); height:40px; border-width:1px; border-radius:10px; background:var(--lib-card); }   /* the Library header's search box */
-.mh-search .sf-search-input { font-size:13.5px; }
-.mh-search .sf-search-go { padding:0 12px; }
+.sf-search.mh-search { width:clamp(220px, 18vw + 80px, 380px); }   /* Home: the compact search box (sizes: the search box block) */
 .lib-tool.mh-custom { height:44px; padding:0 14px; flex:none; cursor:pointer; color:var(--text); font:700 13px var(--sans); }
 .lib-tool.mh-custom[aria-expanded="true"] { border-color:var(--olive); background:var(--olive-faint); }
 .mh-custom:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px; }
